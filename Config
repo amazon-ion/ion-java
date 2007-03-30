@@ -1,0 +1,42 @@
+# -*-perl-*- 
+#  //brazil/src/shared/platform/IonJava/mainline perforce:9591/Config 
+
+package.IonJava = {
+  interfaces = (1.0);
+  flavors = {
+    map = pthread-notux;
+    generation = 1;
+  };
+  scope = framework;
+
+  dependencies = {
+    1.0 = {
+    };
+  };
+
+  targets = {
+    libHello = {
+      type = clibrary;
+      visibility = external;
+      dependencies = ();
+      modules = {
+	public = (
+		  libhello,
+		  );
+      };
+    };
+
+    HelloApp = {
+      type = capplication;
+      visibility = external;
+      dependencies = (libHello);
+      flavor = DEV.STD.PTHREAD;
+      modules = {
+	private = (
+		   helloapp,
+		   );
+      };
+    };
+
+  };
+};
