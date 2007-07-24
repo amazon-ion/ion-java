@@ -1,0 +1,340 @@
+/*
+ * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ */
+
+package com.amazon.ion;
+
+
+
+public class StructTest
+    extends ContainerTestCase
+{
+    public static void checkNullStruct(IonStruct value)
+    {
+        assertTrue(value.isNullValue());
+
+        try
+        {
+            value.size();
+            fail("Expected NullValueException");
+        }
+        catch (NullValueException e) { }
+
+        try
+        {
+            value.get("f");
+            fail("Expected NullValueException");
+        }
+        catch (NullValueException e) { }
+
+        try
+        {
+            value.iterator();
+            fail("Expected NullValueException");
+        }
+        catch (NullValueException e) { }
+
+        try
+        {
+            value.remove(null);
+            fail("Expected NullValueException");
+        }
+        catch (NullValueException e) { }
+
+        try
+        {
+            value.isEmpty();
+            fail("Expected NullValueException");
+        }
+        catch (NullValueException e) { }
+
+        assertEquals("null.struct", value.toString());
+    }
+
+
+    /**
+     * @param value must be null.struct or empty
+     */
+    public void modifyStruct(IonStruct value)
+    {
+        IonBool nullBool0 = system().newBool();
+        value.put("f", nullBool0);
+        assertEquals("size", 1, value.size());
+        assertSame(nullBool0, value.get("f"));
+        assertEquals("f", nullBool0.getFieldName());
+        assertSame(value, nullBool0.getContainer());
+
+        IonBool nullBool1 = system().newBool();
+        value.add("g", nullBool1);
+        assertEquals("size", 2, value.size());
+        assertSame(nullBool1, value.get("g"));
+        assertEquals("g", nullBool1.getFieldName());
+        assertSame(value, nullBool1.getContainer());
+
+        // Repeated field name, which one do we get?
+        IonBool nullBool2 = system().newBool();
+        value.add("f", nullBool2);
+        assertEquals("size", 3, value.size());
+        assertEquals("f", nullBool2.getFieldName());
+        assertSame(value, nullBool2.getContainer());
+
+        IonBool someBool = (IonBool) value.get("f");
+        assertTrue((someBool == nullBool0) || (someBool == nullBool2));
+
+        try
+        {
+            value.put("h", nullBool0);
+            fail("Expected ContainedValueException");
+        }
+        catch (ContainedValueException e) { }
+        // Make sure the element hasn't changed
+        assertEquals("f", nullBool0.getFieldName());
+        assertSame(value, nullBool0.getContainer());
+
+        // Make sure put replaces doubled field.
+        IonBool nullBool3 = system().newBool();
+        value.put("f", nullBool3);
+        assertEquals(2, value.size());
+        assertNull(nullBool0.getContainer());
+        assertNull(nullBool2.getContainer());
+
+        // Now remove an element
+        value.put("h", nullBool0);
+        boolean removed = value.remove(nullBool3);
+        assertTrue(removed);
+        assertNull(nullBool3.getFieldName());
+        assertNull(nullBool3.getContainer());
+        assertEquals("size", 2, value.size());
+        assertSame(nullBool1, value.get("g"));
+        assertSame(nullBool0, value.get("h"));
+
+        // Clear the struct
+        testClearContainer(value);
+    }
+
+
+    //=========================================================================
+    // Test cases
+
+    public void testFactoryNullStruct()
+    {
+        IonStruct value = system().newStruct();
+        assertNull(value.getFieldName());
+        assertNull(value.getContainer());
+        checkNullStruct(value);
+        modifyStruct(value);
+    }
+
+    public void testTextNullStruct()
+    {
+        IonStruct value = (IonStruct) oneValue("null.struct");
+        checkNullStruct(value);
+        modifyStruct(value);
+    }
+
+    public void testMakeNullStruct()
+    {
+        IonStruct value = (IonStruct) oneValue("{foo:bar}");
+        assertFalse(value.isNullValue());
+        value.makeNull();
+        checkNullStruct(value);
+    }
+
+    public void testClearNonMaterializedStruct()
+    {
+        IonStruct value = (IonStruct) oneValue("{foo:bar}");
+        testClearContainer(value);
+    }
+
+    public void testEmptyStruct()
+    {
+        IonStruct value = (IonStruct) oneValue("{}");
+        assertFalse(value.isNullValue());
+        assertNull("annotation should be null", value.getTypeAnnotations());
+        assertEquals(0, value.size());
+        assertTrue(value.isEmpty());
+        assertFalse(value.iterator().hasNext());
+        assertNull(value.get("not"));
+        assertEquals("{}", value.toString());
+    }
+
+    public void testStructs()
+    {
+        IonStruct value = (IonStruct) oneValue("{a:b}");
+        assertEquals(1, value.size());
+        IonSymbol fieldA = (IonSymbol) value.get("a");
+        assertEquals("a", fieldA.getFieldName());
+        assertEquals("b", fieldA.stringValue());
+        assertNull(value.get("not"));
+        assertEquals("{a:b}", value.toString());
+    }
+
+    public void testGetTwiceReturnsSame()
+    {
+        IonStruct value = (IonStruct) oneValue("{a:b}");
+        IonValue fieldA1 = value.get("a");
+        IonValue fieldA2 = value.get("a");
+        assertSame(fieldA1, fieldA2);
+    }
+
+    public void testDeepPut()
+    {
+        IonStruct value = (IonStruct) oneValue("{a:{b:bv}}");
+        IonStruct nested = (IonStruct) value.get("a");
+        IonBool inserted = system().newBool();
+        nested.put("c", inserted);
+        assertSame(inserted, ((IonStruct)value.get("a")).get("c"));
+    }
+
+    public void testExtraCommas()
+    {
+        IonStruct value = (IonStruct) oneValue("{a:b,}");
+        assertEquals(1, value.size());
+        assertEquals("{a:b}", value.toString());
+
+        // Leading and lonely commas not allowed.
+        badValue("{,}");
+        badValue("{,3}");
+    }
+
+
+    public void testLongFieldName()
+    {
+        IonStruct value = (IonStruct) oneValue("{ '''a''' : b}");
+        assertEquals(1, value.size());
+        IonSymbol fieldA = (IonSymbol) value.get("a");
+        assertEquals("a", fieldA.getFieldName());
+        assertEquals("b", fieldA.stringValue());
+        assertEquals("{a:b}", value.toString());
+    }
+
+    public void testConcatenatedFieldName()
+    {
+        IonStruct value = (IonStruct) oneValue("{ '''a''' '''a''' : b}");
+        assertEquals(1, value.size());
+        IonSymbol fieldA = (IonSymbol) value.get("aa");
+        assertEquals("aa", fieldA.getFieldName());
+        assertEquals("b",  fieldA.stringValue());
+        assertEquals("{aa:b}", value.toString());
+    }
+
+
+    public void testMediumSymbolFieldNames()
+    {
+        IonStruct value = (IonStruct) oneValue("{'123456789ABCDEF':b}");
+        assertEquals(1, value.size());
+        IonSymbol fieldA = (IonSymbol) value.get("123456789ABCDEF");
+        assertEquals("123456789ABCDEF", fieldA.getFieldName());
+        assertEquals("b", fieldA.stringValue());
+    }
+
+
+    public void testMediumStringFieldNames()
+    {
+        IonStruct value = (IonStruct) oneValue("{\"123456789ABCDEF\":b}");
+        assertEquals(1, value.size());
+        IonSymbol fieldA = (IonSymbol) value.get("123456789ABCDEF");
+        assertEquals("123456789ABCDEF", fieldA.getFieldName());
+        assertEquals("b", fieldA.stringValue());
+    }
+
+
+    public void testNewlineInStringFieldName()
+    {
+        badValue("{ \"123\n4\" : v }");
+        // Get beyond the 13-char threshold.
+        badValue("{ \"123456789ABCDEF\nGHI\" : v }");
+    }
+
+
+    public void testNewlineInLongStringFieldName()
+    {
+        IonStruct value = (IonStruct) oneValue("{ '''123\n4''' : v }");
+        checkSymbol("v", value.get("123\n4"));
+
+        // Get beyond the 13-char threshold.
+        value = (IonStruct) oneValue("{ '''123456789ABCDEF\nGHI''' : v }");
+        checkSymbol("v", value.get("123456789ABCDEF\nGHI"));
+    }
+
+    public void testConcatenatedFieldValue()
+    {
+        IonStruct value = (IonStruct) oneValue("{a:'''a''' '''a'''}");
+        assertEquals(1, value.size());
+        IonString fieldA = (IonString) value.get("a");
+        assertEquals("a", fieldA.getFieldName());
+        assertEquals("aa",  fieldA.stringValue());
+        assertEquals("{a:\"aa\"}", value.toString());
+    }
+
+    public void testBadGets()
+    {
+        IonStruct value = (IonStruct) oneValue("{a:b}");
+
+        try {
+            value.get(null);
+            fail("Expected NullPointerException");
+        }
+        catch (NullPointerException e) { }
+
+        try {
+            value.get("");
+            fail("Expected IllegalArgumentException");
+        }
+        catch (IllegalArgumentException e) { }
+    }
+
+    public void testBadPuts()
+    {
+        IonStruct value = system().newStruct();
+        IonBool nullBool = system().newBool();
+
+        try {
+            value.put(null, nullBool);
+            fail("Expected NullPointerException");
+        }
+        catch (NullPointerException e) { }
+
+        try {
+            value.put("", nullBool);
+            fail("Expected IllegalArgumentException");
+        }
+        catch (IllegalArgumentException e) { }
+
+        try {
+            value.put("f", null);
+            fail("Expected NullPointerException");
+        }
+        catch (NullPointerException e) { }
+    }
+
+    public void testBadAddss()
+    {
+        IonStruct value = system().newStruct();
+        IonBool nullBool = system().newBool();
+
+        try {
+            value.add(null, nullBool);
+            fail("Expected NullPointerException");
+        }
+        catch (NullPointerException e) { }
+
+        try {
+            value.add("", nullBool);
+            fail("Expected IllegalArgumentException");
+        }
+        catch (IllegalArgumentException e) { }
+
+        try {
+            value.add("f", null);
+            fail("Expected NullPointerException");
+        }
+        catch (NullPointerException e) { }
+    }
+
+    public void testStructIteratorRemove()
+    {
+        IonStruct value = (IonStruct) oneValue("{a:b,c:d,e:f}");
+        testIteratorRemove(value);
+    }
+}

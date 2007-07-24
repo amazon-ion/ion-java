@@ -1,0 +1,3 @@
+// Strings cannot contain newlines.
+123 "abc
+" 123

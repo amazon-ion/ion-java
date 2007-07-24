@@ -1,0 +1,16 @@
+$ion_1_0
+root:: {x:"6483021025"
+, targetNamespace:"x-schema:ado-schema.xml", 
+ xmlns1: {
+  namespace1:"x-schema:ado-schema.xml" 
+ },
+ xmlns2: {
+  prefix:'xs',
+  namespace2:"http://www.w3.org/2001/XMLSchema" 
+ },
+ 'schema': {
+  attributeFormDefault:"qualified", 
+  elementFormDefault:"qualified", 
+  element: {
+   name:"data" 
+ } } }

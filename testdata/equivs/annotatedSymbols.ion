@@ -1,0 +1,19 @@
+annotation :: value
+annotation:: value
+annotation ::value
+annotation::value
+
+annotation :: 'value'
+annotation:: 'value'
+annotation ::'value'
+annotation::'value'
+
+'annotation' :: value
+'annotation':: value
+'annotation' ::value
+'annotation'::value
+
+'annotation' :: 'value'
+'annotation':: 'value'
+'annotation' ::'value'
+'annotation'::'value'

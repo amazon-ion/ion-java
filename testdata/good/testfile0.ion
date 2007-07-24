@@ -1,0 +1,10 @@
+$ion_1_0
+contact::{
+lname:"smith",
+fname:"john",
+'phonelist': [
+{ac:206, prefix:234, suffix:2934},
+{ac:444, prefix:333, suffix:2222},
+],
+age:"6483020949" /* {{units:years}} */
+}

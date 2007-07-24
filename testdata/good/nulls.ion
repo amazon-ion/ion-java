@@ -1,0 +1,14 @@
+null
+null.null
+null.int
+null.float
+null.decimal
+null.symbol
+null.string
+null.timestamp
+null.blob
+null.clob
+null.bool
+null.list
+null.sexp
+null.struct

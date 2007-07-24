@@ -1,0 +1,25 @@
+'a b c d e f g h i j k l m n o p q r s t u v w x y z'
+'A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'
+'1 2 3 4 5 6 7 8 9 0'
+', . ; / [ \' ] \\ = - 0 9 8 7 6 5 4 3 2 1 ` ~ ! @ # $ % ^ & * ( ) _ + | : < > ?'
+'\0 \a \b \t \n \f \r \v \" \' \? \\\\ \/ \0\a\b\t\n\f\r\v\"\'\?\\\\\/'
+'\uabcd \udeff \uffff \u1234 \u4e6a \ud37b\uf4c2\u0000\x00\xff'
+'\uABCD \uDEFF \uFFFF \u1234 \u4E6A \uD37B\uF4C2\u0000\x00\xff'
+'\uaBcD \uDEff \uFffF \u1234 \u4E6a \ud37B\uF4c2\u0000\x00\xff'
+bareSymbol
+BareSymbol
+$bare
+_bare
+zzzzz
+aaaaa
+ZZZZZ
+AAAAA
+z
+Z
+a
+A
+_
+$
+_9876543210
+$0123456789
+abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$_

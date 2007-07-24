@@ -1,0 +1,3939 @@
+$ion_1_0::{
+    symbols:{
+        $101 : "brand",
+        $102 : "classification",
+        $103 : "conveyability",
+        $104 : "customerAssembly",
+        $105 : "discontinueDate",
+        $106 : "explicitDeletion",
+        $107 : "fixedShippingCharge",
+        $108 : "freeShipping",
+        $109 : "handling",
+        $110 : "heat",
+        $111 : "isRequired",
+        $112 : "isSolidSided",
+        $113 : "isUsedForShipping",
+        $114 : "localizedContributorList",
+        $115 : "localizedContributorListByLanguage",
+        $116 : "maxOrderingQuantity",
+        $117 : "normalizedItem",
+        $118 : "originalPackaging",
+        $119 : "promotion",
+        $120 : "quantity",
+        $121 : "sensitivity",
+        $122 : "shippingPromotion",
+        $123 : "structure",
+        $124 : "tag",
+    }
+}
+
+normalizedItem::
+{
+ contribution:
+ {
+  feedId:"24036124",
+  recordId:"1",
+  normalizedItemId:"2313661191",
+  sourceId:"6",
+  item:
+  {
+   'id':"B0009VXAM0",
+   merchantId:"1",
+   productType:"ABIS_VIDEO_GAMES",
+   itemPackage:
+   {
+    contents:
+    {
+     numberOfItems:"1",
+    },
+    packageType:
+    {
+     'id':"1",
+    },
+    dimensions:
+    {
+     length:"17.170000076293945",
+     width:"13.75",
+     height:"7.050000190734863",
+     unit:"IN",
+    },
+    weight:
+    {
+     value:"15.0",
+     unit:"LB",
+    },
+   },
+  },
+ },
+ contribution:
+ {
+  feedId:"35993979",
+  recordId:"1",
+  normalizedItemId:"2151125451",
+  sourceId:"20",
+  item:
+  {
+   sourceId:"20",
+   merchantId:"1",
+   productType:"ABIS_VIDEO_GAMES",
+   physical:
+   {
+    productIdentification:
+    {
+     harmonizedCode:"0000.00.0000",
+    },
+    container:
+    {
+     isShippableInOriginalContainer:"false",
+    },
+    services:
+    {
+     giftWrap:"true",
+    },
+    dimensions:
+    {
+     length:"12.8",
+     width:"10.79",
+     height:"3.86",
+     unit:"IN",
+    },
+    weight:{
+    value:"11.0",
+    unit:"LB",
+   },
+  },
+  manufacturer:
+  {
+   manufacturerName:"Sony Computer Entertainment",
+  },
+  marketable:
+  {
+   marketplace:"1",
+   msrp:
+   {
+   price:
+   {
+    amount:"599.99",
+    currency:"USD",
+   },
+  },
+  brand:
+  {
+   code:"SONZ9",
+  },
+  release:
+  {
+   streetDate:"2006-11-17 00:00:01",
+  },
+  display:
+  {
+   detailPage:
+   {
+    launchDate:"2005-07-12 00:{00:{01",
+   },
+   displayAttributeGroup:
+   {
+    name:"video_games_display_on_website",
+   },
+   displayOnWebsiteGroup:
+   {
+    name:"video_games_display_on_website",
+   },
+  },
+  availability:
+  {
+   defaultAvailability:"OutOfPrint",
+  },
+  glProductGroup:
+  {
+   name:"gl_video_games",
+  },
+  handlingGroup:
+  {
+   name:"video_games_handling",
+},
+},
+itemPackage:{
+contents:{
+numberOfItems:"1",
+},
+packageType:{
+'id':"1",
+level:"Item",
+},
+dimensions:{
+length:"17.2",
+width:"13.7",
+height:"7.0",
+unit:"IN",
+},
+weight:{
+value:"15.65",
+unit:"LB",
+},
+},
+externalId:{
+'id':"711719800002",
+type:"catalog_number",
+},
+externalId:{
+'id':"410000233948",
+type:"upc",
+},
+productGroup:{
+type:"display_attribute",
+group:"video_games_display_on_website",
+isCurrent:"true",
+},
+productGroup:{
+type:"display_on_website",
+group:"video_games_display_on_website",
+isCurrent:"true",
+},
+productGroup:{
+type:"gl_product_group_type",
+group:"gl_video_games",
+isCurrent:"true",
+},
+productGroup:{
+type:"handling_group",
+group:"video_games_handling",
+isCurrent:"true",
+},
+productGroup:{
+type:"replenishment_strategy",
+group:"replen_standard",
+isCurrent:"true",
+},
+attribute:{
+name:"matching_catalog_number",
+type:"string",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"711719800002",
+},
+},
+attribute:{
+name:"binding",
+type:"enumerated",
+unitType:"other",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"cd_rom",
+},
+},
+attribute:{
+name:"case_pack_quantity",
+type:"number",
+unitType:"other",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"2",
+},
+},
+attribute:{
+name:"inner_packs_per_master_pack",
+type:"number",
+unitType:"other",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"1",
+},
+},
+attribute:{
+name:"is_sold_in_stores",
+type:"boolean",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"true",
+},
+},
+attribute:{
+name:"item_pack_is_conveyable",
+type:"boolean",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"true",
+},
+},
+attribute:{
+name:"platform",
+type:"enumerated",
+unitType:"other",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"sony_playstation3",
+},
+},
+attribute:{
+name:"authorized_sellers",
+type:"enumerated",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"gated_sdp_sellers",
+},
+},
+attribute:{
+name:"brand_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony Computer Entertainment",
+},
+},
+attribute:{
+name:"bullet_point",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony PlayStation 3 is currently slated for release in November 2006",
+attributeValue:"Games will use Blu-Ray discs as media format",
+attributeValue:"Features a powerful Cell processor and a dynamic RSX graphics chip",
+attributeValue:"Completely backward compatible  all the way to the original Sony PlayStation",
+attributeValue:"Built-in Wi-Fi access for easy connection to gaming services and the Internet",
+},
+},
+attribute:{
+name:"fulfill_readiness_cond",
+type:"enumerated",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"drop_ship_ready",
+},
+},
+attribute:{
+name:"hardware_platform",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"playstation_3",
+},
+},
+attribute:{
+name:"inner_pack_is_conveyable",
+type:"boolean",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"false",
+},
+},
+attribute:{
+name:"is_base_product",
+type:"boolean",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"true",
+},
+},
+attribute:{
+name:"item_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony PlayStation 3 (60GB)",
+},
+},
+attribute:{
+name:"item_type_keyword",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"video-game-consoles",
+},
+},
+attribute:{
+name:"manufacturer",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony Computer Entertainment",
+},
+},
+attribute:{
+name:"master_pack_is_conveyable",
+type:"boolean",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"false",
+},
+},
+attribute:{
+name:"hack_merchant_id",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"1",
+},
+},
+attribute:{
+name:"product_category",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"6302800",
+},
+},
+attribute:{
+name:"product_subcategory",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"6302883",
+},
+},
+attribute:{
+name:"publisher_code",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"SONZ9",
+},
+},
+attribute:{
+name:"requires_fulfillment_center_prep",
+type:"boolean",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"false",
+},
+},
+attribute:{
+name:"sdp_disable_new",
+type:"boolean",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"false",
+},
+},
+attribute:{
+name:"sdp_disable_refurbished",
+type:"boolean",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"true",
+},
+},
+attribute:{
+name:"sdp_disabled",
+type:"boolean",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"false",
+},
+},
+attribute:{
+name:"seller_of_record_vendor_id",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"24808",
+},
+},
+attribute:{
+name:"subject_keywords",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"ps3} ps 3} ps} three}play} station}playstation} sony playstation} sony playstation 3",
+},
+},
+attribute:{
+name:"super_saver_shipping_excluded",
+type:"boolean",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"false",
+},
+},
+attribute:{
+name:"toys_r_us_category",
+type:"number",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"99",
+},
+},
+attribute:{
+name:"toys_r_us_subcategory",
+type:"number",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"9999",
+},
+},
+attribute:{
+name:"website_shipping_weight",
+type:"number",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"15.65",
+unitValue:"LB",
+},
+},
+offering:{
+offerListing:{
+marketplace:"1",
+expirationDate:"2006-11-30 00:{00:{01",
+websiteBuyability:{
+code:"os_buyable",
+},
+replenishment:{
+strategy:"replen_standard",
+category:"Basic",
+},
+availability:{
+defaultAvailability:"OutOfPrint",
+},
+offeringServices:{
+giftWrap:"true",
+},
+},
+},
+attribute:{
+name:"is_pre_order_price_protected",
+type:"boolean",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"true",
+},
+},
+attribute:{
+name:"ordering_channel",
+type:"string",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"video_games_ordering_channel",
+},
+},
+attribute:{
+name:"availability",
+type:"enumerated",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"out_of_print",
+},
+},
+attribute:{
+name:"bullet_point",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony PlayStation 3 is currently slated for release in November 2006",
+attributeValue:"Games will use Blu-Ray discs as media format",
+attributeValue:"Features a powerful Cell processor and a dynamic RSX graphics chip",
+attributeValue:"Completely backward compatible  all the way to the original Sony PlayStation",
+attributeValue:"Built-in Wi-Fi access for easy connection to gaming services and the Internet",
+},
+},
+attribute:{
+name:"can_be_giftwrapped",
+type:"boolean",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"true",
+},
+},
+attribute:{
+name:"quantity",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"0|1164873601|0|1",
+},
+},
+attribute:{
+name:"sales",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"24481|0|0|0",
+},
+},
+attribute:{
+name:"seller_of_record_vendor_id",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"24808",
+},
+},
+attribute:{
+name:"super_saver_shipping_excluded",
+type:"boolean",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"false",
+},
+},
+attribute:{
+name:"toys_r_us_category",
+type:"number",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"99",
+},
+},
+attribute:{
+name:"toys_r_us_subcategory",
+type:"number",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"9999",
+},
+},
+attribute:{
+name:"website_shipping_weight",
+type:"number",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+unitValue:"LB",
+attributeValue:15.65,
+},
+},
+offering:{
+offerListing:{
+marketplace:"1",
+expirationDate:"2006-11-30 00:{00:{01",
+websiteBuyability:{
+code:"os_buyable",
+},
+replenishment:{
+strategy:"replen_standard",
+category:"Basic",
+},
+availability:{
+defaultAvailability:"OutOfPrint",
+},
+offeringServices:{
+giftWrap:"true",
+},
+},
+attribute:{
+name:"is_pre_order_price_protected",
+type:"boolean",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"true",
+},
+},
+attribute:{
+name:"ordering_channel",
+type:"string",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"video_games_ordering_channel",
+},
+},
+attribute:{
+name:"availability",
+type:"enumerated",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"out_of_print",
+},
+},
+attribute:{
+name:"bullet_point",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony PlayStation 3 is currently slated for release in November 2006",
+attributeValue:"Games will use Blu-Ray discs as media format",
+attributeValue:"Features a powerful Cell processor and a dynamic RSX graphics chip",
+attributeValue:"Completely backward compatible  all the way to the original Sony PlayStation",
+attributeValue:"Built-in Wi-Fi access for easy connection to gaming services and the Internet",
+},
+},
+attribute:{
+name:"can_be_giftwrapped",
+type:"boolean",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"true",
+},
+},
+attribute:{
+name:"quantity",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"0|1164873601|0|1",
+},
+},
+attribute:{
+name:"sales",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"24481|0|0|0",
+},
+},
+attribute:{
+name:"seller_of_record_vendor_id",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"24808",
+},
+},
+attribute:{
+name:"super_saver_shipping_excluded",
+type:"boolean",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"false",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"33787376",
+recordId:"1",
+normalizedItemId:"2312526891",
+sourceId:"101",
+item:{
+sourceId:"101",
+merchantId:"1",
+productType:"ABIS_VIDEO_GAMES",
+itemPackage:{
+contents:{
+numberOfItems:"0",
+},
+handling:{
+conveyability:"Noncon",
+},
+packageType:{
+'id':"3",
+},
+dimensions:{
+length:"17.68000030517578",
+width:"14.920000076293945",
+height:"14.609999656677246",
+unit:"IN",
+},
+weight:{
+value:"31.0",
+unit:"LB",
+},
+},
+externalId:{
+'id':"711719800002",
+type:"upc",
+},
+productGroup:{
+type:"gl_product_group_type",
+group:"gl_software",
+},
+},
+},
+contribution:{
+feedId:"1191465083",
+recordId:"44",
+normalizedItemId:"2693107881",
+sourceId:"26",
+item:{
+sourceId:"26",
+merchantId:"13",
+productType:"ABIS_VIDEO_GAMES",
+physical:{
+productIdentification:{
+harmonizedCode:"0000.00.0000",
+},
+container:{
+isShippableInOriginalContainer:"false",
+},
+services:{
+giftWrap:"true",
+},
+},
+manufacturer:{
+manufacturerName:"Sony Computer Entertainment",
+},
+marketable:{
+marketplace:"7",
+display:{
+detailPage:{
+launchDate:"2006-10-17 00:{00:{01",
+},
+displayAttributeGroup:{
+name:"video_games_display_on_website",
+},
+displayOnWebsiteGroup:{
+name:"video_games_display_on_website",
+},
+},
+availability:{
+defaultAvailability:"PublisherOutOfStock",
+},
+glProductGroup:{
+name:"gl_video_games",
+},
+handlingGroup:{
+name:"video_games_handling",
+},
+},
+itemPackage:{
+contents:{
+numberOfItems:"1",
+},
+packageType:{
+'id':"1",
+level:"Item",
+},
+dimensions:{
+length:"43.69",
+width:"34.8",
+height:"17.78",
+unit:"CM",
+},
+weight:{
+value:"7.1",
+unit:"KG",
+},
+},
+externalId:{
+'id':"711719800002",
+type:"catalog_number",
+},
+externalId:{
+'id':"410000233948",
+type:"upc",
+},
+externalId:{
+'id':"B0009VXAM0",
+type:"asin",
+},
+externalId:{
+'id':"7-11719-80000-2",
+type:"catalog_number",
+},
+externalId:{
+'id':"B0009VXAM0",
+type:"catalog_number",
+},
+externalId:{
+'id':"0410000233948",
+type:"ean",
+},
+externalId:{
+'id':"10451235",
+type:"target_catalog_id",
+},
+externalId:{
+'id':"207-23-0001",
+type:"target_dpci",
+},
+externalId:{
+'id':"711719800002",
+type:"target_uid",
+},
+externalId:{
+'id':"711719800002",
+type:"upc",
+},
+productGroup:{
+type:"display_attribute",
+group:"video_games_display_on_website",
+isCurrent:"true",
+},
+productGroup:{
+type:"display_on_website",
+group:"video_games_display_on_website",
+isCurrent:"true",
+},
+productGroup:{
+type:"gl_product_group_type",
+group:"gl_video_games",
+isCurrent:"true",
+},
+productGroup:{
+type:"handling_group",
+group:"video_games_handling",
+isCurrent:"true",
+},
+productGroup:{
+type:"replenishment_strategy",
+group:"replen_standard",
+isCurrent:"true",
+},
+attribute:{
+name:"matching_catalog_number",
+type:"string",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"711719800002",
+},
+},
+attribute:{
+name:"binding",
+type:"enumerated",
+unitType:"other",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"game_video",
+},
+},
+attribute:{
+name:"case_pack_quantity",
+type:"number",
+unitType:"other",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"1",
+},
+},
+attribute:{
+name:"is_sold_in_stores",
+type:"boolean",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"true",
+},
+},
+attribute:{
+name:"item_pack_is_conveyable",
+type:"boolean",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"true",
+},
+},
+attribute:{
+name:"item_package_quantity",
+type:"number",
+unitType:"other",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"1",
+},
+},
+attribute:{
+name:"platform",
+type:"enumerated",
+unitType:"other",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"sony_playstation3",
+},
+},
+attribute:{
+name:"product_tier_id",
+type:"string",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"N",
+},
+},
+attribute:{
+name:"authorized_sellers",
+type:"enumerated",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_CA",
+attributeValue:"none",
+},
+},
+attribute:{
+name:"fulfill_readiness_cond",
+type:"enumerated",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_CA",
+attributeValue:"drop_ship_ready",
+},
+},
+attribute:{
+name:"inner_pack_is_conveyable",
+type:"boolean",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_CA",
+attributeValue:"false",
+},
+},
+attribute:{
+name:"is_base_product",
+type:"boolean",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_CA",
+attributeValue:"true",
+},
+},
+attribute:{
+name:"item_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_CA",
+attributeValue:"Sony PlayStation 3 (60GB)",
+},
+},
+attribute:{
+name:"manufacturer",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_CA",
+attributeValue:"Sony Computer Entertainment",
+},
+},
+attribute:{
+name:"master_pack_is_conveyable",
+type:"boolean",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_CA",
+attributeValue:"false",
+},
+},
+attribute:{
+name:"hack_merchant_id",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_CA",
+attributeValue:"13",
+},
+},
+attribute:{
+name:"product_category",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_CA",
+attributeValue:"6302700",
+},
+},
+attribute:{
+name:"product_subcategory",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_CA",
+attributeValue:"6302755",
+},
+},
+attribute:{
+name:"publisher_code",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_CA",
+attributeValue:"SONZ9",
+},
+},
+attribute:{
+name:"requires_fulfillment_center_prep",
+type:"boolean",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_CA",
+attributeValue:"false",
+},
+},
+attribute:{
+name:"sdp_disable_new",
+type:"boolean",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_CA",
+attributeValue:"true",
+},
+},
+attribute:{
+name:"sdp_disable_refurbished",
+type:"boolean",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_CA",
+attributeValue:"true",
+},
+},
+attribute:{
+name:"sdp_disabled",
+type:"boolean",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_CA",
+attributeValue:"true",
+},
+},
+attribute:{
+name:"source_country_code",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_CA",
+attributeValue:"CA",
+},
+},
+attribute:{
+name:"super_saver_shipping_excluded",
+type:"boolean",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_CA",
+attributeValue:"false",
+},
+},
+attribute:{
+name:"toys_r_us_category",
+type:"number",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_CA",
+attributeValue:"99",
+},
+},
+attribute:{
+name:"toys_r_us_subcategory",
+type:"number",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_CA",
+attributeValue:"9999",
+},
+},
+attribute:{
+name:"website_shipping_weight",
+type:"number",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_CA",
+attributeValue:"15.65",
+unitValue:"LB",
+},
+},
+offering:{
+offerListing:{
+marketplace:"7",
+websiteBuyability:{
+code:"os_buyable",
+},
+replenishment:{
+strategy:"replen_standard",
+category:"Basic",
+},
+availability:{
+defaultAvailability:"PublisherOutOfStock",
+},
+offeringServices:{
+giftWrap:"true",
+},
+},
+attribute:{
+name:"ordering_channel",
+type:"string",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"video_games_ordering_channel",
+},
+},
+attribute:{
+name:"availability",
+type:"enumerated",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_CA",
+attributeValue:"publisher_out_of_stock",
+},
+},
+attribute:{
+name:"can_be_giftwrapped",
+type:"boolean",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_CA",
+attributeValue:"true",
+},
+},
+attribute:{
+name:"sales",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_CA",
+attributeValue:"160010639|0|0|0",
+},
+},
+attribute:{
+name:"super_saver_shipping_excluded",
+type:"boolean",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_CA",
+attributeValue:"false",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"25565474",
+recordId:"1",
+normalizedItemId:"2617629231",
+sourceId:"106",
+item:{
+'id':"B0009VXAM0",
+merchantId:"13",
+productType:"ABIS_VIDEO_GAMES",
+externalId:{
+'id':"711719800002",
+type:"upc",
+},
+},
+},
+contribution:{
+feedId:"35278157",
+recordId:"1",
+normalizedItemId:"2731002891",
+sourceId:"1239460",
+item:{
+sourceId:"1239460",
+merchantSku:"PS360GB",
+merchantId:"798628441",
+productType:"ABIS_VIDEO_GAMES",
+marketable:{
+marketplace:"1",
+display:{
+detailPage:{
+launchDate:"2001-10-02 00:{01:{00",
+},
+},
+},
+offering:{
+offering_sku:"PS360GB",
+offerListing:{
+marketplace:"1",
+effectiveDate:"2006-11-20 07:{00:{00",
+},
+attribute:{
+name:"offering_condition_note",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"SHIPS FULLY INSURED VIA UPS. FAST  100% SAFE AND SECURE SHOPPING!",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"35512476",
+recordId:"1",
+normalizedItemId:"3381276141",
+sourceId:"4838510",
+item:{
+sourceId:"4838510",
+merchantSku:"1193478021-1166934956199",
+merchantId:"1193478021",
+productType:"VIDEO_GAME_ACCESSORIES",
+manufacturer:{
+modelNumber:"Playstation 3",
+},
+marketable:{
+marketplace:"1",
+},
+externalId:{
+'id':"711719800002",
+type:"upc",
+},
+attribute:{
+name:"item_package_quantity",
+type:"string",
+unitType:"other",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"1",
+},
+},
+attribute:{
+name:"manufacturer",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony Computer Entertainment",
+},
+},
+attribute:{
+name:"item_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Playstation 3",
+},
+},
+attribute:{
+name:"item_type_keyword",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"computer-game-hardware",
+},
+},
+attribute:{
+name:"hardware_platform",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Playstation 3",
+},
+},
+attribute:{
+name:"brand_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony Playstation",
+},
+},
+},
+},
+contribution:{
+feedId:"31562933",
+recordId:"1",
+normalizedItemId:"3141851781",
+sourceId:"3612660",
+item:{
+sourceId:"3612660",
+merchantSku:"Japanese PS3",
+merchantId:"1242490981",
+productType:"ABIS_VIDEO_GAMES",
+marketable:{
+marketplace:"1",
+},
+offering:{
+offering_sku:"Japanese PS3",
+offerListing:{
+marketplace:"1",
+},
+attribute:{
+name:"offering_condition_note",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Japanese PS3!!! NTSC Plays US PS3 Games and Blu-Ray Brand NEW Best Price Online NO RETURNS for this ITEM",
+unitValue:"",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"35251827",
+recordId:"1",
+normalizedItemId:"3376249011",
+sourceId:"4765360",
+item:{
+sourceId:"4765360",
+merchantSku:"1336939681-1166556810033",
+merchantId:"1336939681",
+productType:"ABIS_VIDEO_GAMES",
+marketable:{
+marketplace:"1",
+},
+offering:{
+offering_sku:"1336939681-1166556810033",
+offerListing:{
+marketplace:"1",
+effectiveDate:"2006-12-19 07:{00:{00",
+},
+attribute:{
+name:"offering_condition_note",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Brand new  I ship fast from CA via Fedex 2nd Day  if overnight  please email me  its my goal to do everything in my power to ensure this is in your hands for the holidays.",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"35043779",
+recordId:"1",
+normalizedItemId:"2366493951",
+sourceId:"2134250",
+item:{
+sourceId:"2134250",
+merchantSku:"45347",
+merchantId:"932759291",
+productType:"ABIS_VIDEO_GAMES",
+marketable:{
+marketplace:"1",
+},
+offering:{
+offering_sku:"45347",
+offerListing:{
+marketplace:"1",
+},
+attribute:{
+name:"offering_condition_note",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Brand new in factory sealed box. In stock and ready to ship!",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"35218288",
+recordId:"1",
+normalizedItemId:"2357624691",
+sourceId:"2770250",
+item:{
+sourceId:"2770250",
+merchantSku:"SONYPLAYSTATION3-60GB",
+merchantId:"1102676411",
+productType:"ABIS_VIDEO_GAMES",
+marketable:{
+marketplace:"1",
+display:{
+detailPage:{
+launchDate:"2006-05-02 00:{00:{00",
+},
+},
+vendorTaxCode:{
+taxCode:"A_GEN_TAX",
+},
+},
+},
+},
+contribution:{
+feedId:"1183647103",
+recordId:"6276",
+normalizedItemId:"2336083311",
+sourceId:"2770280",
+item:{
+sourceId:"2770280",
+merchantSku:"SONYPLAYSTATION3-60GB",
+merchantId:"1102676411",
+productType:"CONSUMER_ELECTRONICS",
+explicitDeletion:"true",
+marketable:{
+marketplace:"1",
+display:{
+detailPage:{
+launchDate:"2006-05-02 00:{00:{00",
+},
+},
+vendorTaxCode:{
+taxCode:"A_GEN_TAX",
+},
+},
+externalId:{
+'id':"410000233948",
+type:"upc",
+},
+attribute:{
+name:"matching_part_number",
+type:"string",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"PS398000",
+},
+},
+attribute:{
+name:"part_number",
+type:"string",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"PS398000",
+},
+},
+attribute:{
+name:"item_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony PlayStation3 60GB HDD - PS398000",
+},
+},
+attribute:{
+name:"brand_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony",
+},
+},
+attribute:{
+name:"website_shipping_weight",
+type:"number",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"2.10",
+unitValue:"LB",
+},
+},
+attribute:{
+name:"manufacturer",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony",
+},
+},
+attribute:{
+name:"generic_keywords",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"GAMING",
+attributeValue:"Gaming Hardware",
+attributeValue:"PS398000",
+},
+},
+attribute:{
+name:"item_type_keyword",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"computer-game-hardware",
+},
+},
+attribute:{
+name:"target_audience_keywords",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"unisex-adult",
+attributeValue:"teens",
+attributeValue:"men",
+},
+},
+offering:{
+offering_sku:"SONYPLAYSTATION3-60GB",
+offerListing:{
+marketplace:"1",
+offeringServices:{
+giftWrap:"true",
+giftMessage:"true",
+},
+},
+attribute:{
+name:"display_item_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony PlayStation3 60GB HDD - PS398000",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"34976749",
+recordId:"1",
+normalizedItemId:"2276179941",
+sourceId:"2954470",
+item:{
+sourceId:"2954470",
+merchantSku:"PS3_60GB_Sys",
+merchantId:"1165931791",
+productType:"ABIS_VIDEO_GAMES",
+marketable:{
+marketplace:"1",
+},
+offering:{
+offering_sku:"PS3_60GB_Sys",
+offerListing:{
+marketplace:"1",
+},
+attribute:{
+name:"offering_condition_note",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"EXPRESS OVERNIGHT AVAILABLE - IN STOCK SHIPS IMMEDIATELY  FROM AMAZONS HIGHEST RANKED PS3 SELLER - XMAS GUARANTEED",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"32169403",
+recordId:"1",
+normalizedItemId:"2279054031",
+sourceId:"3046350",
+item:{
+sourceId:"3046350",
+merchantSku:"PS3",
+merchantId:"1205219531",
+productType:"ABIS_VIDEO_GAMES",
+marketable:{
+marketplace:"1",
+},
+},
+},
+contribution:{
+feedId:"1154241823",
+recordId:"10",
+normalizedItemId:"2273604381",
+sourceId:"3046380",
+item:{
+sourceId:"3046380",
+merchantSku:"PS3",
+merchantId:"1205219531",
+productType:"CONSUMER_ELECTRONICS",
+marketable:{
+marketplace:"1",
+display:{
+detailPage:{
+launchDate:"2006-11-27 12:{59:{04",
+},
+},
+},
+externalId:{
+'id':"410000233948",
+type:"upc",
+},
+attribute:{
+name:"matching_part_number",
+type:"string",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"SONY",
+},
+},
+attribute:{
+name:"part_number",
+type:"string",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"Sony",
+},
+},
+attribute:{
+name:"item_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony Playstation 3 PS3 - 60GB Premium Video Game System",
+},
+},
+attribute:{
+name:"brand_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony",
+},
+},
+attribute:{
+name:"product_description",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony PS3 - PS3 is the most advanced computer system that serves as a platform to ",
+attributeValue:"enjoy next generation computer entertainment contents in the home  realized through the combination ",
+attributeValue:"of Cell and RSX processors  in addition to the playability of a vast catalog of PlayStation and ",
+attributeValue:"PlayStation 2 software titles. Having Giga-bit Ethernet and a pre-installed hard disk drive (HDD) ",
+attributeValue:"as standard in PS3  users will be able to download a variety of contents as well as access on-line ",
+attributeValue:"games and services over the network. Equipped with basic input/output ports  PS3 supports a broad ",
+attributeValue:"range of displays from conventional NTSC/PAL standard TVs to the latest full HD (1080i/1080p) flat ",
+attributeValue:"panel displays  offering the joy of the most advanced computer entertainment contents to homes ",
+attributeValue:"around the world. For use in living rooms  maximum heat and noise reduction has been achieved with ",
+attributeValue:"a noise level equivalent to that of the current slim-line PlayStation 2. With the overwhelming ",
+attributeValue:"computational power of the Cell processor  PS3 is capable of playing back content from Blu-ray (BD) ",
+attributeValue:"disc at a bit rate of multiplex 48Mbps with ease  the maximum bit rate defined in BD standards. The ",
+attributeValue:"new controller for PS3 has been created by refining and improving the world's most popular ",
+attributeValue:"PlayStation controller which has shipped more than several hundred million units worldwide. The ",
+attributeValue:"controller for PS3 employs a high-precision  highly sensitive six-axis sensing system that is ",
+attributeValue:"capable of processing all parameters within the controller itself  thereby eliminating the need for ",
+attributeValue:"any additional settings on the display system. By applying this technology  it will become possible ",
+attributeValue:"to freely control the PS3 system over the network. Controllers - Wireless Bluetooth (up to seven) ",
+attributeValue:"We currently have 1 unit on hand  sealed in box with receipt and full warranty. Originally meant as ",
+attributeValue:"a gift for owner's family member. In the rush to secure 1 on launch day  we not only paid a VERY ",
+attributeValue:"premium re-sell price  but we ended up with 2 un",
+},
+},
+attribute:{
+name:"bullet_point",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"60GB Playstation 3",
+attributeValue:"CPU - Cell Broadband Engine",
+attributeValue:"GPU - RSX",
+attributeValue:"Memory - 256MB XDR Main Ram  256MB GDDR3 VRAM",
+attributeValue:"Hard drive - 2.5\" Serial ATA (60GB)",
+},
+},
+attribute:{
+name:"website_shipping_weight",
+type:"number",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"560.00",
+unitValue:"OZ",
+},
+},
+attribute:{
+name:"manufacturer",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony",
+},
+},
+attribute:{
+name:"item_type_keyword",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"florist-products-gift-packages",
+},
+},
+offering:{
+offering_sku:"PS3",
+offerListing:{
+marketplace:"1",
+effectiveDate:"2006-11-27 12:{59:{04",
+},
+attribute:{
+name:"display_item_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony Playstation 3 PS3 - 60GB Premium Video Game System",
+},
+},
+attribute:{
+name:"product_description",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony PS3 - PS3 is the most advanced computer system that serves as a platform to ",
+attributeValue:"enjoy next generation computer entertainment contents in the home  realized through the combination ",
+attributeValue:"of Cell and RSX processors  in addition to the playability of a vast catalog of PlayStation and ",
+attributeValue:"PlayStation 2 software titles. Having Giga-bit Ethernet and a pre-installed hard disk drive (HDD) ",
+attributeValue:"as standard in PS3  users will be able to download a variety of contents as well as access on-line ",
+attributeValue:"games and services over the network. Equipped with basic input/output ports  PS3 supports a broad ",
+attributeValue:"range of displays from conventional NTSC/PAL standard TVs to the latest full HD (1080i/1080p) flat ",
+attributeValue:"panel displays  offering the joy of the most advanced computer entertainment contents to homes ",
+attributeValue:"around the world. For use in living rooms  maximum heat and noise reduction has been achieved with ",
+attributeValue:"a noise level equivalent to that of the current slim-line PlayStation 2. With the overwhelming ",
+attributeValue:"computational power of the Cell processor  PS3 is capable of playing back content from Blu-ray (BD) ",
+attributeValue:"disc at a bit rate of multiplex 48Mbps with ease  the maximum bit rate defined in BD standards. The ",
+attributeValue:"new controller for PS3 has been created by refining and improving the world's most popular ",
+attributeValue:"PlayStation controller which has shipped more than several hundred million units worldwide. The ",
+attributeValue:"controller for PS3 employs a high-precision  highly sensitive six-axis sensing system that is ",
+attributeValue:"capable of processing all parameters within the controller itself  thereby eliminating the need for ",
+attributeValue:"any additional settings on the display system. By applying this technology  it will become possible ",
+attributeValue:"to freely control the PS3 system over the network. Controllers - Wireless Bluetooth (up to seven) ",
+attributeValue:"We currently have 1 unit on hand  sealed in box with receipt and full warranty. Originally meant as ",
+attributeValue:"a gift for owner's family member. In the rush to secure 1 on launch day  we not only paid a VERY ",
+attributeValue:"premium re-sell price  but we ended up with 2 un",
+},
+},
+attribute:{
+name:"bullet_point",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"60GB Playstation 3",
+attributeValue:"CPU - Cell Broadband Engine",
+attributeValue:"GPU - RSX",
+attributeValue:"Memory - 256MB XDR Main Ram  256MB GDDR3 VRAM",
+attributeValue:"Hard drive - 2.5\" Serial ATA (60GB)",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"31029098",
+recordId:"1",
+normalizedItemId:"2261903151",
+sourceId:"3514360",
+item:{
+sourceId:"3514360",
+merchantSku:"snps3",
+merchantId:"1229035411",
+productType:"VIDEO_GAME_HARDWARE",
+marketable:{
+marketplace:"1",
+},
+externalId:{
+'id':"711719800002",
+type:"upc",
+},
+attribute:{
+name:"manufacturer",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony",
+},
+},
+attribute:{
+name:"item_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Playstation 3 Console",
+},
+},
+attribute:{
+name:"item_type_keyword",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"console-video-game-hardware",
+},
+},
+attribute:{
+name:"hardware_platform",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"PlayStation",
+},
+},
+},
+},
+contribution:{
+feedId:"34370114",
+recordId:"1",
+normalizedItemId:"2359129941",
+sourceId:"3529380",
+item:{
+sourceId:"3529380",
+merchantSku:"1234682711-1166024956803",
+merchantId:"1234682711",
+productType:"ABIS_VIDEO_GAMES",
+marketable:{
+marketplace:"1",
+},
+offering:{
+offering_sku:"1234682711-1166024956803",
+offerListing:{
+marketplace:"1",
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"35291120",
+recordId:"1",
+normalizedItemId:"2415963321",
+sourceId:"3790050",
+item:{
+sourceId:"3790050",
+merchantSku:"S-PS3",
+merchantId:"1283908791",
+productType:"ABIS_VIDEO_GAMES",
+physical:{
+dimensions:{
+length:"12.8",
+width:"10.79",
+height:"3.86",
+unit:"IN",
+},
+weight:{
+value:"11.0",
+unit:"LB",
+},
+},
+marketable:{
+marketplace:"1",
+display:{
+detailPage:{
+launchDate:"2004-04-26 07:{00:{00",
+},
+},
+},
+externalId:{
+'id':"410000233948",
+type:"upc",
+},
+offering:{
+offering_sku:"S-PS3",
+offerListing:{
+marketplace:"1",
+},
+attribute:{
+name:"offering_condition_note",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"RARE. Get it before X'MAS!!! Next day air will be used for EXPEDITED shipment option",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"34939509",
+recordId:"1",
+normalizedItemId:"2670233571",
+sourceId:"829530",
+item:{
+sourceId:"829530",
+merchantSku:"PS3",
+merchantId:"1125130460",
+productType:"ABIS_VIDEO_GAMES",
+marketable:{
+marketplace:"1",
+display:{
+detailPage:{
+launchDate:"2005-01-09 00:{01:{00",
+},
+},
+vendorTaxCode:{
+taxCode:"A_GEN_NOTAX",
+},
+},
+offering:{
+offering_sku:"PS3",
+offerListing:{
+marketplace:"1",
+effectiveDate:"2006-12-03 07:{00:{00",
+},
+attribute:{
+name:"offering_condition_note",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"In STOCK!",
+unitValue:"",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"35582199",
+recordId:"1",
+normalizedItemId:"2999498121",
+sourceId:"895520",
+item:{
+sourceId:"895520",
+merchantSku:"PS3-60GB",
+merchantId:"1152749260",
+productType:"ABIS_VIDEO_GAMES",
+marketable:{
+marketplace:"1",
+display:{
+detailPage:{
+launchDate:"2004-06-23 00:{01:{00",
+},
+},
+},
+offering:{
+offering_sku:"PS3-60GB",
+offerListing:{
+marketplace:"1",
+offeringServices:{
+giftWrap:"true",
+giftMessage:"true",
+},
+},
+attribute:{
+name:"offering_condition_note",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"*Amazon Trusted Featured Merchant* BRAND NEW SEALED - Will Ship it within 24 hours with UPS and insurance.",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"35896460",
+recordId:"1",
+normalizedItemId:"3019462821",
+sourceId:"895520",
+item:{
+sourceId:"895520",
+merchantSku:"PS3-60GB-Ground",
+merchantId:"1152749260",
+productType:"ABIS_VIDEO_GAMES",
+marketable:{
+marketplace:"1",
+display:{
+detailPage:{
+launchDate:"2004-06-23 00:{01:{00",
+},
+},
+},
+offering:{
+offering_sku:"PS3-60GB-Ground",
+offerListing:{
+marketplace:"1",
+offeringServices:{
+giftWrap:"true",
+giftMessage:"true",
+},
+},
+attribute:{
+name:"offering_condition_note",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"*Amazon Trusted Featured Merchant* BRAND NEW - IN STOCK - BUY SAFE! Shipment is Fully insured.",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"35896462",
+recordId:"1",
+normalizedItemId:"3019173021",
+sourceId:"895520",
+item:{
+sourceId:"895520",
+merchantSku:"PS3-60GB-Local",
+merchantId:"1152749260",
+productType:"ABIS_VIDEO_GAMES",
+marketable:{
+marketplace:"1",
+display:{
+detailPage:{
+launchDate:"2004-06-23 00:{01:{00",
+},
+},
+},
+offering:{
+offering_sku:"PS3-60GB-Local",
+offerListing:{
+marketplace:"1",
+offeringServices:{
+giftWrap:"true",
+giftMessage:"true",
+},
+},
+attribute:{
+name:"offering_condition_note",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"*Amazon Trusted Featured Merchant* BRAND NEW - IN STOCK NOW - BUY SAFE! Shipment is Fully insured. Local pick-up available in Twin City  MN.",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"35896461",
+recordId:"1",
+normalizedItemId:"3019167261",
+sourceId:"895520",
+item:{
+sourceId:"895520",
+merchantSku:"PS3-J",
+merchantId:"1152749260",
+productType:"ABIS_VIDEO_GAMES",
+marketable:{
+marketplace:"1",
+display:{
+detailPage:{
+launchDate:"2004-06-23 00:{01:{00",
+},
+},
+},
+offering:{
+offering_sku:"PS3-J",
+offerListing:{
+marketplace:"1",
+offeringServices:{
+giftWrap:"true",
+giftMessage:"true",
+},
+},
+attribute:{
+name:"offering_condition_note",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Brand New In Stock! Shipment is Fully insured. *Amazon Trusted Featured Merchant*",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"33824672",
+recordId:"1",
+normalizedItemId:"2920847511",
+sourceId:"902340",
+item:{
+sourceId:"902340",
+merchantSku:"PS3",
+merchantId:"1155371580",
+productType:"ABIS_VIDEO_GAMES",
+marketable:{
+marketplace:"1",
+display:{
+detailPage:{
+launchDate:"2004-04-27 00:{01:{00",
+},
+},
+},
+externalId:{
+'id':"410000233948",
+type:"upc",
+},
+attribute:{
+name:"website_shipping_weight",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"5",
+unitValue:"LB",
+},
+},
+offering:{
+offering_sku:"PS3",
+offerListing:{
+marketplace:"1",
+},
+attribute:{
+name:"offering_condition_note",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Brand new in sealed box. FedEx fast shipping. Sorry due to limited supply and high demand. No returns available on this product. Mfg. warranty applies.",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"1168486553",
+recordId:"12517",
+normalizedItemId:"2801540181",
+sourceId:"929790",
+item:{
+sourceId:"929790",
+merchantSku:"DNH-98000",
+merchantId:"1169064880",
+productType:"CONSUMER_ELECTRONICS",
+physical:{
+fulfillmentRequirements:{
+serialNumberScan:"false",
+},
+weight:{
+value:"2.0",
+unit:"LB",
+},
+},
+marketable:{
+marketplace:"1",
+msrp:{
+price:{
+amount:"1283.25",
+currency:"USD",
+},
+},
+display:{
+detailPage:{
+launchDate:"2004-07-07 00:{01:{00",
+},
+},
+vendorTaxCode:{
+taxCode:"A_GEN_TAX",
+},
+},
+externalId:{
+'id':"711719800002",
+type:"upc",
+},
+attribute:{
+name:"matching_part_number",
+type:"string",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"98000",
+},
+},
+attribute:{
+name:"part_number",
+type:"string",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"98000",
+},
+},
+attribute:{
+name:"is_memorabilia",
+type:"boolean",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"false",
+},
+},
+attribute:{
+name:"is_autographed",
+type:"boolean",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"false",
+},
+},
+attribute:{
+name:"item_package_quantity",
+type:"number",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"1",
+},
+},
+attribute:{
+name:"item_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"SONY PLAYSTATION PLAYSTATION 3 CONSOLE 60GB (98000)",
+},
+},
+attribute:{
+name:"brand_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony",
+},
+},
+attribute:{
+name:"product_description",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony PS3 - PS3 is the most advanced computer system that serves as a platform to ",
+attributeValue:"enjoy next generation computer entertainment contents in the home  realized through the combination ",
+attributeValue:"of Cell and RSX processors  in addition to the playability of a vast catalog of PlayStation and ",
+attributeValue:"PlayStation 2 software titles. Having Giga-bit Ethernet and a pre-installed hard disk drive (HDD) ",
+attributeValue:"as standard in PS3  users will be able to download a variety of contents as well as access on-line ",
+attributeValue:"games and services over the network. Equipped with basic input/output ports  PS3 supports a broad ",
+attributeValue:"range of displays from conventional NTSC/PAL standard TVs to the latest full HD (1080i/1080p) flat ",
+attributeValue:"panel displays  offering the joy of the most advanced computer entertainment contents to homes ",
+attributeValue:"around the world. For use in living rooms  maximum heat and noise reduction has been achieved with ",
+attributeValue:"a noise level equivalent to that of the current slim-line PlayStation 2. With the overwhelming ",
+attributeValue:"computational power of the Cell processor  PS3 is capable of playing back content from Blu-ray (BD) ",
+attributeValue:"disc at a bit rate of multiplex 48Mbps with ease  the maximum bit rate defined in BD standards. The ",
+attributeValue:"new controller for PS3 has been created by refining and improving the world's most popular ",
+attributeValue:"PlayStation controller which has shipped more than several hundred million units worldwide. The ",
+attributeValue:"controller for PS3 employs a high-precision  highly sensitive six-axis sensing system that is ",
+attributeValue:"capable of processing all parameters within the controller itself  thereby eliminating the need for ",
+attributeValue:"any additional settings on the display system. By applying this technology  it will become possible ",
+attributeValue:"to freely control the PS3 system over the network. Controllers - Wireless Bluetooth (up to seven) ",
+attributeValue:"We currently have 1 unit on hand  sealed in box with receipt and full warranty. Originally meant as ",
+attributeValue:"a gift for owner's family member. In the rush to secure 1 on launch day  we not only paid a VERY ",
+attributeValue:"premium re-sell price  but we ended up with 2 un",
+},
+},
+attribute:{
+name:"manufacturer",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"SONY PLAYSTATION",
+},
+},
+attribute:{
+name:"item_type_keyword",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"audio-video-accessories-and-parts",
+},
+},
+attribute:{
+name:"target_audience_keywords",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"consumer-audience",
+},
+},
+attribute:{
+name:"thesaurus_subject_keywords",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"vehicles",
+},
+},
+offering:{
+offering_sku:"DNH-98000",
+offerListing:{
+marketplace:"1",
+effectiveDate:"2002-07-08 20:{00:{00",
+offeringServices:{
+giftWrap:"false",
+giftMessage:"false",
+},
+},
+attribute:{
+name:"display_item_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"SONY PLAYSTATION PLAYSTATION 3 CONSOLE 60GB (98000)",
+},
+},
+attribute:{
+name:"product_description",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony PS3 - PS3 is the most advanced computer system that serves as a platform to ",
+attributeValue:"enjoy next generation computer entertainment contents in the home  realized through the combination ",
+attributeValue:"of Cell and RSX processors  in addition to the playability of a vast catalog of PlayStation and ",
+attributeValue:"PlayStation 2 software titles. Having Giga-bit Ethernet and a pre-installed hard disk drive (HDD) ",
+attributeValue:"as standard in PS3  users will be able to download a variety of contents as well as access on-line ",
+attributeValue:"games and services over the network. Equipped with basic input/output ports  PS3 supports a broad ",
+attributeValue:"range of displays from conventional NTSC/PAL standard TVs to the latest full HD (1080i/1080p) flat ",
+attributeValue:"panel displays  offering the joy of the most advanced computer entertainment contents to homes ",
+attributeValue:"around the world. For use in living rooms  maximum heat and noise reduction has been achieved with ",
+attributeValue:"a noise level equivalent to that of the current slim-line PlayStation 2. With the overwhelming ",
+attributeValue:"computational power of the Cell processor  PS3 is capable of playing back content from Blu-ray (BD) ",
+attributeValue:"disc at a bit rate of multiplex 48Mbps with ease  the maximum bit rate defined in BD standards. The ",
+attributeValue:"new controller for PS3 has been created by refining and improving the world's most popular ",
+attributeValue:"PlayStation controller which has shipped more than several hundred million units worldwide. The ",
+attributeValue:"controller for PS3 employs a high-precision  highly sensitive six-axis sensing system that is ",
+attributeValue:"capable of processing all parameters within the controller itself  thereby eliminating the need for ",
+attributeValue:"any additional settings on the display system. By applying this technology  it will become possible ",
+attributeValue:"to freely control the PS3 system over the network. Controllers - Wireless Bluetooth (up to seven) ",
+attributeValue:"We currently have 1 unit on hand  sealed in box with receipt and full warranty. Originally meant as ",
+attributeValue:"a gift for owner's family member. In the rush to secure 1 on launch day  we not only paid a VERY ",
+attributeValue:"premium re-sell price  but we ended up with 2 un",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"35394744",
+recordId:"1",
+normalizedItemId:"3018434691",
+sourceId:"1293750",
+item:{
+sourceId:"1293750",
+merchantSku:"ps3",
+merchantId:"1287846760",
+productType:"ABIS_VIDEO_GAMES",
+marketable:{
+marketplace:"1",
+display:{
+detailPage:{
+launchDate:"2001-10-02 00:{01:{00",
+},
+},
+},
+offering:{
+offering_sku:"ps3",
+offerListing:{
+marketplace:"1",
+},
+attribute:{
+name:"offering_condition_note",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"98000",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"35307159",
+recordId:"1",
+normalizedItemId:"3017003121",
+sourceId:"1669000",
+item:{
+sourceId:"1669000",
+merchantSku:"1523742600-1166627677392",
+merchantId:"1523742600",
+productType:"ABIS_VIDEO_GAMES",
+marketable:{
+marketplace:"1",
+},
+offering:{
+offering_sku:"1523742600-1166627677392",
+offerListing:{
+marketplace:"1",
+},
+attribute:{
+name:"offering_condition_note",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Brand New  Factory Sealed. Include Original Receipt. EXPEDITED shipment For only $8.50 Special Offer!!",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"34789296",
+recordId:"1",
+normalizedItemId:"2997663501",
+sourceId:"1686320",
+item:{
+sourceId:"1686320",
+merchantSku:"1540647820-1166275657665",
+merchantId:"1540647820",
+productType:"ABIS_VIDEO_GAMES",
+marketable:{
+marketplace:"1",
+},
+offering:{
+offering_sku:"1540647820-1166275657665",
+offerListing:{
+marketplace:"1",
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"1160078593",
+recordId:"4907",
+normalizedItemId:"2802468111",
+sourceId:"1792900",
+item:{
+sourceId:"1792900",
+merchantSku:"DH98000",
+merchantId:"1612577600",
+productType:"CONSUMER_ELECTRONICS",
+marketable:{
+marketplace:"1",
+},
+externalId:{
+'id':"711719800002",
+type:"upc",
+},
+attribute:{
+name:"matching_part_number",
+type:"string",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"98000",
+},
+},
+attribute:{
+name:"part_number",
+type:"string",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"98000",
+},
+},
+attribute:{
+name:"item_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"PlayStation 3 Console 60GB",
+},
+},
+attribute:{
+name:"brand_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony",
+},
+},
+attribute:{
+name:"product_description",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"PlayStation 3 Console 60GB",
+},
+},
+attribute:{
+name:"website_shipping_weight",
+type:"number",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"15.00",
+unitValue:"LB",
+},
+},
+attribute:{
+name:"manufacturer",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony PlayStation",
+},
+},
+attribute:{
+name:"generic_keywords",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"98000",
+attributeValue:"98000",
+attributeValue:"Sony PlayStation",
+},
+},
+attribute:{
+name:"item_type_keyword",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"office-electronics",
+},
+},
+offering:{
+offering_sku:"DH98000",
+offerListing:{
+marketplace:"1",
+},
+attribute:{
+name:"display_item_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"PlayStation 3 Console 60GB",
+},
+},
+attribute:{
+name:"product_description",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"PlayStation 3 Console 60GB",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"34739582",
+recordId:"1",
+normalizedItemId:"2973159951",
+sourceId:"2188770",
+item:{
+sourceId:"2188770",
+merchantSku:"1731215500-1166055460088",
+merchantId:"1731215500",
+productType:"ABIS_VIDEO_GAMES",
+marketable:{
+marketplace:"1",
+},
+offering:{
+offering_sku:"1731215500-1166055460088",
+offerListing:{
+marketplace:"1",
+},
+attribute:{
+name:"offering_condition_note",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Brand New. In Stock and Ready to Ship. Free Shipping upgrade with standard shipping.",
+unitValue:"",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"1151014143",
+recordId:"22078",
+normalizedItemId:"2685577521",
+sourceId:"3839110",
+item:{
+sourceId:"3839110",
+merchantSku:"DH98000",
+merchantId:"2059038800",
+productType:"CONSUMER_ELECTRONICS",
+physical:{
+fulfillmentRequirements:{
+serialNumberScan:"false",
+},
+weight:{
+value:"2.0",
+unit:"LB",
+},
+},
+marketable:{
+marketplace:"1",
+msrp:{
+price:{
+amount:"1225.81",
+currency:"USD",
+},
+},
+display:{
+detailPage:{
+launchDate:"2006-08-09 21:{00:{00",
+},
+},
+},
+externalId:{
+'id':"711719800002",
+type:"upc",
+},
+attribute:{
+name:"matching_part_number",
+type:"string",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"98000",
+},
+},
+attribute:{
+name:"part_number",
+type:"string",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"98000",
+},
+},
+attribute:{
+name:"is_memorabilia",
+type:"boolean",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"false",
+},
+},
+attribute:{
+name:"is_autographed",
+type:"boolean",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"false",
+},
+},
+attribute:{
+name:"item_package_quantity",
+type:"number",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"1",
+},
+},
+attribute:{
+name:"item_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"SONY PLAYSTATION PLAYSTATION 3 CONSOLE 60GB (98000)",
+},
+},
+attribute:{
+name:"brand_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony",
+},
+},
+attribute:{
+name:"product_description",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony PS3 - PS3 is the most advanced computer system that serves as a platform to ",
+attributeValue:"enjoy next generation computer entertainment contents in the home  realized through the combination ",
+attributeValue:"of Cell and RSX processors  in addition to the playability of a vast catalog of PlayStation and ",
+attributeValue:"PlayStation 2 software titles. Having Giga-bit Ethernet and a pre-installed hard disk drive (HDD) ",
+attributeValue:"as standard in PS3  users will be able to download a variety of contents as well as access on-line ",
+attributeValue:"games and services over the network. Equipped with basic input/output ports  PS3 supports a broad ",
+attributeValue:"range of displays from conventional NTSC/PAL standard TVs to the latest full HD (1080i/1080p) flat ",
+attributeValue:"panel displays  offering the joy of the most advanced computer entertainment contents to homes ",
+attributeValue:"around the world. For use in living rooms  maximum heat and noise reduction has been achieved with ",
+attributeValue:"a noise level equivalent to that of the current slim-line PlayStation 2. With the overwhelming ",
+attributeValue:"computational power of the Cell processor  PS3 is capable of playing back content from Blu-ray (BD) ",
+attributeValue:"disc at a bit rate of multiplex 48Mbps with ease  the maximum bit rate defined in BD standards. The ",
+attributeValue:"new controller for PS3 has been created by refining and improving the world's most popular ",
+attributeValue:"PlayStation controller which has shipped more than several hundred million units worldwide. The ",
+attributeValue:"controller for PS3 employs a high-precision  highly sensitive six-axis sensing system that is ",
+attributeValue:"capable of processing all parameters within the controller itself  thereby eliminating the need for ",
+attributeValue:"any additional settings on the display system. By applying this technology  it will become possible ",
+attributeValue:"to freely control the PS3 system over the network. Controllers - Wireless Bluetooth (up to seven) ",
+attributeValue:"We currently have 1 unit on hand  sealed in box with receipt and full warranty. Originally meant as ",
+attributeValue:"a gift for owner's family member. In the rush to secure 1 on launch day  we not only paid a VERY ",
+attributeValue:"premium re-sell price  but we ended up with 2 un",
+},
+},
+attribute:{
+name:"manufacturer",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"SONY PLAYSTATION",
+},
+},
+attribute:{
+name:"item_type_keyword",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"audio-video-accessories-and-parts",
+},
+},
+attribute:{
+name:"target_audience_keywords",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"consumer-audience",
+},
+},
+offering:{
+offering_sku:"DH98000",
+offerListing:{
+marketplace:"1",
+effectiveDate:"2006-08-09 21:{00:{00",
+offeringServices:{
+giftWrap:"false",
+giftMessage:"false",
+},
+},
+attribute:{
+name:"display_item_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"SONY PLAYSTATION PLAYSTATION 3 CONSOLE 60GB (98000)",
+},
+},
+attribute:{
+name:"product_description",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony PS3 - PS3 is the most advanced computer system that serves as a platform to ",
+attributeValue:"enjoy next generation computer entertainment contents in the home  realized through the combination ",
+attributeValue:"of Cell and RSX processors  in addition to the playability of a vast catalog of PlayStation and ",
+attributeValue:"PlayStation 2 software titles. Having Giga-bit Ethernet and a pre-installed hard disk drive (HDD) ",
+attributeValue:"as standard in PS3  users will be able to download a variety of contents as well as access on-line ",
+attributeValue:"games and services over the network. Equipped with basic input/output ports  PS3 supports a broad ",
+attributeValue:"range of displays from conventional NTSC/PAL standard TVs to the latest full HD (1080i/1080p) flat ",
+attributeValue:"panel displays  offering the joy of the most advanced computer entertainment contents to homes ",
+attributeValue:"around the world. For use in living rooms  maximum heat and noise reduction has been achieved with ",
+attributeValue:"a noise level equivalent to that of the current slim-line PlayStation 2. With the overwhelming ",
+attributeValue:"computational power of the Cell processor  PS3 is capable of playing back content from Blu-ray (BD) ",
+attributeValue:"disc at a bit rate of multiplex 48Mbps with ease  the maximum bit rate defined in BD standards. The ",
+attributeValue:"new controller for PS3 has been created by refining and improving the world's most popular ",
+attributeValue:"PlayStation controller which has shipped more than several hundred million units worldwide. The ",
+attributeValue:"controller for PS3 employs a high-precision  highly sensitive six-axis sensing system that is ",
+attributeValue:"capable of processing all parameters within the controller itself  thereby eliminating the need for ",
+attributeValue:"any additional settings on the display system. By applying this technology  it will become possible ",
+attributeValue:"to freely control the PS3 system over the network. Controllers - Wireless Bluetooth (up to seven) ",
+attributeValue:"We currently have 1 unit on hand  sealed in box with receipt and full warranty. Originally meant as ",
+attributeValue:"a gift for owner's family member. In the rush to secure 1 on launch day  we not only paid a VERY ",
+attributeValue:"premium re-sell price  but we ended up with 2 un",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"34909827",
+recordId:"1",
+normalizedItemId:"2999609841",
+sourceId:"3966170",
+item:{
+sourceId:"3966170",
+merchantSku:"sonps360",
+merchantId:"2079751800",
+productType:"ABIS_VIDEO_GAMES",
+marketable:{
+marketplace:"1",
+},
+offering:{
+offering_sku:"sonps360",
+offerListing:{
+marketplace:"1",
+},
+attribute:{
+name:"offering_condition_note",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Brand New Sealed Full USA Warranty!",
+unitValue:"",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"1156726963",
+recordId:"554",
+normalizedItemId:"2666539581",
+sourceId:"1844710",
+item:{
+sourceId:"1844710",
+merchantSku:"10451235",
+merchantId:"6",
+productType:"CONSOLE_VIDEO_GAMES",
+classification:"BASE_PRODUCT",
+physical:{
+customerAssembly:{
+isRequired:"false",
+},
+structure:{
+isSolidSided:"false",
+},
+sensitivity:{
+heat:"false",
+},
+services:{
+giftWrap:"true",
+},
+},
+manufacturer:{
+currency:"USD TODO fix this empty struct thing!",
+},
+marketable:{
+marketplace:"2",
+msrp:{
+price:{
+amount:"599.99",
+currency:"USD",
+},
+},
+release:{
+streetDate:"2006-11-17 00:{00:{00",
+},
+display:{
+detailPage:{
+launchDate:"2006-11-17 00:{00:{00",
+discontinueDate:"2006-11-21 00:{00:{00",
+},
+},
+vendorTaxCode:{
+taxCode:"G",
+},
+},
+itemPackage:{
+contents:{
+numberOfItems:"1",
+},
+packageType:{
+'id':"1",
+level:"Item",
+},
+dimensions:{
+length:"17.17",
+width:"13.75",
+height:"7.05",
+unit:"IN",
+},
+weight:{
+value:"15.0",
+unit:"LB",
+},
+},
+externalId:{
+'id':"711719800002",
+type:"upc",
+},
+externalId:{
+'id':"10451235",
+type:"target_catalog_id",
+},
+externalId:{
+'id':"207-23-0001",
+type:"target_dpci",
+},
+externalId:{
+'id':"711719800002",
+type:"target_uid",
+},
+attribute:{
+name:"item_pack_is_conveyable",
+type:"boolean",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"false",
+},
+},
+attribute:{
+name:"are_batteries_included",
+type:"boolean",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"false",
+},
+},
+attribute:{
+name:"batteries_required",
+type:"string",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"false",
+},
+},
+attribute:{
+name:"case_pack_quantity",
+type:"number",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"2",
+},
+},
+attribute:{
+name:"customer_return_method",
+type:"enumerated",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"mail",
+attributeValue:"store",
+},
+},
+attribute:{
+name:"customer_return_policy",
+type:"enumerated",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"standard",
+},
+},
+attribute:{
+name:"is_assortment",
+type:"string",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"false",
+},
+},
+attribute:{
+name:"item_display_weight",
+type:"number",
+unitType:"other",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"15.0",
+unitValue:"pounds",
+},
+},
+attribute:{
+name:"item_package_quantity",
+type:"number",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"1",
+},
+},
+attribute:{
+name:"quick_search_id",
+type:"string",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"10451235",
+},
+},
+attribute:{
+name:"brand_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony",
+},
+},
+attribute:{
+name:"item_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"PlayStation 3 Computer Entertainment System with 60GB Hard Drive",
+},
+},
+attribute:{
+name:"distinctive_title",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"PlayStation 3 Computer Entertainment System with 60GB Hard Drive",
+},
+},
+attribute:{
+name:"manufacturer",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony Computer Entertainment",
+},
+},
+attribute:{
+name:"target_item_status",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"A",
+},
+},
+attribute:{
+name:"target_product_subcategory",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"PS3 Hardware",
+},
+},
+attribute:{
+name:"target_product_subcategory_code",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"23",
+},
+},
+attribute:{
+name:"target_product_category",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Video Games",
+},
+},
+attribute:{
+name:"target_product_category_code",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"143",
+},
+},
+attribute:{
+name:"primary_fulfill_location",
+type:"enumerated",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"target_fulfilled",
+},
+},
+attribute:{
+name:"fulfill_readiness_cond",
+type:"enumerated",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"drop_ship_ready",
+},
+},
+attribute:{
+name:"hardware_platform",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"default",
+},
+},
+attribute:{
+name:"po_box_shipping_excluded",
+type:"boolean",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"true",
+},
+},
+attribute:{
+name:"requires_fulfillment_center_prep",
+type:"boolean",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"false",
+},
+},
+attribute:{
+name:"website_shipping_weight",
+type:"number",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"15.0",
+unitValue:"LB",
+},
+},
+attribute:{
+name:"target_price_type",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"R",
+},
+},
+attribute:{
+name:"subject_keywords",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"ps3  sony ps3  play-station 3  playstation III  98000  ps3 station  ps3 console",
+},
+},
+attribute:{
+name:"bullet_point",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Gaming Platform&#58} PlayStation 3",
+attributeValue:"Package Includes Wireless Controller  PlayStation 3",
+attributeValue:"Features&#58} System Interoperability  Cell Broadband Engine&#153} Multimedia Capabilities  Built-In Blu-Ray Disc&#153} Player  60GB Removable Hard Disk Drive  High-Definition Multimedia Interface  Backwards Compatibility",
+attributeValue:"Dimensions- 17.17x13.75x7.05 } Weight- 15.0",
+},
+},
+offering:{
+offering_sku:"10451235",
+offerListing:{
+marketplace:"2",
+effectiveDate:"2006-11-17 00:{00:{00",
+expirationDate:"2006-11-21 00:{00:{00",
+fixedShippingCharge:{
+price:{
+amount:"7.99",
+currency:"USD",
+},
+},
+websiteBuyability:{
+code:"os_vendor_buyable",
+},
+availability:{
+defaultAvailability:"InInventory",
+},
+countryOfOrigin:{
+label:"CN",
+},
+promotion:{
+tag:"sale",
+effectiveDate:"2006-11-12 00:{00:{00",
+expirationDate:"2006-11-17 00:{00:{00",
+},
+shippingPromotion:{
+freeShipping:"false",
+},
+originalPackaging:{
+isUsedForShipping:"false",
+},
+offeringServices:{
+giftWrap:"true",
+giftMessage:"true",
+},
+maxOrderingQuantity:{
+quantity:"98",
+},
+},
+offerListing:{
+marketplace:"1",
+countryOfOrigin:{
+label:"CN",
+},
+offeringServices:{
+giftMessage:"true",
+},
+},
+attribute:{
+name:"shipping_group",
+type:"string",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"video_games",
+},
+},
+attribute:{
+name:"purchasing_channel",
+type:"string",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"in_store",
+},
+},
+attribute:{
+name:"is_customizable",
+type:"boolean",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"false",
+},
+},
+attribute:{
+name:"display_item_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"PlayStation 3 Computer Entertainment System with 60GB Hard Drive",
+},
+},
+attribute:{
+name:"sales",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"24481",
+},
+},
+attribute:{
+name:"super_saver_shipping_excluded",
+type:"boolean",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"false",
+},
+},
+attribute:{
+name:"bullet_point",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Gaming Platform&#58} PlayStation 3",
+attributeValue:"Package Includes Wireless Controller  PlayStation 3",
+attributeValue:"Features&#58} System Interoperability  Cell Broadband Engine&#153} Multimedia Capabilities  Built-In Blu-Ray Disc&#153} Player  60GB Removable Hard Disk Drive  High-Definition Multimedia Interface  Backwards Compatibility",
+attributeValue:"Dimensions- 17.17x13.75x7.05 } Weight- 15.0",
+},
+},
+attribute:{
+name:"target_bullet_point",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Gaming Platform&#58} PlayStation 3",
+attributeValue:"Package Includes Wireless Controller  PlayStation 3",
+attributeValue:"Features&#58} System Interoperability  Cell Broadband Engine&#153} Multimedia Capabilities  Built-In Blu-Ray Disc&#153} Player  60GB Removable Hard Disk Drive  High-Definition Multimedia Interface  Backwards Compatibility",
+attributeValue:"Dimensions- 17.17x13.75x7.05 } Weight- 15.0",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+localizedContributorList:{
+localizedContributorListByLanguage:{
+languageCode:"en_US",
+},
+},
+},
+contribution:{
+feedId:"34914690",
+recordId:"1",
+normalizedItemId:"3018073821",
+sourceId:"4555900",
+item:{
+sourceId:"4555900",
+merchantSku:"60GBPS3NEW",
+merchantId:"137258586",
+productType:"ABIS_VIDEO_GAMES",
+marketable:{
+marketplace:"1",
+},
+offering:{
+offering_sku:"60GBPS3NEW",
+offerListing:{
+marketplace:"1",
+},
+attribute:{
+name:"offering_condition_note",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"~SUPER FAST EXPEDITED SHIPPING ~ BRAND NEW 60GB ~FACTORY SEALED ~USA Version ~PLEASE READ SHIPPING INFO- Fast Expedited Shipping is available. We only ship this item to continental 48 USA via UPS. UPS delivers to physical address only. (No PO box) Orders received Sunday Dec 17th will ship Monday Dec 18th. We ship from NC. Expedited shipping to USA 48 States will use UPS 2 or 3 Day delivery! YES we can deliver before Xmas!",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"34095994",
+recordId:"1",
+normalizedItemId:"2982447651",
+sourceId:"4644440",
+item:{
+sourceId:"4644440",
+merchantSku:"PS3-60GB",
+merchantId:"156691226",
+productType:"ABIS_VIDEO_GAMES",
+marketable:{
+marketplace:"1",
+},
+offering:{
+offering_sku:"PS3-60GB",
+offerListing:{
+marketplace:"1",
+effectiveDate:"2006-12-01 07:{00:{00",
+},
+attribute:{
+name:"offering_condition_note",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"SHIPS SAME DAY IF ORDERED BEFORE 3PM",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"35808546",
+recordId:"1",
+normalizedItemId:"3003013221",
+sourceId:"1270640",
+item:{
+sourceId:"1270640",
+merchantSku:"PS3-60",
+merchantId:"1007058250",
+productType:"ABIS_VIDEO_GAMES",
+marketable:{
+marketplace:"1",
+display:{
+detailPage:{
+launchDate:"2001-10-02 00:{01:{00",
+},
+},
+},
+offering:{
+offering_sku:"PS3-60",
+offerListing:{
+marketplace:"1",
+},
+attribute:{
+name:"offering_condition_note",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Certified Amazon Merchant.....BRAND NEW Shipment Just Arrived !.....Ships fast and fully insured !",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"35164397",
+recordId:"1",
+normalizedItemId:"3009882111",
+sourceId:"568400",
+item:{
+sourceId:"568400",
+merchantSku:"PS3-60",
+merchantId:"1021733890",
+productType:"ABIS_VIDEO_GAMES",
+marketable:{
+marketplace:"1",
+display:{
+detailPage:{
+launchDate:"2005-04-04 00:{00:{00",
+},
+},
+vendorTaxCode:{
+taxCode:"A_GEN_NOTAX",
+},
+},
+offering:{
+offering_sku:"PS3-60",
+offerListing:{
+marketplace:"1",
+},
+attribute:{
+name:"offering_condition_note",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"SAME DAY SHIPPING- FACTORY SEALED GAME",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"33803806",
+recordId:"1",
+normalizedItemId:"3002495271",
+sourceId:"2489720",
+item:{
+sourceId:"2489720",
+merchantSku:"1156994150-1165644285995",
+merchantId:"1156994150",
+productType:"VIDEO_GAME_ACCESSORIES",
+manufacturer:{
+modelNumber:"98000",
+},
+marketable:{
+marketplace:"1",
+},
+externalId:{
+'id':"711719800002",
+type:"upc",
+},
+attribute:{
+name:"item_package_quantity",
+type:"string",
+unitType:"other",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"1",
+},
+},
+attribute:{
+name:"manufacturer",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony Computer Entertainment",
+},
+},
+attribute:{
+name:"item_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Playstation 3 60 Gb System with Talladeg Nights",
+},
+},
+attribute:{
+name:"item_type_keyword",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"computer-game-hardware",
+},
+},
+attribute:{
+name:"hardware_platform",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Playstation 3",
+},
+},
+attribute:{
+name:"brand_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony",
+},
+},
+},
+},
+contribution:{
+feedId:"32069395",
+recordId:"1",
+normalizedItemId:"2902539741",
+sourceId:"1056920",
+item:{
+sourceId:"1056920",
+merchantSku:"PS3a",
+merchantId:"1211288030",
+productType:"ABIS_VIDEO_GAMES",
+display:{
+detailPage:{
+launchDate:"2004-06-29 00:{01:{00",
+},
+},
+},
+externalId:{
+'id':"410000233948",
+type:"upc",
+},
+attribute:{
+name:"website_shipping_weight",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"20",
+unitValue:"LB",
+},
+},
+offering:{
+offering_sku:"PS3a",
+offerListing:{
+marketplace:"1",
+effectiveDate:"2006-11-25 07:{00:{00",
+},
+attribute:{
+name:"offering_condition_note",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Brand New in Sealed Box from Sony",
+unitValue:"",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+contribution:{
+feedId:"35294518",
+recordId:"1",
+normalizedItemId:"2967598911",
+sourceId:"1155900",
+item:{
+sourceId:"1155900",
+merchantSku:"PS3-60gb",
+merchantId:"1242622350",
+productType:"ABIS_VIDEO_GAMES",
+marketable:{
+marketplace:"1",
+},
+offering:{
+offering_sku:"PS3-60gb",
+offerListing:{
+marketplace:"1",
+},
+attribute:{
+name:"offering_condition_note",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Brand New in box. USA 60gb Ships UPS ground insured for free from CA. Includes Talladega Nights- The Ballad of Ricky Bobby Blue Ray movie. 2nd day air expedited available. Will ship within 24 hours  order before 3pm pacific time and will ship same day.",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"36069882",
+recordId:"1",
+normalizedItemId:"2983972431",
+sourceId:"1729600",
+item:{
+sourceId:"1729600",
+merchantSku:"1560080170-1165138549804",
+merchantId:"1560080170",
+productType:"ABIS_VIDEO_GAMES",
+marketable:{
+marketplace:"1",
+},
+offering:{
+offering_sku:"1560080170-1165138549804",
+offerListing:{
+marketplace:"1",
+},
+attribute:{
+name:"offering_condition_note",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"BRAND NEW FACTORY SEALED (USA VERSION) IN STOCK SHIPS SAME DAY SHIPPING. INSURANCE AND TRACKING NUMBER INCLUDED. NO APO  FPO OR CA ADDRESSES.",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"34679129",
+recordId:"1",
+normalizedItemId:"3010893831",
+sourceId:"2212140",
+item:{
+sourceId:"2212140",
+merchantSku:"PS3- 60GB",
+merchantId:"1740806950",
+productType:"ABIS_VIDEO_GAMES",
+physical:{
+dimensions:{
+length:"12.8",
+width:"10.79",
+height:"3.86",
+unit:"IN",
+},
+weight:{
+value:"11.0",
+unit:"LB",
+},
+},
+marketable:{
+marketplace:"1",
+display:{
+detailPage:{
+launchDate:"2004-04-26 07:{00:{00",
+},
+},
+},
+externalId:{
+'id':"410000233948",
+type:"upc",
+},
+attribute:{
+name:"generic_keywords",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"GAMING",
+attributeValue:"Gaming Hardware",
+attributeValue:"PS398000",
+attributeValue:"Playstaion3 playstation 3 ",
+attributeValue:"ps3 ps2 playstation sony playstation",
+},
+},
+offering:{
+offering_sku:"PS3- 60GB",
+offerListing:{
+marketplace:"1",
+},
+attribute:{
+name:"offering_condition_note",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Brand New! Factory Sealed! US VERSION!!! Sony's warranty!!!! Amazon Featured Merchant. Same day shipping w/ UPS Tracking#. UPS insured. Expedited shipping available.",
+},
+},
+offeringConditionPair:{
+type:"New",
+subtype:"New",
+},
+},
+},
+},
+contribution:{
+feedId:"34708156",
+recordId:"1",
+normalizedItemId:"3016974741",
+sourceId:"2695780",
+item:{
+sourceId:"2695780",
+merchantSku:"1934964410-1166222176185",
+merchantId:"1934964410",
+productType:"VIDEO_GAME_ACCESSORIES",
+manufacturer:{
+modelNumber:"PS3",
+},
+marketable:{
+marketplace:"1",
+},
+externalId:{
+'id':"711719800002",
+type:"upc",
+},
+attribute:{
+name:"item_package_quantity",
+type:"string",
+unitType:"other",
+isLanguageLocalized:"false",
+attributeValueList:{
+attributeValue:"1",
+},
+},
+attribute:{
+name:"manufacturer",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony Computer Entertainment",
+},
+},
+attribute:{
+name:"item_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Playstation 3",
+},
+},
+attribute:{
+name:"item_type_keyword",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"computer-game-earphones",
+},
+},
+attribute:{
+name:"hardware_platform",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"PS3",
+},
+},
+attribute:{
+name:"brand_name",
+type:"string",
+isLanguageLocalized:"true",
+attributeValueList:{
+languageCode:"en_US",
+attributeValue:"Sony Playstation 3",
+},
+},
+},
+},
+}

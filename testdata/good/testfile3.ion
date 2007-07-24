@@ -1,0 +1,9 @@
+$ion_1_0
+Envelope::{
+ Header:{
+  alertcontrol:{priority:1, expires:"6483021034"}
+ },
+ Body:{
+  alert:{msg:"The printer is on fire!"}
+ }
+}

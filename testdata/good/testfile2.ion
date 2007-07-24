@@ -1,0 +1,48 @@
+$ion_1_0
+root::{x:"6483021037", targetNamespace:"x-schema:ado-schema.xml", 
+ xmlns: {
+  namespace:"x-schema:ado-schema.xml" 
+ },
+ xmlns: {
+  prefix:'xs',
+  namespace:"http://www.w3.org/2001/XMLSchema" 
+ },
+ 'schema': {
+  attributeFormDefault:"qualified", 
+  elementFormDefault:"qualified", 
+  element: {
+   name:"data", 
+   complexType: {
+    choice: {
+     maxOccurs:"unbounded", 
+      element: {
+       name:"row", 
+       complexType: [
+        { name:"au_id",  form:"unqualified",  type:"xs:string" },
+        { name:"au_lname",  form:"unqualified",  type:"xs:string" },
+        { name:"au_fname",  form:"unqualified",  type:"xs:string" },
+        { name:"phone",  form:"unqualified" , type:"xs:string" },
+        { name:"address",  form:"unqualified",  type:"xs:string" },
+        { name:"city",  form:"unqualified",  type:"xs:string" },
+        { name:"state",  form:"unqualified",  type:"xs:string" },
+        { name:"zip",  form:"unqualified",  type:"xs:string" },
+        { name:"contract",  form:"unqualified",  type:"xs:string" },
+        { name:"name",  form:"unqualified",  type:"xs:string" },
+        { name:"id" , form:"unqualified",  type:"xs:string" },
+        { name:"uid",  form:"unqualified",  type:"xs:string" },
+        { name:"type" , form:"unqualified" , type:"xs:string" },
+        { name:"userstat" , form:"unqualified",  type:"xs:string" },
+        { name:"sysstat",  form:"unqualified",  type:"xs:string" },
+        { name:"indexdel",  form:"unqualified",  type:"xs:string" },
+        { name:"schema_ver",  form:"unqualified",  type:"xs:string" },
+        { name:"refdate",  form:"unqualified",  type:"xs:string" },
+        { name:"crdate",  form:"unqualified", type:"xs:string" },
+        { name:"version",  form:"unqualified" , type:"xs:string" },
+        { name:"deltrig",  form:"unqualified" , type:"xs:string" },
+        { name:"instrig",  form:"unqualified" , type:"xs:string" },
+        { name:"updtrig",  form:"unqualified" , type:"xs:string" },
+        { name:"seltrig",  form:"unqualified" , type:"xs:string" },
+        { name:"category",  form:"unqualified",  type:"xs:string" },
+        { name:"cache",  form:"unqualified",  type:"xs:string" },
+       ]
+}}}}}}
