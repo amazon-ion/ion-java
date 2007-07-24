@@ -1,0 +1,170 @@
+<?xml version="1.0"?>
+
+<project name="IonJava" basedir="." default="release"
+  xmlns:ht2b="antlib:amazon.ht2.mini.trails.ant"
+  xmlns:ht2="antlib:amazon.ht2.trails.ant">
+
+  <import file="ht2setup.xml"/>
+
+  <target name="build.properties" depends="init:directories,commonTrails">
+    <property name="dir.output"  location="${amazon.ht2.bd.private.output.dir}"/>
+    <property name="dir.src"     location="${basedir}/src"/>
+    <property name="dir.doc"     location="${amazon.ht2.bd.thisPackage.build.dir}/docs"/>
+    <property name="dir.classes" location="${dir.output}/classes"/>
+    <property name="dir.release" location="${amazon.ht2.bd.lib.output.dir}"/>
+
+    <property name="dir.test"         location="${basedir}/test"/>
+<!--<property name="dir.test.src"     location="${dir.test}/src"/> -->
+    <property name="dir.test.src"     location="${dir.test}"/>
+<!--<property name="dir.test.config"  location="${dir.test}/config"/> -->
+    <property name="dir.test.classes" location="${dir.output}/test"/>
+
+    <property name="jar.output.src"  location="${dir.release}/${ant.project.name}.jar"/>
+    <property name="jar.output.test" location="${dir.release}/${ant.project.name}-test.jar"/>
+
+    <property name="dir.output.logs" location="${dir.output}/log"/>
+    <path id="extraJars">
+<!--
+      <fileset dir="lib">
+        <include name="**/*.jar"/>
+      </fileset>
+-->
+    </path>
+  </target>
+
+  <target name="build.dirs" depends="build.properties">
+    <mkdir dir="${dir.doc}" />
+    <mkdir dir="${dir.classes}" />
+    <mkdir dir="${dir.release}" />
+    <mkdir dir="${dir.output}" />
+    <mkdir dir="${dir.test.classes}" />
+    <mkdir dir="${dir.output.logs}" />
+  </target>
+
+
+  <!-- ==================================================================== -->
+
+
+  <target name="build" depends="build.dirs">
+    <javac srcdir="${dir.src}" debug="on"
+           destdir="${dir.classes}"
+           source="1.5" target="1.5">
+      <classpath>
+        <path path="${run.classpath}"/>
+        <path path="${build.classpath}"/>
+        <path refid="extraJars" />
+      </classpath>
+    </javac>
+  </target>
+
+
+  <target name="jars" depends="build">
+    <jar destfile="${jar.output.src}" basedir="${dir.classes}"/>
+<!--
+    <copy todir="${dir.release}">
+      <fileset dir="lib">
+        <include name="**/*.jar"/>
+      </fileset>
+    </copy>
+-->
+  </target>
+
+  <target name="build.test" depends="jars">
+    <javac srcdir="${dir.test.src}"
+           destdir="${dir.test.classes}"
+           source="1.5" target="1.5">
+      <classpath>
+        <path path="${build.classpath}"/>
+        <path path="${test.classpath}"/>
+        <path path="${run.classpath}"/>
+        <pathelement location="${dir.classes}"/>
+      </classpath>
+    </javac>
+  </target>
+
+  <target name="jars.test" depends="build.test">
+    <jar destfile="${jar.output.test}" basedir="${dir.test.classes}"/>
+  </target>
+
+  <target name="test" depends="jars.test">
+    <property name="teardown" value="true"/>
+    <property name="testcaseOverride" value="()"/>
+    <property name="domain" value="test"/>
+    <property name="loglevel" value="DEBUG"/>
+    <property name="suite" value="AllTests"/>
+
+    <junit printsummary="false"
+           haltonfailure="false" haltonerror="false"
+	   failureproperty="test.failure"
+           dir="${basedir}"
+           fork="true"
+           includeantruntime="true">
+      <test name="${suite}" todir="${dir.output.logs}" outfile="TEST" />
+
+      <!-- JUnit task adds the minimum Ant libs to make things work. -->
+      <classpath>
+        <path path="${build.classpath}"/>
+        <path path="${test.classpath}"/>
+        <path path="${run.classpath}"/>
+        <pathelement location="${jar.output.src}"/>
+        <pathelement location="${jar.output.test}"/>
+      </classpath>
+
+      <sysproperty key="java.library.path" value="${java.libraryPath.test}" />
+
+      <assertions enableSystemAssertions="true">
+        <!--
+          This syntax gives no easy way to turn assertions on/off by property
+          -->
+        <enable />
+      </assertions>
+
+      <!-- Log messages to the console. -->
+      <formatter type="plain" usefile="false" />
+
+      <!-- Long logs to file. -->
+      <formatter type="xml" />
+    </junit>
+
+    <fail message="Test(s) failed" if="test.failure" />
+  </target>
+
+
+  <!-- ==================================================================== -->
+
+
+  <target name="javadoc" depends="commonTrails, build.properties">
+    <javadoc destdir="${dir.doc}">
+      <fileset dir="${dir.src}">
+        <include name="**/*.java"/>
+      </fileset>
+      <classpath>
+        <pathelement path="${build.classpath}"/>
+        <pathelement path="${run.classpath}"/>
+      </classpath>
+    </javadoc>
+  </target>
+
+
+  <target name="doc" depends="javadoc">
+    <!-- Also build manuals etc. -->
+  </target>
+
+
+  <!-- ==================================================================== -->
+
+
+  <target name="release" depends="test, doc"
+          description="Build and test all release artifacts.">
+  </target>
+
+
+  <target name="all" depends="release"
+          description="Build everything.">
+  </target>
+
+  <target name="cruise" depends="test"
+          description="Run CruiseControl continuous build">
+  </target>
+
+</project>

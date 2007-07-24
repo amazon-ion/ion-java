@@ -4,8 +4,11 @@
 package.IonJava = {
   interfaces = (1.0);
   flavors = {
-    map = pthread-notux;
+    map = single;
     generation = 1;
+  };
+  deploy = {
+    generic = true;
   };
   scope = framework;
 
@@ -14,29 +17,24 @@ package.IonJava = {
     };
   };
 
+
+  build-tools = {
+    1.0 = {
+      ApacheAnt = 1.7;
+      HappyTrails = 2.0;
+      JDK = 1.5;
+    };
+  };
+
+  test-dependencies = {
+    1.0 = {
+      junit = 1.0;
+    };
+  };
+
   targets = {
-    libHello = {
-      type = clibrary;
-      visibility = external;
-      dependencies = ();
-      modules = {
-	public = (
-		  libhello,
-		  );
-      };
-    };
-
-    HelloApp = {
-      type = capplication;
-      visibility = external;
-      dependencies = (libHello);
-      flavor = DEV.STD.PTHREAD;
-      modules = {
-	private = (
-		   helloapp,
-		   );
-      };
-    };
-
+    IonJava = { type = javalibrary; };
+#    antlr-3.0b6 = { type = javalibrary; };
+#    stringtemplate-3.0 = { type = javalibrary; }; 
   };
 };
