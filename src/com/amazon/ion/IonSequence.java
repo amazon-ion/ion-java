@@ -77,8 +77,8 @@ public interface IonSequence
      * @throws IllegalArgumentException if <code>element</code> is an
      * {@link IonDatagram}.
      */
-    public void addEmbedded(IonValue element)
-        throws NullPointerException;
+//    public void addEmbedded(IonValue element)
+//        throws NullPointerException;
 
 
     /**

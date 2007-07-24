@@ -46,7 +46,7 @@ public interface IonLoader
      *
      * @param ionText must not be null.
      * @return a datagram containing the input values.
-     * @threws NullPointerException if <code>ionText</code> is null.
+     * @throws NullPointerException if <code>ionText</code> is null.
      * @throws IonException if there's a syntax error in the Ion content.
      */
     public IonDatagram load(String ionText)
@@ -58,7 +58,7 @@ public interface IonLoader
      *
      * @param ionText will not be closed by this method.
      * @return a datagram containing all the elements on the input stream.
-     * @threws NullPointerException if <code>ionText</code> is null.
+     * @throws NullPointerException if <code>ionText</code> is null.
      * @throws IonException if there's a syntax error in the Ion content.
      */
     public IonDatagram load(Reader ionText)
@@ -71,7 +71,7 @@ public interface IonLoader
      *
      * @param ionText will not be closed by this method.
      * @return a datagram containing all the elements on the input stream.
-     * @threws NullPointerException if <code>ionText</code> is null.
+     * @throws NullPointerException if <code>ionText</code> is null.
      * @throws IonException if there's a syntax error in the Ion content.
      */
     public IonDatagram load(Reader ionText, LocalSymbolTable symbolTable)
@@ -83,7 +83,7 @@ public interface IonLoader
      *
      * @param ionData may be either Ion binary data, or UTF-encoded Ion text.
      * @return a datagram containing all the elements on the input stream.
-     * @threws NullPointerException if <code>ionData</code> is null.
+     * @throws NullPointerException if <code>ionData</code> is null.
      * @throws IonException if there's a syntax error in the Ion content.
      */
     public IonDatagram load(byte[] ionData);
