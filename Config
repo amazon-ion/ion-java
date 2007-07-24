@@ -18,9 +18,14 @@ package.IonJava = {
   };
 
 
+  caching-behavior = {
+    additional-directories = (brazil-documentation);
+  };
+
   build-tools = {
     1.0 = {
       ApacheAnt = 1.7;
+      BrazilJavadoc = 1.0;
       HappyTrails = 2.0;
       JDK = 1.5;
     };

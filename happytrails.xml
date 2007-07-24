@@ -2,7 +2,7 @@
 <!--
 
   HappyTrails 2.0 Common Build File
-  Last updated:  $DateTime: 2007/07/24 21:25:34 $
+  Last updated:  $DateTime: 2007/07/24 22:29:42 $
 
   ===========================================================================
   SUPPORT NOTE:
@@ -170,7 +170,7 @@
   <ht2:path dependencyType="test"  artifactType="jar"  property="test.classpath"  />
 
   <!-- HappyTrails 2.0 Brazil Unit Testing Task Definition -->
-  <taskdef name="brazilunittest" classname="amazon.devtools.but.BrazilUnitTestTask">
+  <taskdef name="brazilunittest" classname="amazon.devtools.but.BrazilUnitTestTask" onerror="ignore">
     <classpath>
       <path path="${test.classpath}"/>
     </classpath>

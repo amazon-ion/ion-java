@@ -12,7 +12,7 @@ JUNIT_HOME := $(shell /apollo/env/SDETools/bin/bootstrap-cache-package-version $
 
 ANT_LIBPATH := $(JUNIT_HOME)/lib/junit.jar
 ANT_CMD   := $(ANT_HOME)/bin/ant -lib $(ANT_LIBPATH)
-ANT_FLAGS := 
+ANT_FLAGS :=
 
 
 #
