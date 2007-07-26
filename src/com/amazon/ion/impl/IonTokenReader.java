@@ -1101,7 +1101,7 @@ sizedloop:
             }
         }
 
-        if (c == '\"') {
+        if (maxlookahead != -1 && c == '\"') {
                 // this is the normal, non-longline case so we're just done
                 closeString();
             }

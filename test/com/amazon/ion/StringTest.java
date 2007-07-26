@@ -4,6 +4,8 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.system.StandardIonSystem;
+
 
 
 public class StringTest
@@ -210,4 +212,14 @@ public class StringTest
         IonValue value = oneValue("  '''a''' '''b'''  ");
         checkString("ab", value);
     }
+    
+    public void testQuotes() {
+        StandardIonSystem ionSystem = new StandardIonSystem();
+        IonValue v = ionSystem.singleValue("{value:\"KIM 12\\\" X 12\\\"\"}");
+        assert v instanceof IonStruct;
+        IonValue v1 = ((IonStruct)v).get("value");
+        assert v1 instanceof IonString;
+        assertEquals(((IonString)v1).stringValue(), "KIM 12\" X 12\"");
+    }
+
 }
