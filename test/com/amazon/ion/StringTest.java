@@ -4,7 +4,6 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.system.StandardIonSystem;
 
 
 
@@ -213,13 +212,12 @@ public class StringTest
         checkString("ab", value);
     }
     
-    public void testQuotes() {
-        StandardIonSystem ionSystem = new StandardIonSystem();
-        IonValue v = ionSystem.singleValue("{value:\"KIM 12\\\" X 12\\\"\"}");
-        assert v instanceof IonStruct;
-        IonValue v1 = ((IonStruct)v).get("value");
-        assert v1 instanceof IonString;
-        assertEquals(((IonString)v1).stringValue(), "KIM 12\" X 12\"");
+    public void testQuotesOnMediumStringBoundary() 
+    {
+        // Double-quote falls on the boundary.
+        checkString("KIM 12\" X 12\"", oneValue("\"KIM 12\\\" X 12\\\"\""));
+        // Try again with long-string syntax.
+        checkString("KIM 12\" X 12\"", oneValue("'''KIM 12\\\" X 12\\\"'''"));
     }
 
 }

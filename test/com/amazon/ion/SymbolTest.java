@@ -102,4 +102,10 @@ public class SymbolTest
         checkSymbol(symText, value);
         assertEquals(324, value.intValue());
     }
+    
+    public void testQuotesOnMediumStringBoundary() 
+    {
+        // Double-quote falls on the boundary.
+        checkSymbol("KIM 12\" X 12\"", oneValue("'KIM 12\\\" X 12\\\"'"));
+    }
 }
