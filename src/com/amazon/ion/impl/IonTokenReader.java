@@ -103,14 +103,14 @@ public class IonTokenReader
 
         public static class timeinfo {
             // FIXME SimpleDateFormat isn't thread-safe!
-            private static final SimpleDateFormat DATE_PARSER;
-            private static final SimpleDateFormat DATE_TIME_MINS_PARSER;
-            private static final SimpleDateFormat DATE_TIME_SECS_PARSER;
+            private static final SimpleDateFormat xDATE_PARSER;
+            private static final SimpleDateFormat xDATE_TIME_MINS_PARSER;
+            private static final SimpleDateFormat xDATE_TIME_SECS_PARSER;
 
             static {
-                DATE_PARSER           = newFormat("yyyy-MM-dd");
-                DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
-                DATE_TIME_SECS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm:ss");
+                xDATE_PARSER           = newFormat("yyyy-MM-dd");
+                xDATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
+                xDATE_TIME_SECS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm:ss");
             }
 
             private static SimpleDateFormat newFormat(String pattern) {
@@ -169,6 +169,7 @@ public class IonTokenReader
                     int len = s.length();
                     if (len == 10) {
                         // "yyyy-MM-dd");
+ SimpleDateFormat DATE_PARSER = newFormat("yyyy-MM-dd");
                         ti.d = DATE_PARSER.parse(s);
                         ti.localOffset = null;
                     }
@@ -178,6 +179,7 @@ public class IonTokenReader
                             // Not enough characters for seconds and TZD
                             throw new IonException("invalid timestamp: " + s);
                         }
+SimpleDateFormat DATE_TIME_SECS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm:ss");
                         ti.d = DATE_TIME_SECS_PARSER.parse(s.substring(0, 19));
 
                         int tzdOffset = 19;
@@ -216,6 +218,7 @@ public class IonTokenReader
                     }
                     else if (len > 16) {
                         // yyyy-MM-dd'T'HH:mmZ
+SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
                         ti.d = DATE_TIME_MINS_PARSER.parse(s.substring(0, 16));
                         ti.localOffset = parseLocalOffset(s.substring(16));
                     }
@@ -231,7 +234,8 @@ public class IonTokenReader
                 }
                 catch (ParseException pe) {
                     // TODO this message is confusing to user.
-                    throw new IonException("bad date '"+s+"'", pe);
+                    String msg = (pe.getMessage() == null) ? "" : pe.getMessage();
+                    throw new IonException("bad date '"+s+"'"+msg, pe);
                 }
 
                 // Adjust the Java Date instance into UTC
