@@ -101,6 +101,15 @@ public class IonTokenReader
             highNibble = ln;
         }
 
+        /**
+         * jonker: I gotta ask why this class exists at all.  We should store
+         * this stuff directly in IonTimestampImpl as a BigDecimal (time) and
+         * int (offset, -1==unknown) and avoid constructing more objects.
+         * <p>
+         * Also, we probably don't need the DateFormats.  The parser already
+         * matches against a regex, so we should be able to pull the data
+         * straight from the string to compute the value.
+         */
         public static class timeinfo {
             // FIXME SimpleDateFormat isn't thread-safe!
             private static final SimpleDateFormat xDATE_PARSER;

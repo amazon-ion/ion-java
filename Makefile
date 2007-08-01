@@ -46,3 +46,21 @@ test:
 build:
 %:
 	JAVA_HOME=$(JAVA_HOME) $(ANT_CMD) $(ANT_FLAGS) $(BRAZIL_VERSION) $@
+
+
+png_dir := build/brazil-documentation/figures
+figure_names := $(basename $(notdir $(wildcard doc/figures/*.ms)))
+png_names := $(patsubst %,$(png_dir)/%.png,$(figure_names))
+
+figures: $(png_dir) $(png_names)
+
+$(png_dir):
+	mkdir $@
+
+$(png_dir)/%.png: doc/figures/%.ms
+	bin/dformat $< | \
+	    groff -p -P-pletter -Tps | \
+	    gs -q -sDEVICE=ppm -sOutputFile=- -r300x300 - | \
+	    pnmcrop | \
+	    pnmscale 0.33 | \
+	    pnmtopng > $@
