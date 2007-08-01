@@ -8,5 +8,5 @@ style recspread 0
 noname
          --20-dashed \fIlength\fR
 noname
-         --20 \fIrepresentation\fR : UTF-8
+         --20 \fIsymbol ID\fR : UInt
 .end
