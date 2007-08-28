@@ -740,6 +740,8 @@ public abstract class IonValueImpl
      * Decodes the content of this element into Java values for access via
      * this object.  If this is a container, the children are not necessarily
      * materialized.
+     * <p/>
+     * Postcondition: <code>this._hasNativeValue == true </code>
      */
     protected synchronized void materialize() throws IOException
     {
@@ -769,7 +771,11 @@ public abstract class IonValueImpl
         // now materialize the value itself (this is done in the
         // specialized sub classes)
         assert reader.position() == this.pos_getOffsetAtValueTD();
+
+        // TODO doMaterializeValue should precondition !_hasNativeValue and
+        // then set _hasNativeValue here, OnceAndOnlyOnce.
         this.doMaterializeValue(reader);
+        assert _hasNativeValue;
         this._isMaterialized = true;
     }
 
@@ -806,7 +812,14 @@ public abstract class IonValueImpl
         }
     }
 
-    abstract void doMaterializeValue(IonBinary.Reader reader) throws IOException;
+    /**
+     * Postcondition: <code>this._hasNativeValue == true</code>
+     *
+     * @param reader is not <code>null</code>.
+     * @throws IOException
+     */
+    abstract void doMaterializeValue(IonBinary.Reader reader)
+        throws IOException;
 
 
     protected void detachFromBuffer()
@@ -1425,8 +1438,12 @@ public abstract class IonValueImpl
             this.pos_moveAll(offset);
         }
 
-        /** Load all children from binary into our native list
-         * @throws IOException */
+        /**
+         * Load all children from binary into our native list.
+         * <p/>
+         * Postcondition: <code>this._hasNativeValue == true </code>
+         * @throws IOException
+         */
         @Override
         protected void materialize() throws IOException
         {

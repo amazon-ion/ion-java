@@ -47,6 +47,8 @@ public final class IonStringImpl
     
     public String stringValue()
     {
+        if (this.isNullValue()) return null;
+        
         makeReady();
         return _get_value();
     }

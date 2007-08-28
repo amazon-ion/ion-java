@@ -8,7 +8,7 @@ package com.amazon.ion;
  * An Ion <code>symbol</code> value.
  */
 public interface IonSymbol
-    extends IonValue
+    extends IonText
 {
     /**
      * Indicates that a symbol's integer ID could not be determined.  That's
@@ -45,5 +45,6 @@ public interface IonSymbol
      *
      * @throws EmptySymbolException if <code>value</code> is the empty string.
      */
-    public void setValue(String value);
+    public void setValue(String value)
+        throws EmptySymbolException;
 }

@@ -4,6 +4,7 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonText;
 import com.amazon.ion.NullValueException;
 
 /**
@@ -11,9 +12,10 @@ import com.amazon.ion.NullValueException;
  */
 abstract class IonTextImpl
     extends IonValueImpl
+    implements IonText
 {
     private String _text_value;
-    
+
     /**
      * Constructs a binary-backed value.
      */
@@ -22,7 +24,7 @@ abstract class IonTextImpl
          super(typeDesc);
      }
 
-    
+
     public String getValue()
         throws NullValueException
     {
@@ -31,25 +33,25 @@ abstract class IonTextImpl
         return _text_value;
     }
 
-    public void setValue(String value) 
+    public void setValue(String value)
     {
         _text_value = value;
         _hasNativeValue = true;
         setDirty();
     }
-    
-    protected String _get_value() 
+
+    /** Must call {@link #makeReady()} before calling. */
+    protected String _get_value()
     {
-        makeReady();
         return _text_value;
     }
-    
-    protected void _set_value(String value) 
+
+    protected void _set_value(String value)
     {
         _text_value = value;
     }
-    
-    @Override 
+
+    @Override
     public synchronized boolean isNullValue()
     {
         if (!_hasNativeValue) return super.isNullValue();
