@@ -822,6 +822,19 @@ public abstract class IonValueImpl
         throws IOException;
 
 
+    public void deepMaterialize()
+    {
+        try
+        {
+            materialize();
+        }
+        catch (IOException e)
+        {
+            throw new IonException(e);
+        }
+    }
+
+
     protected void detachFromBuffer()
         throws IOException
     {
@@ -1447,6 +1460,8 @@ public abstract class IonValueImpl
         @Override
         protected void materialize() throws IOException
         {
+            // TODO throw IonException not IOException
+
             if (! _hasNativeValue)
             {
                 // First materialization must be from clean state.
@@ -1498,6 +1513,27 @@ public abstract class IonValueImpl
                 child = makeValueFromReader(0, reader, buffer, symtab, this);
                 _contents.add(child);
                 pos = child.pos_getOffsetofNextValue();
+            }
+        }
+
+
+        public void deepMaterialize()
+        {
+            try
+            {
+                materialize();
+            }
+            catch (IOException e)
+            {
+                throw new IonException(e);
+            }
+
+            if (_contents != null)
+            {
+                for (IonValue contained : _contents)
+                {
+                    contained.deepMaterialize();
+                }
             }
         }
 

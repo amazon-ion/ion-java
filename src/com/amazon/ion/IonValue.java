@@ -104,4 +104,11 @@ public interface IonValue
      * <code>null</code>.
      */
     public void accept(ValueVisitor visitor) throws Exception;
+
+
+    /**
+     * Ensures that this value, and all contained data, is fully materialized
+     * into {@link IonValue} instances from any underlying Ion binary buffer.
+     */
+    public void deepMaterialize();
 }
