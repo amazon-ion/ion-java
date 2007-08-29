@@ -113,10 +113,10 @@ public class RoundTripTests
                          text2FromText, text2FromBinary);
 
             assertEquals("encoded size from text vs from binary",
-                         binary2FromText.length, 
+                         binary2FromText.length,
                          binary2FromBinary.length);
-            
-            for (int i = 0; i < binary2FromText.length; i++) 
+
+            for (int i = 0; i < binary2FromText.length; i++)
             {
                 if (binary2FromText[i] != binary2FromBinary[i])
                 {
@@ -143,6 +143,11 @@ public class RoundTripTests
     @Override
     protected Test makeTest(File ionFile)
     {
-        return new RoundTripTest(ionFile);
+        String fileName = ionFile.getName();
+        if (fileName.endsWith(".ion"))
+        {
+            return new RoundTripTest(ionFile);
+        }
+        return null;
     }
 }

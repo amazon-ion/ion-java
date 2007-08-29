@@ -67,6 +67,15 @@ public abstract class IonTestCase
         return loader.loadTextFile(textFile);
     }
 
+    protected IonDatagram readIonBinary(File ionFile)
+        throws Exception
+    {
+        IonLoader loader = system().newLoader();
+        IonDatagram dg = loader.loadBinaryFile(ionFile);
+        dg.deepMaterialize();
+        return dg;
+    }
+
     /**
      * Reads the content of an Ion file contained in the test data suite.
      *

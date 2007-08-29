@@ -5,19 +5,21 @@
 package com.amazon.ion;
 
 import java.io.File;
-
 import junit.framework.TestSuite;
 
 
 public class BadIonTests
     extends DirectoryTestSuite
 {
-    private static class BadIonTextTest
+    private static class BadIonTestCase
         extends FileTestCase
     {
-        public BadIonTextTest(File ionText)
+        private final boolean myFileIsBinary;
+
+        public BadIonTestCase(File ionFile, boolean binary)
         {
-            super(ionText);
+            super(ionFile);
+            myFileIsBinary = binary;
         }
 
         public void runTest()
@@ -25,7 +27,14 @@ public class BadIonTests
         {
             try
             {
-                readIonText(myTestFile);
+                if (myFileIsBinary)
+                {
+                    readIonBinary(myTestFile);
+                }
+                else
+                {
+                    readIonText(myTestFile);
+                }
                 fail("Expected IonException parsing "
                      + myTestFile.getAbsolutePath());
             }
@@ -47,8 +56,17 @@ public class BadIonTests
 
 
     @Override
-    protected BadIonTextTest makeTest(File ionFile)
+    protected BadIonTestCase makeTest(File ionFile)
     {
-        return new BadIonTextTest(ionFile);
+        String fileName = ionFile.getName();
+        if (fileName.endsWith(".ion"))
+        {
+            return new BadIonTestCase(ionFile, false);
+        }
+        else if (fileName.endsWith(".10n"))
+        {
+            return new BadIonTestCase(ionFile, true);
+        }
+        return null;
     }
 }
