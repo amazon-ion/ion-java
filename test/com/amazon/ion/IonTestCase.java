@@ -64,14 +64,14 @@ public abstract class IonTestCase
         throws Exception
     {
         IonLoader loader = system().newLoader();
-        return loader.loadTextFile(textFile);
+        return loader.loadText(textFile);
     }
 
     protected IonDatagram readIonBinary(File ionFile)
         throws Exception
     {
         IonLoader loader = system().newLoader();
-        IonDatagram dg = loader.loadBinaryFile(ionFile);
+        IonDatagram dg = loader.loadBinary(ionFile);
         dg.deepMaterialize();
         return dg;
     }
@@ -142,7 +142,7 @@ public abstract class IonTestCase
         throws Exception
     {
         IonLoader loader = system().newLoader();
-        return loader.load(text);
+        return loader.loadText(text);
     }
 
 
@@ -228,7 +228,7 @@ public abstract class IonTestCase
     // TODO add to IonSystem()?
     public byte[] encode(String ionText)
     {
-        return system().getLoader().load(ionText).toBytes();
+        return system().getLoader().loadText(ionText).toBytes();
     }
 
     public void assertEscape(char expected, char escapedChar)

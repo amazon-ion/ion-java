@@ -161,7 +161,7 @@ public class PrinterTest
         IonLoader loader = system().getLoader();
         
         String text = "a b c";
-        IonDatagram dg = loader.load(text);
+        IonDatagram dg = loader.loadText(text);
         checkRendering(text, dg);
         
 //        text = "$ion_1_0 a + [a,'+']";

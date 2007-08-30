@@ -70,7 +70,7 @@ public class SymbolTableTest
             "  }" +
             "}\n" +
             "null";
-        loader().load(importingText);
+        loader().loadText(importingText);
 
         StaticSymbolTable importedTable =
             system.getCatalog().getTable("imported", 2);
@@ -182,7 +182,7 @@ public class SymbolTableTest
         testLocalTableResetting(scanner);
 
         IonLoader loader = system().newLoader();
-        IonDatagram datagram = loader.load(text);
+        IonDatagram datagram = loader.loadText(text);
 
         testLocalTableResetting(datagram.iterator());
 
@@ -255,7 +255,7 @@ public class SymbolTableTest
         IonReader scanner = system().newReader(text);
         testStaticTable(scanner);
 
-        IonDatagram datagram = loader().load(text);
+        IonDatagram datagram = loader().loadText(text);
         testStaticTable(datagram.iterator());
 
         datagram = loader().load(datagram.toBytes());
@@ -364,7 +364,7 @@ public class SymbolTableTest
             "  imports:[{name:'''imported''',version:1}],\n" +
             "}\n" +
             "null";
-        IonDatagram dg = system().newLoader().load(text);
+        IonDatagram dg = system().newLoader().loadText(text);
 
         LocalSymbolTable symbolTable = dg.get(0).getSymbolTable();
         SymbolTable used = symbolTable.getImportedTable("imported");

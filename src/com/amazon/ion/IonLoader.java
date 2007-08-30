@@ -30,6 +30,23 @@ public interface IonLoader
      */
     public IonSystem getSystem();
 
+
+    /**
+     * Loads an entire file of Ion data into a single datagram,
+     * detecting whether it's text or binary data.
+     *
+     * @param ionFile a file containing Ion data.
+     *
+     * @return a datagram containing all the values in the file.
+     *
+     * @throws IonException if there's a syntax error in the Ion content.
+     * @throws IOException if reading from the specified file results
+     * in an <code>IOException</code>.
+     */
+    public IonDatagramImpl load(File ionFile)
+        throws IonException, IOException;
+
+
     /**
      * Loads an Ion text (UTF-8) file.  The file is parsed in its entirety.
      *
@@ -38,35 +55,40 @@ public interface IonLoader
      * @return a datagram containing the ordered elements of the file.
      * @throws IonException if there's a syntax error in the Ion content.
      * @throws IOException if there's a problem reading the file.
+     *
+     * @deprecated renamed to {@link #loadText(File)}
      */
     public IonDatagram loadTextFile(File ionFile)
         throws IonException, IOException;
 
 
     /**
-     * Loads an Ion binary file.  The file is parsed in its entirety.
+     * Loads an entire file of (UTF-8) Ion text data into a single datagram.
      *
-     * @param ionFile a file containing Ion binary data.
+     * @param ionFile a file containing UTF-8 encoded Ion text.
      *
-     * @return a datagram containing the ordered elements of the file.
+     * @return a datagram containing all the values in the file.
+     *
      * @throws IonException if there's a syntax error in the Ion content.
-     * @throws IOException if there's a problem reading the file.
+     * @throws IOException if reading from the specified file results
+     * in an <code>IOException</code>.
      */
-    public IonDatagramImpl loadBinaryFile(File ionFile)
+    public IonDatagram loadText(File ionFile)
         throws IonException, IOException;
 
 
     /**
-     * Loads an Ion file, detecting whether it's text or binary data.
-     * The file is parsed in its entirety.
+     * Loads an entire file of Ion binary data into a single datagram.
      *
-     * @param ionFile a file containing Ion data.
+     * @param ionFile a file containing Ion binary data.
      *
-     * @return a datagram containing the ordered elements of the file.
+     * @return a datagram containing all the values in the file.
+     *
      * @throws IonException if there's a syntax error in the Ion content.
-     * @throws IOException if there's a problem reading the file.
+     * @throws IOException if reading from the specified file results
+     * in an <code>IOException</code>.
      */
-    public IonDatagramImpl loadFile(File ionFile)
+    public IonDatagramImpl loadBinary(File ionFile)
         throws IonException, IOException;
 
 
@@ -77,43 +99,144 @@ public interface IonLoader
      * @return a datagram containing the input values.
      * @throws NullPointerException if <code>ionText</code> is null.
      * @throws IonException if there's a syntax error in the Ion content.
+     *
+     * @deprecated renamed to {@link #loadText(String)}
      */
     public IonDatagram load(String ionText)
         throws IonException;
 
 
     /**
-     * Loads Ion text in its entirety.
+     * Loads a string of Ion text into a single datagraam.
      *
-     * @param ionText will not be closed by this method.
+     * @param ionText must not be null.
+     * 
+     * @return a datagram containing all the values in the text.
+     * 
+     * @throws NullPointerException if <code>ionText</code> is null.
+     * @throws IonException if there's a syntax error in the Ion content.
+     */
+    public IonDatagram loadText(String ionText)
+        throws IonException;
+
+
+    /**
+     * Loads a stream of Ion text into a single datagram.
+     * <p/>
+     * The specified reader remains open after this method returns.
+     *
+     * @param ionText the reader from which to read Ion text.
      * @return a datagram containing all the elements on the input stream.
      * @throws NullPointerException if <code>ionText</code> is null.
      * @throws IonException if there's a syntax error in the Ion content.
+     *
+     * @deprecated renamed to {@link #loadText(Reader)}
      */
     public IonDatagram load(Reader ionText)
         throws IonException;
 
 
     /**
-     * Loads Ion text in its entirety, starting with a given symbolTable for
-     * encoding symbols.
+     * Loads an entire stream of Ion text data into a single datagram.
+     * <p/>
+     * The specified reader remains open after this method returns.
      *
-     * @param ionText will not be closed by this method.
-     * @return a datagram containing all the elements on the input stream.
+     * @param ionText the reader from which to read Ion text.
+     *
+     * @return a datagram containing all the values on the input stream.
+     *
      * @throws NullPointerException if <code>ionText</code> is null.
      * @throws IonException if there's a syntax error in the Ion content.
+     * @throws IOException if reading from the specified input stream results
+     * in an <code>IOException</code>.
      */
-    public IonDatagram load(Reader ionText, LocalSymbolTable symbolTable)
-        throws IonException;
+    public IonDatagram loadText(Reader ionText)
+        throws IonException, IOException;
+
+
+    /**
+     * Loads an entire stream of Ion text data into a single datagram,
+     * starting with a given symbolTable for encoding symbols.
+     * <p/>
+     * The specified reader remains open after this method returns.
+     *
+     * @param ionText the reader from which to read Ion text.
+     *
+     * @return a datagram containing all the values on the input stream.
+     *
+     * @throws NullPointerException if <code>ionText</code> is null.
+     * @throws IonException if there's a syntax error in the Ion content.
+     * @throws IOException if reading from the specified input stream results
+     * in an <code>IOException</code>.
+     */
+    public IonDatagram loadText(Reader ionText, LocalSymbolTable symbolTable)
+        throws IonException, IOException;
 
 
     /**
      * Loads Ion data in its entirety.
      *
      * @param ionData may be either Ion binary data, or UTF-encoded Ion text.
-     * @return a datagram containing all the elements on the input stream.
+     * 
+     * @return a datagram containing all the values on the input stream.
+     * 
      * @throws NullPointerException if <code>ionData</code> is null.
      * @throws IonException if there's a syntax error in the Ion content.
      */
     public IonDatagram load(byte[] ionData);
+
+
+    /**
+     * Loads an entire stream of Ion data into a single datagram,
+     * detecting whether it's text or binary data.
+     * <p/>
+     * The specified stream remains open after this method returns.
+     *
+     * @param ionData the stream from which to read Ion data.
+     *
+     * @return a datagram containing all the values on the input stream.
+     *
+     * @throws NullPointerException if <code>ionData</code> is null.
+     * @throws IonException if there's a syntax error in the Ion content.
+     * @throws IOException if reading from the specified input stream results
+     * in an <code>IOException</code>.
+     */
+    public IonDatagram load(InputStream ionData)
+        throws IonException, IOException;
+
+
+    /**
+     * Loads an entire stream of (UTF-8) Ion text data into a single datagram.
+     * <p/>
+     * The specified stream remains open after this method returns.
+     *
+     * @param ionText the stream from which to read UTF-8 encoded Ion text.
+     *
+     * @return a datagram containing all the values on the input stream.
+     *
+     * @throws NullPointerException if <code>ionText</code> is null.
+     * @throws IonException if there's a syntax error in the Ion content.
+     * @throws IOException if reading from the specified input stream results
+     * in an <code>IOException</code>.
+     */
+    public IonDatagram loadText(InputStream ionText)
+        throws IOException;
+
+
+    /**
+     * Loads an entire stream of Ion binary data into a single datagram.
+     * <p/>
+     * The specified stream remains open after this method returns.
+     *
+     * @param ionBinary the stream from which to read Ion binary data.
+     *
+     * @return a datagram containing all the values on the input stream.
+     *
+     * @throws NullPointerException if <code>ionBinary</code> is null.
+     * @throws IonException if there's a syntax error in the Ion content.
+     * @throws IOException if reading from the specified input stream results
+     * in an <code>IOException</code>.
+     */
+    public IonDatagramImpl loadBinary(InputStream ionBinary)
+        throws IOException;
 }

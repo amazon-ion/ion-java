@@ -30,7 +30,7 @@ public class SimpleCatalogTest
             "    $2:'''no'''," +
             "  }" +
             "}";
-        loader().load(t1Text);
+        loader().loadText(t1Text);
 
         StaticSymbolTable t1 = cat.getTable("T", 1);
         assertEquals("no", t1.findKnownSymbol(2));
@@ -48,7 +48,7 @@ public class SimpleCatalogTest
             "    $3:'''maybe'''," +
             "  }" +
             "}";
-        loader().load(t2Text);
+        loader().loadText(t2Text);
 
         StaticSymbolTable t2 = cat.getTable("T", 2);
         assertEquals(3, t2.findSymbol("maybe"));

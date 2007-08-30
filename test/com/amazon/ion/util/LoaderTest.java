@@ -43,7 +43,7 @@ public class LoaderTest
         throws IOException
     {
         File text = getTestdataFile(filename);
-        return myLoader.loadTextFile(text);
+        return myLoader.loadText(text);
     }
 
 
@@ -56,7 +56,7 @@ public class LoaderTest
      */
     public IonValue loadOneValue(String text)
     {
-        IonDatagram dg = myLoader.load(text);
+        IonDatagram dg = myLoader.loadText(text);
 
         if (dg.size() == 0)
         {
@@ -224,7 +224,7 @@ public class LoaderTest
         String image = "(this is a single sexp)";
         IonValue v1 =  sys.singleValue(image);
 
-        IonDatagram dg = sys.newLoader().load(image);
+        IonDatagram dg = sys.newLoader().loadText(image);
         assert  v1.toString().equals( dg.get(0).toString() );
 
         byte[] bytes = dg.toBytes();
