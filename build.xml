@@ -99,7 +99,7 @@
 
     <junit printsummary="false"
            haltonfailure="false" haltonerror="false"
-	   failureproperty="test.failure"
+           failureproperty="test.failure"
            dir="${basedir}"
            fork="true"
            includeantruntime="true">
@@ -115,6 +115,8 @@
       </classpath>
 
       <sysproperty key="java.library.path" value="${java.libraryPath.test}" />
+      <sysproperty key="com.amazon.iontests.iontestdata.path"
+                   value="${brazil.package.IonTests-1.0.base.dir}/iontestdata"/>
 
       <assertions enableSystemAssertions="true">
         <!--
@@ -141,7 +143,7 @@
     <javadoc>
       <fileset dir="${dir.src}">
         <include name="**/*.java"/>
-	<exclude name="com/amazon/ion/impl/**" />
+        <exclude name="com/amazon/ion/impl/**" />
       </fileset>
       <classpath>
         <pathelement path="${build.classpath}"/>

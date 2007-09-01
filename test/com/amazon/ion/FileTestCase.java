@@ -19,10 +19,10 @@ public abstract class FileTestCase
 
     public FileTestCase(File testFile)
     {
+        super(testFile.getName());
         myTestFile = testFile;
-
-        setName(testFile.getName());
     }
+
 
     /**
      * Subclasses should override this to implement the test case.

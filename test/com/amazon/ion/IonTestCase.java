@@ -8,8 +8,11 @@ import com.amazon.ion.system.StandardIonSystem;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Properties;
 import junit.framework.TestCase;
 
 /**
@@ -18,24 +21,86 @@ import junit.framework.TestCase;
 public abstract class IonTestCase
     extends TestCase
 {
+    private static boolean ourSystemPropertiesLoaded = false;
     protected StandardIonSystem mySystem;
     protected IonLoader myLoader;
+
+
+    public IonTestCase()
+    {
+    }
+
+    public IonTestCase(String name)
+    {
+        super(name);
+    }
 
 
     // ========================================================================
     // Access to test data
 
+    public static synchronized void loadSystemProperties()
+    {
+        if (! ourSystemPropertiesLoaded)
+        {
+            InputStream stream =
+                IonTestCase.class.getResourceAsStream("/system.properties");
+
+            if (stream != null)
+            {
+                Properties props = new Properties();
+
+                try
+                {
+                    props.load(stream);
+
+                    Iterator entries = props.entrySet().iterator();
+                    while (entries.hasNext())
+                    {
+                        Map.Entry entry = (Map.Entry) entries.next();
+
+                        String key = (String) entry.getKey();
+
+                        // Command-line values override system.properties
+                        if (System.getProperty(key) == null)
+                        {
+                            System.setProperty(key, (String) entry.getValue());
+                        }
+                    }
+                }
+                catch (IOException e)
+                {
+                    synchronized (System.out)
+                    {
+                        System.out.println("Caught exception while loading system.properties:");
+                        e.printStackTrace(System.out);
+                    }
+                }
+            }
+
+            ourSystemPropertiesLoaded = true;
+        }
+    }
+    
+
+    public static String requireSystemProperty(String prop)
+    {
+        loadSystemProperties();
+        
+        String value = System.getProperty(prop);
+        if (value == null)
+        {
+            String message = "Missing required system property: " + prop;
+            throw new IllegalStateException(message);
+        }
+        return value;
+    }
+    
+    
+    
     public static File getProjectHome()
     {
-        String basedir = System.getProperty("trellis.basedir");
-        if (basedir == null)
-        {
-            // The expected property is not set, meaning we're not running from
-            // within Trellis Antfiles.  So assume that the working directory
-            // is the project home.  This is a rather shaky assumption.
-            basedir = System.getProperty("user.dir");
-        }
-
+        String basedir = System.getProperty("user.dir");
         return new File(basedir);
     }
 
@@ -43,13 +108,15 @@ public abstract class IonTestCase
     {
         return new File(getProjectHome(), path);
     }
-
+    
     /**
      * Gets a {@link File} relative to the <code>testdata</code> tree.
      */
     public static File getTestdataFile(String path)
     {
-        File testDataDir = getProjectFile("testdata");
+        String testDataPath = 
+            requireSystemProperty("com.amazon.iontests.iontestdata.path");
+        File testDataDir = new File(testDataPath);        
         return new File(testDataDir, path);
     }
 
