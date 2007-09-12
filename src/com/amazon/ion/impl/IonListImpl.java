@@ -14,32 +14,41 @@ public final class IonListImpl
     extends IonValueImpl.list
     implements IonList
 {
-    
-    static final int _list_typeDesc = 
-        IonConstants.makeTypeDescriptorByte(
-                    IonConstants.tidPosInt
-                   ,IonConstants.lnIsNullContainer
-       );
+    private static final int NULL_LIST_TYPEDESC =
+        IonConstants.makeTypeDescriptorByte(IonConstants.tidList,
+                                            IonConstants.lnIsNullContainer);
 
-    
+
     /**
      * Constructs a null list value.
      */
     public IonListImpl()
     {
-        super(_list_typeDesc);
+        this(true);
     }
+    
+    /**
+     * Constructs a null or empty list.
+     *
+     * @param makeNull indicates whether this should be <code>null.list</code>
+     * (if <code>true</code>) or an empty sequence (if <code>false</code>).
+     */
+    public IonListImpl(boolean makeNull)
+    {
+        super(NULL_LIST_TYPEDESC, makeNull);
+        assert pos_getType() == IonConstants.tidList;
+    } 
 
     /**
-     * Constructs a list backed by a binary buffer.
+     * Constructs a non-materialized list backed by a binary buffer.
      *
      * @param typeDesc
      */
     public IonListImpl(int typeDesc)
-     {
-         super(typeDesc);
-         assert pos_getType() == IonConstants.tidList;
-     }
+    {
+        super(typeDesc);
+        assert pos_getType() == IonConstants.tidList;
+    }
 
 
     public void accept(ValueVisitor visitor) throws Exception

@@ -81,12 +81,12 @@ public abstract class IonTestCase
             ourSystemPropertiesLoaded = true;
         }
     }
-    
+
 
     public static String requireSystemProperty(String prop)
     {
         loadSystemProperties();
-        
+
         String value = System.getProperty(prop);
         if (value == null)
         {
@@ -95,9 +95,9 @@ public abstract class IonTestCase
         }
         return value;
     }
-    
-    
-    
+
+
+
     public static File getProjectHome()
     {
         String basedir = System.getProperty("user.dir");
@@ -108,15 +108,15 @@ public abstract class IonTestCase
     {
         return new File(getProjectHome(), path);
     }
-    
+
     /**
      * Gets a {@link File} relative to the <code>testdata</code> tree.
      */
     public static File getTestdataFile(String path)
     {
-        String testDataPath = 
+        String testDataPath =
             requireSystemProperty("com.amazon.iontests.iontestdata.path");
-        File testDataDir = new File(testDataPath);        
+        File testDataDir = new File(testDataPath);
         return new File(testDataDir, path);
     }
 
@@ -194,6 +194,31 @@ public abstract class IonTestCase
         String result = QT + BS + escape + QT;
         return result;
     }
+
+
+    // ========================================================================
+    // Encoding helpers
+
+    public IonDatagram reload(IonDatagram dg)
+    {
+        byte[] bytes = dg.toBytes();
+        checkBinaryHeader(bytes);
+
+        IonDatagram dg1 = loader().load(bytes);
+        return dg1;
+    }
+
+    public IonValue reload(IonValue value)
+    {
+        IonDatagram dg = system().newDatagram(value);
+        byte[] bytes = dg.toBytes();
+        checkBinaryHeader(bytes);
+
+        dg = loader().load(bytes);
+        assertEquals(1, dg.size());
+        return dg.get(0);
+    }
+
 
 
     // ========================================================================
@@ -407,10 +432,10 @@ public abstract class IonTestCase
         String[] found_annotations = found.getTypeAnnotations();
         String[] annotations = expected.getTypeAnnotations();
         if (annotations == null || found_annotations == null) {
-            assert annotations == null && found_annotations == null;
+            assertTrue(annotations == null && found_annotations == null);
         }
         else {
-            assert annotations.length == found_annotations.length;
+            assertEquals(annotations.length, found_annotations.length);
             for (String s : annotations) {
                 checkAnnotation(s, found);
             }

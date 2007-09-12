@@ -88,4 +88,30 @@ public class SexpTest
         IonSexp value = (IonSexp) oneValue("(a b c)");
         testIteratorRemove(value);
     }
+
+    public void testCreatingNullSexp()
+    {
+        IonSexp sexp1 = system().newSexp();
+        IonValue sexp2 = reload(sexp1);
+
+        // FIXME ensure sexp1._isPositionLoaded && _isMaterialized
+        assertIonEquals(sexp1, sexp2);
+    }
+
+    public void testCreatingSexpWithString()
+    {
+        IonSexp sexp1 = system().newSexp();
+        sexp1.add(system().newString("Hello"));
+
+        IonValue sexp2 = reload(sexp1);
+        
+        assertIonEquals(sexp1, sexp2);
+        
+        // Again, starting from [] instead of null.list
+        sexp1 = system().newEmptySexp();
+        sexp1.add(system().newString("Hello"));
+
+        sexp2 = reload(sexp1);
+        assertIonEquals(sexp1, sexp2);
+    }
 }

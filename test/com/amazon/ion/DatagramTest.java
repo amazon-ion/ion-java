@@ -25,6 +25,7 @@ public class DatagramTest
     }
 
 
+
     public IonDatagram roundTrip(String text)
         throws Exception
     {
@@ -33,6 +34,12 @@ public class DatagramTest
         checkBinaryHeader(bytes);
         IonDatagram datagram1 = myLoader.load(bytes);
         return datagram1;
+    }
+
+    public void checkLeadingSymbolTable(IonDatagram dg)
+    {
+        assertTrue("Datagram doesn't start with a symbol table",
+                   dg.systemGet(0).hasTypeAnnotation(SymbolTable.ION_1_0));
     }
 
     public void testBinaryData()
@@ -73,7 +80,7 @@ public class DatagramTest
         IonDatagram datagram0 = myLoader.loadText("a::{}");
         assertEquals(1, datagram0.size());
         IonStruct struct = (IonStruct)(datagram0.get(0));
-        IonInt i = 
+        IonInt i =
             (IonInt)system().clone(myLoader.loadText("-12345 a").get(0));
         struct.put("a", i);
         datagram0.toBytes();
@@ -124,14 +131,17 @@ public class DatagramTest
     }
 
 
-    public void testAddingToDatagram()
+    public void testNewSingletonDatagramWithSymbolTable()
     {
         IonSystem system = system();
         IonNull aNull = system.newNull();
         aNull.addTypeAnnotation("ann");
 
         IonDatagram dg = system.newDatagram(aNull);
-        dg.toBytes();
+        checkLeadingSymbolTable(dg);
+        IonDatagram dg2 = reload(dg);
+        IonNull v = (IonNull) dg2.get(0);
+        assertTrue(v.hasTypeAnnotation("ann"));
     }
 
     public void testNoSymbols()
@@ -157,6 +167,7 @@ public class DatagramTest
         s = (IonStruct) datagram.get(0);
         assertTrue(s.get("a").isNullValue());
     }
+
 
     // FIXME implement embedding
     public void XXXtestEmbedding()

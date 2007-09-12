@@ -170,7 +170,11 @@ public final class IonDatagramImpl
         {
             symtab = _system.newLocalSymbolTable();
             IonStruct ionRep = symtab.getIonRepresentation();
+
+            // TODO why insert at zero?  Should we just append?
+            // Should grap the ST from the last elt of either kind?
             _contents.add(0, ionRep);
+
             ((IonValueImpl)ionRep)._container = this;
         }
         else
@@ -179,10 +183,10 @@ public final class IonDatagramImpl
             assert symtab != null;
         }
 
-
-        super.add(element);  // Clears symtab pointer
+        add(_contents.size(), element, true);
         assert element.getSymbolTable() == null;
 
+        // FIXME this doesn't reset any extant encoded data
         ((IonValueImpl)element).setSymbolTable(symtab);
         _userContents.add(element);
     }

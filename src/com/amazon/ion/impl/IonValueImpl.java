@@ -1645,6 +1645,7 @@ public abstract class IonValueImpl
 
             if (_contents != null)
             {
+                // FIXME the following is no longer true under the new spec
                 // write the value length, its never in the TD byte.
                 writer.writeVarUInt7Value(this.getNakedValueLength()
                                          ,true);
@@ -1747,7 +1748,8 @@ public abstract class IonValueImpl
         protected void add(IonValue element)
             throws NullPointerException
         {
-            int size = (isNullValue() ? 0 : size());
+            makeReady();
+            int size = (_contents == null ? 0 : _contents.size());
 
             add(size, element, true);
         }
@@ -1939,6 +1941,11 @@ public abstract class IonValueImpl
         implements IonSequence
     {
 
+        /**
+         * Constructs a list backed by a binary buffer.
+         *
+         * @param typeDesc
+         */
         protected list(int typeDesc) {
             super(typeDesc);
             assert !_hasNativeValue;
@@ -1952,8 +1959,8 @@ public abstract class IonValueImpl
 
             if (! makeNull) {
                 _contents = new ArrayList<IonValue>();
-                _hasNativeValue = true;
             }
+            _hasNativeValue = true;
         }
 
 

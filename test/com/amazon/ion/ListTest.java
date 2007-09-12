@@ -32,7 +32,7 @@ public class ListTest
         IonList value = (IonList) oneValue("null.list");
         testFreshNullSequence(value);
     }
-    
+
     public void testMakeNullList()
     {
         IonList value = (IonList) oneValue("[6,9]");
@@ -40,7 +40,7 @@ public class ListTest
         value.makeNull();
         testFreshNullSequence(value);
     }
-    
+
     public void testClearNonMaterializedList()
     {
         IonList value = (IonList) oneValue("[6,9]");
@@ -91,9 +91,9 @@ public class ListTest
     {
         IonList value = (IonList) oneValue("[a::4]");
         IonInt four = (IonInt) value.get(0);
-        
+
         // Don't touch anything until we remove it!
-        
+
         value.remove(four);
         assertEquals(4, four.intValue());
         checkAnnotation("a", four);
@@ -112,7 +112,7 @@ public class ListTest
         assertNull(elt.getContainer());
         assertEquals(1, elt.intValue());
     }
-    
+
     /** Ensure that triple-quote concatenation works inside lists. */
     public void testConcatenation()
     {
@@ -120,12 +120,38 @@ public class ListTest
         checkSymbol("a",  value.get(0));
         checkString("ab", value.get(1));
         checkString("c",  value.get(2));
-        assertEquals(3, value.size());        
+        assertEquals(3, value.size());
     }
-    
+
     public void testListIteratorRemove()
     {
         IonList value = (IonList) oneValue("[a,b,c]");
         testIteratorRemove(value);
+    }
+
+    public void testCreatingNullList()
+    {
+        IonList list1 = system().newList();
+        IonValue list2 = reload(list1);
+
+        // FIXME ensure list1._isPositionLoaded && _isMaterialized
+        assertIonEquals(list1, list2);
+    }
+
+    public void testCreatingListWithString()
+    {
+        IonList list1 = system().newList();
+        list1.add(system().newString("Hello"));
+
+        IonValue list2 = reload(list1);
+        
+        assertIonEquals(list1, list2);
+        
+        // Again, starting from [] instead of null.list
+        list1 = system().newEmptyList();
+        list1.add(system().newString("Hello"));
+
+        list2 = reload(list1);
+        assertIonEquals(list1, list2);
     }
 }

@@ -45,6 +45,7 @@ public class SystemSymbolTableImpl
      */
     public static String unknownSymbolName(int id)
     {
+        assert id > 0;
         return "$" + id;
     }
 

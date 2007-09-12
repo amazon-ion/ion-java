@@ -411,9 +411,7 @@ public class StandardIonSystem
 
     public IonList newEmptyList()
     {
-        IonList result = new IonListImpl();
-        result.clear();
-        return result;
+        return new IonListImpl(false);
     }
 
 
@@ -430,9 +428,7 @@ public class StandardIonSystem
 
     public IonSexp newEmptySexp()
     {
-        IonSexp result = new IonSexpImpl();
-        result.clear();
-        return result;
+        return new IonSexpImpl(false);
     }
 
 
