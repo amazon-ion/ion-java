@@ -12,11 +12,11 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * This implements a blocked byte buffer and both an input and output stream 
+ * This implements a blocked byte buffer and both an input and output stream
  * that operates over it. It is designed to be able to be randomly accessed.
- * The output steam supports both inserting data (with "stretching") in the 
+ * The output steam supports both inserting data (with "stretching") in the
  * middle of the stream and over-write.  The output steam also supports remove
- * which shrinks the overall data buffer. The underlying buffer is backed by 
+ * which shrinks the overall data buffer. The underlying buffer is backed by
  * one or more byte arrays to minimize data movement.
  * <p>
  * It is also meant to be reused, so that it does not have to pressure the
@@ -41,38 +41,45 @@ public class BlockedBuffer
     Object              _mutator;
 
     void start_mutate(Object caller, int version) {
-        if (_mutation_version != 0 || _mutator != null) throw new BlockedBufferException("lock conflict");
-        if (version != _version)  throw new BlockedBufferException("version conflict on update");
+        if (_mutation_version != 0 || _mutator != null)
+            throw new BlockedBufferException("lock conflict");
+        if (version != _version)
+            throw new BlockedBufferException("version conflict on update");
         _mutator = caller;
         _mutation_version = version;
     }
     int end_mutate(Object caller) {
-        if (_version != _mutation_version) throw new BlockedBufferException("version mismatch failure");
-        if (caller != _mutator) throw new BlockedBufferException("caller mismatch failure");
-        
+        if (_version != _mutation_version)
+            throw new BlockedBufferException("version mismatch failure");
+        if (caller != _mutator)
+            throw new BlockedBufferException("caller mismatch failure");
+
         _version = _mutation_version + 1;
         _mutation_version = 0;
         _mutator = null;
         return _version;
     }
     boolean mutation_in_progress(Object caller, int version) {
-        if (_mutation_version != version)  throw new BlockedBufferException("unexpected update lock conflict");
-        if (caller != _mutator) throw new BlockedBufferException("caller mismatch failure");
+        if (_mutation_version != version)
+            throw new BlockedBufferException("unexpected update lock conflict");
+        if (caller != _mutator)
+            throw new BlockedBufferException("caller mismatch failure");
         return true;
     }
     int getVersion() {
         return _version;
     }
-    
+
     static boolean debugValidation = false;
-    
+
     public static int _defaultBlockSizeMin = 4096 * 8;
     public static int _defaultBlockSizeUpperLimit = 4096 * 8;
-    
+
     public int _blockSizeMin = _defaultBlockSizeMin;
     public int _blockSizeUpperLimit = _defaultBlockSizeUpperLimit;
 
-    public static void setBlockSizeParameters(int min, int max, boolean intenseValidation) {
+    public static void setBlockSizeParameters(int min, int max,
+                                              boolean intenseValidation) {
         debugValidation = intenseValidation;
         setBlockSizeParameters(min, max);
     }
@@ -85,22 +92,21 @@ public class BlockedBuffer
         return;
     }
 
-    ///////////////////////////////////////////////////////////////////////////////
-    //
-    // updatable, inserable, possibly fragmented byte buffer
-    //
+    ///////////////////////////////////////////////////////////////////////////
 
     /**
-     * creates a blocked byte buffer
+     * Creates a new buffer without preallocating any space.
      */
     public BlockedBuffer() {
         start_mutate(this, 0);
         init(0, null);
         end_mutate(this);
     }
-  
+
     /**
-     * creates a blocked byte buffer with a target (preallocated) initial capacity
+     * Creates a new buffer, preallocating some initial capacity.
+     *
+     * @param initialSize the number of bytes to allocate.
      */
     public BlockedBuffer(int initialSize) {
         start_mutate(this, 0);
@@ -109,30 +115,36 @@ public class BlockedBuffer
     }
 
     /**
-     * creates a blocked byte buffer from a users binary image. The buffer 
-     * takes ownership of this array, and may modify it as needed.
-     * @param binary users bytes 
+     * Creates a new buffer, assuming ownership of given data.
+     * <em>This method assumes ownership of the <code>data</code> array</em>
+     * and will modify it at will.
+     *
+     * @param data the initial data to be buffered.
+     *
+     * @throws NullPointerException if buffer is null.
      */
-    public BlockedBuffer(byte[] binary) {
+    public BlockedBuffer(byte[] data) {
         start_mutate(this, 0);
-        init(0, new bbBlock(binary));
-        _buf_limit = binary.length;
+        init(0, new bbBlock(data));
+        _buf_limit = data.length;
         end_mutate(this);
     }
-    
+
     /**
-     * constructino helper that sets up the various members such as the block arraylist
+     * Initializes the various members such as the block arraylist
      * the initial block and the various values like the block size upper limit.
      * @param initialSize or 0
      * @param initialBlock or null
      * @return bbBlock the initial current block
      */
-    private bbBlock init(int initialSize, bbBlock initialBlock) 
+    private bbBlock init(int initialSize, bbBlock initialBlock)
     {
         this._lastCapacity = BlockedBuffer._defaultBlockSizeMin;
         this._blockSizeUpperLimit = BlockedBuffer._defaultBlockSizeUpperLimit;
 
-        while (this._lastCapacity < initialSize && this._lastCapacity < this._blockSizeUpperLimit) {
+        while (this._lastCapacity < initialSize &&
+               this._lastCapacity < this._blockSizeUpperLimit)
+        {
             this.nextBlockSize(this, 0);
         }
 
@@ -145,8 +157,8 @@ public class BlockedBuffer
         }
         this._blocks.add(initialBlock);
         this._next_block_position = 1;
-        
-        // create any preallocated blocks (which will be after _next_block_position
+
+        // create any preallocated blocks (following _next_block_position)
         bbBlock b;
         for (int need = initialSize - initialBlock.blockCapacity()
            ; need > 0
@@ -155,7 +167,7 @@ public class BlockedBuffer
             b = new bbBlock(this.nextBlockSize(this, 0));
             b._idx = -1;
             this._blocks.add(b);
-            
+
         }
         return initialBlock;
     }
@@ -185,9 +197,10 @@ public class BlockedBuffer
      */
     bbBlock truncate(Object caller, int version, int pos) {
         assert mutation_in_progress(caller, version);
-        
-        if (0 > pos || pos > this._buf_limit ) throw new IllegalArgumentException();
-        
+
+        if (0 > pos || pos > this._buf_limit )
+            throw new IllegalArgumentException();
+
         // clear out all the blocks in use from the last in use
         // to the block where the eof will be located
         bbBlock b = null;
@@ -198,7 +211,7 @@ public class BlockedBuffer
         }
         // reset the next block position to account for this.
         this._next_block_position = b._idx + 1;
-        
+
         // on the block where eof is, set it's limit appropriately
         b._limit = pos - b._offset;
 
@@ -209,12 +222,14 @@ public class BlockedBuffer
         return b;
     }
 
-    private bbBlock addBlock(Object caller, int version, int idx, int offset, int needed) 
+    private bbBlock addBlock(Object caller, int version, int idx, int offset,
+                             int needed)
     {
         assert mutation_in_progress(caller, version);
         bbBlock newblock = null;
-        
-        for (int ii=this._next_block_position; ii < this._blocks.size(); ii++) {
+
+        for (int ii=this._next_block_position; ii < this._blocks.size(); ii++)
+        {
             bbBlock tmpblock = this._blocks.get(this._next_block_position);
             if (tmpblock._buffer.length >= needed) {
                 this._blocks.remove(this._next_block_position);
@@ -222,9 +237,9 @@ public class BlockedBuffer
                 break;
             }
         }
-        
+
         if (newblock == null) {
-            // if there's nothing big enough to recycle 
+            // if there's nothing big enough to recycle
             // so we have to really make more space
             int bufcapacity = 0;
             if (needed > _blockSizeUpperLimit) {
@@ -255,7 +270,7 @@ public class BlockedBuffer
         // initialize the buffer and add it to the list in the right spot
         newblock._idx = idx;
         newblock._offset = offset;
-        
+
         _blocks.add(idx, newblock);
         _next_block_position++;
 
@@ -266,8 +281,8 @@ public class BlockedBuffer
 
         return newblock;
     }
-    
-    private int nextBlockSize(Object caller, int version) 
+
+    private int nextBlockSize(Object caller, int version)
     {
         assert mutation_in_progress(caller, version);
         if (_lastCapacity == 0) {
@@ -280,13 +295,13 @@ public class BlockedBuffer
     }
 
     /**
-     * find the block where this offset (newPosition) has already 
-     * been written. Typically the caller will set _curr to be the 
+     * find the block where this offset (newPosition) has already
+     * been written. Typically the caller will set _curr to be the
      * returned block.
      * @param pos global position to be read from
      * @return curr block ready to be read from
      */
-    bbBlock findBlockForRead(Object caller, int version, bbBlock curr, int pos) 
+    bbBlock findBlockForRead(Object caller, int version, bbBlock curr, int pos)
     {
         if (pos < 0 || pos > this._buf_limit) {
             throw new BlockedBufferException("invalid position");
@@ -298,7 +313,7 @@ public class BlockedBuffer
             if (curr.containsForRead(pos)) {
                 return curr;
             }
-            if (pos == this._buf_limit 
+            if (pos == this._buf_limit
             && (pos - curr._offset) == curr._limit) {
                 return curr;
             }
@@ -307,7 +322,7 @@ public class BlockedBuffer
                 startIdx = curr._idx;
             }
         }
-        
+
         // it's valid and not in the current block, so go
         // look for the block it should be in
         bbBlock block = null;
@@ -321,7 +336,7 @@ public class BlockedBuffer
                 // if this is the last block really in use
                 // and we're looking for the eof position then
                 // we can check for the last byte not quite
-                // written case 
+                // written case
                 if ((pos - block._offset) == block._limit) {
                     return block;
                 }
@@ -336,7 +351,7 @@ public class BlockedBuffer
      * @param pos global position to be written to
      * @return curr block ready to be written to
      */
-    bbBlock findBlockForWrite(Object caller, int version, bbBlock curr, int pos) 
+    bbBlock findBlockForWrite(Object caller, int version, bbBlock curr, int pos)
     {
         assert mutation_in_progress(caller, version);
         if (pos < 0) {
@@ -346,23 +361,23 @@ public class BlockedBuffer
             throw new BlockedBufferException("writes must be contiguous");
         }
         assert _validate();
-        
+
         if (pos == this._buf_limit) {
             curr = this._blocks.get(this._next_block_position - 1);
         }
-        else if (curr == null 
+        else if (curr == null
              || (curr._offset > pos)
              || (curr._offset + curr._limit < pos)
         ) {
-            // note that in this case we can't be right at the EOF since 
+            // note that in this case we can't be right at the EOF since
             // we already tested for that case
             curr = findBlockForRead(caller, version, curr, pos);
         }
         assert curr != null;
-        
+
         // see if it fits in the current block now
         if (( pos < curr._offset + curr._limit )
-        ||  
+        ||
           (  (curr._idx == this._next_block_position - 1)
              && curr.hasRoomToWrite(pos, 1)
           )
@@ -375,18 +390,18 @@ public class BlockedBuffer
             curr = this._blocks.get(curr._idx + 1);
             return curr;
         }
-        
+
         //so we have to go ahead an actually add a new block
         int newIdx = curr._idx + 1;
-        assert newIdx == this._next_block_position; 
-       
+        assert newIdx == this._next_block_position;
+
         bbBlock ret =  this.addBlock(caller
                             ,version
                             ,newIdx
                             ,pos
                             ,this.nextBlockSize(caller, version)
                );
-        
+
         return ret;
     }
 
@@ -397,21 +412,21 @@ public class BlockedBuffer
      * @param len number of bytes to make space for
      * @return int number of bytes inserted
      */
-    int insert(Object caller, int version, bbBlock curr, int pos, int len) 
+    int insert(Object caller, int version, bbBlock curr, int pos, int len)
     {
         assert mutation_in_progress(caller, version);
 
-        
+
         // DEBUG: int amountMoved = 0;
         // DEBUG: int before = this._buf_limit;
         // DEBUG: assert _validate();
 
         // if there's room in the current block - just
         // move the "trailing" bytes down and we're done
-        int neededSpace = len - curr.unusedBlockCapacity(); 
+        int neededSpace = len - curr.unusedBlockCapacity();
         if (neededSpace <= 0) {
             // we have all the space we need in the current block
-            // DEBUG: amountMoved = 
+            // DEBUG: amountMoved =
                 insertInCurrOnly(caller, version, curr, pos, len);
         }
         else {
@@ -428,7 +443,7 @@ public class BlockedBuffer
                 (neededSpace <= next.unusedBlockCapacity())
             ) {
                 // with the addition of the free space in the following block we have enough
-                // DEBUG: amountMoved = 
+                // DEBUG: amountMoved =
                     insertInCurrAndNext(caller, version, curr, pos, len, next);
             }
             else {
@@ -440,18 +455,18 @@ public class BlockedBuffer
                 int lenNeededInLastAddedBlock = neededSpace % _blockSizeUpperLimit;
                 int tailLen = curr.bytesAvailableToRead(pos);
                 if (lenNeededInLastAddedBlock < tailLen) lenNeededInLastAddedBlock = tailLen;
-                if (lenNeededInLastAddedBlock < neededSpace 
+                if (lenNeededInLastAddedBlock < neededSpace
                  && neededSpace < this._blockSizeUpperLimit) {
-                    // if we need less than the largest block then we should 
+                    // if we need less than the largest block then we should
                     // make *one* block with all of the needed space
-                    lenNeededInLastAddedBlock = neededSpace; 
+                    lenNeededInLastAddedBlock = neededSpace;
                 }
                 bbBlock newblock = insertMakeNewTailBlock(caller, version, curr, lenNeededInLastAddedBlock);
-                
+
                 // now see if the curr block and this newblock have enough
                 // available space to do the job, and if there's some trailing
                 // data from curr that will end up staying in curr
-                if (len <= (curr.unusedBlockCapacity() 
+                if (len <= (curr.unusedBlockCapacity()
                            + newblock.unusedBlockCapacity())
                 ) {
                     // insert this as a zero length block immediately  after _curr
@@ -459,7 +474,7 @@ public class BlockedBuffer
                     insertBlock(newblock);
 
                     // now pretend we just have the "push into the next block" case
-                    // DEBUG: amountMoved = 
+                    // DEBUG: amountMoved =
                         insertInCurrAndNext(caller, version, curr, pos, len, newblock);
 
                 }
@@ -472,7 +487,7 @@ public class BlockedBuffer
                 }
             }
         }
-        
+
         // DEBUG: if (this._buf_limit - before != len
         // DEBUG: || amountMoved != len) {
         // DEBUG: throw new BlockedBufferException("insert went wrong #1 !!!");
@@ -486,7 +501,7 @@ public class BlockedBuffer
      *  this handles insert when there's enough room in the
      *  current block
      */
-    private int insertInCurrOnly(Object caller, int version, bbBlock curr, int pos, int len) 
+    private int insertInCurrOnly(Object caller, int version, bbBlock curr, int pos, int len)
     {
         assert mutation_in_progress(caller, version);
         // the space we need is available right in the block
@@ -497,11 +512,11 @@ public class BlockedBuffer
         curr._limit += len;
         this.adjustOffsets(curr._idx, len, 0);
         notifyInsert(pos, len);
-        
+
         return len;
     }
-    
-    private int insertInCurrAndNext(Object caller, int version, bbBlock curr, int pos, int len, bbBlock next) 
+
+    private int insertInCurrAndNext(Object caller, int version, bbBlock curr, int pos, int len, bbBlock next)
     {
         assert mutation_in_progress(caller, version);
         // DEBUG: int amountMoved = 0;
@@ -510,8 +525,8 @@ public class BlockedBuffer
         assert curr.unusedBlockCapacity() + next.unusedBlockCapacity() >= len;
         // and we need to use space in both of these blocks
         assert curr.unusedBlockCapacity() < len;
-        
-        int availableToRead = curr.bytesAvailableToRead(pos); 
+
+        int availableToRead = curr.bytesAvailableToRead(pos);
         int tailInCurr = availableToRead;
         int deltaOfNextData = len - curr.unusedBlockCapacity();
         int tailCopiedToNext = deltaOfNextData;
@@ -530,13 +545,13 @@ public class BlockedBuffer
 
         // next we copy the data from the tail of _curr into the front of next
         // since we don't have room for it any longer in the _curr block
-        // but it is possible that there is not tail at all (pos == limit) 
+        // but it is possible that there is not tail at all (pos == limit)
         if (tailCopiedToNext > 0) {
             System.arraycopy(curr._buffer, curr._limit - tailCopiedToNext
                             , next._buffer, deltaOfNextData - tailCopiedToNext, tailCopiedToNext);
         }
 
-        // finally if there's any tail left in the _curr block we copy that 
+        // finally if there's any tail left in the _curr block we copy that
         // down to the end of the _curr block (if all of the tail moved into
         // the next block nothing happens here
         int leftInCurr = tailInCurr - tailCopiedToNext;
@@ -545,7 +560,7 @@ public class BlockedBuffer
             System.arraycopy(curr._buffer, blockPosition
                             ,curr._buffer, blockPosition + len, leftInCurr);
         }
-        
+
         // finally if we reused from space in _curr (between _limit and the unreserved capacity)
         // we adjust for that as well as the space adjusted in the newblock
         int addedInCurr = curr.unusedBlockCapacity();
@@ -558,7 +573,7 @@ public class BlockedBuffer
 
         this.adjustOffsets(next._idx, len, 0);
         notifyInsert(pos, len);
-        
+
         // DEBUG: if (amountMoved != len) {
         // DEBUG: throw new BlockedBufferException("insert went wrong #4 !!!");
         // DEBUG: }
@@ -581,41 +596,41 @@ public class BlockedBuffer
                 // hit the max blocksize whichever comes first
             }
         }
-        
+
         // allocate and initialize a new block that will be the
         // tail of our interesting blocks
         bbBlock newblock = new bbBlock(newblocksize);
         newblock._idx = curr._idx + 1;
         newblock._offset = curr._offset + curr._limit; // we'll adjust this later like any existing block
-        
+
         return newblock;
     }
-    
-    private int insertAsManyBlocksAsNeeded(Object caller, int version, bbBlock curr, int pos, int len, bbBlock newLastBlock) 
+
+    private int insertAsManyBlocksAsNeeded(Object caller, int version, bbBlock curr, int pos, int len, bbBlock newLastBlock)
     {
         assert mutation_in_progress(caller, version);
         // DEBUG: int amountAllocated = 0;
         // DEBUG: int origPos = this._buf_position;
 
-        // this is the case where the old tail is pushed entirely out of the 
-        // old block into a new trailing block and then as many whole new 
-        // blocks as needed (which maybe none) are inserted between these two 
+        // this is the case where the old tail is pushed entirely out of the
+        // old block into a new trailing block and then as many whole new
+        // blocks as needed (which maybe none) are inserted between these two
         bbBlock oldCurr = curr;
         int   oldPosition = curr.blockOffsetFromAbsolute(pos);
         int   oldBlockTail = curr._limit - oldPosition;
-        int   newSpaceInCurr = curr.unusedBlockCapacity(); 
+        int   newSpaceInCurr = curr.unusedBlockCapacity();
 
         // adjust the curr blocks limit
         curr._limit += newSpaceInCurr;
         // DEBUG: amountAllocated += newSpaceInCurr;
-        
+
         int   newoffset = curr._offset + curr._limit;
         int   spaceNeededInMiddle = len - newSpaceInCurr - newLastBlock._buffer.length;
         int   addedblocks = 0;
         bbBlock newblock = null;
 
         assert (spaceNeededInMiddle > 0);  // this is the "as many as needed" case not "this and next"
-        
+
         // add blocks until we're ready for the last block
         while (spaceNeededInMiddle > 0) {
             addedblocks++;
@@ -624,7 +639,7 @@ public class BlockedBuffer
             if (newblock._limit > spaceNeededInMiddle) newblock._limit = spaceNeededInMiddle;
 
             // DEBUG: amountAllocated += newblock._limit;
-            
+
             newblock._idx = curr._idx + addedblocks;
             newblock._offset = newoffset;
             this._blocks.add(newblock._idx, newblock);
@@ -638,7 +653,7 @@ public class BlockedBuffer
         newblock._limit = newblock._buffer.length;
 
         // DEBUG: amountAllocated += newblock._limit;
-        
+
         newblock._idx = curr._idx + addedblocks;
         newblock._offset = newoffset;
         this._blocks.add(newblock._idx, newblock);
@@ -660,7 +675,7 @@ public class BlockedBuffer
         // DEBUG: assert (amountAllocated == len);
         return len;
     }
-        
+
     private void insertBlock(bbBlock newblock) {
         // in both cases we need to insert the new block after _curr
         // and adjust the idx values to go with that
@@ -685,24 +700,24 @@ public class BlockedBuffer
         }
     }
 
-    bbBlock remove(Object caller, int version, bbBlock curr, int pos, int len) 
+    bbBlock remove(Object caller, int version, bbBlock curr, int pos, int len)
     {
         assert mutation_in_progress(caller, version);
         if (len == 0) return curr;
         if (len < 0 || (pos + len) > this._buf_limit) {
             throw new IllegalArgumentException();
         }
-        
+
         int     amountToRemove = len;
         int     removedBlocks = 0;
         int     startingIdx = curr._idx;
-        
+
         int     currIdx = curr._idx;
         bbBlock currBlock = curr;
 
         assert (curr._offset <= pos);
         assert (pos - curr._offset <= curr._limit);
-        
+
         assert _validate();
 
         // this is to simply eliminate a big edge case
@@ -717,7 +732,7 @@ public class BlockedBuffer
         int removedFromThisBlock = currBlock._limit - currBlockPosition;
         if (removedFromThisBlock > amountToRemove) removedFromThisBlock = amountToRemove;
         if (removedFromThisBlock == currBlock._limit) {
-            // we'll be removing the whole block in the whole block loop below 
+            // we'll be removing the whole block in the whole block loop below
             startingIdx--;  // so we have to back up on to fix the next block that will
                             // "fall" down into the soon to be emptied slot here
         }
@@ -732,7 +747,7 @@ public class BlockedBuffer
             amountToRemove -= removedFromThisBlock;
             currBlock._limit -= removedFromThisBlock;
             if (amountToRemove > 0) {
-                // when we're on the last block, there'll be nothing to remove, 
+                // when we're on the last block, there'll be nothing to remove,
                 // and no block to get either
                 currIdx = currBlock._idx + 1;
                 currBlock = this._blocks.get(currIdx);
@@ -741,13 +756,13 @@ public class BlockedBuffer
 
         while (amountToRemove > 0 && amountToRemove >= currBlock._limit) {
             amountToRemove -= currBlock._limit;
-            
+
             // remove the whole block - so first hang onto a reference
             bbBlock temp = currBlock;
-            
+
             this._blocks.remove(currIdx);
             removedBlocks++;
-            
+
             temp.clearBlock();
             this._blocks.add(temp); // dump it at the end (marked as not in use)
             // and we don't move currIdx because we bumped it out of the whole array
@@ -766,7 +781,7 @@ public class BlockedBuffer
 
         if (amountToRemove > 0) {
             assert amountToRemove < currBlock._limit;
-            
+
             System.arraycopy(currBlock._buffer, amountToRemove
                             ,currBlock._buffer, 0, currBlock._limit - amountToRemove);
 
@@ -774,15 +789,15 @@ public class BlockedBuffer
             currBlock._limit -= amountToRemove;
             currBlock._offset += amountToRemove;
         }
-        
-        // we'll even adjust the offset of the first block (if it's the last as well) 
+
+        // we'll even adjust the offset of the first block (if it's the last as well)
         adjustOffsets(startingIdx, -len, -removedBlocks);
         notifyRemove(pos, len);
-        
+
         // DEBUG: int shouldBe = 0;
         // DEBUG: int is = currBlock._offset;
         // DEBUG: if (currBlock._idx > 0) {
-        // DEBUG:     shouldBe = this._blocks.get(currBlock._idx - 1)._offset + this._blocks.get(currBlock._idx - 1)._limit; 
+        // DEBUG:     shouldBe = this._blocks.get(currBlock._idx - 1)._offset + this._blocks.get(currBlock._idx - 1)._limit;
         // DEBUG:     if (currIdx != startingIdx) assert (shouldBe == this._buf_position);
         // DEBUG: }
         // DEBUG: int delta = shouldBe - is;
@@ -799,7 +814,7 @@ public class BlockedBuffer
         int pos = 0;
         int idx;
         boolean err = false;
-        
+
         _validate_count++;
 
         // you can change the 0 below (in from of the -2) to be the validation counter
@@ -809,7 +824,7 @@ public class BlockedBuffer
             // used to set breakpoints on particular calls for validation
             err = (_validate_count < 0);
         }
-        
+
         for (idx=0; idx<this._blocks.size(); idx++) {
             bbBlock b = this._blocks.get(idx);
             if (b._idx == -1) break;
@@ -834,8 +849,8 @@ public class BlockedBuffer
                 err = true;
             }
             else if (b._limit == 0) {
-                if ( ! (b._idx == (this._next_block_position - 1) 
-                     && b._offset == this._buf_limit) 
+                if ( ! (b._idx == (this._next_block_position - 1)
+                     && b._offset == this._buf_limit)
                 ) {
                     System.out.println("block "+idx+": "+
                                        "has a ZERO limit");
@@ -869,21 +884,21 @@ public class BlockedBuffer
                 System.out.println("last block "+last._idx+" limit isn't "+
                                    "_buf_limit ("+this._buf_limit+"): "+
                                    " calc'd last block limit is "
-                                   +       last._offset +" + "+ last._limit 
+                                   +       last._offset +" + "+ last._limit
                                    +" = "+(last._offset + last._limit)
                                    );
                 err = true;
-            } 
+            }
         }
         if (this._buf_limit < 0 || (this._buf_limit > 0 && this._next_block_position < 1)){
             System.out.println("this._buf_limit "+ this._buf_limit+ " is invalid");
             err = true;
         }
-        
+
         if (err == true) {
             System.out.println("failed with validation count = " + _validate_count);
         }
-    
+
         return err == false;  // validate is true if all is ok so that assert _validate(); works as expected
     }
 
@@ -892,21 +907,31 @@ public class BlockedBuffer
         public int     _offset;
         public int     _limit;
         public byte[]  _buffer;
-    
+
         public bbBlock(int capacity) {
             _buffer = new byte[capacity];
         }
-        bbBlock(byte[] userbuf) {
-            _buffer = userbuf;
-            _limit = userbuf.length;
+
+        /**
+         * Assumes ownership of an array to create a new block.  The data
+         * within the buffer is maintained.
+         *
+         * @param buffer contains the data for the block.
+         *
+         * @throws NullPointerException if buffer is null.
+         */
+        bbBlock(byte[] buffer) {
+            _buffer = buffer;
+            _limit = buffer.length;
         }
+
         public bbBlock clearBlock() {
             _idx = -1;
             _offset = -1;
             _limit = 0;
             return this;
         }
-    
+
         /**
          * maximimum number of bytes that can be held in this block.
          */
@@ -920,7 +945,7 @@ public class BlockedBuffer
             return this._buffer.length - this._limit;
         }
         /**
-         * Gets the number of bytes between the current position and the 
+         * Gets the number of bytes between the current position and the
          * writable capacity of this block.
          * @param pos absolute position
          */
@@ -929,8 +954,8 @@ public class BlockedBuffer
         }
         /**
          * Gets the number of, as yet, unused bytes in this block.  That's the number
-         * of bytes that can be inserted into this block without overflowing, or the 
-         * number of bytes between the current position and the end of the written bytes 
+         * of bytes that can be inserted into this block without overflowing, or the
+         * number of bytes between the current position and the end of the written bytes
          * in this block
          * @param pos absolute position
          */
@@ -938,12 +963,12 @@ public class BlockedBuffer
         public final int bytesAvailableToRead(int pos) {
             return this._limit - (pos - _offset);
         }
-    
+
         /**
          * is there space between position and capacity?
          * @param pos absolute position
          * @param needed
-         * @return boolean 
+         * @return boolean
          */
         final boolean hasRoomToWrite(int pos, int needed) {
             return (needed <= (this._buffer.length - (pos - _offset)));
@@ -958,26 +983,26 @@ public class BlockedBuffer
             return pos - _offset;
         }
     }
-    
+
     public interface Monitor
     {
         public boolean notifyInsert(int pos, int len);
         public boolean notifyRemove(int pos, int len);
         public int     getMemberIdOffset();
     }
-    private static class PositionMonitor implements Monitor 
+    private static class PositionMonitor implements Monitor
     {
         int _pos;
         PositionMonitor(int pos) { _pos = pos; }
         public int getMemberIdOffset() { return _pos; }
         public boolean notifyInsert(int pos, int len) { return false; }
         public boolean notifyRemove(int pos, int len) { return false; }
-       
+
     }
     private static class CompareMonitor implements Comparator<Monitor> {
         static CompareMonitor instance = new CompareMonitor();
         private CompareMonitor() {}
-        static CompareMonitor getComparator() 
+        static CompareMonitor getComparator()
         {
             return instance;
         }
@@ -995,7 +1020,7 @@ public class BlockedBuffer
     }
     public void notifyInsert(int pos, int len) {
         if (len == 0) return;
-        
+
         PositionMonitor pm = new PositionMonitor(pos);
         SortedSet<Monitor> follows = _updatelist.tailSet(pm);
         for (Monitor m : follows) {
@@ -1006,7 +1031,7 @@ public class BlockedBuffer
     }
     public void notifyRemove(int pos, int len) {
         if (len == 0) return;
-        
+
         PositionMonitor pm = new PositionMonitor(pos);
         SortedSet<Monitor> follows = _updatelist.tailSet(pm);
         for (Monitor m : follows) {
@@ -1043,27 +1068,27 @@ public class BlockedBuffer
         {
             this(pos, bb);
         }
-        
+
         /**
          * @param pos initial offset to read
          * @param end is the local limit, or -1 (_end_unspecified)
          * @param bb blocked buffer to read from
           */
-        private BlockedByteInputStream(int pos, BlockedBuffer bb)  
+        private BlockedByteInputStream(int pos, BlockedBuffer bb)
         {
             if (bb == null) throw new IllegalArgumentException();
             _version = bb.getVersion();
             _buf = bb;
             _set_position(pos);
         }
-        
+
         /**
          * the current offset in the buffer
          */
         public int position() {
             return this._pos;
         }
-        
+
         /**
          * this forces a version sync with the underlying blocked buffer.
          * The current position is lost during this call.
@@ -1076,7 +1101,7 @@ public class BlockedBuffer
             _pos = 0;
         }
         /**
-         * debug api to force check for internal validity of the 
+         * debug api to force check for internal validity of the
          * underlying buffer
          */
         public boolean _validate() {
@@ -1090,22 +1115,22 @@ public class BlockedBuffer
          * @param pos new offset to read from
          * @return this stream
          */
-        public BlockedByteInputStream setPosition(int pos) throws IOException  
+        public BlockedByteInputStream setPosition(int pos) throws IOException
         {
             if (_buf == null) new IOException("stream is closed");
             fail_on_version_change();
-            
+
             if (pos < 0 || pos > _buf.size()) {
                 throw new IllegalArgumentException();
             }
-            
+
             // call our unfailing private method to do the real work
             _set_position(pos);
-            
+
             fail_on_version_change();
             return this;
         }
-        private void _set_position(int pos) 
+        private void _set_position(int pos)
         {
             _pos = pos;
             _curr = _buf.findBlockForRead(this, _version, _curr, pos);
@@ -1114,11 +1139,11 @@ public class BlockedBuffer
         }
 
         /**
-         * closes the steam and clears its reference to the 
+         * closes the steam and clears its reference to the
          * byte buffer.  Once closed it cannot be used.
          */
         @Override
-        public void close() throws IOException 
+        public void close() throws IOException
         {
             this._buf = null;
             this._pos = -1;
@@ -1128,21 +1153,21 @@ public class BlockedBuffer
         /**
          * reads len bytes from the buffer and copies them into
          * the user supplied byte array (bytes) starting at offset
-         * off in the users array.  This returns the number of bytes 
+         * off in the users array.  This returns the number of bytes
          * read, which may be less than the number requested if
          * there is not enough data available in the buffer.
          */
         @Override
-        public int read(byte[] bytes, int offset, int len) throws IOException 
+        public int read(byte[] bytes, int offset, int len) throws IOException
         {
             if (_buf == null) throw new IOException("stream is closed");
-            fail_on_version_change(); 
+            fail_on_version_change();
             if (_pos >= _buf.size()) throw new IllegalArgumentException();
-            
+
             int startingPos = _pos;
             int localEnd = _pos + len;
             if (localEnd > _buf.size()) localEnd = _buf.size();
-            
+
             while (_pos < localEnd) {
                 int available = _curr._limit - _blockPosition;
                 if (available > localEnd - _pos) available = localEnd - _pos;
@@ -1156,9 +1181,9 @@ public class BlockedBuffer
             fail_on_version_change();
             return _pos - startingPos;
         }
-        
+
         /**
-         * reads the next byte in the buffer.  This returns -1 
+         * reads the next byte in the buffer.  This returns -1
          * if there is no data available to be read.
          */
         @Override
@@ -1186,7 +1211,7 @@ public class BlockedBuffer
             }
         }
     }
-    
+
 
     /**
      * Reads data from a byte buffer, keeps a local position and
@@ -1236,14 +1261,14 @@ public class BlockedBuffer
             _version = _buf.getVersion();
             _set_position(0);
         }
-        
+
         /**
          * the current offset in the buffer
          */
         public int position() {
             return this._pos;
         }
-        
+
         /**
          * this forces a version sync with the underlying blocked buffer.
          * The current position is lost during this call.
@@ -1255,9 +1280,9 @@ public class BlockedBuffer
             _pos = 0;
             _curr = null;
         }
-        
+
         /**
-         * debug api to force check for internal validity of the 
+         * debug api to force check for internal validity of the
          * underlying buffer
          */
         public boolean _validate() {
@@ -1265,7 +1290,7 @@ public class BlockedBuffer
         }
 
         /**
-         * repositions this stream in the buffer.  The next  
+         * repositions this stream in the buffer.  The next
          * read, write, or insert operation will take place
          * at the specified position.  The position must
          * be within the contiguous range of written bytes,
@@ -1273,21 +1298,21 @@ public class BlockedBuffer
          * past the end, which can be written on and returns
          * -1 if read.
          */
-        public BlockedByteOutputStream setPosition(int pos) throws IOException 
+        public BlockedByteOutputStream setPosition(int pos) throws IOException
         {
             if (_buf == null) new IOException("stream is closed");
             fail_on_version_change();
-            
+
             if (pos < 0 || pos > _buf.size()) {
                 throw new IllegalArgumentException();
             }
-            
+
             this._set_position(pos);
-            
+
             fail_on_version_change();
             return this;
         }
-        private void _set_position(int pos) 
+        private void _set_position(int pos)
         {
             _pos = pos;
             _curr = _buf.findBlockForRead(this, _version, _curr, pos);
@@ -1296,11 +1321,11 @@ public class BlockedBuffer
         }
 
         /**
-         * closes the steam and clears its reference to the 
+         * closes the steam and clears its reference to the
          * byte buffer.  Once closed it cannot be used.
          */
         @Override
-        public void close() throws IOException 
+        public void close() throws IOException
         {
             this._buf = null;
             this._pos = -1;
@@ -1308,10 +1333,10 @@ public class BlockedBuffer
         }
 
         /**
-         * Inserts space and writes 1 byte to the current 
+         * Inserts space and writes 1 byte to the current
          * position in this output stream.  Only the low
          * order byte of the passed in int is written the
-         * high order bits are ignored. 
+         * high order bits are ignored.
          */
         @Override
         public void write(int b) throws IOException
@@ -1319,9 +1344,9 @@ public class BlockedBuffer
             if (_buf == null) new IOException("stream is closed");
 
             _buf.start_mutate(this, _version);
-            
+
             _write(b);
-            
+
             _version = _buf.end_mutate(this);
             return;
         }
@@ -1350,12 +1375,12 @@ public class BlockedBuffer
             return _curr.bytesAvailableToWrite(pos);
         }
         /**
-         * Writes len bytes from the specified byte array starting 
+         * Writes len bytes from the specified byte array starting
          * at in the user array at offset off to the current position
-         * in this output stream. 
+         * in this output stream.
          */
         @Override
-        public void write(byte[] b, int off, int len) 
+        public void write(byte[] b, int off, int len)
         {
             if (_buf == null) new IOException("stream is closed");
             _buf.start_mutate(this, _version);
@@ -1365,19 +1390,19 @@ public class BlockedBuffer
         private void _write(byte[] b, int off, int len)
         {
             int end_b = off + len;
-            while (off < end_b) 
+            while (off < end_b)
             {
                 int writeInThisBlock = bytesAvailableToWriteInCurr(_pos);
-                
+
                 if (writeInThisBlock > end_b - off) {
                     writeInThisBlock = end_b - off;
                 }
                 assert writeInThisBlock >= 0;
-                
+
                 System.arraycopy(b, off, _curr._buffer, _blockPosition, writeInThisBlock);
                 off += writeInThisBlock;
                 _pos += writeInThisBlock;
-                _blockPosition += writeInThisBlock; 
+                _blockPosition += writeInThisBlock;
                 if (_blockPosition > _curr._limit) {
                     _curr._limit = _blockPosition;
                     if (_pos > _buf._buf_limit) _buf._buf_limit = _pos;
@@ -1394,12 +1419,12 @@ public class BlockedBuffer
             }
         }
         /**
-         * Writes len bytes from the specified byte array starting 
+         * Writes len bytes from the specified byte array starting
          * at in the user array at offset off to the current position
-         * in this output stream. 
-         * @throws IOException 
+         * in this output stream.
+         * @throws IOException
          */
-        public void write(InputStream bytestream) throws IOException 
+        public void write(InputStream bytestream) throws IOException
         {
             if (_buf == null) new IOException("stream is closed");
             _buf.start_mutate(this, _version);
@@ -1409,17 +1434,17 @@ public class BlockedBuffer
         private void _write(InputStream bytestream) throws IOException
         {
             int written = 0;
-            for (;;) 
+            for (;;)
             {
                 int writeInThisBlock = bytesAvailableToWriteInCurr(_pos);
                 assert writeInThisBlock >= 0;
-                
+
                 int len = bytestream.read(_curr._buffer, _blockPosition, writeInThisBlock);
                 if (len == -1) break;
                 if (len == 0) continue;  // can this really happen?
-                
+
                 _pos += len;
-                _blockPosition += len; 
+                _blockPosition += len;
                 if (_blockPosition > _curr._limit) {
                     _curr._limit = _blockPosition;
                     if (_pos > _buf._buf_limit) _buf._buf_limit = _pos;
@@ -1440,9 +1465,9 @@ public class BlockedBuffer
         }
 
         /**
-         * Inserts the amount space requested at the current 
+         * Inserts the amount space requested at the current
          * position in this output stream.  No data is written
-         * into the output stream. 
+         * into the output stream.
          */
         public void insert(int len) throws IOException
         {
@@ -1459,10 +1484,10 @@ public class BlockedBuffer
         }
 
         /**
-         * Inserts space and writes 1 byte to the current 
+         * Inserts space and writes 1 byte to the current
          * position in this output stream.  Only the low
          * order byte of the passed in int is written the
-         * high order bits are ignored. 
+         * high order bits are ignored.
          */
         public void insert(byte b) throws IOException
         {
@@ -1472,13 +1497,13 @@ public class BlockedBuffer
             _write(b);
             _version = _buf.end_mutate(this);
         }
-        
+
         /**
-         * Inserts space and writes len bytes from the specified  
-         * byte array starting at in the user array at offset off 
-         * to the current position in this output stream. 
+         * Inserts space and writes len bytes from the specified
+         * byte array starting at in the user array at offset off
+         * to the current position in this output stream.
          */
-        public void insert(byte[] b, int off, int len) throws IOException 
+        public void insert(byte[] b, int off, int len) throws IOException
         {
             if (_buf == null) new IOException("stream is closed");
             _buf.start_mutate(this, _version);
@@ -1487,11 +1512,11 @@ public class BlockedBuffer
             _version = _buf.end_mutate(this);
        }
         /**
-         * Inserts space and writes len bytes from the specified  
-         * byte array starting at in the user array at offset off 
-         * to the current position in this output stream. 
+         * Inserts space and writes len bytes from the specified
+         * byte array starting at in the user array at offset off
+         * to the current position in this output stream.
          */
-        public void remove(int len) throws IOException 
+        public void remove(int len) throws IOException
         {
             if (_buf == null) new IOException("stream is closed");
             _buf.start_mutate(this, _version);
@@ -1500,7 +1525,7 @@ public class BlockedBuffer
        }
         /**
          * trucates the buffer at the current location after this
-         * call the last previously written or read byte will be 
+         * call the last previously written or read byte will be
          * the end of the buffer.
          */
         public void truncate() throws IOException
@@ -1510,7 +1535,7 @@ public class BlockedBuffer
             _curr = _buf.truncate(this, _version, _pos);
             _version = _buf.end_mutate(this);
         }
-        
+
         private void fail_on_version_change() throws IOException
         {
             if (_buf.getVersion() != _version) {
@@ -1519,11 +1544,11 @@ public class BlockedBuffer
             }
         }
     }
-    
+
     public static class BlockedBufferException extends RuntimeException
     {
         private static final long serialVersionUID = 1582507845614969389L;
-        
+
         public BlockedBufferException() { super(); }
         public BlockedBufferException(String message) { super(message); }
         public BlockedBufferException(String message, Throwable cause) {

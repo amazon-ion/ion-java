@@ -31,6 +31,9 @@ public class UserReader
     private IonValue            _next;
 
 
+    /**
+     * @throws NullPointerException if input is null.
+     */
     public UserReader(StandardIonSystem system,
                       LocalSymbolTable initialSymbolTable,
                       Reader input)

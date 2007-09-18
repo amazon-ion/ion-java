@@ -10,6 +10,12 @@ import java.util.Date;
 /**
  * Entry point to all things Ion.
  * <p>
+ * In general, instances returned from one system are not interchangable with
+ * those returned by other systems.
+ * The intended usage pattern is for an application to construct a single
+ * <code>IonSystem</code> instance and use it throughout,
+ * rather than constructing multiples and intermingling their use.
+ * <p>
  * Implementations of this interface must be safe for use by multiple threads.
  */
 public interface IonSystem
@@ -115,13 +121,96 @@ public interface IonSystem
     public void setLoader(IonLoader loader);
 
 
-//  public IonReader newReader(InputStream stream);
-    public IonReader newReader(Reader reader);
+    /**
+     * Creates a reader for iterating over a stream of Ion text data.
+     *
+     * @return a new reader instance.
+     *
+     * @throws NullPointerException if <code>ionText</code> is null.
+     *
+     * @deprecated Renamed to {@link #newTextReader(Reader)}.
+     */
+    public IonReader newReader(Reader ionText);
+
+
+    /**
+     * Creates a reader for iterating over a string containing Ion text data.
+     *
+     * @param ionText must not be null.
+     *
+     * @return a new reader instance.
+     *
+     * @throws NullPointerException if <code>ionText</code> is null.
+     *
+     * @deprecated Renamed to {@link #newTextReader(String)}.
+     */
     public IonReader newReader(String ionText);
 
 
+    /**
+     * Creates a reader for iterating over a string containing Ion text data.
+     *
+     * @param ionText must not be null.
+     *
+     * @return a new reader instance.
+     *
+     * @throws NullPointerException if <code>ionText</code> is null.
+     */
+    public IonReader newTextReader(String ionText);
+
+
+    /**
+     * Creates a reader for iterating over a stream of Ion text data.
+     *
+     * @return a new reader instance.
+     *
+     * @throws NullPointerException if <code>ionText</code> is null.
+     */
+    public IonReader newTextReader(Reader ionText);
+
+
+    /**
+     * Creates a reader for iterating over Ion data.
+     *
+     * @param ionData may be either Ion binary data or (UTF-8) Ion text.
+     * <em>This method assumes ownership of the array</em> and may modify it at
+     * will.
+     *
+     * @return a new reader instance.
+     *
+     * @throws NullPointerException if <code>ionData</code> is null.
+     */
+    public IonReader newReader(byte[] ionData);
+
+
+
+    /**
+     * Extracts a single value from Ion text data.
+     *
+     * @param ionText must not be null.
+     *
+     * @return the first (and only) user value in the data.
+     *
+     * @throws NullPointerException if <code>ionText</code> is null.
+     * @throws IonException if the data does not contain exactly one user
+     * value.
+     */
     public IonValue singleValue(String ionText);
-    public IonValue singleValue(byte[] ionBinary);
+
+
+    /**
+     * Extracts a single value from Ion text or binary data.
+     *
+     * @param ionData may be either Ion binary data or (UTF-8) Ion text.
+     * <em>This method assumes ownership of the array</em> and may modify it at
+     * will.
+     *
+     * @return the first (and only) user value in the data.
+     *
+     * @throws IonException if the data does not contain exactly one user
+     * value.
+     */
+    public IonValue singleValue(byte[] ionData);
 
 
     //-------------------------------------------------------------------------
@@ -137,7 +226,15 @@ public interface IonSystem
      */
     public IonBool newBool();
 
-    public IonBool newBool(boolean value);
+    /**
+     * Constructs a new <code>bool</code> instance with the given content.
+     *
+     * @param content the initial content of the value.
+     *
+     * @return a bool with
+     * <code>{@link IonBool#booleanValue()} == content</code>.
+     */
+    public IonBool newBool(boolean content);
 
 
     /**
@@ -164,7 +261,7 @@ public interface IonSystem
     /**
      * Constructs a new <code>int</code> instance with the given content.
      *
-     * @param content the new int's value.
+     * @param content the new int's content.
      */
     public IonInt newInt(int content);
 
@@ -181,7 +278,7 @@ public interface IonSystem
      * The integer portion of the number is used, any fractional portion is
      * ignored.
      *
-     * @param content the new int's value;
+     * @param content the new int's content;
      * may be <code>null</code> to make <code>null.int</code>.
      */
     public IonInt newInt(Number content);

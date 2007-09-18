@@ -174,16 +174,19 @@ public interface IonLoader
 
 
     /**
-     * Loads Ion data in its entirety.
+     * Loads Ion data by wrapping given data with a datagram.
      *
-     * @param ionData may be either Ion binary data, or UTF-encoded Ion text.
+     * @param ionData may be either Ion binary data, or UTF-8 Ion text.
+     * <em>This method assumes ownership of the array</em> and may modify it at
+     * will.
      * 
      * @return a datagram containing all the values on the input stream.
      * 
      * @throws NullPointerException if <code>ionData</code> is null.
      * @throws IonException if there's a syntax error in the Ion content.
      */
-    public IonDatagram load(byte[] ionData);
+    public IonDatagram load(byte[] ionData)
+        throws IonException;
 
 
     /**

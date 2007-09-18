@@ -42,6 +42,9 @@ public class SystemReader
         this(system, system.getCatalog(), new StringReader(s));
     }
 
+    /**
+     * @throws NullPointerException if input is null.
+     */
     public SystemReader(StandardIonSystem system,
                         IonCatalog catalog,
                         Reader input)
@@ -49,6 +52,9 @@ public class SystemReader
         this(system, catalog, system.newLocalSymbolTable(), input);
     }
 
+    /**
+     * @throws NullPointerException if input is null.
+     */
     public SystemReader(StandardIonSystem system,
                         IonCatalog catalog,
                         LocalSymbolTable initialSymboltable,
@@ -61,6 +67,9 @@ public class SystemReader
     }
 
 
+    /**
+     * @throws NullPointerException if input is null.
+     */
     private void initialize(Reader input, int limit) {
         _input = input;
         _parser = new IonParser(_input);

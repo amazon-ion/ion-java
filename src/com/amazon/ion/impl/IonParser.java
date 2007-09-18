@@ -34,7 +34,15 @@ public class IonParser
     private ArrayList<Integer>  _annotationList;
 
 
+    /**
+     * @param bb may be null, in which case a new {@link BufferManager} will
+     * be created.
+     *
+     * @throws NullPointerException if r is null.
+     */
     public IonParser(Reader r, BufferManager bb) {
+        if (r == null) throw new NullPointerException();
+
         _in = new IonTokenReader(new PushbackReader(r));
         if (bb != null) {
             _out = bb;
@@ -44,6 +52,9 @@ public class IonParser
         }
     }
 
+    /**
+     * @throws NullPointerException if r is null.
+     */
     public IonParser(Reader r) {
         this(r, new BufferManager());
     }

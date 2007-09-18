@@ -162,11 +162,26 @@ public class StandardIonSystem
     }
 
 
+
+    //=========================================================================
+    // IonReader creation
+
+    /**
+     *  @deprecated Renamed to {@link #newTextReader(Reader)}.
+     */
     public IonReader newReader(Reader reader)
     {
         return new UserReader(this, this.newLocalSymbolTable(), reader);
     }
 
+    public IonReader newTextReader(Reader reader)
+    {
+        return new UserReader(this, this.newLocalSymbolTable(), reader);
+    }
+
+    /**
+     *  @deprecated Renamed to {@link #newTextReader(String)}.
+     */
     public IonReader newReader(String ionText)
     {
         return new UserReader(this,
@@ -174,19 +189,29 @@ public class StandardIonSystem
                               new StringReader(ionText));
     }
 
-    /**
-     *
-     * @param ionData may be (UTF-8) text or binary.
-     */
+    public IonReader newTextReader(String ionText)
+    {
+        return new UserReader(this,
+                              this.newLocalSymbolTable(),
+                              new StringReader(ionText));
+    }
+
+
     public IonReader newReader(byte[] ionData)
     {
         SystemReader systemReader = newSystemReader(ionData);
         return new UserReader(systemReader);
     }
 
+
     /**
+     * Creates a new reader, wrapping an array of text or binary data.
      *
      * @param ionData may be (UTF-8) text or binary.
+     * <em>This method assumes ownership of the array</em> and may modify it at
+     * will.
+     *
+     * @throws NullPointerException if <code>ionData</code> is null.
      */
     public SystemReader newSystemReader(byte[] ionData)
     {
@@ -204,9 +229,15 @@ public class StandardIonSystem
         return sysReader;
     }
 
+
     /**
+     * Creates a new reader, wrapping an array of binary data.
      *
-     * @param ionBinary must be Ion binary data, not text..
+     * @param ionBinary must be Ion binary data, not text.
+     * <em>This method assumes ownership of the array</em> and may modify it at
+     * will.
+     *
+     * @throws NullPointerException if <code>ionBinary</code> is null.
      */
     public SystemReader newBinarySystemReader(byte[] ionBinary)
     {
@@ -216,6 +247,15 @@ public class StandardIonSystem
     }
 
 
+    /**
+     * Creates a new reader, wrapping bytes holding UTF-8 text.
+     *
+     * @param ionText must be UTF-8 encoded Ion text data, not binary.
+     * <em>This method assumes ownership of the array</em> and may modify it at
+     * will.
+     *
+     * @throws NullPointerException if <code>ionText</code> is null.
+     */
     public SystemReader newTextSystemReader(byte[] ionText)
     {
         ByteArrayInputStream stream = new ByteArrayInputStream(ionText);
@@ -330,7 +370,7 @@ public class StandardIonSystem
 
     public IonValue singleValue(String ionText)
     {
-        IonReader reader = newReader(ionText);
+        IonReader reader = newTextReader(ionText);
         return singleValue(reader);
     }
 

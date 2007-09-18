@@ -67,7 +67,7 @@ public class TimestampTest
         assertNotSame(found, actual.dateValue());
 
         assertEquals(found.getTime(), actual.getMillis());
-        
+
         if (expected.getTime() != found.getTime())
         {
             DateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
@@ -91,7 +91,7 @@ public class TimestampTest
         else
         {
             int actualOffsetMillis = actualOffsetMinutes * 60 * 1000;
-            assertEquals(expectedOffsetMillis, actualOffsetMillis);            
+            assertEquals(expectedOffsetMillis, actualOffsetMillis);
         }
     }
 
@@ -100,19 +100,19 @@ public class TimestampTest
     {
         checkMagicDay(null, text);
     }
-    
+
     private void checkMagicDay(TimeZone tz, String text)
     {
         IonTimestamp value = (IonTimestamp) oneValue(text);
         Calendar magicDay = makeUtcCalendar();
         // month is zero-based!
         magicDay.set(1969, 01, 23);
-        
+
         if (tz != null)
         {
             magicDay.setTimeZone(tz);
         }
-        
+
         checkTimestamp(magicDay, value);
     }
 
@@ -161,7 +161,7 @@ public class TimestampTest
         value.setMillis(now.getTime());
         checkTimestamp(now, value);
         assertEquals(-60, value.getLocalOffset().intValue());
-        
+
         value.setLocalOffset(null);
         checkTimestamp(now, value);
         assertEquals(null, value.getLocalOffset());
@@ -240,6 +240,17 @@ public class TimestampTest
         checkMagicDay("1969-02-23T00:00:00.00+00:00");
     }
 
+
+    public void testPrecision()
+    {
+        IonTimestamp t1 = (IonTimestamp) oneValue("2007-08-28T16:37:24Z");
+        IonTimestamp t2 = (IonTimestamp) oneValue("2007-08-28T16:37:24.0Z");
+        IonTimestamp t3 = (IonTimestamp) oneValue("2007-08-28T16:37:24.00Z");
+        IonTimestamp t4 = (IonTimestamp) oneValue("2007-08-28T16:37:24.000Z");
+        // TODO verify structural inequality.
+    }
+
+
     public void testDateWithNormalTzd()
     {
         IonTimestamp value = (IonTimestamp) oneValue("1969-02-22T16:00-08:00");
@@ -247,7 +258,7 @@ public class TimestampTest
         // month is zero-based!
         magicDay.set(1969, 01, 22, 16, 0);
         magicDay.setTimeZone(PST);
-                
+
         checkTimestamp(magicDay, value);
     }
 
@@ -257,7 +268,7 @@ public class TimestampTest
         Calendar magicDay = makeUtcCalendar();
         // month is zero-based!
         magicDay.set(1969, 01, 23);
-        
+
         checkTimestamp(magicDay.getTime(), value);
         assertEquals(75, value.getLocalOffset().intValue());
     }
