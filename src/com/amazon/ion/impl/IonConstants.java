@@ -40,29 +40,29 @@ public class IonConstants
     public static final int tidClob         =  9;
     public static final int tidBlob         = 10; // a
     public static final int tidList         = 11; // b
-    public static final int tidStruct       = 12; // c
-    public static final int tidTypedecl     = 13; // d
-    public static final int tidSexp         = 14; // e
+    public static final int tidSexp         = 12; // c
+    public static final int tidStruct       = 13; // d
+    public static final int tidTypedecl     = 14; // e
     public static final int tidUnused       = 15; // f
 
 /* this is just here to help programmer productivity ...
     switch (((td & 0xf0) >> 4)) {
-    case IonConstants.tidNull: // null(0)
-    case IonConstants.tidBoolean: // boolean(1)
-    case IonConstants.tidPosInt: // 2
-    case IonConstants.tidNegInt: // 3
-    case IonConstants.tidFloat: // float(4)
-    case IonConstants.tidDecimal: // decimal(5)
-    case IonConstants.tidTimestamp: // timestamp(6)
-    case IonConstants.tidSymbol: // symbol(7)
-    case IonConstants.tidString: // string (8)
-    case IonConstants.tidClob: // clob(9)
-    case IonConstants.tidBlob: // blob(10)
-    case IonConstants.tidList: // list(11)
-    case IonConstants.tidStruct: // struct(12)
-    case IonConstants.tidTypedecl: // typedecl(13)
-    case IonConstants.tidSexp: // sexp(14)
-    case IonConstants.tidUnused: // unused(15)
+    case IonConstants.tidNull:      // 0
+    case IonConstants.tidBoolean:   // 1
+    case IonConstants.tidPosInt:    // 2
+    case IonConstants.tidNegInt:    // 3
+    case IonConstants.tidFloat:     // 4
+    case IonConstants.tidDecimal:   // 5
+    case IonConstants.tidTimestamp: // 6
+    case IonConstants.tidSymbol:    // 7
+    case IonConstants.tidString:    // 8
+    case IonConstants.tidClob:      // 9
+    case IonConstants.tidBlob:      // 10 A
+    case IonConstants.tidList:      // 11 B
+    case IonConstants.tidSexp:      // 12 C
+    case IonConstants.tidStruct:    // 13 D
+    case IonConstants.tidTypedecl:  // 14 E
+    case IonConstants.tidUnused:    // 15 F
     default:
         throw new IonException("???");
     }
@@ -81,11 +81,11 @@ public class IonConstants
         case IonConstants.tidString: // string (8)
         case IonConstants.tidClob: // clob(9)
         case IonConstants.tidBlob: // blob(10)
-        case IonConstants.tidTypedecl: // typedecl(13)
+        case IonConstants.tidTypedecl: // 14
             return true;
-        case IonConstants.tidList: // list(11)
-        case IonConstants.tidStruct: // struct(12)
-        case IonConstants.tidSexp: // sexp(14)
+        case IonConstants.tidList:     // 11
+        case IonConstants.tidSexp:     // 12
+        case IonConstants.tidStruct:   // 13
             return false;
         case IonConstants.tidUnused: // unused(15)
         default:
@@ -108,9 +108,9 @@ public class IonConstants
         hnClob      (tidClob,       false,    false),
         hnBlob      (tidBlob,       false,    false),
         hnList      (tidList,       true,     true),
+        hnSexp      (tidSexp,       true,     true),
         hnStruct    (tidStruct,     true,     true),
         hnTypedecl  (tidTypedecl,   false,    false),
-        hnSexp      (tidSexp,       true,     true),
         hnUnused    (tidUnused,     false,    false);
 
         private int     _value;
@@ -137,9 +137,9 @@ public class IonConstants
             case tidClob:       return hnClob;
             case tidBlob:       return hnBlob;
             case tidList:       return hnList;
+            case tidSexp:       return hnSexp;
             case tidStruct:     return hnStruct;
             case tidTypedecl:   return hnTypedecl;
-            case tidSexp:       return hnSexp;
             case tidUnused:     return hnUnused;
             }
             return null;

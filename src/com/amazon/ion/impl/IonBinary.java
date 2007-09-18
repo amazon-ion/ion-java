@@ -270,15 +270,15 @@ public class IonBinary
         case IonConstants.tidString: // string (8)
         case IonConstants.tidClob: // clob(9)
         case IonConstants.tidBlob: // blob(10)
-        case IonConstants.tidTypedecl: // typedecl(13)
+        case IonConstants.tidTypedecl: // 14
             if (valuelen < IonConstants.lnIsVarLen) {
                 return IonConstants.BB_TOKEN_LEN;
             }
             // fall through since the len has to follow
             // the td byte, just like it does in containers
-        case IonConstants.tidList: // list(11)
-        case IonConstants.tidStruct: // struct(12)
-        case IonConstants.tidSexp: // sexp(14)
+        case IonConstants.tidList:   // 11
+        case IonConstants.tidSexp:   // 12
+        case IonConstants.tidStruct: // 13
             return IonConstants.BB_TOKEN_LEN + lenVarUInt7(valuelen);
             
         case IonConstants.tidUnused: // unused(15)
@@ -602,7 +602,7 @@ public class IonBinary
             case IonConstants.tidString: // string (8)
             case IonConstants.tidClob: // clob(9)
             case IonConstants.tidBlob: // blob(10)
-            case IonConstants.tidTypedecl: // typedecl(13)
+            case IonConstants.tidTypedecl: // 14
                 switch (ln) {
                 case 0:
                 case IonConstants.lnIsNullAtom:
@@ -612,9 +612,9 @@ public class IonBinary
                 default:
                     return ln;
                 }
-            case IonConstants.tidList: // list(11)
-            case IonConstants.tidStruct: // struct(12)
-            case IonConstants.tidSexp: // sexp(14)
+            case IonConstants.tidList:   // 11
+            case IonConstants.tidSexp:   // 12
+            case IonConstants.tidStruct: // 13
                 if ((ln & IonConstants.lnIsNullContainer) != 0) return 0;
                 return readVarUInt7IntValue();                
             case IonConstants.tidUnused: // unused(15)

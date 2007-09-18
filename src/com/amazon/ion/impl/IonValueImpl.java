@@ -299,14 +299,14 @@ public abstract class IonValueImpl
         case IonConstants.tidList: // list(11)
             value = new IonListImpl(typedesc);
             break;
-        case IonConstants.tidSexp:
+        case IonConstants.tidSexp: // 12
             value = new IonSexpImpl(typedesc);
             break;
-        case IonConstants.tidStruct: // struct(12)
+        case IonConstants.tidStruct: // 13
             value = new IonStructImpl(typedesc);
             break;
 
-        case IonConstants.tidTypedecl: // typedecl(13)
+        case IonConstants.tidTypedecl: // 14
         default:
             throw new IonException("invalid type "+typeId+" ("+typedesc+") encountered");
         }
@@ -1008,9 +1008,9 @@ public abstract class IonValueImpl
         case IonConstants.tidBlob: // 10
             len += IonBinary.lenLenFieldWithOptionalNibble(valuelen);
             break;
-        case IonConstants.tidList: // list(11)
-        case IonConstants.tidSexp:
-        case IonConstants.tidStruct: // struct(12)
+        case IonConstants.tidList:   // 11
+        case IonConstants.tidSexp:   // 12
+        case IonConstants.tidStruct: // 13
             // and we need to force the length to be at least 1 byte (since we
             // have to write the 0 length out even if it is 0
             len += valuelen == 0 ? 1 : IonBinary.lenVarUInt7(valuelen);
