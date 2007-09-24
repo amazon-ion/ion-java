@@ -16,6 +16,11 @@ public class ListTest
         return system().newList();
     }
 
+    @Override
+    protected String wrap(String v)
+    {
+        return "[" + v + "]";
+    }
 
     //=========================================================================
     // Test cases
@@ -78,6 +83,7 @@ public class ListTest
         assertIonEquals(four, i.next());
         assertFalse(i.hasNext());
     }
+
 
     public void testGetTwiceReturnsSame()
     {
@@ -144,9 +150,9 @@ public class ListTest
         list1.add(system().newString("Hello"));
 
         IonValue list2 = reload(list1);
-        
+
         assertIonEquals(list1, list2);
-        
+
         // Again, starting from [] instead of null.list
         list1 = system().newEmptyList();
         list1.add(system().newString("Hello"));

@@ -218,7 +218,7 @@ public class IonParser
 
         // the length here is the bytes of annotations + the value we
         // wrote as we parsed it
-        this._out.writer().writeTypeDescWithLenForScalars(
+        this._out.writer().writeCommonTypeDescWithLen(
                                 IonConstants.tidTypedecl
                                ,totalAnnotationAndValueLen
                            );
@@ -260,18 +260,15 @@ public class IonParser
             break;
 
         case tOpenParen:
-            // Houston, we have an expression list
-            startCollectionHeader(IonConstants.tidSexp, 0);
+            // Houston, we have an sexp
             parseSexpBody( );
             break;
         case tOpenSquare:
-            // Houston, we have a data list
-            startCollectionHeader(IonConstants.tidList, 0);
+            // Houston, we have a list
             parseListBody( );
             break;
         case tOpenCurly:
             // Quit calling me Houston and ... it's a struct
-            startCollectionHeader(IonConstants.tidStruct, IonConstants.lnNumericZero);
             parseStructBody( );
             break;
         case tOpenDoubleCurly:
@@ -360,6 +357,8 @@ public class IonParser
 
         assert _t == IonTokenReader.Type.tOpenParen;
 
+        _out.writer().startLongWrite(IonConstants.tidSexp);
+        
 loop:   for (;;) {
             next(true);
             switch(_t) {
@@ -378,15 +377,16 @@ loop:   for (;;) {
 
         // here we backpatch the head of this list
         // TODO shouldn't need to pass high-nibble again.
-        this._out.writer().patchLongHeader(IonConstants.tidSexp, IonConstants.lnNumericZero);
-
-        return;
+        // lownibble is ignored and computed from amount written.
+        this._out.writer().patchLongHeader(IonConstants.tidSexp, 0);
     }
 
     void parseListBody( ) throws IOException  {
 
         assert _t == IonTokenReader.Type.tOpenSquare;
 
+        _out.writer().startLongWrite(IonConstants.tidList);
+        
 loop:   for (;;) {
             next(false);
             switch(_t) {
@@ -407,16 +407,20 @@ loop:   for (;;) {
         }
 
         // here we backpatch the head of this list
-        this._out.writer().patchLongHeader(IonConstants.tidList, IonConstants.lnNumericZero);
-
-        return;
+        // lownibble is ignored and computed from amount written.
+        this._out.writer().patchLongHeader(IonConstants.tidList, 0);
     }
 
     void parseStructBody(  ) throws IOException  {
         boolean string_name = false;
 
         assert _t == IonTokenReader.Type.tOpenCurly;
-
+        
+        int hn = IonConstants.tidStruct;
+        int ln = IonConstants.lnNumericZero;
+        _out.writer().pushLongHeader(hn, ln, true);
+        this._out.writer().writeTypeDescWithLenForContainer(hn, ln, 0);
+        
         // read string tagged values - legal tags will be recognized
         this._in.pushContext(IonTokenReader.Context.STRUCT);
 
@@ -523,6 +527,8 @@ loop:   for (;;) {
     {
         assert this._in.keyword != null;
 
+        int hn = this._in.keyword.getHighNibble().value();
+
         int token;
         switch (this._in.keyword) {
             case kwTrue:
@@ -542,18 +548,15 @@ loop:   for (;;) {
             case kwNullString:
             case kwNullBlob:
             case kwNullClob:
-                token = IonConstants.makeTypeDescriptorByte(
-                             this._in.keyword.getHighNibble().value()
-                            ,IonConstants.lnIsNullAtom
-                        );
-                break;
             case kwNullList:
             case kwNullSexp:
+                token = IonConstants.makeTypeDescriptorByte(hn,
+                                         IonConstants.lnIsNullAtom);
+                break;
             case kwNullStruct:
                 token = IonConstants.makeTypeDescriptorByte(
-                             this._in.keyword.getHighNibble().value()
-                            ,IonConstants.lnIsNullContainer
-                        );
+                                         hn,
+                                         IonConstants.lnIsNullContainer); // XXX
                 break;
             default:
                 throw new IllegalStateException("bad keyword token");
@@ -696,12 +699,6 @@ loop:   for (;;) {
             }
             this._out.writer().patchLongHeader(IonConstants.tidBlob, len);
         }
-    }
-
-    public void startCollectionHeader(int hn, int ln) throws IOException
-    {
-        _out.writer().pushLongHeader(hn, ln, true);
-        this._out.writer().writeTypeDescWithLenForContainer(hn, ln, 0);
     }
 
     /**

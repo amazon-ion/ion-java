@@ -59,7 +59,13 @@ public abstract class IonValueImpl
     //                                               next_start ^
     //
     protected int _fieldSid;        // field symbol id in buffer
-    private int _type_desc;         // the actual value td byte
+
+    /**
+     * The actual TD byte of the value.
+     * TODO document when the low-nibble is known to be correct.
+     */
+    private int _type_desc;
+
     private int _entry_start;       // offset of initial td, possibly an annotation
     private int _value_td_start;    // offset of td of the actual value
     private int _value_content_start;// offset of td of the actual value
@@ -583,8 +589,7 @@ public abstract class IonValueImpl
         int start;
         start = this._value_td_start = valueReader.position();
 
-        // our _entry_start needs to be back filled to preceed
-        // the field id
+        // our _entry_start needs to be back filled to precede the field id
         this._entry_start = start - pos_getFieldIdLen();
 
         // read and remember our type descriptor byte
@@ -607,9 +612,7 @@ public abstract class IonValueImpl
             // read the actual values type desc
             this._type_desc = valueReader.readToken();
             type = this.pos_getType();
-            if ( type == IonConstants.tidSexp
-              || type == IonConstants.tidStruct
-              || type == IonConstants.tidList
+            if ( type == IonConstants.tidStruct
               || this.pos_getLowNibble() == IonConstants.lnIsVarLen
             ) {
                 valueReader.readVarUInt7IntValue();
@@ -892,18 +895,15 @@ public abstract class IonValueImpl
             if (isNullValue()) return 0;
 
             len = getNativeValueLength();
-
         }
         else {
-            IonBinary.Reader reader = this._buffer.reader();
-            reader.sync();
-            reader.setPosition(this.pos_getOffsetAtValueTD() + 1);
-            len = getFieldLength(this.pos_getTypeDescriptorByte(), reader);
+            assert _isPositionLoaded;
+            len = pos_getValueOnlyLength();
         }
         return len;
     }
 
-
+    // TODO document!  What's the difference btw this and getNAKEDvalueLength?
     abstract protected int getNativeValueLength();
 
 
@@ -1004,12 +1004,12 @@ public abstract class IonValueImpl
         case IonConstants.tidTimestamp: // timestamp(6)
         case IonConstants.tidSymbol: // symbol(7)
         case IonConstants.tidString: // string (8)
-        case IonConstants.tidClob: // 9
-        case IonConstants.tidBlob: // 10
-            len += IonBinary.lenLenFieldWithOptionalNibble(valuelen);
-            break;
+        case IonConstants.tidClob:   // 9
+        case IonConstants.tidBlob:   // 10
         case IonConstants.tidList:   // 11
         case IonConstants.tidSexp:   // 12
+            len += IonBinary.lenLenFieldWithOptionalNibble(valuelen);
+            break;
         case IonConstants.tidStruct: // 13
             // and we need to force the length to be at least 1 byte (since we
             // have to write the 0 length out even if it is 0
@@ -1055,7 +1055,7 @@ public abstract class IonValueImpl
         // typedesc (since it wraps the values td and len and value)
         len += this.getAnnotationOverheadLength(len);
 
-        // and the field preceeds them all and doesn't get caught
+        // and the field precedes them all and doesn't get caught
         // up in all that "length" business.
         len += this.getFieldNameOverheadLength();
 
@@ -1068,15 +1068,15 @@ public abstract class IonValueImpl
      * changed.
      * @throws IOException
      */
-    public int updateToken() throws IOException {
+    public final int updateToken() throws IOException {
         if (!this._isDirty) return 0;
 
         int old_next_start = _next_start;
 
-        //      | mid | an | tlen | alen | ann | td | vlen | value |
+        //      | fid | an | tlen | alen | ann | td | vlen | value |
         //      |     |                        |                   |
         //       ^ entry_start                  ^ value_start
-        //             ^ + len(mid)                      next_start ^
+        //             ^ + len(fid)                      next_start ^
 
         int fieldSidLen = 0;
         int newFieldSid = 0;
@@ -1119,7 +1119,16 @@ public abstract class IonValueImpl
         return _next_start - old_next_start;
     }
 
-    abstract protected int computeLowNibble(int valuelen);
+    /**
+     * Precondition:  _isDirty && _hasNativeValue
+     *
+     * @param valuelen
+     * @return the current type descriptor low nibble for this value.
+     *
+     * @throws IOException if there's a problem reading binary data while
+     * making this computation.
+     */
+    abstract protected int computeLowNibble(int valuelen) throws IOException;
 
 
     protected void shiftTokenAndChildren(int delta)
@@ -1129,7 +1138,6 @@ public abstract class IonValueImpl
         pos_moveAll(delta);
     }
 
-    // CAS UPDATE - added updateSymbolTable
     public void updateSymbolTable(LocalSymbolTable symtab) {
         if (this._annotations != null) {
             for (String s : this._annotations) {
@@ -1140,7 +1148,20 @@ public abstract class IonValueImpl
 
     /**
      * Brings the binary buffer in sync with the materialized view.
-     *
+     * <p>
+     * The cumulativePositionDelta counts how many bytes have been
+     * inserted/removed from the byte buffer "to the left" of this value.
+     * If this value has data in the buffer, its current position must be
+     * offset by this amount to find where the data is upon entry to this
+     * method.  This method may do further inserts and/or deletes, and it must
+     * return the accumulated delta.  For example, if this method (and/or any
+     * methods it calls) causes N bytes to be inserted into the buffer, it
+     * must return <code>(cumulativePositionDelta + N)</code>.  If M bytes are
+     * removed, it must return <code>(cumulativePositionDelta - M)</code>.
+     * <p>
+     * Note that "inserted into the buffer" is different from "written into the
+     * buffer".  Writes don't affect the delta, but calls like
+     * {@link Writer#insert(int)} and {@link Writer#remove(int)} do.
      * <p>
      * Preconditions: If we've been encoded before, the existing data is at a
      * position after newPosition.  If we need more space we must insert it.
@@ -1148,9 +1169,13 @@ public abstract class IonValueImpl
      * the old data.
      * <p>
      * Postconditions: Our token is fully up to date.  isDirty() == false
+     *
+     * @return the updated cumulativePositionDelta.
      * @throws IOException
      */
-    protected int updateBuffer2(IonBinary.Writer writer, int newPosition, int cumulativePositionDelta) throws IOException
+    protected final int updateBuffer2(IonBinary.Writer writer, int newPosition,
+                                      int cumulativePositionDelta)
+        throws IOException
     {
         assert writer != null;
         assert writer.position() == newPosition;
@@ -1167,7 +1192,7 @@ public abstract class IonValueImpl
             if (0 < gapSize)
             {
                 // Remove the gap to our left
-                writer.setPosition(newPosition);
+                writer.setPosition(newPosition);  // TODO shouldnt be needed
                 writer.remove(gapSize);
                 cumulativePositionDelta -= gapSize;
             }
@@ -1193,7 +1218,9 @@ public abstract class IonValueImpl
         return cumulativePositionDelta;
     }
 
-    protected int updateNewValue(IonBinary.Writer writer, int newPosition, int cumulativePositionDelta) throws IOException
+    protected int updateNewValue(IonBinary.Writer writer, int newPosition,
+                                 int cumulativePositionDelta)
+        throws IOException
     {
         assert writer.position() == newPosition;
 
@@ -1221,8 +1248,11 @@ public abstract class IonValueImpl
         return cumulativePositionDelta;
     }
 
-    protected int updateOldValue(IonBinary.Writer writer, int newPosition, int cumulativePositionDelta) throws IOException
+    protected int updateOldValue(IonBinary.Writer writer, int newPosition,
+                                 int cumulativePositionDelta)
+        throws IOException
     {
+        assert !(this instanceof IonContainer);
         assert writer.position() == newPosition;
 
         int oldEndOfValue = pos_getOffsetofNextValue();
@@ -1232,7 +1262,8 @@ public abstract class IonValueImpl
         assert newPosition <= pos_getOffsetAtFieldId();
 
         // Do we need to insert more space?
-        assert oldEndOfValue - newPosition > 1;  // why 1?? shouldn't this be > 0
+        assert oldEndOfValue - newPosition > 1;
+        // TODO why 1?? shouldn't this be > 0
 
         updateToken();
 
@@ -1246,7 +1277,7 @@ public abstract class IonValueImpl
         int cumulativePositionDelta2 =
             writeElement(writer, cumulativePositionDelta);
 
-        assert  cumulativePositionDelta2 == cumulativePositionDelta;
+        assert cumulativePositionDelta2 == cumulativePositionDelta;
 
         return cumulativePositionDelta;
     }
@@ -1257,7 +1288,7 @@ public abstract class IonValueImpl
      * and enough space is available.
      * @throws IOException
      */
-    int writeElement(IonBinary.Writer writer, int cumulativePositionDelta) throws IOException
+    final int writeElement(IonBinary.Writer writer, int cumulativePositionDelta) throws IOException
     {
         writeFieldName(writer);
 
@@ -1296,7 +1327,7 @@ public abstract class IonValueImpl
      * and enough space is available.
      * @throws IOException
      */
-    void writeAnnotations(IonBinary.Writer writer) throws IOException
+    final void writeAnnotations(IonBinary.Writer writer) throws IOException
     {
         if (this._annotations != null) {
             int valuelen      = this.getNakedValueLength();
@@ -1304,22 +1335,28 @@ public abstract class IonValueImpl
             int annotationlen = getAnnotationLength();
             int wrappedLength = valuelen + tdwithvlenlen + annotationlen;
 
-            writer.writeTypeDescWithLenForScalars(IonConstants.tidTypedecl,
+            writer.writeCommonTypeDescWithLen(IonConstants.tidTypedecl,
                                                 wrappedLength);
             writer.writeAnnotations(_annotations, this.getSymbolTable());
         }
     }
 
-    protected abstract void doWriteNakedValue(IonBinary.Writer writer, int valueLen) throws IOException;
+    protected abstract void doWriteNakedValue(IonBinary.Writer writer,
+                                              int valueLen)
+        throws IOException;
+
     /**
      * Precondition: the token is up to date, the buffer is positioned properly,
      * and enough space is available.
+     *
+     * @return the cumulative position delta at the end of this value.
      * @throws IOException
      */
-    protected int writeValue(IonBinary.Writer writer, int cumulativePositionDelta) throws IOException
+    protected int writeValue(IonBinary.Writer writer,
+                             int cumulativePositionDelta)
+        throws IOException
     {
-
-        // updateBuffer is overridden by container.
+        // overridden by container.
         assert !(this instanceof IonContainer);
 
         // everyone gets a type descriptor byte (which was set
@@ -1349,7 +1386,7 @@ public abstract class IonValueImpl
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //
-    //  the container class = for structs, lists of both data and expressions
+    //  the container class = for structs and sequences (list and sexp)
     //
     //
     abstract public static class container
@@ -1364,17 +1401,6 @@ public abstract class IonValueImpl
             super(typeDesc);
         }
 
-
-        @Override
-        public boolean isNullValue()
-        {
-            if (_hasNativeValue || !_isPositionLoaded) {
-                return (_contents == null);
-            }
-
-            int ln = this.pos_getLowNibble();
-            return ((ln & IonConstants.lnIsNullContainer) != 0);
-        }
 
         public int size()
             throws NullValueException
@@ -1599,24 +1625,26 @@ public abstract class IonValueImpl
         }
 
         @Override
-        protected int updateOldValue(IonBinary.Writer writer, int newPosition, int cumulativePositionDelta) throws IOException
+        protected int updateOldValue(IonBinary.Writer writer, int newPosition,
+                                     int cumulativePositionDelta)
+            throws IOException
         {
             assert writer.position() == newPosition;
 
             this.pos_moveAll(cumulativePositionDelta);
 
-            int oldPositionOfValue = this.pos_getOffsetInitialTD();
+            int currentPositionOfContent = pos_getOffsetAtActualValue();
+            int currentPositionOfFieldId = pos_getOffsetAtFieldId();
 
-            int currentSpaceBeforeValue = oldPositionOfValue - newPosition;
-            assert currentSpaceBeforeValue >= 0;
+            // The old data is at or to the right of the current position.
+            assert newPosition <= currentPositionOfFieldId;
 
             // Recompute our final offsets and lengths.
             updateToken();
 
-            // TODO: is this the right offset?
-            int newPositionOfValue = this.pos_getOffsetInitialTD();
+            int newPositionOfContent = pos_getOffsetAtActualValue();
+            int headerOverlap = newPositionOfContent - currentPositionOfContent;
 
-            int headerOverlap = newPositionOfValue - oldPositionOfValue;
             if (headerOverlap > 0) {
                 // We need to make more space for the field name & annotations
                 // so we don't overwrite the core value.
@@ -1630,40 +1658,9 @@ public abstract class IonValueImpl
             return cumulativePositionDelta;
         }
 
-        /**
-         * Preconditions: isDirty().  Children's tokens not updated nor shifted.
-         * @throws IOException
-         */
-        @Override
-        protected int writeValue(IonBinary.Writer writer,
-                                 int cumulativePositionDelta) throws IOException
-        {
-            assert _hasNativeValue == true || _isPositionLoaded == false;
-            assert !(this instanceof IonDatagram);
 
-            writer.write(this.pos_getTypeDescriptorByte());
-
-            if (_contents != null)
-            {
-                // FIXME the following is no longer true under the new spec
-                // write the value length, its never in the TD byte.
-                writer.writeVarUInt7Value(this.getNakedValueLength()
-                                         ,true);
-
-                cumulativePositionDelta =
-                    doWriteContainerContents(
-                        writer
-                       ,cumulativePositionDelta
-                    );
-            }
-
-            return cumulativePositionDelta;
-        }
-
-
-        protected int doWriteContainerContents(IonBinary.Writer writer
-                                              ,int cumulativePositionDelta
-        )
+        protected int doWriteContainerContents(IonBinary.Writer writer,
+                                               int cumulativePositionDelta)
             throws IOException
         {
             if (_contents != null)
@@ -1680,14 +1677,6 @@ public abstract class IonValueImpl
             return cumulativePositionDelta;
         }
 
-
-        @Override
-        protected int computeLowNibble(int valuelen)
-        {
-            // FIXME: we wipe out the "in order bit" here !
-            if (this.isNullValue()) return IonConstants.lnIsNullContainer;
-            return 0;
-        }
 
         @Override
         protected void doWriteNakedValue(Writer writer, int valueLen)
@@ -1942,7 +1931,7 @@ public abstract class IonValueImpl
     {
 
         /**
-         * Constructs a list backed by a binary buffer.
+         * Constructs a sequence backed by a binary buffer.
          *
          * @param typeDesc
          */
@@ -1951,9 +1940,13 @@ public abstract class IonValueImpl
             assert !_hasNativeValue;
         }
 
+        /**
+         * Constructs a sequence value <em>not</em> backed by binary.
+         * @param typeDesc
+         * @param makeNull
+         */
         protected list(int typeDesc, boolean makeNull) {
             this(typeDesc);
-            assert !_hasNativeValue;
             assert _contents == null;
             assert isDirty();
 
@@ -1961,6 +1954,18 @@ public abstract class IonValueImpl
                 _contents = new ArrayList<IonValue>();
             }
             _hasNativeValue = true;
+        }
+
+
+        @Override
+        public boolean isNullValue()
+        {
+            if (_hasNativeValue || !_isPositionLoaded) {
+                return (_contents == null);
+            }
+
+            int ln = this.pos_getLowNibble();
+            return (ln == IonConstants.lnIsNullSequence);
         }
 
 
@@ -1995,6 +2000,52 @@ public abstract class IonValueImpl
 
             assert wrapper._isSystemValue;  // so we can unwrap it
             super.add(wrapper);
+        }
+
+        @Override
+        protected int computeLowNibble(int valuelen)
+            throws IOException
+        {
+            assert _hasNativeValue;
+
+            if (_contents == null)
+            {
+                return IonConstants.lnIsNullSequence;
+            }
+
+            int contentLength = getNakedValueLength();
+            if (contentLength > IonConstants.lnIsVarLen)
+            {
+                return IonConstants.lnIsVarLen;
+            }
+
+            return contentLength;
+        }
+
+        @Override
+        protected int writeValue(IonBinary.Writer writer,
+                                 int cumulativePositionDelta)
+            throws IOException
+        {
+            assert _hasNativeValue == true || _isPositionLoaded == false;
+            assert !(this instanceof IonDatagram);
+
+            writer.write(this.pos_getTypeDescriptorByte());
+
+            // now we write any data bytes - unless it's null
+            int vlen = this.getNativeValueLength();
+            if (vlen > 0) {
+                if (vlen >= IonConstants.lnIsVarLen) {
+                    writer.writeVarUInt7Value(vlen, true);
+                    // Fall through...
+                }
+
+                // TODO cleanup; this is the only line different from super
+                cumulativePositionDelta =
+                    doWriteContainerContents(writer,
+                                             cumulativePositionDelta);
+            }
+            return cumulativePositionDelta;
         }
     }
 

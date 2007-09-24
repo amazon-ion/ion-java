@@ -18,16 +18,16 @@ public class IonConstants
     public final static int BB_INT64_LEN_MAX       =    8;
     public final static int BB_VAR_LEN_MIN         =    1;
     public final static int BB_MAX_7BIT_INT        =  127;
- 
+
     public static int INT32_SIZE            = 4;
     public static int MAGIC_TOKEN_SIZE      = 4;
-    
+
     /**
      * Only valid for Ion 1.0
      */
     public static int MAGIC_TOKEN           = 0x10140100;
- 
-    
+
+
     public static final int tidNull         =  0;
     public static final int tidBoolean      =  1;
     public static final int tidPosInt       =  2;
@@ -67,7 +67,7 @@ public class IonConstants
         throw new IonException("???");
     }
 */
-    
+
     public static final boolean lengthIsEncodedInLowNibble(int hn) {
         switch (hn) {
         case IonConstants.tidNull: // null(0)
@@ -81,10 +81,10 @@ public class IonConstants
         case IonConstants.tidString: // string (8)
         case IonConstants.tidClob: // clob(9)
         case IonConstants.tidBlob: // blob(10)
-        case IonConstants.tidTypedecl: // 14
-            return true;
         case IonConstants.tidList:     // 11
         case IonConstants.tidSexp:     // 12
+        case IonConstants.tidTypedecl: // 14
+            return true;
         case IonConstants.tidStruct:   // 13
             return false;
         case IonConstants.tidUnused: // unused(15)
@@ -150,7 +150,12 @@ public class IonConstants
     }
 
     public static final int lnIsNullAtom      = 0x0f;
+    public static final int lnIsNullSequence  = 0x0f;
     public static final int lnIsVarLen        = 0x0e;
+
+    /**
+     * TODO improve the name; this is only used by struct.
+     */
     public static final int lnIsNullContainer = 0x08;
     public static final int lnIsDatagram      = 0x04;
 

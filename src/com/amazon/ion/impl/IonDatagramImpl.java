@@ -431,6 +431,13 @@ public final class IonDatagramImpl
         return _buffer.buffer().size() - oldSize;
     }
 
+    @Override
+    protected int computeLowNibble(int valuelen)
+        throws IOException
+    {
+        return 0;
+    }
+
     /**
      * Preconditions: isDirty().  Children's tokens not updated nor shifted.
      * @throws IOException

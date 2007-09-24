@@ -15,6 +15,11 @@ public class SexpTest
         return system().newSexp();
     }
 
+    @Override
+    protected String wrap(String v)
+    {
+        return "(" + v + ")";
+    }
     
     //=========================================================================
     // Test cases
@@ -73,7 +78,7 @@ public class SexpTest
         assertEquals(3, value.size());
     }
     
-    /** Ensure that triple-quote concatenation works inside sexpr. */
+    /** Ensure that triple-quote concatenation works inside sexp. */
     public void testConcatenation()
     {
         IonSexp value = (IonSexp) oneValue("(a '''a''' '''b''' \"c\")");

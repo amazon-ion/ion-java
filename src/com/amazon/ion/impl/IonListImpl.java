@@ -16,7 +16,7 @@ public final class IonListImpl
 {
     private static final int NULL_LIST_TYPEDESC =
         IonConstants.makeTypeDescriptorByte(IonConstants.tidList,
-                                            IonConstants.lnIsNullContainer);
+                                            IonConstants.lnIsNullSequence);
 
 
     /**
@@ -26,7 +26,7 @@ public final class IonListImpl
     {
         this(true);
     }
-    
+
     /**
      * Constructs a null or empty list.
      *
@@ -37,7 +37,7 @@ public final class IonListImpl
     {
         super(NULL_LIST_TYPEDESC, makeNull);
         assert pos_getType() == IonConstants.tidList;
-    } 
+    }
 
     /**
      * Constructs a non-materialized list backed by a binary buffer.

@@ -4,6 +4,7 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
@@ -47,6 +48,18 @@ public final class IonStructImpl
     }
 
 
+    @Override
+    public boolean isNullValue()
+    {
+        if (_hasNativeValue || !_isPositionLoaded) {
+            return (_contents == null);
+        }
+
+        int ln = this.pos_getLowNibble();
+        return ((ln & IonConstants.lnIsNullContainer) != 0);
+    }
+    
+    
     public IonValue get(IonSymbol fieldName)
     {
         makeReady();
@@ -159,7 +172,35 @@ public final class IonStructImpl
     // Helpers
 
 
+    @Override
+    protected int computeLowNibble(int valuelen)
+    {
+        // FIXME: we wipe out the "in order bit" here !
+        if (this.isNullValue()) return IonConstants.lnIsNullContainer;
+        return 0;
+    }
 
+    @Override
+    protected int writeValue(IonBinary.Writer writer,
+                             int cumulativePositionDelta)
+        throws IOException
+    {
+        assert _hasNativeValue == true || _isPositionLoaded == false;
+
+        writer.write(this.pos_getTypeDescriptorByte());
+
+        if (_contents != null)
+        {
+            // FIXME the following is no longer true under the new spec
+            // write the value length, its never in the TD byte.
+            writer.writeVarUInt7Value(this.getNakedValueLength(), true);
+
+            cumulativePositionDelta =
+                doWriteContainerContents(writer, cumulativePositionDelta);
+        }
+
+        return cumulativePositionDelta;
+    }
 
     @Override
     public void updateSymbolTable(LocalSymbolTable symtab) {

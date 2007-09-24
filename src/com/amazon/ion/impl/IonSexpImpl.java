@@ -14,9 +14,9 @@ public class IonSexpImpl
     extends IonValueImpl.list
     implements IonSexp
 {
-    private static final int NULL_SEXP_TYPEDESC = 
+    private static final int NULL_SEXP_TYPEDESC =
         IonConstants.makeTypeDescriptorByte(IonConstants.tidSexp,
-                                            IonConstants.lnIsNullContainer);
+                                            IonConstants.lnIsNullSequence);
 
 
     /**
@@ -26,7 +26,7 @@ public class IonSexpImpl
     {
         this(true);
     }
-    
+
     /**
      * Constructs a null or empty S-expression.
      *
@@ -37,7 +37,7 @@ public class IonSexpImpl
     {
         super(NULL_SEXP_TYPEDESC, makeNull);
         assert pos_getType() == IonConstants.tidSexp;
-    } 
+    }
 
 
     /**

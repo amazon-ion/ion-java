@@ -199,6 +199,9 @@ public abstract class IonTestCase
     // ========================================================================
     // Encoding helpers
 
+    /**
+     * Gets bytes of datagram and loads into a new one.
+     */
     public IonDatagram reload(IonDatagram dg)
     {
         byte[] bytes = dg.toBytes();
@@ -208,6 +211,10 @@ public abstract class IonTestCase
         return dg1;
     }
 
+    /**
+     * Put value into a datagram, get bytes, and reload to single value.
+     * Result should be equivalent.
+     */
     public IonValue reload(IonValue value)
     {
         IonDatagram dg = system().newDatagram(value);
@@ -277,7 +284,7 @@ public abstract class IonTestCase
     {
         IonValue value = null;
 
-        Iterator<IonValue> iterator = system().newReader(text);
+        Iterator<IonValue> iterator = system().newTextReader(text);
         if (iterator.hasNext())
         {
             value = iterator.next();

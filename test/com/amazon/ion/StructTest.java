@@ -169,6 +169,32 @@ public class StructTest
         assertEquals("{a:b}", value.toString());
     }
 
+
+    /**
+     * This looks for a subtle encoding problem. If a value has its header
+     * widened enough to overlap clean content, we must be careful to not
+     * overwrite the content while writing the header.  This can happen when
+     * adding annotations.
+     * @see ListTest#testModsCausingHeaderOverlap()
+     */
+    public void testModsCausingHeaderOverlap()
+        throws Exception
+    {
+        IonDatagram dg = values("{f:\"this is a string to overlap\"}");
+        IonStruct v = (IonStruct) dg.get(0);
+        v.addTypeAnnotation("one");
+        v.addTypeAnnotation("two");
+        v.addTypeAnnotation("three");
+        v.addTypeAnnotation("four");
+        v.addTypeAnnotation("five");
+        v.addTypeAnnotation("six");
+
+        dg = reload(dg);
+        v = (IonStruct) dg.get(0);
+        checkString("this is a string to overlap", v.get("f"));
+    }
+
+
     public void testGetTwiceReturnsSame()
     {
         IonStruct value = (IonStruct) oneValue("{a:b}");
