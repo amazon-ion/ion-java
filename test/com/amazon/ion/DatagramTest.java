@@ -4,6 +4,7 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.impl.IonSequenceImpl;
 import com.amazon.ion.impl.IonValueImpl;
 import java.util.Iterator;
 
@@ -185,7 +186,7 @@ public class DatagramTest
         assertEquals(beanSid, javaSym.intValue());
 
         // TODO remove cast
-        ((IonValueImpl.list)destList).addEmbedded(sourceBean);
+        ((IonSequenceImpl)destList).addEmbedded(sourceBean);
         assertIonEquals(sourceBean, destList.get(1));
 
         IonDatagram reloadedDatagram = myLoader.load(destDatagram.toBytes());

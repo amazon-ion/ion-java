@@ -4,7 +4,6 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
@@ -19,7 +18,7 @@ import java.util.Iterator;
  * Implements the Ion <code>struct</code> type.
  */
 public final class IonStructImpl
-    extends IonValueImpl.container
+    extends IonContainerImpl
     implements IonStruct
 {
 
@@ -58,8 +57,8 @@ public final class IonStructImpl
         int ln = this.pos_getLowNibble();
         return ((ln & IonConstants.lnIsNullContainer) != 0);
     }
-    
-    
+
+
     public IonValue get(IonSymbol fieldName)
     {
         makeReady();

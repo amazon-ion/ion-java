@@ -11,7 +11,7 @@ import com.amazon.ion.ValueVisitor;
  * Implements the Ion <code>sexp</code> (S-expression) type.
  */
 public class IonSexpImpl
-    extends IonValueImpl.list
+    extends IonSequenceImpl
     implements IonSexp
 {
     private static final int NULL_SEXP_TYPEDESC =

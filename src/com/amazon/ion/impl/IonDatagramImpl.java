@@ -24,7 +24,7 @@ import java.util.Iterator;
  *
  */
 public final class IonDatagramImpl
-    extends IonValueImpl.list
+    extends IonSequenceImpl
     implements IonDatagram
 {
     static private final int DATAGRAM_TYPEDESC  =

@@ -11,7 +11,7 @@ import com.amazon.ion.ValueVisitor;
  * Implements the Ion <code>list</code> type.
  */
 public final class IonListImpl
-    extends IonValueImpl.list
+    extends IonSequenceImpl
     implements IonList
 {
     private static final int NULL_LIST_TYPEDESC =
