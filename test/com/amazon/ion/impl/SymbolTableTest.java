@@ -141,7 +141,7 @@ public class SymbolTableTest
             "}\n" +
             "bar foo";
 
-        IonReader scanner = system().newReader(text);
+        IonReader scanner = system().newTextReader(text);
 
         IonValue value = scanner.next();
         checkSymbol("bar", 101, value);
@@ -178,7 +178,7 @@ public class SymbolTableTest
             "$ion_1_0\n" +
             "1 bar foo";
 
-        IonReader scanner = system().newReader(text);
+        IonReader scanner = system().newTextReader(text);
         testLocalTableResetting(scanner);
 
         IonLoader loader = system().newLoader();
@@ -252,7 +252,7 @@ public class SymbolTableTest
             "}\n" +
             "null";
 
-        IonReader scanner = system().newReader(text);
+        IonReader scanner = system().newTextReader(text);
         testStaticTable(scanner);
 
         IonDatagram datagram = loader().loadText(text);
@@ -297,7 +297,7 @@ public class SymbolTableTest
             "}\n" +
             "null";
 
-        IonReader scanner = system().newReader(importingText);
+        IonReader scanner = system().newTextReader(importingText);
         try {
             scanner.next();
             fail("Expected IonException");
@@ -331,7 +331,7 @@ public class SymbolTableTest
             "shadow\n" +
             "$" + shadowId;
 
-        IonReader scanner = system().newReader(importingText);
+        IonReader scanner = system().newTextReader(importingText);
 
         IonValue value = scanner.next();
         LocalSymbolTable symtab = value.getSymbolTable();
@@ -453,7 +453,7 @@ public class SymbolTableTest
         checkSymbol("imported 1", import1id, dg.get(2));
         checkSymbol("imported 2", import2id, dg.get(3));
         checkSymbol("$" + fred3id, fred3id, dg.get(4));
-        
+
         // We can't load the original text because it doesn't have max_id
         badValue(text);
     }
@@ -497,7 +497,7 @@ public class SymbolTableTest
         checkSymbol("$" + import2id, import2id, dg.get(3));
         checkSymbol("fred3", fred3id, dg.get(4));
         checkSymbol("fred5", local3id, dg.get(5));
-        
+
         // We can't load the original text because it doesn't have max_id
         badValue(text);
     }

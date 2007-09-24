@@ -40,7 +40,7 @@ public class ReaderTest
 
     public void testSimpleScan()
     {
-        IonReader scanner = system().newReader("abc");
+        IonReader scanner = system().newTextReader("abc");
         SymbolTable symtab = scanner.getLocalSymbolTable();
 
         IonSymbol value = (IonSymbol) scanner.next();
@@ -52,7 +52,7 @@ public class ReaderTest
 
     public void testCustomSid()
     {
-        IonReader scanner = system().newReader("abc");
+        IonReader scanner = system().newTextReader("abc");
         LocalSymbolTable symtab = scanner.getLocalSymbolTable();
         assertEquals(-1, symtab.findSymbol("abc"));
 
@@ -69,7 +69,7 @@ public class ReaderTest
 
     public void testIncrementalParsing()
     {
-        IonReader scanner = system().newReader("abc def ghi");
+        IonReader scanner = system().newTextReader("abc def ghi");
         LocalSymbolTable symtab = scanner.getLocalSymbolTable();
 
 
@@ -92,7 +92,7 @@ public class ReaderTest
 
     public void testSettingSymbolTable()
     {
-        IonReader scanner = system().newReader("abc def ghi");
+        IonReader scanner = system().newTextReader("abc def ghi");
         LocalSymbolTable symtab0 = scanner.getLocalSymbolTable();
 
 
@@ -130,12 +130,12 @@ public class ReaderTest
 
     public void testScannerTermination()
     {
-        IonReader scanner = system().newReader("");
+        IonReader scanner = system().newTextReader("");
         checkEmptyIterator(scanner);
         scanner.close();
 
         // Try calling next before hasNext
-        scanner= system().newReader("1");
+        scanner= system().newTextReader("1");
         try {
             scanner.next();
             checkEmptyIterator(scanner);

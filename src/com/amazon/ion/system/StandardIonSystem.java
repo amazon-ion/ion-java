@@ -171,7 +171,7 @@ public class StandardIonSystem
      */
     public IonReader newReader(Reader reader)
     {
-        return new UserReader(this, this.newLocalSymbolTable(), reader);
+        return newTextReader(reader);
     }
 
     public IonReader newTextReader(Reader reader)
@@ -184,9 +184,7 @@ public class StandardIonSystem
      */
     public IonReader newReader(String ionText)
     {
-        return new UserReader(this,
-                              this.newLocalSymbolTable(),
-                              new StringReader(ionText));
+        return newTextReader(ionText);
     }
 
     public IonReader newTextReader(String ionText)

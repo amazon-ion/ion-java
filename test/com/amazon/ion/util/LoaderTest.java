@@ -123,7 +123,7 @@ public class LoaderTest
         try
         {
             Reader reader = new InputStreamReader(fileStream, "UTF-8");
-            IonReader i = system().newReader(reader);
+            IonReader i = system().newTextReader(reader);
             while (i.hasNext())
             {
                 IonValue value = i.next();
