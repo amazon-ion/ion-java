@@ -4,6 +4,7 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.IonConstants.MAGIC_COOKIE_SIZE;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
@@ -546,9 +547,9 @@ public abstract class IonValueImpl
 
         _fieldSid           = 0;
         _type_desc          = typeDesc;
-        _entry_start        = 8;
-        _value_td_start     = 8;
-        _value_content_start= 8;
+        _entry_start        = MAGIC_COOKIE_SIZE;
+        _value_td_start     = MAGIC_COOKIE_SIZE;
+        _value_content_start= MAGIC_COOKIE_SIZE;
         _next_start         = length;
     }
 

@@ -4,6 +4,7 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.IonConstants.MAGIC_COOKIE_SIZE;
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
@@ -56,8 +57,8 @@ public final class IonDatagramImpl
     {
         BufferManager buffer = new BufferManager();
         try {
-            buffer.writer(0).writeFixedIntValue(0xffffffff, 4);
-            buffer.writer().writeFixedIntValue(IonConstants.MAGIC_TOKEN, 4);
+            buffer.writer().writeFixedIntValue(IonConstants.MAGIC_COOKIE,
+                                               IonConstants.MAGIC_COOKIE_SIZE);
         }
         catch (IOException e) {
              throw new IonException(e);
@@ -415,11 +416,11 @@ public final class IonDatagramImpl
         }
 
 
-        updateBuffer2(_buffer.writer(8), 8, 0);
+        updateBuffer2(_buffer.writer(MAGIC_COOKIE_SIZE), MAGIC_COOKIE_SIZE, 0);
 
         if (systemSize() == 0) {
             // Nothing should've been written.
-            assert _buffer.writer().position() == 8;
+            assert _buffer.writer().position() == MAGIC_COOKIE_SIZE;
         }
         else {
             IonValueImpl lastChild = (IonValueImpl) systemGet(systemSize() - 1);
@@ -466,10 +467,6 @@ public final class IonDatagramImpl
             _buffer.reader().sync();   // FIXME is this correct?
 
             updateBuffer();
-
-            int pos = _buffer.writer().position();
-            _buffer.writer(0).writeFixedIntValue(this.pos_getOffsetofNextValue(), 4);
-            _buffer.writer().setPosition(pos);
 
             int len = _buffer.buffer().size();
             byte[] bytes = new byte[len];

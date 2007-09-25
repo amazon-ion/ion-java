@@ -5,6 +5,8 @@
 package com.amazon.ion.impl;
 
 
+import static com.amazon.ion.impl.IonConstants.MAGIC_COOKIE;
+import static com.amazon.ion.impl.IonConstants.MAGIC_COOKIE_SIZE;
 import java.io.IOException;
 import java.io.PushbackReader;
 import java.io.Reader;
@@ -87,15 +89,17 @@ public class IonParser
 
     /**
      *
-     * @param symboltable
-     * @param start
-     * @param write_header
+     * @param symboltable must not be null.
+     * @param startPosition
+     *      The position to start writing into our buffer.
+     * @param writeMagicCookie
+     *      Whether we should write the Ion magic cookie before any data.
      * @param consume the preferred number of characters to consume.  More than
      * this number may be read, but we won't stop until we pass this threshold.
      */
     public void parse(LocalSymbolTable symboltable
-                    , int start
-                    , boolean write_header
+                    , int startPosition
+                    , boolean writeMagicCookie
                     , int consume)
     {
         assert symboltable != null;
@@ -106,12 +110,11 @@ public class IonParser
         try {
             _out.openReader();
             _out.openWriter();
-            IonBinary.Writer writer = _out.writer(start);
+            IonBinary.Writer writer = _out.writer(startPosition);
 
-            if (write_header) {
-                // first we'll start the buffer (we'll come back and rewrite the 0 later)
-                writer.writeFixedIntValue(0, 4);
-                writer.writeFixedIntValue(IonConstants.MAGIC_TOKEN, 4);
+            if (writeMagicCookie) {
+                // Start the buffer with the magic cookie.
+                writer.writeFixedIntValue(MAGIC_COOKIE, MAGIC_COOKIE_SIZE);
             }
 
             do {
@@ -128,7 +131,7 @@ public class IonParser
             } while (consume > this._in.consumed);
 
             // and we're done
-            finishParsing(start, write_header);
+            this._out.writer().truncate();
         }
         catch (IOException ioe) {
             throw new IonException(ioe.getMessage()+ " at " + this._in.position(),
@@ -358,7 +361,7 @@ public class IonParser
         assert _t == IonTokenReader.Type.tOpenParen;
 
         _out.writer().startLongWrite(IonConstants.tidSexp);
-        
+
 loop:   for (;;) {
             next(true);
             switch(_t) {
@@ -386,7 +389,7 @@ loop:   for (;;) {
         assert _t == IonTokenReader.Type.tOpenSquare;
 
         _out.writer().startLongWrite(IonConstants.tidList);
-        
+
 loop:   for (;;) {
             next(false);
             switch(_t) {
@@ -415,12 +418,12 @@ loop:   for (;;) {
         boolean string_name = false;
 
         assert _t == IonTokenReader.Type.tOpenCurly;
-        
+
         int hn = IonConstants.tidStruct;
         int ln = IonConstants.lnNumericZero;
         _out.writer().pushLongHeader(hn, ln, true);
         this._out.writer().writeTypeDescWithLenForContainer(hn, ln, 0);
-        
+
         // read string tagged values - legal tags will be recognized
         this._in.pushContext(IonTokenReader.Context.STRUCT);
 
@@ -698,25 +701,6 @@ loop:   for (;;) {
                 len = IonConstants.lnIsVarLen;
             }
             this._out.writer().patchLongHeader(IonConstants.tidBlob, len);
-        }
-    }
-
-    /**
-     * Truncates the buffer and (perhaps) update the buffer header's length.
-     * @param start
-     * @param write_header
-     * @throws IOException
-     */
-    void finishParsing(int start, boolean write_header) throws IOException
-    {
-        this._out.writer().truncate();
-
-        if (write_header) {
-            assert start == 0;
-            int len = this._out.buffer().size();
-            // these next two lines are the main reason all that "buffered bytes" code is here
-            this._out.writer().setPosition(0);
-            this._out.writer().writeFixedIntValue(len, 4); // initial length includes itself - hmmm TODO
         }
     }
 

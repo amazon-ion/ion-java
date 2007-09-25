@@ -4,6 +4,7 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.IonConstants.MAGIC_COOKIE_SIZE;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
@@ -82,31 +83,24 @@ public class SystemReader
         this(system, system.getCatalog(), buffer);
     }
 
+    /**
+     * Creates a new system reader using a specific catalog, reading data from
+     * the start of a buffer.
+     */
     public SystemReader(StandardIonSystem system,
                         IonCatalog catalog,
                         BufferManager buffer)
     {
-        // TODO downcast shouldn't be necessary.
+        IonBinary.Reader reader = buffer.reader();
+        IonBinary.verifyMagicCookie(reader);
+
         _system = system;
         _catalog = catalog;
         // TODO this should be an unmodifiable bootstram symtab.
         _currentSymbolTable = system.newLocalSymbolTable();
         _buffer = buffer;
-        _buffer_offset = 8;
+        _buffer_offset = reader.position();
     }
-
-//        private void initialize(byte[] bytes, int offset, int len) {
-//            byte[] temp = bytes;
-//            if (offset != 0 || len != bytes.length) {
-//                // TODO - bytebuffer should be able to handle a subset of an array
-//                temp = new byte[len];
-//                System.arraycopy(bytes, offset, temp, 0, len);
-//                bytes = temp;
-//            }
-//            BlockedBuffer bb = new BlockedBuffer(bytes);
-//            _buffer = new BufferManager(bb);
-//            _buffer_offset = 8;
-//        }
 
 
     public StandardIonSystem getSystem() {
@@ -169,9 +163,8 @@ public class SystemReader
                               ,0
                 );
                 if (freshBuffer) {
-                    // We wrote a header; skip it.
-                    // TODO remove magic number!
-                    _buffer_offset = 8;
+                    // We wrote a magic cookie; skip it.
+                    _buffer_offset = MAGIC_COOKIE_SIZE;
                 }
             }
             if (buffer.buffer().size() <= _buffer_offset) {

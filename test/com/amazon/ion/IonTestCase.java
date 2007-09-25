@@ -4,6 +4,7 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.impl.IonConstants;
 import com.amazon.ion.system.StandardIonSystem;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -341,21 +342,12 @@ public abstract class IonTestCase
 
     public void checkBinaryHeader(byte[] datagram)
     {
-        assertTrue("datagram is too small", datagram.length >= 8);
+        assertTrue("datagram is too small", datagram.length >= 4);
 
-        long encodedSize =
-            (long) (datagram[0] & 0xFF) << 24 |
-            (long) (datagram[1] & 0xFF) << 16 |
-            (long) (datagram[2] & 0xFF) << 8  |
-                   (datagram[3] & 0xFF);
-
-        // TODO check for $FFFFFFFF unknown length
-        assertEquals("datagram encoded length", datagram.length, encodedSize);
-
-        assertEquals("datagram cookie byte 1", datagram[4], 0x10);
-        assertEquals("datagram cookie byte 2", datagram[5], 0x14);
-        assertEquals("datagram cookie byte 3", datagram[6], 0x01);
-        assertEquals("datagram cookie byte 4", datagram[7], 0x00);
+        assertEquals("datagram cookie byte 1", datagram[0], 0x10);
+        assertEquals("datagram cookie byte 2", datagram[1], 0x14);
+        assertEquals("datagram cookie byte 3", datagram[2], 0x01);
+        assertEquals("datagram cookie byte 4", datagram[3], 0x00);
     }
 
 

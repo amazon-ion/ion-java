@@ -16,6 +16,13 @@ public class IonException extends RuntimeException
     public IonException(String message, Throwable cause) {
         super(message, cause);
     }
+
+    /**
+     * Constructs a new exception with the given cause, copying the message
+     * from the cause into this instance.
+     * @param cause
+     *     the root cause of the exception; must not be null.
+     */
     public IonException(Throwable cause) { super(cause.getMessage(), cause); }
 
 }

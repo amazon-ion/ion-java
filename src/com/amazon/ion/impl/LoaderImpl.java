@@ -133,7 +133,7 @@ public class LoaderImpl
 
     //=========================================================================
     // Loading from Reader
-    
+
     public IonDatagramImpl loadText(Reader ionReader)
         throws IonException, IOException
     {
@@ -211,18 +211,18 @@ public class LoaderImpl
     static boolean isBinary(PushbackInputStream pushback)
         throws IonException, IOException
     {
-        boolean isbinary = false;
-        byte[] header = new byte[8];
+        boolean isBinary = false;
+        byte[] cookie = new byte[IonConstants.MAGIC_COOKIE_SIZE];
 
-        int len = pushback.read(header);
-        if (len == 8) {
-            if (IonBinary.isMagicCookie(header, 4, 4)) {
+        int len = pushback.read(cookie);
+        if (len == IonConstants.MAGIC_COOKIE_SIZE) {
+            if (IonBinary.isMagicCookie(cookie, 0, len)) {
                 return true;
             }
         }
         if (len > 0) {
-            pushback.unread(header, 0, len);
+            pushback.unread(cookie, 0, len);
         }
-        return isbinary;
+        return isBinary;
     }
 }

@@ -214,7 +214,7 @@ public class StandardIonSystem
     public SystemReader newSystemReader(byte[] ionData)
     {
         boolean isbinary =
-            IonBinary.isMagicCookie(ionData, 4, ionData.length - 4);
+            IonBinary.isMagicCookie(ionData, 0, ionData.length);
 
         SystemReader sysReader;
         if (isbinary) {

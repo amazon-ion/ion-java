@@ -4,6 +4,8 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.IonConstants.MAGIC_COOKIE;
+import static com.amazon.ion.impl.IonConstants.MAGIC_COOKIE_SIZE;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PushbackReader;
@@ -36,17 +38,44 @@ public class IonBinary
 
     public static boolean isMagicCookie(byte[] b, int off, int len)
     {
-        if (len < 4) return false;
+        if (len < MAGIC_COOKIE_SIZE) return false;
 
-        int token = IonConstants.MAGIC_TOKEN;
+        int token = MAGIC_COOKIE;
 
-        for (int ii=3; ii>=0; ii--) {
+        for (int ii = MAGIC_COOKIE_SIZE - 1; ii >= 0; ii--) {
             int b1 = (0xff) & b[off + ii];  // low byte first
             int b2 = (0xff) & token;
             if (b1 != b2) return false;
             token >>= 8;
         }
         return true;
+    }
+
+    /**
+     * Verifies that a reader starts with a valid Ion cookie, throwing an
+     * exception if it does not.
+     *
+     * @param reader must not be null.
+     * @throws IonException if there's a problem reading the cookie, or if the
+     * data does not start with {@link IonConstants#MAGIC_COOKIE}.
+     */
+    public static void verifyMagicCookie(Reader reader)
+        throws IonException
+    {
+        try
+        {
+            reader.sync();
+            reader.setPosition(0);
+            int cookie = reader.readFixedIntIntValue(MAGIC_COOKIE_SIZE);
+            if (cookie != MAGIC_COOKIE)
+            {
+                throw new IonException("Binary data has unrecognized header.");
+            }
+        }
+        catch (IOException e)
+        {
+            throw new IonException(e);
+        }
     }
 
     public static class BufferManager

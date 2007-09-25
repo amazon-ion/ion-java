@@ -20,12 +20,16 @@ public class IonConstants
     public final static int BB_MAX_7BIT_INT        =  127;
 
     public static int INT32_SIZE            = 4;
-    public static int MAGIC_TOKEN_SIZE      = 4;
 
     /**
      * Only valid for Ion 1.0
      */
-    public static int MAGIC_TOKEN           = 0x10140100;
+    public static int MAGIC_COOKIE = 0x10140100;
+
+    /**
+     * The number of bytes in {@link #MAGIC_COOKIE} when encoded in a buffer.
+     */
+    public static int MAGIC_COOKIE_SIZE = 4;
 
 
     public static final int tidNull         =  0;
