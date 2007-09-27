@@ -22,11 +22,11 @@ public final class IonStructImpl
     implements IonStruct
 {
 
-    static final int _struct_typeDesc =
-        IonConstants.makeTypeDescriptorByte(
-                    IonConstants.tidStruct
-                   ,IonConstants.lnIsNullContainer
-       );
+    private static final int NULL_STRUCT_TYPEDESC =
+        IonConstants.makeTypeDescriptorByte(IonConstants.tidStruct,
+                                            IonConstants.lnIsNullStruct);
+
+    private boolean _isOrdered = false;
 
 
     /**
@@ -34,7 +34,8 @@ public final class IonStructImpl
      */
     public IonStructImpl()
     {
-        this(_struct_typeDesc);
+        this(NULL_STRUCT_TYPEDESC);
+        _hasNativeValue = true;
     }
 
     /**
@@ -55,7 +56,7 @@ public final class IonStructImpl
         }
 
         int ln = this.pos_getLowNibble();
-        return ((ln & IonConstants.lnIsNullContainer) != 0);
+        return (ln == IonConstants.lnIsNullStruct);
     }
 
 
@@ -95,6 +96,8 @@ public final class IonStructImpl
 
     public void put(String fieldName, IonValue value)
     {
+        // TODO maintain _isOrdered
+
         validateFieldName(fieldName);
         if (value == null) {
             throw new NullPointerException("value must not be null");
@@ -130,6 +133,8 @@ public final class IonStructImpl
 
     public void add(String fieldName, IonValue value)
     {
+        // TODO maintain _isOrdered
+
         validateFieldName(fieldName);
         if (value == null) {
             throw new NullPointerException("value must not be null");
@@ -170,13 +175,43 @@ public final class IonStructImpl
     //=========================================================================
     // Helpers
 
+    @Override
+    public int getTypeDescriptorAndLengthOverhead(int contentLength)
+    {
+        int len = IonConstants.BB_TOKEN_LEN;
+
+        if (isNullValue() || isEmpty())
+        {
+            assert contentLength == 0;
+            return len;
+        }
+
+        if (_isOrdered || contentLength >= IonConstants.lnIsVarLen)
+        {
+            len += IonBinary.lenVarUInt7(contentLength);
+        }
+
+        return len;
+    }
 
     @Override
     protected int computeLowNibble(int valuelen)
     {
-        // FIXME: we wipe out the "in order bit" here !
-        if (this.isNullValue()) return IonConstants.lnIsNullContainer;
-        return 0;
+        assert _hasNativeValue;
+
+        if (_contents == null) return IonConstants.lnIsNullStruct;
+
+        if (_contents.isEmpty()) return IonConstants.lnIsEmptyContainer;
+
+        if (_isOrdered) return IonConstants.lnIsOrderedStruct;
+
+        int contentLength = this.getNativeValueLength();  // FIXME check nakedLength?
+        if (contentLength > IonConstants.lnIsVarLen)
+        {
+            return IonConstants.lnIsVarLen;
+        }
+
+        return contentLength;
     }
 
     @Override
@@ -188,11 +223,15 @@ public final class IonStructImpl
 
         writer.write(this.pos_getTypeDescriptorByte());
 
-        if (_contents != null)
+        if (_contents != null && _contents.size() > 0)
         {
-            // FIXME the following is no longer true under the new spec
-            // write the value length, its never in the TD byte.
-            writer.writeVarUInt7Value(this.getNakedValueLength(), true);
+            // TODO Rewrite this to avoid computing length again
+            int vlen = this.getNativeValueLength();
+
+            if (_isOrdered || vlen >= IonConstants.lnIsVarLen)
+            {
+                writer.writeVarUInt7Value(vlen, true);
+            }
 
             cumulativePositionDelta =
                 doWriteContainerContents(writer, cumulativePositionDelta);
@@ -227,6 +266,8 @@ public final class IonStructImpl
         int pos = this.pos_getOffsetAtActualValue();
         int end = this.pos_getOffsetofNextValue();
 
+        // TODO compute _isOrdered flag
+
         while (pos < end) {
             reader.setPosition(pos);
             int sid = reader.readVarUInt7IntValue();
@@ -234,5 +275,7 @@ public final class IonStructImpl
             _contents.add(child);
             pos = child.pos_getOffsetofNextValue();
         }
+        assert pos == end;  // TODO should throw IonException
+
     }
 }

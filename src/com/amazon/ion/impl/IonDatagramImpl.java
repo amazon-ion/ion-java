@@ -389,6 +389,7 @@ public final class IonDatagramImpl
                 _userContents.add(child);
             }
 
+            // TODO doc why this would happen. Isn't child fresh from binary?
             if (child.isDirty()) setDirty();
         }
     }

@@ -69,7 +69,10 @@ public class IonBinary
             int cookie = reader.readFixedIntIntValue(MAGIC_COOKIE_SIZE);
             if (cookie != MAGIC_COOKIE)
             {
-                throw new IonException("Binary data has unrecognized header.");
+                String message =
+                    "Binary data has unrecognized header 0x" +
+                    Integer.toHexString(cookie).toUpperCase();
+                throw new IonException(message);
             }
         }
         catch (IOException e)
@@ -241,8 +244,6 @@ public class IonBinary
     }
     public static int lenIonInt(long v) {
         if (v < 0) {
-// CAS UPDATE - old logic, not replaced ..
-            // return IonBinary.lenVarInt(v);
             return IonBinary.lenVarUInt8(-v);
         }
         else if (v > 0) {
@@ -503,7 +504,8 @@ public class IonBinary
 
 
 
-    public static class Reader extends BlockedBuffer.BlockedByteInputStream
+    public static final class Reader
+        extends BlockedBuffer.BlockedByteInputStream
     {
         /**
          * @param bb blocked buffer to read from
@@ -532,11 +534,12 @@ public class IonBinary
         {
             int c = read();
             if (c < 0) throwUnexpectedEOFException();
-            c = (c & 0xff);
+            c = (c & 0xff);  // TODO document why this is necessary
             int typeid = IonConstants.getTypeDescriptor(c);
             if (typeid == IonConstants.tidTypedecl) {
                 this.readLength(typeid, IonConstants.getLowNibble(c));
                 int alen = this.readVarInt7IntValue();
+                // TODO add skip(int) method instead of this loop.
                 while (alen > 0) {
                     if (this.read() < 0) throwUnexpectedEOFException();
                     alen--;
@@ -618,6 +621,7 @@ public class IonBinary
 
         public int readLength(int td, int ln) throws IOException
         {
+            // TODO check for invalid lownibbles
             switch (td) {
             case IonConstants.tidNull: // null(0)
             case IonConstants.tidBoolean: // boolean(1)
@@ -644,10 +648,19 @@ public class IonBinary
                     return ln;
                 }
             case IonConstants.tidStruct: // 13
-                if ((ln & IonConstants.lnIsNullContainer) != 0) return 0;
-                return readVarUInt7IntValue();
+                switch (ln) {
+                case IonConstants.lnIsEmptyContainer:
+                case IonConstants.lnIsNullStruct:
+                    return 0;
+                case IonConstants.lnIsOrderedStruct:
+                case IonConstants.lnIsVarLen:
+                    return readVarUInt7IntValue();
+                default:
+                    return ln;
+                }
             case IonConstants.tidUnused: // unused(15)
             default:
+                // TODO use InvalidBinaryDataException
                 throw new BlockedBuffer.BlockedBufferException("invalid type id encountered: " + td);
             }
         }
@@ -884,7 +897,7 @@ public class IonBinary
             boolean is_negative = false;
             int     b;
 
-            // sythetic label "done" (yuck)
+            // synthetic label "done" (yuck)
 done:       for (;;) {
                 // read the first byte - it has the sign bit
                 if ((b = read()) < 0) throwUnexpectedEOFException();
@@ -918,7 +931,7 @@ done:       for (;;) {
             boolean is_negative = false;
             int     b;
 
-            // sythetic label "done" (yuck)
+            // synthetic label "done" (yuck)
 done:       for (;;) {
                 // read the first byte - it has the sign bit
                 if ((b = read()) < 0) throwUnexpectedEOFException();
@@ -1162,7 +1175,8 @@ done:       for (;;) {
         }
     }
 
-    public static class Writer extends BlockedBuffer.BlockedByteOutputStream
+    public static final class Writer
+        extends BlockedBuffer.BlockedByteOutputStream
     {
         /**
          * creates writable stream (OutputStream) that writes
@@ -1231,23 +1245,9 @@ done:       for (;;) {
         {
             if (debugValidation) _validate();
 
-            // 13 for the min value that fits, 1 for the typedesc,
-            //  5 for the max varlen (up to 32bit) that might be needed
-            // if the value "goes long".
+            pushLongHeader(hn, 0, false);
 
-            // first we make sure that the initial value will fit in
-            // a single buffer (just to reduce the edge cases later
-            boolean lenAlwaysFollows =
-                !IonConstants.lengthIsEncodedInLowNibble(hn);
-
-            pushLongHeader(hn, 0, lenAlwaysFollows);
-
-            if (lenAlwaysFollows) {
-                this.writeTypeDescWithLenForContainer(hn, 0, 0);
-            }
-            else {
-                this.writeCommonTypeDescWithLen(hn, 0);
-            }
+            this.writeCommonHeader(hn, 0);
 
             if (debugValidation) _validate();
         }
@@ -1289,21 +1289,31 @@ done:       for (;;) {
            // calculate the length just the value itself
            // we don't count the type descriptor in the value len
            int writtenValueLen = totallen - IonConstants.BB_TOKEN_LEN;
-           if (n._length_follows) {
-               // if it's a struct we also wrote one empty byte of
-               // the length value (since we have to have at least one)
-               // so that byte is not "value"
-               writtenValueLen--;
-           }
+
            // now we can figure out how long the value is going to be
 
            // This is the length of the length (it does NOT
            // count the typedesc byte however)
            int len_o_len = IonBinary.lenVarUInt7(writtenValueLen);
 
-           if (n._length_follows) {    // struct
-               if (writtenValueLen < 1) {
-                   len_o_len = 1;
+           // TODO cleanup this logic.  lengthFollows == is struct
+           if (n._length_follows) {
+               assert hn == IonConstants.tidStruct;
+
+               if (lownibble == IonConstants.lnIsOrderedStruct)
+               {
+                   // leave len_o_len alone
+               }
+               else
+               {
+                   if (writtenValueLen < IonConstants.lnIsVarLen) {
+                       lownibble = writtenValueLen;
+                       len_o_len = 0;
+                   }
+                   else {
+                       lownibble = IonConstants.lnIsVarLen;
+                   }
+                   assert lownibble != IonConstants.lnIsOrderedStruct;
                }
            }
            else {
@@ -1319,14 +1329,9 @@ done:       for (;;) {
            // first we go back to the beginning
            this.setPosition(pm.getPosition());
 
-           // firgure out if we need to move the trailing data to make
+           // figure out if we need to move the trailing data to make
            // room for the variable length length
            int needed = len_o_len;
-           if (n._length_follows) {
-               // we already have some space for this - 1 byte
-               needed--;
-           }
-
            if (needed > 0) {
                // insert does the heavy lifting of making room for us
                // at the current position for "needed" additional bytes
@@ -1377,7 +1382,7 @@ done:       for (;;) {
         * Reads the remainder of a quoted string/symbol into this buffer.
         * The closing quotes are consumed from the reader.
         * <p>
-          XXX  WARNING  XXX
+        * XXX  WARNING  XXX
         * Almost identical logic is found in
         * {@link IonTokenReader#finishScanString(boolean)}
         *
@@ -1816,18 +1821,18 @@ done:       for (;;) {
             return this.position() - startPosition;
         }
 
-        public int writeTypeDescWithLenForContainer(int hn, int ln, int len)
+
+        public void writeStubStructHeader(int hn, int ln)
             throws IOException
         {
-            int returnlen = 0;
-
-            // write the hn and ln as the typedesc
-            returnlen += writeToken(IonConstants.makeTypeDescriptorByte( hn, ln ));
-            returnlen += writeVarUInt7Value(len, true);
-
-            return returnlen;
+            // write the hn and ln as the typedesc, we'll patch it later.
+            writeToken(IonConstants.makeTypeDescriptorByte(hn, ln));
         }
-        public int writeCommonTypeDescWithLen(int hn, int len)
+
+        /**
+         * Write typedesc and length for the common case.
+         */
+        public int writeCommonHeader(int hn, int len)
             throws IOException
         {
             int returnlen = 0;
@@ -1858,7 +1863,7 @@ done:       for (;;) {
             assert sid > 0;
 
             int vlen = lenVarUInt8(sid);
-            int len = this.writeCommonTypeDescWithLen(
+            int len = this.writeCommonHeader(
                                  IonConstants.tidSymbol
                                 ,vlen
                            );
@@ -1880,7 +1885,7 @@ done:       for (;;) {
             if (len < 0) this.throwUTF8Exception();
 
             // first we write the type desc and length
-            this.writeCommonTypeDescWithLen(IonConstants.tidString, len);
+            this.writeCommonHeader(IonConstants.tidString, len);
 
             // now we write just the value out
             for (int ii=0; ii<s.length(); ii++) {
@@ -1911,19 +1916,20 @@ done:       for (;;) {
                         );
             return 1;
         }
-        public int writeTimestampWithTD(IonTokenReader.Type.timeinfo di) throws IOException
+        public int writeTimestampWithTD(IonTokenReader.Type.timeinfo di)
+            throws IOException
         {
             int  returnlen;
 
             if (di == null) {
-                returnlen = this.writeCommonTypeDescWithLen(
+                returnlen = this.writeCommonHeader(
                                       IonConstants.tidTimestamp
                                      ,IonConstants.lnIsNullAtom);
             }
             else {
                 int vlen = IonBinary.lenIonTimestamp(di);
 
-                returnlen = this.writeCommonTypeDescWithLen(
+                returnlen = this.writeCommonHeader(
                                           IonConstants.tidTimestamp
                                          ,vlen);
 
@@ -1932,7 +1938,8 @@ done:       for (;;) {
             return returnlen;
         }
 
-        public int writeTimestamp(IonTokenReader.Type.timeinfo di) throws IOException
+        public int writeTimestamp(IonTokenReader.Type.timeinfo di)
+            throws IOException
         {
             int  returnlen = 0;
 

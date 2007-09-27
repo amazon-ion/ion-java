@@ -4,7 +4,6 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl.IonConstants;
 import com.amazon.ion.system.StandardIonSystem;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -140,7 +139,9 @@ public abstract class IonTestCase
     {
         IonLoader loader = system().newLoader();
         IonDatagram dg = loader.loadBinary(ionFile);
-        dg.deepMaterialize();
+
+        dg.deepMaterialize(); // Flush out any encoding problems in the data.
+
         return dg;
     }
 

@@ -221,7 +221,7 @@ public class IonParser
 
         // the length here is the bytes of annotations + the value we
         // wrote as we parsed it
-        this._out.writer().writeCommonTypeDescWithLen(
+        this._out.writer().writeCommonHeader(
                                 IonConstants.tidTypedecl
                                ,totalAnnotationAndValueLen
                            );
@@ -353,7 +353,6 @@ public class IonParser
             this._out.writer().appendToLongValue('\'', true, onlyByteSizedCharacters, r);
         }
         this._out.writer().patchLongHeader(hn, -1);
-        return;
     }
 
     void parseSexpBody( ) throws IOException  {
@@ -420,9 +419,9 @@ loop:   for (;;) {
         assert _t == IonTokenReader.Type.tOpenCurly;
 
         int hn = IonConstants.tidStruct;
-        int ln = IonConstants.lnNumericZero;
+        int ln = IonConstants.lnNumericZero;  // TODO justify
         _out.writer().pushLongHeader(hn, ln, true);
-        this._out.writer().writeTypeDescWithLenForContainer(hn, ln, 0);
+        this._out.writer().writeStubStructHeader(hn, ln);
 
         // read string tagged values - legal tags will be recognized
         this._in.pushContext(IonTokenReader.Context.STRUCT);
@@ -488,12 +487,11 @@ loop:   for (;;) {
         // TODO check for "accidental" ordering.
         boolean fieldsAreOrdered = false;
 
-        int lowNibble = (fieldsAreOrdered ? IonConstants.lnIsOrdered : 0);
+        // TODO This code path is WAY ugly and needs cleanup.
+        int lowNibble = (fieldsAreOrdered ? IonConstants.lnIsOrderedStruct : 0);
         this._out.writer().patchLongHeader(IonConstants.tidStruct,
                                   lowNibble);
         this._in.popContext();
-
-        return;
     }
 
     void processFieldName() throws IOException {
@@ -559,7 +557,7 @@ loop:   for (;;) {
             case kwNullStruct:
                 token = IonConstants.makeTypeDescriptorByte(
                                          hn,
-                                         IonConstants.lnIsNullContainer); // XXX
+                                         IonConstants.lnIsNullStruct);
                 break;
             default:
                 throw new IllegalStateException("bad keyword token");
@@ -673,7 +671,7 @@ loop:   for (;;) {
             _out.writer().startLongWrite(IonConstants.tidBlob);
             _out.writer().appendToLongValue(-1, false, true, pbr);
 
-            // we'll have exitted from the reader either on trailing whitespace or
+            // we'll have exited from the reader either on trailing whitespace or
             // the first closing curly brace (the reader will consume the correct
             // number of trailing '=' characters), so skip past any whitespace
             c = bin64reader.terminatingChar();

@@ -577,8 +577,7 @@ public abstract class IonValueImpl
         pos_setFieldId(fieldId);
 
         // we expect to be positioned at the initial typedesc byte
-        int start;
-        start = this._value_td_start = valueReader.position();
+        int start = this._value_td_start = valueReader.position();
 
         // our _entry_start needs to be back filled to precede the field id
         this._entry_start = start - pos_getFieldIdLen();
@@ -597,15 +596,19 @@ public abstract class IonValueImpl
         if (type == IonConstants.tidTypedecl) {
             // read past the annotation list
             int annotationListLength = valueReader.readVarUInt7IntValue();
-            assert annotationListLength > 0;
+            assert annotationListLength > 0;  // TODO throw if bad
             this._value_td_start = valueReader.position() + annotationListLength;
             valueReader.setPosition(this._value_td_start);
             // read the actual values type desc
             this._type_desc = valueReader.readToken();
-            type = this.pos_getType();
-            if ( type == IonConstants.tidStruct
-              || this.pos_getLowNibble() == IonConstants.lnIsVarLen
-            ) {
+            // TODO check that td != annotation (illegal nested annotation)
+
+            int ln = pos_getLowNibble();
+            if ((ln == IonConstants.lnIsVarLen)
+                || (pos_getType() == IonConstants.tidStruct
+                    && ln == IonConstants.lnIsOrderedStruct))
+            {
+                // Skip over the extended length to find the content start.
                 valueReader.readVarUInt7IntValue();
             }
             this._value_content_start = valueReader.position();
@@ -976,10 +979,10 @@ public abstract class IonValueImpl
 
     /**
      * Length of the core header.
-     * @param valuelen length of the core value.
+     * @param contentLength length of the core value.
      * @return at least one.
      */
-    public int getTypeDescriptorAndLengthOverhead(int valuelen) {
+    public int getTypeDescriptorAndLengthOverhead(int contentLength) {
         int len = IonConstants.BB_TOKEN_LEN;
 
         if (isNullValue()) return len;
@@ -999,13 +1002,9 @@ public abstract class IonValueImpl
         case IonConstants.tidBlob:   // 10
         case IonConstants.tidList:   // 11
         case IonConstants.tidSexp:   // 12
-            len += IonBinary.lenLenFieldWithOptionalNibble(valuelen);
+            len += IonBinary.lenLenFieldWithOptionalNibble(contentLength);
             break;
-        case IonConstants.tidStruct: // 13
-            // and we need to force the length to be at least 1 byte (since we
-            // have to write the 0 length out even if it is 0
-            len += valuelen == 0 ? 1 : IonBinary.lenVarUInt7(valuelen);
-            break;
+        case IonConstants.tidStruct: // Overridden
         default:
             throw new IonException("this value has an illegal type descriptor id");
         }
@@ -1326,7 +1325,7 @@ public abstract class IonValueImpl
             int annotationlen = getAnnotationLength();
             int wrappedLength = valuelen + tdwithvlenlen + annotationlen;
 
-            writer.writeCommonTypeDescWithLen(IonConstants.tidTypedecl,
+            writer.writeCommonHeader(IonConstants.tidTypedecl,
                                                 wrappedLength);
             writer.writeAnnotations(_annotations, this.getSymbolTable());
         }
