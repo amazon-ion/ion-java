@@ -18,17 +18,16 @@ public final class IonBlobImpl
     implements IonBlob
 {
 
-    static final int _blob_typeDesc = 
-         IonConstants.makeTypeDescriptorByte( 
-                          IonConstants.tidBlob
-                         ,IonConstants.lnIsNullAtom);
-    
+    static final int NULL_BLOB_TYPEDESC =
+         IonConstants.makeTypeDescriptor(IonConstants.tidBlob,
+                                         IonConstants.lnIsNullAtom);
+
     /**
      * Constructs a <code>null.blob</code> element.
      */
     public IonBlobImpl()
     {
-        super(_blob_typeDesc);
+        super(NULL_BLOB_TYPEDESC);
     }
 
     /**

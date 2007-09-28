@@ -15,8 +15,8 @@ public class IonSexpImpl
     implements IonSexp
 {
     private static final int NULL_SEXP_TYPEDESC =
-        IonConstants.makeTypeDescriptorByte(IonConstants.tidSexp,
-                                            IonConstants.lnIsNullSequence);
+        IonConstants.makeTypeDescriptor(IonConstants.tidSexp,
+                                        IonConstants.lnIsNullSequence);
 
 
     /**

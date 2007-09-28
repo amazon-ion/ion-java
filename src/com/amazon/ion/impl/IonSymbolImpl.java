@@ -21,11 +21,9 @@ public final class IonSymbolImpl
     extends IonTextImpl
     implements IonSymbol
 {
-    static final int _symbol_typeDesc =
-        IonConstants.makeTypeDescriptorByte(
-                    IonConstants.tidSymbol
-                   ,IonConstants.lnIsNullAtom
-       );
+    static final int NULL_SYMBOL_TYPEDESC =
+        IonConstants.makeTypeDescriptor(IonConstants.tidSymbol,
+                                        IonConstants.lnIsNullAtom);
 
     private int mySid = UNKNOWN_SYMBOL_ID;
 
@@ -34,12 +32,12 @@ public final class IonSymbolImpl
      */
     public IonSymbolImpl()
     {
-        this(_symbol_typeDesc);
+        this(NULL_SYMBOL_TYPEDESC);
     }
 
     public IonSymbolImpl(String name)
     {
-        this(_symbol_typeDesc);
+        this(NULL_SYMBOL_TYPEDESC);
         setValue(name);
     }
 

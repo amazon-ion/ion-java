@@ -18,18 +18,16 @@ public final class IonNullImpl
     implements IonNull
 {
 
-    static final int _null_typeDesc =
-        IonConstants.makeTypeDescriptorByte(
-                    IonConstants.tidNull
-                   ,IonConstants.lnIsNullAtom
-       );
+    static final int NULL_NULL_TYPEDESC =
+        IonConstants.makeTypeDescriptor(IonConstants.tidNull,
+                                        IonConstants.lnIsNullAtom);
 
     /**
      * Constructs a <code>null.null</code> value.
      */
     public IonNullImpl()
     {
-        super(_null_typeDesc);
+        super(NULL_NULL_TYPEDESC);
     }
 
     /**
@@ -38,7 +36,7 @@ public final class IonNullImpl
     public IonNullImpl(int typeDesc)
     {
         super(typeDesc);
-        if (typeDesc != _null_typeDesc)
+        if (typeDesc != NULL_NULL_TYPEDESC)
         {
             throw new IonException("Invalid type descriptor byte " + typeDesc);
         }

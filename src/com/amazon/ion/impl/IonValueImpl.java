@@ -55,6 +55,8 @@ public abstract class IonValueImpl
 
     /**
      * The actual TD byte of the value.
+     * This is always a positive value between 0x00 and 0xFF.
+     * <p>
      * TODO document when the low-nibble is known to be correct.
      */
     private int _type_desc;
@@ -259,7 +261,7 @@ public abstract class IonValueImpl
     static IonValueImpl makeValue(int typedesc)
     {
         IonValueImpl value = null;
-        int typeId = IonConstants.getTypeDescriptor(typedesc);
+        int typeId = IonConstants.getTypeCode(typedesc);
 
         switch (typeId) {
         case IonConstants.tidNull: // null(0)
@@ -605,8 +607,7 @@ public abstract class IonValueImpl
 
             int ln = pos_getLowNibble();
             if ((ln == IonConstants.lnIsVarLen)
-                || (pos_getType() == IonConstants.tidStruct
-                    && ln == IonConstants.lnIsOrderedStruct))
+                || (this._type_desc == IonStructImpl.ORDERED_STRUCT_TYPEDESC))
             {
                 // Skip over the extended length to find the content start.
                 valueReader.readVarUInt7IntValue();
@@ -616,24 +617,18 @@ public abstract class IonValueImpl
     }
 
     public final byte pos_getTypeDescriptorByte() {
-        return (byte)(0xff & this._type_desc);
+        return (byte) this._type_desc;
     }
     public final void pos_setTypeDescriptorByte(int td) {
-        this._type_desc = (byte)(0xff & td);
+        assert td >= 0 && td <= 0xFF;
+        this._type_desc = td;
     }
     public final int pos_getType() {
-        return IonConstants.getTypeDescriptor(this._type_desc);
+        return IonConstants.getTypeCode(this._type_desc);
     }
-    public final void pos_setType(int hn) {
-        assert hn >= IonConstants.tidNull && hn <= IonConstants.tidUnused;
-        IonConstants.makeTypeDescriptorByte(hn, this.pos_getLowNibble());
-    }
+
     public final int pos_getLowNibble() {
         return IonConstants.getLowNibble(this._type_desc);
-    }
-    public final void pos_setLowNibble(int ln) {
-        assert ln >= 0 && ln <= 0xf;
-        IonConstants.makeTypeDescriptorByte(this.pos_getType(), ln);
     }
 
     public final int pos_getFieldId() {
@@ -727,7 +722,7 @@ public abstract class IonValueImpl
     static int getFieldLength(int td, IonBinary.Reader reader) throws IOException
     {
         int ln = IonConstants.getLowNibble(td);
-        int hn = IonConstants.getTypeDescriptor(td);
+        int hn = IonConstants.getTypeCode(td);
         int len = reader.readLength(hn, ln);
         return len;
     }
@@ -787,7 +782,7 @@ public abstract class IonValueImpl
 
         // skip over the annoation td and total length
         int td = reader.read();
-        if (IonConstants.getTypeDescriptor(td) != IonConstants.tidTypedecl) {
+        if (IonConstants.getTypeCode(td) != IonConstants.tidTypedecl) {
             throw new IonException("invalid user type annotation");
         }
         if (IonConstants.getLowNibble(td) == IonConstants.lnIsVarLen) {
@@ -1100,7 +1095,7 @@ public abstract class IonValueImpl
 
         int hn = this.pos_getType();
         int ln = this.computeLowNibble(valuelen);
-        _type_desc = IonConstants.makeTypeDescriptorByte(hn, ln);
+        _type_desc = IonConstants.makeTypeDescriptor(hn, ln);
 
         // overwrite the sid as everything is computed on the new value
         _fieldSid = newFieldSid;

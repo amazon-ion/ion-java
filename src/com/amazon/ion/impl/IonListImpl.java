@@ -15,8 +15,8 @@ public final class IonListImpl
     implements IonList
 {
     private static final int NULL_LIST_TYPEDESC =
-        IonConstants.makeTypeDescriptorByte(IonConstants.tidList,
-                                            IonConstants.lnIsNullSequence);
+        IonConstants.makeTypeDescriptor(IonConstants.tidList,
+                                        IonConstants.lnIsNullSequence);
 
 
     /**

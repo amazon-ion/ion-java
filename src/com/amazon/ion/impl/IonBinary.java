@@ -523,7 +523,14 @@ public class IonBinary
             super(bb, pos);
         }
 
-        public int readToken() throws IOException
+        /**
+         * Read exactly one byte of input.
+         *
+         * @return 0x00 through 0xFF as a positive int.
+         * @throws UnexpectedEOFException if end of file is hit.
+         * @throws IOException if there's other problems reading input.
+         */
+        public int readToken() throws UnexpectedEofException, IOException
         {
             int c = read();
             if (c < 0) throwUnexpectedEOFException();
@@ -534,8 +541,7 @@ public class IonBinary
         {
             int c = read();
             if (c < 0) throwUnexpectedEOFException();
-            c = (c & 0xff);  // TODO document why this is necessary
-            int typeid = IonConstants.getTypeDescriptor(c);
+            int typeid = IonConstants.getTypeCode(c);
             if (typeid == IonConstants.tidTypedecl) {
                 this.readLength(typeid, IonConstants.getLowNibble(c));
                 int alen = this.readVarInt7IntValue();
@@ -546,7 +552,6 @@ public class IonBinary
                 }
                 c = read();
                 if (c < 0) throwUnexpectedEOFException();
-                c = (c & 0xff);
             }
             return c;
         }
@@ -672,28 +677,28 @@ public class IonBinary
             switch (len) {
             case 8:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= (b & 0xFF) << (7*8);
+                retvalue |= b << (7*8);
             case 7:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= (b & 0xFF) << (6*8);
+                retvalue |= b << (6*8);
             case 6:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= (b & 0xFF) << (5*8);
+                retvalue |= b << (5*8);
             case 5:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= (b & 0xFF) << (4*8);
+                retvalue |= b << (4*8);
             case 4:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= (b & 0xFF) << (3*8);
+                retvalue |= b << (3*8);
             case 3:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= (b & 0xFF) << (2*8);
+                retvalue |= b << (2*8);
             case 2:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= (b & 0xFF) << (1*8);
+                retvalue |= b << (1*8);
             case 1:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= (b & 0xFF) << (0*8);
+                retvalue |= b << (0*8);
             }
             return retvalue;
         }
@@ -704,16 +709,16 @@ public class IonBinary
             switch (len) {
             case 4:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= (b & 0xFF) << (3*8);
+                retvalue |= b << (3*8);
             case 3:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= (b & 0xFF) << (2*8);
+                retvalue |= b << (2*8);
             case 2:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= (b & 0xFF) << (1*8);
+                retvalue |= b << (1*8);
             case 1:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= (b & 0xFF) << (0*8);
+                retvalue |= b << (0*8);
             }
             return retvalue;
         }
@@ -731,25 +736,25 @@ public class IonBinary
                 switch (len - 1) {  // we read 1 already
                 case 7:
                     if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | (b & 0xFF);
+                    retvalue = (retvalue << 8) | b;
                 case 6:
                     if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | (b & 0xFF);
+                    retvalue = (retvalue << 8) | b;
                 case 5:
                     if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | (b & 0xFF);
+                    retvalue = (retvalue << 8) | b;
                 case 4:
                     if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | (b & 0xFF);
+                    retvalue = (retvalue << 8) | b;
                 case 3:
                     if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | (b & 0xFF);
+                    retvalue = (retvalue << 8) | b;
                 case 2:
                     if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | (b & 0xFF);
+                    retvalue = (retvalue << 8) | b;
                 case 1:
                     if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | (b & 0xFF);
+                    retvalue = (retvalue << 8) | b;
                 default:
                 }
                 if (is_negative) {
@@ -780,13 +785,13 @@ public class IonBinary
                     throw new IonException("overflow attempt to read long value into an int");
                 case 3:
                     if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | (b & 0xFF);
+                    retvalue = (retvalue << 8) | b;
                 case 2:
                     if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | (b & 0xFF);
-                case 1:
+                    retvalue = (retvalue << 8) | b;
+
                     if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | (b & 0xFF);
+                    retvalue = (retvalue << 8) | b;
                 }
                 if (is_negative) {
                     retvalue = -retvalue;
@@ -801,28 +806,28 @@ public class IonBinary
             switch (len) {
             case 8:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue = (retvalue << 8) | (b & 0xFF);
+                retvalue = (retvalue << 8) | b;
             case 7:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue = (retvalue << 8) | (b & 0xFF);
+                retvalue = (retvalue << 8) | b;
             case 6:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue = (retvalue << 8) | (b & 0xFF);
+                retvalue = (retvalue << 8) | b;
             case 5:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue = (retvalue << 8) | (b & 0xFF);
+                retvalue = (retvalue << 8) | b;
             case 4:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue = (retvalue << 8) | (b & 0xFF);
+                retvalue = (retvalue << 8) | b;
             case 3:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue = (retvalue << 8) | (b & 0xFF);
+                retvalue = (retvalue << 8) | b;
             case 2:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue = (retvalue << 8) | (b & 0xFF);
+                retvalue = (retvalue << 8) | b;
             case 1:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue = (retvalue << 8) | (b & 0xFF);
+                retvalue = (retvalue << 8) | b;
             default:
             }
             return retvalue;
@@ -836,16 +841,16 @@ public class IonBinary
                 throw new IonException("overflow attempt to read long value into an int");
             case 4:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue = (b & 0xFF);
+                retvalue = b;
             case 3:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue = (retvalue << 8) | (b & 0xFF);
+                retvalue = (retvalue << 8) | b;
             case 2:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue = (retvalue << 8) | (b & 0xFF);
+                retvalue = (retvalue << 8) | b;
             case 1:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue = (retvalue << 8) | (b & 0xFF);
+                retvalue = (retvalue << 8) | b;
             case 0:
             }
             return retvalue;
@@ -1161,7 +1166,7 @@ done:       for (;;) {
 
         public String readString() throws IOException {
             int td = read();
-            if (((td >> 4) & 0xf) != IonConstants.tidString) {
+            if (IonConstants.getTypeCode(td) != IonConstants.tidString) {
                 throw new IonException("readString helper only works for string(7) not "+((td >> 4 & 0xf)));
             }
             int len = (td & 0xf);
@@ -1340,7 +1345,7 @@ done:       for (;;) {
 
            // so, we have room (or already had enough) now we can write
            // replacement type descriptor and the length and the reset the pos
-           this.writeToken(IonConstants.makeTypeDescriptorByte(hn, (lownibble & 0x0f)));
+           this.writeByte(IonConstants.makeTypeDescriptor(hn, lownibble));
            if (len_o_len > 0) {
                this.writeVarUInt7Value(writtenValueLen, true);
            }
@@ -1763,15 +1768,40 @@ done:       for (;;) {
          *
          *     void write<type>(nibble, ...)
          */
-        public int writeToken(HighNibble hn, int len) throws IOException
+        public int writeByte(HighNibble hn, int len) throws IOException
         {
-            if (len < 0) throw new IonException("negative token length encountered");
-            if (len > 13) len = 14;
-            byte t = IonConstants.makeTypeDescriptorByte( hn.value(), len );
+            if (len < 0) {
+                throw new IonException("negative token length encountered");
+            }
+            if (len > 13) len = 14; // TODO remove magic numbers
+            int t = IonConstants.makeTypeDescriptor( hn.value(), len );
             write(t);
             return 1;
         }
-        public int writeToken(byte b) throws IOException
+
+        /**
+         * Write one byte.
+         *
+         * @param b the byte to write.
+         * @return the number of bytes written (always 1).
+         * @throws IOException
+         */
+        public int writeByte(byte b) throws IOException
+        {
+            write(b);
+            return 1;
+        }
+
+        /**
+         * Write one byte.
+         *
+         * @param b integer containing the byte to write; only the 8 low-order
+         * bits are written.
+         *
+         * @return the number of bytes written (always 1).
+         * @throws IOException
+         */
+        public int writeByte(int b) throws IOException
         {
             write(b);
             return 1;
@@ -1826,7 +1856,7 @@ done:       for (;;) {
             throws IOException
         {
             // write the hn and ln as the typedesc, we'll patch it later.
-            writeToken(IonConstants.makeTypeDescriptorByte(hn, ln));
+            writeByte(IonConstants.makeTypeDescriptor(hn, ln));
         }
 
         /**
@@ -1839,10 +1869,10 @@ done:       for (;;) {
 
             // write then len in low nibble
             if (len < IonConstants.lnIsVarLen) {
-                returnlen += writeToken(IonConstants.makeTypeDescriptorByte( hn, len ));
+                returnlen += writeByte(IonConstants.makeTypeDescriptor(hn, len));
             }
             else {
-                returnlen += writeToken( IonConstants.makeTypeDescriptorByte( hn, IonConstants.lnIsVarLen ));
+                returnlen += writeByte(IonConstants.makeTypeDescriptor(hn, IonConstants.lnIsVarLen));
                 returnlen += writeVarUInt7Value(len, false);
             }
             return returnlen;
@@ -1910,10 +1940,7 @@ done:       for (;;) {
 
         public int writeNullWithTD(HighNibble hn) throws IOException
         {
-            write(IonConstants.makeTypeDescriptorByte(
-                              hn.value()
-                             ,IonConstants.lnIsNullAtom)
-                        );
+            writeByte(hn, IonConstants.lnIsNullAtom);
             return 1;
         }
         public int writeTimestampWithTD(IonTokenReader.Type.timeinfo di)
@@ -1954,6 +1981,7 @@ done:       for (;;) {
                 if (tzlen == 0) tzlen = 1;
 
                 if (di.localOffset == null) {
+                    // TODO don't use magic numbers!
                     this.write((byte)(0xff & (0x80 | 0x40))); // negative 0 (no timezone)
                     returnlen ++;
                 }
@@ -1971,26 +1999,18 @@ done:       for (;;) {
             int returnlen;
             // we only write out the '0' value as the nibble 0
             if (bd == null) {
-                returnlen = this.writeToken(
-                                IonConstants.makeTypeDescriptorByte(
-                                    IonConstants.tidDecimal
-                                  , IonConstants.lnIsNullAtom
-                                )
-                            );
+                returnlen =
+                    this.writeByte(IonDecimalImpl.NULL_DECIMAL_TYPEDESC);
             }
             else if (BigDecimal.ZERO.equals(bd)) {
-                returnlen = this.writeToken(
-                                IonConstants.makeTypeDescriptorByte(
-                                    IonConstants.tidDecimal
-                                  , IonConstants.lnNumericZero
-                                )
-                              );
+                returnlen =
+                    this.writeByte(IonDecimalImpl.ZERO_DECIMAL_TYPEDESC);
             }
             else {
                 // otherwise we to it the hard way ....
                 int len = IonBinary.lenIonDecimal(bd);
-                returnlen = this.writeToken(
-                        IonConstants.makeTypeDescriptorByte(
+                returnlen = this.writeByte(
+                        IonConstants.makeTypeDescriptor(
                             IonConstants.tidDecimal
                           , len
                         )

@@ -26,11 +26,8 @@ public class TemporaryList
      * Creates an empty list.
      */
     public TemporaryList() {
-        super(IonConstants.makeTypeDescriptorByte(
-                         IonConstants.tidList
-                        ,IonConstants.lnNumericZero
-                        )
-        );
+        super(IonConstants.makeTypeDescriptor(IonConstants.tidList,
+                                              IonConstants.lnNumericZero));
        _tmpelements = new ArrayList<IonValueImpl>();
        setClean();
     }

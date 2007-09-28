@@ -23,8 +23,13 @@ public final class IonStructImpl
 {
 
     private static final int NULL_STRUCT_TYPEDESC =
-        IonConstants.makeTypeDescriptorByte(IonConstants.tidStruct,
-                                            IonConstants.lnIsNullStruct);
+        IonConstants.makeTypeDescriptor(IonConstants.tidStruct,
+                                        IonConstants.lnIsNullStruct);
+
+    static final int ORDERED_STRUCT_TYPEDESC =
+        IonConstants.makeTypeDescriptor(IonConstants.tidStruct,
+                                        IonConstants.lnIsOrderedStruct);
+
 
     private boolean _isOrdered = false;
 

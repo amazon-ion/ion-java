@@ -22,19 +22,17 @@ public final class IonClobImpl
     extends IonLobImpl
     implements IonClob
 {
-    
-    static final int _clob_typeDesc = 
-        IonConstants.makeTypeDescriptorByte(
-                         IonConstants.tidClob
-                        ,IonConstants.lnIsNullAtom
-        );
-    
+
+    static final int NULL_CLOB_TYPEDESC =
+        IonConstants.makeTypeDescriptor(IonConstants.tidClob,
+                                        IonConstants.lnIsNullAtom);
+
     /**
      * Constructs a <code>null.clob</code> element.
      */
     public IonClobImpl()
     {
-        super(_clob_typeDesc);
+        super(NULL_CLOB_TYPEDESC);
     }
 
     /**
@@ -50,7 +48,7 @@ public final class IonClobImpl
     {
         InputStream in = newInputStream();
         if (in == null) return null;
-        
+
         makeReady();
         return new InputStreamReader(in, cs);
     }
@@ -59,7 +57,7 @@ public final class IonClobImpl
     public String stringValue(Charset cs)
     {
         makeReady();
-        
+
         // TODO use Charset directly.
         byte[] bytes = newBytes();
         if (bytes == null) return null;

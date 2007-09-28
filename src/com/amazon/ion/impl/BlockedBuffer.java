@@ -1189,7 +1189,9 @@ public class BlockedBuffer
         @Override
         public int read() throws IOException
         {
-            if (_buf == null) new IOException("stream is closed");
+            if (_buf == null) {
+                throw new IOException("input stream is closed");
+            }
             fail_on_version_change();
             if (_pos >= _buf.size()) return -1;
             if (_blockPosition >= _curr._limit) {

@@ -29,10 +29,8 @@ public final class IonDatagramImpl
     implements IonDatagram
 {
     static private final int DATAGRAM_TYPEDESC  =
-        IonConstants.makeTypeDescriptorByte(
-            IonConstants.tidSexp
-           ,IonConstants.lnIsDatagram
-        );
+        IonConstants.makeTypeDescriptor(IonConstants.tidSexp,
+                                        IonConstants.lnIsDatagram);
 
     private final static String[] EMPTY_STRING_ARRAY = new String[0];
 

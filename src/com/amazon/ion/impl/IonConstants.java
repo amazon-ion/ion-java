@@ -103,8 +103,9 @@ public class IonConstants
         private boolean _isContainer;
 
         HighNibble(int value, boolean lengthFollows, boolean isContainer) {
-            if ((value & (~0xF)) != 0)
+            if ((value & (~0xF)) != 0) {
                 throw new IonException("illegal high nibble initialization");
+            }
             _value = value;
             _lengthFollows = lengthFollows;
             _isContainer = isContainer;
@@ -152,25 +153,48 @@ public class IonConstants
     public static final int lnNumericZero     = 0x00;
 
 
-    public static final byte makeTypeDescriptorByte(int highNibble,
-                                                    int lowNibble)
+    /**
+     * Make a type descriptor from two nibbles; all of which are represented as
+     * ints.
+     *
+     * @param highNibble must be a positive int between 0x00 and 0x0F.
+     * @param lowNibble must be a positive int between 0x00 and 0x0F.
+     *
+     * @return the combined nibbles, between 0x00 and 0xFF.
+     */
+    public static final int makeTypeDescriptor(int highNibble,
+                                               int lowNibble)
     {
-        return (byte)( ((((highNibble & 0xF) << 4) | (lowNibble & 0xF)) & 0xFF) );
+        assert highNibble == (highNibble & 0xF);
+        assert lowNibble == (lowNibble & 0xF);
+
+        return ((highNibble << 4) | lowNibble);
     }
-    public static final int getTypeDescriptor(int td)
+
+    /**
+     * Extract the type code (high nibble) from a type descriptor.
+     *
+     * @param td must be a positive int between 0x00 and 0xFF.
+     *
+     * @return the high nibble of the input byte, between 0x00 and 0x0F.
+     */
+    public static final int getTypeCode(int td)
     {
-        return (td >> 4) & 0xf;
+        assert td >= 0 && td <= 0xFF;
+
+        return (td >> 4);
     }
+
     public static final int getLowNibble(int td)
     {
         return td & 0xf;
     }
 
-    public static final byte True =
-        makeTypeDescriptorByte(IonConstants.tidBoolean,
-                               IonConstants.lnBooleanTrue);
+    public static final int True =
+        makeTypeDescriptor(IonConstants.tidBoolean,
+                           IonConstants.lnBooleanTrue);
 
-    public static final byte False =
-        makeTypeDescriptorByte(IonConstants.tidBoolean,
-                               IonConstants.lnBooleanFalse);
+    public static final int False =
+        makeTypeDescriptor(IonConstants.tidBoolean,
+                           IonConstants.lnBooleanFalse);
 }

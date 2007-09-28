@@ -19,11 +19,9 @@ public final class IonBoolImpl
     extends IonValueImpl
     implements IonBool
 {
-    static final int _bool_typeDesc = 
-               IonConstants.makeTypeDescriptorByte(
-                     IonConstants.tidBoolean
-                    ,IonConstants.lnIsNullAtom
-               );
+    static final int NULL_BOOL_TYPEDESC =
+        IonConstants.makeTypeDescriptor(IonConstants.tidBoolean,
+                                        IonConstants.lnIsNullAtom);
 
     private Boolean _bool_value;
 
@@ -32,7 +30,7 @@ public final class IonBoolImpl
      */
     public IonBoolImpl()
     {
-        super(_bool_typeDesc);
+        super(NULL_BOOL_TYPEDESC);
     }
     public IonBoolImpl(int typeDesc)
     {
@@ -59,7 +57,7 @@ public final class IonBoolImpl
         _hasNativeValue = true;
         setDirty();
     }
-    
+
     @Override
     protected int getNativeValueLength()
     {
@@ -70,7 +68,7 @@ public final class IonBoolImpl
     protected int computeLowNibble(int valuelen)
     {
         assert _hasNativeValue == true;
-        
+
         int ln = 0;
         if (_bool_value == null) {
             ln = IonConstants.lnIsNullAtom;
@@ -96,10 +94,10 @@ public final class IonBoolImpl
     protected void doMaterializeValue(IonBinary.Reader reader)
     {
         assert this._isPositionLoaded == true && this._buffer != null;
-        
+
         // a native value trumps a buffered value
         if (_hasNativeValue) return;
-        
+
         // the reader will have been positioned for us
         assert reader.position() == this.pos_getOffsetAtValueTD();
 
@@ -118,17 +116,17 @@ public final class IonBoolImpl
         default:
             throw new IonException("malformed binary boolean value");
         }
-        
+
         _hasNativeValue = true;
     }
 
-    
+
     @Override
     protected void doWriteNakedValue(IonBinary.Writer writer, int valueLen) throws IOException
     {
         throw new IonException("call not needed!");
     }
-    
+
 
     public void accept(ValueVisitor visitor)
         throws Exception

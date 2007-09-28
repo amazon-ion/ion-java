@@ -169,7 +169,7 @@ public class IonParser
     {
         _annotationList = new ArrayList<Integer>();
         this._out.writer().pushPosition(_annotationList);
-        this._out.writer().write(IonConstants.makeTypeDescriptorByte(IonConstants.tidTypedecl, 0));
+        this._out.writer().write(IonConstants.makeTypeDescriptor(IonConstants.tidTypedecl, 0));
         this._out.writer().writeVarInt7Value(1, true); // we'll have at least 1 byte of annotations
         this._out.writer().write((byte)0);       // and here's at least 1 annotation
     }
@@ -551,11 +551,11 @@ loop:   for (;;) {
             case kwNullClob:
             case kwNullList:
             case kwNullSexp:
-                token = IonConstants.makeTypeDescriptorByte(hn,
+                token = IonConstants.makeTypeDescriptor(hn,
                                          IonConstants.lnIsNullAtom);
                 break;
             case kwNullStruct:
-                token = IonConstants.makeTypeDescriptorByte(
+                token = IonConstants.makeTypeDescriptor(
                                          hn,
                                          IonConstants.lnIsNullStruct);
                 break;
@@ -563,7 +563,7 @@ loop:   for (;;) {
                 throw new IllegalStateException("bad keyword token");
         }
 
-        this._out.writer().write((byte)(token & 0xff));
+        this._out.writer().write(token);
     }
 
     void parseCastNumeric(IonTokenReader.Type castto) throws IOException {
@@ -572,7 +572,7 @@ loop:   for (;;) {
         case constPosInt:
             {
                 long l = this._in.intValue.longValue();
-                this._out.writer().writeToken(castto.getHighNibble()
+                this._out.writer().writeByte(castto.getHighNibble()
                                      ,IonBinary.lenVarUInt8(l));
                 this._out.writer().writeVarUInt8Value(l, false);
             }
@@ -580,7 +580,7 @@ loop:   for (;;) {
         case constNegInt:
         {
             long l = 0 - this._in.intValue.longValue();
-            this._out.writer().writeToken(castto.getHighNibble()
+            this._out.writer().writeByte(castto.getHighNibble()
                                  ,IonBinary.lenVarUInt8(l));
             this._out.writer().writeVarUInt8Value(l, false);
         }
@@ -589,7 +589,7 @@ loop:   for (;;) {
             {
                 double d = this._in.doubleValue.doubleValue();
                 int len = IonBinary.lenIonFloat(d);
-                this._out.writer().writeToken(castto.getHighNibble(), (byte)len);
+                this._out.writer().writeByte(castto.getHighNibble(), (byte)len);
                 this._out.writer().writeFloatValue(d);
             }
             break;

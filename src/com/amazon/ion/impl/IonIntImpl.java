@@ -23,20 +23,21 @@ public final class IonIntImpl
     implements IonInt
 {
 
-    static final int _posint_typeDesc =
-        IonConstants.makeTypeDescriptorByte(
-                    IonConstants.tidPosInt
-                   ,IonConstants.lnIsNullAtom
-       );
-    static private final Long   ZERO_LONG   = new Long(0);
+    static final int NULL_INT_TYPEDESC =
+        IonConstants.makeTypeDescriptor(IonConstants.tidPosInt,
+                                        IonConstants.lnIsNullAtom);
+
+    static private final Long ZERO_LONG = new Long(0);
 
     private Long _int_value;
+
+
     /**
      * Constructs a <code>null.int</code> element.
      */
     public IonIntImpl()
     {
-        super(_posint_typeDesc);
+        super(NULL_INT_TYPEDESC);
     }
 
     /**

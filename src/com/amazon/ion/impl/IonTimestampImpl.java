@@ -21,11 +21,10 @@ public final class IonTimestampImpl
     implements IonTimestamp
 {
     public final static Integer UTC_OFFSET = new Integer(0);
-    static final int _timestamp_typeDesc =
-        IonConstants.makeTypeDescriptorByte(
-                    IonConstants.tidTimestamp
-                   ,IonConstants.lnIsNullAtom
-       );
+
+    static final int NULL_TIMESTAMP_TYPEDESC =
+        IonConstants.makeTypeDescriptor(IonConstants.tidTimestamp,
+                                        IonConstants.lnIsNullAtom);
 
     private timeinfo _timestamp_value;
 
@@ -34,7 +33,7 @@ public final class IonTimestampImpl
      */
     public IonTimestampImpl()
     {
-        super(_timestamp_typeDesc);
+        super(NULL_TIMESTAMP_TYPEDESC);
     }
 
 
@@ -104,14 +103,14 @@ public final class IonTimestampImpl
 
         return _timestamp_value.d.getTime();
     }
-    
-    
+
+
     public void setMillis(long millis)
     {
         setTime(new Date(millis));
     }
-    
-    
+
+
     public void setMillisUtc(long millis)
     {
         setTime(new Date(millis));

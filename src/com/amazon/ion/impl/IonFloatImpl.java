@@ -19,21 +19,20 @@ public final class IonFloatImpl
     extends IonValueImpl
     implements IonFloat
 {
-    static final int _float_typeDesc = 
-        IonConstants.makeTypeDescriptorByte(
-                    IonConstants.tidFloat
-                   ,IonConstants.lnIsNullAtom
-       );
+    static final int NULL_FLOAT_TYPEDESC =
+        IonConstants.makeTypeDescriptor(IonConstants.tidFloat,
+                                        IonConstants.lnIsNullAtom);
+
     static private final Double ZERO_DOUBLE = new Double(0);
-    
+
     private Double _float_value;
-    
+
     /**
      * Constructs a <code>null.float</code> element.
      */
     public IonFloatImpl()
     {
-        super(_float_typeDesc);
+        super(NULL_FLOAT_TYPEDESC);
     }
 
     /**
@@ -92,8 +91,8 @@ public final class IonFloatImpl
             setValue(value.doubleValue());
         }
     }
-    
-    public void setValue(Double d) 
+
+    public void setValue(Double d)
     {
         _float_value = d;
         _hasNativeValue = true;
@@ -118,7 +117,7 @@ public final class IonFloatImpl
     protected int computeLowNibble(int valuelen)
     {
         assert _hasNativeValue == true;
-        
+
         int ln = 0;
         if (_float_value == null) {
             ln = IonConstants.lnIsNullAtom;
@@ -134,16 +133,16 @@ public final class IonFloatImpl
         }
         return ln;
     }
-    
-    
+
+
     @Override
     protected void doMaterializeValue(IonBinary.Reader reader) throws IOException
     {
         assert this._isPositionLoaded == true && this._buffer != null;
-        
+
         // a native value trumps a buffered value
         if (_hasNativeValue) return;
-        
+
         // the reader will have been positioned for us
         assert reader.position() == this.pos_getOffsetAtValueTD();
 
@@ -161,7 +160,7 @@ public final class IonFloatImpl
             _float_value = null;
             break;
         case 0:
-            _float_value = ZERO_DOUBLE; 
+            _float_value = ZERO_DOUBLE;
             break;
         case IonConstants.lnIsVarLen:
             ln = reader.readVarUInt7IntValue();
@@ -178,7 +177,7 @@ public final class IonFloatImpl
     {
         assert valueLen == this.getNakedValueLength();
         assert valueLen > 0;
-        
+
         int wlen = writer.writeFloatValue(_float_value);
         assert wlen == valueLen;
 
