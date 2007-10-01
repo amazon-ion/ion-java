@@ -5,6 +5,7 @@
 package com.amazon.ion;
 
 import java.io.Reader;
+import java.util.Collection;
 import java.util.Date;
 
 /**
@@ -295,6 +296,20 @@ public interface IonSystem
     public IonList newEmptyList();
 
     /**
+     * Constructs a new <code>list</code> instance with given child elements
+     *
+     * @param elements
+     *  the initial set of child elements.  If <code>null</code>, then the new
+     *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
+     *
+     * @throws ContainedValueException if any value in <code>elements</code>
+     * has <code>{@link IonValue#getContainer()} != null</code>.
+     */
+    public IonList newList(Collection<? extends IonValue> elements)
+        throws ContainedValueException;
+
+
+    /**
      * Constructs a new <code>null.null</code> instance.
      */
     public IonNull newNull();
@@ -308,6 +323,20 @@ public interface IonSystem
      * Constructs a new empty (not null) <code>sexp</code> instance.
      */
     public IonSexp newEmptySexp();
+
+    /**
+     * Constructs a new <code>sexp</code> instance with given child elements
+     *
+     * @param elements
+     *  the initial set of child elements.  If <code>null</code>, then the new
+     *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
+     *
+     * @throws ContainedValueException if any value in <code>elements</code>
+     * has <code>{@link IonValue#getContainer()} != null</code>.
+     */
+    public IonSexp newSexp(Collection<? extends IonValue> elements)
+        throws ContainedValueException;
+
 
     /**
      * Constructs a new <code>null.string</code> instance.

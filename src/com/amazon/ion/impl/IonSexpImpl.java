@@ -4,8 +4,11 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonSexp;
+import com.amazon.ion.IonValue;
 import com.amazon.ion.ValueVisitor;
+import java.util.Collection;
 
 /**
  * Implements the Ion <code>sexp</code> (S-expression) type.
@@ -37,6 +40,22 @@ public class IonSexpImpl
     {
         super(NULL_SEXP_TYPEDESC, makeNull);
         assert pos_getType() == IonConstants.tidSexp;
+    }
+
+    /**
+     * Constructs a sexp value <em>not</em> backed by binary.
+     *
+     * @param elements
+     *   the initial set of child elements.  If <code>null</code>, then the new
+     *   instance will have <code>{@link #isNullValue()} == true</code>.
+     *
+     * @throws ContainedValueException if any value in <code>elements</code>
+     * has <code>{@link IonValue#getContainer()} != null</code>.
+     */
+    public IonSexpImpl(Collection<? extends IonValue> elements)
+        throws ContainedValueException
+    {
+        super(NULL_SEXP_TYPEDESC, elements);
     }
 
 

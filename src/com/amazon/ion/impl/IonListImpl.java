@@ -4,8 +4,11 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonList;
+import com.amazon.ion.IonValue;
 import com.amazon.ion.ValueVisitor;
+import java.util.Collection;
 
 /**
  * Implements the Ion <code>list</code> type.
@@ -38,6 +41,23 @@ public final class IonListImpl
         super(NULL_LIST_TYPEDESC, makeNull);
         assert pos_getType() == IonConstants.tidList;
     }
+
+    /**
+     * Constructs a list value <em>not</em> backed by binary.
+     *
+     * @param elements
+     *   the initial set of child elements.  If <code>null</code>, then the new
+     *   instance will have <code>{@link #isNullValue()} == true</code>.
+     *
+     * @throws ContainedValueException if any value in <code>elements</code>
+     * has <code>{@link IonValue#getContainer()} != null</code>.
+     */
+    public IonListImpl(Collection<? extends IonValue> elements)
+        throws ContainedValueException
+    {
+        super(NULL_LIST_TYPEDESC, elements);
+    }
+
 
     /**
      * Constructs a non-materialized list backed by a binary buffer.

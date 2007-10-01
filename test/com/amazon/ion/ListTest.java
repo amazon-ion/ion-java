@@ -4,7 +4,9 @@
 
 package com.amazon.ion;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 
 public class ListTest
@@ -143,6 +145,27 @@ public class ListTest
         // FIXME ensure list1._isPositionLoaded && _isMaterialized
         assertIonEquals(list1, list2);
     }
+
+    public void testCreatingListFromCollection()
+    {
+        IonSystem system = system();
+        List<IonValue> elements = null;
+
+        IonList v = system.newList(elements);
+        testFreshNullSequence(v);
+
+        elements = new ArrayList<IonValue>();
+        v = system.newList(elements);
+        testEmptySequence(v);
+
+        elements.add(system.newString("hi"));
+        elements.add(system.newInt(1776));
+        v = system.newList(elements);
+        assertEquals(2, v.size());
+        checkString("hi", v.get(0));
+        checkInt(1776, v.get(1));
+    }
+
 
     public void testCreatingListWithString()
     {

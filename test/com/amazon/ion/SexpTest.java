@@ -4,6 +4,9 @@
 
 package com.amazon.ion;
 
+import java.util.ArrayList;
+import java.util.List;
+
 
 
 public class SexpTest
@@ -20,7 +23,7 @@ public class SexpTest
     {
         return "(" + v + ")";
     }
-    
+
     //=========================================================================
     // Test cases
 
@@ -36,7 +39,7 @@ public class SexpTest
         IonSexp value = (IonSexp) oneValue("null.sexp");
         testFreshNullSequence(value);
     }
-    
+
     public void testMakeNullSexp()
     {
         IonSexp value = (IonSexp) oneValue("(foo+bar)");
@@ -44,7 +47,7 @@ public class SexpTest
         value.makeNull();
         testFreshNullSequence(value);
     }
-    
+
     public void testClearNonMaterializedSexp()
     {
         IonSexp value = (IonSexp) oneValue("(foo+bar)");
@@ -77,7 +80,7 @@ public class SexpTest
         checkSymbol("c", val3);
         assertEquals(3, value.size());
     }
-    
+
     /** Ensure that triple-quote concatenation works inside sexp. */
     public void testConcatenation()
     {
@@ -85,9 +88,9 @@ public class SexpTest
         checkSymbol("a",  value.get(0));
         checkString("ab", value.get(1));
         checkString("c",  value.get(2));
-        assertEquals(3, value.size());        
+        assertEquals(3, value.size());
     }
-    
+
     public void testSexpIteratorRemove()
     {
         IonSexp value = (IonSexp) oneValue("(a b c)");
@@ -103,16 +106,36 @@ public class SexpTest
         assertIonEquals(sexp1, sexp2);
     }
 
+    public void testCreatingListFromCollection()
+    {
+        IonSystem system = system();
+        List<IonValue> elements = null;
+
+        IonSexp v = system.newSexp(elements);
+        testFreshNullSequence(v);
+
+        elements = new ArrayList<IonValue>();
+        v = system.newSexp(elements);
+        testEmptySequence(v);
+
+        elements.add(system.newString("hi"));
+        elements.add(system.newInt(1776));
+        v = system.newSexp(elements);
+        assertEquals(2, v.size());
+        checkString("hi", v.get(0));
+        checkInt(1776, v.get(1));
+    }
+
     public void testCreatingSexpWithString()
     {
         IonSexp sexp1 = system().newSexp();
         sexp1.add(system().newString("Hello"));
 
         IonValue sexp2 = reload(sexp1);
-        
+
         assertIonEquals(sexp1, sexp2);
-        
-        // Again, starting from [] instead of null.list
+
+        // Again, starting from () instead of null.sexp
         sexp1 = system().newEmptySexp();
         sexp1.add(system().newString("Hello"));
 

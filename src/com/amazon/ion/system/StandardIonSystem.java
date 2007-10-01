@@ -35,6 +35,7 @@ import com.amazon.ion.impl.IonBinary;
 import com.amazon.ion.impl.IonBlobImpl;
 import com.amazon.ion.impl.IonBoolImpl;
 import com.amazon.ion.impl.IonClobImpl;
+import com.amazon.ion.impl.IonDatagramImpl;
 import com.amazon.ion.impl.IonDecimalImpl;
 import com.amazon.ion.impl.IonFloatImpl;
 import com.amazon.ion.impl.IonIntImpl;
@@ -50,7 +51,6 @@ import com.amazon.ion.impl.LocalSymbolTableImpl;
 import com.amazon.ion.impl.StaticSymbolTableImpl;
 import com.amazon.ion.impl.SystemReader;
 import com.amazon.ion.impl.SystemSymbolTableImpl;
-import com.amazon.ion.impl.IonDatagramImpl;
 import com.amazon.ion.impl.UserReader;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.util.Printer;
@@ -61,6 +61,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
+import java.util.Collection;
 import java.util.Date;
 
 /**
@@ -452,6 +453,12 @@ public class StandardIonSystem
         return new IonListImpl(false);
     }
 
+    public IonList newList(Collection<? extends IonValue> elements)
+        throws ContainedValueException
+    {
+        return new IonListImpl(elements);
+    }
+
 
     public IonNull newNull()
     {
@@ -467,6 +474,12 @@ public class StandardIonSystem
     public IonSexp newEmptySexp()
     {
         return new IonSexpImpl(false);
+    }
+
+    public IonSexp newSexp(Collection<? extends IonValue> elements)
+        throws ContainedValueException
+    {
+        return new IonSexpImpl(elements);
     }
 
 

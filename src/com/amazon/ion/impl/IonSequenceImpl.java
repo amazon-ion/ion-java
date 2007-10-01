@@ -12,6 +12,8 @@ import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.SymbolTable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
 
 
 /**
@@ -51,6 +53,41 @@ public abstract class IonSequenceImpl
         }
         _hasNativeValue = true;
     }
+
+    /**
+     * Constructs a sequence value <em>not</em> backed by binary.
+     *
+     * @param typeDesc
+     *   the type descriptor byte.
+     * @param elements
+     *   the initial set of child elements.  If <code>null</code>, then the new
+     *   instance will have <code>{@link #isNullValue()} == true</code>.
+     *
+     * @throws ContainedValueException if any value in <code>elements</code>
+     * has <code>{@link IonValue#getContainer()} != null</code>.
+     */
+    protected IonSequenceImpl(int typeDesc,
+                              Collection<? extends IonValue> elements)
+        throws ContainedValueException
+    {
+        this(typeDesc);
+        assert _contents == null;
+        assert isDirty();
+
+        _hasNativeValue = true;
+
+        if (elements != null)
+        {
+            _contents = new ArrayList<IonValue>(elements.size());
+            for (Iterator i = elements.iterator(); i.hasNext();)
+            {
+                IonValue element = (IonValue) i.next();
+                super.add(element);
+            }
+        }
+    }
+
+    //=========================================================================
 
     @Override
     public boolean isNullValue()
