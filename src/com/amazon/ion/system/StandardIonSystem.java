@@ -61,8 +61,11 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 
 /**
  * The standard, public implementation of Ion.
@@ -454,9 +457,28 @@ public class StandardIonSystem
     }
 
     public IonList newList(Collection<? extends IonValue> elements)
-        throws ContainedValueException
+        throws ContainedValueException, NullPointerException
     {
         return new IonListImpl(elements);
+    }
+
+    public <T extends IonValue> IonList newList(T... elements)
+        throws ContainedValueException, NullPointerException
+    {
+        List<T> e = (elements == null ? null : Arrays.asList(elements));
+        return new IonListImpl(e);
+    }
+
+    public IonList newList(int[] elements)
+    {
+        ArrayList<IonInt> e = newInts(elements);
+        return newList(e);
+    }
+
+    public IonList newList(long[] elements)
+    {
+        ArrayList<IonInt> e = newInts(elements);
+        return newList(e);
     }
 
 
@@ -477,9 +499,28 @@ public class StandardIonSystem
     }
 
     public IonSexp newSexp(Collection<? extends IonValue> elements)
-        throws ContainedValueException
+        throws ContainedValueException, NullPointerException
     {
         return new IonSexpImpl(elements);
+    }
+
+    public <T extends IonValue> IonSexp newSexp(T... elements)
+        throws ContainedValueException, NullPointerException
+    {
+        List<T> e = (elements == null ? null : Arrays.asList(elements));
+        return new IonSexpImpl(e);
+    }
+
+    public IonSexp newSexp(int[] elements)
+    {
+        ArrayList<IonInt> e = newInts(elements);
+        return newSexp(e);
+    }
+
+    public IonSexp newSexp(long[] elements)
+    {
+        ArrayList<IonInt> e = newInts(elements);
+        return newSexp(e);
     }
 
 
@@ -566,5 +607,43 @@ public class StandardIonSystem
 
         String text = buffer.toString();
         return (T) singleValue(text);
+    }
+
+
+    //=========================================================================
+    // Helpers
+
+    private ArrayList<IonInt> newInts(int[] elements)
+    {
+        ArrayList<IonInt> e = null;
+
+        if (elements != null)
+        {
+            e = new ArrayList<IonInt>(elements.length);
+            for (int i = 0; i < elements.length; i++)
+            {
+                int value = elements[i];
+                e.add(newInt(value));
+            }
+        }
+
+        return e;
+    }
+
+    private ArrayList<IonInt> newInts(long[] elements)
+    {
+        ArrayList<IonInt> e = null;
+
+        if (elements != null)
+        {
+            e = new ArrayList<IonInt>(elements.length);
+            for (int i = 0; i < elements.length; i++)
+            {
+                long value = elements[i];
+                e.add(newInt(value));
+            }
+        }
+
+        return e;
     }
 }

@@ -379,7 +379,13 @@ public abstract class IonTestCase
         checkInt((expected == null ? null : expected.longValue()), actual);
     }
 
-
+    public void checkNullNull(IonValue actual)
+    {
+        IonNull n = (IonNull) actual;
+        assertNotNull(n);
+    }
+    
+    
     /**
      * Checks that the value is an IonString with the given text.
      * @param text may be null to check for null.string

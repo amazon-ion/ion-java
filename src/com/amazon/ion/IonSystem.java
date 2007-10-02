@@ -296,17 +296,64 @@ public interface IonSystem
     public IonList newEmptyList();
 
     /**
-     * Constructs a new <code>list</code> instance with given child elements
+     * Constructs a new <code>list</code> with given child elements.
      *
      * @param elements
      *  the initial set of child elements.  If <code>null</code>, then the new
      *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
      *
      * @throws ContainedValueException if any value in <code>elements</code>
-     * has <code>{@link IonValue#getContainer()} != null</code>.
+     *  has <code>{@link IonValue#getContainer()} != null</code>.
+     * @throws NullPointerException if any value in <code>elements</code> is
+     *  null.
      */
     public IonList newList(Collection<? extends IonValue> elements)
-        throws ContainedValueException;
+        throws ContainedValueException, NullPointerException;
+
+    /**
+     * Constructs a new <code>list</code> with given child elements.
+     *
+     * @param elements
+     *  the initial set of child values.  If <code>null</code>, then the new
+     *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
+     *  If an element is Java <code>null</code>, its corresponding element in
+     *  the result will be an {@link IonNull} value.
+     *
+     * @throws ContainedValueException if any value in <code>elements</code>
+     *  has <code>{@link IonValue#getContainer()} != null</code>.
+     * @throws NullPointerException if any value in <code>elements</code> is
+     *  null.
+     */
+    public <T extends IonValue> IonList newList(T... elements)
+        throws ContainedValueException, NullPointerException;
+
+    /**
+     * Constructs a new <code>list</code> with given <code>int</code> child
+     * elements.
+     *
+     * @param elements
+     *  the initial set of child values.  If <code>null</code>, then the new
+     *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
+     *  Otherwise, the resulting sequence will contain new {@link IonInt}s with
+     *  the given values.
+     *
+     * @return a new list where each element is an {@link IonInt}.
+     */
+    public IonList newList(int[] elements);
+
+    /**
+     * Constructs a new <code>list</code> with given <code>long</code> child
+     * elements.
+     *
+     * @param elements
+     *  the initial set of child values.  If <code>null</code>, then the new
+     *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
+     *  Otherwise, the resulting sequence will contain new {@link IonInt}s with
+     *  the given values.
+     *
+     * @return a new list where each element is an {@link IonInt}.
+     */
+    public IonList newList(long[] elements);
 
 
     /**
@@ -325,17 +372,62 @@ public interface IonSystem
     public IonSexp newEmptySexp();
 
     /**
-     * Constructs a new <code>sexp</code> instance with given child elements
+     * Constructs a new <code>sexp</code> with given child elements.
      *
      * @param elements
      *  the initial set of child elements.  If <code>null</code>, then the new
      *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
      *
      * @throws ContainedValueException if any value in <code>elements</code>
-     * has <code>{@link IonValue#getContainer()} != null</code>.
+     *  has <code>{@link IonValue#getContainer()} != null</code>.
+     * @throws NullPointerException if any value in <code>elements</code> is
+     *  null.
      */
     public IonSexp newSexp(Collection<? extends IonValue> elements)
-        throws ContainedValueException;
+        throws ContainedValueException, NullPointerException;
+
+    /**
+     * Constructs a new <code>sexp</code> with given child elements.
+     *
+     * @param elements
+     *  the initial set of child values.  If <code>null</code>, then the new
+     *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
+     *
+     * @throws ContainedValueException if any value in <code>elements</code>
+     *  has <code>{@link IonValue#getContainer()} != null</code>.
+     * @throws NullPointerException if any value in <code>elements</code> is
+     *  null.
+     */
+    public <T extends IonValue> IonSexp newSexp(T... elements)
+        throws ContainedValueException, NullPointerException;
+
+    /**
+     * Constructs a new <code>sexp</code> with given <code>int</code> child
+     * elements.
+     *
+     * @param elements
+     *  the initial set of child values.  If <code>null</code>, then the new
+     *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
+     *  Otherwise, the resulting sequence will contain new {@link IonInt}s with
+     *  the given values.
+     *
+     * @return a new sexp where each element is an {@link IonInt}.
+     */
+    public IonSexp newSexp(int[] elements);
+
+    /**
+     * Constructs a new <code>sexp</code> with given <code>long</code> child
+     * elements.
+     *
+     * @param elements
+     *  the initial set of child values.  If <code>null</code>, then the new
+     *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
+     *  Otherwise, the resulting sequence will contain new {@link IonInt}s with
+     *  the given values.
+     *
+     * @return a new sexp where each element is an {@link IonInt}.
+     */
+    public IonSexp newSexp(long[] elements);
 
 
     /**

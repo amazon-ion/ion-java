@@ -106,7 +106,7 @@ public class SexpTest
         assertIonEquals(sexp1, sexp2);
     }
 
-    public void testCreatingListFromCollection()
+    public void testCreatingSexpFromCollection()
     {
         IonSystem system = system();
         List<IonValue> elements = null;
@@ -124,6 +124,98 @@ public class SexpTest
         assertEquals(2, v.size());
         checkString("hi", v.get(0));
         checkInt(1776, v.get(1));
+
+        try {
+            v = system.newSexp(elements);
+            fail("Expected ContainedValueException");
+        }
+        catch (ContainedValueException e) { }
+
+        elements = new ArrayList<IonValue>();
+        elements.add(system.newInt(1776));
+        elements.add(null);
+        try {
+            v = system.newSexp(elements);
+            fail("Expected NullPointerException");
+        }
+        catch (NullPointerException e) { }
+    }
+
+    public void testCreatingSexpFromIntArray()
+    {
+        IonSystem system = system();
+        int[] elements = null;
+
+        IonSexp v = system.newSexp(elements);
+        testFreshNullSequence(v);
+
+        elements = new int[0];
+        v = system.newSexp(elements);
+        testEmptySequence(v);
+
+        elements = new int[]{ 12, 13, 14 };
+        v = system.newSexp(elements);
+        assertEquals(3, v.size());
+        checkInt(12, v.get(0));
+        checkInt(13, v.get(1));
+        checkInt(14, v.get(2));
+    }
+
+    public void testCreatingSexpFromLongArray()
+    {
+        IonSystem system = system();
+        long[] elements = null;
+
+        IonSexp v = system.newSexp(elements);
+        testFreshNullSequence(v);
+
+        elements = new long[0];
+        v = system.newSexp(elements);
+        testEmptySequence(v);
+
+        elements = new long[]{ 12, 13, 14 };
+        v = system.newSexp(elements);
+        assertEquals(3, v.size());
+        checkInt(12, v.get(0));
+        checkInt(13, v.get(1));
+        checkInt(14, v.get(2));
+    }
+
+    public void testCreatingSexpFromValueArray()
+    {
+        IonSystem system = system();
+        IonValue[] elements = null;
+
+        IonSexp v = system.newSexp(elements);
+        testFreshNullSequence(v);
+
+        elements = new IonValue[0];
+        v = system.newSexp(elements);
+        testEmptySequence(v);
+
+        elements = new IonValue[]{ system.newInt(12), system.newString("hi") };
+        v = system.newSexp(elements);
+        assertEquals(2, v.size());
+        checkInt(12, v.get(0));
+        checkString("hi", v.get(1));
+
+        try {
+            v = system.newSexp(elements);
+            fail("Expected ContainedValueException");
+        }
+        catch (ContainedValueException e) { }
+
+        // varargs usage
+        v = system.newSexp(system.newInt(12), system.newString("hi"));
+        assertEquals(2, v.size());
+        checkInt(12, v.get(0));
+        checkString("hi", v.get(1));
+
+        try {
+            v = system.newSexp(system.newInt(12), null);
+            fail("Expected NullPointerException");
+        }
+        catch (NullPointerException e) { }
     }
 
     public void testCreatingSexpWithString()

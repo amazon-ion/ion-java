@@ -164,8 +164,100 @@ public class ListTest
         assertEquals(2, v.size());
         checkString("hi", v.get(0));
         checkInt(1776, v.get(1));
+
+        try {
+            v = system.newList(elements);
+            fail("Expected ContainedValueException");
+        }
+        catch (ContainedValueException e) { }
+
+        elements = new ArrayList<IonValue>();
+        elements.add(system.newInt(1776));
+        elements.add(null);
+        try {
+            system.newList(elements);
+            fail("Expected NullPointerException");
+        }
+        catch (NullPointerException e) { }
     }
 
+    public void testCreatingListFromIntArray()
+    {
+        IonSystem system = system();
+        int[] elements = null;
+
+        IonList v = system.newList(elements);
+        testFreshNullSequence(v);
+
+        elements = new int[0];
+        v = system.newList(elements);
+        testEmptySequence(v);
+
+        elements = new int[]{ 12, 13, 14 };
+        v = system.newList(elements);
+        assertEquals(3, v.size());
+        checkInt(12, v.get(0));
+        checkInt(13, v.get(1));
+        checkInt(14, v.get(2));
+        elements = new int[]{ 12, 13, 14 };
+    }
+
+    public void testCreatingListFromLongArray()
+    {
+        IonSystem system = system();
+        long[] elements = null;
+
+        IonList v = system.newList(elements);
+        testFreshNullSequence(v);
+
+        elements = new long[0];
+        v = system.newList(elements);
+        testEmptySequence(v);
+
+        elements = new long[]{ 12, 13, 14 };
+        v = system.newList(elements);
+        assertEquals(3, v.size());
+        checkInt(12, v.get(0));
+        checkInt(13, v.get(1));
+        checkInt(14, v.get(2));
+    }
+
+    public void testCreatingListFromValueArray()
+    {
+        IonSystem system = system();
+        IonValue[] elements = null;
+
+        IonList v = system.newList(elements);
+        testFreshNullSequence(v);
+
+        elements = new IonValue[0];
+        v = system.newList(elements);
+        testEmptySequence(v);
+
+        elements = new IonValue[]{ system.newInt(12), system.newString("hi") };
+        v = system.newList(elements);
+        assertEquals(2, v.size());
+        checkInt(12, v.get(0));
+        checkString("hi", v.get(1));
+
+        try {
+            v = system.newList(elements);
+            fail("Expected ContainedValueException");
+        }
+        catch (ContainedValueException e) { }
+
+        // varargs usage
+        v = system.newList(system.newInt(12), system.newString("hi"));
+        assertEquals(2, v.size());
+        checkInt(12, v.get(0));
+        checkString("hi", v.get(1));
+
+        try {
+            v = system.newList(system.newInt(12), null);
+            fail("Expected NullPointerException");
+        }
+        catch (NullPointerException e) { }
+    }
 
     public void testCreatingListWithString()
     {
