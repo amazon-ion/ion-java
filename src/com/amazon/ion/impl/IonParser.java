@@ -45,7 +45,7 @@ public class IonParser
     public IonParser(Reader r, BufferManager bb) {
         if (r == null) throw new NullPointerException();
 
-        _in = new IonTokenReader(new PushbackReader(r));
+        _in = new IonTokenReader(r);
         if (bb != null) {
             _out = bb;
         }
@@ -128,7 +128,7 @@ public class IonParser
 
                 //  FIXME need symtab logic here!!!
 
-            } while (consume > this._in.consumed);
+            } while (consume > this._in.getConsumedAmount());
 
             // and we're done
             this._out.writer().truncate();
@@ -337,13 +337,13 @@ public class IonParser
                 this._in.unread(c);
                 break;
             }
-            c = this._in.readEverything();
+            c = this._in.read();
             if (c != '\'') {
                 this._in.unread(c);
                 this._in.unread('\''); // the one we went by before
                 break;
             }
-            c = this._in.readEverything();
+            c = this._in.read();
             if (c != '\'') {
                 this._in.unread(c);
                 this._in.unread('\''); // the one we went by before
@@ -452,7 +452,7 @@ loop:   for (;;) {
                 // this._in.inContent = false;
                 int c = this._in.readIgnoreWhitespace();
                 if (c == ':') {
-                    c = this._in.readEverything();
+                    c = this._in.read();
                     if (c == ':') {
                         throw new IonException("member name expected but usertypedesc found at " + this._in.position());
                     }
@@ -624,12 +624,12 @@ loop:   for (;;) {
         // if it's a quote we have a "clob"  (clob)
         if (c == '\"' || c == '\'') {
             if (c == '\'') { // that's 1
-                c = this._in.readEverything();
+                c = this._in.read();
                 if (c != '\'') {
                     throw new IonException("invalid clob or blob value");
                 }
                 // that's 2
-                c = this._in.readEverything();
+                c = this._in.read();
                 if (c != '\'') {
                     throw new IonException("invalid clob or blob value");
                 }
@@ -650,7 +650,7 @@ loop:   for (;;) {
                 throw new IonException("invalid clob value, double curly braces expected at " + this._in.position());
             }
             // we saw 1 close curly, is there a second (or should be)
-            c = this._in.readEverything();
+            c = this._in.read();
             if (c != '}') {
                 throw new IonException("invalid clob value, double curly braces expected at " + this._in.position());
             }
@@ -686,7 +686,7 @@ loop:   for (;;) {
                 throw new IonException("invalid base64 ending, at least one curly brace was expected at " + this._in.position());
             }
             // we saw 1 close curly, is there a second
-            c = this._in.readEverything();
+            c = this._in.read();
             if (c != '}') {
                 if (c == -1) {
                     throw new UnexpectedEofException();

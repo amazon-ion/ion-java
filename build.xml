@@ -76,6 +76,7 @@
   <target name="build.test" depends="jars">
     <javac srcdir="${dir.test.src}"
            destdir="${dir.test.classes}"
+           debug="true"
            source="1.5" target="1.5">
       <classpath>
         <path path="${build.classpath}"/>

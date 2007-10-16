@@ -21,6 +21,7 @@ import com.amazon.ion.StructTest;
 import com.amazon.ion.SymbolTest;
 import com.amazon.ion.TimestampTest;
 import com.amazon.ion.impl.ByteBufferTest;
+import com.amazon.ion.impl.CharacterReaderTest;
 import com.amazon.ion.impl.ReaderTest;
 import com.amazon.ion.impl.SymbolTableTest;
 import com.amazon.ion.system.SimpleCatalogTest;
@@ -46,7 +47,7 @@ public class AllTests
         // Low-level facilities.
         suite.addTestSuite(ByteBufferTest.class);
         suite.addTestSuite(TextTest.class);
-
+        suite.addTestSuite(CharacterReaderTest.class);
 
         // General framework tests
         suite.addTestSuite(SimpleCatalogTest.class);

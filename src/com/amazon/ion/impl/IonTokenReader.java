@@ -417,7 +417,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
                 _sbavailable--;
             }
             else {
-                c = _tr.readEverything();
+                c = _tr.read();
             }
             return c;
         }
@@ -481,16 +481,9 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
     // state that keeps us on track ...
     //
 
-    public PushbackReader   in;
-           LocalReader      localReader;
-           PushbackReader   pushbackReader;
-    public int              line;
-    public int              offset;
-    public int              prev_offset;
-    public int              consumed;
-
-    public int[]            unreadStack = new int[3];
-    public int              unreadStackTop = 0;
+    private IonCharacterReader  in;
+    private LocalReader         localReader;
+    private PushbackReader      pushbackReader;
 
     public boolean          inQuotedContent;
     public boolean          isIncomplete;
@@ -513,20 +506,24 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
 
     public int              numberType;
 
-    public IonTokenReader(PushbackReader r) {
-        this.in = r;
+    public IonTokenReader(final Reader r) {
+        this.in = new IonCharacterReader( r );
     }
 
-    public int getLine() {
-        return this.line + 1;
+    public int getConsumedAmount() {
+        return in.getConsumedAmount();
+    }
+    
+    public int getLineNumber() {
+        return in.getLineNumber();
     }
 
-    public int getOffset() {
-        return this.offset;
+    public int getColumn() {
+        return in.getColumn();
     }
 
     public String position() {
-        return "line "+this.getLine()+" offset "+this.getOffset();
+        return "line " + this.getLineNumber() + " column " + this.getColumn();
     }
 
     public String getValueString(boolean is_in_expression) throws IOException {
@@ -561,52 +558,15 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
         return pushbackReader ;
     }
 
-
     /**
-     * Read the next character, but don't handle any character specially.
-     * @return the next character, or -1 at end of stream.
-     * @throws IOException
-     */
-    final int readRaw() throws IOException {
-        int c;
-
-        if (unreadStackTop > 0) {
-            unreadStackTop--;
-            c = unreadStack[unreadStackTop];
-        }
-        else {
-            c = this.in.read();
-            if (c != -1) {
-                this.consumed++;
-            }
-        }
-        return c;
-    }
-
-    /**
-     * Read the next character, but consume both parts of newlines pairs,
-     * incrementing the line counter.
+     * Reads the next character using the underlying stream.
      * @return -1 on end of stream.
      * @throws IOException
      */
-    final int readEverything() throws IOException {
-        int c = readRaw();
-        if (c == '\n' || c == '\r') {
-            int c2 = readRaw();
-            if (c == '\r') {                     // "normal" dos EOL \r\n
-                if (c2 != '\n') this.unread(c2);
-            }
-            else {                               // oddball \n\r
-                if (c2 != '\r') this.unread(c2);
-            }
-
-            // we always return a single new line from the various \r \n combinations
-            c = '\n';
-            line++;
-            prev_offset = offset;
-            offset = 0;
-        }
-        return c;
+    final int read() throws IOException {
+        final int ch = in.read();
+        assert ch != '\r';
+        return ch;
     }
 
 
@@ -616,8 +576,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
         assert !inQuotedContent;
         int c;
         do {
-            c = readEverything();
-            this.offset++;
+            c = read();
         } while (Text.isWhitespace(c));
         return c;
     }
@@ -631,25 +590,15 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
         // read through comments - this detects and rejects double slash
         // and slash star style comments and their contents
         for (;;) {
-            c = readEverything();
-            this.offset++;
+            c = read();
 
             if (c == '/') { // possibly a start of a comment
-                int c2 = readEverything();
-                this.offset++;
+                int c2 = read();
 
                 if (c2 == '/') {
                     // we have a // comment, scan for the terminating new line
-                    while (c2 != '\n' && c2 != '\r' && c2 != -1) {
-                        c2 = readEverything();
-                        this.offset++;
-                    }
-                    if (c2 == '\r') {
-                        int c3 = readEverything();
-                        if (c3 != '\n') {
-                            this.unread(c3);
-                        }
-                        c2 = '\n';
+                    while (c2 != '\n' && c2 != -1) {
+                        c2 = read();
                     }
                     c = c2;
                 }
@@ -657,12 +606,10 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
                     // we have a /* */ comment scan for closing */
                     scancomment:
                     while (c2 != -1) {
-                        c2 = readEverything();
-                        this.offset++;
+                        c2 = read();
 
                         if (c2 == '*') {
-                            c2 = readEverything();
-                            this.offset++;
+                            c2 = read();
 
                             if (c2 == '/') {
                                 break scancomment;
@@ -670,8 +617,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
                             unread(c2); // in case this was the '*' we're looking for
                         }
                     }
-                    c = readEverything();
-                    this.offset++;
+                    c = read();
                 }
                 else {
                     // it wasn't a comment start, throw it back
@@ -685,14 +631,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
         return c;
     }
     void unread(int c) throws IOException {
-
-        unreadStack[unreadStackTop++] = c;
-
-        this.offset--;
-        if (c == '\n' || c == '\r') {
-            this.offset = this.prev_offset;
-            this.line--;
-        }
+        this.in.unread(c);
     }
 
     // TODO clone the body of next(c) here, later , for perf, we
@@ -714,7 +653,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
         case -1:
             return (t = Type.eof);
         case '{':
-            c2 = readEverything();
+            c2 = read();
             if (c2 == '{') {
                 return (t = Type.tOpenDoubleCurly);
             }
@@ -740,9 +679,9 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
             this.keyword = Type.none; // anything in quotes isn't a keyword
             return scanString(c, IonConstants.lnIsVarLen - 1);
         case '\'':
-            c2 = readEverything();
+            c2 = read();
             if (c2 == '\'') {
-                c2 = readEverything();
+                c2 = read();
                 if (c2 == '\'') {
                     return scanLongString();
                 }
@@ -753,7 +692,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
             inQuotedContent = true;
             return scanIdentifier(c);
         case '-': case '+':
-            c2 = readEverything();
+            c2 = read();
             if (c2 >= '0' && c2 <= '9') {
                 this.unread(c2);
                 return readNumber(c);
@@ -769,7 +708,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
                 return scanOperator(c);
             }
         }
-        throw new IonException("bad token "+c+" encountered at line " + this.getLine() + " offset " + this.getOffset());
+        throw new IonException("bad token "+c+" encountered at line " + this.getLineNumber() + " column " + this.getColumn());
     }
 
 
@@ -796,11 +735,11 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
             this.keyword = IonTokenReader.matchKeyword(value, 0, value.length());
             if (this.keyword != null) {
                 if (this.keyword == Type.kwNull) {
-                    c = this.readEverything();
+                    c = this.read();
                     if (c == '.') {
                         int dot = value.length();
                         value.append((char)c);
-                        c = this.readEverything();
+                        c = this.read();
                         readIdentifierContents(c);
                         this.keyword = setNullType(value, dot + 1, value.length() - dot - 1);
                     }
@@ -819,7 +758,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
             unread(c);
         }
         else {
-            c = readEverything();
+            c = read();
             if (c != ':') {
                 unread(c);
                 this.t = Type.constMemberName;
@@ -838,7 +777,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
 
         if ((quotedIdentifier = inQuotedContent) == true) {
             for (;;) {
-                c = readEverything();
+                c = read();
                 if (c < 0 || c == quote) break;
                 if (c == '\\') {
                     c = IonTokenReader.readEscapedCharacter(this.in);
@@ -854,7 +793,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
         else {
             value.append((char)c);
             for (;;) {
-                c = readEverything();
+                c = read();
                 if (!Text.isIdentifierFollowChar(c)) {
                     break;
                 }
@@ -1072,7 +1011,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
 
         value.append((char)c);
         for (;;) {
-            c = readEverything();
+            c = read();
             if (!Text.isOperatorChar(c)) {
                 break;
             }
@@ -1096,11 +1035,10 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
 
 sizedloop:
         while (maxlookahead-- > 0) {
-            switch ((c = this.readEverything())) {
+            switch ((c = this.read())) {
             case -1:   break sizedloop; // TODO deoptimize, throw exception
             case '\"': break sizedloop;
             case '\n':
-            case '\r':
                 throw new IonException("unexpected line terminator encountered in quoted string");
             case '\\':
                 c = IonTokenReader.readEscapedCharacter(this.in);
@@ -1152,7 +1090,7 @@ sizedloop:
 
         for (;;)
         {
-            int c = this.readRaw();
+            int c = this.read();
             if (c == -1) {
                 throw new UnexpectedEofException();
             }
@@ -1186,7 +1124,7 @@ sizedloop:
                     value.append((char)c);
                 }
             }
-            else if (!isLongString && (c == '\n' || c == '\r')) {
+            else if (!isLongString && (c == '\n')) {
                 throw new IonException("unexpected line terminator encountered in quoted string");
             }
             else {
@@ -1204,9 +1142,9 @@ sizedloop:
      */
     private boolean twoMoreSingleQuotes() throws IOException
     {
-        int c = readRaw();
+        int c = read();
         if (c == '\'') {
-            int c2 = readRaw();
+            int c2 = read();
             if (c2 == '\'') {
                 return true;
             }
@@ -1269,7 +1207,7 @@ sizedloop:
         int read() throws IOException {
             switch (_readerType) {
             case 1: return _pbr.read();
-            case 2: return _atr.readEverything();
+            case 2: return _atr.read();
             }
             throw new IllegalStateException("Invalid reader type encountered (probably an uninitialized object)");
         }
@@ -1378,18 +1316,6 @@ sizedloop:
             case '0':
                 return 0;
             case '\n':
-                // convert \n\r to \n
-                c2 = r.read();
-                if (c2 != '\r') {
-                    r.unread(c2);
-                }
-                return EMPTY_ESCAPE_SEQUENCE;
-            case '\r':
-                // convert \r\n to \n
-                c2 = r.read();
-                if (c2 != '\n') {
-                    r.unread(c2);
-                }
                 return EMPTY_ESCAPE_SEQUENCE;
             default:
                 break;
@@ -1442,14 +1368,14 @@ sizedloop:
         switch (c) {
         case '-':
             value.append((char)c);
-            c = this.readEverything();
+            c = this.read();
             t = Type.constNegInt;
             this.numberType = NT_NEGINT;
             break;
         case '+':
             // we eat the plus sign, but remember we saw one
             explicitPlusSign = true;
-            c = this.readEverything();
+            c = this.read();
             t = Type.constPosInt;
             this.numberType = NT_POSINT;
             break;
@@ -1466,7 +1392,7 @@ sizedloop:
         boolean leadingZero = isZero;
 
         // process the next character after the initial digit.
-        switch((c = this.readEverything())) {
+        switch((c = this.read())) {
         case 'x':
         case 'X':
             if (!isZero) {
@@ -1508,7 +1434,7 @@ sizedloop:
             // We've now scanned at least two digits.
             // read in the remaining whole number digits
             for (;;) {
-                c = this.readEverything();
+                c = this.read();
                 if (!Text.isDigit(c, 10)) break;
                 value.append((char)c);
                 isZero &= (c == '0');
@@ -1560,7 +1486,7 @@ sizedloop:
         // (fractional) digits
         if (this.numberType == NT_DECIMAL) {
             for (;;) {
-                c = this.readEverything();
+                c = this.read();
                 if (!Text.isDigit(c, 10)) break;
                 value.append((char)c);
             }
@@ -1595,7 +1521,7 @@ sizedloop:
         // reading the first character of the exponent, it can be
         // a sign character or a digit (this is the only place
         // the sign is valid) and we're for sure a float at this point
-        switch ((c = this.readEverything())) {
+        switch ((c = this.read())) {
         case '-':
             value.append((char)c);
             break;
@@ -1614,7 +1540,7 @@ sizedloop:
 
         // read in the remaining whole number digits and then quit
         for (;;) {
-            c = this.readEverything();
+            c = this.read();
             if (!Text.isDigit(c, 10)) break;
             value.append((char)c);
         }
@@ -1637,7 +1563,7 @@ sizedloop:
 
         // read in the remaining whole number digits and then quit
         for (;;) {
-            c = this.readEverything();
+            c = this.read();
             if (!Text.isDigit(c, 16)) break;
             anydigits = true;
             isZero &= (c == '0');
@@ -1727,7 +1653,7 @@ endofdate:
                 }
                 else if (c == 'Z') {
                     value.append((char)c);
-                    c = this.readEverything(); // because we'll unread it before we return
+                    c = this.read(); // because we'll unread it before we return
                 }
             }
             break endofdate;
@@ -1743,7 +1669,7 @@ endofdate:
         int c, len = 0;
         // read in the remaining whole number digits and then quit
         for (;;) {
-            c = this.readEverything();
+            c = this.read();
             if (!Text.isDigit(c, 10)) break;
             len++;
             if (len > limit) {
