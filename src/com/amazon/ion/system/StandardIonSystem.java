@@ -27,7 +27,6 @@ import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.StaticSymbolTable;
-import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.UnsupportedSystemVersionException;
 import com.amazon.ion.impl.BlockedBuffer;
@@ -92,7 +91,7 @@ public class StandardIonSystem
     public SystemSymbolTable getSystemSymbolTable(String systemId)
         throws UnsupportedSystemVersionException
     {
-        if (systemId.equals(SymbolTable.ION_1_0))
+        if (systemId.equals(SystemSymbolTable.ION_1_0))
         {
             return mySystemSymbols;
         }
@@ -309,7 +308,7 @@ public class StandardIonSystem
                 return sid == SystemSymbolTableImpl.ION_1_0_SID;
             }
 
-            return SymbolTable.ION_1_0.equals(symbol.stringValue());
+            return SystemSymbolTable.ION_1_0.equals(symbol.stringValue());
         }
         return false;
     }
@@ -317,7 +316,7 @@ public class StandardIonSystem
     public final boolean valueIsStaticSymbolTable(IonValue value)
     {
         return (value instanceof IonStruct
-                && value.hasTypeAnnotation(SymbolTable.ION_SYMBOL_TABLE));
+                && value.hasTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE));
     }
 
     public final LocalSymbolTable handleLocalSymbolTable(IonCatalog catalog,
@@ -329,7 +328,7 @@ public class StandardIonSystem
 
         if (value instanceof IonStruct)
         {
-            if (value.hasTypeAnnotation(SymbolTable.ION_1_0))
+            if (value.hasTypeAnnotation(SystemSymbolTable.ION_1_0))
             {
                 symtab = new LocalSymbolTableImpl(this, catalog,
                                                   (IonStruct) value,

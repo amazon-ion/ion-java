@@ -16,6 +16,7 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.StaticSymbolTable;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.system.SimpleCatalog;
 import java.util.Iterator;
 
@@ -26,7 +27,7 @@ public class SymbolTableTest
     extends IonTestCase
 {
     public final int ION_1_0_MAX_ID =
-        system().getSystemSymbolTable(SymbolTable.ION_1_0).getMaxId();
+        system().getSystemSymbolTable(SystemSymbolTable.ION_1_0).getMaxId();
 
     public final static int IMPORTED_1_MAX_ID = 2;
     public final static int IMPORTED_2_MAX_ID = 4;

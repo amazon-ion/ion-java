@@ -10,6 +10,7 @@ import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SystemSymbolTable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -122,7 +123,7 @@ public abstract class IonSequenceImpl
         LocalSymbolTable symtab = element.getSymbolTable();
 
         IonSexpImpl wrapper = new IonSexpImpl();
-        wrapper.addTypeAnnotation(SymbolTable.ION_EMBEDDED_VALUE);
+        wrapper.addTypeAnnotation(SystemSymbolTable.ION_EMBEDDED_VALUE);
 
         String systemId = symtab.getSystemSymbolTable().getSystemId();
         // TODO inject systemId ($ion_1_0)

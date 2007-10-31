@@ -527,7 +527,7 @@ public class IonBinary
          * Read exactly one byte of input.
          *
          * @return 0x00 through 0xFF as a positive int.
-         * @throws UnexpectedEOFException if end of file is hit.
+         * @throws UnexpectedEofException if end of file is hit.
          * @throws IOException if there's other problems reading input.
          */
         public int readToken() throws UnexpectedEofException, IOException

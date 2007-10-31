@@ -14,7 +14,7 @@ import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.system.StandardIonSystem;
 import java.io.File;
 import java.io.FileInputStream;
@@ -150,7 +150,7 @@ public class LoaderTest
 
     public void testIgnoreHeaderSymbol()
     {
-        String text = SymbolTable.ION_1_0 + " 123";
+        String text = SystemSymbolTable.ION_1_0 + " 123";
 
         IonInt value = (IonInt) loadOneValue(text);
         checkInt(123, value);

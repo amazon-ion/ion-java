@@ -11,6 +11,7 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.StaticSymbolTable;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SystemSymbolTable;
 
 
 /**
@@ -32,7 +33,7 @@ public class StaticSymbolTableImpl
         super(symtabElt);
 
         assert system != null;
-        assert symtabElt.hasTypeAnnotation(ION_SYMBOL_TABLE);
+        assert symtabElt.hasTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE);
 
 
         StringBuilder errors = new StringBuilder();
@@ -73,7 +74,9 @@ public class StaticSymbolTableImpl
         loadSymbols(errors);
 
         if (errors.length() != 0) {
-            errors.insert(0, "Error in " + ION_SYMBOL_TABLE + ":");
+            errors.insert(0,
+                          "Error in " + SystemSymbolTable.ION_SYMBOL_TABLE
+                            + ":");
             throw new IonException(errors.toString());
         }
     }

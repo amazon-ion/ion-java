@@ -40,7 +40,7 @@ public class DatagramTest
     public void checkLeadingSymbolTable(IonDatagram dg)
     {
         assertTrue("Datagram doesn't start with a symbol table",
-                   dg.systemGet(0).hasTypeAnnotation(SymbolTable.ION_1_0));
+                   dg.systemGet(0).hasTypeAnnotation(SystemSymbolTable.ION_1_0));
     }
 
     public void testBinaryData()

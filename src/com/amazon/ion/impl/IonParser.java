@@ -162,7 +162,6 @@ public class IonParser
         if (is_annotated) {
             this.closeAnnotations();
         }
-        return;
     }
 
     void startAnnotations() throws IOException
@@ -288,7 +287,6 @@ public class IonParser
                                         + this._in.position());
             }
         }
-        return;
     }
 
     private void transferString(int hn) throws IOException
@@ -308,7 +306,6 @@ public class IonParser
         this._out.writer().appendToLongValue('\"', false, onlyByteSizedCharacters, r);
 
         this._out.writer().patchLongHeader(hn, -1);
-        return;
     }
 
     private void transferLongString(int hn) throws IOException
@@ -503,8 +500,6 @@ loop:   for (;;) {
 
         int sid = this._symboltable.addSymbol(s);
         this._out.writer().writeVarUInt7Value(sid, true);
-
-        return;
     }
 
     /**
