@@ -132,6 +132,62 @@ public class DatagramTest
     }
 
 
+
+    public void testEncodingAnnotatedSymbol()
+    {
+        IonSystem system = system();
+        IonList v = system.newList();
+
+        IonDatagram dg = system.newDatagram(v);
+        dg.toBytes();
+    }
+
+    public void testEncodingSymbolInList()
+    {
+        IonSystem system = system();
+        IonList v = system.newList();
+        IonSymbol sym = system.newSymbol("sym");
+        sym.addTypeAnnotation("ann");
+        v.add(sym);
+
+        IonDatagram dg = system.newDatagram(v);
+        dg.toBytes();
+    }
+    
+    public void testEncodingSymbolInStruct()
+    {
+        IonSystem system = system();
+        IonStruct struct1 = system.newStruct();
+        struct1.addTypeAnnotation("ann1");
+        
+        IonSymbol sym = system.newSymbol("sym");
+        sym.addTypeAnnotation("ann");
+        struct1.add("g", sym);
+
+        IonDatagram dg = system.newDatagram(struct1);
+        dg.toBytes();
+    }
+    
+    public void testEncodingStructInStruct()
+    {
+        IonSystem system = system();
+        IonStruct struct1 = system.newStruct();
+        struct1.addTypeAnnotation("ann1");
+        
+        IonStruct struct2 = system.newStruct();
+        struct1.addTypeAnnotation("ann2");
+
+        IonSymbol sym = system.newSymbol("sym");
+        sym.addTypeAnnotation("ann");
+        
+        struct1.add("f", struct2);
+        struct2.add("g", sym);
+
+        IonDatagram dg = system.newDatagram(struct1);
+        dg.toBytes();
+    }
+
+
     public void testNewSingletonDatagramWithSymbolTable()
     {
         IonSystem system = system();

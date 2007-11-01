@@ -111,4 +111,13 @@ public interface IonValue
      * into {@link IonValue} instances from any underlying Ion binary buffer.
      */
     public void deepMaterialize();
+
+
+    /**
+     * Returns a canonical text representation of this value.
+     * For more configurable rendering, see {@link com.amazon.ion.util.Printer}.
+     *
+     * @return Ion text data equivalent to this value.
+     */
+    public String toString();
 }

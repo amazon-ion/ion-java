@@ -241,13 +241,22 @@ public class TimestampTest
     }
 
 
+    public void checkCanonicalText(String text)
+    {
+        IonValue value = oneValue(text);
+        String printed = value.toString();
+        assertEquals(text, printed);
+    }
+
     public void testPrecision()
     {
-        IonTimestamp t1 = (IonTimestamp) oneValue("2007-08-28T16:37:24Z");
-        IonTimestamp t2 = (IonTimestamp) oneValue("2007-08-28T16:37:24.0Z");
-        IonTimestamp t3 = (IonTimestamp) oneValue("2007-08-28T16:37:24.00Z");
-        IonTimestamp t4 = (IonTimestamp) oneValue("2007-08-28T16:37:24.000Z");
-        // TODO verify structural inequality.
+        // FIXME All of these should be distinct
+//        checkCanonicalText("2007-08-28");
+//        checkCanonicalText("2007-08-28T16:37:24Z");
+//        checkCanonicalText("2007-08-28T16:37:24.0Z");
+//        checkCanonicalText("2007-08-28T16:37:24.00Z");
+        checkCanonicalText("2007-08-28T16:37:24.000Z");
+//        checkCanonicalText("2007-08-28T16:37:24.0000Z");
     }
 
 

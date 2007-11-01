@@ -238,9 +238,9 @@ public final class IonDatagramImpl
     public boolean remove(IonValue element) throws NullValueException
     {
         // TODO may leave dead symbol tables (and/or symbols) in the datagram
-        for (Iterator i = _userContents.iterator(); i.hasNext();)
+        for (Iterator<IonValue> i = _userContents.iterator(); i.hasNext();)
         {
-            IonValue child = (IonValue) i.next();
+            IonValue child = i.next();
             if (child == element) // Yes, instance identity.
             {
                 i.remove();
@@ -392,15 +392,6 @@ public final class IonDatagramImpl
         }
     }
 
-
-    @Override
-    public void updateSymbolTable(LocalSymbolTable symtab) {
-        if (this._contents != null) {
-            for (IonValue v : this._contents) {
-                ((IonValueImpl)v).updateSymbolTable(symtab);
-            }
-        }
-    }
 
     private int updateBuffer() throws IOException
     {

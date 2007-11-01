@@ -245,16 +245,6 @@ public final class IonStructImpl
         return cumulativePositionDelta;
     }
 
-    @Override
-    public void updateSymbolTable(LocalSymbolTable symtab) {
-        super.updateSymbolTable(symtab);
-        if (this._contents != null) {
-            for (IonValue v : this._contents) {
-                symtab.addSymbol(v.getFieldName());
-            }
-        }
-    }
-
 
     /**
      * Overrides IonValueImpl.container copy to add code to
@@ -281,6 +271,5 @@ public final class IonStructImpl
             pos = child.pos_getOffsetofNextValue();
         }
         assert pos == end;  // TODO should throw IonException
-
     }
 }

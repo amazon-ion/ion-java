@@ -242,6 +242,18 @@ abstract public class IonContainerImpl
         }
     }
 
+
+    @Override
+    public void updateSymbolTable(LocalSymbolTable symtab)
+    {
+        super.updateSymbolTable(symtab);
+        if (this._contents != null) {
+            for (IonValue v : this._contents) {
+                ((IonValueImpl)v).updateSymbolTable(symtab);
+            }
+        }
+    }
+
     @Override
     protected int updateNewValue(IonBinary.Writer writer, int newPosition,
                                  int cumulativePositionDelta)

@@ -1123,11 +1123,21 @@ public abstract class IonValueImpl
         pos_moveAll(delta);
     }
 
-    public void updateSymbolTable(LocalSymbolTable symtab) {
+    /**
+     * Adds all of our annotations into the symbol table.
+     */
+    public void updateSymbolTable(LocalSymbolTable symtab)
+    {
+        // TODO can any of this be short-circuited?
+        
         if (this._annotations != null) {
             for (String s : this._annotations) {
                 symtab.addSymbol(s);
             }
+        }
+        
+        if (this._fieldName != null) {
+            symtab.addSymbol(this._fieldName);
         }
     }
 

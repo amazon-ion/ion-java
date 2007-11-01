@@ -6,6 +6,7 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
@@ -676,5 +677,19 @@ public class SymbolTableTest
             "}\n" +
             "null";
         badValue(text);
+    }
+    
+    public void testSystemIdOnNonStruct()
+    {
+        String text = "$ion_1_0::12";
+        IonInt v = (IonInt) oneValue(text);
+        checkInt(12, v);
+    }
+    
+    public void testSymbolTableOnNonStruct()
+    {
+        String text = "$ion_symbol_table::12";
+        IonInt v = (IonInt) oneValue(text);
+        checkInt(12, v);
     }
 }
