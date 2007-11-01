@@ -9,7 +9,6 @@ import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
-import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import java.io.IOException;
 import java.util.ArrayList;

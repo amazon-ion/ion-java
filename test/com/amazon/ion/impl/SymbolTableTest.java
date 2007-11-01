@@ -4,12 +4,14 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SystemSymbolTable.ION_1_0;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
+import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTestCase;
@@ -17,7 +19,6 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.StaticSymbolTable;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.system.SimpleCatalog;
 import java.util.Iterator;
 
@@ -28,7 +29,7 @@ public class SymbolTableTest
     extends IonTestCase
 {
     public final int ION_1_0_MAX_ID =
-        system().getSystemSymbolTable(SystemSymbolTable.ION_1_0).getMaxId();
+        system().getSystemSymbolTable(ION_1_0).getMaxId();
 
     public final static int IMPORTED_1_MAX_ID = 2;
     public final static int IMPORTED_2_MAX_ID = 4;
@@ -678,18 +679,25 @@ public class SymbolTableTest
             "null";
         badValue(text);
     }
-    
+
     public void testSystemIdOnNonStruct()
     {
         String text = "$ion_1_0::12";
         IonInt v = (IonInt) oneValue(text);
         checkInt(12, v);
     }
-    
+
     public void testSymbolTableOnNonStruct()
     {
         String text = "$ion_symbol_table::12";
         IonInt v = (IonInt) oneValue(text);
         checkInt(12, v);
+    }
+
+    public void testNestedSystemId()
+    {
+        String text = "($ion_1_0)";
+        IonSexp v = oneSexp(text);
+        checkSymbol(ION_1_0, v.get(0));
     }
 }

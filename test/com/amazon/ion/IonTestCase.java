@@ -305,6 +305,12 @@ public abstract class IonTestCase
         return value;
     }
 
+    public IonSexp oneSexp(String text)
+    {
+        return (IonSexp) oneValue(text);
+    }
+
+
     /**
      * Parse a broken value, expecting an IonException.
      * @param text can be anything.
@@ -384,8 +390,8 @@ public abstract class IonTestCase
         IonNull n = (IonNull) actual;
         assertNotNull(n);
     }
-    
-    
+
+
     /**
      * Checks that the value is an IonString with the given text.
      * @param text may be null to check for null.string

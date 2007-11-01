@@ -4,6 +4,7 @@
 
 package com.amazon.ion;
 
+import static com.amazon.ion.SystemSymbolTable.ION_1_0;
 import com.amazon.ion.impl.IonSequenceImpl;
 import com.amazon.ion.impl.IonValueImpl;
 import java.util.Iterator;
@@ -40,7 +41,7 @@ public class DatagramTest
     public void checkLeadingSymbolTable(IonDatagram dg)
     {
         assertTrue("Datagram doesn't start with a symbol table",
-                   dg.systemGet(0).hasTypeAnnotation(SystemSymbolTable.ION_1_0));
+                   dg.systemGet(0).hasTypeAnnotation(ION_1_0));
     }
 
     public void testBinaryData()
@@ -153,13 +154,13 @@ public class DatagramTest
         IonDatagram dg = system.newDatagram(v);
         dg.toBytes();
     }
-    
+
     public void testEncodingSymbolInStruct()
     {
         IonSystem system = system();
         IonStruct struct1 = system.newStruct();
         struct1.addTypeAnnotation("ann1");
-        
+
         IonSymbol sym = system.newSymbol("sym");
         sym.addTypeAnnotation("ann");
         struct1.add("g", sym);
@@ -167,19 +168,19 @@ public class DatagramTest
         IonDatagram dg = system.newDatagram(struct1);
         dg.toBytes();
     }
-    
+
     public void testEncodingStructInStruct()
     {
         IonSystem system = system();
         IonStruct struct1 = system.newStruct();
         struct1.addTypeAnnotation("ann1");
-        
+
         IonStruct struct2 = system.newStruct();
         struct1.addTypeAnnotation("ann2");
 
         IonSymbol sym = system.newSymbol("sym");
         sym.addTypeAnnotation("ann");
-        
+
         struct1.add("f", struct2);
         struct2.add("g", sym);
 

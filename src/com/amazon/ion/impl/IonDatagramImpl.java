@@ -16,6 +16,7 @@ import com.amazon.ion.NullValueException;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.system.StandardIonSystem;
+import com.amazon.ion.util.Printer;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
@@ -480,12 +481,19 @@ public final class IonDatagramImpl
 
     public String toString()
     {
-        StringBuilder buf = new StringBuilder();
-        buf.append('[');
-        buf.append(getClass().getName());
-        buf.append(' ');
-        buf.append(_contents.toString());
-        buf.append(']');
-        return buf.toString();
+        Printer p = new Printer();
+        StringBuilder builder = new StringBuilder();
+        try {
+            p.print(this, builder);
+            for (IonValue element : _contents)
+            {
+                p.print(element, builder);
+                builder.append('\n');
+            }
+        }
+        catch (IOException e) {
+            throw new IonException(e);
+        }
+        return builder.toString();
     }
 }
