@@ -200,7 +200,7 @@ public final class IonSymbolImpl
         // We've already been through updateSymbolTable().
         assert mySid > 0;
 
-        int wlen = writer.writeVarUInt8Value(mySid, true);
+        int wlen = writer.writeVarUInt8Value(mySid, valueLen);
         assert wlen == valueLen;
     }
 

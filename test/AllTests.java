@@ -3,6 +3,7 @@
  */
 
 import com.amazon.ion.BadIonTests;
+import com.amazon.ion.BinaryTest;
 import com.amazon.ion.BlobTest;
 import com.amazon.ion.BoolTest;
 import com.amazon.ion.ClobTest;
@@ -66,6 +67,9 @@ public class AllTests
         suite.addTestSuite(StructTest.class);
         suite.addTestSuite(SymbolTest.class);
         suite.addTestSuite(TimestampTest.class);
+
+        // binary format tests
+        suite.addTestSuite(BinaryTest.class);
 
         // Utility tests
         suite.addTestSuite(LoaderTest.class);

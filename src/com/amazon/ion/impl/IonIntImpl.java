@@ -215,7 +215,7 @@ public final class IonIntImpl
 
         long l = (_int_value < 0) ? -_int_value : _int_value;
 
-        int wlen = writer.writeVarUInt8Value(l, false);
+        int wlen = writer.writeVarUInt8Value(l, valueLen);
         assert wlen == valueLen;
 
         return;

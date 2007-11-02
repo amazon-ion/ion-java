@@ -64,7 +64,6 @@ public class Printer
 
     protected Options myOptions = new Options();
 
-
     public Printer()
     {
         myOptions = new Options();
@@ -522,12 +521,33 @@ public class Printer
             }
             else
             {
-                BigDecimal decimal = value.toBigDecimal();
-                BigInteger unscaled = decimal.unscaledValue();
+                double real = value.doubleValue();
 
-                myOut.append(unscaled.toString());
-                myOut.append('e');
-                myOut.append(Integer.toString(-decimal.scale()));
+                // shortcut zero cases
+                if (real == 0.0)
+                {
+                    // XXX use the raw bits to avoid boxing and distinguish +/-0e0
+                    long bits = Double.doubleToLongBits(real);
+                    if (bits == 0L)
+                    {
+                        // positive zero
+                        myOut.append("0e0");
+                    }
+                    else
+                    {
+                        // negative zero
+                        myOut.append("-0e0");
+                    }
+                }
+                else
+                {
+                    BigDecimal decimal = value.toBigDecimal();
+                    BigInteger unscaled = decimal.unscaledValue();
+
+                    myOut.append(unscaled.toString());
+                    myOut.append('e');
+                    myOut.append(Integer.toString(-decimal.scale()));
+                }
             }
         }
 
@@ -747,20 +767,20 @@ public class Printer
         public void writeSymbol(String text)
             throws IOException
         {
-	    myOut.append('\"');
-	    escapeToAscii(text);
-	    myOut.append('\"');
-	}
+            myOut.append('\"');
+            escapeToAscii(text);
+            myOut.append('\"');
+        }
 
-	public void writeFloat(BigDecimal value) 
-	    throws IOException
-	{
-	    BigInteger unscaled = value.unscaledValue();
+        public void writeFloat(BigDecimal value) 
+            throws IOException
+        {
+            BigInteger unscaled = value.unscaledValue();
 
-	    myOut.append(unscaled.toString());
-	    myOut.append('e');
-	    myOut.append(Integer.toString(-value.scale()));
-	}
+            myOut.append(unscaled.toString());
+            myOut.append('e');
+            myOut.append(Integer.toString(-value.scale()));
+        }
 
         public void visit(IonTimestamp value) throws IOException
         {
@@ -794,7 +814,7 @@ public class Printer
             if (value.isNullValue()) {
                 myOut.append("null");
             } else {
-		writeString(value.stringValue());
+                writeString(value.stringValue());
             }
         }
 
@@ -803,7 +823,7 @@ public class Printer
             if (value.isNullValue()) {
                 myOut.append("null");
             } else {
-		writeFloat(value.toBigDecimal());
+                writeFloat(value.toBigDecimal());
             }
         }
 
@@ -812,7 +832,7 @@ public class Printer
             if (value.isNullValue()) {
                 myOut.append("null");
             } else {
-		writeFloat(value.toBigDecimal());
+                writeFloat(value.toBigDecimal());
             }
         }
 

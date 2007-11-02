@@ -165,7 +165,7 @@ public final class IonFloatImpl
 
         int type = this.pos_getType();
         if (type != IonConstants.tidFloat) {
-            throw new IonException("invalid type desc encountered for int");
+            throw new IonException("invalid type desc encountered for float");
         }
         int ln = this.pos_getLowNibble();
         switch ((0xf & ln)) {

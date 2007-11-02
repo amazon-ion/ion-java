@@ -33,6 +33,9 @@ public class IonBinary
     final static int _ib_VAR_INT32_LEN_MAX   =    5; // 31 bits (java limit) / 7 bits per byte = 5 bytes
     final static int _ib_VAR_INT64_LEN_MAX   =   10; // 31 bits (java limit) / 7 bits per byte = 5 bytes
     final static int _ib_INT64_LEN_MAX       =    8;
+    final static int _ib_FLOAT64_LEN         =    8;
+
+    private static final Double DOUBLE_POS_ZERO = Double.valueOf(0.0);
 
     private IonBinary() { }
 
@@ -319,15 +322,14 @@ public class IonBinary
 
 
     public static int lenIonFloat(double value) {
-        // first check for the 0.0 special case
-        if (value == 0.0) return 0;
+        if (Double.valueOf(value).equals(DOUBLE_POS_ZERO))
+        {
+            // pos zero special case
+            return 0;
+        }
 
-        // just use the built in Java support for this for the
-        // time being
-        // TODO write "custom" serialization or verify that
-        //      the java routine is doing the right thing
-        long dBits = Double.doubleToRawLongBits(value);
-        return lenVarInt(dBits);
+        // always 8-bytes for IEEE-754 64-bit
+        return _ib_FLOAT64_LEN;
     }
     public static int lenIonDecimal(BigDecimal bd) {
         int len = 0;
@@ -1035,16 +1037,19 @@ done:       for (;;) {
 
         public double readFloatValue(int len) throws IOException
         {
-            double d = 0.0;
-
-            // first check for the 0.0 special case
-            if (len == 0) {
-                return d;
+            if (len == 0)
+            {
+                // special case, return pos zero
+                return 0.0d;
             }
-            long dBits = readVarInt8LongValue(len);
-            d = Double.longBitsToDouble(dBits);
 
-            return d;
+            if (len != 8)
+            {
+                throw new IonException("Length of float read must be 0 or 8");
+            }
+
+            long dBits = readVarUInt8LongValue(len);
+            return Double.longBitsToDouble(dBits);
         }
         public BigDecimal readDecimalValue(int len) throws IOException
         {
@@ -1575,31 +1580,30 @@ done:       for (;;) {
             }
             return len;
         }
-        public int writeVarUInt8Value(long value, boolean force_zero_write) throws IOException
+
+        /** 
+         * Writes a uint field of maximum length 8.
+         * Note that this will write from the lowest to highest
+         * order bits in the long value given.
+         */
+        public int writeVarUInt8Value(long value, int len) throws IOException
         {
             long mask = 0xffL;
-            int  len = lenVarUInt8(value);
 
-            // write the rest
-            switch (len - 1) {
-            case 7: write((byte)((value >> (8*7)) & mask));
-            case 6: write((byte)((value >> (8*6)) & mask));
-            case 5: write((byte)((value >> (8*5)) & mask));
-            case 4: write((byte)((value >> (8*4)) & mask));
-            case 3: write((byte)((value >> (8*3)) & mask));
-            case 2: write((byte)((value >> (8*2)) & mask));
-            case 1: write((byte)((value >> (8*1)) & mask));
-            case 0: write((byte)(value & mask));
+            switch (len) {
+            case 8: write((byte)((value >> (56)) & mask));
+            case 7: write((byte)((value >> (48)) & mask));
+            case 6: write((byte)((value >> (40)) & mask));
+            case 5: write((byte)((value >> (32)) & mask));
+            case 4: write((byte)((value >> (24)) & mask));
+            case 3: write((byte)((value >> (16)) & mask));
+            case 2: write((byte)((value >> (8)) & mask));
+            case 1: write((byte)(value & mask));
                     break;
-            case -1:
-                if (force_zero_write) {
-                    write((byte)0x0);
-                    len = 1;
-                }
-                break;
             }
             return len;
         }
+
         public int writeVarInt7Value(int value, boolean force_zero_write) throws IOException
         {
             int len = 0;
@@ -1707,16 +1711,16 @@ done:       for (;;) {
         }
         public int writeFloatValue(double d) throws IOException
         {
-            // first check for the 0.0 special case
-            if (d == 0.0) return 0;
-
-            // just use the built in Java support for this for the
-            // time being
+            if (Double.valueOf(d).equals(DOUBLE_POS_ZERO))
+            {
+                // pos zero special case
+                return 0;
+            }
 
             // TODO write "custom" serialization or verify that
             //      the java routine is doing the right thing
             long dBits = Double.doubleToRawLongBits(d);
-            return writeVarInt8Value(dBits);
+            return writeVarUInt8Value(dBits, _ib_FLOAT64_LEN);
         }
         public int writeCharValue(int c) throws IOException
         {
@@ -1897,7 +1901,7 @@ done:       for (;;) {
                                  IonConstants.tidSymbol
                                 ,vlen
                            );
-            len += this.writeVarUInt8Value(sid, false);
+            len += this.writeVarUInt8Value(sid, vlen);
 
             return len;
         }

@@ -567,18 +567,22 @@ loop:   for (;;) {
         case constPosInt:
             {
                 long l = this._in.intValue.longValue();
-                this._out.writer().writeByte(castto.getHighNibble()
-                                     ,IonBinary.lenVarUInt8(l));
-                this._out.writer().writeVarUInt8Value(l, false);
+                int size = IonBinary.lenVarUInt8(l);
+                this._out.writer().writeByte(
+                        castto.getHighNibble(),
+                        size);
+                this._out.writer().writeVarUInt8Value(l, size);
             }
             break;
         case constNegInt:
-        {
-            long l = 0 - this._in.intValue.longValue();
-            this._out.writer().writeByte(castto.getHighNibble()
-                                 ,IonBinary.lenVarUInt8(l));
-            this._out.writer().writeVarUInt8Value(l, false);
-        }
+            {
+                long l = 0 - this._in.intValue.longValue();
+                int size = IonBinary.lenVarUInt8(l);
+                this._out.writer().writeByte(
+                        castto.getHighNibble(),
+                        size);
+                this._out.writer().writeVarUInt8Value(l, size);
+            }
         break;
         case constFloat:
             {
