@@ -33,6 +33,7 @@ public class ClobTest
     
     public void checkNullClob(IonClob value)
     {
+        assertSame(IonType.CLOB, value.getType());
         assertTrue(value.isNullValue());
         assertNull(value.newInputStream());
         assertNull(value.newReader(UTF8));
@@ -65,6 +66,7 @@ public class ClobTest
     private void checkUtf8(String expectedString, IonClob value)
         throws NullValueException, IOException
     {
+        assertSame(IonType.CLOB, value.getType());
         assertFalse(value.isNullValue());
 
         // TODO byte-based access to clobs

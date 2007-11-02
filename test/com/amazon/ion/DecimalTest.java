@@ -17,6 +17,7 @@ public class DecimalTest
 
     public static void checkNullDecimal(IonDecimal value)
     {
+        assertSame(IonType.DECIMAL, value.getType());
         assertTrue("isNullValue is false", value.isNullValue());
 
         try
@@ -39,7 +40,7 @@ public class DecimalTest
 
     public void modifyDecimal(IonDecimal value)
     {
-        float  fVal = 123.45F;
+        float fVal = 123.45F;
 
         value.setValue(fVal);
         assertEquals(fVal, value.floatValue());
@@ -75,6 +76,7 @@ public class DecimalTest
     public void testDecimals()
     {
         IonDecimal value = (IonDecimal) oneValue("1.0");
+        assertSame(IonType.DECIMAL, value.getType());
         assertFalse(value.isNullValue());
         assertNull(value.getTypeAnnotations());
         assertEquals(1.0F, value.floatValue());

@@ -30,6 +30,7 @@ public class SexpTest
     public void testFactoryNullSexp()
     {
         IonSexp value = system().newSexp();
+        assertSame(IonType.SEXP, value.getType());
         assertNull(value.getContainer());
         testFreshNullSequence(value);
     }
@@ -37,12 +38,14 @@ public class SexpTest
     public void testTextNullSexp()
     {
         IonSexp value = (IonSexp) oneValue("null.sexp");
+        assertSame(IonType.SEXP, value.getType());
         testFreshNullSequence(value);
     }
 
     public void testMakeNullSexp()
     {
         IonSexp value = (IonSexp) oneValue("(foo+bar)");
+        assertSame(IonType.SEXP, value.getType());
         assertFalse(value.isNullValue());
         value.makeNull();
         testFreshNullSequence(value);
@@ -57,6 +60,7 @@ public class SexpTest
     public void testEmptySexp()
     {
         IonSexp value = (IonSexp) oneValue("()");
+        assertSame(IonType.SEXP, value.getType());
         testEmptySequence(value);
     }
 

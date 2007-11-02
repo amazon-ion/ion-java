@@ -4,13 +4,13 @@
 
 package com.amazon.ion.impl;
 
-import java.io.IOException;
-import java.math.BigInteger;
-
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonInt;
+import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ValueVisitor;
+import java.io.IOException;
+import java.math.BigInteger;
 
 
 /**
@@ -49,6 +49,12 @@ public final class IonIntImpl
         assert pos_getType() == IonConstants.tidPosInt
             || pos_getType() == IonConstants.tidNegInt
         ;
+    }
+
+
+    public IonType getType()
+    {
+        return IonType.INT;
     }
 
 

@@ -4,14 +4,14 @@
 
 package com.amazon.ion.impl;
 
-import java.io.IOException;
-import java.util.Date;
-
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonTimestamp;
+import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonTokenReader.Type.timeinfo;
+import java.io.IOException;
+import java.util.Date;
 
 /**
  * Implements the Ion <code>timestamp</code> type.
@@ -44,6 +44,12 @@ public final class IonTimestampImpl
     {
         super(typeDesc);
         assert pos_getType() == IonConstants.tidTimestamp;
+    }
+
+
+    public IonType getType()
+    {
+        return IonType.TIMESTAMP;
     }
 
 

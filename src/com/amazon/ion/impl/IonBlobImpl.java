@@ -6,6 +6,7 @@ package com.amazon.ion.impl;
 
 
 import com.amazon.ion.IonBlob;
+import com.amazon.ion.IonType;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,6 +38,12 @@ public final class IonBlobImpl
     {
         super(typeDesc);
         assert pos_getType() == IonConstants.tidBlob;
+    }
+
+
+    public IonType getType()
+    {
+        return IonType.BLOB;
     }
 
 

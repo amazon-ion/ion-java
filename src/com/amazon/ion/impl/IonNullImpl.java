@@ -4,11 +4,11 @@
 
 package com.amazon.ion.impl;
 
-import java.io.IOException;
-
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonNull;
+import com.amazon.ion.IonType;
 import com.amazon.ion.ValueVisitor;
+import java.io.IOException;
 
 /**
  * Implements the Ion <code>null</code> type.
@@ -41,6 +41,12 @@ public final class IonNullImpl
             throw new IonException("Invalid type descriptor byte " + typeDesc);
         }
         assert pos_getType() == IonConstants.tidNull;
+    }
+
+
+    public IonType getType()
+    {
+        return IonType.NULL;
     }
 
 

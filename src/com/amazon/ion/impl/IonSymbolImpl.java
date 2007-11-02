@@ -7,6 +7,7 @@ package com.amazon.ion.impl;
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonSymbol;
+import com.amazon.ion.IonType;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ValueVisitor;
@@ -47,6 +48,12 @@ public final class IonSymbolImpl
     {
         super(typeDesc);
         assert pos_getType() == IonConstants.tidSymbol;
+    }
+
+
+    public IonType getType()
+    {
+        return IonType.SYMBOL;
     }
 
 

@@ -15,6 +15,7 @@ public class IntTest
 
     public static void checkNullInt(IonInt value)
     {
+        assertSame(IonType.INT, value.getType());
         assertTrue("isNullValue() is false",   value.isNullValue());
 
         try
@@ -37,6 +38,7 @@ public class IntTest
 
     public void modifyInt(IonInt value)
     {
+        assertSame(IonType.INT, value.getType());
         value.setValue(123);
         assertFalse(value.isNullValue());
         assertEquals(123, value.intValue());
@@ -74,12 +76,14 @@ public class IntTest
     public void testNegInt()
     {
         IonInt value = (IonInt) oneValue("-1");
+        assertSame(IonType.INT, value.getType());
         assertFalse(value.isNullValue());
         assertNull(value.getTypeAnnotations());
         assertEquals(-1, value.intValue());
         assertEquals(-1L, value.longValue());
 
         value = (IonInt)oneValue("-1999");
+        assertSame(IonType.INT, value.getType());
         assertFalse(value.isNullValue());
         assertNull(value.getTypeAnnotations());
         assertEquals(-1999, value.intValue());

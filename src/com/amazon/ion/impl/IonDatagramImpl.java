@@ -10,6 +10,7 @@ import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSystem;
+import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.NullValueException;
@@ -157,6 +158,14 @@ public final class IonDatagramImpl
 
     //=========================================================================
 
+
+    public IonType getType()
+    {
+        throw new UnsupportedOperationException();
+    }
+
+
+
     // FIXME need to make add more solid, maintain symbol tables etc.
 
     public void add(IonValue element)
@@ -172,7 +181,7 @@ public final class IonDatagramImpl
             IonStruct ionRep = symtab.getIonRepresentation();
 
             // TODO why insert at zero?  Should we just append?
-            // Should grap the ST from the last elt of either kind?
+            // Should grab the ST from the last elt of either kind?
             _contents.add(0, ionRep);
 
             ((IonValueImpl)ionRep)._container = this;

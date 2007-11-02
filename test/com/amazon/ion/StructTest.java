@@ -11,6 +11,7 @@ public class StructTest
 {
     public static void checkNullStruct(IonStruct value)
     {
+        assertSame(IonType.STRUCT, value.getType());
         assertTrue(value.isNullValue());
 
         try
@@ -128,6 +129,7 @@ public class StructTest
     public void testTextNullStruct()
     {
         IonStruct value = (IonStruct) oneValue("null.struct");
+        assertSame(IonType.STRUCT, value.getType());
         checkNullStruct(value);
         modifyStruct(value);
     }
@@ -135,6 +137,7 @@ public class StructTest
     public void testMakeNullStruct()
     {
         IonStruct value = (IonStruct) oneValue("{foo:bar}");
+        assertSame(IonType.STRUCT, value.getType());
         assertFalse(value.isNullValue());
         value.makeNull();
         checkNullStruct(value);
@@ -149,6 +152,7 @@ public class StructTest
     public void testEmptyStruct()
     {
         IonStruct value = (IonStruct) oneValue("{}");
+        assertSame(IonType.STRUCT, value.getType());
         assertFalse(value.isNullValue());
         assertNull("annotation should be null", value.getTypeAnnotations());
         assertEquals(0, value.size());

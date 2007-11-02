@@ -382,11 +382,13 @@ public abstract class IonTestCase
      */
     public void checkInt(Integer expected, IonValue actual)
     {
+        assertSame(IonType.INT, actual.getType());
         checkInt((expected == null ? null : expected.longValue()), actual);
     }
 
     public void checkNullNull(IonValue actual)
     {
+        assertSame(IonType.NULL, actual.getType());
         IonNull n = (IonNull) actual;
         assertNotNull(n);
     }
@@ -398,6 +400,7 @@ public abstract class IonTestCase
      */
     public void checkString(String text, IonValue value)
     {
+        assertSame(IonType.STRING, value.getType());
         IonString str = (IonString) value;
         assertEquals("string content", text, str.stringValue());
     }
@@ -408,6 +411,7 @@ public abstract class IonTestCase
      */
     public void checkSymbol(String name, IonValue value)
     {
+        assertSame(IonType.SYMBOL, value.getType());
         IonSymbol sym = (IonSymbol) value;
         assertEquals("symbol name", name, sym.stringValue());
     }
@@ -418,6 +422,7 @@ public abstract class IonTestCase
      */
     public void checkSymbol(String name, int id, IonValue value)
     {
+        assertSame(IonType.SYMBOL, value.getType());
         IonSymbol sym = (IonSymbol) value;
         assertEquals("symbol name", name, sym.stringValue());
         assertEquals("symbol id", id, sym.intValue());

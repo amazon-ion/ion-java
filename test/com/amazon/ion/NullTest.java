@@ -13,7 +13,8 @@ public class NullTest
 {
     public void checkNull(IonNull value)
     {
-        assertTrue("isNullValue() is false",   value.isNullValue());
+        assertSame(IonType.NULL, value.getType());
+        assertTrue("isNullValue() is false", value.isNullValue());
     }
 
 

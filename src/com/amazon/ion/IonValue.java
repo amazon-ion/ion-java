@@ -11,6 +11,17 @@ package com.amazon.ion;
 public interface IonValue
 {
     /**
+     * Gets an enumeration value identifying the core Ion data type of this
+     * object.
+     * <p/>
+     * <b>WARNING:</b> this method is not implemented by {@link IonDatagram}.
+     *
+     * @return a non-<code>null</code> enumeration value.
+     */
+    public IonType getType();
+
+
+    /**
      * Determines whether this in an Ion null-value, <em>e.g.</em>,
      * <code>null</code> or <code>null.string</code>.
      * Note that there are unique null values for each Ion type.

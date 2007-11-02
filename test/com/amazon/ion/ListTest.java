@@ -30,6 +30,7 @@ public class ListTest
     public void testFactoryNullList()
     {
         IonList value = system().newList();
+        assertSame(IonType.LIST, value.getType());
         assertNull(value.getContainer());
         testFreshNullSequence(value);
     }
@@ -37,12 +38,14 @@ public class ListTest
     public void testTextNullList()
     {
         IonList value = (IonList) oneValue("null.list");
+        assertSame(IonType.LIST, value.getType());
         testFreshNullSequence(value);
     }
 
     public void testMakeNullList()
     {
         IonList value = (IonList) oneValue("[6,9]");
+        assertSame(IonType.LIST, value.getType());
         assertFalse(value.isNullValue());
         value.makeNull();
         testFreshNullSequence(value);
@@ -57,6 +60,7 @@ public class ListTest
     public void testEmptyList()
     {
         IonList value = (IonList) oneValue("[]");
+        assertSame(IonType.LIST, value.getType());
         testEmptySequence(value);
     }
 

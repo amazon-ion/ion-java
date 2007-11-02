@@ -4,15 +4,15 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonClob;
+import com.amazon.ion.IonException;
+import com.amazon.ion.IonType;
+import com.amazon.ion.ValueVisitor;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
-
-import com.amazon.ion.IonClob;
-import com.amazon.ion.IonException;
-import com.amazon.ion.ValueVisitor;
 
 
 /**
@@ -43,6 +43,13 @@ public final class IonClobImpl
         super(typeDesc);
         assert pos_getType() == IonConstants.tidClob;
     }
+
+
+    public IonType getType()
+    {
+        return IonType.CLOB;
+    }
+
 
     public Reader newReader(Charset cs)
     {

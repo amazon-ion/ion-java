@@ -11,6 +11,7 @@ public class SymbolTest
 {
     public static void checkNullSymbol(IonSymbol value)
     {
+        assertSame(IonType.SYMBOL, value.getType());
         assertTrue("isNullValue() is false",   value.isNullValue());
         assertNull("stringValue() isn't null", value.stringValue());
         
@@ -80,16 +81,19 @@ public class SymbolTest
     public void testSymbols()
     {
         IonSymbol value = (IonSymbol) oneValue("foo");
+        assertSame(IonType.SYMBOL, value.getType());
         assertEquals("foo", value.stringValue());
         assertTrue(value.intValue() > 0);
         modifySymbol(value);
 
         value = (IonSymbol) oneValue("'foo'");
+        assertSame(IonType.SYMBOL, value.getType());
         assertEquals("foo", value.stringValue());
         assertTrue(value.intValue() > 0);
         modifySymbol(value);
 
         value = (IonSymbol) oneValue("'foo bar'");
+        assertSame(IonType.SYMBOL, value.getType());
         assertEquals("foo bar", value.stringValue());
         assertTrue(value.intValue() > 0);
         modifySymbol(value);

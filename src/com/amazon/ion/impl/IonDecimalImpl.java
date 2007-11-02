@@ -4,13 +4,13 @@
 
 package com.amazon.ion.impl;
 
-import java.io.IOException;
-import java.math.BigDecimal;
-
 import com.amazon.ion.IonDecimal;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ValueVisitor;
+import java.io.IOException;
+import java.math.BigDecimal;
 
 
 /**
@@ -46,6 +46,13 @@ public final class IonDecimalImpl
         super(typeDesc);
         assert pos_getType() == IonConstants.tidDecimal;
     }
+
+
+    public IonType getType()
+    {
+        return IonType.DECIMAL;
+    }
+
 
     public float floatValue()
         throws NullValueException

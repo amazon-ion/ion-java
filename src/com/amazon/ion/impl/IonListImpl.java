@@ -6,6 +6,7 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonList;
+import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.ValueVisitor;
 import java.util.Collection;
@@ -71,7 +72,14 @@ public final class IonListImpl
     }
 
 
-    public void accept(ValueVisitor visitor) throws Exception
+    public IonType getType()
+    {
+        return IonType.LIST;
+    }
+
+
+    public void accept(ValueVisitor visitor)
+        throws Exception
     {
         makeReady();
         visitor.visit(this);

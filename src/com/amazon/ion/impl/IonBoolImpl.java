@@ -4,12 +4,12 @@
 
 package com.amazon.ion.impl;
 
-import java.io.IOException;
-
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ValueVisitor;
+import java.io.IOException;
 
 
 /**
@@ -37,6 +37,13 @@ public final class IonBoolImpl
         super( typeDesc );
         assert pos_getType() == IonConstants.tidBoolean;
     }
+
+
+    public IonType getType()
+    {
+        return IonType.BOOL;
+    }
+
 
     public boolean booleanValue()
         throws NullValueException

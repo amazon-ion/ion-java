@@ -6,6 +6,7 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonSexp;
+import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.ValueVisitor;
 import java.util.Collection;
@@ -67,6 +68,13 @@ public class IonSexpImpl
         super(typeDesc, true);
         assert pos_getType() == IonConstants.tidSexp;
     }
+
+
+    public IonType getType()
+    {
+        return IonType.SEXP;
+    }
+
 
     public void accept(ValueVisitor visitor) throws Exception
     {

@@ -16,6 +16,7 @@ public class FloatTest
 
     public static void checkNullFloat(IonFloat value)
     {
+        assertSame(IonType.FLOAT, value.getType());
         assertTrue("isNullValue is false", value.isNullValue());
 
         try
@@ -74,6 +75,7 @@ public class FloatTest
     public void testFloats()
     {
         IonFloat value = (IonFloat) oneValue("1.0e0");
+        assertSame(IonType.FLOAT, value.getType());
         assertFalse(value.isNullValue());
         assertNull(value.getTypeAnnotations());
         assertEquals(1.0F, value.floatValue());

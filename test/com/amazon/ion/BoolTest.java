@@ -11,6 +11,8 @@ public class BoolTest
 {
     public static void checkNullBool(IonBool value)
     {
+        assertSame(IonType.BOOL, value.getType());
+
         assertTrue(value.isNullValue());
         try
         {
@@ -22,6 +24,7 @@ public class BoolTest
 
     public static void checkBool(boolean expected, IonBool value)
     {
+        assertSame(IonType.BOOL, value.getType());
         assertFalse(value.isNullValue());
         assertEquals(expected, value.booleanValue());
     }
@@ -33,7 +36,7 @@ public class BoolTest
         checkNullBool(value);
         assertNull(value.getTypeAnnotations());
         assertEquals("null.bool", value.toString());
-        
+
         value = (IonBool) oneValue("a::null.bool");
         checkNullBool(value);
         checkAnnotation("a", value);

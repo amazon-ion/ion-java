@@ -6,6 +6,7 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonList;
+import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.ValueVisitor;
@@ -31,6 +32,13 @@ public class TemporaryList
        _tmpelements = new ArrayList<IonValueImpl>();
        setClean();
     }
+
+
+    public IonType getType()
+    {
+        return IonType.LIST;
+    }
+
 
     @Override
     public void add(IonValue v) {

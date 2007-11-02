@@ -61,6 +61,7 @@ public class TimestampTest
 
     private void checkTimestamp(Date expected, IonTimestamp actual)
     {
+        assertSame(IonType.TIMESTAMP, actual.getType());
         Date found = actual.dateValue();
         assertNotNull("date is null", found);
         // Ensure that dateValue() returns a new instance each call!
@@ -118,6 +119,7 @@ public class TimestampTest
 
     public void checkNullTimestamp(IonTimestamp value)
     {
+        assertSame(IonType.TIMESTAMP, value.getType());
         assertTrue(value.isNullValue());
         assertNull(value.dateValue());
         try

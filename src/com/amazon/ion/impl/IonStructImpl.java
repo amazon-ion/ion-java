@@ -7,6 +7,7 @@ package com.amazon.ion.impl;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
+import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.ValueVisitor;
@@ -50,6 +51,12 @@ public final class IonStructImpl
     {
         super(typeDesc);
         assert pos_getType() == IonConstants.tidStruct;
+    }
+
+
+    public IonType getType()
+    {
+        return IonType.STRUCT;
     }
 
 

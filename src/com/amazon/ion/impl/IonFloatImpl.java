@@ -4,13 +4,14 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonException;
+import com.amazon.ion.IonFloat;
+import com.amazon.ion.IonType;
+import com.amazon.ion.NullValueException;
+import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
 import java.math.BigDecimal;
 
-import com.amazon.ion.IonException;
-import com.amazon.ion.IonFloat;
-import com.amazon.ion.NullValueException;
-import com.amazon.ion.ValueVisitor;
 
 /**
  * Implements the Ion <code>float</code> type.
@@ -24,6 +25,9 @@ public final class IonFloatImpl
                                         IonConstants.lnIsNullAtom);
 
     static private final Double ZERO_DOUBLE = new Double(0);
+
+    static private final int SIZE_OF_IEEE_754_64_BITS = 8;
+
 
     private Double _float_value;
 
@@ -42,7 +46,16 @@ public final class IonFloatImpl
     {
         super(typeDesc);
         assert pos_getType() == IonConstants.tidFloat;
+//        assert pos_getLowNibble() == IonConstants.lnIsNullAtom
+//            || pos_getLowNibble() == SIZE_OF_IEEE_754_64_BITS;
     }
+
+
+    public IonType getType()
+    {
+        return IonType.FLOAT;
+    }
+
 
     public float floatValue()
         throws NullValueException
@@ -180,8 +193,6 @@ public final class IonFloatImpl
 
         int wlen = writer.writeFloatValue(_float_value);
         assert wlen == valueLen;
-
-        return;
     }
 
 
