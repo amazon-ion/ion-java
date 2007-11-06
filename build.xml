@@ -141,7 +141,13 @@
 
 
   <target name="javadoc" depends="build.properties">
-    <javadoc>
+    <javadoc
+        overview= "${dir.src}/com/amazon/ion/overview.html"
+        windowtitle="IonJava API"
+        doctitle="The IonJava API Reference"
+        header="IonJava API Reference"
+        bottom="&lt;center>Copyright (C) 2007 Amazon.com. All Rights Reserved.&lt;/center>"
+        docencoding="UTF-8">
       <fileset dir="${dir.src}">
         <include name="**/*.java"/>
         <exclude name="com/amazon/ion/impl/**" />
