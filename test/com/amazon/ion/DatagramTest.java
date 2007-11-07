@@ -7,6 +7,7 @@ package com.amazon.ion;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0;
 import com.amazon.ion.impl.IonSequenceImpl;
 import com.amazon.ion.impl.IonValueImpl;
+import java.io.ByteArrayOutputStream;
 import java.util.Iterator;
 
 
@@ -105,7 +106,7 @@ public class DatagramTest
     }
 
     public void testSystemDatagram()
-    throws Exception
+        throws Exception
     {
         IonSystem system = system();
         IonInt i = system.newInt();
@@ -132,6 +133,68 @@ public class DatagramTest
         }
     }
 
+    public void assertArrayEquals(byte[] expected, byte[] actual)
+    {
+        assertEquals("array length",
+                     expected.length,
+                     actual.length);
+
+        for (int i = 0; i < expected.length; i++)
+        {
+            if (expected[i] != actual[i])
+            {
+                fail("byte[] differs at index " + i);
+            }
+        }
+    }
+
+
+    public void testGetBytes()
+        throws Exception
+    {
+        IonDatagram dg = myLoader.loadText("hello '''hi''' 23 [a,b]");
+        byte[] bytes1 = dg.toBytes();
+        final int size = dg.byteSize();
+
+        assertEquals(size, bytes1.length);
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        int outLen = dg.getBytes(out);
+        assertEquals(size, outLen);
+
+        byte[] bytes2 = out.toByteArray();
+        assertEquals(size, bytes2.length);
+
+        assertArrayEquals(bytes1, bytes2);
+
+        // now check extraction into sub-array
+        final int OFFSET = 5;
+        assertTrue(bytes1.length > OFFSET);
+        bytes2 = new byte[size + OFFSET];
+
+        outLen = dg.getBytes(bytes2, OFFSET);
+        assertEquals(size, outLen);
+
+        for (int i = 0; i < bytes1.length; i++)
+        {
+            if (bytes1[i] != bytes2[i + OFFSET])
+            {
+                fail("Binary data differs at index " + i);
+            }
+        }
+        
+        try {
+            dg.getBytes(new byte[3]);
+            fail("Expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException e) { /* good */ }
+        
+        try {
+            dg.getBytes(new byte[size + OFFSET - 1], OFFSET);
+            fail("Expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException e) { /* good */ }
+    }
 
 
     public void testEncodingAnnotatedSymbol()

@@ -10,6 +10,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 
 /**
  * This implements a blocked byte buffer and both an input and output stream
@@ -1135,7 +1136,6 @@ public class BlockedBuffer
             _pos = pos;
             _curr = _buf.findBlockForRead(this, _version, _curr, pos);
             _blockPosition = _pos - _curr._offset;
-            return;
         }
 
         /**
@@ -1147,15 +1147,41 @@ public class BlockedBuffer
         {
             this._buf = null;
             this._pos = -1;
-            return;
+        }
+
+        public int writeTo(OutputStream out, int len) throws IOException
+        {
+            if (_buf == null) throw new IOException("stream is closed");
+            fail_on_version_change();
+            if (_pos >= _buf.size()) throw new IllegalArgumentException();
+
+            int startingPos = _pos;
+            int localEnd = _pos + len;
+            if (localEnd > _buf.size()) localEnd = _buf.size();
+
+            while (_pos < localEnd) {
+                int available = _curr._limit - _blockPosition;
+                if (available > localEnd - _pos) available = localEnd - _pos;
+
+                out.write(_curr._buffer, _blockPosition, available);
+                _pos += available;
+                _curr = _buf.findBlockForRead(this, _version, _curr, _pos);
+                _blockPosition = 0;
+            }
+
+            fail_on_version_change();
+            return _pos - startingPos;
         }
 
         /**
-         * reads len bytes from the buffer and copies them into
+         * reads (up to) {@code len} bytes from the buffer and copies them into
          * the user supplied byte array (bytes) starting at offset
          * off in the users array.  This returns the number of bytes
          * read, which may be less than the number requested if
          * there is not enough data available in the buffer.
+         *
+         * @throws IndexOutOfBoundsException
+         *   if {@code (dst.length - offset) < len}
          */
         @Override
         public int read(byte[] bytes, int offset, int len) throws IOException

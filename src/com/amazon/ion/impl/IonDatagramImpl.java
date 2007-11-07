@@ -19,6 +19,7 @@ import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.system.StandardIonSystem;
 import com.amazon.ion.util.Printer;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -403,8 +404,10 @@ public final class IonDatagramImpl
     }
 
 
-    private int updateBuffer() throws IOException
+    private int updateBuffer() throws IonException
     {
+        _buffer.reader().sync();   // FIXME is this correct?
+
         int oldSize = _buffer.buffer().size();
 
         if (this.isDirty()) {
@@ -415,20 +418,29 @@ public final class IonDatagramImpl
             }
         }
 
+        try
+        {
+            updateBuffer2(_buffer.writer(MAGIC_COOKIE_SIZE), 
+                          MAGIC_COOKIE_SIZE, 
+                          0);
 
-        updateBuffer2(_buffer.writer(MAGIC_COOKIE_SIZE), MAGIC_COOKIE_SIZE, 0);
-
-        if (systemSize() == 0) {
-            // Nothing should've been written.
-            assert _buffer.writer().position() == MAGIC_COOKIE_SIZE;
+            if (systemSize() == 0) {
+                // Nothing should've been written.
+                assert _buffer.writer().position() == MAGIC_COOKIE_SIZE;
+            }
+            else {
+                IonValueImpl lastChild = (IonValueImpl) 
+                    systemGet(systemSize() - 1);
+                assert _buffer.writer().position() ==
+                    lastChild.pos_getOffsetofNextValue();
+            }
+            _buffer.writer().truncate();
         }
-        else {
-            IonValueImpl lastChild = (IonValueImpl) systemGet(systemSize() - 1);
-            assert _buffer.writer().position() ==
-                   lastChild.pos_getOffsetofNextValue();
+        catch (IOException e)
+        {
+            throw new IonException(e);
         }
-        _buffer.writer().truncate();
-
+        
         return _buffer.buffer().size() - oldSize;
     }
 
@@ -455,27 +467,45 @@ public final class IonDatagramImpl
     }
 
 
-    /**
-     *
-     * @return the entire binary content of this datagram.
-     * @throws IonException if there's an error encoding the data.
-     */
+
+    public int byteSize()
+        throws IonException
+    {
+        updateBuffer();
+        return _buffer.buffer().size();
+    }
+
     public byte[] toBytes() throws IonException
+    {
+        int len = byteSize();
+        byte[] bytes = new byte[len];
+
+        doGetBytes(bytes, 0, len);
+
+        return bytes;
+    }
+
+    public int getBytes(byte[] dst)
+        throws IonException
+    {
+        return getBytes(dst, 0);
+    }
+
+    public int getBytes(byte[] dst, int offset)
+        throws IonException
+    {
+        return doGetBytes(dst, offset, byteSize());
+    }
+
+    private int doGetBytes(byte[] dst, int offset, int byteSize)
+        throws IonException
     {
         try
         {
-            _buffer.reader().sync();   // FIXME is this correct?
-
-            updateBuffer();
-
-            int len = _buffer.buffer().size();
-            byte[] bytes = new byte[len];
             IonBinary.Reader reader = _buffer.reader();
             reader.sync();
             reader.setPosition(0);
-            reader.read(bytes, 0, len);
-
-            return bytes;
+            return reader.read(dst, offset, byteSize);
         }
         catch (IOException e)
         {
@@ -483,6 +513,20 @@ public final class IonDatagramImpl
         }
     }
 
+    public int getBytes(OutputStream out)
+        throws IOException
+    {
+        int len = byteSize();  // Throws IonException if there's breakage.
+
+        // Allow IOException to propagate from here.
+        IonBinary.Reader reader = _buffer.reader();
+        reader.sync();
+        reader.setPosition(0);
+        int len2 = reader.writeTo(out, len);
+        assert len == len2;
+
+        return len2;
+    }
 
     public BufferManager getBuffer() {
         return this._buffer;
