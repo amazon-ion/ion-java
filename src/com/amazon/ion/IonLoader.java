@@ -43,7 +43,7 @@ public interface IonLoader
      * @throws IOException if reading from the specified file results
      * in an <code>IOException</code>.
      */
-    public IonDatagramImpl load(File ionFile)
+    public IonDatagram load(File ionFile)
         throws IonException, IOException;
 
 
@@ -88,7 +88,7 @@ public interface IonLoader
      * @throws IOException if reading from the specified file results
      * in an <code>IOException</code>.
      */
-    public IonDatagramImpl loadBinary(File ionFile)
+    public IonDatagram loadBinary(File ionFile)
         throws IonException, IOException;
 
 
@@ -110,9 +110,9 @@ public interface IonLoader
      * Loads a string of Ion text into a single datagraam.
      *
      * @param ionText must not be null.
-     * 
+     *
      * @return a datagram containing all the values in the text.
-     * 
+     *
      * @throws NullPointerException if <code>ionText</code> is null.
      * @throws IonException if there's a syntax error in the Ion content.
      */
@@ -179,9 +179,9 @@ public interface IonLoader
      * @param ionData may be either Ion binary data, or UTF-8 Ion text.
      * <em>This method assumes ownership of the array</em> and may modify it at
      * will.
-     * 
+     *
      * @return a datagram containing all the values on the input stream.
-     * 
+     *
      * @throws NullPointerException if <code>ionData</code> is null.
      * @throws IonException if there's a syntax error in the Ion content.
      */
@@ -240,6 +240,6 @@ public interface IonLoader
      * @throws IOException if reading from the specified input stream results
      * in an <code>IOException</code>.
      */
-    public IonDatagramImpl loadBinary(InputStream ionBinary)
+    public IonDatagram loadBinary(InputStream ionBinary)
         throws IOException;
 }

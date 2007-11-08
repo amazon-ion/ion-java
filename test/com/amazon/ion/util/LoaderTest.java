@@ -9,6 +9,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonLoader;
+import com.amazon.ion.IonNull;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
@@ -43,7 +44,7 @@ public class LoaderTest
         throws IOException
     {
         File text = getTestdataFile(filename);
-        return myLoader.loadText(text);
+        return myLoader.load(text);
     }
 
 
@@ -113,6 +114,12 @@ public class LoaderTest
         IonList nullsList = (IonList) contents.get(0);
         assertEquals(14, nullsList.size());
         assertSame(contents, nullsList.getContainer());
+        
+        // Load some binary.
+        contents = loadFile("good/null.10n");
+        assertEquals(1, contents.size());
+        IonNull nullValue = (IonNull) contents.get(0);
+        assertNotNull(nullValue);
     }
 
     public void testIteratingSimpleFile()

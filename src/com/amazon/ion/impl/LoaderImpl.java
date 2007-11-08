@@ -216,9 +216,7 @@ public class LoaderImpl
 
         int len = pushback.read(cookie);
         if (len == IonConstants.MAGIC_COOKIE_SIZE) {
-            if (IonBinary.isMagicCookie(cookie, 0, len)) {
-                return true;
-            }
+            isBinary = IonBinary.isMagicCookie(cookie, 0, len);
         }
         if (len > 0) {
             pushback.unread(cookie, 0, len);
