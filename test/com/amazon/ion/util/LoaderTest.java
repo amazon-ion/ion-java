@@ -20,6 +20,7 @@ import com.amazon.ion.system.StandardIonSystem;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -38,13 +39,6 @@ public class LoaderTest
     {
         super.setUp();
         myLoader = system().newLoader();
-    }
-
-    public IonDatagram loadFile(String filename)
-        throws IOException
-    {
-        File text = getTestdataFile(filename);
-        return myLoader.load(text);
     }
 
 
@@ -114,7 +108,7 @@ public class LoaderTest
         IonList nullsList = (IonList) contents.get(0);
         assertEquals(14, nullsList.size());
         assertSame(contents, nullsList.getContainer());
-        
+
         // Load some binary.
         contents = loadFile("good/null.10n");
         assertEquals(1, contents.size());
@@ -252,5 +246,30 @@ public class LoaderTest
             fail("Expected IonException");
         }
         catch (IonException ie) { /* ok */ }
+    }
+
+
+
+    public static void main(String[] args)
+        throws Exception
+    {
+        File f = getTestdataFile("good/decimalNegativeOneDotZero.10n");
+        FileOutputStream out = new FileOutputStream(f);
+        try
+        {
+            int[] data = { 0x10, 0x14, 0x01, 0x00,  // binary version marker
+                           0x52, 0xC1, 0x8A
+            };
+            
+            for (int i = 0; i < data.length; i++)
+            {
+                int b = data[i];
+                out.write(b);
+            }
+        }
+        finally
+        {
+            out.close();
+        }
     }
 }

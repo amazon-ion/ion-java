@@ -1062,7 +1062,7 @@ done:       for (;;) {
             else {
                 // otherwise we to it the hard way ....
                 int         startpos = this.position();
-                int         scale = this.readVarInt7IntValue();
+                int         exponent = this.readVarInt7IntValue();
                 int         bitlen = len - (this.position() - startpos);
                 byte[]      bits = new byte[bitlen];
 
@@ -1074,6 +1074,9 @@ done:       for (;;) {
                 else {
                     value = BigInteger.ZERO;
                 }
+
+                // Ion stores exponent, BigDecimal uses the negation "scale"
+                int scale = -exponent;
                 bd = new BigDecimal(value, scale, MathContext.DECIMAL128);
             }
             return bd;
@@ -1581,7 +1584,7 @@ done:       for (;;) {
             return len;
         }
 
-        /** 
+        /**
          * Writes a uint field of maximum length 8.
          * Note that this will write from the lowest to highest
          * order bits in the long value given.
@@ -2030,12 +2033,16 @@ done:       for (;;) {
             int returnlen = 0;
             // we only write out the '0' value as the nibble 0
             if (bd != null && !BigDecimal.ZERO.equals(bd)) {
-                // otherwise we to it the hard way ....
+                // otherwise we do it the hard way ....
                 BigInteger  bi    = bd.unscaledValue();
+                
+                // FIXME this is twos-complement
                 byte[]      bits  = bi.toByteArray();
                 int         scale = bd.scale();
 
-                returnlen += this.writeVarInt7Value(scale, true);
+                // Ion stores exponent, BigDecimal uses the negation "scale"
+                int exponent = -scale;
+                returnlen += this.writeVarInt7Value(exponent, true);
                 this.write(bits, 0, bits.length);
                 returnlen += bits.length;
             }

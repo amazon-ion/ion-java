@@ -240,7 +240,7 @@ public class StandardIonSystem
      *
      * @throws NullPointerException if <code>ionBinary</code> is null.
      */
-    public SystemReader newBinarySystemReader(byte[] ionBinary)
+    private SystemReader newBinarySystemReader(byte[] ionBinary)
     {
         BlockedBuffer bb = new BlockedBuffer(ionBinary);
         BufferManager buffer = new BufferManager(bb);
@@ -257,7 +257,7 @@ public class StandardIonSystem
      *
      * @throws NullPointerException if <code>ionText</code> is null.
      */
-    public SystemReader newTextSystemReader(byte[] ionText)
+    private SystemReader newTextSystemReader(byte[] ionText)
     {
         ByteArrayInputStream stream = new ByteArrayInputStream(ionText);
         Reader reader;

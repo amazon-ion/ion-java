@@ -148,7 +148,7 @@ public class Printer
 
     /**
      * Sets whether this printer renders all null values as <code>null</code>
-     * (<em>i.e.</em>, the same as an {@link IonNull}.
+     * (<em>i.e.</em>, the same as an {@link IonNull}).
      * By default, this is <code>false</code>.
      */
     public synchronized boolean getPrintUntypedNulls()
@@ -274,7 +274,7 @@ public class Printer
 
         protected Options    myOptions;
         protected Appendable myOut;
-        
+
         /**
          * Should we quote operators at the current level of the hierarchy?
          * As we recurse down into containers, this value is pushed on the
@@ -296,9 +296,9 @@ public class Printer
          * Recurse down into a container, we push the current value of
          * {@link #myQuoteOperators} onto the stack and replace it with
          * the given value.
-         * 
+         *
          * @param value
-         * @param quoteOperators replaces the current value of 
+         * @param quoteOperators replaces the current value of
          * {@link #myQuoteOperators} during the recursive visitation.
          * @throws Exception propagated from visitation of <code>value</code>.
          * @throws NullPointerException if <code>value</code> is null.
@@ -491,7 +491,7 @@ public class Printer
                 writeChild(child, false);
             }
         }
-        
+
         public void visit(IonDecimal value) throws IOException
         {
             writeAnnotations(value);
@@ -752,6 +752,9 @@ public class Printer
 
     }
 
+    /**
+     * <b>This class is unsupported and will be removed!</b>
+     */
     public final static class JsonPrinterVisitor
         extends PrinterVisitor
     {
@@ -772,7 +775,7 @@ public class Printer
             myOut.append('\"');
         }
 
-        public void writeFloat(BigDecimal value) 
+        public void writeFloat(BigDecimal value)
             throws IOException
         {
             BigInteger unscaled = value.unscaledValue();

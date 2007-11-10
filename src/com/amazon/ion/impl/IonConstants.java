@@ -29,7 +29,7 @@ public class IonConstants
     /**
      * Only valid for Ion 1.0
      */
-    public static final int MAGIC_COOKIE = 0x10140100;
+    public static final int MAGIC_COOKIE = 0x10140100;  // 0xE00100EA;
 
     /**
      * The number of bytes in {@link #MAGIC_COOKIE} when encoded in a buffer.

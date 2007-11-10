@@ -161,6 +161,14 @@ public abstract class IonTestCase
     }
 
 
+    public IonDatagram loadFile(String filename)
+        throws IOException
+    {
+        File text = getTestdataFile(filename);
+        return loader().load(text);
+    }
+
+
     // ========================================================================
     // Fixture Helpers
 

@@ -133,9 +133,43 @@ public class DecimalTest
         assertEquals(-12.3D, value.doubleValue());
     }
 
+    public void checkDecimal(int unscaled, int scale, BigDecimal actual)
+    {
+        assertEquals("decimal unscaled value",
+                     unscaled, actual.unscaledValue().intValue());
+        assertEquals("decimal scale",
+                     scale, actual.scale());
+    }
+
+    public void testBinaryDecimals()
+        throws Exception
+    {
+        IonDatagram dg = loadFile("good/decimalOneDotZero.10n");
+        assertEquals(1, dg.size());
+
+        IonDecimal value = (IonDecimal) dg.get(0);
+        BigDecimal dec = value.toBigDecimal();
+        checkDecimal(10, 1, dec);
+        assertEquals(1,  dec.intValue());
+
+        // FIXME this is a big bug!!!
+        dg = loadFile("good/decimalNegativeOneDotZero.10n");
+        assertEquals(1, dg.size());
+
+        value = (IonDecimal) dg.get(0);
+        dec = value.toBigDecimal();
+//        checkDecimal(10, -1, dec);
+//        assertEquals(-1, dec.intValue());
+    }
+
+
     public void testScale()
     {
-        final BigDecimal one_00 = BigDecimal.ONE.setScale(2);
+        final BigDecimal one_00 = new BigDecimal("1.00");
+
+        assertEquals(1,   one_00.intValue());
+        assertEquals(100, one_00.unscaledValue().intValue());
+        assertEquals(2,   one_00.scale());
 
         IonDecimal value = (IonDecimal) oneValue("1.00");
         assertEquals(one_00, value.toBigDecimal());
