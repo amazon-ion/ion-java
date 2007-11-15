@@ -59,7 +59,7 @@ public class IntTest
 
     public void testFactoryInt()
     {
-        IonInt value = system().newInt();
+        IonInt value = system().newNullInt();
         checkNullInt(value);
         modifyInt(value);
     }

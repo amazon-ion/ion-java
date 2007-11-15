@@ -15,7 +15,7 @@ public class SexpTest
     @Override
     protected IonSequence makeNull()
     {
-        return system().newSexp();
+        return system().newNullSexp();
     }
 
     @Override
@@ -29,7 +29,7 @@ public class SexpTest
 
     public void testFactoryNullSexp()
     {
-        IonSexp value = system().newSexp();
+        IonSexp value = system().newNullSexp();
         assertSame(IonType.SEXP, value.getType());
         assertNull(value.getContainer());
         testFreshNullSequence(value);
@@ -103,7 +103,7 @@ public class SexpTest
 
     public void testCreatingNullSexp()
     {
-        IonSexp sexp1 = system().newSexp();
+        IonSexp sexp1 = system().newNullSexp();
         IonValue sexp2 = reload(sexp1);
 
         // FIXME ensure sexp1._isPositionLoaded && _isMaterialized
@@ -224,7 +224,7 @@ public class SexpTest
 
     public void testCreatingSexpWithString()
     {
-        IonSexp sexp1 = system().newSexp();
+        IonSexp sexp1 = system().newNullSexp();
         sexp1.add(system().newString("Hello"));
 
         IonValue sexp2 = reload(sexp1);

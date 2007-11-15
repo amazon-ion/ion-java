@@ -119,7 +119,7 @@ public class ClobTest
     public void testFactoryClob()
         throws Exception
     {
-        IonClob value = system().newClob();
+        IonClob value = system().newNullClob();
         checkNullClob(value);
         modifyClob(value);
     }
@@ -174,7 +174,7 @@ public class ClobTest
     
     public void testByteSize()
     {
-        IonClob value = system().newClob();
+        IonClob value = system().newNullClob();
         value.setBytes(SAMPLE_ASCII_AS_UTF8);
         assertEquals("unexpected byte size", value.byteSize(), 
                      SAMPLE_ASCII_AS_UTF8.length);

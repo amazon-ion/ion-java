@@ -148,7 +148,7 @@ public class BinaryTest extends IonTestCase
 
     public void testBinWriteFloat01()
     {
-        IonFloat fval = sys.newFloat();
+        IonFloat fval = sys.newNullFloat();
         fval.setValue(-1.0);
         byte[] raw = ionBytes(fval);
         byte[] ref = hexToBytes(EMPTY_HEADER + "48 BF F0 00 00 00 00 00 00");
@@ -158,7 +158,7 @@ public class BinaryTest extends IonTestCase
 
     public void testBinWriteFloat02()
     {
-        IonFloat fval = sys.newFloat();
+        IonFloat fval = sys.newNullFloat();
         // approx 1.79769313486231e300
         fval.setValue(Double.longBitsToDouble(0x7E45798EE2308C26L));
         byte[] raw = ionBytes(fval);
@@ -169,7 +169,7 @@ public class BinaryTest extends IonTestCase
 
     public void testBinWriteFloat03()
     {
-        IonFloat fval = sys.newFloat();
+        IonFloat fval = sys.newNullFloat();
         // approx -1.2278379192877e-276
         fval.setValue(Double.longBitsToDouble(0x86A5C3F28D5EC54AL));
         byte[] raw = ionBytes(fval);

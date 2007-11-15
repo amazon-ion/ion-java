@@ -60,14 +60,14 @@ public abstract class SequenceTestCase
 
     public void modifySequence(IonSequence value)
     {
-        IonBool nullBool0 = system().newBool();
+        IonBool nullBool0 = system().newNullBool();
         value.add(nullBool0);
         assertNull(nullBool0.getFieldName());
         assertSame(value, nullBool0.getContainer());
         assertEquals("size", 1, value.size());
         assertSame(nullBool0, value.get(0));
 
-        IonBool nullBool1 = system().newBool();
+        IonBool nullBool1 = system().newNullBool();
         value.add(nullBool1);
         assertNull(nullBool1.getFieldName());
         assertSame(value, nullBool1.getContainer());
@@ -94,7 +94,7 @@ public abstract class SequenceTestCase
         assertSame(nullBool1, value.get(0));
 
         // How about insert?
-        IonInt nullInt = system().newInt();
+        IonInt nullInt = system().newNullInt();
         value.add(0, nullInt);
         assertSame(value, nullInt.getContainer());
         assertEquals("size", 2, value.size());
@@ -174,7 +174,7 @@ public abstract class SequenceTestCase
     public void testBadRemoves()
     {
         IonSequence value = makeNull();
-        IonBool nullBool0 = system().newBool();
+        IonBool nullBool0 = system().newNullBool();
         value.add(nullBool0);
 
         try {
@@ -183,7 +183,7 @@ public abstract class SequenceTestCase
         }
         catch (NullPointerException e) { }
 
-        IonBool nullBool1 = system().newBool();
+        IonBool nullBool1 = system().newNullBool();
         assertFalse(value.remove(nullBool1));
 
         IonSequence otherSeq = makeNull();

@@ -34,6 +34,14 @@ public interface IonDatagram
 
 
     /**
+     * Returns {@code false} at all times, since datagrams cannot be null.
+     *
+     * @return <code>false</code>
+     */
+    public boolean isNullValue();
+
+
+    /**
      * {@inheritDoc}
      * <p>
      * Datagrams always return <code>null</code> from this method, since by
@@ -77,15 +85,17 @@ public interface IonDatagram
 
 
     /**
-     * {@inheritDoc}
+     * Creates an iterator providing the (direct) elements of this datagram.
+     * Elements will be returned
+     * in order of their appearance in the Ion representation.
      * <p>
      * This iterator returns only user values, ignoring symbol tables and other
      * system values. It does not support the {@link Iterator#remove()}
      * operation.
+     *
      * @see #systemIterator()
      */
-    public Iterator<IonValue> iterator()
-        throws NullValueException;
+    public Iterator<IonValue> iterator();
 
     /**
      * Iterate all values in the datagram, including the otherwise-hidden

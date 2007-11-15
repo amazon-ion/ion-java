@@ -15,7 +15,7 @@ public class ListTest
     @Override
     protected IonSequence makeNull()
     {
-        return system().newList();
+        return system().newNullList();
     }
 
     @Override
@@ -29,7 +29,7 @@ public class ListTest
 
     public void testFactoryNullList()
     {
-        IonList value = system().newList();
+        IonList value = system().newNullList();
         assertSame(IonType.LIST, value.getType());
         assertNull(value.getContainer());
         testFreshNullSequence(value);
@@ -143,7 +143,7 @@ public class ListTest
 
     public void testCreatingNullList()
     {
-        IonList list1 = system().newList();
+        IonList list1 = system().newNullList();
         IonValue list2 = reload(list1);
 
         // FIXME ensure list1._isPositionLoaded && _isMaterialized
@@ -265,7 +265,7 @@ public class ListTest
 
     public void testCreatingListWithString()
     {
-        IonList list1 = system().newList();
+        IonList list1 = system().newNullList();
         list1.add(system().newString("Hello"));
 
         IonValue list2 = reload(list1);

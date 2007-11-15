@@ -109,9 +109,9 @@ public class DatagramTest
         throws Exception
     {
         IonSystem system = system();
-        IonInt i = system.newInt();
+        IonInt i = system.newNullInt();
         i.setValue(65);
-        IonStruct struct = system.newStruct();
+        IonStruct struct = system.newNullStruct();
         LocalSymbolTable sym = struct.getSymbolTable();
         if (sym == null) {
             sym = system.newLocalSymbolTable();
@@ -200,7 +200,7 @@ public class DatagramTest
     public void testEncodingAnnotatedSymbol()
     {
         IonSystem system = system();
-        IonList v = system.newList();
+        IonList v = system.newNullList();
 
         IonDatagram dg = system.newDatagram(v);
         dg.toBytes();
@@ -209,7 +209,7 @@ public class DatagramTest
     public void testEncodingSymbolInList()
     {
         IonSystem system = system();
-        IonList v = system.newList();
+        IonList v = system.newNullList();
         IonSymbol sym = system.newSymbol("sym");
         sym.addTypeAnnotation("ann");
         v.add(sym);
@@ -221,7 +221,7 @@ public class DatagramTest
     public void testEncodingSymbolInStruct()
     {
         IonSystem system = system();
-        IonStruct struct1 = system.newStruct();
+        IonStruct struct1 = system.newNullStruct();
         struct1.addTypeAnnotation("ann1");
 
         IonSymbol sym = system.newSymbol("sym");
@@ -235,10 +235,10 @@ public class DatagramTest
     public void testEncodingStructInStruct()
     {
         IonSystem system = system();
-        IonStruct struct1 = system.newStruct();
+        IonStruct struct1 = system.newNullStruct();
         struct1.addTypeAnnotation("ann1");
 
-        IonStruct struct2 = system.newStruct();
+        IonStruct struct2 = system.newNullStruct();
         struct1.addTypeAnnotation("ann2");
 
         IonSymbol sym = system.newSymbol("sym");

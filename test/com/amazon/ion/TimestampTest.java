@@ -177,7 +177,7 @@ public class TimestampTest
 
     public void testFactoryNullTimestamp()
     {
-        IonTimestamp value = system().newTimestamp();
+        IonTimestamp value = system().newNullTimestamp();
         checkNullTimestamp(value);
         modifyTimestamp(value);
     }
@@ -347,7 +347,7 @@ public class TimestampTest
 
     public void testBadSetLocalOffset()
     {
-        IonTimestamp value = system().newTimestamp();
+        IonTimestamp value = system().newNullTimestamp();
 
         try {
             value.setLocalOffset(0);

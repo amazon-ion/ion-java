@@ -381,13 +381,31 @@ public class StandardIonSystem
         return singleValue(reader);
     }
 
+    /**
+     * @deprecated Use {@link #newNullBlob()} instead
+     */
     public IonBlob newBlob()
+    {
+        return newNullBlob();
+    }
+
+
+    public IonBlob newNullBlob()
     {
         return new IonBlobImpl();
     }
 
 
+    /**
+     * @deprecated Use {@link #newNullBool()} instead
+     */
     public IonBool newBool()
+    {
+        return newNullBool();
+    }
+
+
+    public IonBool newNullBool()
     {
         return new IonBoolImpl();
     }
@@ -400,25 +418,61 @@ public class StandardIonSystem
     }
 
 
+    /**
+     * @deprecated Use {@link #newNullClob()} instead
+     */
     public IonClob newClob()
+    {
+        return newNullClob();
+    }
+
+
+    public IonClob newNullClob()
     {
         return new IonClobImpl();
     }
 
 
+    /**
+     * @deprecated Use {@link #newNullDecimal()} instead
+     */
     public IonDecimal newDecimal()
+    {
+        return newNullDecimal();
+    }
+
+
+    public IonDecimal newNullDecimal()
     {
         return new IonDecimalImpl();
     }
 
 
+    /**
+     * @deprecated Use {@link #newNullFloat()} instead
+     */
     public IonFloat newFloat()
+    {
+        return newNullFloat();
+    }
+
+
+    public IonFloat newNullFloat()
     {
         return new IonFloatImpl();
     }
 
 
+    /**
+     * @deprecated Use {@link #newNullInt()} instead
+     */
     public IonInt newInt()
+    {
+        return newNullInt();
+    }
+
+
+    public IonInt newNullInt()
     {
         return new IonIntImpl();
     }
@@ -445,7 +499,16 @@ public class StandardIonSystem
     }
 
 
+    /**
+     * @deprecated Use {@link #newNullList()} instead
+     */
     public IonList newList()
+    {
+        return newNullList();
+    }
+
+
+    public IonList newNullList()
     {
         return new IonListImpl();
     }
@@ -487,7 +550,16 @@ public class StandardIonSystem
     }
 
 
+    /**
+     * @deprecated Use {@link #newNullSexp()} instead
+     */
     public IonSexp newSexp()
+    {
+        return newNullSexp();
+    }
+
+
+    public IonSexp newNullSexp()
     {
         return new IonSexpImpl();
     }
@@ -523,7 +595,16 @@ public class StandardIonSystem
     }
 
 
+    /**
+     * @deprecated Use {@link #newNullString()} instead
+     */
     public IonString newString()
+    {
+        return newNullString();
+    }
+
+
+    public IonString newNullString()
     {
         return new IonStringImpl();
     }
@@ -536,7 +617,16 @@ public class StandardIonSystem
     }
 
 
+    /**
+     * @deprecated Use {@link #newNullStruct()} instead
+     */
     public IonStruct newStruct()
+    {
+        return newNullStruct();
+    }
+
+
+    public IonStruct newNullStruct()
     {
         return new IonStructImpl();
     }
@@ -549,7 +639,16 @@ public class StandardIonSystem
     }
 
 
+    /**
+     * @deprecated Use {@link #newNullSymbol()} instead
+     */
     public IonSymbol newSymbol()
+    {
+        return newNullSymbol();
+    }
+
+
+    public IonSymbol newNullSymbol()
     {
         return new IonSymbolImpl();
     }
@@ -559,7 +658,16 @@ public class StandardIonSystem
         return new IonSymbolImpl(name);
     }
 
+    /**
+     * @deprecated Use {@link #newNullTimestamp()} instead
+     */
     public IonTimestamp newTimestamp()
+    {
+        return newNullTimestamp();
+    }
+
+
+    public IonTimestamp newNullTimestamp()
     {
         return new IonTimestampImpl();
     }

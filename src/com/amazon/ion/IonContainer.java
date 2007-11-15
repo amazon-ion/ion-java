@@ -25,7 +25,7 @@ public interface IonContainer
         throws NullValueException;
 
     /**
-     * Creates an iterator that provides the (direct) elements of this container.
+     * Creates an iterator providing the (direct) elements of this container.
      * Note that ordering is not specified in general, although implementations
      * of {@link IonSequence} must return elements
      * in order of their appearance in the Ion representation.

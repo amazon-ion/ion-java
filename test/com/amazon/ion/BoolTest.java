@@ -74,7 +74,7 @@ public class BoolTest
 
     public void testBoolChanges()
     {
-        IonBool v = system().newBool();
+        IonBool v = system().newNullBool();
         checkNullBool(v);
 
         v.setValue(true);

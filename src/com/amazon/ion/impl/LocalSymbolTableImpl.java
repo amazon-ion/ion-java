@@ -100,8 +100,7 @@ public class LocalSymbolTableImpl
         }
 
         if (_symbolsStruct == null) {
-            _symbolsStruct = system.newStruct();
-            _symbolsStruct.clear();
+            _symbolsStruct = system.newEmptyStruct();
             _symtabElement.put(SystemSymbolTable.SYMBOLS, _symbolsStruct);
         }
     }
@@ -145,6 +144,7 @@ public class LocalSymbolTableImpl
     }
 
 
+    @Override
     protected void doDefineSymbol(String name, int id)
     {
         String systemSymbol = _systemSymbols.findKnownSymbol(id);
@@ -381,8 +381,7 @@ public class LocalSymbolTableImpl
             maxId = importedTable.getMaxId();
             assert maxId > 0;
 
-            IonInt maxInt = system.newInt();
-            maxInt.setValue(maxId);
+            IonInt maxInt = system.newInt(maxId);
             importStruct.put(SystemSymbolTable.MAX_ID, maxInt);
         }
         else

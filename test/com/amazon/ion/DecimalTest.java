@@ -61,7 +61,7 @@ public class DecimalTest
 
     public void testFactoryDecimal()
     {
-        IonDecimal value = system().newDecimal();
+        IonDecimal value = system().newNullDecimal();
         checkNullDecimal(value);
         modifyDecimal(value);
     }

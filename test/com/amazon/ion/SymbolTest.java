@@ -57,7 +57,7 @@ public class SymbolTest
 
     public void testFactorySymbol()
     {
-        IonSymbol value = system().newSymbol();
+        IonSymbol value = system().newNullSymbol();
         checkNullSymbol(value);
         modifySymbol(value);
         

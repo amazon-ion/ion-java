@@ -60,7 +60,7 @@ public class FloatTest
 
     public void testFactoryFloat()
     {
-        IonFloat value = system().newFloat();
+        IonFloat value = system().newNullFloat();
         checkNullFloat(value);
         modifyFloat(value);
     }

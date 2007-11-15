@@ -41,7 +41,7 @@ public class StringTest
 
     public void testFactoryString()
     {
-        IonString value = system().newString();
+        IonString value = system().newNullString();
         checkNullString(value);
         modifyString(value);
     }

@@ -121,7 +121,7 @@ public class BlobTest
     public void testFactoryBlob()
         throws Exception
     {
-        IonBlob value = system().newBlob();
+        IonBlob value = system().newNullBlob();
         checkNullBlob(value);
         modifyBlob(value);
     }
@@ -163,7 +163,7 @@ public class BlobTest
     {
         for (int i = 0; i < TEST_DATA.length; i++)
         {
-            IonBlob value = system().newBlob();
+            IonBlob value = system().newNullBlob();
             byte[] testBytes = TEST_DATA[i].bytes;
             value.setBytes(testBytes);
             assertEquals("unexpected byte size", testBytes.length,

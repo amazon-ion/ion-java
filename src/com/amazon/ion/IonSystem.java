@@ -131,6 +131,7 @@ public interface IonSystem
      *
      * @deprecated Renamed to {@link #newTextReader(Reader)}.
      */
+    @Deprecated
     public IonReader newReader(Reader ionText);
 
 
@@ -145,6 +146,7 @@ public interface IonSystem
      *
      * @deprecated Renamed to {@link #newTextReader(String)}.
      */
+    @Deprecated
     public IonReader newReader(String ionText);
 
 
@@ -219,13 +221,31 @@ public interface IonSystem
 
     /**
      * Constructs a new <code>null.blob</code> instance.
+     * @deprecated Use {@link #newNullBlob()} instead.
      */
+    @Deprecated
     public IonBlob newBlob();
+
+
+    /**
+     * Constructs a new <code>null.blob</code> instance.
+     */
+    public IonBlob newNullBlob();
+
+
+    /**
+     * Constructs a new <code>null.bool</code> instance.
+     * @deprecated Use {@link #newNullBool()} instead
+     */
+    @Deprecated
+    public IonBool newBool();
+
 
     /**
      * Constructs a new <code>null.bool</code> instance.
      */
-    public IonBool newBool();
+    public IonBool newNullBool();
+
 
     /**
      * Constructs a new <code>bool</code> instance with the given content.
@@ -240,24 +260,59 @@ public interface IonSystem
 
     /**
      * Constructs a new <code>null.clob</code> instance.
+     * @deprecated Use {@link #newNullClob()} instead
      */
+    @Deprecated
     public IonClob newClob();
+
+
+    /**
+     * Constructs a new <code>null.clob</code> instance.
+     */
+    public IonClob newNullClob();
+
+
+    /**
+     * Constructs a new <code>null.decimal</code> instance.
+     * @deprecated Use {@link #newNullDecimal()} instead
+     */
+    @Deprecated
+    public IonDecimal newDecimal();
+
 
     /**
      * Constructs a new <code>null.decimal</code> instance.
      */
-    public IonDecimal newDecimal();
+    public IonDecimal newNullDecimal();
+
+
+    /**
+     * Constructs a new <code>null.float</code> instance.
+     * @deprecated Use {@link #newNullFloat()} instead
+     */
+    @Deprecated
+    public IonFloat newFloat();
+
 
     /**
      * Constructs a new <code>null.float</code> instance.
      */
-    public IonFloat newFloat();
+    public IonFloat newNullFloat();
+
+
+    /**
+     * Constructs a new <code>null.int</code> instance.
+     * @deprecated Use {@link #newNullInt()} instead
+     */
+    @Deprecated
+    public IonInt newInt();
 
 
     /**
      * Constructs a new <code>null.int</code> instance.
      */
-    public IonInt newInt();
+    public IonInt newNullInt();
+
 
     /**
      * Constructs a new <code>int</code> instance with the given content.
@@ -265,6 +320,7 @@ public interface IonSystem
      * @param content the new int's content.
      */
     public IonInt newInt(int content);
+
 
     /**
      * Constructs a new <code>int</code> instance with the given content.
@@ -287,8 +343,17 @@ public interface IonSystem
 
     /**
      * Constructs a new <code>null.list</code> instance.
+     * @deprecated Use {@link #newNullList()} instead
      */
+    @Deprecated
     public IonList newList();
+
+
+    /**
+     * Constructs a new <code>null.list</code> instance.
+     */
+    public IonList newNullList();
+
 
     /**
      * Constructs a new empty (not null) <code>list</code> instance.
@@ -310,6 +375,7 @@ public interface IonSystem
     public IonList newList(Collection<? extends IonValue> elements)
         throws ContainedValueException, NullPointerException;
 
+
     /**
      * Constructs a new <code>list</code> with given child elements.
      *
@@ -327,6 +393,7 @@ public interface IonSystem
     public <T extends IonValue> IonList newList(T... elements)
         throws ContainedValueException, NullPointerException;
 
+
     /**
      * Constructs a new <code>list</code> with given <code>int</code> child
      * elements.
@@ -340,6 +407,7 @@ public interface IonSystem
      * @return a new list where each element is an {@link IonInt}.
      */
     public IonList newList(int[] elements);
+
 
     /**
      * Constructs a new <code>list</code> with given <code>long</code> child
@@ -361,15 +429,26 @@ public interface IonSystem
      */
     public IonNull newNull();
 
+
+    /**
+     * Constructs a new <code>null.sexp</code> instance.
+     * @deprecated Use {@link #newNullSexp()} instead
+     */
+    @Deprecated
+    public IonSexp newSexp();
+
+
     /**
      * Constructs a new <code>null.sexp</code> instance.
      */
-    public IonSexp newSexp();
+    public IonSexp newNullSexp();
+
 
     /**
      * Constructs a new empty (not null) <code>sexp</code> instance.
      */
     public IonSexp newEmptySexp();
+
 
     /**
      * Constructs a new <code>sexp</code> with given child elements.
@@ -386,6 +465,7 @@ public interface IonSystem
     public IonSexp newSexp(Collection<? extends IonValue> elements)
         throws ContainedValueException, NullPointerException;
 
+
     /**
      * Constructs a new <code>sexp</code> with given child elements.
      *
@@ -401,6 +481,7 @@ public interface IonSystem
     public <T extends IonValue> IonSexp newSexp(T... elements)
         throws ContainedValueException, NullPointerException;
 
+
     /**
      * Constructs a new <code>sexp</code> with given <code>int</code> child
      * elements.
@@ -414,6 +495,7 @@ public interface IonSystem
      * @return a new sexp where each element is an {@link IonInt}.
      */
     public IonSexp newSexp(int[] elements);
+
 
     /**
      * Constructs a new <code>sexp</code> with given <code>long</code> child
@@ -432,8 +514,17 @@ public interface IonSystem
 
     /**
      * Constructs a new <code>null.string</code> instance.
+     * @deprecated Use {@link #newNullString()} instead
      */
+    @Deprecated
     public IonString newString();
+
+
+    /**
+     * Constructs a new <code>null.string</code> instance.
+     */
+    public IonString newNullString();
+
 
     /**
      * Constructs a new Ion string with the given content.
@@ -443,10 +534,20 @@ public interface IonSystem
      */
     public IonString newString(String content);
 
+
+    /**
+     * Constructs a new <code>null.struct</code> instance.
+     * @deprecated Use {@link #newNullStruct()} instead
+     */
+    @Deprecated
+    public IonStruct newStruct();
+
+
     /**
      * Constructs a new <code>null.struct</code> instance.
      */
-    public IonStruct newStruct();
+    public IonStruct newNullStruct();
+
 
     /**
      * Constructs a new empty (not null) <code>struct</code> instance.
@@ -456,8 +557,17 @@ public interface IonSystem
 
     /**
      * Constructs a new <code>null.symbol</code> instance.
+     * @deprecated Use {@link #newNullSymbol()} instead
      */
+    @Deprecated
     public IonSymbol newSymbol();
+
+
+    /**
+     * Constructs a new <code>null.symbol</code> instance.
+     */
+    public IonSymbol newNullSymbol();
+
 
     /**
      * Constructs a new Ion symbol with the given content.
@@ -472,8 +582,16 @@ public interface IonSystem
 
     /**
      * Constructs a new <code>null.timestamp</code> instance.
+     * @deprecated Use {@link #newNullTimestamp()} instead
      */
+    @Deprecated
     public IonTimestamp newTimestamp();
+
+
+    /**
+     * Constructs a new <code>null.timestamp</code> instance.
+     */
+    public IonTimestamp newNullTimestamp();
 
 
     /**
@@ -498,6 +616,7 @@ public interface IonSystem
      * may be <code>null</code> to make <code>null.timestamp</code>.
      */
     public IonTimestamp newUtcTimestamp(Date utcDate);
+
 
     /**
      * Constructs a new UTC <code>timestamp</code> instance initialized so that

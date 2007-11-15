@@ -169,7 +169,7 @@ public class LoaderTest
         assertIonEquals(one, onePrime);
         assertNull("cloned value has container", onePrime.getContainer());
 
-        IonList parent = system().newList();
+        IonList parent = system().newNullList();
         parent.add(onePrime);
         assertSame(parent, onePrime.getContainer());
         checkInt(1, onePrime);
@@ -182,7 +182,7 @@ public class LoaderTest
     // TODO move to ScannerTest
     public void testCloneWithAnnotation() {
         String s = "some_annotation::{foo:\"test\"}";
-        IonStruct v = system().newStruct();
+        IonStruct v = system().newNullStruct();
         v.put("bar", loadOneValue(s));
         IonStruct bar = (IonStruct) v.get("bar");
         bar.get("foo");
@@ -195,7 +195,7 @@ public class LoaderTest
     {
         String s = "some_annotation::{foo:\"test\"}";
         IonValue v = loadOneValue(s);
-        IonStruct struct1 = system().newStruct();
+        IonStruct struct1 = system().newNullStruct();
         struct1.put("bar", v);
         IonValue bar = struct1.get("bar");
         assert bar instanceof IonStruct;
