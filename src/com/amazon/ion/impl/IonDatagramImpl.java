@@ -4,7 +4,7 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl.IonConstants.MAGIC_COOKIE_SIZE;
+import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
@@ -58,8 +58,7 @@ public final class IonDatagramImpl
     {
         BufferManager buffer = new BufferManager();
         try {
-            buffer.writer().writeFixedIntValue(IonConstants.MAGIC_COOKIE,
-                                               IonConstants.MAGIC_COOKIE_SIZE);
+            buffer.writer().write(IonConstants.BINARY_VERSION_MARKER_1_0);
         }
         catch (IOException e) {
              throw new IonException(e);
@@ -169,6 +168,7 @@ public final class IonDatagramImpl
 
     // FIXME need to make add more solid, maintain symbol tables etc.
 
+    @Override
     public void add(IonValue element)
         throws ContainedValueException, NullPointerException
     {
@@ -201,12 +201,14 @@ public final class IonDatagramImpl
         _userContents.add(element);
     }
 
+    @Override
     public void add(int index, IonValue element)
         throws ContainedValueException, NullPointerException
     {
         throw new UnsupportedOperationException();
     }
 
+    @Override
     public IonValue get(int index)
         throws NullValueException, IndexOutOfBoundsException
     {
@@ -219,6 +221,7 @@ public final class IonDatagramImpl
         return super.get(index);
     }
 
+    @Override
     public Iterator<IonValue> iterator() throws NullValueException
     {
         // TODO implement remove on UserDatagram.iterator()
@@ -233,6 +236,7 @@ public final class IonDatagramImpl
         return new IonContainerIterator(_contents.iterator(), false);
     }
 
+    @Override
     public void clear()
     {
         // TODO implement datagram clear
@@ -240,12 +244,14 @@ public final class IonDatagramImpl
 
     }
 
+    @Override
     public boolean isEmpty() throws NullValueException
     {
         return _userContents.isEmpty();
     }
 
 
+    @Override
     public boolean remove(IonValue element) throws NullValueException
     {
         // TODO may leave dead symbol tables (and/or symbols) in the datagram
@@ -262,6 +268,7 @@ public final class IonDatagramImpl
         return false;
     }
 
+    @Override
     public int size() throws NullValueException
     {
         return _userContents.size();
@@ -273,6 +280,7 @@ public final class IonDatagramImpl
     }
 
 
+    @Override
     public void addTypeAnnotation(String annotation)
     {
         String message = "Datagrams do not have annotations";
@@ -280,12 +288,14 @@ public final class IonDatagramImpl
     }
 
 
+    @Override
     public LocalSymbolTable getSymbolTable()
     {
         return null;
     }
 
 
+    @Override
     public void makeNull()
     {
         throw new UnsupportedOperationException("Cannot make a null datagram");
@@ -299,6 +309,7 @@ public final class IonDatagramImpl
     }
 
 
+    @Override
     public void clearTypeAnnotations()
     {
         // No annotations, nothing to do.
@@ -314,6 +325,7 @@ public final class IonDatagramImpl
     /**
      * @return null
      */
+    @Override
     public String getFieldName()
     {
         return null;
@@ -323,6 +335,7 @@ public final class IonDatagramImpl
     /**
      * @return an empty array.
      */
+    @Override
     public String[] getTypeAnnotationStrings()
     {
         return EMPTY_STRING_ARRAY;
@@ -332,6 +345,7 @@ public final class IonDatagramImpl
     /**
      * @return an empty array.
      */
+    @Override
     public String[] getTypeAnnotations()
     {
         return EMPTY_STRING_ARRAY;
@@ -341,6 +355,7 @@ public final class IonDatagramImpl
     /**
      * @return false
      */
+    @Override
     public boolean hasTypeAnnotation(String annotation)
     {
         return false;
@@ -350,6 +365,7 @@ public final class IonDatagramImpl
     /**
      * @return false
      */
+    @Override
     public boolean isNullValue()
     {
         return false;
@@ -359,6 +375,7 @@ public final class IonDatagramImpl
     /**
      * Does nothing since datagrams have no annotations.
      */
+    @Override
     public void removeTypeAnnotation(String annotation)
     {
         // Nothing to do, no annotations here.
@@ -420,16 +437,16 @@ public final class IonDatagramImpl
 
         try
         {
-            updateBuffer2(_buffer.writer(MAGIC_COOKIE_SIZE), 
-                          MAGIC_COOKIE_SIZE, 
+            updateBuffer2(_buffer.writer(BINARY_VERSION_MARKER_SIZE),
+                          BINARY_VERSION_MARKER_SIZE,
                           0);
 
             if (systemSize() == 0) {
                 // Nothing should've been written.
-                assert _buffer.writer().position() == MAGIC_COOKIE_SIZE;
+                assert _buffer.writer().position() == BINARY_VERSION_MARKER_SIZE;
             }
             else {
-                IonValueImpl lastChild = (IonValueImpl) 
+                IonValueImpl lastChild = (IonValueImpl)
                     systemGet(systemSize() - 1);
                 assert _buffer.writer().position() ==
                     lastChild.pos_getOffsetofNextValue();
@@ -440,7 +457,7 @@ public final class IonDatagramImpl
         {
             throw new IonException(e);
         }
-        
+
         return _buffer.buffer().size() - oldSize;
     }
 
@@ -528,10 +545,12 @@ public final class IonDatagramImpl
         return len2;
     }
 
+    @Override
     public BufferManager getBuffer() {
         return this._buffer;
     }
 
+    @Override
     public String toString()
     {
         Printer p = new Printer();

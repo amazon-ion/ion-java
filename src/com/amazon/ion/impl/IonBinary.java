@@ -4,8 +4,12 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl.IonConstants.MAGIC_COOKIE;
-import static com.amazon.ion.impl.IonConstants.MAGIC_COOKIE_SIZE;
+import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_1_0;
+import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
+import com.amazon.ion.IonException;
+import com.amazon.ion.LocalSymbolTable;
+import com.amazon.ion.UnexpectedEofException;
+import com.amazon.ion.impl.IonConstants.HighNibble;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PushbackReader;
@@ -15,11 +19,6 @@ import java.math.MathContext;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Stack;
-
-import com.amazon.ion.IonException;
-import com.amazon.ion.LocalSymbolTable;
-import com.amazon.ion.UnexpectedEofException;
-import com.amazon.ion.impl.IonConstants.HighNibble;
 
 
 /**
@@ -39,17 +38,13 @@ public class IonBinary
 
     private IonBinary() { }
 
-    public static boolean isMagicCookie(byte[] b, int off, int len)
+    public static boolean startsWithBinaryVersionMarker(byte[] b)
     {
-        if (len < MAGIC_COOKIE_SIZE) return false;
+        if (b.length < BINARY_VERSION_MARKER_SIZE) return false;
 
-        int token = MAGIC_COOKIE;
-
-        for (int ii = MAGIC_COOKIE_SIZE - 1; ii >= 0; ii--) {
-            int b1 = (0xff) & b[off + ii];  // low byte first
-            int b2 = (0xff) & token;
-            if (b1 != b2) return false;
-            token >>= 8;
+        for (int i = 0; i < BINARY_VERSION_MARKER_SIZE; i++)
+        {
+            if (BINARY_VERSION_MARKER_1_0[i] != b[i]) return false;
         }
         return true;
     }
@@ -60,22 +55,38 @@ public class IonBinary
      *
      * @param reader must not be null.
      * @throws IonException if there's a problem reading the cookie, or if the
-     * data does not start with {@link IonConstants#MAGIC_COOKIE}.
+     * data does not start with {@link IonConstants#BINARY_VERSION_MARKER_1_0}.
      */
-    public static void verifyMagicCookie(Reader reader)
+    public static void verifyBinaryVersionMarker(Reader reader)
         throws IonException
     {
         try
         {
             reader.sync();
             reader.setPosition(0);
-            int cookie = reader.readFixedIntIntValue(MAGIC_COOKIE_SIZE);
-            if (cookie != MAGIC_COOKIE)
+            byte[] bvm = new byte[BINARY_VERSION_MARKER_SIZE];
+            int len = reader.read(bvm);
+            if (len < BINARY_VERSION_MARKER_SIZE)
             {
                 String message =
-                    "Binary data has unrecognized header 0x" +
-                    Integer.toHexString(cookie).toUpperCase();
+                    "Binary data is too short: at least " +
+                    BINARY_VERSION_MARKER_SIZE +
+                    " bytes are required, but only " + len + " were found.";
                 throw new IonException(message);
+
+            }
+
+            if (! startsWithBinaryVersionMarker(bvm))
+            {
+                StringBuilder buf = new StringBuilder();
+                buf.append("Binary data has unrecognized header");
+                for (int i = 0; i < bvm.length; i++)
+                {
+                    int b = bvm[i] & 0xFF;
+                    buf.append(" 0x");
+                    buf.append(Integer.toHexString(b).toUpperCase());
+                }
+                throw new IonException(buf.toString());
             }
         }
         catch (IOException e)
@@ -767,6 +778,7 @@ public class IonBinary
         }
         /** @throws IOException
          * @deprecated */
+        @Deprecated
         public int readVarInt8IntValue(int len) throws IOException {
             int retvalue = 0;
             boolean is_negative = false;
@@ -2035,7 +2047,7 @@ done:       for (;;) {
             if (bd != null && !BigDecimal.ZERO.equals(bd)) {
                 // otherwise we do it the hard way ....
                 BigInteger  bi    = bd.unscaledValue();
-                
+
                 // FIXME this is twos-complement
                 byte[]      bits  = bi.toByteArray();
                 int         scale = bd.scale();

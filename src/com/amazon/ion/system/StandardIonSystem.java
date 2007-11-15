@@ -172,6 +172,7 @@ public class StandardIonSystem
     /**
      *  @deprecated Renamed to {@link #newTextReader(Reader)}.
      */
+    @Deprecated
     public IonReader newReader(Reader reader)
     {
         return newTextReader(reader);
@@ -185,6 +186,7 @@ public class StandardIonSystem
     /**
      *  @deprecated Renamed to {@link #newTextReader(String)}.
      */
+    @Deprecated
     public IonReader newReader(String ionText)
     {
         return newTextReader(ionText);
@@ -217,7 +219,7 @@ public class StandardIonSystem
     public SystemReader newSystemReader(byte[] ionData)
     {
         boolean isbinary =
-            IonBinary.isMagicCookie(ionData, 0, ionData.length);
+            IonBinary.startsWithBinaryVersionMarker(ionData);
 
         SystemReader sysReader;
         if (isbinary) {
@@ -384,6 +386,7 @@ public class StandardIonSystem
     /**
      * @deprecated Use {@link #newNullBlob()} instead
      */
+    @Deprecated
     public IonBlob newBlob()
     {
         return newNullBlob();
@@ -399,6 +402,7 @@ public class StandardIonSystem
     /**
      * @deprecated Use {@link #newNullBool()} instead
      */
+    @Deprecated
     public IonBool newBool()
     {
         return newNullBool();
@@ -421,6 +425,7 @@ public class StandardIonSystem
     /**
      * @deprecated Use {@link #newNullClob()} instead
      */
+    @Deprecated
     public IonClob newClob()
     {
         return newNullClob();
@@ -436,6 +441,7 @@ public class StandardIonSystem
     /**
      * @deprecated Use {@link #newNullDecimal()} instead
      */
+    @Deprecated
     public IonDecimal newDecimal()
     {
         return newNullDecimal();
@@ -451,6 +457,7 @@ public class StandardIonSystem
     /**
      * @deprecated Use {@link #newNullFloat()} instead
      */
+    @Deprecated
     public IonFloat newFloat()
     {
         return newNullFloat();
@@ -466,6 +473,7 @@ public class StandardIonSystem
     /**
      * @deprecated Use {@link #newNullInt()} instead
      */
+    @Deprecated
     public IonInt newInt()
     {
         return newNullInt();
@@ -502,6 +510,7 @@ public class StandardIonSystem
     /**
      * @deprecated Use {@link #newNullList()} instead
      */
+    @Deprecated
     public IonList newList()
     {
         return newNullList();
@@ -553,6 +562,7 @@ public class StandardIonSystem
     /**
      * @deprecated Use {@link #newNullSexp()} instead
      */
+    @Deprecated
     public IonSexp newSexp()
     {
         return newNullSexp();
@@ -598,6 +608,7 @@ public class StandardIonSystem
     /**
      * @deprecated Use {@link #newNullString()} instead
      */
+    @Deprecated
     public IonString newString()
     {
         return newNullString();
@@ -620,6 +631,7 @@ public class StandardIonSystem
     /**
      * @deprecated Use {@link #newNullStruct()} instead
      */
+    @Deprecated
     public IonStruct newStruct()
     {
         return newNullStruct();
@@ -642,6 +654,7 @@ public class StandardIonSystem
     /**
      * @deprecated Use {@link #newNullSymbol()} instead
      */
+    @Deprecated
     public IonSymbol newSymbol()
     {
         return newNullSymbol();
@@ -661,6 +674,7 @@ public class StandardIonSystem
     /**
      * @deprecated Use {@link #newNullTimestamp()} instead
      */
+    @Deprecated
     public IonTimestamp newTimestamp()
     {
         return newNullTimestamp();

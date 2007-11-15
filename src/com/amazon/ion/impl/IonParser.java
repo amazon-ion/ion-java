@@ -5,8 +5,12 @@
 package com.amazon.ion.impl;
 
 
-import static com.amazon.ion.impl.IonConstants.MAGIC_COOKIE;
-import static com.amazon.ion.impl.IonConstants.MAGIC_COOKIE_SIZE;
+import com.amazon.ion.IonException;
+import com.amazon.ion.LocalSymbolTable;
+import com.amazon.ion.UnexpectedEofException;
+import com.amazon.ion.impl.IonBinary.BufferManager;
+import com.amazon.ion.impl.IonBinary.PositionMarker;
+import com.amazon.ion.util.Text;
 import java.io.IOException;
 import java.io.PushbackReader;
 import java.io.Reader;
@@ -14,13 +18,6 @@ import java.io.StringReader;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
-
-import com.amazon.ion.IonException;
-import com.amazon.ion.LocalSymbolTable;
-import com.amazon.ion.UnexpectedEofException;
-import com.amazon.ion.impl.IonBinary.BufferManager;
-import com.amazon.ion.impl.IonBinary.PositionMarker;
-import com.amazon.ion.util.Text;
 
 
 /**
@@ -113,8 +110,8 @@ public class IonParser
             IonBinary.Writer writer = _out.writer(startPosition);
 
             if (writeMagicCookie) {
-                // Start the buffer with the magic cookie.
-                writer.writeFixedIntValue(MAGIC_COOKIE, MAGIC_COOKIE_SIZE);
+                // Start the buffer with the BVM.
+                writer.write(IonConstants.BINARY_VERSION_MARKER_1_0);
             }
 
             do {
@@ -365,6 +362,8 @@ loop:   for (;;) {
             case tCloseParen:
                 // EOF breaks loop, but we verify close-paren below.
                 break loop;
+            default:
+                // do nothing
             }
             // get the value
             parseAnnotatedValue( true );
@@ -393,6 +392,8 @@ loop:   for (;;) {
             case tCloseSquare:
                 // EOF breaks loop, but we verify ']' below.
                 break loop;
+            default:
+                // do nothing
             }
             // get the value
             parseAnnotatedValue(false);

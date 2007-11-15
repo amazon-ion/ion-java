@@ -4,7 +4,7 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl.IonConstants.MAGIC_COOKIE_SIZE;
+import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
@@ -92,7 +92,7 @@ public class SystemReader
                         BufferManager buffer)
     {
         IonBinary.Reader reader = buffer.reader();
-        IonBinary.verifyMagicCookie(reader);
+        IonBinary.verifyBinaryVersionMarker(reader);
 
         _system = system;
         _catalog = catalog;
@@ -164,7 +164,7 @@ public class SystemReader
                 );
                 if (freshBuffer) {
                     // We wrote a magic cookie; skip it.
-                    _buffer_offset = MAGIC_COOKIE_SIZE;
+                    _buffer_offset = BINARY_VERSION_MARKER_SIZE;
                 }
             }
             if (buffer.buffer().size() <= _buffer_offset) {

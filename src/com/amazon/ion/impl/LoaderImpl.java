@@ -59,6 +59,7 @@ public class LoaderImpl
 
 
     /** @deprecated */
+    @Deprecated
     public IonDatagramImpl loadTextFile(File ionFile)
         throws IonException, IOException
     {
@@ -124,6 +125,7 @@ public class LoaderImpl
 
 
     /** @deprecated */
+    @Deprecated
     public IonDatagramImpl load(String ionText)
         throws IonException
     {
@@ -150,6 +152,7 @@ public class LoaderImpl
 
 
     /** @deprecated */
+    @Deprecated
     public IonDatagramImpl load(Reader ionReader)
         throws IonException
     {
@@ -212,11 +215,11 @@ public class LoaderImpl
         throws IonException, IOException
     {
         boolean isBinary = false;
-        byte[] cookie = new byte[IonConstants.MAGIC_COOKIE_SIZE];
+        byte[] cookie = new byte[IonConstants.BINARY_VERSION_MARKER_SIZE];
 
         int len = pushback.read(cookie);
-        if (len == IonConstants.MAGIC_COOKIE_SIZE) {
-            isBinary = IonBinary.isMagicCookie(cookie, 0, len);
+        if (len == IonConstants.BINARY_VERSION_MARKER_SIZE) {
+            isBinary = IonBinary.startsWithBinaryVersionMarker(cookie);
         }
         if (len > 0) {
             pushback.unread(cookie, 0, len);

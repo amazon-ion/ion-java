@@ -28,7 +28,7 @@ public class BinaryTest extends IonTestCase
             data[i] = (byte) ordinal;
         }
         return data;
-    } 
+    }
 
     private static String bytesToHex(final byte[] bytes)
     {
@@ -46,7 +46,7 @@ public class BinaryTest extends IonTestCase
         return builder.toString();
     }
 
-    private static String MAGIC_COOKIE = "10 14 01 00 ";
+    private static String MAGIC_COOKIE = "E0 01 00 EA ";
 
     // MC + $ion_1_0::{symbols : null.struct}
     private static String EMPTY_HEADER = MAGIC_COOKIE + "E5 81 82 D2 87 DF ";
@@ -104,7 +104,7 @@ public class BinaryTest extends IonTestCase
         assertTrue(val instanceof IonNull);
         assertTrue(val.isNullValue());
     }
-    
+
     public void testBinReadNull02()
     {
         // name::null.null
@@ -118,7 +118,7 @@ public class BinaryTest extends IonTestCase
     {
         // 1e0
         IonValue val = ion("48 3F F0 00 00 00 00 00 00");
-        
+
         assertTrue(val instanceof IonFloat);
         assertTrue(((IonFloat) val).doubleValue() == 1.0);
     }
@@ -127,7 +127,7 @@ public class BinaryTest extends IonTestCase
     {
         // $ion_1_0::{} 1e0
         IonValue val = ion("E3 81 82 D0 48 3F F0 00 00 00 00 00 00");
-        
+
         assertTrue(val instanceof IonFloat);
         assertTrue(((IonFloat) val).doubleValue() == 1.0);
     }
@@ -152,7 +152,7 @@ public class BinaryTest extends IonTestCase
         fval.setValue(-1.0);
         byte[] raw = ionBytes(fval);
         byte[] ref = hexToBytes(EMPTY_HEADER + "48 BF F0 00 00 00 00 00 00");
-        
+
         assertTrue(dump(raw, ref), Arrays.equals(raw, ref));
     }
 
@@ -163,7 +163,7 @@ public class BinaryTest extends IonTestCase
         fval.setValue(Double.longBitsToDouble(0x7E45798EE2308C26L));
         byte[] raw = ionBytes(fval);
         byte[] ref = hexToBytes(EMPTY_HEADER + "48 7E 45 79 8E E2 30 8C 26");
-        
+
         assertTrue(dump(raw, ref), Arrays.equals(raw, ref));
     }
 
@@ -174,7 +174,7 @@ public class BinaryTest extends IonTestCase
         fval.setValue(Double.longBitsToDouble(0x86A5C3F28D5EC54AL));
         byte[] raw = ionBytes(fval);
         byte[] ref = hexToBytes(EMPTY_HEADER + "48 86 A5 C3 F2 8D 5E C5 4A");
-        
+
         assertTrue(dump(raw, ref), Arrays.equals(raw, ref));
     }
 

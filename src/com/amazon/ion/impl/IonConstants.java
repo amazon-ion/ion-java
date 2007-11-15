@@ -26,15 +26,21 @@ public class IonConstants
 
     public final static int INT32_SIZE            = 4;
 
-    /**
-     * Only valid for Ion 1.0
-     */
-    public static final int MAGIC_COOKIE = 0x10140100;  // 0xE00100EA;
 
     /**
-     * The number of bytes in {@link #MAGIC_COOKIE} when encoded in a buffer.
+     * The byte sequence indicating use of Ion 1.0 binary format.
      */
-    public static final int MAGIC_COOKIE_SIZE = 4;
+    public static final byte[] BINARY_VERSION_MARKER_1_0 = { (byte) 0xE0,
+                                                             (byte) 0x01,
+                                                             (byte) 0x00,
+                                                             (byte) 0xEA };
+
+    /**
+     * The number of bytes in {@link #BINARY_VERSION_MARKER_1_0}
+     * ({@value #BINARY_VERSION_MARKER_SIZE}).
+     */
+    public static final int BINARY_VERSION_MARKER_SIZE =
+        BINARY_VERSION_MARKER_1_0.length;
 
 
     public static final int tidNull         =  0;
@@ -146,6 +152,7 @@ public class IonConstants
     public static final int lnIsVarLen         = 0x0e;
 
     /** @deprecated */
+    @Deprecated
     public static final int lnIsDatagram      = 0x04;
 
     public static final int lnBooleanTrue     = 0x01;
