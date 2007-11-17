@@ -152,14 +152,13 @@ public class DecimalTest
         checkDecimal(10, 1, dec);
         assertEquals(1,  dec.intValue());
 
-        // FIXME this is a big bug!!!
         dg = loadFile("good/decimalNegativeOneDotZero.10n");
         assertEquals(1, dg.size());
 
         value = (IonDecimal) dg.get(0);
         dec = value.toBigDecimal();
-//        checkDecimal(10, -1, dec);
-//        assertEquals(-1, dec.intValue());
+        checkDecimal(-10, 1, dec);
+        assertEquals(-1, dec.intValue());
     }
 
 

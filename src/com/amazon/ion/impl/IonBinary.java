@@ -233,6 +233,9 @@ public class IonBinary
         }
         return len;
     }
+
+    // TODO maybe add lenVarInt7(int) to micro-optimize
+
     public static int lenVarInt7(long longVal) {
         int len = 0;
 
@@ -342,18 +345,43 @@ public class IonBinary
         // always 8-bytes for IEEE-754 64-bit
         return _ib_FLOAT64_LEN;
     }
+
+    /**
+     * @param bd must not be null.
+     */
     public static int lenIonDecimal(BigDecimal bd) {
         int len = 0;
-        // first check for the 0.0 special case
+        // first check for the 0d0 special case
         if (!BigDecimal.ZERO.equals(bd)) {
             // otherwise this is very expensive (or so I'd bet)
-            BigInteger     bi = bd.unscaledValue();
-            byte[]      bits = bi.toByteArray();
-            int            scale = bd.scale();
+            BigInteger mantissa = bd.unscaledValue();
 
+            int bitCount;
+            if (mantissa.compareTo(BigInteger.ZERO) > 0)
+            {
+                bitCount = mantissa.bitLength();
+            }
+            else // sign is negative
+            {
+                // TODO avoid negate call? (maybe slow)
+                bitCount = mantissa.negate().bitLength();
+
+                // Here's why its hard to avoid negate above:
+//              assert (new BigInteger("-2").bitLength()) == 1;
+                // We need 2 bits to represent the magnitude.
+            }
+            bitCount++;  // One more bit to hold the sign
+            int mantissaByteCount = (bitCount + 7) / 8;
+
+            // We really need the length of the exponent (-scale) but in our
+            // representation the length is the same regardless of sign.
+            int scale = bd.scale();
             len = lenVarInt7(scale);
+
+            // Exponent is always at least one byte.
             if (len == 0) len = 1;
-            len += bits.length;
+
+            len += mantissaByteCount;
         }
         return len;
     }
@@ -1076,12 +1104,21 @@ done:       for (;;) {
                 int         startpos = this.position();
                 int         exponent = this.readVarInt7IntValue();
                 int         bitlen = len - (this.position() - startpos);
-                byte[]      bits = new byte[bitlen];
 
                 BigInteger value;
-                if (bitlen > 0) {
+                if (bitlen > 0)
+                {
+                    byte[] bits = new byte[bitlen];
                     this.read(bits, 0, bitlen);
-                    value = new BigInteger(bits);
+
+                    int signum = 1;
+                    if (bits[0] < 0)
+                    {
+                        // value is negative, clear the sign
+                        bits[0] &= 0x7F;
+                        signum = -1;
+                    }
+                    value = new BigInteger(signum, bits);
                 }
                 else {
                     value = BigInteger.ZERO;
@@ -2007,13 +2044,13 @@ done:       for (;;) {
                 else {
                     returnlen += this.writeVarInt7Value(tzoffset, true);
                 }
-                returnlen += this.writeDecimalValue(bd);
+                returnlen += this.writeDecimalContent(bd);
             }
             return returnlen;
         }
 
 
-        public int writeDecimalWithTD(BigDecimal  bd) throws IOException
+        public int writeDecimalWithTD(BigDecimal bd) throws IOException
         {
             int returnlen;
             // we only write out the '0' value as the nibble 0
@@ -2028,33 +2065,55 @@ done:       for (;;) {
             else {
                 // otherwise we to it the hard way ....
                 int len = IonBinary.lenIonDecimal(bd);
+
+                // FIXME: this assumes len < 14!
+                assert len < IonConstants.lnIsVarLen;
                 returnlen = this.writeByte(
                         IonConstants.makeTypeDescriptor(
                             IonConstants.tidDecimal
                           , len
                         )
                       );
-                returnlen += writeDecimalValue(bd);
+                int wroteDecimalLen = writeDecimalContent(bd);
+                assert wroteDecimalLen == len;
+                returnlen += wroteDecimalLen;
             }
             return returnlen;
         }
 
         // also used by writeDate()
-        public int writeDecimalValue(BigDecimal  bd) throws IOException
+        public int writeDecimalContent(BigDecimal bd) throws IOException
         {
             int returnlen = 0;
             // we only write out the '0' value as the nibble 0
             if (bd != null && !BigDecimal.ZERO.equals(bd)) {
                 // otherwise we do it the hard way ....
-                BigInteger  bi    = bd.unscaledValue();
+                BigInteger mantissa = bd.unscaledValue();
 
-                // FIXME this is twos-complement
-                byte[]      bits  = bi.toByteArray();
-                int         scale = bd.scale();
+                boolean isNegative = (mantissa.compareTo(BigInteger.ZERO) < 0);
+                if (isNegative) {
+                    mantissa = mantissa.negate();
+                }
+
+                byte[] bits  = mantissa.toByteArray();
+                int    scale = bd.scale();
 
                 // Ion stores exponent, BigDecimal uses the negation "scale"
                 int exponent = -scale;
                 returnlen += this.writeVarInt7Value(exponent, true);
+
+                // If the first bit is set, we can't use it for the sign,
+                // and we need to write an extra byte to hold it.
+                boolean needExtraByteForSign = ((bits[0] & 0x80) != 0);
+                if (needExtraByteForSign)
+                {
+                    this.write(isNegative ? 0x80 : 0x00);
+                    returnlen++;
+                }
+                else if (isNegative)
+                {
+                    bits[0] |= 0x80;
+                }
                 this.write(bits, 0, bits.length);
                 returnlen += bits.length;
             }

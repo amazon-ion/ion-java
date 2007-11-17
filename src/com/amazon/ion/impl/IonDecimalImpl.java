@@ -179,7 +179,7 @@ public final class IonDecimalImpl
         assert valueLen == this.getNakedValueLength();
         assert valueLen > 0;
 
-        int wlen = writer.writeDecimalValue(_decimal_value);
+        int wlen = writer.writeDecimalContent(_decimal_value);
         assert wlen == valueLen;
 
         return;
