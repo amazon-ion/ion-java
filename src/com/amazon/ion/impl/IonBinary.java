@@ -234,6 +234,26 @@ public class IonBinary
         return len;
     }
 
+
+    public static int lenVarInt8(BigInteger bi)
+    {
+        if (bi.compareTo(BigInteger.ZERO) < 0)
+        {
+            // TODO avoid negate call? (maybe slow)
+            bi = bi.negate();
+
+            // Here's why its hard to avoid negate:
+//          assert (new BigInteger("-2").bitLength()) == 1;
+            // We need 2 bits to represent the magnitude.
+        }
+
+        int bitCount = bi.bitLength() + 1;   // One more bit to hold the sign
+
+        int byteCount = (bitCount + 7) / 8;
+        return byteCount;
+    }
+
+
     // TODO maybe add lenVarInt7(int) to micro-optimize
 
     public static int lenVarInt7(long longVal) {
@@ -355,23 +375,7 @@ public class IonBinary
         if (!BigDecimal.ZERO.equals(bd)) {
             // otherwise this is very expensive (or so I'd bet)
             BigInteger mantissa = bd.unscaledValue();
-
-            int bitCount;
-            if (mantissa.compareTo(BigInteger.ZERO) > 0)
-            {
-                bitCount = mantissa.bitLength();
-            }
-            else // sign is negative
-            {
-                // TODO avoid negate call? (maybe slow)
-                bitCount = mantissa.negate().bitLength();
-
-                // Here's why its hard to avoid negate above:
-//              assert (new BigInteger("-2").bitLength()) == 1;
-                // We need 2 bits to represent the magnitude.
-            }
-            bitCount++;  // One more bit to hold the sign
-            int mantissaByteCount = (bitCount + 7) / 8;
+            int mantissaByteCount = lenVarInt8(mantissa);
 
             // We really need the length of the exponent (-scale) but in our
             // representation the length is the same regardless of sign.
@@ -385,6 +389,8 @@ public class IonBinary
         }
         return len;
     }
+
+
     public static int lenIonTimestamp(IonTokenReader.Type.timeinfo di)
     {
         if (di == null) return 0;

@@ -32,6 +32,14 @@ public final class IonIntImpl
 
     static private final Long ZERO_LONG = new Long(0);
 
+    // FIXME We can't handle Long.MIN_VALUE at encoding time.
+    static private final BigInteger MIN_VALUE =
+        BigInteger.valueOf(Long.MIN_VALUE + 1);
+
+    static private final BigInteger MAX_VALUE =
+        BigInteger.valueOf(Long.MAX_VALUE);
+
+
     private Long _int_value;
 
 
@@ -108,7 +116,9 @@ public final class IonIntImpl
             if (value instanceof BigInteger)
             {
                 BigInteger big = (BigInteger) value;
-                if (big.shiftRight(64).compareTo(BigInteger.ZERO) != 0) {
+                if ((big.compareTo(MIN_VALUE) < 0) ||
+                    (big.compareTo(MAX_VALUE) > 0))
+                {
                     String message =
                         "int too large for this implementation: " + big;
                     throw new IonException(message);
@@ -177,7 +187,8 @@ public final class IonIntImpl
 
 
     @Override
-    protected void doMaterializeValue(IonBinary.Reader reader) throws IOException
+    protected void doMaterializeValue(IonBinary.Reader reader)
+        throws IOException
     {
         assert this._isPositionLoaded == true && this._buffer != null;
 
@@ -216,7 +227,8 @@ public final class IonIntImpl
             if (type == IonConstants.tidNegInt) {
                 l = - l;
             }
-            _int_value = new Long(l);break;
+            _int_value = new Long(l);
+            break;
         }
 
         _hasNativeValue = true;
@@ -224,7 +236,8 @@ public final class IonIntImpl
 
 
     @Override
-    protected void doWriteNakedValue(IonBinary.Writer writer, int valueLen) throws IOException
+    protected void doWriteNakedValue(IonBinary.Writer writer, int valueLen)
+        throws IOException
     {
         assert valueLen == this.getNakedValueLength();
         assert valueLen > 0;

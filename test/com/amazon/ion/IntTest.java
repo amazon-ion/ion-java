@@ -121,8 +121,7 @@ public class IntTest
     public void testNegativeIntRoundTrip()
     {
         IonInt i = system().newInt(-20);
-        byte[] encoded = system().newDatagram(i).toBytes();
-        IonInt result = (IonInt) system().singleValue(encoded);
+        IonInt result = (IonInt) reload(i);
         assertEquals(-20, result.intValue());
     }
 
@@ -133,19 +132,27 @@ public class IntTest
         final long v = Long.MIN_VALUE + 1;
 
         IonInt i = system().newInt(v);
-        byte[] encoded = system().newDatagram(i).toBytes();
-        IonInt result = (IonInt) system().singleValue(encoded);
+        IonInt result = (IonInt) reload(i);
         assertEquals(v, result.longValue());
     }
 
 
-    public void XXXtestNegNumberRoundTrip() // FIXME ACTIVATE AND FIX BUG
+    public void testRoundTrip(BigInteger v)
     {
-        BigInteger v = new BigInteger("-98102");
         IonInt i = system().newInt(v);
-        byte[] encoded = system().newDatagram(i).toBytes();
-        IonInt result = (IonInt) system().singleValue(encoded);
+        IonInt result = (IonInt) reload(i);
         assertEquals(v, result.toBigInteger());
+    }
+
+
+    public void testNegNumberRoundTrip()
+    {
+        testRoundTrip(BigInteger.valueOf(Long.MAX_VALUE));
+        testRoundTrip(BigInteger.valueOf(0));
+        testRoundTrip(BigInteger.valueOf(-98102));
+        testRoundTrip(BigInteger.valueOf(Long.MIN_VALUE+1));
+        // FIXME: encoder can't handle Long.MIN_VALUE
+//        testRoundTrip(BigInteger.valueOf(Long.MIN_VALUE));
     }
 
     public void testLongs()
