@@ -432,6 +432,7 @@ public abstract class IonValueImpl
     /**
      * @deprecated Use {@link #getTypeAnnotations()} instead
      */
+    @Deprecated
     public String[] getTypeAnnotationStrings()
     {
         return getTypeAnnotations();
@@ -860,6 +861,8 @@ public abstract class IonValueImpl
         this.setDirty();
     }
 
+
+    @Override
     public String toString() {
         Printer p = new Printer();
         StringBuilder builder = new StringBuilder();
@@ -872,6 +875,8 @@ public abstract class IonValueImpl
         return builder.toString();
     }
 
+
+    // TODO rename to getContentLength
     protected int getNakedValueLength() throws IOException
     {
         // container overrides this method.
@@ -892,7 +897,13 @@ public abstract class IonValueImpl
         return len;
     }
 
-    // TODO document!  What's the difference btw this and getNAKEDvalueLength?
+
+    // TODO rename to computeContentLengthFromNativeValue
+    /**
+     * Computes the content length based on the materialized view.
+     * <p>
+     * PRECONDITION: {@code _hasNativeValue == true}
+     */
     abstract protected int getNativeValueLength();
 
 
@@ -1093,9 +1104,7 @@ public abstract class IonValueImpl
         // the next start include the value and it's header as well
         _next_start = _value_td_start + tdwithvlenlen + valuelen;
 
-        int hn = this.pos_getType();
-        int ln = this.computeLowNibble(valuelen);
-        _type_desc = IonConstants.makeTypeDescriptor(hn, ln);
+        _type_desc = computeTypeDesc(valuelen);
 
         // overwrite the sid as everything is computed on the new value
         _fieldSid = newFieldSid;
@@ -1103,6 +1112,19 @@ public abstract class IonValueImpl
         // and the delta is how far the end moved
         return _next_start - old_next_start;
     }
+
+
+    /**
+     * Precondition:  _isDirty && _hasNativeValue
+     */
+    protected int computeTypeDesc(int valuelen)
+        throws IOException
+    {
+        int hn = this.pos_getType();
+        int ln = this.computeLowNibble(valuelen);
+        return IonConstants.makeTypeDescriptor(hn, ln);
+    }
+
 
     /**
      * Precondition:  _isDirty && _hasNativeValue
@@ -1129,13 +1151,13 @@ public abstract class IonValueImpl
     public void updateSymbolTable(LocalSymbolTable symtab)
     {
         // TODO can any of this be short-circuited?
-        
+
         if (this._annotations != null) {
             for (String s : this._annotations) {
                 symtab.addSymbol(s);
             }
         }
-        
+
         if (this._fieldName != null) {
             symtab.addSymbol(this._fieldName);
         }

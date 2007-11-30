@@ -26,6 +26,9 @@ public final class IonIntImpl
     static final int NULL_INT_TYPEDESC =
         IonConstants.makeTypeDescriptor(IonConstants.tidPosInt,
                                         IonConstants.lnIsNullAtom);
+    static final int ZERO_INT_TYPEDESC =
+        IonConstants.makeTypeDescriptor(IonConstants.tidPosInt,
+                                        IonConstants.lnNumericZero);
 
     static private final Long ZERO_LONG = new Long(0);
 
@@ -134,29 +137,42 @@ public final class IonIntImpl
     protected int getNativeValueLength()
     {
         assert _hasNativeValue == true;
+        // TODO streamline following; this is only call site.
         return IonBinary.lenIonInt(_int_value);
     }
 
-
     @Override
-    protected int computeLowNibble(int valuelen)
+    protected int computeTypeDesc(int valuelen)
     {
         assert _hasNativeValue == true;
 
-        int ln = 0;
         if (_int_value == null) {
-            ln = IonConstants.lnIsNullAtom;
+            return NULL_INT_TYPEDESC;
         }
-        else if (_int_value.equals(0)) {
-            ln = IonConstants.lnNumericZero;
+
+        long content = _int_value.longValue();
+        if (content == 0) {
+            return ZERO_INT_TYPEDESC;
         }
-        else {
-            ln = getNativeValueLength();
-            if (ln > IonConstants.lnIsVarLen) {
-                ln = IonConstants.lnIsVarLen;
-            }
+
+        int hn =
+            (content > 0 ? IonConstants.tidPosInt : IonConstants.tidNegInt);
+
+        int ln = valuelen;
+        if (ln > IonConstants.lnIsVarLen) {
+            ln = IonConstants.lnIsVarLen;
         }
-        return ln;
+
+        return IonConstants.makeTypeDescriptor(hn, ln);
+    }
+
+    /**
+     * Never called, since we override {@link #computeTypeDesc}.
+     */
+    @Override
+    protected int computeLowNibble(int valuelen)
+    {
+        throw new UnsupportedOperationException();
     }
 
 

@@ -4,6 +4,8 @@
 
 package com.amazon.ion;
 
+import java.math.BigInteger;
+
 
 
 
@@ -116,6 +118,35 @@ public class IntTest
         assertEquals(Integer.MIN_VALUE, value.intValue());
     }
 
+    public void testNegativeIntRoundTrip()
+    {
+        IonInt i = system().newInt(-20);
+        byte[] encoded = system().newDatagram(i).toBytes();
+        IonInt result = (IonInt) system().singleValue(encoded);
+        assertEquals(-20, result.intValue());
+    }
+
+
+    public void testNegativeLongRoundTrip()
+    {
+        // FIXME: encoder can't handle Long.MIN_VALUE
+        final long v = Long.MIN_VALUE + 1;
+
+        IonInt i = system().newInt(v);
+        byte[] encoded = system().newDatagram(i).toBytes();
+        IonInt result = (IonInt) system().singleValue(encoded);
+        assertEquals(v, result.longValue());
+    }
+
+
+    public void XXXtestNegNumberRoundTrip() // FIXME ACTIVATE AND FIX BUG
+    {
+        BigInteger v = new BigInteger("-98102");
+        IonInt i = system().newInt(v);
+        byte[] encoded = system().newDatagram(i).toBytes();
+        IonInt result = (IonInt) system().singleValue(encoded);
+        assertEquals(v, result.toBigInteger());
+    }
 
     public void testLongs()
     {
