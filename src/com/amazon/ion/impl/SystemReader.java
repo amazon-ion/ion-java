@@ -39,12 +39,15 @@ public class SystemReader
     private IonValue     _next;
 
 
+    /**
+     * @throws NullPointerException if any parameter is null.
+     */
     public SystemReader(StandardIonSystem system, String s) {
         this(system, system.getCatalog(), new StringReader(s));
     }
 
     /**
-     * @throws NullPointerException if input is null.
+     * @throws NullPointerException if any parameter is null.
      */
     public SystemReader(StandardIonSystem system,
                         IonCatalog catalog,
@@ -54,13 +57,18 @@ public class SystemReader
     }
 
     /**
-     * @throws NullPointerException if input is null.
+     * @throws NullPointerException if any parameter is null.
      */
     public SystemReader(StandardIonSystem system,
                         IonCatalog catalog,
                         LocalSymbolTable initialSymboltable,
                         Reader input)
     {
+        if (system == null || catalog == null || initialSymboltable == null)
+        {
+            throw new NullPointerException();
+        }
+
         _system = system;
         _catalog = catalog;
         _currentSymbolTable = initialSymboltable;
@@ -78,6 +86,9 @@ public class SystemReader
     }
 
 
+    /**
+     * @throws NullPointerException if any parameter is null.
+     */
     public SystemReader(StandardIonSystem system, BufferManager buffer)
     {
         this(system, system.getCatalog(), buffer);
@@ -86,11 +97,18 @@ public class SystemReader
     /**
      * Creates a new system reader using a specific catalog, reading data from
      * the start of a buffer.
+     *
+     * @throws NullPointerException if any parameter is null.
      */
     public SystemReader(StandardIonSystem system,
                         IonCatalog catalog,
                         BufferManager buffer)
     {
+        if (catalog == null)  // Others are dereferenced below.
+        {
+            throw new NullPointerException();
+        }
+
         IonBinary.Reader reader = buffer.reader();
         IonBinary.verifyBinaryVersionMarker(reader);
 

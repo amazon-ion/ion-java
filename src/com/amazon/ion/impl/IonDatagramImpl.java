@@ -80,9 +80,12 @@ public final class IonDatagramImpl
     }
 
 
+    /**
+     * @throws NullPointerException if any parameter is null.
+     */
     public IonDatagramImpl(StandardIonSystem system,
-                        LocalSymbolTable initialSymbolTable,
-                        Reader ionText)
+                           LocalSymbolTable initialSymbolTable,
+                           Reader ionText)
     {
         this(new SystemReader(system,
                               system.getCatalog(),
@@ -106,6 +109,8 @@ public final class IonDatagramImpl
     /**
      *
      * @param buffer is filled with Ion data.
+     *
+     * @throws NullPointerException if any parameter is null.
      */
     public IonDatagramImpl(StandardIonSystem system, BufferManager buffer)
     {
@@ -113,9 +118,10 @@ public final class IonDatagramImpl
     }
 
 
-
     /**
-     * workhorse constructor this does the actual work
+     * Workhorse constructor this does the actual work.
+     *
+     * @throws NullPointerException if any parameter is null.
      */
     public IonDatagramImpl(SystemReader rawStream)
     {

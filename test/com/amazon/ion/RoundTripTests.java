@@ -30,6 +30,7 @@ public class RoundTripTests
             super(ionText);
         }
 
+        @Override
         public void setUp()
             throws Exception
         {
@@ -38,6 +39,7 @@ public class RoundTripTests
             myBuilder = new StringBuilder();
         }
 
+        @Override
         public void tearDown()
             throws Exception
         {
@@ -71,8 +73,9 @@ public class RoundTripTests
 
 
 
+        @Override
         public void runTest()
-        throws Exception
+            throws Exception
         {
             IonDatagram values = readIonText(myTestFile);
 

@@ -2,28 +2,19 @@
  * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
  */
 
-package com.amazon.ion.util;
+package com.amazon.ion;
 
-import com.amazon.ion.IonDatagram;
-import com.amazon.ion.IonException;
-import com.amazon.ion.IonInt;
-import com.amazon.ion.IonList;
-import com.amazon.ion.IonLoader;
-import com.amazon.ion.IonNull;
-import com.amazon.ion.IonReader;
-import com.amazon.ion.IonString;
-import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonTestCase;
-import com.amazon.ion.IonValue;
-import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.system.StandardIonSystem;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.io.StringReader;
 
 /**
  *
@@ -34,6 +25,7 @@ public class LoaderTest
     private IonLoader myLoader;
 
 
+    @Override
     public void setUp()
         throws Exception
     {
@@ -218,6 +210,51 @@ public class LoaderTest
         assert ((IonString)v).stringValue().equals("test");
     }
 
+
+    public void testReloadingTextSeveralWays()
+        throws IOException
+    {
+        String s = "ann::{field:value}";
+
+        IonLoader loader = loader();
+
+        IonDatagram dg = loader.loadText(s);
+        checkReloading(dg);
+
+        StringReader reader = new StringReader(s);
+        dg = loader.loadText(reader);
+        checkReloading(dg);
+
+        // TODO Test passing (unnecessary) local symbol table.
+//        reader = new StringReader(s);
+//        dg = loader.loadText(reader, (LocalSymbolTable) null);
+//        checkReloading(dg);
+
+        byte[] bytes = s.getBytes("UTF-8");
+        dg = loader.load(bytes);
+//        checkReloading(dg);   FIXME this is a big bug!
+
+        InputStream in = new ByteArrayInputStream(bytes);
+        dg = loader.load(in);
+        checkReloading(dg);
+
+        in = new ByteArrayInputStream(bytes);
+        dg = loader.loadText(in);
+        checkReloading(dg);
+    }
+
+    public void checkReloading(IonDatagram dg)
+    {
+        byte[] binary = dg.toBytes();
+
+        IonDatagram dg2 = loader().load(binary);
+        assertEquals(1, dg2.size());
+        IonStruct struct = (IonStruct) dg2.get(0);
+        assertTrue(struct.hasTypeAnnotation("ann"));
+        IonSymbol value = (IonSymbol) struct.get("field");
+        assertEquals("value", value.stringValue());
+    }
+
     public void testSingleValue()
     {
         StandardIonSystem sys = new StandardIonSystem();
@@ -260,7 +297,7 @@ public class LoaderTest
             int[] data = { 0x10, 0x14, 0x01, 0x00,  // binary version marker
                            0x52, 0xC1, 0x8A
             };
-            
+
             for (int i = 0; i < data.length; i++)
             {
                 int b = data[i];

@@ -4,7 +4,6 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl.IonDatagramImpl;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -58,6 +57,7 @@ public interface IonLoader
      *
      * @deprecated renamed to {@link #loadText(File)}
      */
+    @Deprecated
     public IonDatagram loadTextFile(File ionFile)
         throws IonException, IOException;
 
@@ -102,6 +102,7 @@ public interface IonLoader
      *
      * @deprecated renamed to {@link #loadText(String)}
      */
+    @Deprecated
     public IonDatagram load(String ionText)
         throws IonException;
 
@@ -132,6 +133,7 @@ public interface IonLoader
      *
      * @deprecated renamed to {@link #loadText(Reader)}
      */
+    @Deprecated
     public IonDatagram load(Reader ionText)
         throws IonException;
 
@@ -164,7 +166,7 @@ public interface IonLoader
      *
      * @return a datagram containing all the values on the input stream.
      *
-     * @throws NullPointerException if <code>ionText</code> is null.
+     * @throws NullPointerException if either parameter is null.
      * @throws IonException if there's a syntax error in the Ion content.
      * @throws IOException if reading from the specified input stream results
      * in an <code>IOException</code>.
