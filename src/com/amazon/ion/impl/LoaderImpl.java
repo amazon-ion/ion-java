@@ -7,7 +7,6 @@ package com.amazon.ion.impl;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.LocalSymbolTable;
-import com.amazon.ion.system.StandardIonSystem;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -25,16 +24,16 @@ import java.io.StringReader;
 public class LoaderImpl
     implements IonLoader
 {
-    private final StandardIonSystem mySystem;
+    private final IonSystemImpl mySystem;
 
 
-    public LoaderImpl(StandardIonSystem system)
+    public LoaderImpl(IonSystemImpl system)
     {
         mySystem = system;
     }
 
 
-    public StandardIonSystem getSystem()
+    public IonSystemImpl getSystem()
     {
         return mySystem;
     }

@@ -7,20 +7,17 @@ package com.amazon.ion;
 
 
 /**
- * Collects known symbol tables for use by Ion components.  It is expected that
+ * Collects static symbol tables for use by an {@link IonSystem}.
+ * It is expected that
  * applications may implement this interface to customize caching behavior.
  */
 public interface IonCatalog
 {
-    // Not sure if this belongs here or in IonSystem.
-//    public SystemSymbolTable getSystemSymbolTable(String systemId);
-
-
     /**
      * Gets a symbol table with a specific name and the highest version
      * possible.
      *
-     * @param name
+     * @param name identifies the desired symbol table.
      * @return <code>null</code> if not found.
      */
     public StaticSymbolTable getTable(String name);

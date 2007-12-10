@@ -4,7 +4,7 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.system.StandardIonSystem;
+import com.amazon.ion.impl.IonSystemImpl;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -22,7 +22,7 @@ public abstract class IonTestCase
     extends TestCase
 {
     private static boolean ourSystemPropertiesLoaded = false;
-    protected StandardIonSystem mySystem;
+    protected IonSystemImpl mySystem;
     protected IonLoader myLoader;
 
 
@@ -172,11 +172,11 @@ public abstract class IonTestCase
     // ========================================================================
     // Fixture Helpers
 
-    protected StandardIonSystem system()
+    protected IonSystemImpl system()
     {
         if (mySystem == null)
         {
-            mySystem = new StandardIonSystem();
+            mySystem = new IonSystemImpl();
         }
         return mySystem;
     }

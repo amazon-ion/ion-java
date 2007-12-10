@@ -16,7 +16,6 @@ import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonBinary.BufferManager;
-import com.amazon.ion.system.StandardIonSystem;
 import com.amazon.ion.util.Printer;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -69,12 +68,12 @@ public final class IonDatagramImpl
 
     //=========================================================================
 
-    public IonDatagramImpl(StandardIonSystem system) {
+    public IonDatagramImpl(IonSystemImpl system) {
         this(system, make_empty_buffer());
     }
 
 
-    public IonDatagramImpl(StandardIonSystem system, Reader ionText)
+    public IonDatagramImpl(IonSystemImpl system, Reader ionText)
     {
         this(system, system.newLocalSymbolTable(), ionText);
     }
@@ -83,7 +82,7 @@ public final class IonDatagramImpl
     /**
      * @throws NullPointerException if any parameter is null.
      */
-    public IonDatagramImpl(StandardIonSystem system,
+    public IonDatagramImpl(IonSystemImpl system,
                            LocalSymbolTable initialSymbolTable,
                            Reader ionText)
     {
@@ -112,7 +111,7 @@ public final class IonDatagramImpl
      *
      * @throws NullPointerException if any parameter is null.
      */
-    public IonDatagramImpl(StandardIonSystem system, BufferManager buffer)
+    public IonDatagramImpl(IonSystemImpl system, BufferManager buffer)
     {
         this(new SystemReader(system, buffer));
     }

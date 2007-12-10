@@ -9,7 +9,6 @@ import com.amazon.ion.IonReader;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.impl.IonBinary.BufferManager;
-import com.amazon.ion.system.StandardIonSystem;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.NoSuchElementException;
@@ -34,7 +33,7 @@ public class UserReader
     /**
      * @throws NullPointerException if input is null.
      */
-    public UserReader(StandardIonSystem system,
+    public UserReader(IonSystemImpl system,
                       LocalSymbolTable initialSymbolTable,
                       Reader input)
     {

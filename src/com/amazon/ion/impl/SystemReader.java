@@ -13,7 +13,6 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.StaticSymbolTable;
 import com.amazon.ion.impl.IonBinary.BufferManager;
-import com.amazon.ion.system.StandardIonSystem;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
@@ -23,7 +22,7 @@ import java.util.NoSuchElementException;
 public class SystemReader
     implements IonReader
 {
-    private final StandardIonSystem _system;
+    private final IonSystemImpl _system;
     private final IonCatalog _catalog;
 
     private Reader           _input;
@@ -42,14 +41,14 @@ public class SystemReader
     /**
      * @throws NullPointerException if any parameter is null.
      */
-    public SystemReader(StandardIonSystem system, String s) {
+    public SystemReader(IonSystemImpl system, String s) {
         this(system, system.getCatalog(), new StringReader(s));
     }
 
     /**
      * @throws NullPointerException if any parameter is null.
      */
-    public SystemReader(StandardIonSystem system,
+    public SystemReader(IonSystemImpl system,
                         IonCatalog catalog,
                         Reader input)
     {
@@ -59,7 +58,7 @@ public class SystemReader
     /**
      * @throws NullPointerException if any parameter is null.
      */
-    public SystemReader(StandardIonSystem system,
+    public SystemReader(IonSystemImpl system,
                         IonCatalog catalog,
                         LocalSymbolTable initialSymboltable,
                         Reader input)
@@ -89,7 +88,7 @@ public class SystemReader
     /**
      * @throws NullPointerException if any parameter is null.
      */
-    public SystemReader(StandardIonSystem system, BufferManager buffer)
+    public SystemReader(IonSystemImpl system, BufferManager buffer)
     {
         this(system, system.getCatalog(), buffer);
     }
@@ -100,7 +99,7 @@ public class SystemReader
      *
      * @throws NullPointerException if any parameter is null.
      */
-    public SystemReader(StandardIonSystem system,
+    public SystemReader(IonSystemImpl system,
                         IonCatalog catalog,
                         BufferManager buffer)
     {
@@ -121,7 +120,7 @@ public class SystemReader
     }
 
 
-    public StandardIonSystem getSystem() {
+    public IonSystemImpl getSystem() {
         return _system;
     }
 

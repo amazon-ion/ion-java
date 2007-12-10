@@ -4,7 +4,7 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.system.StandardIonSystem;
+import com.amazon.ion.impl.IonSystemImpl;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -257,7 +257,7 @@ public class LoaderTest
 
     public void testSingleValue()
     {
-        StandardIonSystem sys = new StandardIonSystem();
+        IonSystemImpl sys = new IonSystemImpl();
 
         String image = "(this is a single sexp)";
         IonValue v1 =  sys.singleValue(image);

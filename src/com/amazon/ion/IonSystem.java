@@ -41,7 +41,7 @@ public interface IonSystem
 
 
     /**
-     * Gets the default catalog used by this system.  Unless otherwise noted,
+     * Gets the catalog used by this system.  Unless otherwise noted,
      * all objects derived from this system will use this catalog.
      */
     public IonCatalog getCatalog();
@@ -52,7 +52,10 @@ public interface IonSystem
      *
      * @param catalog the new system catalog.
      * @throws NullPointerException if <code>catalog</code> is null.
+     *
+     * @deprecated
      */
+    @Deprecated
     public void setCatalog(IonCatalog catalog);
 
 
@@ -118,7 +121,10 @@ public interface IonSystem
      * @throws NullPointerException if loader is null.
      * @throws IllegalArgumentException if <code>loader.getSystem()</code> is
      * not this system.
+     *
+     * @deprecated
      */
+    @Deprecated
     public void setLoader(IonLoader loader);
 
 

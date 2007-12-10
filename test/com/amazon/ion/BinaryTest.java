@@ -6,11 +6,11 @@ package com.amazon.ion;
 
 import java.util.Arrays;
 
-import com.amazon.ion.system.StandardIonSystem;
+import com.amazon.ion.impl.IonSystemImpl;
 
 public class BinaryTest extends IonTestCase
 {
-    private static final IonSystem sys = new StandardIonSystem();
+    private static final IonSystem sys = new IonSystemImpl();
 
     private static byte[] hexToBytes(final String hex)
     {
