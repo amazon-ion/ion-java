@@ -111,12 +111,11 @@ public final class IonStructImpl
         // TODO maintain _isOrdered
 
         validateFieldName(fieldName);
-        if (value == null) {
-            throw new NullPointerException("value must not be null");
-        }
+        validateNewChild(value);
 
         makeReady();
 
+        int size;
         if (_contents != null) {
             try {
                 for (Iterator i = _contents.iterator(); i.hasNext();)
@@ -132,10 +131,14 @@ public final class IonStructImpl
             catch (IOException e) {
                 throw new IonException(e);
             }
+            size = _contents.size();
+        }
+        else {
+            size = 0;
         }
 
         IonValueImpl concrete = (IonValueImpl) value;
-        add(concrete);
+        add(size, concrete, true);
 
         // This should be true because we've validated that its not contained.
         assert value.getFieldName() == null;
@@ -148,9 +151,7 @@ public final class IonStructImpl
         // TODO maintain _isOrdered
 
         validateFieldName(fieldName);
-        if (value == null) {
-            throw new NullPointerException("value must not be null");
-        }
+//      validateNewChild(value);          // This is done by add() below.
 
         IonValueImpl concrete = (IonValueImpl) value;
         add(concrete);
@@ -159,6 +160,7 @@ public final class IonStructImpl
         assert value.getFieldName() == null;
         concrete.setFieldName(fieldName);
     }
+
 
     /**
      * Ensures that a given field name is valid. Used as a helper for

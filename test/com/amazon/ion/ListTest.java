@@ -5,6 +5,7 @@
 package com.amazon.ion;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
@@ -13,9 +14,27 @@ public class ListTest
     extends SequenceTestCase
 {
     @Override
-    protected IonSequence makeNull()
+    protected IonList makeNull()
     {
         return system().newNullList();
+    }
+
+    @Override
+    protected IonList makeEmpty()
+    {
+        return system().newEmptyList();
+    }
+
+    @Override
+    protected IonList newSequence(Collection<? extends IonValue> children)
+    {
+        return system().newList(children);
+    }
+
+    @Override
+    protected <T extends IonValue> IonList newSequence(T... elements)
+    {
+        return system().newList(elements);
     }
 
     @Override

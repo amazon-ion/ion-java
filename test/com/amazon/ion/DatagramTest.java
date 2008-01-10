@@ -20,6 +20,7 @@ public class DatagramTest
     private IonLoader myLoader;
 
 
+    @Override
     public void setUp()
         throws Exception
     {
@@ -182,13 +183,13 @@ public class DatagramTest
                 fail("Binary data differs at index " + i);
             }
         }
-        
+
         try {
             dg.getBytes(new byte[3]);
             fail("Expected IndexOutOfBoundsException");
         }
         catch (IndexOutOfBoundsException e) { /* good */ }
-        
+
         try {
             dg.getBytes(new byte[size + OFFSET - 1], OFFSET);
             fail("Expected IndexOutOfBoundsException");
@@ -288,6 +289,51 @@ public class DatagramTest
         s = (IonStruct) datagram.get(0);
         assertTrue(s.get("a").isNullValue());
     }
+
+    public void testAddingDatagramToDatagram()
+    {
+        IonDatagram dg1 = loader().load("one");
+        IonDatagram dg2 = loader().load("two");
+
+        // Cannot append a datagram
+        try
+        {
+            dg1.add(dg2);
+            fail("Expected IllegalArgumentException");
+        }
+        catch (IllegalArgumentException e) { }
+
+        // Cannot insert a datagram  // TODO this operation unsupported
+//        try
+//        {
+//            dg1.add(1, dg2);
+//            fail("Expected IllegalArgumentException");
+//        }
+//        catch (IllegalArgumentException e) { }
+    }
+
+    public void testNewDatagramFromDatagram()
+    {
+        IonDatagram dg1 = loader().load("one");
+        try
+        {
+            system().newDatagram(dg1);
+            fail("Expected IllegalArgumentException");
+        }
+        catch (IllegalArgumentException e) { }
+    }
+
+    public void testCloningDatagram()
+    {
+        IonDatagram dg1 = loader().load("one 1 [1.0]");
+        IonDatagram dg2 = system().clone(dg1);
+
+        byte[] bytes1 = dg1.toBytes();
+        byte[] bytes2 = dg2.toBytes();
+
+        assertArrayEquals(bytes1, bytes2);
+    }
+
 
 
     // FIXME implement embedding

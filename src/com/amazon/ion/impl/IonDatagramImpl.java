@@ -40,7 +40,7 @@ public final class IonDatagramImpl
     /**
      * The system that created this datagram.
      */
-    private IonSystem             _system;
+    private IonSystem _system;
 
     /**
      * Used while constructing, then set to null.
@@ -102,6 +102,22 @@ public final class IonDatagramImpl
 
             setDirty();
         }
+    }
+
+
+    /**
+     * Creates a datagram wrapping bytes containing Ion text or binary data.
+     *
+     * @param ionData may be either Ion binary data, or UTF-8 Ion text.
+     * <em>This method assumes ownership of the array</em> and may modify it at
+     * will.
+     *
+     * @throws NullPointerException if any parameter is null.
+     * @throws IonException if there's a syntax error in the Ion content.
+     */
+    public IonDatagramImpl(IonSystemImpl system, byte[] ionData)
+    {
+        this(system.newSystemReader(ionData));
     }
 
 
@@ -177,6 +193,8 @@ public final class IonDatagramImpl
     public void add(IonValue element)
         throws ContainedValueException, NullPointerException
     {
+        validateNewChild(element);
+
         // FIXME here we assume that we're inserting a user value!
 
         LocalSymbolTable symtab;

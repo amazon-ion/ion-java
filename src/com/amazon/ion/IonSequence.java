@@ -37,32 +37,39 @@ public interface IonSequence
 
 
     /**
-     * Appends the specified element to the end of this sequence.
+     * Appends a child value to the end of this sequence.
      * If <code>this.isNullValue()</code>, then it becomes a single-element
      * sequence.
      *
-     * @param element is the element to be appended to this sequence.
-     * @throws ContainedValueException if <code>element</code> is already part
-     * of a container.
-     * @throws NullPointerException if <code>element</code> is <code>null</code>.
+     * @param child is the value to be appended to this sequence.
+     *
+     * @throws NullPointerException
+     *   if {@code child} is <code>null</code>.
+     * @throws ContainedValueException
+     *   if {@code child} is already part of a container.
+     * @throws IllegalArgumentException
+     *   if {@code child} is an {@link IonDatagram}.
      */
-    public void add(IonValue element)
+    public void add(IonValue child)
         throws ContainedValueException, NullPointerException;
 
     /**
-     * Inserts an element at the specified position in this sequence.
+     * Inserts a child value at the specified position in this sequence.
      * If <code>this.isNullValue()</code>, then it becomes a single-element
      * sequence.
-     * @param element is the element to be appended to this sequence.
      *
-     * @throws ContainedValueException if <code>element</code> is already part
-     * of a container.
+     * @param child is the element to be appended to this sequence.
+     *
      * @throws NullPointerException
-     * if <code>element</code> is <code>null</code>.
+     *   if {@code child} is <code>null</code>.
+     * @throws ContainedValueException
+     *   if {@code child} is already part of a container.
+     * @throws IllegalArgumentException
+     *   if {@code child} is an {@link IonDatagram}.
      * @throws IndexOutOfBoundsException if the index is out of range
      * (index < 0 || index > size()).
      */
-    public void add(int index, IonValue element)
+    public void add(int index, IonValue child)
         throws ContainedValueException, NullPointerException;
 
 

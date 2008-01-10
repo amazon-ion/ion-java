@@ -115,18 +115,18 @@ public class IonSystemImpl
     }
 
 
-    public IonDatagram newDatagram(IonValue initialElement)
+    public IonDatagram newDatagram(IonValue initialChild)
         throws ContainedValueException
     {
-        // TODO what if value is IonDatagram?
+        if (initialChild.getContainer() != null)
+        {
+            initialChild = clone(initialChild);
+        }
+
         IonDatagramImpl datagram = new IonDatagramImpl(this);
 
-        if (initialElement.getContainer() != null
-         || initialElement instanceof IonDatagram
-        ) {
-            initialElement = clone(initialElement);
-        }
-        datagram.add(initialElement);
+        // This will fail if initialChild instanceof IonDatagram:
+        datagram.add(initialChild);
 
         return datagram;
     }
@@ -698,7 +698,14 @@ public class IonSystemImpl
     @SuppressWarnings("unchecked")
     public <T extends IonValue> T clone(T value)
     {
-        // TODO make clone(IonDatagram) work!
+        if (value instanceof IonDatagram)
+        {
+            byte[] data = ((IonDatagram)value).toBytes();
+
+            // TODO This can probably be optimized further.
+            return (T) new IonDatagramImpl(this, data);
+        }
+
         StringBuilder buffer = new StringBuilder();
         Printer printer = new Printer();
         try

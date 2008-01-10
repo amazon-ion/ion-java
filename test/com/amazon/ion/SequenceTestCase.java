@@ -4,6 +4,9 @@
 
 package com.amazon.ion;
 
+import java.util.ArrayList;
+import java.util.Collection;
+
 
 
 public abstract class SequenceTestCase
@@ -13,6 +16,14 @@ public abstract class SequenceTestCase
      * @return a new null sequence.
      */
     protected abstract IonSequence makeNull();
+
+    protected abstract IonSequence makeEmpty();
+
+    protected abstract
+    IonSequence newSequence(Collection<? extends IonValue> children);
+
+    protected abstract
+    <T extends IonValue> IonSequence newSequence(T... elements);
 
     /**
      * Wrap a single value with a sequence of the class under test.
@@ -84,6 +95,24 @@ public abstract class SequenceTestCase
         // Make sure the element hasn't changed
         assertNull(nullBool0.getFieldName());
         assertSame(value, nullBool0.getContainer());
+
+        // Cannot append a datagram
+        try
+        {
+            IonDatagram dg = loader().loadText("hi");
+            value.add(dg);
+            fail("Expected IllegalArgumentException");
+        }
+        catch (IllegalArgumentException e) { }
+
+        // Cannot insert a datagram
+        try
+        {
+            IonDatagram dg = loader().loadText("hi");
+            value.add(1, dg);
+            fail("Expected IllegalArgumentException");
+        }
+        catch (IllegalArgumentException e) { }
 
         // Now remove an element
         boolean removed = value.remove(nullBool0);
@@ -190,5 +219,30 @@ public abstract class SequenceTestCase
         otherSeq.add(nullBool1);
 
         assertFalse(value.remove(nullBool1));
+    }
+
+    public void testNewSeqWithDatagram()
+    {
+        IonValue first = system().newInt(12);
+        IonDatagram dg = loader().load("1 2 3");
+
+        ArrayList<IonValue> children = new ArrayList<IonValue>();
+        children.add(first);
+        children.add(dg);
+
+        try {
+            newSequence(children);
+            fail("Expected IllegalArgumentException");
+        }
+        catch (IllegalArgumentException e) { }
+
+        // FIXME:  first now has a container... but its garbage!
+
+        first = system().newInt(13);
+        try {
+            newSequence(first, dg);
+            fail("Expected IllegalArgumentException");
+        }
+        catch (IllegalArgumentException e) { }
     }
 }

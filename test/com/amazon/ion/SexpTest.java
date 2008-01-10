@@ -5,6 +5,7 @@
 package com.amazon.ion;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 
@@ -13,9 +14,27 @@ public class SexpTest
     extends SequenceTestCase
 {
     @Override
-    protected IonSequence makeNull()
+    protected IonSexp makeNull()
     {
         return system().newNullSexp();
+    }
+
+    @Override
+    protected IonSexp makeEmpty()
+    {
+        return system().newEmptySexp();
+    }
+
+    @Override
+    protected IonSexp newSequence(Collection<? extends IonValue> children)
+    {
+        return system().newSexp(children);
+    }
+
+    @Override
+    protected <T extends IonValue> IonSexp newSequence(T... elements)
+    {
+        return system().newSexp(elements);
     }
 
     @Override

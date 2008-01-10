@@ -92,6 +92,27 @@ public class StructTest
         assertEquals("f", nullBool0.getFieldName());
         assertSame(value, nullBool0.getContainer());
 
+        // Cannot put a datagram
+        try
+        {
+            IonDatagram dg = loader().loadText("hi");
+            value.put("g", dg);
+            fail("Expected IllegalArgumentException");
+        }
+        catch (IllegalArgumentException e) { }
+        assertEquals("g", nullBool1.getFieldName());
+
+        // Cannot add a datagram
+        try
+        {
+            IonDatagram dg = loader().loadText("hi");
+            value.add("g", dg);
+            fail("Expected IllegalArgumentException");
+        }
+        catch (IllegalArgumentException e) { }
+        assertEquals("g", nullBool1.getFieldName());
+
+
         // Make sure put replaces doubled field.
         IonBool nullBool3 = system().newNullBool();
         value.put("f", nullBool3);

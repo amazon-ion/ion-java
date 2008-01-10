@@ -84,6 +84,8 @@ public abstract class IonSequenceImpl
                 IonValue element = (IonValue) i.next();
                 super.add(element);
             }
+
+            // FIXME if add of a child fails, prior children have bad container
         }
     }
 

@@ -6,6 +6,7 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonContainer;
+import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
@@ -93,6 +94,8 @@ abstract public class IonContainerImpl
         else if (!isEmpty())
         {
             _contents.clear();
+
+            // FIXME all existing children still incorrectly have container set!
             setDirty();
         }
     }
@@ -387,30 +390,77 @@ abstract public class IonContainerImpl
      * <p>
      * This is protected because it's not a valid call for structs.
      *
-     * @param element
-     *        must not be null.
+     * @param child the value to append.
+     *
      * @throws NullPointerException
-     *         if the element is <code>null</code>.
+     *   if {@code child} is {@code null}.
+     * @throws ContainedValueException
+     *   if {@code child} is already part of a container.
+     * @throws IllegalArgumentException
+     *   if {@code child} is an {@link IonDatagram}.
      */
-    protected void add(IonValue element)
-        throws NullPointerException
+    protected void add(IonValue child)
+        throws NullPointerException, IllegalArgumentException
     {
+        // We do this here to avoid materialization if element is bad.
+        validateNewChild(child);
+
         makeReady();
         int size = (_contents == null ? 0 : _contents.size());
 
-        add(size, element, true);
+        add(size, child, true);
     }
 
-    protected void add(int index, IonValue element)
+    /**
+     * @throws NullPointerException
+     *   if {@code child} is {@code null}.
+     * @throws ContainedValueException
+     *   if {@code child} is already part of a container.
+     * @throws IllegalArgumentException
+     *   if {@code child} is an {@link IonDatagram}.
+     */
+
+    protected void add(int index, IonValue child)
         throws ContainedValueException, NullPointerException
     {
-        add(index, element, true);
+        validateNewChild(child);
+        add(index, child, true);
+    }
+
+    /**
+     * Ensures that a potential new child is non-null, has no container,
+     * and is not a datagram.
+     *
+     * @throws NullPointerException
+     *   if {@code child} is {@code null}.
+     * @throws ContainedValueException
+     *   if {@code child} is already part of a container.
+     * @throws IllegalArgumentException
+     *   if {@code child} is an {@link IonDatagram}.
+     */
+    protected static void validateNewChild(IonValue child)
+        throws ContainedValueException, NullPointerException,
+               IllegalArgumentException
+    {
+        // FIXME should this recognize system container?
+        if (child.getContainer() != null)            // Also checks for null.
+        {
+            throw new ContainedValueException();
+        }
+
+        if (child instanceof IonDatagram)
+        {
+            throw new IllegalArgumentException();
+        }
     }
 
     /**
      * Materialize this container, append a child, and (perhaps) mark this as
      * dirty.
      * <p>
+     * <p>
+     * NOTE: this assumes that {@link #validateNewChild(IonValue)}
+     * has been called.
      * TO DO: do we really need setDirty? yes.
      *
      * @param element
@@ -421,13 +471,6 @@ abstract public class IonContainerImpl
     protected void add(int index, IonValue element, boolean setDirty)
         throws ContainedValueException, NullPointerException
     {
-        // This also verifies that element != null to satisfy contract.
-
-        // FIXME should this recognize system container?
-        if (element.getContainer() != null) {
-            throw new ContainedValueException();
-        }
-
         final IonValueImpl concrete = ((IonValueImpl) element);
 
         // TODO: true to reuse the byte array if it is present

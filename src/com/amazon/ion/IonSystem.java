@@ -90,11 +90,18 @@ public interface IonSystem
      * Creates a new datagram containing one value.  If the given value is
      * contained elsewhere, it is cloned before insertion.
      *
-     * @param initialElement
+     * @param initialChild becomes the first and only (user) value in the
+     * datagram.
+     *
      * @return a new datagram.
-     * @throws NullPointerException if <code>initialElement<code> is null.
+     *
+     * @throws NullPointerException
+     *   if {@code initialChild} is null.
+     * @throws IllegalArgumentException
+     *   if {@code initialChild} is an {@link IonDatagram}.
      */
-    public IonDatagram newDatagram(IonValue initialElement);
+    public IonDatagram newDatagram(IonValue initialChild)
+        throws ContainedValueException;
 
 
     /**
@@ -373,10 +380,13 @@ public interface IonSystem
      *  the initial set of child elements.  If <code>null</code>, then the new
      *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
      *
-     * @throws ContainedValueException if any value in <code>elements</code>
+     * @throws ContainedValueException
+     *  if any value in {@code elements}
      *  has <code>{@link IonValue#getContainer()} != null</code>.
-     * @throws NullPointerException if any value in <code>elements</code> is
-     *  null.
+     * @throws NullPointerException
+     *   if any value in {@code elements} is null.
+     * @throws IllegalArgumentException
+     *   if any value in {@code elements} is an {@link IonDatagram}.
      */
     public IonList newList(Collection<? extends IonValue> elements)
         throws ContainedValueException, NullPointerException;
@@ -391,10 +401,13 @@ public interface IonSystem
      *  If an element is Java <code>null</code>, its corresponding element in
      *  the result will be an {@link IonNull} value.
      *
-     * @throws ContainedValueException if any value in <code>elements</code>
+     * @throws ContainedValueException
+     *  if any value in {@code elements}
      *  has <code>{@link IonValue#getContainer()} != null</code>.
-     * @throws NullPointerException if any value in <code>elements</code> is
-     *  null.
+     * @throws NullPointerException
+     *   if any value in {@code elements} is null.
+     * @throws IllegalArgumentException
+     *   if any value in {@code elements} is an {@link IonDatagram}.
      */
     public <T extends IonValue> IonList newList(T... elements)
         throws ContainedValueException, NullPointerException;
@@ -463,10 +476,13 @@ public interface IonSystem
      *  the initial set of child elements.  If <code>null</code>, then the new
      *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
      *
-     * @throws ContainedValueException if any value in <code>elements</code>
+     * @throws ContainedValueException
+     *  if any value in {@code elements}
      *  has <code>{@link IonValue#getContainer()} != null</code>.
-     * @throws NullPointerException if any value in <code>elements</code> is
-     *  null.
+     * @throws NullPointerException
+     *   if any value in {@code elements} is null.
+     * @throws IllegalArgumentException
+     *   if any value in {@code elements} is an {@link IonDatagram}.
      */
     public IonSexp newSexp(Collection<? extends IonValue> elements)
         throws ContainedValueException, NullPointerException;
@@ -479,10 +495,13 @@ public interface IonSystem
      *  the initial set of child values.  If <code>null</code>, then the new
      *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
      *
-     * @throws ContainedValueException if any value in <code>elements</code>
+     * @throws ContainedValueException
+     *  if any value in {@code elements}
      *  has <code>{@link IonValue#getContainer()} != null</code>.
-     * @throws NullPointerException if any value in <code>elements</code> is
-     *  null.
+     * @throws NullPointerException
+     *   if any value in {@code elements} is null.
+     * @throws IllegalArgumentException
+     *   if any value in {@code elements} is an {@link IonDatagram}.
      */
     public <T extends IonValue> IonSexp newSexp(T... elements)
         throws ContainedValueException, NullPointerException;
@@ -633,7 +652,8 @@ public interface IonSystem
 
 
     /**
-     * Creates a deep copy of an Ion value.
+     * Creates a deep copy of an Ion value.  This method can properly clone
+     * {@link IonDatagram}s.
      *
      * @param value the value to copy.
      * @return a deep copy of value, with no container.

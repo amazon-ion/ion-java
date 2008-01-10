@@ -12,7 +12,6 @@ import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonBinary.Reader;
 import com.amazon.ion.impl.IonBinary.Writer;
-import com.amazon.ion.impl.IonSequenceImpl;
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -42,11 +41,13 @@ public class TemporaryList
 
     @Override
     public void add(IonValue v) {
+        validateNewChild(v);
         add(size(), v, false);
     }
 
     @Override
     public void add(int index, IonValue v) {
+        validateNewChild(v);
         add(index, v, false);
     }
 
