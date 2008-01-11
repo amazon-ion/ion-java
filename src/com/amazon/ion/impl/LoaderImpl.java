@@ -62,50 +62,42 @@ public class LoaderImpl
     public IonDatagramImpl loadTextFile(File ionFile)
         throws IonException, IOException
     {
-        return loadText(ionFile);
+        return load(ionFile);
     }
 
-
+    @Deprecated
     public IonDatagramImpl loadText(File ionFile)
         throws IonException, IOException
     {
-        FileInputStream fileStream = new FileInputStream(ionFile);
-        try
-        {
-            return loadText(fileStream);
-        }
-        finally
-        {
-            fileStream.close();
-        }
+        return load(ionFile);
     }
 
-
+    @Deprecated
     public IonDatagramImpl loadBinary(File ionFile)
         throws IonException, IOException
     {
-        FileInputStream fileStream = new FileInputStream(ionFile);
-        try
-        {
-            return loadBinary(fileStream);
-        }
-        finally
-        {
-            fileStream.close();
-        }
+        return load(ionFile);
     }
 
 
     //=========================================================================
     // Loading from String
 
+    @Deprecated
     public IonDatagramImpl loadText(String ionText)
+        throws IonException
+    {
+        return load(ionText);
+    }
+
+
+    public IonDatagramImpl load(String ionText)
         throws IonException
     {
         StringReader reader = new StringReader(ionText);
         try
         {
-            return loadText(reader);
+            return load(reader);
         }
         catch (IOException e)
         {
@@ -123,46 +115,38 @@ public class LoaderImpl
     }
 
 
-    /** @deprecated */
-    @Deprecated
-    public IonDatagramImpl load(String ionText)
-        throws IonException
-    {
-        return loadText(ionText);
-    }
-
-
     //=========================================================================
     // Loading from Reader
 
+    @Deprecated
     public IonDatagramImpl loadText(Reader ionReader)
         throws IonException, IOException
     {
-        return new IonDatagramImpl(mySystem, ionReader);
+        return load(ionReader);
     }
 
 
-    public IonDatagramImpl loadText(Reader ionText,
-                                    LocalSymbolTable symbolTable)
+    public IonDatagramImpl load(Reader ionText,
+                                LocalSymbolTable symbolTable)
         throws IonException, IOException
     {
         return new IonDatagramImpl(mySystem, symbolTable, ionText);
     }
 
 
-    /** @deprecated */
     @Deprecated
-    public IonDatagramImpl load(Reader ionReader)
-        throws IonException
+    public IonDatagramImpl loadText(Reader ionText,
+                                    LocalSymbolTable symbolTable)
+        throws IonException, IOException
     {
-        try
-        {
-            return loadText(ionReader);
-        }
-        catch (IOException e)
-        {
-            throw new IonException(e);
-        }
+        return load(ionText, symbolTable);
+    }
+
+
+    public IonDatagramImpl load(Reader ionReader)
+        throws IonException, IOException
+    {
+        return new IonDatagramImpl(mySystem, ionReader);
     }
 
 
@@ -184,21 +168,22 @@ public class LoaderImpl
     {
         PushbackInputStream pushback = new PushbackInputStream(ionData, 8);
         if (isBinary(pushback)) {
-            return loadBinary(pushback);
+            return loadBinary(pushback);   // TODO inline this call
         }
 
-        return loadText(pushback);
+        return loadText(pushback); // TODO inline this call
     }
 
 
+    @Deprecated
     public IonDatagramImpl loadText(InputStream ionText)
         throws IOException
     {
         Reader reader = new InputStreamReader(ionText, "UTF-8");
-        return loadText(reader);
+        return load(reader);
     }
 
-
+    @Deprecated
     public IonDatagramImpl loadBinary(InputStream ionBinary)
         throws IOException
     {

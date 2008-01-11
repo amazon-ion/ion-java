@@ -43,7 +43,7 @@ public class LoaderTest
      */
     public IonValue loadOneValue(String text)
     {
-        IonDatagram dg = myLoader.loadText(text);
+        IonDatagram dg = myLoader.load(text);
 
         if (dg.size() == 0)
         {
@@ -116,7 +116,7 @@ public class LoaderTest
         try
         {
             Reader reader = new InputStreamReader(fileStream, "UTF-8");
-            IonReader i = system().newTextReader(reader);
+            IonReader i = system().newReader(reader);
             while (i.hasNext())
             {
                 IonValue value = i.next();
@@ -218,11 +218,11 @@ public class LoaderTest
 
         IonLoader loader = loader();
 
-        IonDatagram dg = loader.loadText(s);
+        IonDatagram dg = loader.load(s);
         checkReloading(dg);
 
         StringReader reader = new StringReader(s);
-        dg = loader.loadText(reader);
+        dg = loader.load(reader);
         checkReloading(dg);
 
         // TODO Test passing (unnecessary) local symbol table.
@@ -232,14 +232,14 @@ public class LoaderTest
 
         byte[] bytes = s.getBytes("UTF-8");
         dg = loader.load(bytes);
-//        checkReloading(dg);   FIXME this is a big bug!
+//      checkReloading(dg);   // FIXME this is a big bug!
 
         InputStream in = new ByteArrayInputStream(bytes);
         dg = loader.load(in);
         checkReloading(dg);
 
         in = new ByteArrayInputStream(bytes);
-        dg = loader.loadText(in);
+        dg = loader.load(in);
         checkReloading(dg);
     }
 
@@ -262,7 +262,7 @@ public class LoaderTest
         String image = "(this is a single sexp)";
         IonValue v1 =  sys.singleValue(image);
 
-        IonDatagram dg = sys.newLoader().loadText(image);
+        IonDatagram dg = sys.newLoader().load(image);
         assert  v1.toString().equals( dg.get(0).toString() );
 
         byte[] bytes = dg.toBytes();

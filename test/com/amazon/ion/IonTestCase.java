@@ -130,15 +130,13 @@ public abstract class IonTestCase
     protected IonDatagram readIonText(File textFile)
         throws Exception
     {
-        IonLoader loader = system().newLoader();
-        return loader.loadText(textFile);
+        return loader().load(textFile);
     }
 
     protected IonDatagram readIonBinary(File ionFile)
         throws Exception
     {
-        IonLoader loader = system().newLoader();
-        IonDatagram dg = loader.loadBinary(ionFile);
+        IonDatagram dg = loader().load(ionFile);
 
         dg.deepMaterialize(); // Flush out any encoding problems in the data.
 

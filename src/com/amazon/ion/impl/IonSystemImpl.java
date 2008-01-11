@@ -153,34 +153,36 @@ public class IonSystemImpl
     //=========================================================================
     // IonReader creation
 
-    /**
-     *  @deprecated Renamed to {@link #newTextReader(Reader)}.
-     */
-    @Deprecated
-    public IonReader newReader(Reader reader)
-    {
-        return newTextReader(reader);
-    }
 
-    public IonReader newTextReader(Reader reader)
+    public IonReader newReader(Reader reader)
     {
         return new UserReader(this, this.newLocalSymbolTable(), reader);
     }
 
     /**
-     *  @deprecated Renamed to {@link #newTextReader(String)}.
+     *  @deprecated Use {@link #newReader(Reader)}.
      */
     @Deprecated
-    public IonReader newReader(String ionText)
+    public IonReader newTextReader(Reader reader)
     {
-        return newTextReader(ionText);
+        return newReader(reader);
     }
 
-    public IonReader newTextReader(String ionText)
+
+    public IonReader newReader(String ionText)
     {
         return new UserReader(this,
                               this.newLocalSymbolTable(),
                               new StringReader(ionText));
+    }
+
+    /**
+     *  @deprecated Use {@link #newReader(String)}.
+     */
+    @Deprecated
+    public IonReader newTextReader(String ionText)
+    {
+        return newReader(ionText);
     }
 
 

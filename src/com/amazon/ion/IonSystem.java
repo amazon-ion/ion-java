@@ -53,7 +53,7 @@ public interface IonSystem
      * @param catalog the new system catalog.
      * @throws NullPointerException if <code>catalog</code> is null.
      *
-     * @deprecated
+     * @deprecated  Catalog should be immutable.
      */
     @Deprecated
     public void setCatalog(IonCatalog catalog);
@@ -129,7 +129,7 @@ public interface IonSystem
      * @throws IllegalArgumentException if <code>loader.getSystem()</code> is
      * not this system.
      *
-     * @deprecated
+     * @deprecated Default loader should be immutable.
      */
     @Deprecated
     public void setLoader(IonLoader loader);
@@ -141,10 +141,7 @@ public interface IonSystem
      * @return a new reader instance.
      *
      * @throws NullPointerException if <code>ionText</code> is null.
-     *
-     * @deprecated Renamed to {@link #newTextReader(Reader)}.
      */
-    @Deprecated
     public IonReader newReader(Reader ionText);
 
 
@@ -156,10 +153,7 @@ public interface IonSystem
      * @return a new reader instance.
      *
      * @throws NullPointerException if <code>ionText</code> is null.
-     *
-     * @deprecated Renamed to {@link #newTextReader(String)}.
      */
-    @Deprecated
     public IonReader newReader(String ionText);
 
 
@@ -171,7 +165,10 @@ public interface IonSystem
      * @return a new reader instance.
      *
      * @throws NullPointerException if <code>ionText</code> is null.
+     *
+     * @deprecated Use {@link #newReader(String)}.
      */
+    @Deprecated
     public IonReader newTextReader(String ionText);
 
 
@@ -181,7 +178,10 @@ public interface IonSystem
      * @return a new reader instance.
      *
      * @throws NullPointerException if <code>ionText</code> is null.
+     *
+     * @deprecated Use {@link #newReader(Reader)}.
      */
+    @Deprecated
     public IonReader newTextReader(Reader ionText);
 
 
