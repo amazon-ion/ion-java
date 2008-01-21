@@ -411,7 +411,7 @@ public class IonBinary
         if (v == null) return 0;
 
         int len = 0;
-
+// BUGBUG: this should be looking for surrogate characters !!!
         for (int ii=0; ii<v.length(); ii++) {
             char c = v.charAt(ii);
             int clen = lenUTF8Char(c);
@@ -570,6 +570,25 @@ public class IonBinary
             super(bb, pos);
         }
 
+        /**
+         * return the underlying bytes as a single buffer
+         *
+         * @return bytes[]
+         * @throws IOException 
+         * @throws UnexpectedEofException if end of file is hit.
+         * @throws IOException if there's other problems reading input.
+         */
+        public byte[] getBytes() throws IOException {
+            if (this._buf == null) return null;
+            int len = _buf.size();
+            byte[] buf = new byte[len];
+            if (this.read(buf) != len) {
+                throw new UnexpectedEofException();
+            }
+            return buf;
+        }
+
+        
         /**
          * Read exactly one byte of input.
          *
