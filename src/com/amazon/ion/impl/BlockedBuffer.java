@@ -4,6 +4,7 @@
 
 package com.amazon.ion.impl;
 
+// for scanner: import com.amazon.ion.scanner.ByteWriter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.SortedSet;
@@ -209,6 +210,9 @@ public class BlockedBuffer
             b = this._blocks.get(idx);
             if (b._offset <= pos) break;
             b.clearBlock();
+        }
+        if (b == null) {
+            throw new IllegalStateException("block missing at position "+pos);
         }
         // reset the next block position to account for this.
         this._next_block_position = b._idx + 1;
@@ -1050,6 +1054,7 @@ public class BlockedBuffer
     {
         BlockedBuffer _buf;
         int           _pos;
+        int           _mark;
         bbBlock       _curr;
         int           _blockPosition;
         int           _version;
@@ -1081,6 +1086,18 @@ public class BlockedBuffer
             _version = bb.getVersion();
             _buf = bb;
             _set_position(pos);
+            _mark = -1;
+        }
+        
+        @Override
+        public void mark(int readlimit) {
+            this._mark = this._pos;
+        }
+
+        @Override
+        public void reset() throws IOException {
+            if (this._mark == -1) throw new IOException("mark not set");
+            _set_position(this._mark);
         }
 
         /**
@@ -1173,6 +1190,34 @@ public class BlockedBuffer
             return _pos - startingPos;
         }
 
+/*
+ * this will come back when the scanner code is integrated
+ 
+        public int writeTo(ByteWriter out, int len) throws IOException
+        {
+            if (_buf == null) throw new IOException("stream is closed");
+            fail_on_version_change();
+            if (_pos >= _buf.size()) throw new IllegalArgumentException();
+
+            int startingPos = _pos;
+            int localEnd = _pos + len;
+            if (localEnd > _buf.size()) localEnd = _buf.size();
+
+            while (_pos < localEnd) {
+                int available = _curr._limit - _blockPosition;
+                if (available > localEnd - _pos) available = localEnd - _pos;
+
+                out.write(_curr._buffer, _blockPosition, available);
+                _pos += available;
+                _curr = _buf.findBlockForRead(this, _version, _curr, _pos);
+                _blockPosition = 0;
+            }
+
+            fail_on_version_change();
+            return _pos - startingPos;
+        }
+*/
+        
         /**
          * reads (up to) {@code len} bytes from the buffer and copies them into
          * the user supplied byte array (bytes) starting at offset
@@ -1195,13 +1240,21 @@ public class BlockedBuffer
             if (localEnd > _buf.size()) localEnd = _buf.size();
 
             while (_pos < localEnd) {
-                int available = _curr._limit - _blockPosition;
-                if (available > localEnd - _pos) available = localEnd - _pos;
-                System.arraycopy(_curr._buffer, _blockPosition, bytes, offset, available);
+                bbBlock block = _curr;
+                int block_offset = _blockPosition; 
+                int available = block._limit - _blockPosition;
+                if (available > localEnd - _pos) {
+                    // we aren't emptying this block so adjust our location
+                    available = localEnd - _pos;
+                    _blockPosition += available;
+                }
+                else {
+                    _curr = _buf.findBlockForRead(this, _version, _curr, _pos);
+                    _blockPosition = 0;
+                }
+                System.arraycopy(block._buffer, block_offset, bytes, offset, available);
                 _pos += available;
                 offset += available;
-                _curr = _buf.findBlockForRead(this, _version, _curr, _pos);
-                _blockPosition = 0;
             }
 
             fail_on_version_change();
@@ -1237,6 +1290,34 @@ public class BlockedBuffer
                 this.close();
                 throw new BlockedBufferException("buffer has been changed!");
             }
+        }
+        
+        @Override
+        public long skip(long n) throws IOException
+        {
+            if (n < 0 || n > Integer.MAX_VALUE) throw new IllegalArgumentException("we only handle buffer less than "+Integer.MAX_VALUE+" bytes in length");
+            if (_buf == null) throw new IOException("stream is closed");
+            fail_on_version_change();
+            if (_pos >= _buf.size()) return -1;
+            
+            int len = (int)n;
+            if (len == 0) return 0;
+            
+            int startingPos = _pos;
+            int localEnd = _pos + len;
+            if (localEnd > _buf.size()) localEnd = _buf.size();
+
+            // if we run off the end of this block, we need to update
+            // our current block ( _curr ) we'll update the block position
+            // in any event (once we know the right block, of course)
+            if (localEnd > _blockPosition + _curr._offset) {
+                _curr = _buf.findBlockForRead(this, _version, _curr, localEnd);
+            }
+            _blockPosition = localEnd - _curr._offset;
+            _pos = localEnd;
+
+            fail_on_version_change();
+            return _pos - startingPos;
         }
     }
 

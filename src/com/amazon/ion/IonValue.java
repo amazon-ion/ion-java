@@ -126,7 +126,14 @@ public interface IonValue
      */
     public String getFieldName();
 
+    
+    /**
+     * Gets the field name attached to this value,
+     * or <code>null</code> if this is not part of an {@link IonStruct}.
+     */
+    public int getFieldNameId();
 
+    
     /**
      * Gets the container of this value,
      * or <code>null</code> if this is not part of one.
