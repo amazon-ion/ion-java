@@ -11,9 +11,25 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.util.NoSuchElementException;
 
 /**
- *
+ * Tokenizer for the Ion text parser in IonTextIterator. This
+ * reads bytes and returns the interesting tokens it recognizes
+ * or an error.  While, currently, this does UTF-8 decoding
+ * as it goes that is unnecessary.  The main entry point is
+ * lookahead(n) which gets the token type n tokens ahead (0
+ * is the next token).  The tokens type, its starting offset
+ * in the input stream and its ending offset in the input stream
+ * are cached, so lookahead() can be called repeatedly with
+ * little overhead.  This supports a 7 token lookahead and requires
+ * a "recompile" to change this limit.  (this could be "fixed"
+ * but seems unnecessary at this time - the limit is in 
+ * IonTextTokenizer._token_lookahead_size which is 1 larger than 
+ * the size of the lookahead allowed)  Tokens are consumed by
+ * a call to consumeToken, or the helper consumeTokenAsString.
+ * The informational interfaces - getValueStart(), getValueEnd()
+ * getValueAsString() can be used to get the contents of the
+ * value once the caller has decided how to use it. 
  */
-public class IonTextTokenizer
+public final class IonTextTokenizer
 {
 //////////////////////////////////////////////////////////////////////////  debug
 static final boolean _debug = false;
@@ -27,11 +43,11 @@ static final boolean _debug = false;
     public static final int TOKEN_DECIMAL =  2;
     public static final int TOKEN_FLOAT   =  3;
     public static final int TOKEN_TIMESTAMP= 4;
-    public static final int TOKEN_SYMBOL1 =  5;  // java identifier
-    public static final int TOKEN_SYMBOL2 =  6;  // single quoted string
+    public static final int TOKEN_SYMBOL1 =  5; // java identifier
+    public static final int TOKEN_SYMBOL2 =  6; // single quoted string
     public static final int TOKEN_SYMBOL3 =  7; // operator sequence for sexp
-    public static final int TOKEN_STRING1 =  8;
-    public static final int TOKEN_STRING2 =  9;
+    public static final int TOKEN_STRING1 =  8; // string in double quotes (")
+    public static final int TOKEN_STRING2 =  9; // part of a string in triple quotes (''')
     
     public static final int TOKEN_DOT     = 10;
     public static final int TOKEN_COMMA   = 11;

@@ -14,7 +14,7 @@ import java.math.BigInteger;
 /**
  *
  */
-public class ByteWriterOutputStream
+public final class ByteWriterOutputStream
     implements ByteWriter
 {
     private static final int _ib_FLOAT64_LEN         =    8;

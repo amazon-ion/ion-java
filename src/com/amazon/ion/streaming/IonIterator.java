@@ -19,7 +19,13 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- *
+ * Implements the iterator pattern over various representations
+ * of Ion, including text, binary and the IonValue tree.  This
+ * class includes the static factory methods that will return
+ * the appropriate IonIterator depending on the input value. This
+ * included the logic to look into a byte array for the magic
+ * cookie to determine it the input is binary or text (UTF-8)
+ * Ion. 
  */
 public abstract class IonIterator
 {

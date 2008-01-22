@@ -26,9 +26,11 @@ import java.math.BigDecimal;
 import java.util.Date;
 
 /**
- *
+ * Provides a concrete implementation of the IonWriter where
+ * the output of the this writer is one or more IonValues,
+ * typically an IonDatagram with contents.
  */
-public class IonTreeWriter
+public final class IonTreeWriter
     extends IonBaseWriter
 {
     IonSystem       _sys;

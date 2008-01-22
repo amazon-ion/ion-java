@@ -26,11 +26,12 @@ import java.math.BigDecimal;
 import java.util.Date;
 import java.util.EmptyStackException;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 /**
- * implements an iterator over a Ion binary buffer.
+ * implements an Ion iterator over a Ion binary buffer.
  */
-public class IonBinaryIterator
+public final class IonBinaryIterator
     extends IonIterator
 {
 // TODO------------------------------------------------------------------------------------------
@@ -136,6 +137,7 @@ static String getTidAsString(int tid) {
         _symbols = symboltable;
         _expect_symbol_table = (parent == null || parent.equals(IonType.SEXP));
     }
+    
     @Override
     public boolean hasNext()
     {
@@ -155,36 +157,170 @@ static String getTidAsString(int tid) {
             return false;
         }
         
-        int td;
+        int td = -1;
         try {
-            if (_in_struct) {
-                _value_field_id = _reader.readVarUInt();
-            }
-            else {
-                _value_field_id = -1;
-            }
+            _value_field_id = (_in_struct) ? _reader.readVarUInt() : -1;
             
             td = _reader.read();
             if (td == ByteReader.EOF) {
                 _eof = true;
                 return false;
             }
-            
             if (_expect_symbol_table 
             && ((td >>> 4) & 0xf) == IonConstants.tidTypedecl
             ) {
+                // this looks at the current value, checks to see if it has the
+                // $ion_1_0 annoation and if it does load the symbol table and
+                // move forward, otherwise just read the actual values td and
+                // return that instead.  If it's not a symbol table, then the 14
+                // (user type annotation) will be handled during "next()"
                 td = loadPossibleSymbolTable(td);
             }
         }
         catch (IOException e) {
             throw new IonException(e);
         }
+        
         // mark where we are
         _value_tid = td;
         _state = IonBinaryIterator.S_AFTER_TID;
         _expect_symbol_table = false;
         return true;
     }
+    public int nextTid() 
+    {
+        if (_state != IonBinaryIterator.S_AFTER_TID && !this.hasNext()) {
+                throw new NoSuchElementException();
+        }
+        
+        // get actual type id
+        int ion_type = (_value_tid & 0xf0) >>> 4;
+        
+        try {
+            // if 14 (annotation)
+            if (ion_type == IonConstants.tidTypedecl) {
+                //      skip forward annotation length
+                
+                //      first we skip the value length and then 
+                //      read the local annotation length
+                read_length(_value_tid);
+
+                //      set annotation start to the position of
+                //      the first type desc byte
+                this._annotation_start = _reader.position();
+                int annotation_len = _reader.readVarUInt();
+                _reader.skip(annotation_len);
+                
+                //      read tid again
+                _value_tid = _reader.read();
+                ion_type = (_value_tid & 0xf0) >>> 4;
+            }
+            else {
+                // clear the annotation marker that's left over from our previous value
+                _annotation_start = -1;
+            }
+            
+            // read length (if necessary)
+            _value_len = read_length(_value_tid);
+        }
+        catch (IOException e) {
+            throw new IonException(e);
+        }
+        
+        // set the state forward
+        _state = IonBinaryIterator.S_BEFORE_CONTENTS;
+        return ion_type;
+    }
+    @Override
+    public IonType next()
+    {
+        // get actual type id, this also handle the hasNext & eof logic as necessary
+        int ion_type = this.nextTid();
+        _value_type = get_iontype_from_tid(ion_type);
+        return _value_type;
+    }
+    final IonType get_iontype_from_tid(int tid)
+    {
+        IonType t = null;
+        switch (tid) {
+        case IonConstants.tidNull:      // 0
+            t = IonType.NULL;
+            break;
+        case IonConstants.tidBoolean:   // 1
+            t = IonType.BOOL;
+            break;
+        case IonConstants.tidPosInt:    // 2
+        case IonConstants.tidNegInt:    // 3
+            t = IonType.INT;
+            break;
+        case IonConstants.tidFloat:     // 4
+            t = IonType.FLOAT;
+            break;
+        case IonConstants.tidDecimal:   // 5
+            t = IonType.DECIMAL;
+            break;
+        case IonConstants.tidTimestamp: // 6
+            t = IonType.TIMESTAMP;
+            break;
+        case IonConstants.tidSymbol:    // 7
+            t = IonType.SYMBOL;
+            break;
+        case IonConstants.tidString:    // 8
+            t = IonType.STRING;
+            break;
+        case IonConstants.tidClob:      // 9
+            t = IonType.CLOB;
+            break;
+        case IonConstants.tidBlob:      // 10 A
+            t = IonType.BLOB;
+            break;
+        case IonConstants.tidList:      // 11 B
+            t = IonType.LIST;
+            break;
+        case IonConstants.tidSexp:      // 12 C
+            t = IonType.SEXP;
+            break;
+        case IonConstants.tidStruct:    // 13 D
+            t = IonType.STRUCT;
+            break;
+        case IonConstants.tidTypedecl:  // 14 E
+        default:
+            throw new IonException("unrecognized value type encountered: "+tid);
+        }
+        return t;
+    }
+    
+    int read_length(int tid) throws IOException {
+        switch ((tid >>> 4) & 0xf) {
+        case IonConstants.tidNull:      // 0
+        case IonConstants.tidBoolean:   // 1
+            return 0;
+        case IonConstants.tidPosInt:    // 2
+        case IonConstants.tidNegInt:    // 3
+        case IonConstants.tidFloat:     // 4
+        case IonConstants.tidDecimal:   // 5
+        case IonConstants.tidTimestamp: // 6
+        case IonConstants.tidSymbol:    // 7
+        case IonConstants.tidString:    // 8
+        case IonConstants.tidClob:      // 9
+        case IonConstants.tidBlob:      // 10 A
+        case IonConstants.tidList:      // 11 B
+        case IonConstants.tidSexp:      // 12 C
+        case IonConstants.tidStruct:    // 13 D
+        case IonConstants.tidTypedecl:  // 14 E
+            int len = tid & 0xf;
+            if (len == 14) {
+                len = _reader.readVarUInt();
+            }
+            else if (len == 15) {
+                len = 0;
+            }
+            return len;
+        default:
+            throw new IonException("unrecognized type encountered");
+        }
+    }
+    
     int loadPossibleSymbolTable(int typedesc) {
         int original_position = _reader.position();
         
@@ -211,6 +347,7 @@ static String getTidAsString(int tid) {
         _reader.position(original_position);
         return typedesc;
     }
+
     int loadSymbolTable(int annotationid, int original_start, int contents_start) throws IOException 
     {
         _reader.position(contents_start);
@@ -274,7 +411,7 @@ static String getTidAsString(int tid) {
         this._in_struct = was_struct;
         this._local_end = prev_end;
         
-        int value_start = _reader.position(); 
+        int value_start = _reader.position();
         if (value_start >= this._local_end) {
             _eof = true;
             return 0;
@@ -291,173 +428,7 @@ static String getTidAsString(int tid) {
         
         return td;
     }
-    public int nextTid() {
-        if (_state != IonBinaryIterator.S_AFTER_TID) {
-            throw new IllegalStateException();
-        }
-        // get actual type id
-        int ion_type = (_value_tid & 0xf0) >>> 4;
-        
-        try {
-            // if 14 (annotation)
-            if (ion_type == IonConstants.tidTypedecl) {
-                //      skip forward annotation length
-                
-                //      first we skip the value length and then 
-                //      read the local annotation length
-                read_length(_value_tid);
 
-                //      set annotation start to the position of
-                //      the first type desc byte
-                this._annotation_start = _reader.position();
-                int annotation_len = _reader.readVarUInt();
-                _reader.skip(annotation_len);
-                
-                //      read tid again
-                _value_tid = _reader.read();
-                ion_type = (_value_tid & 0xf0) >>> 4;
-            }
-            else {
-                // clear the annotation marker that's left over from our previous value
-                _annotation_start = -1;
-            }
-            
-            // read length (if necessary)
-            _value_len = read_length(_value_tid);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-        
-        // set the state forward
-        _state = IonBinaryIterator.S_BEFORE_CONTENTS;
-        return ion_type;
-
-        
-    }
-    @Override
-    public IonType next()
-    {
-        if (_state != IonBinaryIterator.S_AFTER_TID) {
-            throw new IllegalStateException();
-        }
-        // get actual type id
-        int ion_type = (_value_tid & 0xf0) >>> 4;
-        
-        try {
-            // if 14 (annotation)
-            if (ion_type == IonConstants.tidTypedecl) {
-                //      skip forward annotation length
-                
-                //      first we skip the value length and then 
-                //      read the local annotation length
-                read_length(_value_tid);
-
-                //      set annotation start to the position of
-                //      the first type desc byte
-                this._annotation_start = _reader.position();
-                int annotation_len = _reader.readVarUInt();
-                _reader.skip(annotation_len);
-                
-                //      read tid again
-                _value_tid = _reader.read();
-                ion_type = (_value_tid & 0xf0) >>> 4;
-            }
-            else {
-                // clear the annotation marker that's left over from our previous value
-                _annotation_start = -1;
-            }
-            
-            // read length (if necessary)
-            _value_len = read_length(_value_tid);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-        
-        // set the state forward
-        _state = IonBinaryIterator.S_BEFORE_CONTENTS;
-        _value_type = null;
-        switch (ion_type) {
-        case IonConstants.tidNull:      // 0
-            _value_type = IonType.NULL;
-            break;
-        case IonConstants.tidBoolean:   // 1
-            _value_type = IonType.BOOL;
-            break;
-        case IonConstants.tidPosInt:    // 2
-        case IonConstants.tidNegInt:    // 3
-            _value_type = IonType.INT;
-            break;
-        case IonConstants.tidFloat:     // 4
-            _value_type = IonType.FLOAT;
-            break;
-        case IonConstants.tidDecimal:   // 5
-            _value_type = IonType.DECIMAL;
-            break;
-        case IonConstants.tidTimestamp: // 6
-            _value_type = IonType.TIMESTAMP;
-            break;
-        case IonConstants.tidSymbol:    // 7
-            _value_type = IonType.SYMBOL;
-            break;
-        case IonConstants.tidString:    // 8
-            _value_type = IonType.STRING;
-            break;
-        case IonConstants.tidClob:      // 9
-            _value_type = IonType.CLOB;
-            break;
-        case IonConstants.tidBlob:      // 10 A
-            _value_type = IonType.BLOB;
-            break;
-        case IonConstants.tidList:      // 11 B
-            _value_type = IonType.LIST;
-            break;
-        case IonConstants.tidSexp:      // 12 C
-            _value_type = IonType.SEXP;
-            break;
-        case IonConstants.tidStruct:    // 13 D
-            _value_type = IonType.STRUCT;
-            break;
-        case IonConstants.tidTypedecl:  // 14 E
-        default:
-            throw new IonException("unrecognized type encountered");
-        }
-        
-        return _value_type;
-
-    }
-    int read_length(int tid) throws IOException {
-        switch ((tid >>> 4) & 0xf) {
-        case IonConstants.tidNull:      // 0
-        case IonConstants.tidBoolean:   // 1
-            return 0;
-        case IonConstants.tidPosInt:    // 2
-        case IonConstants.tidNegInt:    // 3
-        case IonConstants.tidFloat:     // 4
-        case IonConstants.tidDecimal:   // 5
-        case IonConstants.tidTimestamp: // 6
-        case IonConstants.tidSymbol:    // 7
-        case IonConstants.tidString:    // 8
-        case IonConstants.tidClob:      // 9
-        case IonConstants.tidBlob:      // 10 A
-        case IonConstants.tidList:      // 11 B
-        case IonConstants.tidSexp:      // 12 C
-        case IonConstants.tidStruct:    // 13 D
-        case IonConstants.tidTypedecl:  // 14 E
-            int len = tid & 0xf;
-            if (len == 14) {
-                len = _reader.readVarUInt();
-            }
-            else if (len == 15) {
-                len = 0;
-            }
-            return len;
-        default:
-            throw new IonException("unrecognized type encountered");
-        }
-    }
-    
     @Override
     public int getDepth() {
         return _top;

@@ -19,9 +19,19 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
- *
+ * A concrete implementation of IonWriter which writes the
+ * values out as text.  It writes the value out as UTF-8.  The
+ * constructor offers the option of pretty printing the value
+ * and also offers the option of generating pure ascii output.
+ * In the event pure ascii is chosen (utf8asascii) non-ascii
+ * characters are emitted as \\u or \\U escaped hex values. If
+ * this is not chosen the output stream may contain unicode
+ * character directly, which is often not a readable.  Either
+ * form will be parsed, by an Ion parser, into the same Ion
+ * values however the u encodings may be longer in the text
+ * form and less readable in some environments.
  */
-public class IonTextWriter
+public final class IonTextWriter
     extends IonBaseWriter
 {
     boolean      _pretty;

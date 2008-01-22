@@ -8,7 +8,11 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- *
+ * InputStream implementations over a number of types (byte[] and String)
+ * that do not handle character decoding.  Each byte is treated as just
+ * a character from 0 to 255.  These are used internally to wire up some
+ * of the Iterator code to some of the base64 encoding (or decoding)
+ * routins in ion.impl. 
  */
 public abstract class IonTextBufferedStream extends InputStream
 {
@@ -25,9 +29,8 @@ public abstract class IonTextBufferedStream extends InputStream
     public abstract int position();
     public abstract IonTextBufferedStream setPosition(int pos);
     
-    static class SimpleBufferStream extends IonTextBufferedStream
-        {
-        
+    static final class SimpleBufferStream extends IonTextBufferedStream
+    {
         byte [] _buffer;
         int     _len;
         int     _pos;
@@ -79,7 +82,7 @@ public abstract class IonTextBufferedStream extends InputStream
         }
     }
     
-    static class StringStream extends IonTextBufferedStream
+    static final class StringStream extends IonTextBufferedStream
     {
         
         String _string;
@@ -130,9 +133,8 @@ public abstract class IonTextBufferedStream extends InputStream
         }
     }
     
-    static class OffsetBufferStream extends IonTextBufferedStream
+    static final class OffsetBufferStream extends IonTextBufferedStream
     {
-        
         byte [] _buffer;
         int     _start;
         int     _end;
@@ -189,5 +191,4 @@ public abstract class IonTextBufferedStream extends InputStream
             return this;
         }
     }
-
 }

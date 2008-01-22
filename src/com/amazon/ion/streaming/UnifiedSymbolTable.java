@@ -32,7 +32,7 @@ import java.util.NoSuchElementException;
  *   then local names from the new max id
  * 
  */
-public class UnifiedSymbolTable
+public final class UnifiedSymbolTable
     implements SymbolTable, LocalSymbolTable, StaticSymbolTable,
     SystemSymbolTable
 {
@@ -652,7 +652,7 @@ public class UnifiedSymbolTable
         return new SymbolIterator(this, _symbols, _symbol_count);
     }
 
-    class SymbolIterator implements Iterator<Symbol> 
+    static final class SymbolIterator implements Iterator<Symbol> 
     {
         UnifiedSymbolTable _source_table;
         Symbol[] _symbols;

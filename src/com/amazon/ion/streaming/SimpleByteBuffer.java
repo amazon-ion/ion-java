@@ -17,7 +17,7 @@ import java.util.Date;
  * Manages a very simple byte buffer that is a single contiguous
  * byte array, without resize ability.
  */
-public class SimpleByteBuffer
+public final class SimpleByteBuffer
     implements ByteBuffer
 {
     byte[]  _bytes;
@@ -95,7 +95,7 @@ public class SimpleByteBuffer
         out.write(_bytes, _start, length);
     }
     
-    static class SimpleByteReader implements ByteReader 
+    static final class SimpleByteReader implements ByteReader 
     {
         SimpleByteBuffer _buffer;
         int              _position;

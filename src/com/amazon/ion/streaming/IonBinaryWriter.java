@@ -21,9 +21,11 @@ import java.util.Date;
 import java.util.Iterator;
 
 /**
- *
+ * implementation of the IonWrite where the output is
+ * Ion binary formatted bytes.  This will include a local
+ * symbol table in the output if a symbol table is necessary.
  */
-public class IonBinaryWriter
+public final class IonBinaryWriter
     extends IonBaseWriter
 {
 static final boolean _verbose_debug = false;

@@ -30,13 +30,15 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- *
+ * Provides a concrete implmentation of IonIterator that operates
+ * over an IonValue, typically an IonDatagram.
  */
-public class IonTreeIterator
+public final class IonTreeIterator
     extends IonIterator
 {
     Iterator<IonValue> _iter;
     IonValue _root;
+    IonValue _next;
     IonValue _curr;
     boolean  _eof;
     
@@ -86,23 +88,28 @@ public class IonTreeIterator
     public boolean hasNext()
     {
         if (this._eof) return false;
-        if (this._iter == null) return true;
-        return this._iter.hasNext();
+        if (this._next != null) return true;
+        
+        if (this._iter == null) {
+            this._next = this._root;
+        }
+        else if (this._iter.hasNext()) {
+            this._next = this._iter.next();
+        }
+        this._eof = (this._next == null);
+        return !this._eof;
     }
 
     @Override
     public IonType next()
     {
-        if (this._eof) return null;
-        if (this._iter == null) {
-            this._curr = this._root;
-            this._eof = true;
+        if (this._next == null && !this.hasNext()) {
+            throw new NoSuchElementException();
         }
-        else {
-            this._curr = this._iter.next();
-            this._eof = (this._curr == null);
-        }
-        return (this._curr == null) ? null : this._curr.getType();
+        this._curr = this._next;
+        this._next = null;
+        
+        return this._curr.getType();
     }
     
     @Override
@@ -268,7 +275,7 @@ public class IonTreeIterator
     {
         if (_curr instanceof IonNull) return true;
         if (_curr == null) {
-            throw new IllegalStateException("current is nujll");
+            throw new IllegalStateException("curr of iterator is not yet set");
     
         }
         return _curr.isNullValue();
@@ -446,7 +453,7 @@ public class IonTreeIterator
         return (_curr == null) ? null : _curr.toString();
     }
 
-    static class StringIterator implements Iterator<String>
+    static final class StringIterator implements Iterator<String>
     {
         String [] _values;
         int       _pos;
@@ -466,7 +473,7 @@ public class IonTreeIterator
         }
     }
 
-    static class IdIterator implements Iterator<Integer>
+    static final class IdIterator implements Iterator<Integer>
     {
         int []  _values;
         int     _pos;

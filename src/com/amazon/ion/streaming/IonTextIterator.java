@@ -32,9 +32,10 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- * Walks over a text stream and returns Ion values from it.
+ * IonIterator implmentation that walks over a text stream and 
+ * returns Ion values from it.
  */
-public class IonTextIterator
+public final class IonTextIterator
     extends IonIterator
 {
    
@@ -303,35 +304,29 @@ public class IonTextIterator
     public int getDepth() {
         return _current_depth;
     }
+
+    IonType _lookahead_type = null;
+    int _current_depth = 0;
     
     @Override
     public boolean hasNext() 
     {    
         if (_eof) return false;
+        if (_lookahead_type != null) return true;
+        
         _lookahead_type = lookahead();
-        if (_lookahead_type == null) {
-            _eof = true;
-            return false;
-        }
-        return true;
-    }
-    
-    IonType _lookahead_type = null;
-    int _current_depth = 0;
+        _eof = (_lookahead_type == null);
 
+        return !_eof;
+    }
     @Override
-    public IonType next() {
-        IonType t = null;
-        if (_lookahead_type != null) {
-            t = _lookahead_type;
-            _lookahead_type = null;
+    public IonType next() 
+    {
+        if (_lookahead_type == null && !hasNext()) {
+            throw new NoSuchElementException();
         }
-        else {
-            t = lookahead();
-            if (t == null) {
-                throw new NoSuchElementException();
-            }
-        }
+        IonType t = _lookahead_type;
+        _lookahead_type = null;
         return t;
     }
     
