@@ -4,7 +4,8 @@
 
 package com.amazon.ion.impl;
 
-// for scanner: import com.amazon.ion.scanner.ByteWriter;
+import com.amazon.ion.streaming.ByteWriter;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.SortedSet;
@@ -1190,9 +1191,6 @@ public class BlockedBuffer
             return _pos - startingPos;
         }
 
-/*
- * this will come back when the scanner code is integrated
- 
         public int writeTo(ByteWriter out, int len) throws IOException
         {
             if (_buf == null) throw new IOException("stream is closed");
@@ -1216,7 +1214,6 @@ public class BlockedBuffer
             fail_on_version_change();
             return _pos - startingPos;
         }
-*/
         
         /**
          * reads (up to) {@code len} bytes from the buffer and copies them into
