@@ -1088,7 +1088,7 @@ public class BlockedBuffer
             _set_position(pos);
             _mark = -1;
         }
-        
+
         @Override
         public void mark(int readlimit) {
             this._mark = this._pos;
@@ -1192,7 +1192,7 @@ public class BlockedBuffer
 
 /*
  * this will come back when the scanner code is integrated
- 
+
         public int writeTo(ByteWriter out, int len) throws IOException
         {
             if (_buf == null) throw new IOException("stream is closed");
@@ -1217,7 +1217,7 @@ public class BlockedBuffer
             return _pos - startingPos;
         }
 */
-        
+
         /**
          * reads (up to) {@code len} bytes from the buffer and copies them into
          * the user supplied byte array (bytes) starting at offset
@@ -1241,7 +1241,7 @@ public class BlockedBuffer
 
             while (_pos < localEnd) {
                 bbBlock block = _curr;
-                int block_offset = _blockPosition; 
+                int block_offset = _blockPosition;
                 int available = block._limit - _blockPosition;
                 if (available > localEnd - _pos) {
                     // we aren't emptying this block so adjust our location
@@ -1249,7 +1249,8 @@ public class BlockedBuffer
                     _blockPosition += available;
                 }
                 else {
-                    _curr = _buf.findBlockForRead(this, _version, _curr, _pos);
+                    // TODO can't we just move to the next block?
+                    _curr = _buf.findBlockForRead(this, _version, _curr, _pos + available);
                     _blockPosition = 0;
                 }
                 System.arraycopy(block._buffer, block_offset, bytes, offset, available);
@@ -1291,7 +1292,7 @@ public class BlockedBuffer
                 throw new BlockedBufferException("buffer has been changed!");
             }
         }
-        
+
         @Override
         public long skip(long n) throws IOException
         {
@@ -1299,10 +1300,10 @@ public class BlockedBuffer
             if (_buf == null) throw new IOException("stream is closed");
             fail_on_version_change();
             if (_pos >= _buf.size()) return -1;
-            
+
             int len = (int)n;
             if (len == 0) return 0;
-            
+
             int startingPos = _pos;
             int localEnd = _pos + len;
             if (localEnd > _buf.size()) localEnd = _buf.size();
