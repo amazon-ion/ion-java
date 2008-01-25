@@ -88,7 +88,7 @@ public class RoundTripTests
             IonLoader loader = system().newLoader();
             try
             {
-                values = loader.loadText(text1);
+                values = loader.load(text1);
             }
             catch (Exception e)
             {

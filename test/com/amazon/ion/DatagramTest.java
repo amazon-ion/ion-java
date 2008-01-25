@@ -25,7 +25,7 @@ public class DatagramTest
         throws Exception
     {
         super.setUp();
-        myLoader = system().newLoader();
+        myLoader = loader();
     }
 
 
@@ -33,7 +33,7 @@ public class DatagramTest
     public IonDatagram roundTrip(String text)
         throws Exception
     {
-        IonDatagram datagram0 = myLoader.loadText(text);
+        IonDatagram datagram0 = myLoader.load(text);
         byte[] bytes = datagram0.toBytes();
         checkBinaryHeader(bytes);
         IonDatagram datagram1 = myLoader.load(bytes);
@@ -49,7 +49,7 @@ public class DatagramTest
     public void testBinaryData()
         throws Exception
     {
-        IonDatagram datagram0 = myLoader.loadText("swamp");
+        IonDatagram datagram0 = myLoader.load("swamp");
         assertEquals(1, datagram0.size());
         checkSymbol("swamp", datagram0.get(0));
         assertSame(datagram0, datagram0.get(0).getContainer());
@@ -81,18 +81,18 @@ public class DatagramTest
     public void testBinaryDataWithNegInt()
         throws Exception
     {
-        IonDatagram datagram0 = myLoader.loadText("a::{}");
+        IonDatagram datagram0 = myLoader.load("a::{}");
         assertEquals(1, datagram0.size());
         IonStruct struct = (IonStruct)(datagram0.get(0));
         IonInt i =
-            (IonInt)system().clone(myLoader.loadText("-12345 a").get(0));
+            (IonInt)system().clone(myLoader.load("-12345 a").get(0));
         struct.put("a", i);
         datagram0.toBytes();
         IonValue a = struct.get("a");
         struct.remove(a);
         int ival = -65;
         String sval = ""+ival;
-        i = (IonInt)system().clone(myLoader.loadText(sval).get(0));
+        i = (IonInt)system().clone(myLoader.load(sval).get(0));
         struct.put("a", i);
         checkInt(ival, struct.get("a"));
 
@@ -153,7 +153,7 @@ public class DatagramTest
     public void testGetBytes()
         throws Exception
     {
-        IonDatagram dg = myLoader.loadText("hello '''hi''' 23 [a,b]");
+        IonDatagram dg = myLoader.load("hello '''hi''' 23 [a,b]");
         byte[] bytes1 = dg.toBytes();
         final int size = dg.byteSize();
 
@@ -339,8 +339,8 @@ public class DatagramTest
     // FIXME implement embedding
     public void XXXtestEmbedding()
     {
-        IonDatagram sourceDatagram = myLoader.loadText("bean");
-        IonDatagram destDatagram = myLoader.loadText("[java]");
+        IonDatagram sourceDatagram = myLoader.load("bean");
+        IonDatagram destDatagram = myLoader.load("[java]");
 
         IonSymbol sourceBean = (IonSymbol) sourceDatagram.get(0);
         assertEquals("bean", sourceBean.stringValue());

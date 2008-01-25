@@ -73,7 +73,7 @@ public class SymbolTableTest
             "  }" +
             "}\n" +
             "null";
-        loader().loadText(importingText);
+        loader().load(importingText);
 
         StaticSymbolTable importedTable =
             system.getCatalog().getTable("imported", 2);
@@ -144,7 +144,7 @@ public class SymbolTableTest
             "}\n" +
             "bar foo";
 
-        IonReader scanner = system().newTextReader(text);
+        IonReader scanner = system().newReader(text);
 
         IonValue value = scanner.next();
         checkSymbol("bar", 101, value);
@@ -181,11 +181,11 @@ public class SymbolTableTest
             "$ion_1_0\n" +
             "1 bar foo";
 
-        IonReader scanner = system().newTextReader(text);
+        IonReader scanner = system().newReader(text);
         testLocalTableResetting(scanner);
 
-        IonLoader loader = system().newLoader();
-        IonDatagram datagram = loader.loadText(text);
+        IonLoader loader = loader();
+        IonDatagram datagram = loader.load(text);
 
         testLocalTableResetting(datagram.iterator());
 
@@ -255,10 +255,10 @@ public class SymbolTableTest
             "}\n" +
             "null";
 
-        IonReader scanner = system().newTextReader(text);
+        IonReader scanner = system().newReader(text);
         testStaticTable(scanner);
 
-        IonDatagram datagram = loader().loadText(text);
+        IonDatagram datagram = loader().load(text);
         testStaticTable(datagram.iterator());
 
         datagram = loader().load(datagram.toBytes());
@@ -300,7 +300,7 @@ public class SymbolTableTest
             "}\n" +
             "null";
 
-        IonReader scanner = system().newTextReader(importingText);
+        IonReader scanner = system().newReader(importingText);
         try {
             scanner.next();
             fail("Expected IonException");
@@ -334,7 +334,7 @@ public class SymbolTableTest
             "shadow\n" +
             "$" + shadowId;
 
-        IonReader scanner = system().newTextReader(importingText);
+        IonReader scanner = system().newReader(importingText);
 
         IonValue value = scanner.next();
         LocalSymbolTable symtab = value.getSymbolTable();
@@ -367,7 +367,7 @@ public class SymbolTableTest
             "  imports:[{name:'''imported''',version:1}],\n" +
             "}\n" +
             "null";
-        IonDatagram dg = system().newLoader().loadText(text);
+        IonDatagram dg = loader().load(text);
 
         LocalSymbolTable symbolTable = dg.get(0).getSymbolTable();
         SymbolTable used = symbolTable.getImportedTable("imported");
@@ -375,7 +375,7 @@ public class SymbolTableTest
 
         // Check that the encoded table has max_id on import
         byte[] binary = dg.toBytes();
-        dg = system().newLoader().load(binary);
+        dg = loader().load(binary);
         IonStruct symtabStruct = (IonStruct) dg.systemGet(0);
         IonList imports = (IonList) symtabStruct.get("imports");
         IonStruct importStruct = (IonStruct) imports.get(0);
@@ -408,7 +408,7 @@ public class SymbolTableTest
         SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
         assertSame(importedTable, catalog.removeTable("imported", 1));
 
-        IonDatagram dg = system().newLoader().load(binary);
+        IonDatagram dg = loader().load(binary);
         checkSymbol("local1", local1id, dg.get(0));
         checkSymbol("local2", local2id, dg.get(1));
         checkSymbol("$" + import1id, import1id, dg.get(2));

@@ -95,7 +95,7 @@ public class StructTest
         // Cannot put a datagram
         try
         {
-            IonDatagram dg = loader().loadText("hi");
+            IonDatagram dg = loader().load("hi");
             value.put("g", dg);
             fail("Expected IllegalArgumentException");
         }
@@ -105,7 +105,7 @@ public class StructTest
         // Cannot add a datagram
         try
         {
-            IonDatagram dg = loader().loadText("hi");
+            IonDatagram dg = loader().load("hi");
             value.add("g", dg);
             fail("Expected IllegalArgumentException");
         }

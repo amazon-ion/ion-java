@@ -48,6 +48,7 @@ public class Printer
 //      public boolean skipSystemValues = true;
 
 
+        @Override
         public Options clone()
         {
             try
@@ -205,6 +206,7 @@ public class Printer
      *  @deprecated use {@link #setJsonMode()}.
      */
 
+    @Deprecated
     public void printJson(IonValue value, Appendable out)
         throws IOException
     {
@@ -410,12 +412,14 @@ public class Printer
         //---------------------------------------------------------------------
         // AbstractValueVisitor overrides
 
+        @Override
         protected void defaultVisit(IonValue value)
         {
             String message = "cannot print " + value.getClass().getName();
             throw new UnsupportedOperationException(message);
         }
 
+        @Override
         public void visit(IonBlob value) throws IOException
         {
             writeAnnotations(value);
@@ -432,6 +436,7 @@ public class Printer
             }
         }
 
+        @Override
         public void visit(IonBool value)
             throws IOException
         {
@@ -447,6 +452,7 @@ public class Printer
             }
         }
 
+        @Override
         public void visit(IonClob value) throws IOException
         {
             writeAnnotations(value);
@@ -477,6 +483,7 @@ public class Printer
             }
         }
 
+        @Override
         public void visit(IonDatagram value) throws IOException, Exception
         {
             boolean hitOne = false;
@@ -492,6 +499,7 @@ public class Printer
             }
         }
 
+        @Override
         public void visit(IonDecimal value) throws IOException
         {
             writeAnnotations(value);
@@ -511,6 +519,7 @@ public class Printer
             }
         }
 
+        @Override
         public void visit(IonFloat value) throws IOException
         {
             writeAnnotations(value);
@@ -551,6 +560,7 @@ public class Printer
             }
         }
 
+        @Override
         public void visit(IonInt value) throws IOException
         {
             writeAnnotations(value);
@@ -566,6 +576,7 @@ public class Printer
             }
         }
 
+        @Override
         public void visit(IonList value) throws IOException, Exception
         {
             writeAnnotations(value);
@@ -580,6 +591,7 @@ public class Printer
             }
         }
 
+        @Override
         public void visit(IonNull value) throws IOException
         {
             writeAnnotations(value);
@@ -587,6 +599,7 @@ public class Printer
         }
 
 
+        @Override
         public void visit(IonSexp value) throws IOException, Exception
         {
             writeAnnotations(value);
@@ -606,6 +619,7 @@ public class Printer
         }
 
 
+        @Override
         public void visit(IonString value) throws IOException
         {
             writeAnnotations(value);
@@ -621,6 +635,7 @@ public class Printer
         }
 
 
+        @Override
         public void visit(IonStruct value) throws IOException, Exception
         {
             writeAnnotations(value);
@@ -651,6 +666,7 @@ public class Printer
         }
 
 
+        @Override
         public void visit(IonSymbol value) throws IOException
         {
             writeAnnotations(value);
@@ -666,6 +682,7 @@ public class Printer
         }
 
 
+        @Override
         public void visit(IonTimestamp value) throws IOException
         {
             writeAnnotations(value);
@@ -754,7 +771,9 @@ public class Printer
 
     /**
      * <b>This class is unsupported and will be removed!</b>
+     * @deprecated
      */
+    @Deprecated
     public final static class JsonPrinterVisitor
         extends PrinterVisitor
     {
@@ -763,10 +782,12 @@ public class Printer
             super(options, out);
         }
 
+        @Override
         public void writeAnnotations(IonValue value)
             throws IOException
         {}
 
+        @Override
         public void writeSymbol(String text)
             throws IOException
         {
@@ -785,6 +806,7 @@ public class Printer
             myOut.append(Integer.toString(-value.scale()));
         }
 
+        @Override
         public void visit(IonTimestamp value) throws IOException
         {
             if (value.isNullValue()) {
@@ -794,6 +816,7 @@ public class Printer
             }
         }
 
+        @Override
         public void visit(IonList value) throws IOException, Exception
         {
             if (value.isNullValue()) {
@@ -803,6 +826,7 @@ public class Printer
             }
         }
 
+        @Override
         public void visit(IonStruct value) throws IOException, Exception
         {
             if (value.isNullValue()) {
@@ -812,6 +836,7 @@ public class Printer
             }
         }
 
+        @Override
         public void visit(IonString value) throws IOException
         {
             if (value.isNullValue()) {
@@ -821,6 +846,7 @@ public class Printer
             }
         }
 
+        @Override
         public void visit(IonDecimal value) throws IOException
         {
             if (value.isNullValue()) {
@@ -830,6 +856,7 @@ public class Printer
             }
         }
 
+        @Override
         public void visit(IonFloat value) throws IOException
         {
             if (value.isNullValue()) {
@@ -839,6 +866,7 @@ public class Printer
             }
         }
 
+        @Override
         public void visit(IonSexp value) throws IOException, Exception
         {
             if (value.isNullValue())

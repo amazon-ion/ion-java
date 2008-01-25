@@ -16,7 +16,6 @@ import com.amazon.ion.IonDecimal;
 import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
-import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonNull;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonString;
@@ -155,10 +154,8 @@ public class PrinterTest
     public void testPrintingDatagram()
         throws Exception
     {
-        IonLoader loader = system().getLoader();
-
         String text = "a b c";
-        IonDatagram dg = loader.loadText(text);
+        IonDatagram dg = loader().load(text);
         checkRendering(text, dg);
 
 //        text = "$ion_1_0 a + [a,'+']";

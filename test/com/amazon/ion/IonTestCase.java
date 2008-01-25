@@ -249,7 +249,7 @@ public abstract class IonTestCase
         throws Exception
     {
         IonLoader loader = system().newLoader();
-        return loader.loadText(text);
+        return loader.load(text);
     }
 
 
@@ -292,7 +292,7 @@ public abstract class IonTestCase
     {
         IonValue value = null;
 
-        Iterator<IonValue> iterator = system().newTextReader(text);
+        Iterator<IonValue> iterator = system().newReader(text);
         if (iterator.hasNext())
         {
             value = iterator.next();
@@ -341,7 +341,7 @@ public abstract class IonTestCase
     // TODO add to IonSystem()?
     public byte[] encode(String ionText)
     {
-        return system().getLoader().loadText(ionText).toBytes();
+        return loader().load(ionText).toBytes();
     }
 
     public void assertEscape(char expected, char escapedChar)

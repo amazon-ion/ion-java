@@ -99,7 +99,7 @@ public abstract class SequenceTestCase
         // Cannot append a datagram
         try
         {
-            IonDatagram dg = loader().loadText("hi");
+            IonDatagram dg = loader().load("hi");
             value.add(dg);
             fail("Expected IllegalArgumentException");
         }
@@ -108,7 +108,7 @@ public abstract class SequenceTestCase
         // Cannot insert a datagram
         try
         {
-            IonDatagram dg = loader().loadText("hi");
+            IonDatagram dg = loader().load("hi");
             value.add(1, dg);
             fail("Expected IllegalArgumentException");
         }
