@@ -107,7 +107,8 @@ public final class SimpleByteBuffer
 
         public int position()
         {
-            return _position - _buffer._start;
+            int pos = _position - _buffer._start;
+            return pos;
         }
 
         public void position(int newPosition)
@@ -151,6 +152,7 @@ public final class SimpleByteBuffer
             int readlen = len;
             if (readlen + _position > _buffer._eob) readlen = _buffer._eob - _position;
             System.arraycopy(_buffer._bytes, _position, dst, start, readlen);
+            _position += readlen;
             return readlen;
         }
 

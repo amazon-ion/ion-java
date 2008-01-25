@@ -1246,7 +1246,8 @@ public class BlockedBuffer
                     _blockPosition += available;
                 }
                 else {
-                    _curr = _buf.findBlockForRead(this, _version, _curr, _pos);
+                    // TODO can't we just move to the next block?
+                    _curr = _buf.findBlockForRead(this, _version, _curr, _pos + available);
                     _blockPosition = 0;
                 }
                 System.arraycopy(block._buffer, block_offset, bytes, offset, available);

@@ -384,7 +384,7 @@ static final boolean _verbose_debug = false;
         }
         timeinfo di = new timeinfo();
         di.d = value;
-        di.localOffset = IonTimestampImpl.UTC_OFFSET;
+        di.localOffset = null; // IonTimestampImpl.UTC_OFFSET;
         
         startValue();
         int patch_len = 1;
@@ -477,19 +477,8 @@ static final boolean _verbose_debug = false;
             writeNull(IonType.CLOB);
             return;
         }
-        
-        startValue();
-        int patch_len = 1;
         int len = value.length;
-        int ln = (len < IonConstants.lnIsVarLen) ? len : IonConstants.lnIsVarLen; 
-        _writer.write((IonConstants.tidClob << 4) | ln);
-        if (ln == IonConstants.lnIsVarLen) {
-            patch_len += _writer.writeVarUInt7Value(len, true);
-        }
-        _writer.write(value);
-        _writer.write(value, 0, len);
-        patch_len += len;
-        patch(patch_len);
+        writeClob(value, 0, len);
     }
 
     public void writeClob(byte[] value, int start, int len) throws IOException
@@ -512,19 +501,8 @@ static final boolean _verbose_debug = false;
             writeNull(IonType.BLOB);
             return;
         }
-        
-        startValue();
-        int patch_len = 1;
         int len = value.length;
-        int ln = (len < IonConstants.lnIsVarLen) ? len : IonConstants.lnIsVarLen; 
-        _writer.write((IonConstants.tidBlob << 4) | ln);
-        if (ln == IonConstants.lnIsVarLen) {
-            patch_len += _writer.writeVarUInt7Value(len, true);
-        }
-        _writer.write(value);
-        _writer.write(value, 0, len);
-        patch_len += len;
-        patch(patch_len);
+        writeBlob(value, 0, len);
     }
 
     public void writeBlob(byte[] value, int start, int len) throws IOException

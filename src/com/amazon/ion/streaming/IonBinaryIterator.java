@@ -158,8 +158,9 @@ static String getTidAsString(int tid) {
         }
         
         int td = -1;
+        _value_field_id = -1;
         try {
-            _value_field_id = (_in_struct) ? _reader.readVarUInt() : -1;
+            if (_in_struct) _value_field_id = _reader.readVarUInt();
             
             td = _reader.read();
             if (td == ByteReader.EOF) {
@@ -811,7 +812,7 @@ static String getTidAsString(int tid) {
         if (tid != IonConstants.tidBoolean) {
             throw new IllegalStateException();
         }
-        switch (_value_len) {
+        switch (_value_tid & 0xf) {
         case IonConstants.lnIsNullAtom:
             throw new NullPointerException();
         case IonConstants.lnBooleanFalse:
@@ -901,6 +902,7 @@ static String getTidAsString(int tid) {
         catch (IOException e) {
             throw new IonException(e);
         }
+        _state = S_BEFORE_TID;
         return value;
     }
 
