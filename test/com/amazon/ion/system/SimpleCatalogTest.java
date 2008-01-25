@@ -73,12 +73,12 @@ public class SimpleCatalogTest
         assertSame(t2, cat.getTable("T", 2));
         assertSame(t2, cat.getTable("T", 5));
     }
-    
-    
+
+
     public void testMaterializeOneValue()
     {
         String ionText =
-            
+
 
             "{" +
             "  name:'''T''', version:2," +
@@ -93,14 +93,14 @@ public class SimpleCatalogTest
         IonValue v1           = sys.newStruct();
         IonDatagram dg        = sys.newDatagram(v1);
         byte[] b              = dg.toBytes();
-        
+
         IonValue v2           = sys.singleValue(b);
-        
-        assertEquals(v1, v2);
-        
+
+        assertIonEquals(v1, v2);
+
         //  assertSame(t2, cat.getTable("T", 5));
     }
-    
+
     @SuppressWarnings("unchecked")
     public void testBenchmark() {
         Map m = new HashMap();
@@ -127,12 +127,12 @@ public class SimpleCatalogTest
         }
         m.put("hmap", hmap);
         m.put("tmap", tmap);
-        
+
         StandardIonSystem sys = new StandardIonSystem();
         IonStruct i_tmap, i_hmap, i_map;
         Set<Entry<String, String>> set;
         String    k, v;
-        
+
         i_tmap = sys.newEmptyStruct();
         set = tmap.entrySet();
         for (Entry<String, String> e : set) {
@@ -146,7 +146,7 @@ public class SimpleCatalogTest
             IonString is = sys.newString(e.getValue());
             i_hmap.add(e.getKey(), is);
         }
-        
+
         i_map = sys.newEmptyStruct();
         set = tmap.entrySet();
         for (Entry<String, String> e : set) {
@@ -164,11 +164,11 @@ public class SimpleCatalogTest
             else {
                 throw new RuntimeException("ACK! there's something in this map I don't understand!");
             }
-                
+
             i_map.add(e.getKey(), ival);
         }
         IonDatagram dg = sys.newDatagram(i_map);
-        
+
         byte[] bytes = dg.toBytes();
         IonValue v2 = sys.singleValue(bytes);
 
