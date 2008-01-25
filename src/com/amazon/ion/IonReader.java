@@ -10,6 +10,9 @@ import java.util.Iterator;
  * Reads individual {@link IonValue}s from a stream.  Values returned by the
  * iterator have no container.
  * <p>
+ * Users should always call {@link #close} when done using a reader, so it can
+ * clean up and close its input source.
+ * <p>
  * Implementations of this interface may not be safe for use by multiple
  * threads.
  */

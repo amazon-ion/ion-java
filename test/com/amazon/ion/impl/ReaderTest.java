@@ -10,7 +10,6 @@ import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.impl.SystemReader;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -40,7 +39,7 @@ public class ReaderTest
 
     public void testSimpleScan()
     {
-        IonReader scanner = system().newTextReader("abc");
+        IonReader scanner = system().newReader("abc");
         SymbolTable symtab = scanner.getLocalSymbolTable();
 
         IonSymbol value = (IonSymbol) scanner.next();
@@ -52,7 +51,7 @@ public class ReaderTest
 
     public void testCustomSid()
     {
-        IonReader scanner = system().newTextReader("abc");
+        IonReader scanner = system().newReader("abc");
         LocalSymbolTable symtab = scanner.getLocalSymbolTable();
         assertEquals(-1, symtab.findSymbol("abc"));
 
@@ -69,7 +68,7 @@ public class ReaderTest
 
     public void testIncrementalParsing()
     {
-        IonReader scanner = system().newTextReader("abc def ghi");
+        IonReader scanner = system().newReader("abc def ghi");
         LocalSymbolTable symtab = scanner.getLocalSymbolTable();
 
 
@@ -92,7 +91,7 @@ public class ReaderTest
 
     public void testSettingSymbolTable()
     {
-        IonReader scanner = system().newTextReader("abc def ghi");
+        IonReader scanner = system().newReader("abc def ghi");
         LocalSymbolTable symtab0 = scanner.getLocalSymbolTable();
 
 
@@ -130,12 +129,12 @@ public class ReaderTest
 
     public void testScannerTermination()
     {
-        IonReader scanner = system().newTextReader("");
+        IonReader scanner = system().newReader("");
         checkEmptyIterator(scanner);
         scanner.close();
 
         // Try calling next before hasNext
-        scanner= system().newTextReader("1");
+        scanner= system().newReader("1");
         try {
             scanner.next();
             checkEmptyIterator(scanner);

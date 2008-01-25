@@ -7,6 +7,7 @@ package com.amazon.ion.system;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
+import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.StaticSymbolTable;
@@ -40,7 +41,7 @@ public class SimpleCatalogTest
             "    $2:'''no'''," +
             "  }" +
             "}";
-        loader().loadText(t1Text);
+        loader().load(t1Text);
 
         StaticSymbolTable t1 = cat.getTable("T", 1);
         assertEquals("no", t1.findKnownSymbol(2));
@@ -58,7 +59,7 @@ public class SimpleCatalogTest
             "    $3:'''maybe'''," +
             "  }" +
             "}";
-        loader().loadText(t2Text);
+        loader().load(t2Text);
 
         StaticSymbolTable t2 = cat.getTable("T", 2);
         assertEquals(3, t2.findSymbol("maybe"));
@@ -78,8 +79,6 @@ public class SimpleCatalogTest
     public void testMaterializeOneValue()
     {
         String ionText =
-
-
             "{" +
             "  name:'''T''', version:2," +
             "  symbols:{" +
@@ -89,8 +88,8 @@ public class SimpleCatalogTest
             "  }" +
             "}";
 
-        StandardIonSystem sys = new StandardIonSystem();
-        IonValue v1           = sys.newStruct();
+        IonSystem sys = system();
+        IonValue v1           = sys.newNullStruct();
         IonDatagram dg        = sys.newDatagram(v1);
         byte[] b              = dg.toBytes();
 
@@ -128,10 +127,9 @@ public class SimpleCatalogTest
         m.put("hmap", hmap);
         m.put("tmap", tmap);
 
-        StandardIonSystem sys = new StandardIonSystem();
+        IonSystem sys = system();
         IonStruct i_tmap, i_hmap, i_map;
         Set<Entry<String, String>> set;
-        String    k, v;
 
         i_tmap = sys.newEmptyStruct();
         set = tmap.entrySet();
