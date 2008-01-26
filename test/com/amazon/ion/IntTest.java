@@ -4,6 +4,8 @@
 
 package com.amazon.ion;
 
+import java.math.BigInteger;
+
 
 
 
@@ -15,6 +17,7 @@ public class IntTest
 
     public static void checkNullInt(IonInt value)
     {
+        assertSame(IonType.INT, value.getType());
         assertTrue("isNullValue() is false",   value.isNullValue());
 
         try
@@ -37,6 +40,7 @@ public class IntTest
 
     public void modifyInt(IonInt value)
     {
+        assertSame(IonType.INT, value.getType());
         value.setValue(123);
         assertFalse(value.isNullValue());
         assertEquals(123, value.intValue());
@@ -57,7 +61,7 @@ public class IntTest
 
     public void testFactoryInt()
     {
-        IonInt value = system().newInt();
+        IonInt value = system().newNullInt();
         checkNullInt(value);
         modifyInt(value);
     }
@@ -74,12 +78,14 @@ public class IntTest
     public void testNegInt()
     {
         IonInt value = (IonInt) oneValue("-1");
+        assertSame(IonType.INT, value.getType());
         assertFalse(value.isNullValue());
         assertNull(value.getTypeAnnotations());
         assertEquals(-1, value.intValue());
         assertEquals(-1L, value.longValue());
 
         value = (IonInt)oneValue("-1999");
+        assertSame(IonType.INT, value.getType());
         assertFalse(value.isNullValue());
         assertNull(value.getTypeAnnotations());
         assertEquals(-1999, value.intValue());
@@ -112,6 +118,42 @@ public class IntTest
         assertEquals(Integer.MIN_VALUE, value.intValue());
     }
 
+    public void testNegativeIntRoundTrip()
+    {
+        IonInt i = system().newInt(-20);
+        IonInt result = (IonInt) reload(i);
+        assertEquals(-20, result.intValue());
+    }
+
+
+    public void testNegativeLongRoundTrip()
+    {
+        // FIXME: encoder can't handle Long.MIN_VALUE
+        final long v = Long.MIN_VALUE + 1;
+
+        IonInt i = system().newInt(v);
+        IonInt result = (IonInt) reload(i);
+        assertEquals(v, result.longValue());
+    }
+
+
+    public void testRoundTrip(BigInteger v)
+    {
+        IonInt i = system().newInt(v);
+        IonInt result = (IonInt) reload(i);
+        assertEquals(v, result.toBigInteger());
+    }
+
+
+    public void testNegNumberRoundTrip()
+    {
+        testRoundTrip(BigInteger.valueOf(Long.MAX_VALUE));
+        testRoundTrip(BigInteger.valueOf(0));
+        testRoundTrip(BigInteger.valueOf(-98102));
+        testRoundTrip(BigInteger.valueOf(Long.MIN_VALUE+1));
+        // FIXME: encoder can't handle Long.MIN_VALUE
+//        testRoundTrip(BigInteger.valueOf(Long.MIN_VALUE));
+    }
 
     public void testLongs()
     {

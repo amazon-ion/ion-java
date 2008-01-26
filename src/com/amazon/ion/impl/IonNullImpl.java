@@ -4,11 +4,11 @@
 
 package com.amazon.ion.impl;
 
-import java.io.IOException;
-
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonNull;
+import com.amazon.ion.IonType;
 import com.amazon.ion.ValueVisitor;
+import java.io.IOException;
 
 /**
  * Implements the Ion <code>null</code> type.
@@ -17,19 +17,17 @@ public final class IonNullImpl
     extends IonValueImpl
     implements IonNull
 {
-    
-    static final int _null_typeDesc = 
-        IonConstants.makeTypeDescriptorByte(
-                    IonConstants.tidNull
-                   ,IonConstants.lnIsNullAtom
-       );
+
+    static final int NULL_NULL_TYPEDESC =
+        IonConstants.makeTypeDescriptor(IonConstants.tidNull,
+                                        IonConstants.lnIsNullAtom);
 
     /**
      * Constructs a <code>null.null</code> value.
      */
     public IonNullImpl()
     {
-        super(_null_typeDesc);
+        super(NULL_NULL_TYPEDESC);
     }
 
     /**
@@ -38,7 +36,17 @@ public final class IonNullImpl
     public IonNullImpl(int typeDesc)
     {
         super(typeDesc);
+        if (typeDesc != NULL_NULL_TYPEDESC)
+        {
+            throw new IonException("Invalid type descriptor byte " + typeDesc);
+        }
         assert pos_getType() == IonConstants.tidNull;
+    }
+
+
+    public IonType getType()
+    {
+        return IonType.NULL;
     }
 
 
@@ -47,7 +55,7 @@ public final class IonNullImpl
     {
         return true;
     }
-    
+
 
     @Override
     protected int getNativeValueLength()
@@ -60,31 +68,31 @@ public final class IonNullImpl
     {
         return IonConstants.lnIsNullAtom;
     }
-    
-    
+
+
     @Override
     protected void doMaterializeValue(IonBinary.Reader reader)
     {
         assert this._isPositionLoaded == true && this._buffer != null;
-        
+
         // a native value trumps a buffered value
         if (_hasNativeValue) return;
-        
+
         // the reader will have been positioned for us
         assert reader.position() == this.pos_getOffsetAtValueTD();
         assert this.pos_getType() == IonConstants.tidNull;
-        
+
         _hasNativeValue = true;
     }
 
-    
+
     @Override
     protected void doWriteNakedValue(IonBinary.Writer writer, int valueLen) throws IOException
     {
         throw new IonException("call not needed!");
     }
 
-    
+
     public void accept(ValueVisitor visitor)
         throws Exception
     {

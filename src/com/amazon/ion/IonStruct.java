@@ -53,18 +53,21 @@ public interface IonStruct
      * If this is <code>null.struct</code>, then it becomes a single-field
      * struct.
      * <p>
-     * Note that multiple field with the given name may already exist in this
+     * Note that multiple fields with the given name may already exist in this
      * struct; they will all be removed and replaced by the new one.
      *
      * @param fieldName the name of the new field.
-     * @param value the value of the new field.
-     * @throws ContainedValueException if <code>value</code> is already part
-     * of a container.
-     * @throws IllegalArgumentException if <code>fieldName</code> is empty.
-     * @throws NullPointerException if the <code>fieldName</code> or the value
-     * is <code>null</code>.
+     * @param child the value of the new field.
+     *
+     * @throws NullPointerException
+     *   if {@code fieldName} or {@code child} is <code>null</code>.
+     * @throws ContainedValueException
+     *   if {@code child} is already part of a container.
+     * @throws IllegalArgumentException
+     *   if {@code fieldName} is empty or
+     *   if {@code element} is an {@link IonDatagram}.
      */
-    public void put(String fieldName, IonValue value)
+    public void put(String fieldName, IonValue child)
         throws ContainedValueException;
 
 
@@ -77,19 +80,22 @@ public interface IonStruct
      * in which case this method will result in repeated fields.
      *
      * @param fieldName the name of the new field.
-     * @param value the value of the new field.
-     * @throws ContainedValueException if <code>value</code> is already part
-     * of a container.
-     * @throws IllegalArgumentException if <code>fieldName</code> is empty.
-     * @throws NullPointerException if the <code>fieldName</code> or the value
-     * is <code>null</code>.
+     * @param child the value of the new field.
+     *
+     * @throws NullPointerException
+     *   if {@code fieldName} or {@code child} is <code>null</code>.
+     * @throws ContainedValueException
+     *   if {@code child} is already part of a container.
+     * @throws IllegalArgumentException
+     *   if {@code fieldName} is empty or
+     *   if {@code element} is an {@link IonDatagram}.
      */
-    public void add(String fieldName, IonValue value)
+    public void add(String fieldName, IonValue child)
         throws ContainedValueException;
 
 
     /**
-     * Creates a deep copy of an element and puts it into this struct, 
+     * Creates a deep copy of an element and puts it into this struct,
      * replacing existing mappings with the same name.
      * If this is <code>null.struct</code>, then it becomes a single-field
      * struct.

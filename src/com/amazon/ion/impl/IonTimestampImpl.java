@@ -4,14 +4,14 @@
 
 package com.amazon.ion.impl;
 
-import java.io.IOException;
-import java.util.Date;
-
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonTimestamp;
+import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonTokenReader.Type.timeinfo;
+import java.io.IOException;
+import java.util.Date;
 
 /**
  * Implements the Ion <code>timestamp</code> type.
@@ -21,11 +21,10 @@ public final class IonTimestampImpl
     implements IonTimestamp
 {
     public final static Integer UTC_OFFSET = new Integer(0);
-    static final int _timestamp_typeDesc =
-        IonConstants.makeTypeDescriptorByte(
-                    IonConstants.tidTimestamp
-                   ,IonConstants.lnIsNullAtom
-       );
+
+    static final int NULL_TIMESTAMP_TYPEDESC =
+        IonConstants.makeTypeDescriptor(IonConstants.tidTimestamp,
+                                        IonConstants.lnIsNullAtom);
 
     private timeinfo _timestamp_value;
 
@@ -34,7 +33,7 @@ public final class IonTimestampImpl
      */
     public IonTimestampImpl()
     {
-        super(_timestamp_typeDesc);
+        super(NULL_TIMESTAMP_TYPEDESC);
     }
 
 
@@ -45,6 +44,12 @@ public final class IonTimestampImpl
     {
         super(typeDesc);
         assert pos_getType() == IonConstants.tidTimestamp;
+    }
+
+
+    public IonType getType()
+    {
+        return IonType.TIMESTAMP;
     }
 
 
@@ -104,14 +109,14 @@ public final class IonTimestampImpl
 
         return _timestamp_value.d.getTime();
     }
-    
-    
+
+
     public void setMillis(long millis)
     {
         setTime(new Date(millis));
     }
-    
-    
+
+
     public void setMillisUtc(long millis)
     {
         setTime(new Date(millis));

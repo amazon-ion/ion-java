@@ -1,8 +1,0 @@
-[1, 2, 3, 4, 5]
-[1,2,3,4,5]
-[1, [2, 3], [[[5]]]]
-[1, (2 3), [4, (5)]]
-[true, 3.4, 3d6, 2.3e8, "string", '''multi-''' '''string''', Symbol, 'qSymbol',
-    {{"clob data"}}, {{YmxvYiBkYXRh}}, 1970-06-06, null.struct]
-[{one:1}, 2, 3]
-[0xab]

@@ -4,25 +4,18 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.ContainedValueException;
+import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
 import com.amazon.ion.IonContainer;
-import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonList;
-import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.NullValueException;
-import com.amazon.ion.SymbolTable;
-import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.Reader;
 import com.amazon.ion.impl.IonBinary.Writer;
 import com.amazon.ion.util.Printer;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
 
 /**
  *
@@ -32,7 +25,7 @@ public abstract class IonValueImpl
 {
 
     /**
-     * We could mulitplex this with member id, but it adds way more complexity
+     * We could multiplex this with member id, but it adds way more complexity
      * than it saves space.
      */
     int         _elementid;
@@ -59,7 +52,15 @@ public abstract class IonValueImpl
     //                                               next_start ^
     //
     protected int _fieldSid;        // field symbol id in buffer
-    private int _type_desc;         // the actual value td byte
+
+    /**
+     * The actual TD byte of the value.
+     * This is always a positive value between 0x00 and 0xFF.
+     * <p>
+     * TODO document when the low-nibble is known to be correct.
+     */
+    private int _type_desc;
+
     private int _entry_start;       // offset of initial td, possibly an annotation
     private int _value_td_start;    // offset of td of the actual value
     private int _value_content_start;// offset of td of the actual value
@@ -129,7 +130,7 @@ public abstract class IonValueImpl
      * materialized before the change is made as the "old" buffer or
      * symbol table may be needed for the value to be understood.
      */
-    protected IonValueImpl.container _container;
+    protected IonContainerImpl _container;
 
     /**
      * The buffer with this element's binary-encoded data.  May be non-null
@@ -162,7 +163,7 @@ public abstract class IonValueImpl
     protected void init(int fieldSID
                        ,BufferManager buffer
                        ,int offset
-                       ,IonValueImpl.container container
+                       ,IonContainerImpl container
                        ,LocalSymbolTable symboltable
                        )
     {
@@ -208,7 +209,7 @@ public abstract class IonValueImpl
                                     ,int position
                                     ,BufferManager buffer
                                     ,LocalSymbolTable symboltable
-                                    ,IonValueImpl.container container
+                                    ,IonContainerImpl container
     ) {
         IonValueImpl value;
         assert symboltable != null;
@@ -234,13 +235,11 @@ public abstract class IonValueImpl
     /**
      * @return not null.
      */
-    public static IonValueImpl makeValueFromReader(
-                                       int fieldSID
-                                      ,IonBinary.Reader reader
-                                      ,BufferManager buffer
-                                      ,LocalSymbolTable symboltable
-                                      ,IonValueImpl.container container
-    )
+    public static IonValueImpl makeValueFromReader(int fieldSID,
+                                                   IonBinary.Reader reader,
+                                                   BufferManager buffer,
+                                                   LocalSymbolTable symboltable,
+                                                   IonContainerImpl container)
         throws IOException
     {
         IonValueImpl value;
@@ -262,7 +261,7 @@ public abstract class IonValueImpl
     static IonValueImpl makeValue(int typedesc)
     {
         IonValueImpl value = null;
-        int typeId = IonConstants.getTypeDescriptor(typedesc);
+        int typeId = IonConstants.getTypeCode(typedesc);
 
         switch (typeId) {
         case IonConstants.tidNull: // null(0)
@@ -299,14 +298,14 @@ public abstract class IonValueImpl
         case IonConstants.tidList: // list(11)
             value = new IonListImpl(typedesc);
             break;
-        case IonConstants.tidSexp:
+        case IonConstants.tidSexp: // 12
             value = new IonSexpImpl(typedesc);
             break;
-        case IonConstants.tidStruct: // struct(12)
+        case IonConstants.tidStruct: // 13
             value = new IonStructImpl(typedesc);
             break;
 
-        case IonConstants.tidTypedecl: // typedecl(13)
+        case IonConstants.tidTypedecl: // 14
         default:
             throw new IonException("invalid type "+typeId+" ("+typedesc+") encountered");
         }
@@ -344,7 +343,7 @@ public abstract class IonValueImpl
         }
     }
 
-    private final boolean deservesEmbeddingWithLocalSymbolTable() {
+    final boolean deservesEmbeddingWithLocalSymbolTable() {
         // TODO: this is a stub
         return false;
     }
@@ -433,6 +432,7 @@ public abstract class IonValueImpl
     /**
      * @deprecated Use {@link #getTypeAnnotations()} instead
      */
+    @Deprecated
     public String[] getTypeAnnotationStrings()
     {
         return getTypeAnnotations();
@@ -550,9 +550,9 @@ public abstract class IonValueImpl
 
         _fieldSid           = 0;
         _type_desc          = typeDesc;
-        _entry_start        = 8;
-        _value_td_start     = 8;
-        _value_content_start= 8;
+        _entry_start        = BINARY_VERSION_MARKER_SIZE;
+        _value_td_start     = BINARY_VERSION_MARKER_SIZE;
+        _value_content_start= BINARY_VERSION_MARKER_SIZE;
         _next_start         = length;
     }
 
@@ -580,11 +580,9 @@ public abstract class IonValueImpl
         pos_setFieldId(fieldId);
 
         // we expect to be positioned at the initial typedesc byte
-        int start;
-        start = this._value_td_start = valueReader.position();
+        int start = this._value_td_start = valueReader.position();
 
-        // our _entry_start needs to be back filled to preceed
-        // the field id
+        // our _entry_start needs to be back filled to precede the field id
         this._entry_start = start - pos_getFieldIdLen();
 
         // read and remember our type descriptor byte
@@ -601,17 +599,18 @@ public abstract class IonValueImpl
         if (type == IonConstants.tidTypedecl) {
             // read past the annotation list
             int annotationListLength = valueReader.readVarUInt7IntValue();
-            assert annotationListLength > 0;
+            assert annotationListLength > 0;  // TODO throw if bad
             this._value_td_start = valueReader.position() + annotationListLength;
             valueReader.setPosition(this._value_td_start);
             // read the actual values type desc
             this._type_desc = valueReader.readToken();
-            type = this.pos_getType();
-            if ( type == IonConstants.tidSexp
-              || type == IonConstants.tidStruct
-              || type == IonConstants.tidList
-              || this.pos_getLowNibble() == IonConstants.lnIsVarLen
-            ) {
+            // TODO check that td != annotation (illegal nested annotation)
+
+            int ln = pos_getLowNibble();
+            if ((ln == IonConstants.lnIsVarLen)
+                || (this._type_desc == IonStructImpl.ORDERED_STRUCT_TYPEDESC))
+            {
+                // Skip over the extended length to find the content start.
                 valueReader.readVarUInt7IntValue();
             }
             this._value_content_start = valueReader.position();
@@ -619,24 +618,18 @@ public abstract class IonValueImpl
     }
 
     public final byte pos_getTypeDescriptorByte() {
-        return (byte)(0xff & this._type_desc);
+        return (byte) this._type_desc;
     }
     public final void pos_setTypeDescriptorByte(int td) {
-        this._type_desc = (byte)(0xff & td);
+        assert td >= 0 && td <= 0xFF;
+        this._type_desc = td;
     }
     public final int pos_getType() {
-        return IonConstants.getTypeDescriptor(this._type_desc);
+        return IonConstants.getTypeCode(this._type_desc);
     }
-    public final void pos_setType(int hn) {
-        assert hn >= IonConstants.tidNull && hn <= IonConstants.tidUnused;
-        IonConstants.makeTypeDescriptorByte(hn, this.pos_getLowNibble());
-    }
+
     public final int pos_getLowNibble() {
         return IonConstants.getLowNibble(this._type_desc);
-    }
-    public final void pos_setLowNibble(int ln) {
-        assert ln >= 0 && ln <= 0xf;
-        IonConstants.makeTypeDescriptorByte(this.pos_getType(), ln);
     }
 
     public final int pos_getFieldId() {
@@ -730,7 +723,7 @@ public abstract class IonValueImpl
     static int getFieldLength(int td, IonBinary.Reader reader) throws IOException
     {
         int ln = IonConstants.getLowNibble(td);
-        int hn = IonConstants.getTypeDescriptor(td);
+        int hn = IonConstants.getTypeCode(td);
         int len = reader.readLength(hn, ln);
         return len;
     }
@@ -740,6 +733,8 @@ public abstract class IonValueImpl
      * Decodes the content of this element into Java values for access via
      * this object.  If this is a container, the children are not necessarily
      * materialized.
+     * <p/>
+     * Postcondition: <code>this._hasNativeValue == true </code>
      */
     protected synchronized void materialize() throws IOException
     {
@@ -769,7 +764,11 @@ public abstract class IonValueImpl
         // now materialize the value itself (this is done in the
         // specialized sub classes)
         assert reader.position() == this.pos_getOffsetAtValueTD();
+
+        // TODO doMaterializeValue should precondition !_hasNativeValue and
+        // then set _hasNativeValue here, OnceAndOnlyOnce.
         this.doMaterializeValue(reader);
+        assert _hasNativeValue;
         this._isMaterialized = true;
     }
 
@@ -784,7 +783,7 @@ public abstract class IonValueImpl
 
         // skip over the annoation td and total length
         int td = reader.read();
-        if (IonConstants.getTypeDescriptor(td) != IonConstants.tidTypedecl) {
+        if (IonConstants.getTypeCode(td) != IonConstants.tidTypedecl) {
             throw new IonException("invalid user type annotation");
         }
         if (IonConstants.getLowNibble(td) == IonConstants.lnIsVarLen) {
@@ -806,7 +805,27 @@ public abstract class IonValueImpl
         }
     }
 
-    abstract void doMaterializeValue(IonBinary.Reader reader) throws IOException;
+    /**
+     * Postcondition: <code>this._hasNativeValue == true</code>
+     *
+     * @param reader is not <code>null</code>.
+     * @throws IOException
+     */
+    abstract void doMaterializeValue(IonBinary.Reader reader)
+        throws IOException;
+
+
+    public void deepMaterialize()
+    {
+        try
+        {
+            materialize();
+        }
+        catch (IOException e)
+        {
+            throw new IonException(e);
+        }
+    }
 
 
     protected void detachFromBuffer()
@@ -842,6 +861,8 @@ public abstract class IonValueImpl
         this.setDirty();
     }
 
+
+    @Override
     public String toString() {
         Printer p = new Printer();
         StringBuilder builder = new StringBuilder();
@@ -854,6 +875,8 @@ public abstract class IonValueImpl
         return builder.toString();
     }
 
+
+    // TODO rename to getContentLength
     protected int getNakedValueLength() throws IOException
     {
         // container overrides this method.
@@ -866,18 +889,21 @@ public abstract class IonValueImpl
             if (isNullValue()) return 0;
 
             len = getNativeValueLength();
-
         }
         else {
-            IonBinary.Reader reader = this._buffer.reader();
-            reader.sync();
-            reader.setPosition(this.pos_getOffsetAtValueTD() + 1);
-            len = getFieldLength(this.pos_getTypeDescriptorByte(), reader);
+            assert _isPositionLoaded;
+            len = pos_getValueOnlyLength();
         }
         return len;
     }
 
 
+    // TODO rename to computeContentLengthFromNativeValue
+    /**
+     * Computes the content length based on the materialized view.
+     * <p>
+     * PRECONDITION: {@code _hasNativeValue == true}
+     */
     abstract protected int getNativeValueLength();
 
 
@@ -959,10 +985,10 @@ public abstract class IonValueImpl
 
     /**
      * Length of the core header.
-     * @param valuelen length of the core value.
+     * @param contentLength length of the core value.
      * @return at least one.
      */
-    public int getTypeDescriptorAndLengthOverhead(int valuelen) {
+    public int getTypeDescriptorAndLengthOverhead(int contentLength) {
         int len = IonConstants.BB_TOKEN_LEN;
 
         if (isNullValue()) return len;
@@ -978,17 +1004,13 @@ public abstract class IonValueImpl
         case IonConstants.tidTimestamp: // timestamp(6)
         case IonConstants.tidSymbol: // symbol(7)
         case IonConstants.tidString: // string (8)
-        case IonConstants.tidClob: // 9
-        case IonConstants.tidBlob: // 10
-            len += IonBinary.lenLenFieldWithOptionalNibble(valuelen);
+        case IonConstants.tidClob:   // 9
+        case IonConstants.tidBlob:   // 10
+        case IonConstants.tidList:   // 11
+        case IonConstants.tidSexp:   // 12
+            len += IonBinary.lenLenFieldWithOptionalNibble(contentLength);
             break;
-        case IonConstants.tidList: // list(11)
-        case IonConstants.tidSexp:
-        case IonConstants.tidStruct: // struct(12)
-            // and we need to force the length to be at least 1 byte (since we
-            // have to write the 0 length out even if it is 0
-            len += valuelen == 0 ? 1 : IonBinary.lenVarUInt7(valuelen);
-            break;
+        case IonConstants.tidStruct: // Overridden
         default:
             throw new IonException("this value has an illegal type descriptor id");
         }
@@ -1029,7 +1051,7 @@ public abstract class IonValueImpl
         // typedesc (since it wraps the values td and len and value)
         len += this.getAnnotationOverheadLength(len);
 
-        // and the field preceeds them all and doesn't get caught
+        // and the field precedes them all and doesn't get caught
         // up in all that "length" business.
         len += this.getFieldNameOverheadLength();
 
@@ -1042,15 +1064,15 @@ public abstract class IonValueImpl
      * changed.
      * @throws IOException
      */
-    public int updateToken() throws IOException {
+    public final int updateToken() throws IOException {
         if (!this._isDirty) return 0;
 
         int old_next_start = _next_start;
 
-        //      | mid | an | tlen | alen | ann | td | vlen | value |
+        //      | fid | an | tlen | alen | ann | td | vlen | value |
         //      |     |                        |                   |
         //       ^ entry_start                  ^ value_start
-        //             ^ + len(mid)                      next_start ^
+        //             ^ + len(fid)                      next_start ^
 
         int fieldSidLen = 0;
         int newFieldSid = 0;
@@ -1082,9 +1104,7 @@ public abstract class IonValueImpl
         // the next start include the value and it's header as well
         _next_start = _value_td_start + tdwithvlenlen + valuelen;
 
-        int hn = this.pos_getType();
-        int ln = this.computeLowNibble(valuelen);
-        _type_desc = IonConstants.makeTypeDescriptorByte(hn, ln);
+        _type_desc = computeTypeDesc(valuelen);
 
         // overwrite the sid as everything is computed on the new value
         _fieldSid = newFieldSid;
@@ -1093,7 +1113,29 @@ public abstract class IonValueImpl
         return _next_start - old_next_start;
     }
 
-    abstract protected int computeLowNibble(int valuelen);
+
+    /**
+     * Precondition:  _isDirty && _hasNativeValue
+     */
+    protected int computeTypeDesc(int valuelen)
+        throws IOException
+    {
+        int hn = this.pos_getType();
+        int ln = this.computeLowNibble(valuelen);
+        return IonConstants.makeTypeDescriptor(hn, ln);
+    }
+
+
+    /**
+     * Precondition:  _isDirty && _hasNativeValue
+     *
+     * @param valuelen
+     * @return the current type descriptor low nibble for this value.
+     *
+     * @throws IOException if there's a problem reading binary data while
+     * making this computation.
+     */
+    abstract protected int computeLowNibble(int valuelen) throws IOException;
 
 
     protected void shiftTokenAndChildren(int delta)
@@ -1103,18 +1145,40 @@ public abstract class IonValueImpl
         pos_moveAll(delta);
     }
 
-    // CAS UPDATE - added updateSymbolTable
-    public void updateSymbolTable(LocalSymbolTable symtab) {
+    /**
+     * Adds all of our annotations into the symbol table.
+     */
+    public void updateSymbolTable(LocalSymbolTable symtab)
+    {
+        // TODO can any of this be short-circuited?
+
         if (this._annotations != null) {
             for (String s : this._annotations) {
                 symtab.addSymbol(s);
             }
         }
+
+        if (this._fieldName != null) {
+            symtab.addSymbol(this._fieldName);
+        }
     }
 
     /**
      * Brings the binary buffer in sync with the materialized view.
-     *
+     * <p>
+     * The cumulativePositionDelta counts how many bytes have been
+     * inserted/removed from the byte buffer "to the left" of this value.
+     * If this value has data in the buffer, its current position must be
+     * offset by this amount to find where the data is upon entry to this
+     * method.  This method may do further inserts and/or deletes, and it must
+     * return the accumulated delta.  For example, if this method (and/or any
+     * methods it calls) causes N bytes to be inserted into the buffer, it
+     * must return <code>(cumulativePositionDelta + N)</code>.  If M bytes are
+     * removed, it must return <code>(cumulativePositionDelta - M)</code>.
+     * <p>
+     * Note that "inserted into the buffer" is different from "written into the
+     * buffer".  Writes don't affect the delta, but calls like
+     * {@link Writer#insert(int)} and {@link Writer#remove(int)} do.
      * <p>
      * Preconditions: If we've been encoded before, the existing data is at a
      * position after newPosition.  If we need more space we must insert it.
@@ -1122,9 +1186,13 @@ public abstract class IonValueImpl
      * the old data.
      * <p>
      * Postconditions: Our token is fully up to date.  isDirty() == false
+     *
+     * @return the updated cumulativePositionDelta.
      * @throws IOException
      */
-    protected int updateBuffer2(IonBinary.Writer writer, int newPosition, int cumulativePositionDelta) throws IOException
+    protected final int updateBuffer2(IonBinary.Writer writer, int newPosition,
+                                      int cumulativePositionDelta)
+        throws IOException
     {
         assert writer != null;
         assert writer.position() == newPosition;
@@ -1141,7 +1209,7 @@ public abstract class IonValueImpl
             if (0 < gapSize)
             {
                 // Remove the gap to our left
-                writer.setPosition(newPosition);
+                writer.setPosition(newPosition);  // TODO shouldn't be needed
                 writer.remove(gapSize);
                 cumulativePositionDelta -= gapSize;
             }
@@ -1167,7 +1235,9 @@ public abstract class IonValueImpl
         return cumulativePositionDelta;
     }
 
-    protected int updateNewValue(IonBinary.Writer writer, int newPosition, int cumulativePositionDelta) throws IOException
+    protected int updateNewValue(IonBinary.Writer writer, int newPosition,
+                                 int cumulativePositionDelta)
+        throws IOException
     {
         assert writer.position() == newPosition;
 
@@ -1195,8 +1265,11 @@ public abstract class IonValueImpl
         return cumulativePositionDelta;
     }
 
-    protected int updateOldValue(IonBinary.Writer writer, int newPosition, int cumulativePositionDelta) throws IOException
+    protected int updateOldValue(IonBinary.Writer writer, int newPosition,
+                                 int cumulativePositionDelta)
+        throws IOException
     {
+        assert !(this instanceof IonContainer);
         assert writer.position() == newPosition;
 
         int oldEndOfValue = pos_getOffsetofNextValue();
@@ -1206,7 +1279,8 @@ public abstract class IonValueImpl
         assert newPosition <= pos_getOffsetAtFieldId();
 
         // Do we need to insert more space?
-        assert oldEndOfValue - newPosition > 1;  // why 1?? shouldn't this be > 0
+        assert oldEndOfValue - newPosition > 1;
+        // TODO why 1?? shouldn't this be > 0
 
         updateToken();
 
@@ -1220,7 +1294,7 @@ public abstract class IonValueImpl
         int cumulativePositionDelta2 =
             writeElement(writer, cumulativePositionDelta);
 
-        assert  cumulativePositionDelta2 == cumulativePositionDelta;
+        assert cumulativePositionDelta2 == cumulativePositionDelta;
 
         return cumulativePositionDelta;
     }
@@ -1231,7 +1305,7 @@ public abstract class IonValueImpl
      * and enough space is available.
      * @throws IOException
      */
-    int writeElement(IonBinary.Writer writer, int cumulativePositionDelta) throws IOException
+    final int writeElement(IonBinary.Writer writer, int cumulativePositionDelta) throws IOException
     {
         writeFieldName(writer);
 
@@ -1270,7 +1344,7 @@ public abstract class IonValueImpl
      * and enough space is available.
      * @throws IOException
      */
-    void writeAnnotations(IonBinary.Writer writer) throws IOException
+    final void writeAnnotations(IonBinary.Writer writer) throws IOException
     {
         if (this._annotations != null) {
             int valuelen      = this.getNakedValueLength();
@@ -1278,22 +1352,28 @@ public abstract class IonValueImpl
             int annotationlen = getAnnotationLength();
             int wrappedLength = valuelen + tdwithvlenlen + annotationlen;
 
-            writer.writeTypeDescWithLenForScalars(IonConstants.tidTypedecl,
+            writer.writeCommonHeader(IonConstants.tidTypedecl,
                                                 wrappedLength);
             writer.writeAnnotations(_annotations, this.getSymbolTable());
         }
     }
 
-    protected abstract void doWriteNakedValue(IonBinary.Writer writer, int valueLen) throws IOException;
+    protected abstract void doWriteNakedValue(IonBinary.Writer writer,
+                                              int valueLen)
+        throws IOException;
+
     /**
      * Precondition: the token is up to date, the buffer is positioned properly,
      * and enough space is available.
+     *
+     * @return the cumulative position delta at the end of this value.
      * @throws IOException
      */
-    protected int writeValue(IonBinary.Writer writer, int cumulativePositionDelta) throws IOException
+    protected int writeValue(IonBinary.Writer writer,
+                             int cumulativePositionDelta)
+        throws IOException
     {
-
-        // updateBuffer is overridden by container.
+        // overridden by container.
         assert !(this instanceof IonContainer);
 
         // everyone gets a type descriptor byte (which was set
@@ -1319,724 +1399,5 @@ public abstract class IonValueImpl
             }
         }
         return cumulativePositionDelta;
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //
-    //  the container class = for structs, lists of both data and expressions
-    //
-    //
-    abstract public static class container
-        extends IonValueImpl implements IonContainer
-    {
-        /**
-         * Only meaningful if {@link #_hasNativeValue}.
-         */
-        protected ArrayList<IonValue> _contents;
-
-        protected container(int typeDesc) {
-            super(typeDesc);
-        }
-
-
-        @Override
-        public boolean isNullValue()
-        {
-            if (_hasNativeValue || !_isPositionLoaded) {
-                return (_contents == null);
-            }
-
-            int ln = this.pos_getLowNibble();
-            return ((ln & IonConstants.lnIsNullContainer) != 0);
-        }
-
-        public int size()
-            throws NullValueException
-        {
-            validateThisNotNull();
-            makeReady();
-            return _contents.size();
-        }
-
-
-        @Override
-        protected int getNakedValueLength() throws IOException
-        {
-            int length = 0;
-
-            if (this.isDirty()) {
-                assert _hasNativeValue == true || _isPositionLoaded == false;
-                if (_contents != null) {
-                    for (IonValue child : _contents) {
-                        IonValueImpl aChild = (IonValueImpl)child;
-                        length += aChild.getFullEncodedSize();
-                    }
-                }
-            }
-            else {
-                int start = this.pos_getOffsetAtActualValue();
-                int end = this.pos_getOffsetofNextValue();
-                length = end - start;
-            }
-
-            return length;
-        }
-
-        public boolean isEmpty()
-        {
-            validateThisNotNull();
-
-            return (size() == 0);
-        }
-
-        public void clear()
-        {
-            if (isNullValue())
-            {
-                _contents = new ArrayList<IonValue>();
-                _hasNativeValue = true;
-                setDirty();
-            }
-            /* TODO: if this is a big container that's not materialized,
-             * isEmpty() will do a lot of work materializing it just to throw
-             * it out.  Optimization needed.
-             */
-            else if (!isEmpty())
-            {
-                _contents.clear();
-                setDirty();
-            }
-        }
-
-        public void makeNull()
-        {
-            if (!isNullValue())
-            {
-                _contents = null;
-                _hasNativeValue = true;
-                setDirty();
-            }
-        }
-
-        void move_start_helper(int offset) {
-            for (IonValue v : _contents) {
-                ((IonValueImpl)v).pos_moveAll(offset);
-            }
-            this.pos_moveAll(offset);
-        }
-
-        /** Load all children from binary into our native list
-         * @throws IOException */
-        @Override
-        protected void materialize() throws IOException
-        {
-            if (! _hasNativeValue)
-            {
-                // First materialization must be from clean state.
-                assert !isDirty() || _buffer == null;
-                assert _contents == null;
-
-                if (_buffer != null) {
-                    assert _isPositionLoaded == true;
-
-                    IonBinary.Reader reader = this._buffer.reader();
-                    reader.sync();
-                    materializeAnnotations(reader);
-
-                    if (!isNullValue())
-                    {
-                        _contents = new ArrayList<IonValue>();
-                        // this skips past then td and value len
-                        reader.setPosition(this.pos_getOffsetAtActualValue());
-                        doMaterializeValue(reader);
-                    }
-                }
-                else {
-                    assert _isPositionLoaded == false;
-                }
-
-                _hasNativeValue = true;
-            }
-        }
-
-        /**
-         * Overridden by DatagramImpl to handle symtabs.
-         * And Overridded by Struct to handle field sids.
-         * @throws IOException
-         */
-        @Override
-        protected void doMaterializeValue(Reader reader) throws IOException
-        {
-            assert reader.position() == this.pos_getOffsetAtActualValue();
-            assert this.pos_getType() != IonConstants.tidStruct;
-
-            IonBinary.BufferManager buffer = this._buffer;
-            LocalSymbolTable symtab = this.getSymbolTable();
-            int end = this.pos_getOffsetofNextValue();
-            int pos = reader.position();
-
-            while (pos < end) {
-                IonValueImpl child;
-                reader.setPosition(pos);
-                child = makeValueFromReader(0, reader, buffer, symtab, this);
-                _contents.add(child);
-                pos = child.pos_getOffsetofNextValue();
-            }
-        }
-
-        @Override
-        protected void detachFromBuffer()
-            throws IOException
-        {
-            materialize();
-            if (_contents != null)
-            {
-                for (IonValue contained : _contents)
-                {
-                    ((IonValueImpl)contained).detachFromBuffer();
-                }
-            }
-            _buffer = null;
-        }
-
-        @Override
-        protected void shiftTokenAndChildren(int delta)
-        {
-            assert (!this.isDirty());
-
-            this.pos_moveAll(delta);
-
-            if (_contents != null)
-            {
-                //  Move our children's tokens.
-                for (IonValue child : _contents)
-                {
-                    IonValueImpl aChild = (IonValueImpl) child;
-                    aChild.shiftTokenAndChildren(delta);
-                }
-            }
-        }
-
-
-        @Override
-        protected int updateNewValue(IonBinary.Writer writer, int newPosition, int cumulativePositionDelta) throws IOException
-        {
-            assert writer.position() == newPosition;
-
-            updateToken();
-
-            assert pos_getOffsetAtFieldId() < 0;
-
-            // int newValueStart = newPosition + getFieldNameOverheadLength();
-            this.pos_setEntryStart(newPosition);
-
-            assert newPosition == pos_getOffsetAtFieldId();
-
-            // Create space for our header; children will make room for
-            // themselves. header includes annoations, td, and length
-            int headerSize = this.pos_getOffsetAtActualValue() - newPosition;
-
-            writer.insert(headerSize);
-            cumulativePositionDelta += headerSize;
-
-            cumulativePositionDelta =
-                writeElement(writer, cumulativePositionDelta);
-
-            return cumulativePositionDelta;
-        }
-
-        @Override
-        protected int updateOldValue(IonBinary.Writer writer, int newPosition, int cumulativePositionDelta) throws IOException
-        {
-            assert writer.position() == newPosition;
-
-            this.pos_moveAll(cumulativePositionDelta);
-
-            int oldPositionOfValue = this.pos_getOffsetInitialTD();
-
-            int currentSpaceBeforeValue = oldPositionOfValue - newPosition;
-            assert currentSpaceBeforeValue >= 0;
-
-            // Recompute our final offsets and lengths.
-            updateToken();
-
-            // TODO: is this the right offset?
-            int newPositionOfValue = this.pos_getOffsetInitialTD();
-
-            int headerOverlap = newPositionOfValue - oldPositionOfValue;
-            if (headerOverlap > 0) {
-                // We need to make more space for the field name & annotations
-                // so we don't overwrite the core value.
-                writer.insert(headerOverlap);
-                cumulativePositionDelta += headerOverlap;
-            }
-
-            cumulativePositionDelta =
-                writeElement(writer, cumulativePositionDelta);
-
-            return cumulativePositionDelta;
-        }
-
-        /**
-         * Preconditions: isDirty().  Children's tokens not updated nor shifted.
-         * @throws IOException
-         */
-        @Override
-        protected int writeValue(IonBinary.Writer writer,
-                                 int cumulativePositionDelta) throws IOException
-        {
-            assert _hasNativeValue == true || _isPositionLoaded == false;
-            assert !(this instanceof IonDatagram);
-
-            writer.write(this.pos_getTypeDescriptorByte());
-
-            if (_contents != null)
-            {
-                // write the value length, its never in the TD byte.
-                writer.writeVarUInt7Value(this.getNakedValueLength()
-                                         ,true);
-
-                cumulativePositionDelta =
-                    doWriteContainerContents(
-                        writer
-                       ,cumulativePositionDelta
-                    );
-            }
-
-            return cumulativePositionDelta;
-        }
-
-
-        protected int doWriteContainerContents(IonBinary.Writer writer
-                                              ,int cumulativePositionDelta
-        )
-            throws IOException
-        {
-            if (_contents != null)
-            {
-                for (int ii = 0; ii < _contents.size(); ii++)
-                {
-                    IonValueImpl child = (IonValueImpl) _contents.get(ii);
-
-                    cumulativePositionDelta =
-                        child.updateBuffer2(writer, writer.position(),
-                                            cumulativePositionDelta);
-                }
-            }
-            return cumulativePositionDelta;
-        }
-
-
-        @Override
-        protected int computeLowNibble(int valuelen)
-        {
-            // FIXME: we wipe out the "in order bit" here !
-            if (this.isNullValue()) return IonConstants.lnIsNullContainer;
-            return 0;
-        }
-
-        @Override
-        protected void doWriteNakedValue(Writer writer, int valueLen)
-            throws IOException
-        {
-            throw new IonException("unsupported operation");
-        }
-
-
-        @Override
-        protected int getNativeValueLength()
-        {
-            int len = this.pos_getOffsetofNextValue()
-                    - this.pos_getOffsetAtActualValue();
-            return len;
-        }
-
-        /**
-         * TODO clarify behavior on null.
-         */
-        protected IonValueImpl getFirstChild(LocalSymbolTable symtab)
-        {
-            assert !isDirty();
-
-            makeReady();
-
-            assert this._isMaterialized == true || this._hasNativeValue == true;
-
-            if (this.isNullValue()
-             || this._contents.size() < 1
-            ) {
-                return null;
-            }
-
-            IonValueImpl first = (IonValueImpl)this._contents.get(0);
-            return first;
-        }
-
-        public IonValue get(int index)
-            throws NullValueException
-        {
-            if (isNullValue()) {
-                throw new NullValueException();
-            }
-
-            makeReady();
-
-            return _contents.get(index);
-        }
-
-        /**
-         * Materialize this container, append a child, and mark this as dirty.
-         * <p>
-         * This is protected because it's not a valid call for structs.
-         * @param element must not be null.
-         * @throws NullPointerException if the element is <code>null</code>.
-         */
-        protected void add(IonValue element)
-            throws NullPointerException
-        {
-            int size = (isNullValue() ? 0 : size());
-
-            add(size, element, true);
-        }
-
-        protected void add(int index, IonValue element)
-            throws ContainedValueException, NullPointerException
-        {
-            add(index, element, true);
-        }
-
-        /**
-         * Materialize this container, append a child, and (perhaps) mark this
-         * as dirty.
-         * <p>
-         * TO DO: do we really need setDirty? yes.
-         * @param element must not be null.
-         * @throws NullPointerException if the element is <code>null</code>.
-         */
-        protected void add(int index, IonValue element, boolean setDirty)
-            throws ContainedValueException, NullPointerException
-        {
-            // This also verifies that element != null to satisfy contract.
-
-            // FIXME should this recognize system container?
-            if (element.getContainer() != null) {
-                throw new ContainedValueException();
-            }
-
-            final IonValueImpl concrete = ((IonValueImpl)element);
-
-            // TODO: true to reuse the byte array if it is present
-            //       and the symbol tables are compatible or
-            //       the value is big enough to justify embedding
-            //       a copy of its symbol table in the stream
-            //       otherwise clear the buffer and re-init the positions
-            byte[] bytes = null;
-            if (concrete._buffer != null
-            && !concrete.isDirty()
-            &&
-              (
-                 concrete.getSymbolTable().isCompatible(this.getSymbolTable())
-              || concrete.deservesEmbeddingWithLocalSymbolTable()
-              )
-             ) {
-                // TODO: resuse the bytes that are ready to go
-                if (bytes == null) {
-                    // just a trick to convince Eclipse to ignore two warning
-                    // errors that will persist until this code is filled in
-                    throw new IonException("feature not implemented - this code should not be reachable.");
-                }
-            }
-            else {
-                // TODO: should we copy the symbols to the parent, if there are any?
-                concrete.clear_position_and_buffer();
-            }
-
-            makeReady();
-
-            if (_contents == null) {
-                _contents = new ArrayList<IonValue>();
-                _hasNativeValue = true;
-            }
-            _contents.add(index, element);
-
-            // We shouldn't force the child to be dirty, since we haven't
-            // unsynched its materialized and binary copies.
-
-            concrete._container = this;
-
-            if (setDirty) {
-                this.setDirty();
-            }
-        }
-
-
-        void clear_position_and_buffer()
-        {
-            makeReady();
-
-            if (this._contents != null) {
-                for (IonValue v : this._contents) {
-                    ((IonValueImpl)v).clear_position_and_buffer();
-                }
-            }
-            super.clear_position_and_buffer();
-        }
-
-        public boolean remove(IonValue element)
-        {
-            validateThisNotNull();
-            if (element.getContainer() != this) return false;
-
-            // We must already be materialized, else we wouldn't have a child.
-            assert _hasNativeValue;
-
-            // Get all the data into the DOM, since the element will be losing
-            // its backing store.
-            IonValueImpl concrete = (IonValueImpl) element;
-
-            try {
-                for (Iterator i = _contents.iterator(); i.hasNext();)
-                {
-                    IonValue child = (IonValue) i.next();
-                    if (child == concrete) // Yes, instance identity.
-                    {
-                        i.remove();
-
-                        concrete.detachFromContainer();
-
-                        this.setDirty();
-
-                        return true;
-                    }
-                }
-            }
-            catch (IOException e) {
-                throw new IonException(e);
-            }
-            String message =
-                "element is not in materialized contents of its container";
-            throw new IllegalStateException(message);
-        }
-
-        public Iterator<IonValue> iterator() {
-            validateThisNotNull();
-            makeReady();
-            return new IonContainerIterator(_contents.iterator(), true);
-        }
-
-        /** Encapsulates an iterator and implements a custom remove method */
-        protected final class IonContainerIterator
-            implements Iterator<IonValue>
-        {
-            private final Iterator<IonValue> it;
-            private final boolean allowRemove;
-            private IonValue current;
-
-            public IonContainerIterator(Iterator<IonValue> it,
-                                        boolean allowRemove)
-            {
-                this.it = it;
-                this.allowRemove = allowRemove;
-            }
-
-            public boolean hasNext()
-            {
-                return it.hasNext();
-            }
-
-            public IonValue next()
-            {
-                current = it.next();
-                return current;
-            }
-
-            /**
-             * Sets the container to dirty after calling
-             * {@link Iterator#remove()} on the encapsulated iterator
-             */
-            public void remove()
-            {
-                if (!allowRemove) {
-                    throw new UnsupportedOperationException();
-                }
-
-                it.remove();
-                try {
-                    ((IonValueImpl)current).detachFromContainer();
-                }
-                catch (IOException e) {
-                    throw new IonException(e);
-                }
-                finally {
-                    setDirty();
-                }
-            }
-        }
-    }
-
-
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //
-    //  the container class = for lists, lists of both data and expressions
-    //
-    //
-    public static abstract class list
-        extends container
-        implements IonSequence
-    {
-
-        protected list(int typeDesc) {
-            super(typeDesc);
-            assert !_hasNativeValue;
-        }
-
-        protected list(int typeDesc, boolean makeNull) {
-            this(typeDesc);
-            assert !_hasNativeValue;
-            assert _contents == null;
-            assert isDirty();
-
-            if (! makeNull) {
-                _contents = new ArrayList<IonValue>();
-                _hasNativeValue = true;
-            }
-        }
-
-
-        @Override  // Increasing visibility
-        public void add(IonValue element)
-            throws ContainedValueException, NullPointerException
-        {
-            super.add(element);
-        }
-
-
-        @Override  // Increasing visibility
-        public void add(int index, IonValue element)
-            throws ContainedValueException, NullPointerException
-        {
-            super.add(index, element);
-        }
-
-        public void addEmbedded(IonValue element)
-            throws NullPointerException
-        {
-            LocalSymbolTable symtab = element.getSymbolTable();
-
-            IonSexpImpl wrapper = new IonSexpImpl();
-            wrapper.addTypeAnnotation(SymbolTable.ION_EMBEDDED_VALUE);
-
-            String systemId = symtab.getSystemSymbolTable().getSystemId();
-            // TODO inject systemId ($ion_1_0)
-            // TODO inject symtab
-            // TODO inject value
-
-
-            assert wrapper._isSystemValue;  // so we can unwrap it
-            super.add(wrapper);
-        }
-    }
-
-
-    public static class tmplist extends list implements IonList
-    {
-
-        ArrayList<IonValueImpl> _tmpelements;
-
-        /**
-         * Creates an empty list.
-         */
-        public tmplist() {
-            super(IonConstants.makeTypeDescriptorByte(
-                             IonConstants.tidList
-                            ,IonConstants.lnNumericZero
-                            )
-            );
-           _tmpelements = new ArrayList<IonValueImpl>();
-            setClean();
-        }
-
-        @Override
-        public void add(IonValue v) {
-            add(size(), v, false);
-        }
-
-        @Override
-        public void add(int index, IonValue v) {
-            add(index, v, false);
-        }
-
-        @Override
-        protected void add(int index, IonValue v, boolean setdirty) {
-            this._tmpelements.add((IonValueImpl)v);
-        }
-
-
-        @Override
-        public IonValueImpl getFirstChild(LocalSymbolTable ignored)  {
-            IonValueImpl value = null;
-            if (this._tmpelements.size() > 0) {
-                value = get(0);
-            }
-            return value;
-        }
-
-        @Override
-        public IonValueImpl get(int ordinal) {
-            IonValueImpl value = this._tmpelements.get(ordinal);
-            return value;
-        }
-
-        public String toString() {
-            StringBuffer sb = new StringBuffer();
-
-            for (IonValue v : this) {
-                sb.append(v.toString());
-            }
-
-            return sb.toString();
-        }
-
-        public void accept(ValueVisitor visitor) throws Exception
-        {
-            visitor.visit(this);
-        }
-
-        public String[] getTypeAnnotations()
-        {
-            return null;
-        }
-
-        public void setTypeAnnotations(String annotations)
-        {
-            throw new IonException("unsupported operation");
-        }
-
-        @Override
-        protected int computeLowNibble(int valuelen)
-        {
-            throw new IonException("unsupported operation");
-        }
-
-        @Override
-        public void doMaterializeValue(Reader reader)
-            throws IOException
-        {
-            throw new IonException("unsupported operation");
-        }
-
-        @Override
-        protected void doWriteNakedValue(Writer writer, int valueLen)
-            throws IOException
-        {
-            throw new IonException("unsupported operation");
-        }
-
-        @Override
-        protected int getNativeValueLength()
-        {
-            throw new IonException("unsupported operation");
-        }
     }
 }

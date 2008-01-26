@@ -15,6 +15,7 @@ public class BlobTest
     public void checkNullBlob(IonBlob value)
         throws IOException
     {
+        assertSame(IonType.BLOB, value.getType());
         assertTrue(value.isNullValue());
         assertNull(value.newInputStream());
         assertNull(value.newBytes());
@@ -27,7 +28,7 @@ public class BlobTest
         catch (NullValueException e)
         {
         }
-        
+
         StringBuilder buf = new StringBuilder();
         try
         {
@@ -43,6 +44,8 @@ public class BlobTest
     public void checkBlob(int[] expectedBytes, IonBlob value)
         throws NullValueException, IOException
     {
+        assertSame(IonType.BLOB, value.getType());
+
         byte[] bytes = value.newBytes();
         assertEquals(expectedBytes.length, bytes.length);
 
@@ -61,6 +64,8 @@ public class BlobTest
     public void checkBlob(byte[] expectedBytes, IonBlob value)
         throws NullValueException, IOException
     {
+        assertSame(IonType.BLOB, value.getType());
+
         byte[] bytes = value.newBytes();
         assertEquals(expectedBytes.length, bytes.length);
 
@@ -116,7 +121,7 @@ public class BlobTest
     public void testFactoryBlob()
         throws Exception
     {
-        IonBlob value = system().newBlob();
+        IonBlob value = system().newNullBlob();
         checkNullBlob(value);
         modifyBlob(value);
     }
@@ -148,7 +153,7 @@ public class BlobTest
 
         byte[] bytes = value.newBytes();
         assertEquals(0, bytes.length);
-        
+
         StringBuilder buf = new StringBuilder();
         value.appendBase64(buf);
         assertEquals(0, buf.length());
@@ -158,7 +163,7 @@ public class BlobTest
     {
         for (int i = 0; i < TEST_DATA.length; i++)
         {
-            IonBlob value = system().newBlob();
+            IonBlob value = system().newNullBlob();
             byte[] testBytes = TEST_DATA[i].bytes;
             value.setBytes(testBytes);
             assertEquals("unexpected byte size", testBytes.length,
@@ -267,13 +272,13 @@ public class BlobTest
         oneValue("{{ //79/PsAAQIDBAU= }}");
         oneValue("{{ /PsAAQID//79BAU= }}");
     }
-    
+
     public void testBlobWithTooMuchPadding()
     {
         badValue("{{ zg=== }}");
         badValue("{{ nonsense= }}");
     }
-    
+
     public void testBlobWithTooLittlePadding()
     {
         badValue("{{ Zg  }}");

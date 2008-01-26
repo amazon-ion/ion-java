@@ -65,7 +65,7 @@ public class LocalSymbolTableImpl
         _symtabElement.addTypeAnnotation(systemSymbolTable.getSystemId());
 
         _symbolsStruct = new IonStructImpl();
-        _symtabElement.put("symbols", _symbolsStruct);
+        _symtabElement.put(SystemSymbolTable.SYMBOLS, _symbolsStruct);
     }
 
 
@@ -85,7 +85,7 @@ public class LocalSymbolTableImpl
     {
         assert system != null;
         assert systemSymbolTable != null;
-        assert asymboltable.hasTypeAnnotation(ION_1_0);
+        assert asymboltable.hasTypeAnnotation(SystemSymbolTable.ION_1_0);
         _systemSymbols = systemSymbolTable;
         _symtabElement = asymboltable;
         _maxId = _systemSymbols.getMaxId();
@@ -100,9 +100,8 @@ public class LocalSymbolTableImpl
         }
 
         if (_symbolsStruct == null) {
-            _symbolsStruct = system.newStruct();
-            _symbolsStruct.clear();
-            _symtabElement.put("symbols", _symbolsStruct);
+            _symbolsStruct = system.newEmptyStruct();
+            _symtabElement.put(SystemSymbolTable.SYMBOLS, _symbolsStruct);
         }
     }
 
@@ -145,6 +144,7 @@ public class LocalSymbolTableImpl
     }
 
 
+    @Override
     protected void doDefineSymbol(String name, int id)
     {
         String systemSymbol = _systemSymbols.findKnownSymbol(id);
@@ -293,7 +293,8 @@ public class LocalSymbolTableImpl
 
         ImportedTable[] imports = null;
 
-        IonValue importsElement = _symtabElement.get("imports");
+        IonValue importsElement =
+            _symtabElement.get(SystemSymbolTable.IMPORTS);
         if (importsElement instanceof IonList) {
             IonList importsList = (IonList) importsElement;
             if (! importsList.isNullValue() && importsList.size() != 0)
@@ -333,7 +334,7 @@ public class LocalSymbolTableImpl
                                      StringBuilder errors,
                                      IonStruct importStruct)
     {
-        IonValue nameElement = importStruct.get("name");
+        IonValue nameElement = importStruct.get(SystemSymbolTable.NAME);
         String name = stringValue(nameElement);
         if (name == null || name.length() == 0)
         {
@@ -341,7 +342,7 @@ public class LocalSymbolTableImpl
             return null;
         }
 
-        IonValue versionElement = importStruct.get("version");
+        IonValue versionElement = importStruct.get(SystemSymbolTable.VERSION);
         if (! (versionElement instanceof IonInt)
                  || versionElement.isNullValue())
         {
@@ -353,7 +354,7 @@ public class LocalSymbolTableImpl
         StaticSymbolTable importedTable = catalog.getTable(name, version);
 
 
-        IonValue maxIdElement = importStruct.get("max_id");
+        IonValue maxIdElement = importStruct.get(SystemSymbolTable.MAX_ID);
         int maxId = 0;
         if (maxIdElement == null || maxIdElement.isNullValue())
         {
@@ -380,9 +381,8 @@ public class LocalSymbolTableImpl
             maxId = importedTable.getMaxId();
             assert maxId > 0;
 
-            IonInt maxInt = system.newInt();
-            maxInt.setValue(maxId);
-            importStruct.put("max_id", maxInt);
+            IonInt maxInt = system.newInt(maxId);
+            importStruct.put(SystemSymbolTable.MAX_ID, maxInt);
         }
         else
         {

@@ -5,25 +5,34 @@
 package com.amazon.ion;
 
 import java.io.File;
-
 import junit.framework.TestSuite;
 
 
 public class GoodIonTests
     extends DirectoryTestSuite
 {
-    private static class GoodIonTextTest
+    private static class GoodIonTestCase
         extends FileTestCase
     {
-        public GoodIonTextTest(File ionText)
+        private final boolean myFileIsBinary;
+
+        public GoodIonTestCase(File ionFile, boolean binary)
         {
-            super(ionText);
+            super(ionFile);
+            myFileIsBinary = binary;
         }
 
         public void runTest()
             throws Exception
         {
-            readIonText(myTestFile);
+            if (myFileIsBinary)
+            {
+                readIonBinary(myTestFile);
+            }
+            else
+            {
+                readIonText(myTestFile);
+            }
         }
     }
 
@@ -41,8 +50,17 @@ public class GoodIonTests
 
 
     @Override
-    protected GoodIonTextTest makeTest(File ionFile)
+    protected FileTestCase makeTest(File ionFile)
     {
-        return new GoodIonTextTest(ionFile);
+        String fileName = ionFile.getName();
+        if (fileName.endsWith(".ion"))
+        {
+            return new GoodIonTestCase(ionFile, false);
+        }
+        else if (fileName.endsWith(".10n"))
+        {
+            return new GoodIonTestCase(ionFile, true);
+        }
+        return null;
     }
 }

@@ -4,14 +4,14 @@
 
 package com.amazon.ion.impl;
 
-import java.io.IOException;
-
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonSymbol;
+import com.amazon.ion.IonType;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ValueVisitor;
+import java.io.IOException;
 
 
 /**
@@ -21,11 +21,9 @@ public final class IonSymbolImpl
     extends IonTextImpl
     implements IonSymbol
 {
-    static final int _symbol_typeDesc =
-        IonConstants.makeTypeDescriptorByte(
-                    IonConstants.tidSymbol
-                   ,IonConstants.lnIsNullAtom
-       );
+    static final int NULL_SYMBOL_TYPEDESC =
+        IonConstants.makeTypeDescriptor(IonConstants.tidSymbol,
+                                        IonConstants.lnIsNullAtom);
 
     private int mySid = UNKNOWN_SYMBOL_ID;
 
@@ -34,12 +32,12 @@ public final class IonSymbolImpl
      */
     public IonSymbolImpl()
     {
-        this(_symbol_typeDesc);
+        this(NULL_SYMBOL_TYPEDESC);
     }
 
     public IonSymbolImpl(String name)
     {
-        this(_symbol_typeDesc);
+        this(NULL_SYMBOL_TYPEDESC);
         setValue(name);
     }
 
@@ -50,6 +48,12 @@ public final class IonSymbolImpl
     {
         super(typeDesc);
         assert pos_getType() == IonConstants.tidSymbol;
+    }
+
+
+    public IonType getType()
+    {
+        return IonType.SYMBOL;
     }
 
 
@@ -136,13 +140,17 @@ public final class IonSymbolImpl
     {
         // TODO do we really need to materialize?
         makeReady();
+
+        super.updateSymbolTable(symtab);
+
         if (mySid < 1 && this.isNullValue() == false) {
             mySid = symtab.addSymbol(this._get_value());
         }
     }
 
     @Override
-    protected void doMaterializeValue(IonBinary.Reader reader) throws IOException
+    protected void doMaterializeValue(IonBinary.Reader reader)
+        throws IOException
     {
         assert this._isPositionLoaded == true && this._buffer != null;
 
@@ -183,7 +191,8 @@ public final class IonSymbolImpl
 
 
     @Override
-    protected void doWriteNakedValue(IonBinary.Writer writer, int valueLen) throws IOException
+    protected void doWriteNakedValue(IonBinary.Writer writer, int valueLen)
+        throws IOException
     {
         assert valueLen == this.getNakedValueLength();
         assert valueLen > 0;
@@ -191,9 +200,8 @@ public final class IonSymbolImpl
         // We've already been through updateSymbolTable().
         assert mySid > 0;
 
-        int wlen = writer.writeVarUInt8Value(mySid, true);
+        int wlen = writer.writeVarUInt8Value(mySid, valueLen);
         assert wlen == valueLen;
-        return;
     }
 
 

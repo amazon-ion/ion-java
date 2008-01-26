@@ -7,33 +7,25 @@ package com.amazon.ion;
 /**
  * A symbol table maps symbols between their textual form and an integer ID
  * used in the binary encoding.
+ * <p>
+ * Implementations of this interface must be safe for use by multiple threads.
  */
 public interface SymbolTable
 {
-    public static final String ION_RESERVED_PREFIX = "$ion_";
-
-    public static final String ION                = "$ion";
-    public static final String ION_1_0            = "$ion_1_0";
-    public static final String ION_SYMBOL_TABLE   = "$ion_symbol_table";
-    public static final String ION_EMBEDDED_VALUE = "$ion_embedded_value";
-
-    public static final String NAME    = "name";
-    public static final String VERSION = "version";
-
-
-
     /**
-     * Gets the highest symbol id assigned by this table.
+     * Gets the highest symbol id reserved by this table.
      *
-     * @return the largest integer such that {@link #findSymbol(int)} returns
-     * a non-<code>null</code> result.
+     * @return the largest integer such that {@link #findSymbol(int)} could
+     * return a non-<code>null</code> result.  Note that there is no promise
+     * that it <em>will</em> return a name, only that any larger id will not
+     * have a name defined.
      */
     public int getMaxId();
 
 
     /**
      * Returns the number of symbols in this table, not counting imported
-     * symbols (in the case of a {@link LocalSymbolTable}.
+     * symbols (in the case of a {@link LocalSymbolTable}).
      * If it contains more than <code>Integer.MAX_VALUE</code> elements,
      * returns <code>Integer.MAX_VALUE</code>.
      *
@@ -45,7 +37,7 @@ public interface SymbolTable
     /**
      *
      * @param name must not be null or empty.
-     * @return the id of the requested symbol, or 
+     * @return the id of the requested symbol, or
      * {@link IonSymbol#UNKNOWN_SYMBOL_ID} if it's not defined.
      */
     public int findSymbol(String name);

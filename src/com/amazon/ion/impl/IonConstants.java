@@ -13,21 +13,36 @@ public class IonConstants
 {
 
     public final static int BB_TOKEN_LEN           =    1;
-    public final static int BB_VAR_INT32_LEN_MAX   =    5; // 31 bits (java limit) / 7 bits per byte = 5 bytes
-    public final static int BB_VAR_INT64_LEN_MAX   =   10; // 31 bits (java limit) / 7 bits per byte = 5 bytes
+
+    // 31 bits (java limit) / 7 bits per byte = 5 bytes
+    public final static int BB_VAR_INT32_LEN_MAX   =    5;
+
+    // 31 bits (java limit) / 7 bits per byte = 5 bytes
+    public final static int BB_VAR_INT64_LEN_MAX   =   10;
+
     public final static int BB_INT64_LEN_MAX       =    8;
     public final static int BB_VAR_LEN_MIN         =    1;
     public final static int BB_MAX_7BIT_INT        =  127;
- 
-    public static int INT32_SIZE            = 4;
-    public static int MAGIC_TOKEN_SIZE      = 4;
-    
+
+    public final static int INT32_SIZE            = 4;
+
+
     /**
-     * Only valid for Ion 1.0
+     * The byte sequence indicating use of Ion 1.0 binary format.
      */
-    public static int MAGIC_TOKEN           = 0x10140100;
- 
-    
+    public static final byte[] BINARY_VERSION_MARKER_1_0 = { (byte) 0xE0,
+                                                             (byte) 0x01,
+                                                             (byte) 0x00,
+                                                             (byte) 0xEA };
+
+    /**
+     * The number of bytes in {@link #BINARY_VERSION_MARKER_1_0}
+     * ({@value #BINARY_VERSION_MARKER_SIZE}).
+     */
+    public static final int BINARY_VERSION_MARKER_SIZE =
+        BINARY_VERSION_MARKER_1_0.length;
+
+
     public static final int tidNull         =  0;
     public static final int tidBoolean      =  1;
     public static final int tidPosInt       =  2;
@@ -40,58 +55,34 @@ public class IonConstants
     public static final int tidClob         =  9;
     public static final int tidBlob         = 10; // a
     public static final int tidList         = 11; // b
-    public static final int tidStruct       = 12; // c
-    public static final int tidTypedecl     = 13; // d
-    public static final int tidSexp         = 14; // e
+    public static final int tidSexp         = 12; // c
+    public static final int tidStruct       = 13; // d
+    public static final int tidTypedecl     = 14; // e
     public static final int tidUnused       = 15; // f
 
 /* this is just here to help programmer productivity ...
     switch (((td & 0xf0) >> 4)) {
-    case IonConstants.tidNull: // null(0)
-    case IonConstants.tidBoolean: // boolean(1)
-    case IonConstants.tidPosInt: // 2
-    case IonConstants.tidNegInt: // 3
-    case IonConstants.tidFloat: // float(4)
-    case IonConstants.tidDecimal: // decimal(5)
-    case IonConstants.tidTimestamp: // timestamp(6)
-    case IonConstants.tidSymbol: // symbol(7)
-    case IonConstants.tidString: // string (8)
-    case IonConstants.tidClob: // clob(9)
-    case IonConstants.tidBlob: // blob(10)
-    case IonConstants.tidList: // list(11)
-    case IonConstants.tidStruct: // struct(12)
-    case IonConstants.tidTypedecl: // typedecl(13)
-    case IonConstants.tidSexp: // sexp(14)
-    case IonConstants.tidUnused: // unused(15)
+    case IonConstants.tidNull:      // 0
+    case IonConstants.tidBoolean:   // 1
+    case IonConstants.tidPosInt:    // 2
+    case IonConstants.tidNegInt:    // 3
+    case IonConstants.tidFloat:     // 4
+    case IonConstants.tidDecimal:   // 5
+    case IonConstants.tidTimestamp: // 6
+    case IonConstants.tidSymbol:    // 7
+    case IonConstants.tidString:    // 8
+    case IonConstants.tidClob:      // 9
+    case IonConstants.tidBlob:      // 10 A
+    case IonConstants.tidList:      // 11 B
+    case IonConstants.tidSexp:      // 12 C
+    case IonConstants.tidStruct:    // 13 D
+    case IonConstants.tidTypedecl:  // 14 E
+    case IonConstants.tidUnused:    // 15 F
     default:
         throw new IonException("???");
     }
 */
-    
-    public static final boolean lengthIsEncodedInLowNibble(int hn) {
-        switch (hn) {
-        case IonConstants.tidNull: // null(0)
-        case IonConstants.tidBoolean: // boolean(1)
-        case IonConstants.tidPosInt: // 2
-        case IonConstants.tidNegInt: // 3
-        case IonConstants.tidFloat: // float(4)
-        case IonConstants.tidDecimal: // decimal(5)
-        case IonConstants.tidTimestamp: // timestamp(6)
-        case IonConstants.tidSymbol: // symbol(7)
-        case IonConstants.tidString: // string (8)
-        case IonConstants.tidClob: // clob(9)
-        case IonConstants.tidBlob: // blob(10)
-        case IonConstants.tidTypedecl: // typedecl(13)
-            return true;
-        case IonConstants.tidList: // list(11)
-        case IonConstants.tidStruct: // struct(12)
-        case IonConstants.tidSexp: // sexp(14)
-            return false;
-        case IonConstants.tidUnused: // unused(15)
-        default:
-            throw new IonException("???");
-        }
-    }
+
 
     public enum HighNibble {
 
@@ -108,9 +99,9 @@ public class IonConstants
         hnClob      (tidClob,       false,    false),
         hnBlob      (tidBlob,       false,    false),
         hnList      (tidList,       true,     true),
+        hnSexp      (tidSexp,       true,     true),
         hnStruct    (tidStruct,     true,     true),
         hnTypedecl  (tidTypedecl,   false,    false),
-        hnSexp      (tidSexp,       true,     true),
         hnUnused    (tidUnused,     false,    false);
 
         private int     _value;
@@ -118,7 +109,9 @@ public class IonConstants
         private boolean _isContainer;
 
         HighNibble(int value, boolean lengthFollows, boolean isContainer) {
-            if ((value & (~0xF)) != 0) throw new IonException("illegal high nibble initialization");
+            if ((value & (~0xF)) != 0) {
+                throw new IonException("illegal high nibble initialization");
+            }
             _value = value;
             _lengthFollows = lengthFollows;
             _isContainer = isContainer;
@@ -137,9 +130,9 @@ public class IonConstants
             case tidClob:       return hnClob;
             case tidBlob:       return hnBlob;
             case tidList:       return hnList;
+            case tidSexp:       return hnSexp;
             case tidStruct:     return hnStruct;
             case tidTypedecl:   return hnTypedecl;
-            case tidSexp:       return hnSexp;
             case tidUnused:     return hnUnused;
             }
             return null;
@@ -149,56 +142,66 @@ public class IonConstants
         public boolean isContainer()         { return _isContainer; }
     }
 
-    public static final int lnIsNullAtom      = 0x0f;
-    public static final int lnIsVarLen        = 0x0e;
-    public static final int lnIsNullContainer = 0x08;
+    // TODO unify these
+    public static final int lnIsNullAtom       = 0x0f;
+    public static final int lnIsNullSequence   = 0x0f;
+    public static final int lnIsNullStruct     = 0x0f;
+
+    public static final int lnIsEmptyContainer = 0x00;
+    public static final int lnIsOrderedStruct  = 0x01;
+    public static final int lnIsVarLen         = 0x0e;
+
+    /** @deprecated */
+    @Deprecated
     public static final int lnIsDatagram      = 0x04;
 
-    public static final int lnIsOrdered       = 0x04;
     public static final int lnBooleanTrue     = 0x01;
     public static final int lnBooleanFalse    = 0x00;
     public static final int lnNumericZero     = 0x00;
 
-    public enum LowNibble {
-        // for all atomic values (bool-string)
-        lnZero              (lnNumericZero),
-        lnVarlen            (lnIsVarLen),
-        lnNull              (lnIsNullAtom),
 
-        // special value for bool
-        lnFalse             (lnBooleanFalse),
-        lnTrue              (lnBooleanTrue),
-
-         // is annotated, for clob, blob, list, & struct
-        lnNullContainer     (lnIsNullContainer),
-
-        lnListIsDatagram    (lnIsDatagram),
-
-        // for struct tag definition
-        lnStructIsOrdered   (lnIsOrdered);
-
-
-        private    int _value;
-        LowNibble(int value) {
-            if ((value & (~0xF)) != 0) throw new IonException("illegal low nibble initialization");
-            _value = value;
-        }
-        public int get() { return _value; }
-    }
-
-
-    public static final byte makeTypeDescriptorByte(int highNibble, int lowNibble)
+    /**
+     * Make a type descriptor from two nibbles; all of which are represented as
+     * ints.
+     *
+     * @param highNibble must be a positive int between 0x00 and 0x0F.
+     * @param lowNibble must be a positive int between 0x00 and 0x0F.
+     *
+     * @return the combined nibbles, between 0x00 and 0xFF.
+     */
+    public static final int makeTypeDescriptor(int highNibble,
+                                               int lowNibble)
     {
-        return (byte)( ((((highNibble & 0xF) << 4) | (lowNibble & 0xF)) & 0xFF) );
+        assert highNibble == (highNibble & 0xF);
+        assert lowNibble == (lowNibble & 0xF);
+
+        return ((highNibble << 4) | lowNibble);
     }
-    public static final int getTypeDescriptor(int td)
+
+    /**
+     * Extract the type code (high nibble) from a type descriptor.
+     *
+     * @param td must be a positive int between 0x00 and 0xFF.
+     *
+     * @return the high nibble of the input byte, between 0x00 and 0x0F.
+     */
+    public static final int getTypeCode(int td)
     {
-        return (td >> 4) & 0xf;
+        assert td >= 0 && td <= 0xFF;
+
+        return (td >> 4);
     }
+
     public static final int getLowNibble(int td)
     {
         return td & 0xf;
     }
-    public static byte True  = makeTypeDescriptorByte(IonConstants.tidBoolean, IonConstants.lnBooleanTrue);
-    public static byte False = makeTypeDescriptorByte(IonConstants.tidBoolean, IonConstants.lnBooleanFalse);
+
+    public static final int True =
+        makeTypeDescriptor(IonConstants.tidBoolean,
+                           IonConstants.lnBooleanTrue);
+
+    public static final int False =
+        makeTypeDescriptor(IonConstants.tidBoolean,
+                           IonConstants.lnBooleanFalse);
 }

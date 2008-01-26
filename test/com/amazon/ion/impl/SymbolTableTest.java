@@ -4,11 +4,14 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SystemSymbolTable.ION_1_0;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
+import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTestCase;
@@ -26,7 +29,7 @@ public class SymbolTableTest
     extends IonTestCase
 {
     public final int ION_1_0_MAX_ID =
-        system().getSystemSymbolTable(SymbolTable.ION_1_0).getMaxId();
+        system().getSystemSymbolTable(ION_1_0).getMaxId();
 
     public final static int IMPORTED_1_MAX_ID = 2;
     public final static int IMPORTED_2_MAX_ID = 4;
@@ -181,7 +184,7 @@ public class SymbolTableTest
         IonReader scanner = system().newReader(text);
         testLocalTableResetting(scanner);
 
-        IonLoader loader = system().newLoader();
+        IonLoader loader = loader();
         IonDatagram datagram = loader.load(text);
 
         testLocalTableResetting(datagram.iterator());
@@ -364,7 +367,7 @@ public class SymbolTableTest
             "  imports:[{name:'''imported''',version:1}],\n" +
             "}\n" +
             "null";
-        IonDatagram dg = system().newLoader().load(text);
+        IonDatagram dg = loader().load(text);
 
         LocalSymbolTable symbolTable = dg.get(0).getSymbolTable();
         SymbolTable used = symbolTable.getImportedTable("imported");
@@ -372,7 +375,7 @@ public class SymbolTableTest
 
         // Check that the encoded table has max_id on import
         byte[] binary = dg.toBytes();
-        dg = system().newLoader().load(binary);
+        dg = loader().load(binary);
         IonStruct symtabStruct = (IonStruct) dg.systemGet(0);
         IonList imports = (IonList) symtabStruct.get("imports");
         IonStruct importStruct = (IonStruct) imports.get(0);
@@ -405,7 +408,7 @@ public class SymbolTableTest
         SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
         assertSame(importedTable, catalog.removeTable("imported", 1));
 
-        IonDatagram dg = system().newLoader().load(binary);
+        IonDatagram dg = loader().load(binary);
         checkSymbol("local1", local1id, dg.get(0));
         checkSymbol("local2", local2id, dg.get(1));
         checkSymbol("$" + import1id, import1id, dg.get(2));
@@ -453,7 +456,7 @@ public class SymbolTableTest
         checkSymbol("imported 1", import1id, dg.get(2));
         checkSymbol("imported 2", import2id, dg.get(3));
         checkSymbol("$" + fred3id, fred3id, dg.get(4));
-        
+
         // We can't load the original text because it doesn't have max_id
         badValue(text);
     }
@@ -497,7 +500,7 @@ public class SymbolTableTest
         checkSymbol("$" + import2id, import2id, dg.get(3));
         checkSymbol("fred3", fred3id, dg.get(4));
         checkSymbol("fred5", local3id, dg.get(5));
-        
+
         // We can't load the original text because it doesn't have max_id
         badValue(text);
     }
@@ -675,5 +678,26 @@ public class SymbolTableTest
             "}\n" +
             "null";
         badValue(text);
+    }
+
+    public void testSystemIdOnNonStruct()
+    {
+        String text = "$ion_1_0::12";
+        IonInt v = (IonInt) oneValue(text);
+        checkInt(12, v);
+    }
+
+    public void testSymbolTableOnNonStruct()
+    {
+        String text = "$ion_symbol_table::12";
+        IonInt v = (IonInt) oneValue(text);
+        checkInt(12, v);
+    }
+
+    public void testNestedSystemId()
+    {
+        String text = "($ion_1_0)";
+        IonSexp v = oneSexp(text);
+        checkSymbol(ION_1_0, v.get(0));
     }
 }

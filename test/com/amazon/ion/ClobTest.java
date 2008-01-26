@@ -33,6 +33,7 @@ public class ClobTest
     
     public void checkNullClob(IonClob value)
     {
+        assertSame(IonType.CLOB, value.getType());
         assertTrue(value.isNullValue());
         assertNull(value.newInputStream());
         assertNull(value.newReader(UTF8));
@@ -65,6 +66,7 @@ public class ClobTest
     private void checkUtf8(String expectedString, IonClob value)
         throws NullValueException, IOException
     {
+        assertSame(IonType.CLOB, value.getType());
         assertFalse(value.isNullValue());
 
         // TODO byte-based access to clobs
@@ -117,7 +119,7 @@ public class ClobTest
     public void testFactoryClob()
         throws Exception
     {
-        IonClob value = system().newClob();
+        IonClob value = system().newNullClob();
         checkNullClob(value);
         modifyClob(value);
     }
@@ -172,7 +174,7 @@ public class ClobTest
     
     public void testByteSize()
     {
-        IonClob value = system().newClob();
+        IonClob value = system().newNullClob();
         value.setBytes(SAMPLE_ASCII_AS_UTF8);
         assertEquals("unexpected byte size", value.byteSize(), 
                      SAMPLE_ASCII_AS_UTF8.length);

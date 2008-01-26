@@ -48,6 +48,7 @@ public class Printer
 //      public boolean skipSystemValues = true;
 
 
+        @Override
         public Options clone()
         {
             try
@@ -63,7 +64,6 @@ public class Printer
 
 
     protected Options myOptions = new Options();
-
 
     public Printer()
     {
@@ -149,7 +149,7 @@ public class Printer
 
     /**
      * Sets whether this printer renders all null values as <code>null</code>
-     * (<em>i.e.</em>, the same as an {@link IonNull}.
+     * (<em>i.e.</em>, the same as an {@link IonNull}).
      * By default, this is <code>false</code>.
      */
     public synchronized boolean getPrintUntypedNulls()
@@ -206,6 +206,7 @@ public class Printer
      *  @deprecated use {@link #setJsonMode()}.
      */
 
+    @Deprecated
     public void printJson(IonValue value, Appendable out)
         throws IOException
     {
@@ -275,7 +276,7 @@ public class Printer
 
         protected Options    myOptions;
         protected Appendable myOut;
-        
+
         /**
          * Should we quote operators at the current level of the hierarchy?
          * As we recurse down into containers, this value is pushed on the
@@ -297,9 +298,9 @@ public class Printer
          * Recurse down into a container, we push the current value of
          * {@link #myQuoteOperators} onto the stack and replace it with
          * the given value.
-         * 
+         *
          * @param value
-         * @param quoteOperators replaces the current value of 
+         * @param quoteOperators replaces the current value of
          * {@link #myQuoteOperators} during the recursive visitation.
          * @throws Exception propagated from visitation of <code>value</code>.
          * @throws NullPointerException if <code>value</code> is null.
@@ -411,12 +412,14 @@ public class Printer
         //---------------------------------------------------------------------
         // AbstractValueVisitor overrides
 
+        @Override
         protected void defaultVisit(IonValue value)
         {
             String message = "cannot print " + value.getClass().getName();
             throw new UnsupportedOperationException(message);
         }
 
+        @Override
         public void visit(IonBlob value) throws IOException
         {
             writeAnnotations(value);
@@ -433,6 +436,7 @@ public class Printer
             }
         }
 
+        @Override
         public void visit(IonBool value)
             throws IOException
         {
@@ -448,6 +452,7 @@ public class Printer
             }
         }
 
+        @Override
         public void visit(IonClob value) throws IOException
         {
             writeAnnotations(value);
@@ -478,6 +483,7 @@ public class Printer
             }
         }
 
+        @Override
         public void visit(IonDatagram value) throws IOException, Exception
         {
             boolean hitOne = false;
@@ -492,7 +498,8 @@ public class Printer
                 writeChild(child, false);
             }
         }
-        
+
+        @Override
         public void visit(IonDecimal value) throws IOException
         {
             writeAnnotations(value);
@@ -512,6 +519,7 @@ public class Printer
             }
         }
 
+        @Override
         public void visit(IonFloat value) throws IOException
         {
             writeAnnotations(value);
@@ -522,15 +530,37 @@ public class Printer
             }
             else
             {
-                BigDecimal decimal = value.toBigDecimal();
-                BigInteger unscaled = decimal.unscaledValue();
+                double real = value.doubleValue();
 
-                myOut.append(unscaled.toString());
-                myOut.append('e');
-                myOut.append(Integer.toString(-decimal.scale()));
+                // shortcut zero cases
+                if (real == 0.0)
+                {
+                    // XXX use the raw bits to avoid boxing and distinguish +/-0e0
+                    long bits = Double.doubleToLongBits(real);
+                    if (bits == 0L)
+                    {
+                        // positive zero
+                        myOut.append("0e0");
+                    }
+                    else
+                    {
+                        // negative zero
+                        myOut.append("-0e0");
+                    }
+                }
+                else
+                {
+                    BigDecimal decimal = value.toBigDecimal();
+                    BigInteger unscaled = decimal.unscaledValue();
+
+                    myOut.append(unscaled.toString());
+                    myOut.append('e');
+                    myOut.append(Integer.toString(-decimal.scale()));
+                }
             }
         }
 
+        @Override
         public void visit(IonInt value) throws IOException
         {
             writeAnnotations(value);
@@ -546,6 +576,7 @@ public class Printer
             }
         }
 
+        @Override
         public void visit(IonList value) throws IOException, Exception
         {
             writeAnnotations(value);
@@ -560,6 +591,7 @@ public class Printer
             }
         }
 
+        @Override
         public void visit(IonNull value) throws IOException
         {
             writeAnnotations(value);
@@ -567,6 +599,7 @@ public class Printer
         }
 
 
+        @Override
         public void visit(IonSexp value) throws IOException, Exception
         {
             writeAnnotations(value);
@@ -586,6 +619,7 @@ public class Printer
         }
 
 
+        @Override
         public void visit(IonString value) throws IOException
         {
             writeAnnotations(value);
@@ -601,6 +635,7 @@ public class Printer
         }
 
 
+        @Override
         public void visit(IonStruct value) throws IOException, Exception
         {
             writeAnnotations(value);
@@ -631,6 +666,7 @@ public class Printer
         }
 
 
+        @Override
         public void visit(IonSymbol value) throws IOException
         {
             writeAnnotations(value);
@@ -646,6 +682,7 @@ public class Printer
         }
 
 
+        @Override
         public void visit(IonTimestamp value) throws IOException
         {
             writeAnnotations(value);
@@ -732,6 +769,11 @@ public class Printer
 
     }
 
+    /**
+     * <b>This class is unsupported and will be removed!</b>
+     * @deprecated
+     */
+    @Deprecated
     public final static class JsonPrinterVisitor
         extends PrinterVisitor
     {
@@ -740,28 +782,31 @@ public class Printer
             super(options, out);
         }
 
+        @Override
         public void writeAnnotations(IonValue value)
             throws IOException
         {}
 
+        @Override
         public void writeSymbol(String text)
             throws IOException
         {
-	    myOut.append('\"');
-	    escapeToAscii(text);
-	    myOut.append('\"');
-	}
+            myOut.append('\"');
+            escapeToAscii(text);
+            myOut.append('\"');
+        }
 
-	public void writeFloat(BigDecimal value) 
-	    throws IOException
-	{
-	    BigInteger unscaled = value.unscaledValue();
+        public void writeFloat(BigDecimal value)
+            throws IOException
+        {
+            BigInteger unscaled = value.unscaledValue();
 
-	    myOut.append(unscaled.toString());
-	    myOut.append('e');
-	    myOut.append(Integer.toString(-value.scale()));
-	}
+            myOut.append(unscaled.toString());
+            myOut.append('e');
+            myOut.append(Integer.toString(-value.scale()));
+        }
 
+        @Override
         public void visit(IonTimestamp value) throws IOException
         {
             if (value.isNullValue()) {
@@ -771,6 +816,7 @@ public class Printer
             }
         }
 
+        @Override
         public void visit(IonList value) throws IOException, Exception
         {
             if (value.isNullValue()) {
@@ -780,6 +826,7 @@ public class Printer
             }
         }
 
+        @Override
         public void visit(IonStruct value) throws IOException, Exception
         {
             if (value.isNullValue()) {
@@ -789,33 +836,37 @@ public class Printer
             }
         }
 
+        @Override
         public void visit(IonString value) throws IOException
         {
             if (value.isNullValue()) {
                 myOut.append("null");
             } else {
-		writeString(value.stringValue());
+                writeString(value.stringValue());
             }
         }
 
+        @Override
         public void visit(IonDecimal value) throws IOException
         {
             if (value.isNullValue()) {
                 myOut.append("null");
             } else {
-		writeFloat(value.toBigDecimal());
+                writeFloat(value.toBigDecimal());
             }
         }
 
+        @Override
         public void visit(IonFloat value) throws IOException
         {
             if (value.isNullValue()) {
                 myOut.append("null");
             } else {
-		writeFloat(value.toBigDecimal());
+                writeFloat(value.toBigDecimal());
             }
         }
 
+        @Override
         public void visit(IonSexp value) throws IOException, Exception
         {
             if (value.isNullValue())

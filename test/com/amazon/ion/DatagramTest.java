@@ -4,7 +4,10 @@
 
 package com.amazon.ion;
 
+import static com.amazon.ion.SystemSymbolTable.ION_1_0;
+import com.amazon.ion.impl.IonSequenceImpl;
 import com.amazon.ion.impl.IonValueImpl;
+import java.io.ByteArrayOutputStream;
 import java.util.Iterator;
 
 
@@ -17,12 +20,14 @@ public class DatagramTest
     private IonLoader myLoader;
 
 
+    @Override
     public void setUp()
         throws Exception
     {
         super.setUp();
-        myLoader = system().newLoader();
+        myLoader = loader();
     }
+
 
 
     public IonDatagram roundTrip(String text)
@@ -33,6 +38,12 @@ public class DatagramTest
         checkBinaryHeader(bytes);
         IonDatagram datagram1 = myLoader.load(bytes);
         return datagram1;
+    }
+
+    public void checkLeadingSymbolTable(IonDatagram dg)
+    {
+        assertTrue("Datagram doesn't start with a symbol table",
+                   dg.systemGet(0).hasTypeAnnotation(ION_1_0));
     }
 
     public void testBinaryData()
@@ -73,7 +84,8 @@ public class DatagramTest
         IonDatagram datagram0 = myLoader.load("a::{}");
         assertEquals(1, datagram0.size());
         IonStruct struct = (IonStruct)(datagram0.get(0));
-        IonInt i = (IonInt)system().clone(myLoader.load("-12345 a").get(0));
+        IonInt i =
+            (IonInt)system().clone(myLoader.load("-12345 a").get(0));
         struct.put("a", i);
         datagram0.toBytes();
         IonValue a = struct.get("a");
@@ -95,12 +107,12 @@ public class DatagramTest
     }
 
     public void testSystemDatagram()
-    throws Exception
+        throws Exception
     {
         IonSystem system = system();
-        IonInt i = system.newInt();
+        IonInt i = system.newNullInt();
         i.setValue(65);
-        IonStruct struct = system.newStruct();
+        IonStruct struct = system.newNullStruct();
         LocalSymbolTable sym = struct.getSymbolTable();
         if (sym == null) {
             sym = system.newLocalSymbolTable();
@@ -122,15 +134,136 @@ public class DatagramTest
         }
     }
 
+    public void assertArrayEquals(byte[] expected, byte[] actual)
+    {
+        assertEquals("array length",
+                     expected.length,
+                     actual.length);
 
-    public void testAddingToDatagram()
+        for (int i = 0; i < expected.length; i++)
+        {
+            if (expected[i] != actual[i])
+            {
+                fail("byte[] differs at index " + i);
+            }
+        }
+    }
+
+
+    public void testGetBytes()
+        throws Exception
+    {
+        IonDatagram dg = myLoader.load("hello '''hi''' 23 [a,b]");
+        byte[] bytes1 = dg.toBytes();
+        final int size = dg.byteSize();
+
+        assertEquals(size, bytes1.length);
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        int outLen = dg.getBytes(out);
+        assertEquals(size, outLen);
+
+        byte[] bytes2 = out.toByteArray();
+        assertEquals(size, bytes2.length);
+
+        assertArrayEquals(bytes1, bytes2);
+
+        // now check extraction into sub-array
+        final int OFFSET = 5;
+        assertTrue(bytes1.length > OFFSET);
+        bytes2 = new byte[size + OFFSET];
+
+        outLen = dg.getBytes(bytes2, OFFSET);
+        assertEquals(size, outLen);
+
+        for (int i = 0; i < bytes1.length; i++)
+        {
+            if (bytes1[i] != bytes2[i + OFFSET])
+            {
+                fail("Binary data differs at index " + i);
+            }
+        }
+
+        try {
+            dg.getBytes(new byte[3]);
+            fail("Expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException e) { /* good */ }
+
+        try {
+            dg.getBytes(new byte[size + OFFSET - 1], OFFSET);
+            fail("Expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException e) { /* good */ }
+    }
+
+
+    public void testEncodingAnnotatedSymbol()
+    {
+        IonSystem system = system();
+        IonList v = system.newNullList();
+
+        IonDatagram dg = system.newDatagram(v);
+        dg.toBytes();
+    }
+
+    public void testEncodingSymbolInList()
+    {
+        IonSystem system = system();
+        IonList v = system.newNullList();
+        IonSymbol sym = system.newSymbol("sym");
+        sym.addTypeAnnotation("ann");
+        v.add(sym);
+
+        IonDatagram dg = system.newDatagram(v);
+        dg.toBytes();
+    }
+
+    public void testEncodingSymbolInStruct()
+    {
+        IonSystem system = system();
+        IonStruct struct1 = system.newNullStruct();
+        struct1.addTypeAnnotation("ann1");
+
+        IonSymbol sym = system.newSymbol("sym");
+        sym.addTypeAnnotation("ann");
+        struct1.add("g", sym);
+
+        IonDatagram dg = system.newDatagram(struct1);
+        dg.toBytes();
+    }
+
+    public void testEncodingStructInStruct()
+    {
+        IonSystem system = system();
+        IonStruct struct1 = system.newNullStruct();
+        struct1.addTypeAnnotation("ann1");
+
+        IonStruct struct2 = system.newNullStruct();
+        struct1.addTypeAnnotation("ann2");
+
+        IonSymbol sym = system.newSymbol("sym");
+        sym.addTypeAnnotation("ann");
+
+        struct1.add("f", struct2);
+        struct2.add("g", sym);
+
+        IonDatagram dg = system.newDatagram(struct1);
+        dg.toBytes();
+    }
+
+
+    public void testNewSingletonDatagramWithSymbolTable()
     {
         IonSystem system = system();
         IonNull aNull = system.newNull();
         aNull.addTypeAnnotation("ann");
 
         IonDatagram dg = system.newDatagram(aNull);
-        dg.toBytes();
+        checkLeadingSymbolTable(dg);
+        IonDatagram dg2 = reload(dg);
+        IonNull v = (IonNull) dg2.get(0);
+        assertTrue(v.hasTypeAnnotation("ann"));
     }
 
     public void testNoSymbols()
@@ -157,6 +290,52 @@ public class DatagramTest
         assertTrue(s.get("a").isNullValue());
     }
 
+    public void testAddingDatagramToDatagram()
+    {
+        IonDatagram dg1 = loader().load("one");
+        IonDatagram dg2 = loader().load("two");
+
+        // Cannot append a datagram
+        try
+        {
+            dg1.add(dg2);
+            fail("Expected IllegalArgumentException");
+        }
+        catch (IllegalArgumentException e) { }
+
+        // Cannot insert a datagram  // TODO this operation unsupported
+//        try
+//        {
+//            dg1.add(1, dg2);
+//            fail("Expected IllegalArgumentException");
+//        }
+//        catch (IllegalArgumentException e) { }
+    }
+
+    public void testNewDatagramFromDatagram()
+    {
+        IonDatagram dg1 = loader().load("one");
+        try
+        {
+            system().newDatagram(dg1);
+            fail("Expected IllegalArgumentException");
+        }
+        catch (IllegalArgumentException e) { }
+    }
+
+    public void testCloningDatagram()
+    {
+        IonDatagram dg1 = loader().load("one 1 [1.0]");
+        IonDatagram dg2 = system().clone(dg1);
+
+        byte[] bytes1 = dg1.toBytes();
+        byte[] bytes2 = dg2.toBytes();
+
+        assertArrayEquals(bytes1, bytes2);
+    }
+
+
+
     // FIXME implement embedding
     public void XXXtestEmbedding()
     {
@@ -173,7 +352,7 @@ public class DatagramTest
         assertEquals(beanSid, javaSym.intValue());
 
         // TODO remove cast
-        ((IonValueImpl.list)destList).addEmbedded(sourceBean);
+        ((IonSequenceImpl)destList).addEmbedded(sourceBean);
         assertIonEquals(sourceBean, destList.get(1));
 
         IonDatagram reloadedDatagram = myLoader.load(destDatagram.toBytes());

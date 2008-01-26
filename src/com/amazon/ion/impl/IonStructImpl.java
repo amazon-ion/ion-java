@@ -7,6 +7,7 @@ package com.amazon.ion.impl;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
+import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.ValueVisitor;
@@ -18,15 +19,20 @@ import java.util.Iterator;
  * Implements the Ion <code>struct</code> type.
  */
 public final class IonStructImpl
-    extends IonValueImpl.container
+    extends IonContainerImpl
     implements IonStruct
 {
 
-    static final int _struct_typeDesc =
-        IonConstants.makeTypeDescriptorByte(
-                    IonConstants.tidStruct
-                   ,IonConstants.lnIsNullContainer
-       );
+    private static final int NULL_STRUCT_TYPEDESC =
+        IonConstants.makeTypeDescriptor(IonConstants.tidStruct,
+                                        IonConstants.lnIsNullStruct);
+
+    static final int ORDERED_STRUCT_TYPEDESC =
+        IonConstants.makeTypeDescriptor(IonConstants.tidStruct,
+                                        IonConstants.lnIsOrderedStruct);
+
+
+    private boolean _isOrdered = false;
 
 
     /**
@@ -34,7 +40,8 @@ public final class IonStructImpl
      */
     public IonStructImpl()
     {
-        this(_struct_typeDesc);
+        this(NULL_STRUCT_TYPEDESC);
+        _hasNativeValue = true;
     }
 
     /**
@@ -44,6 +51,24 @@ public final class IonStructImpl
     {
         super(typeDesc);
         assert pos_getType() == IonConstants.tidStruct;
+    }
+
+
+    public IonType getType()
+    {
+        return IonType.STRUCT;
+    }
+
+
+    @Override
+    public boolean isNullValue()
+    {
+        if (_hasNativeValue || !_isPositionLoaded) {
+            return (_contents == null);
+        }
+
+        int ln = this.pos_getLowNibble();
+        return (ln == IonConstants.lnIsNullStruct);
     }
 
 
@@ -83,13 +108,14 @@ public final class IonStructImpl
 
     public void put(String fieldName, IonValue value)
     {
+        // TODO maintain _isOrdered
+
         validateFieldName(fieldName);
-        if (value == null) {
-            throw new NullPointerException("value must not be null");
-        }
+        validateNewChild(value);
 
         makeReady();
 
+        int size;
         if (_contents != null) {
             try {
                 for (Iterator i = _contents.iterator(); i.hasNext();)
@@ -105,10 +131,14 @@ public final class IonStructImpl
             catch (IOException e) {
                 throw new IonException(e);
             }
+            size = _contents.size();
+        }
+        else {
+            size = 0;
         }
 
         IonValueImpl concrete = (IonValueImpl) value;
-        add(concrete);
+        add(size, concrete, true);
 
         // This should be true because we've validated that its not contained.
         assert value.getFieldName() == null;
@@ -118,10 +148,10 @@ public final class IonStructImpl
 
     public void add(String fieldName, IonValue value)
     {
+        // TODO maintain _isOrdered
+
         validateFieldName(fieldName);
-        if (value == null) {
-            throw new NullPointerException("value must not be null");
-        }
+//      validateNewChild(value);          // This is done by add() below.
 
         IonValueImpl concrete = (IonValueImpl) value;
         add(concrete);
@@ -130,6 +160,7 @@ public final class IonStructImpl
         assert value.getFieldName() == null;
         concrete.setFieldName(fieldName);
     }
+
 
     /**
      * Ensures that a given field name is valid. Used as a helper for
@@ -158,17 +189,69 @@ public final class IonStructImpl
     //=========================================================================
     // Helpers
 
+    @Override
+    public int getTypeDescriptorAndLengthOverhead(int contentLength)
+    {
+        int len = IonConstants.BB_TOKEN_LEN;
 
+        if (isNullValue() || isEmpty())
+        {
+            assert contentLength == 0;
+            return len;
+        }
 
+        if (_isOrdered || contentLength >= IonConstants.lnIsVarLen)
+        {
+            len += IonBinary.lenVarUInt7(contentLength);
+        }
+
+        return len;
+    }
 
     @Override
-    public void updateSymbolTable(LocalSymbolTable symtab) {
-        super.updateSymbolTable(symtab);
-        if (this._contents != null) {
-            for (IonValue v : this._contents) {
-                symtab.addSymbol(v.getFieldName());
-            }
+    protected int computeLowNibble(int valuelen)
+    {
+        assert _hasNativeValue;
+
+        if (_contents == null) return IonConstants.lnIsNullStruct;
+
+        if (_contents.isEmpty()) return IonConstants.lnIsEmptyContainer;
+
+        if (_isOrdered) return IonConstants.lnIsOrderedStruct;
+
+        int contentLength = this.getNativeValueLength();  // FIXME check nakedLength?
+        if (contentLength > IonConstants.lnIsVarLen)
+        {
+            return IonConstants.lnIsVarLen;
         }
+
+        return contentLength;
+    }
+
+    @Override
+    protected int writeValue(IonBinary.Writer writer,
+                             int cumulativePositionDelta)
+        throws IOException
+    {
+        assert _hasNativeValue == true || _isPositionLoaded == false;
+
+        writer.write(this.pos_getTypeDescriptorByte());
+
+        if (_contents != null && _contents.size() > 0)
+        {
+            // TODO Rewrite this to avoid computing length again
+            int vlen = this.getNativeValueLength();
+
+            if (_isOrdered || vlen >= IonConstants.lnIsVarLen)
+            {
+                writer.writeVarUInt7Value(vlen, true);
+            }
+
+            cumulativePositionDelta =
+                doWriteContainerContents(writer, cumulativePositionDelta);
+        }
+
+        return cumulativePositionDelta;
     }
 
 
@@ -187,6 +270,8 @@ public final class IonStructImpl
         int pos = this.pos_getOffsetAtActualValue();
         int end = this.pos_getOffsetofNextValue();
 
+        // TODO compute _isOrdered flag
+
         while (pos < end) {
             reader.setPosition(pos);
             int sid = reader.readVarUInt7IntValue();
@@ -194,5 +279,6 @@ public final class IonStructImpl
             _contents.add(child);
             pos = child.pos_getOffsetofNextValue();
         }
+        assert pos == end;  // TODO should throw IonException
     }
 }

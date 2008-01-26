@@ -5,10 +5,17 @@
 package com.amazon.ion;
 
 import java.io.Reader;
+import java.util.Collection;
 import java.util.Date;
 
 /**
  * Entry point to all things Ion.
+ * <p>
+ * In general, instances returned from one system are not interchangable with
+ * those returned by other systems.
+ * The intended usage pattern is for an application to construct a single
+ * <code>IonSystem</code> instance and use it throughout,
+ * rather than constructing multiples and intermingling their use.
  * <p>
  * Implementations of this interface must be safe for use by multiple threads.
  */
@@ -34,7 +41,7 @@ public interface IonSystem
 
 
     /**
-     * Gets the default catalog used by this system.  Unless otherwise noted,
+     * Gets the catalog used by this system.  Unless otherwise noted,
      * all objects derived from this system will use this catalog.
      */
     public IonCatalog getCatalog();
@@ -45,7 +52,10 @@ public interface IonSystem
      *
      * @param catalog the new system catalog.
      * @throws NullPointerException if <code>catalog</code> is null.
+     *
+     * @deprecated  Catalog should be immutable.
      */
+    @Deprecated
     public void setCatalog(IonCatalog catalog);
 
 
@@ -80,11 +90,18 @@ public interface IonSystem
      * Creates a new datagram containing one value.  If the given value is
      * contained elsewhere, it is cloned before insertion.
      *
-     * @param initialElement
+     * @param initialChild becomes the first and only (user) value in the
+     * datagram.
+     *
      * @return a new datagram.
-     * @throws NullPointerException if <code>initialElement<code> is null.
+     *
+     * @throws NullPointerException
+     *   if {@code initialChild} is null.
+     * @throws IllegalArgumentException
+     *   if {@code initialChild} is an {@link IonDatagram}.
      */
-    public IonDatagram newDatagram(IonValue initialElement);
+    public IonDatagram newDatagram(IonValue initialChild)
+        throws ContainedValueException;
 
 
     /**
@@ -111,17 +128,105 @@ public interface IonSystem
      * @throws NullPointerException if loader is null.
      * @throws IllegalArgumentException if <code>loader.getSystem()</code> is
      * not this system.
+     *
+     * @deprecated Default loader should be immutable.
      */
+    @Deprecated
     public void setLoader(IonLoader loader);
 
 
-//  public IonReader newReader(InputStream stream);
-    public IonReader newReader(Reader reader);
+    /**
+     * Creates a reader for iterating over a stream of Ion text data.
+     *
+     * @return a new reader instance.
+     *
+     * @throws NullPointerException if <code>ionText</code> is null.
+     */
+    public IonReader newReader(Reader ionText);
+
+
+    /**
+     * Creates a reader for iterating over a string containing Ion text data.
+     *
+     * @param ionText must not be null.
+     *
+     * @return a new reader instance.
+     *
+     * @throws NullPointerException if <code>ionText</code> is null.
+     */
     public IonReader newReader(String ionText);
 
 
+    /**
+     * Creates a reader for iterating over a string containing Ion text data.
+     *
+     * @param ionText must not be null.
+     *
+     * @return a new reader instance.
+     *
+     * @throws NullPointerException if <code>ionText</code> is null.
+     *
+     * @deprecated Use {@link #newReader(String)}.
+     */
+    @Deprecated
+    public IonReader newTextReader(String ionText);
+
+
+    /**
+     * Creates a reader for iterating over a stream of Ion text data.
+     *
+     * @return a new reader instance.
+     *
+     * @throws NullPointerException if <code>ionText</code> is null.
+     *
+     * @deprecated Use {@link #newReader(Reader)}.
+     */
+    @Deprecated
+    public IonReader newTextReader(Reader ionText);
+
+
+    /**
+     * Creates a reader for iterating over Ion data.
+     *
+     * @param ionData may be either Ion binary data or (UTF-8) Ion text.
+     * <em>This method assumes ownership of the array</em> and may modify it at
+     * will.
+     *
+     * @return a new reader instance.
+     *
+     * @throws NullPointerException if <code>ionData</code> is null.
+     */
+    public IonReader newReader(byte[] ionData);
+
+
+
+    /**
+     * Extracts a single value from Ion text data.
+     *
+     * @param ionText must not be null.
+     *
+     * @return the first (and only) user value in the data.
+     *
+     * @throws NullPointerException if <code>ionText</code> is null.
+     * @throws IonException if the data does not contain exactly one user
+     * value.
+     */
     public IonValue singleValue(String ionText);
-    public IonValue singleValue(byte[] ionBinary);
+
+
+    /**
+     * Extracts a single value from Ion text or binary data.
+     *
+     * @param ionData may be either Ion binary data or (UTF-8) Ion text.
+     * <em>This method assumes ownership of the array</em> and may modify it at
+     * will.
+     *
+     * @return the first (and only) user value in the data.
+     *
+     * @throws IonException if the data does not contain exactly one user
+     * value.
+     */
+    public IonValue singleValue(byte[] ionData);
 
 
     //-------------------------------------------------------------------------
@@ -129,44 +234,106 @@ public interface IonSystem
 
     /**
      * Constructs a new <code>null.blob</code> instance.
+     * @deprecated Use {@link #newNullBlob()} instead.
      */
+    @Deprecated
     public IonBlob newBlob();
+
+
+    /**
+     * Constructs a new <code>null.blob</code> instance.
+     */
+    public IonBlob newNullBlob();
+
+
+    /**
+     * Constructs a new <code>null.bool</code> instance.
+     * @deprecated Use {@link #newNullBool()} instead
+     */
+    @Deprecated
+    public IonBool newBool();
+
 
     /**
      * Constructs a new <code>null.bool</code> instance.
      */
-    public IonBool newBool();
+    public IonBool newNullBool();
 
-    public IonBool newBool(boolean value);
+
+    /**
+     * Constructs a new <code>bool</code> instance with the given content.
+     *
+     * @param content the initial content of the value.
+     *
+     * @return a bool with
+     * <code>{@link IonBool#booleanValue()} == content</code>.
+     */
+    public IonBool newBool(boolean content);
+
+
+    /**
+     * Constructs a new <code>null.clob</code> instance.
+     * @deprecated Use {@link #newNullClob()} instead
+     */
+    @Deprecated
+    public IonClob newClob();
 
 
     /**
      * Constructs a new <code>null.clob</code> instance.
      */
-    public IonClob newClob();
+    public IonClob newNullClob();
+
+
+    /**
+     * Constructs a new <code>null.decimal</code> instance.
+     * @deprecated Use {@link #newNullDecimal()} instead
+     */
+    @Deprecated
+    public IonDecimal newDecimal();
+
 
     /**
      * Constructs a new <code>null.decimal</code> instance.
      */
-    public IonDecimal newDecimal();
+    public IonDecimal newNullDecimal();
+
+
+    /**
+     * Constructs a new <code>null.float</code> instance.
+     * @deprecated Use {@link #newNullFloat()} instead
+     */
+    @Deprecated
+    public IonFloat newFloat();
+
 
     /**
      * Constructs a new <code>null.float</code> instance.
      */
-    public IonFloat newFloat();
+    public IonFloat newNullFloat();
+
+
+    /**
+     * Constructs a new <code>null.int</code> instance.
+     * @deprecated Use {@link #newNullInt()} instead
+     */
+    @Deprecated
+    public IonInt newInt();
 
 
     /**
      * Constructs a new <code>null.int</code> instance.
      */
-    public IonInt newInt();
+    public IonInt newNullInt();
+
 
     /**
      * Constructs a new <code>int</code> instance with the given content.
      *
-     * @param content the new int's value.
+     * @param content the new int's content.
      */
     public IonInt newInt(int content);
+
 
     /**
      * Constructs a new <code>int</code> instance with the given content.
@@ -181,7 +348,7 @@ public interface IonSystem
      * The integer portion of the number is used, any fractional portion is
      * ignored.
      *
-     * @param content the new int's value;
+     * @param content the new int's content;
      * may be <code>null</code> to make <code>null.int</code>.
      */
     public IonInt newInt(Number content);
@@ -189,8 +356,17 @@ public interface IonSystem
 
     /**
      * Constructs a new <code>null.list</code> instance.
+     * @deprecated Use {@link #newNullList()} instead
      */
+    @Deprecated
     public IonList newList();
+
+
+    /**
+     * Constructs a new <code>null.list</code> instance.
+     */
+    public IonList newNullList();
+
 
     /**
      * Constructs a new empty (not null) <code>list</code> instance.
@@ -198,24 +374,182 @@ public interface IonSystem
     public IonList newEmptyList();
 
     /**
+     * Constructs a new <code>list</code> with given child elements.
+     *
+     * @param elements
+     *  the initial set of child elements.  If <code>null</code>, then the new
+     *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
+     *
+     * @throws ContainedValueException
+     *  if any value in {@code elements}
+     *  has <code>{@link IonValue#getContainer()} != null</code>.
+     * @throws NullPointerException
+     *   if any value in {@code elements} is null.
+     * @throws IllegalArgumentException
+     *   if any value in {@code elements} is an {@link IonDatagram}.
+     */
+    public IonList newList(Collection<? extends IonValue> elements)
+        throws ContainedValueException, NullPointerException;
+
+
+    /**
+     * Constructs a new <code>list</code> with given child elements.
+     *
+     * @param elements
+     *  the initial set of child values.  If <code>null</code>, then the new
+     *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
+     *  If an element is Java <code>null</code>, its corresponding element in
+     *  the result will be an {@link IonNull} value.
+     *
+     * @throws ContainedValueException
+     *  if any value in {@code elements}
+     *  has <code>{@link IonValue#getContainer()} != null</code>.
+     * @throws NullPointerException
+     *   if any value in {@code elements} is null.
+     * @throws IllegalArgumentException
+     *   if any value in {@code elements} is an {@link IonDatagram}.
+     */
+    public <T extends IonValue> IonList newList(T... elements)
+        throws ContainedValueException, NullPointerException;
+
+
+    /**
+     * Constructs a new <code>list</code> with given <code>int</code> child
+     * elements.
+     *
+     * @param elements
+     *  the initial set of child values.  If <code>null</code>, then the new
+     *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
+     *  Otherwise, the resulting sequence will contain new {@link IonInt}s with
+     *  the given values.
+     *
+     * @return a new list where each element is an {@link IonInt}.
+     */
+    public IonList newList(int[] elements);
+
+
+    /**
+     * Constructs a new <code>list</code> with given <code>long</code> child
+     * elements.
+     *
+     * @param elements
+     *  the initial set of child values.  If <code>null</code>, then the new
+     *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
+     *  Otherwise, the resulting sequence will contain new {@link IonInt}s with
+     *  the given values.
+     *
+     * @return a new list where each element is an {@link IonInt}.
+     */
+    public IonList newList(long[] elements);
+
+
+    /**
      * Constructs a new <code>null.null</code> instance.
      */
     public IonNull newNull();
 
+
+    /**
+     * Constructs a new <code>null.sexp</code> instance.
+     * @deprecated Use {@link #newNullSexp()} instead
+     */
+    @Deprecated
+    public IonSexp newSexp();
+
+
     /**
      * Constructs a new <code>null.sexp</code> instance.
      */
-    public IonSexp newSexp();
+    public IonSexp newNullSexp();
+
 
     /**
      * Constructs a new empty (not null) <code>sexp</code> instance.
      */
     public IonSexp newEmptySexp();
 
+
+    /**
+     * Constructs a new <code>sexp</code> with given child elements.
+     *
+     * @param elements
+     *  the initial set of child elements.  If <code>null</code>, then the new
+     *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
+     *
+     * @throws ContainedValueException
+     *  if any value in {@code elements}
+     *  has <code>{@link IonValue#getContainer()} != null</code>.
+     * @throws NullPointerException
+     *   if any value in {@code elements} is null.
+     * @throws IllegalArgumentException
+     *   if any value in {@code elements} is an {@link IonDatagram}.
+     */
+    public IonSexp newSexp(Collection<? extends IonValue> elements)
+        throws ContainedValueException, NullPointerException;
+
+
+    /**
+     * Constructs a new <code>sexp</code> with given child elements.
+     *
+     * @param elements
+     *  the initial set of child values.  If <code>null</code>, then the new
+     *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
+     *
+     * @throws ContainedValueException
+     *  if any value in {@code elements}
+     *  has <code>{@link IonValue#getContainer()} != null</code>.
+     * @throws NullPointerException
+     *   if any value in {@code elements} is null.
+     * @throws IllegalArgumentException
+     *   if any value in {@code elements} is an {@link IonDatagram}.
+     */
+    public <T extends IonValue> IonSexp newSexp(T... elements)
+        throws ContainedValueException, NullPointerException;
+
+
+    /**
+     * Constructs a new <code>sexp</code> with given <code>int</code> child
+     * elements.
+     *
+     * @param elements
+     *  the initial set of child values.  If <code>null</code>, then the new
+     *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
+     *  Otherwise, the resulting sequence will contain new {@link IonInt}s with
+     *  the given values.
+     *
+     * @return a new sexp where each element is an {@link IonInt}.
+     */
+    public IonSexp newSexp(int[] elements);
+
+
+    /**
+     * Constructs a new <code>sexp</code> with given <code>long</code> child
+     * elements.
+     *
+     * @param elements
+     *  the initial set of child values.  If <code>null</code>, then the new
+     *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
+     *  Otherwise, the resulting sequence will contain new {@link IonInt}s with
+     *  the given values.
+     *
+     * @return a new sexp where each element is an {@link IonInt}.
+     */
+    public IonSexp newSexp(long[] elements);
+
+
+    /**
+     * Constructs a new <code>null.string</code> instance.
+     * @deprecated Use {@link #newNullString()} instead
+     */
+    @Deprecated
+    public IonString newString();
+
+
     /**
      * Constructs a new <code>null.string</code> instance.
      */
-    public IonString newString();
+    public IonString newNullString();
+
 
     /**
      * Constructs a new Ion string with the given content.
@@ -225,10 +559,20 @@ public interface IonSystem
      */
     public IonString newString(String content);
 
+
+    /**
+     * Constructs a new <code>null.struct</code> instance.
+     * @deprecated Use {@link #newNullStruct()} instead
+     */
+    @Deprecated
+    public IonStruct newStruct();
+
+
     /**
      * Constructs a new <code>null.struct</code> instance.
      */
-    public IonStruct newStruct();
+    public IonStruct newNullStruct();
+
 
     /**
      * Constructs a new empty (not null) <code>struct</code> instance.
@@ -238,8 +582,17 @@ public interface IonSystem
 
     /**
      * Constructs a new <code>null.symbol</code> instance.
+     * @deprecated Use {@link #newNullSymbol()} instead
      */
+    @Deprecated
     public IonSymbol newSymbol();
+
+
+    /**
+     * Constructs a new <code>null.symbol</code> instance.
+     */
+    public IonSymbol newNullSymbol();
+
 
     /**
      * Constructs a new Ion symbol with the given content.
@@ -254,8 +607,16 @@ public interface IonSystem
 
     /**
      * Constructs a new <code>null.timestamp</code> instance.
+     * @deprecated Use {@link #newNullTimestamp()} instead
      */
+    @Deprecated
     public IonTimestamp newTimestamp();
+
+
+    /**
+     * Constructs a new <code>null.timestamp</code> instance.
+     */
+    public IonTimestamp newNullTimestamp();
 
 
     /**
@@ -281,6 +642,7 @@ public interface IonSystem
      */
     public IonTimestamp newUtcTimestamp(Date utcDate);
 
+
     /**
      * Constructs a new UTC <code>timestamp</code> instance initialized so that
      * it represents the time at which it was allocated, measured to the nearest
@@ -290,7 +652,8 @@ public interface IonSystem
 
 
     /**
-     * Creates a deep copy of an Ion value.
+     * Creates a deep copy of an Ion value.  This method can properly clone
+     * {@link IonDatagram}s.
      *
      * @param value the value to copy.
      * @return a deep copy of value, with no container.

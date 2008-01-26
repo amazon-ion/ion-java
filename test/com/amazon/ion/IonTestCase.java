@@ -4,12 +4,15 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.system.StandardIonSystem;
+import com.amazon.ion.impl.IonSystemImpl;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Properties;
 import junit.framework.TestCase;
 
 /**
@@ -18,24 +21,86 @@ import junit.framework.TestCase;
 public abstract class IonTestCase
     extends TestCase
 {
-    protected StandardIonSystem mySystem;
+    private static boolean ourSystemPropertiesLoaded = false;
+    protected IonSystemImpl mySystem;
     protected IonLoader myLoader;
+
+
+    public IonTestCase()
+    {
+    }
+
+    public IonTestCase(String name)
+    {
+        super(name);
+    }
 
 
     // ========================================================================
     // Access to test data
 
+    public static synchronized void loadSystemProperties()
+    {
+        if (! ourSystemPropertiesLoaded)
+        {
+            InputStream stream =
+                IonTestCase.class.getResourceAsStream("/system.properties");
+
+            if (stream != null)
+            {
+                Properties props = new Properties();
+
+                try
+                {
+                    props.load(stream);
+
+                    Iterator entries = props.entrySet().iterator();
+                    while (entries.hasNext())
+                    {
+                        Map.Entry entry = (Map.Entry) entries.next();
+
+                        String key = (String) entry.getKey();
+
+                        // Command-line values override system.properties
+                        if (System.getProperty(key) == null)
+                        {
+                            System.setProperty(key, (String) entry.getValue());
+                        }
+                    }
+                }
+                catch (IOException e)
+                {
+                    synchronized (System.out)
+                    {
+                        System.out.println("Caught exception while loading system.properties:");
+                        e.printStackTrace(System.out);
+                    }
+                }
+            }
+
+            ourSystemPropertiesLoaded = true;
+        }
+    }
+
+
+    public static String requireSystemProperty(String prop)
+    {
+        loadSystemProperties();
+
+        String value = System.getProperty(prop);
+        if (value == null)
+        {
+            String message = "Missing required system property: " + prop;
+            throw new IllegalStateException(message);
+        }
+        return value;
+    }
+
+
+
     public static File getProjectHome()
     {
-        String basedir = System.getProperty("trellis.basedir");
-        if (basedir == null)
-        {
-            // The expected property is not set, meaning we're not running from
-            // within Trellis Antfiles.  So assume that the working directory
-            // is the project home.  This is a rather shaky assumption.
-            basedir = System.getProperty("user.dir");
-        }
-
+        String basedir = System.getProperty("user.dir");
         return new File(basedir);
     }
 
@@ -49,7 +114,9 @@ public abstract class IonTestCase
      */
     public static File getTestdataFile(String path)
     {
-        File testDataDir = getProjectFile("testdata");
+        String testDataPath =
+            requireSystemProperty("com.amazon.iontests.iontestdata.path");
+        File testDataDir = new File(testDataPath);
         return new File(testDataDir, path);
     }
 
@@ -63,8 +130,17 @@ public abstract class IonTestCase
     protected IonDatagram readIonText(File textFile)
         throws Exception
     {
-        IonLoader loader = system().newLoader();
-        return loader.loadTextFile(textFile);
+        return loader().load(textFile);
+    }
+
+    protected IonDatagram readIonBinary(File ionFile)
+        throws Exception
+    {
+        IonDatagram dg = loader().load(ionFile);
+
+        dg.deepMaterialize(); // Flush out any encoding problems in the data.
+
+        return dg;
     }
 
     /**
@@ -83,14 +159,22 @@ public abstract class IonTestCase
     }
 
 
+    public IonDatagram loadFile(String filename)
+        throws IOException
+    {
+        File text = getTestdataFile(filename);
+        return loader().load(text);
+    }
+
+
     // ========================================================================
     // Fixture Helpers
 
-    protected StandardIonSystem system()
+    protected IonSystemImpl system()
     {
         if (mySystem == null)
         {
-            mySystem = new StandardIonSystem();
+            mySystem = new IonSystemImpl();
         }
         return mySystem;
     }
@@ -118,6 +202,38 @@ public abstract class IonTestCase
         String result = QT + BS + escape + QT;
         return result;
     }
+
+
+    // ========================================================================
+    // Encoding helpers
+
+    /**
+     * Gets bytes of datagram and loads into a new one.
+     */
+    public IonDatagram reload(IonDatagram dg)
+    {
+        byte[] bytes = dg.toBytes();
+        checkBinaryHeader(bytes);
+
+        IonDatagram dg1 = loader().load(bytes);
+        return dg1;
+    }
+
+    /**
+     * Put value into a datagram, get bytes, and reload to single value.
+     * Result should be equivalent.
+     */
+    public IonValue reload(IonValue value)
+    {
+        IonDatagram dg = system().newDatagram(value);
+        byte[] bytes = dg.toBytes();
+        checkBinaryHeader(bytes);
+
+        dg = loader().load(bytes);
+        assertEquals(1, dg.size());
+        return dg.get(0);
+    }
+
 
 
     // ========================================================================
@@ -195,6 +311,12 @@ public abstract class IonTestCase
         return value;
     }
 
+    public IonSexp oneSexp(String text)
+    {
+        return (IonSexp) oneValue(text);
+    }
+
+
     /**
      * Parse a broken value, expecting an IonException.
      * @param text can be anything.
@@ -219,7 +341,7 @@ public abstract class IonTestCase
     // TODO add to IonSystem()?
     public byte[] encode(String ionText)
     {
-        return system().getLoader().load(ionText).toBytes();
+        return loader().load(ionText).toBytes();
     }
 
     public void assertEscape(char expected, char escapedChar)
@@ -233,21 +355,12 @@ public abstract class IonTestCase
 
     public void checkBinaryHeader(byte[] datagram)
     {
-        assertTrue("datagram is too small", datagram.length >= 8);
+        assertTrue("datagram is too small", datagram.length >= 4);
 
-        long encodedSize =
-            (long) (datagram[0] & 0xFF) << 24 |
-            (long) (datagram[1] & 0xFF) << 16 |
-            (long) (datagram[2] & 0xFF) << 8  |
-                   (datagram[3] & 0xFF);
-
-        // TODO check for $FFFFFFFF unknown length
-        assertEquals("datagram encoded length", datagram.length, encodedSize);
-
-        assertEquals("datagram cookie byte 1", datagram[4], 0x10);
-        assertEquals("datagram cookie byte 2", datagram[5], 0x14);
-        assertEquals("datagram cookie byte 3", datagram[6], 0x01);
-        assertEquals("datagram cookie byte 4", datagram[7], 0x00);
+        assertEquals("datagram cookie byte 1", (byte) 0xE0, datagram[0]);
+        assertEquals("datagram cookie byte 2", (byte) 0x01, datagram[1]);
+        assertEquals("datagram cookie byte 3", (byte) 0x00, datagram[2]);
+        assertEquals("datagram cookie byte 4", (byte) 0xEA, datagram[3]);
     }
 
 
@@ -275,7 +388,15 @@ public abstract class IonTestCase
      */
     public void checkInt(Integer expected, IonValue actual)
     {
+        assertSame(IonType.INT, actual.getType());
         checkInt((expected == null ? null : expected.longValue()), actual);
+    }
+
+    public void checkNullNull(IonValue actual)
+    {
+        assertSame(IonType.NULL, actual.getType());
+        IonNull n = (IonNull) actual;
+        assertNotNull(n);
     }
 
 
@@ -285,6 +406,7 @@ public abstract class IonTestCase
      */
     public void checkString(String text, IonValue value)
     {
+        assertSame(IonType.STRING, value.getType());
         IonString str = (IonString) value;
         assertEquals("string content", text, str.stringValue());
     }
@@ -295,6 +417,7 @@ public abstract class IonTestCase
      */
     public void checkSymbol(String name, IonValue value)
     {
+        assertSame(IonType.SYMBOL, value.getType());
         IonSymbol sym = (IonSymbol) value;
         assertEquals("symbol name", name, sym.stringValue());
     }
@@ -305,6 +428,7 @@ public abstract class IonTestCase
      */
     public void checkSymbol(String name, int id, IonValue value)
     {
+        assertSame(IonType.SYMBOL, value.getType());
         IonSymbol sym = (IonSymbol) value;
         assertEquals("symbol name", name, sym.stringValue());
         assertEquals("symbol id", id, sym.intValue());
@@ -331,10 +455,10 @@ public abstract class IonTestCase
         String[] found_annotations = found.getTypeAnnotations();
         String[] annotations = expected.getTypeAnnotations();
         if (annotations == null || found_annotations == null) {
-            assert annotations == null && found_annotations == null;
+            assertTrue(annotations == null && found_annotations == null);
         }
         else {
-            assert annotations.length == found_annotations.length;
+            assertEquals(annotations.length, found_annotations.length);
             for (String s : annotations) {
                 checkAnnotation(s, found);
             }

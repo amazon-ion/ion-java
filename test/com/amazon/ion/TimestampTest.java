@@ -61,13 +61,14 @@ public class TimestampTest
 
     private void checkTimestamp(Date expected, IonTimestamp actual)
     {
+        assertSame(IonType.TIMESTAMP, actual.getType());
         Date found = actual.dateValue();
         assertNotNull("date is null", found);
         // Ensure that dateValue() returns a new instance each call!
         assertNotSame(found, actual.dateValue());
 
         assertEquals(found.getTime(), actual.getMillis());
-        
+
         if (expected.getTime() != found.getTime())
         {
             DateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
@@ -91,7 +92,7 @@ public class TimestampTest
         else
         {
             int actualOffsetMillis = actualOffsetMinutes * 60 * 1000;
-            assertEquals(expectedOffsetMillis, actualOffsetMillis);            
+            assertEquals(expectedOffsetMillis, actualOffsetMillis);
         }
     }
 
@@ -100,24 +101,25 @@ public class TimestampTest
     {
         checkMagicDay(null, text);
     }
-    
+
     private void checkMagicDay(TimeZone tz, String text)
     {
         IonTimestamp value = (IonTimestamp) oneValue(text);
         Calendar magicDay = makeUtcCalendar();
         // month is zero-based!
         magicDay.set(1969, 01, 23);
-        
+
         if (tz != null)
         {
             magicDay.setTimeZone(tz);
         }
-        
+
         checkTimestamp(magicDay, value);
     }
 
     public void checkNullTimestamp(IonTimestamp value)
     {
+        assertSame(IonType.TIMESTAMP, value.getType());
         assertTrue(value.isNullValue());
         assertNull(value.dateValue());
         try
@@ -161,7 +163,7 @@ public class TimestampTest
         value.setMillis(now.getTime());
         checkTimestamp(now, value);
         assertEquals(-60, value.getLocalOffset().intValue());
-        
+
         value.setLocalOffset(null);
         checkTimestamp(now, value);
         assertEquals(null, value.getLocalOffset());
@@ -175,7 +177,7 @@ public class TimestampTest
 
     public void testFactoryNullTimestamp()
     {
-        IonTimestamp value = system().newTimestamp();
+        IonTimestamp value = system().newNullTimestamp();
         checkNullTimestamp(value);
         modifyTimestamp(value);
     }
@@ -240,6 +242,26 @@ public class TimestampTest
         checkMagicDay("1969-02-23T00:00:00.00+00:00");
     }
 
+
+    public void checkCanonicalText(String text)
+    {
+        IonValue value = oneValue(text);
+        String printed = value.toString();
+        assertEquals(text, printed);
+    }
+
+    public void testPrecision()
+    {
+        // FIXME All of these should be distinct
+//        checkCanonicalText("2007-08-28");
+//        checkCanonicalText("2007-08-28T16:37:24Z");
+//        checkCanonicalText("2007-08-28T16:37:24.0Z");
+//        checkCanonicalText("2007-08-28T16:37:24.00Z");
+        checkCanonicalText("2007-08-28T16:37:24.000Z");
+//        checkCanonicalText("2007-08-28T16:37:24.0000Z");
+    }
+
+
     public void testDateWithNormalTzd()
     {
         IonTimestamp value = (IonTimestamp) oneValue("1969-02-22T16:00-08:00");
@@ -247,7 +269,7 @@ public class TimestampTest
         // month is zero-based!
         magicDay.set(1969, 01, 22, 16, 0);
         magicDay.setTimeZone(PST);
-                
+
         checkTimestamp(magicDay, value);
     }
 
@@ -257,7 +279,7 @@ public class TimestampTest
         Calendar magicDay = makeUtcCalendar();
         // month is zero-based!
         magicDay.set(1969, 01, 23);
-        
+
         checkTimestamp(magicDay.getTime(), value);
         assertEquals(75, value.getLocalOffset().intValue());
     }
@@ -325,7 +347,7 @@ public class TimestampTest
 
     public void testBadSetLocalOffset()
     {
-        IonTimestamp value = system().newTimestamp();
+        IonTimestamp value = system().newNullTimestamp();
 
         try {
             value.setLocalOffset(0);

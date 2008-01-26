@@ -4,13 +4,14 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonException;
+import com.amazon.ion.IonFloat;
+import com.amazon.ion.IonType;
+import com.amazon.ion.NullValueException;
+import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
 import java.math.BigDecimal;
 
-import com.amazon.ion.IonException;
-import com.amazon.ion.IonFloat;
-import com.amazon.ion.NullValueException;
-import com.amazon.ion.ValueVisitor;
 
 /**
  * Implements the Ion <code>float</code> type.
@@ -19,21 +20,23 @@ public final class IonFloatImpl
     extends IonValueImpl
     implements IonFloat
 {
-    static final int _float_typeDesc = 
-        IonConstants.makeTypeDescriptorByte(
-                    IonConstants.tidFloat
-                   ,IonConstants.lnIsNullAtom
-       );
+    static final int NULL_FLOAT_TYPEDESC =
+        IonConstants.makeTypeDescriptor(IonConstants.tidFloat,
+                                        IonConstants.lnIsNullAtom);
+
     static private final Double ZERO_DOUBLE = new Double(0);
-    
+
+    static private final int SIZE_OF_IEEE_754_64_BITS = 8;
+
+
     private Double _float_value;
-    
+
     /**
      * Constructs a <code>null.float</code> element.
      */
     public IonFloatImpl()
     {
-        super(_float_typeDesc);
+        super(NULL_FLOAT_TYPEDESC);
     }
 
     /**
@@ -43,7 +46,16 @@ public final class IonFloatImpl
     {
         super(typeDesc);
         assert pos_getType() == IonConstants.tidFloat;
+//        assert pos_getLowNibble() == IonConstants.lnIsNullAtom
+//            || pos_getLowNibble() == SIZE_OF_IEEE_754_64_BITS;
     }
+
+
+    public IonType getType()
+    {
+        return IonType.FLOAT;
+    }
+
 
     public float floatValue()
         throws NullValueException
@@ -92,8 +104,8 @@ public final class IonFloatImpl
             setValue(value.doubleValue());
         }
     }
-    
-    public void setValue(Double d) 
+
+    public void setValue(Double d)
     {
         _float_value = d;
         _hasNativeValue = true;
@@ -118,7 +130,7 @@ public final class IonFloatImpl
     protected int computeLowNibble(int valuelen)
     {
         assert _hasNativeValue == true;
-        
+
         int ln = 0;
         if (_float_value == null) {
             ln = IonConstants.lnIsNullAtom;
@@ -134,16 +146,16 @@ public final class IonFloatImpl
         }
         return ln;
     }
-    
-    
+
+
     @Override
     protected void doMaterializeValue(IonBinary.Reader reader) throws IOException
     {
         assert this._isPositionLoaded == true && this._buffer != null;
-        
+
         // a native value trumps a buffered value
         if (_hasNativeValue) return;
-        
+
         // the reader will have been positioned for us
         assert reader.position() == this.pos_getOffsetAtValueTD();
 
@@ -153,7 +165,7 @@ public final class IonFloatImpl
 
         int type = this.pos_getType();
         if (type != IonConstants.tidFloat) {
-            throw new IonException("invalid type desc encountered for int");
+            throw new IonException("invalid type desc encountered for float");
         }
         int ln = this.pos_getLowNibble();
         switch ((0xf & ln)) {
@@ -161,7 +173,7 @@ public final class IonFloatImpl
             _float_value = null;
             break;
         case 0:
-            _float_value = ZERO_DOUBLE; 
+            _float_value = ZERO_DOUBLE;
             break;
         case IonConstants.lnIsVarLen:
             ln = reader.readVarUInt7IntValue();
@@ -178,11 +190,9 @@ public final class IonFloatImpl
     {
         assert valueLen == this.getNakedValueLength();
         assert valueLen > 0;
-        
+
         int wlen = writer.writeFloatValue(_float_value);
         assert wlen == valueLen;
-
-        return;
     }
 
 

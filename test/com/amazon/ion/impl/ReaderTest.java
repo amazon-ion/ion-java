@@ -10,7 +10,6 @@ import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.impl.SystemReader;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 

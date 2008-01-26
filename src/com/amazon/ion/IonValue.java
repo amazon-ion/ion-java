@@ -6,10 +6,101 @@ package com.amazon.ion;
 
 
 /**
- * Base type for all Ion data types.
+ * Base type for all Ion data nodes.
+ * <p>
+ * The {@code IonValue} hierarchy presents a "tree view" of Ion data;
+ * every node in the tree is an instance of this class.  Since the Ion
+ * type system is highly orthogonal, most operations use this
+ * base type, and applications will need to examine individual instances and
+ * "downcast" the value to one of the "real" types (<em>e.g.</em>,
+ * {@link IonString}) in order to access the Ion content.
+ * <p>
+ * Besides the real types, there are other generic interfaces that can be
+ * useful:
+ * <ul>
+ *   <li>
+ *     {@link IonText} generalizes {@link IonString} and {@link IonSymbol}
+ *   </li>
+ *   <li>
+ *     {@link IonContainer} generalizes
+ *     {@link IonList}, {@link IonSexp}, and {@link IonStruct}
+ *   </li>
+ *   <li>
+ *     {@link IonSequence} generalizes {@link IonList} and {@link IonSexp}
+ *   </li>
+ *   <li>
+ *     {@link IonLob} generalizes {@link IonBlob} and {@link IonClob}
+ *   </li>
+ * </ul>
+ * <p>
+ * To determine the real type of a generic {@code IonValue}, there are three
+ * main mechanisms:
+ * <ul>
+ *   <li>
+ *     Use {@code instanceof} to look for a desired interface:
+ *<pre>
+ *    if (v instanceof IonString)
+ *    {
+ *        useStruct((IonString) v);
+ *    }
+ *    else if (v instanceof IonStruct)
+ *    {
+ *        useStruct((IonStruct) v);
+ *    }
+ *    // ...
+ *</pre>
+ *   </li>
+ *   <li>
+ *     Call {@link #getType()} and then {@code switch} over the resulting
+ *     {@link IonType}:
+ *<pre>
+ *    switch (v.getType())
+ *    {
+ *        case IonType.STRING: useString((IonString) v); break;
+ *        case IonType.STRUCT: useStruct((IonStruct) v); break;
+ *        // ...
+ *    }
+ *</pre>
+ *   </li>
+ *   <li>
+ *     Implement {@link ValueVisitor} and call {@link #accept(ValueVisitor)}:
+ *<pre>
+ *    public class MyVisitor
+ *        extends AbstractValueVisitor
+ *    {
+ *        public void visit(IonString value)
+ *        {
+ *            useString(v);
+ *        }
+ *        public void visit(IonStruct value)
+ *        {
+ *            useStruct(v);
+ *        }
+ *        // ...
+ *    }
+ *</pre>
+ *   </li>
+ * </ul>
+ * Use the most appropriate mechanism for your algorithm, depending upon how
+ * much validation you've done on the data.
+ * <p>
+ * <b>Instances of {@code IonValue} are not thread-safe!</b>
+ * Your application must perform its own synchronization if you need to access
+ * nodes from multiple threads.
  */
 public interface IonValue
 {
+    /**
+     * Gets an enumeration value identifying the core Ion data type of this
+     * object.
+     * <p/>
+     * <b>WARNING:</b> this method is not implemented by {@link IonDatagram}.
+     *
+     * @return a non-<code>null</code> enumeration value.
+     */
+    public IonType getType();
+
+
     /**
      * Determines whether this in an Ion null-value, <em>e.g.</em>,
      * <code>null</code> or <code>null.string</code>.
@@ -30,12 +121,19 @@ public interface IonValue
 
 
     /**
-     * Gets the member name attached to this value,
+     * Gets the field name attached to this value,
      * or <code>null</code> if this is not part of an {@link IonStruct}.
      */
     public String getFieldName();
 
+    
+    /**
+     * Gets the field name attached to this value,
+     * or <code>null</code> if this is not part of an {@link IonStruct}.
+     */
+    public int getFieldNameId();
 
+    
     /**
      * Gets the container of this value,
      * or <code>null</code> if this is not part of one.
@@ -46,7 +144,7 @@ public interface IonValue
     /**
      * Gets the user type annotations attached to this value
      * as strings, or <code>null</code> if there are none.
-     * @deprecated Use {@link #getTypeAnnotations()} instead
+     * @deprecated Use {@link #getTypeAnnotations()} instead.
      */
     public String[] getTypeAnnotationStrings();
 
@@ -62,7 +160,7 @@ public interface IonValue
      * Determines whether or not the value is annotated with
      * a particular user type annotation.
      * @param annotation as a string value.
-     * @return <code>true</code> if this value has the annoation.
+     * @return <code>true</code> if this value has the annotation.
      */
     public boolean hasTypeAnnotation(String annotation);
 
@@ -104,4 +202,20 @@ public interface IonValue
      * <code>null</code>.
      */
     public void accept(ValueVisitor visitor) throws Exception;
+
+
+    /**
+     * Ensures that this value, and all contained data, is fully materialized
+     * into {@link IonValue} instances from any underlying Ion binary buffer.
+     */
+    public void deepMaterialize();
+
+
+    /**
+     * Returns a canonical text representation of this value.
+     * For more configurable rendering, see {@link com.amazon.ion.util.Printer}.
+     *
+     * @return Ion text data equivalent to this value.
+     */
+    public String toString();
 }

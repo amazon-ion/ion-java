@@ -1,3 +1,0 @@
-// Strings cannot end with EOF.
-// Note that there's no final NL in this file.
-123 "abc

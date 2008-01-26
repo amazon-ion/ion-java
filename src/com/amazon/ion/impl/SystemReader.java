@@ -4,6 +4,7 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
@@ -12,7 +13,6 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.StaticSymbolTable;
 import com.amazon.ion.impl.IonBinary.BufferManager;
-import com.amazon.ion.system.StandardIonSystem;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
@@ -22,7 +22,7 @@ import java.util.NoSuchElementException;
 public class SystemReader
     implements IonReader
 {
-    private final StandardIonSystem _system;
+    private final IonSystemImpl _system;
     private final IonCatalog _catalog;
 
     private Reader           _input;
@@ -38,22 +38,36 @@ public class SystemReader
     private IonValue     _next;
 
 
-    public SystemReader(StandardIonSystem system, String s) {
+    /**
+     * @throws NullPointerException if any parameter is null.
+     */
+    public SystemReader(IonSystemImpl system, String s) {
         this(system, system.getCatalog(), new StringReader(s));
     }
 
-    public SystemReader(StandardIonSystem system,
+    /**
+     * @throws NullPointerException if any parameter is null.
+     */
+    public SystemReader(IonSystemImpl system,
                         IonCatalog catalog,
                         Reader input)
     {
         this(system, catalog, system.newLocalSymbolTable(), input);
     }
 
-    public SystemReader(StandardIonSystem system,
+    /**
+     * @throws NullPointerException if any parameter is null.
+     */
+    public SystemReader(IonSystemImpl system,
                         IonCatalog catalog,
                         LocalSymbolTable initialSymboltable,
                         Reader input)
     {
+        if (system == null || catalog == null || initialSymboltable == null)
+        {
+            throw new NullPointerException();
+        }
+
         _system = system;
         _catalog = catalog;
         _currentSymbolTable = initialSymboltable;
@@ -61,6 +75,9 @@ public class SystemReader
     }
 
 
+    /**
+     * @throws NullPointerException if input is null.
+     */
     private void initialize(Reader input, int limit) {
         _input = input;
         _parser = new IonParser(_input);
@@ -68,39 +85,42 @@ public class SystemReader
     }
 
 
-    public SystemReader(StandardIonSystem system, BufferManager buffer)
+    /**
+     * @throws NullPointerException if any parameter is null.
+     */
+    public SystemReader(IonSystemImpl system, BufferManager buffer)
     {
         this(system, system.getCatalog(), buffer);
     }
 
-    public SystemReader(StandardIonSystem system,
+    /**
+     * Creates a new system reader using a specific catalog, reading data from
+     * the start of a buffer.
+     *
+     * @throws NullPointerException if any parameter is null.
+     */
+    public SystemReader(IonSystemImpl system,
                         IonCatalog catalog,
                         BufferManager buffer)
     {
-        // TODO downcast shouldn't be necessary.
+        if (catalog == null)  // Others are dereferenced below.
+        {
+            throw new NullPointerException();
+        }
+
+        IonBinary.Reader reader = buffer.reader();
+        IonBinary.verifyBinaryVersionMarker(reader);
+
         _system = system;
         _catalog = catalog;
         // TODO this should be an unmodifiable bootstram symtab.
         _currentSymbolTable = system.newLocalSymbolTable();
         _buffer = buffer;
-        _buffer_offset = 8;
+        _buffer_offset = reader.position();
     }
 
-//        private void initialize(byte[] bytes, int offset, int len) {
-//            byte[] temp = bytes;
-//            if (offset != 0 || len != bytes.length) {
-//                // TODO - bytebuffer should be able to handle a subset of an array
-//                temp = new byte[len];
-//                System.arraycopy(bytes, offset, temp, 0, len);
-//                bytes = temp;
-//            }
-//            BlockedBuffer bb = new BlockedBuffer(bytes);
-//            _buffer = new BufferManager(bb);
-//            _buffer_offset = 8;
-//        }
 
-
-    public StandardIonSystem getSystem() {
+    public IonSystemImpl getSystem() {
         return _system;
     }
 
@@ -160,9 +180,8 @@ public class SystemReader
                               ,0
                 );
                 if (freshBuffer) {
-                    // We wrote a header; skip it.
-                    // TODO remove magic number!
-                    _buffer_offset = 8;
+                    // We wrote a magic cookie; skip it.
+                    _buffer_offset = BINARY_VERSION_MARKER_SIZE;
                 }
             }
             if (buffer.buffer().size() <= _buffer_offset) {

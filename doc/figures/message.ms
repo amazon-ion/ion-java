@@ -1,17 +1,16 @@
 .begin dformat
 style linethrutext 0
 style recspread 0.0
-message
-        31-0 \fIlength\fR
+value stream
+        31-0 binary version marker
 noname
-        7-0 0x10
-        7-0 0x14
-        7-0 \fImajor\fR
-        7-0 \fIminor\fR
+        --32-dashed  \fIvalue\fR
 noname
-        --48-dashed  \fIvalue\fR
+        --32-invis  ...
 noname
-        --48-invis  ...
+        --32-dashed binary version marker
 noname
-        --48-dashed  \fIvalue\fR
+        --32-dashed  \fIvalue\fR
+noname
+        --32-invis  ...
 .end

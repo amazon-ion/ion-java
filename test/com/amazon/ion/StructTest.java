@@ -11,6 +11,7 @@ public class StructTest
 {
     public static void checkNullStruct(IonStruct value)
     {
+        assertSame(IonType.STRUCT, value.getType());
         assertTrue(value.isNullValue());
 
         try
@@ -57,14 +58,14 @@ public class StructTest
      */
     public void modifyStruct(IonStruct value)
     {
-        IonBool nullBool0 = system().newBool();
+        IonBool nullBool0 = system().newNullBool();
         value.put("f", nullBool0);
         assertEquals("size", 1, value.size());
         assertSame(nullBool0, value.get("f"));
         assertEquals("f", nullBool0.getFieldName());
         assertSame(value, nullBool0.getContainer());
 
-        IonBool nullBool1 = system().newBool();
+        IonBool nullBool1 = system().newNullBool();
         value.add("g", nullBool1);
         assertEquals("size", 2, value.size());
         assertSame(nullBool1, value.get("g"));
@@ -72,7 +73,7 @@ public class StructTest
         assertSame(value, nullBool1.getContainer());
 
         // Repeated field name, which one do we get?
-        IonBool nullBool2 = system().newBool();
+        IonBool nullBool2 = system().newNullBool();
         value.add("f", nullBool2);
         assertEquals("size", 3, value.size());
         assertEquals("f", nullBool2.getFieldName());
@@ -91,8 +92,29 @@ public class StructTest
         assertEquals("f", nullBool0.getFieldName());
         assertSame(value, nullBool0.getContainer());
 
+        // Cannot put a datagram
+        try
+        {
+            IonDatagram dg = loader().load("hi");
+            value.put("g", dg);
+            fail("Expected IllegalArgumentException");
+        }
+        catch (IllegalArgumentException e) { }
+        assertEquals("g", nullBool1.getFieldName());
+
+        // Cannot add a datagram
+        try
+        {
+            IonDatagram dg = loader().load("hi");
+            value.add("g", dg);
+            fail("Expected IllegalArgumentException");
+        }
+        catch (IllegalArgumentException e) { }
+        assertEquals("g", nullBool1.getFieldName());
+
+
         // Make sure put replaces doubled field.
-        IonBool nullBool3 = system().newBool();
+        IonBool nullBool3 = system().newNullBool();
         value.put("f", nullBool3);
         assertEquals(2, value.size());
         assertNull(nullBool0.getContainer());
@@ -118,7 +140,7 @@ public class StructTest
 
     public void testFactoryNullStruct()
     {
-        IonStruct value = system().newStruct();
+        IonStruct value = system().newNullStruct();
         assertNull(value.getFieldName());
         assertNull(value.getContainer());
         checkNullStruct(value);
@@ -128,6 +150,7 @@ public class StructTest
     public void testTextNullStruct()
     {
         IonStruct value = (IonStruct) oneValue("null.struct");
+        assertSame(IonType.STRUCT, value.getType());
         checkNullStruct(value);
         modifyStruct(value);
     }
@@ -135,6 +158,7 @@ public class StructTest
     public void testMakeNullStruct()
     {
         IonStruct value = (IonStruct) oneValue("{foo:bar}");
+        assertSame(IonType.STRUCT, value.getType());
         assertFalse(value.isNullValue());
         value.makeNull();
         checkNullStruct(value);
@@ -149,6 +173,7 @@ public class StructTest
     public void testEmptyStruct()
     {
         IonStruct value = (IonStruct) oneValue("{}");
+        assertSame(IonType.STRUCT, value.getType());
         assertFalse(value.isNullValue());
         assertNull("annotation should be null", value.getTypeAnnotations());
         assertEquals(0, value.size());
@@ -169,6 +194,32 @@ public class StructTest
         assertEquals("{a:b}", value.toString());
     }
 
+
+    /**
+     * This looks for a subtle encoding problem. If a value has its header
+     * widened enough to overlap clean content, we must be careful to not
+     * overwrite the content while writing the header.  This can happen when
+     * adding annotations.
+     * @see ListTest#testModsCausingHeaderOverlap()
+     */
+    public void testModsCausingHeaderOverlap()
+        throws Exception
+    {
+        IonDatagram dg = values("{f:\"this is a string to overlap\"}");
+        IonStruct v = (IonStruct) dg.get(0);
+        v.addTypeAnnotation("one");
+        v.addTypeAnnotation("two");
+        v.addTypeAnnotation("three");
+        v.addTypeAnnotation("four");
+        v.addTypeAnnotation("five");
+        v.addTypeAnnotation("six");
+
+        dg = reload(dg);
+        v = (IonStruct) dg.get(0);
+        checkString("this is a string to overlap", v.get("f"));
+    }
+
+
     public void testGetTwiceReturnsSame()
     {
         IonStruct value = (IonStruct) oneValue("{a:b}");
@@ -181,7 +232,7 @@ public class StructTest
     {
         IonStruct value = (IonStruct) oneValue("{a:{b:bv}}");
         IonStruct nested = (IonStruct) value.get("a");
-        IonBool inserted = system().newBool();
+        IonBool inserted = system().newNullBool();
         nested.put("c", inserted);
         assertSame(inserted, ((IonStruct)value.get("a")).get("c"));
     }
@@ -286,8 +337,8 @@ public class StructTest
 
     public void testBadPuts()
     {
-        IonStruct value = system().newStruct();
-        IonBool nullBool = system().newBool();
+        IonStruct value = system().newNullStruct();
+        IonBool nullBool = system().newNullBool();
 
         try {
             value.put(null, nullBool);
@@ -310,8 +361,8 @@ public class StructTest
 
     public void testBadAddss()
     {
-        IonStruct value = system().newStruct();
-        IonBool nullBool = system().newBool();
+        IonStruct value = system().newNullStruct();
+        IonBool nullBool = system().newNullBool();
 
         try {
             value.add(null, nullBool);

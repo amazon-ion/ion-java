@@ -6,9 +6,7 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonLoader;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.LocalSymbolTable;
-import com.amazon.ion.system.StandardIonSystem;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -26,64 +24,25 @@ import java.io.StringReader;
 public class LoaderImpl
     implements IonLoader
 {
-    private final StandardIonSystem mySystem;
+    private final IonSystemImpl mySystem;
 
 
-    public LoaderImpl(StandardIonSystem system)
+    public LoaderImpl(IonSystemImpl system)
     {
         mySystem = system;
     }
 
 
-    public IonSystem getSystem()
+    public IonSystemImpl getSystem()
     {
         return mySystem;
     }
 
 
     //=========================================================================
-    // Loading text
+    // Loading from File
 
-
-    /**
-     * Loads an Ion text (UTF-8) file.  The file is parsed in its entirety.
-     *
-     * @param ionFile a file containing UTF-8 encoded Ion text.
-     *
-     * @return an S-expression containing the ordered elements of the file.
-     * If the file has no meaningful elements, return an empty sexp.
-     * @throws IonException if there's a syntax error in the Ion content.
-     * @throws IOException if there's a problem reading the file.
-     */
-    public IonDatagramImpl loadTextFile(File ionFile)
-        throws IonException, IOException
-    {
-        FileInputStream fileStream = new FileInputStream(ionFile);
-        try
-        {
-            return loadText(fileStream);
-        }
-        finally
-        {
-            fileStream.close();
-        }
-    }
-
-    public IonDatagramImpl loadBinaryFile(File ionFile)
-        throws IonException, IOException
-    {
-        FileInputStream fileStream = new FileInputStream(ionFile);
-        try
-        {
-            return loadBinary(fileStream);
-        }
-        finally
-        {
-            fileStream.close();
-        }
-    }
-
-    public IonDatagramImpl loadFile(File ionFile)
+    public IonDatagramImpl load(File ionFile)
         throws IonException, IOException
     {
         FileInputStream fileStream = new FileInputStream(ionFile);
@@ -98,31 +57,101 @@ public class LoaderImpl
     }
 
 
+    /** @deprecated */
+    @Deprecated
+    public IonDatagramImpl loadTextFile(File ionFile)
+        throws IonException, IOException
+    {
+        return load(ionFile);
+    }
+
+    @Deprecated
+    public IonDatagramImpl loadText(File ionFile)
+        throws IonException, IOException
+    {
+        return load(ionFile);
+    }
+
+    @Deprecated
+    public IonDatagramImpl loadBinary(File ionFile)
+        throws IonException, IOException
+    {
+        return load(ionFile);
+    }
+
+
+    //=========================================================================
+    // Loading from String
+
+    @Deprecated
+    public IonDatagramImpl loadText(String ionText)
+        throws IonException
+    {
+        return load(ionText);
+    }
+
+
     public IonDatagramImpl load(String ionText)
         throws IonException
     {
         StringReader reader = new StringReader(ionText);
-        return load(reader);
+        try
+        {
+            return load(reader);
+        }
+        catch (IOException e)
+        {
+            // Wrap this because it shouldn't happen and we don't want to
+            // propagate it.
+            String message = "Error reading from string: " + e.getMessage();
+            throw new IonException(message, e);
+        }
+        finally
+        {
+            // This may not be necessary, but for all I know StringReader will
+            // release some resources.
+            reader.close();
+        }
     }
 
 
-    public IonDatagramImpl load(Reader ionReader)
-        throws IonException
+    //=========================================================================
+    // Loading from Reader
+
+    @Deprecated
+    public IonDatagramImpl loadText(Reader ionReader)
+        throws IonException, IOException
     {
-        return new IonDatagramImpl(mySystem, ionReader);
+        return load(ionReader);
     }
 
 
-    public IonDatagramImpl load(Reader ionText, LocalSymbolTable symbolTable)
-        throws IonException
+    public IonDatagramImpl load(Reader ionText,
+                                LocalSymbolTable symbolTable)
+        throws IonException, IOException
     {
         return new IonDatagramImpl(mySystem, symbolTable, ionText);
     }
 
 
-    //=========================================================================
-    // Loading binary
+    @Deprecated
+    public IonDatagramImpl loadText(Reader ionText,
+                                    LocalSymbolTable symbolTable)
+        throws IonException, IOException
+    {
+        return load(ionText, symbolTable);
+    }
 
+
+    public IonDatagramImpl load(Reader ionReader)
+        throws IonException, IOException
+    {
+        return new IonDatagramImpl(mySystem, ionReader);
+    }
+
+
+    //=========================================================================
+    // Loading from byte[]
 
     public IonDatagramImpl load(byte[] ionData)
     {
@@ -132,53 +161,34 @@ public class LoaderImpl
 
 
     //=========================================================================
-    // Loading binary from a stream
+    // Loading from InputStream
 
     public IonDatagramImpl load(InputStream ionData)
         throws IonException, IOException
     {
-        try
-        {
-            PushbackInputStream pushback = new PushbackInputStream(ionData, 8);
-            if (isBinary(pushback)) {
-                return loadBinary(pushback);
-            }
+        PushbackInputStream pushback = new PushbackInputStream(ionData, 8);
+        if (isBinary(pushback)) {
+            return loadBinary(pushback);   // TODO inline this call
+        }
 
-            return loadText(pushback);
-        }
-        finally
-        {
-            ionData.close();
-        }
+        return loadText(pushback); // TODO inline this call
     }
 
 
+    @Deprecated
     public IonDatagramImpl loadText(InputStream ionText)
         throws IOException
     {
-        try
-        {
-            Reader reader = new InputStreamReader(ionText, "UTF-8");
-            return load(reader);
-        }
-        finally
-        {
-            ionText.close();
-        }
+        Reader reader = new InputStreamReader(ionText, "UTF-8");
+        return load(reader);
     }
 
+    @Deprecated
     public IonDatagramImpl loadBinary(InputStream ionBinary)
         throws IOException
     {
-        try
-        {
-            SystemReader systemReader = mySystem.newBinarySystemReader(ionBinary);
-            return new IonDatagramImpl(systemReader);
-        }
-        finally
-        {
-            ionBinary.close();
-        }
+        SystemReader systemReader = mySystem.newBinarySystemReader(ionBinary);
+        return new IonDatagramImpl(systemReader);
     }
 
 
@@ -188,18 +198,16 @@ public class LoaderImpl
     static boolean isBinary(PushbackInputStream pushback)
         throws IonException, IOException
     {
-        boolean isbinary = false;
-        byte[] header = new byte[8];
+        boolean isBinary = false;
+        byte[] cookie = new byte[IonConstants.BINARY_VERSION_MARKER_SIZE];
 
-        int len = pushback.read(header);
-        if (len == 8) {
-            if (IonBinary.isMagicCookie(header, 4, 4)) {
-                return true;
-            }
+        int len = pushback.read(cookie);
+        if (len == IonConstants.BINARY_VERSION_MARKER_SIZE) {
+            isBinary = IonBinary.startsWithBinaryVersionMarker(cookie);
         }
         if (len > 0) {
-            pushback.unread(header, 0, len);
+            pushback.unread(cookie, 0, len);
         }
-        return isbinary;
+        return isBinary;
     }
 }

@@ -76,6 +76,7 @@
   <target name="build.test" depends="jars">
     <javac srcdir="${dir.test.src}"
            destdir="${dir.test.classes}"
+           debug="true"
            source="1.5" target="1.5">
       <classpath>
         <path path="${build.classpath}"/>
@@ -99,7 +100,7 @@
 
     <junit printsummary="false"
            haltonfailure="false" haltonerror="false"
-	   failureproperty="test.failure"
+           failureproperty="test.failure"
            dir="${basedir}"
            fork="true"
            includeantruntime="true">
@@ -115,6 +116,8 @@
       </classpath>
 
       <sysproperty key="java.library.path" value="${java.libraryPath.test}" />
+      <sysproperty key="com.amazon.iontests.iontestdata.path"
+                   value="${brazil.package.IonTests-1.0.base.dir}/iontestdata"/>
 
       <assertions enableSystemAssertions="true">
         <!--
@@ -138,10 +141,16 @@
 
 
   <target name="javadoc" depends="build.properties">
-    <javadoc>
+    <javadoc
+        overview= "${dir.src}/com/amazon/ion/overview.html"
+        windowtitle="IonJava API"
+        doctitle="The IonJava API Reference"
+        header="IonJava API Reference"
+        bottom="&lt;center>Copyright (C) 2007 Amazon.com. All Rights Reserved.&lt;/center>"
+        docencoding="UTF-8">
       <fileset dir="${dir.src}">
         <include name="**/*.java"/>
-	<exclude name="com/amazon/ion/impl/**" />
+        <exclude name="com/amazon/ion/impl/**" />
       </fileset>
       <classpath>
         <pathelement path="${build.classpath}"/>

@@ -4,6 +4,12 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_1_0;
+import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
+import com.amazon.ion.IonException;
+import com.amazon.ion.LocalSymbolTable;
+import com.amazon.ion.UnexpectedEofException;
+import com.amazon.ion.impl.IonConstants.HighNibble;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PushbackReader;
@@ -14,11 +20,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Stack;
 
-import com.amazon.ion.IonException;
-import com.amazon.ion.LocalSymbolTable;
-import com.amazon.ion.UnexpectedEofException;
-import com.amazon.ion.impl.IonConstants.HighNibble;
-
 
 /**
  *
@@ -26,35 +27,80 @@ import com.amazon.ion.impl.IonConstants.HighNibble;
 public class IonBinary
 {
     static boolean debugValidation = false;
-    
+
     final static int _ib_TOKEN_LEN           =    1;
     final static int _ib_VAR_INT32_LEN_MAX   =    5; // 31 bits (java limit) / 7 bits per byte = 5 bytes
     final static int _ib_VAR_INT64_LEN_MAX   =   10; // 31 bits (java limit) / 7 bits per byte = 5 bytes
     final static int _ib_INT64_LEN_MAX       =    8;
-    
+    final static int _ib_FLOAT64_LEN         =    8;
+
+    private static final Double DOUBLE_POS_ZERO = Double.valueOf(0.0);
+
     private IonBinary() { }
-    
-    public static boolean isMagicCookie(byte[] b, int off, int len) 
+
+    public static boolean startsWithBinaryVersionMarker(byte[] b)
     {
-        if (len < 4) return false;
-        
-        int token = IonConstants.MAGIC_TOKEN;
-        
-        for (int ii=3; ii>=0; ii--) {
-            int b1 = (0xff) & b[off + ii];  // low byte first
-            int b2 = (0xff) & token;
-            if (b1 != b2) return false;
-            token >>= 8;
+        if (b.length < BINARY_VERSION_MARKER_SIZE) return false;
+
+        for (int i = 0; i < BINARY_VERSION_MARKER_SIZE; i++)
+        {
+            if (BINARY_VERSION_MARKER_1_0[i] != b[i]) return false;
         }
         return true;
     }
-    
+
+    /**
+     * Verifies that a reader starts with a valid Ion cookie, throwing an
+     * exception if it does not.
+     *
+     * @param reader must not be null.
+     * @throws IonException if there's a problem reading the cookie, or if the
+     * data does not start with {@link IonConstants#BINARY_VERSION_MARKER_1_0}.
+     */
+    public static void verifyBinaryVersionMarker(Reader reader)
+        throws IonException
+    {
+        try
+        {
+            reader.sync();
+            reader.setPosition(0);
+            byte[] bvm = new byte[BINARY_VERSION_MARKER_SIZE];
+            int len = reader.read(bvm);
+            if (len < BINARY_VERSION_MARKER_SIZE)
+            {
+                String message =
+                    "Binary data is too short: at least " +
+                    BINARY_VERSION_MARKER_SIZE +
+                    " bytes are required, but only " + len + " were found.";
+                throw new IonException(message);
+
+            }
+
+            if (! startsWithBinaryVersionMarker(bvm))
+            {
+                StringBuilder buf = new StringBuilder();
+                buf.append("Binary data has unrecognized header");
+                for (int i = 0; i < bvm.length; i++)
+                {
+                    int b = bvm[i] & 0xFF;
+                    buf.append(" 0x");
+                    buf.append(Integer.toHexString(b).toUpperCase());
+                }
+                throw new IonException(buf.toString());
+            }
+        }
+        catch (IOException e)
+        {
+            throw new IonException(e);
+        }
+    }
+
     public static class BufferManager
     {
         BlockedBuffer    _buf;
         IonBinary.Reader _reader;
         IonBinary.Writer _writer;
-        
+
         public BufferManager() {
             _buf = new BlockedBuffer();
             this.openReader();
@@ -65,16 +111,16 @@ public class IonBinary
             this.openReader();
             this.openWriter();
         }
-        
+
         /**
          * creates a blocked byte buffer from an input stream.
          * @param bytestream a stream interface the byte image to buffer
          */
-        public BufferManager(InputStream bytestream) 
+        public BufferManager(InputStream bytestream)
         {
-            this(); // this will create a fresh buffer 
+            this(); // this will create a fresh buffer
                     // as well as a reader and writer
-            
+
             // now we move the data from the input stream to the buffer
             // more or less as fast as we can.  I am (perhaps foolishly)
             // assuming the "available()" is a useful size.
@@ -88,7 +134,7 @@ public class IonBinary
             }
 
         }
-        
+
         public IonBinary.Reader openReader() {
             if (_reader == null) {
                 _reader = new IonBinary.Reader(_buf);
@@ -101,17 +147,17 @@ public class IonBinary
             }
             return _writer;
         }
-        
+
         public BlockedBuffer    buffer() { return _buf; }
         public IonBinary.Reader reader() { return _reader; }
         public IonBinary.Writer writer() { return _writer; }
-        
-        public IonBinary.Reader reader(int pos) throws IOException 
-        { 
+
+        public IonBinary.Reader reader(int pos) throws IOException
+        {
             _reader.setPosition(pos);
             return _reader;
         }
-        public IonBinary.Writer writer(int pos) throws IOException 
+        public IonBinary.Writer writer(int pos) throws IOException
         {
             _writer.setPosition(pos);
             return _writer;
@@ -187,6 +233,29 @@ public class IonBinary
         }
         return len;
     }
+
+
+    public static int lenVarInt8(BigInteger bi)
+    {
+        if (bi.compareTo(BigInteger.ZERO) < 0)
+        {
+            // TODO avoid negate call? (maybe slow)
+            bi = bi.negate();
+
+            // Here's why its hard to avoid negate:
+//          assert (new BigInteger("-2").bitLength()) == 1;
+            // We need 2 bits to represent the magnitude.
+        }
+
+        int bitCount = bi.bitLength() + 1;   // One more bit to hold the sign
+
+        int byteCount = (bitCount + 7) / 8;
+        return byteCount;
+    }
+
+
+    // TODO maybe add lenVarInt7(int) to micro-optimize
+
     public static int lenVarInt7(long longVal) {
         int len = 0;
 
@@ -212,8 +281,6 @@ public class IonBinary
     }
     public static int lenIonInt(long v) {
         if (v < 0) {
-// CAS UPDATE - old logic, not replaced ..
-            // return IonBinary.lenVarInt(v);
             return IonBinary.lenVarUInt8(-v);
         }
         else if (v > 0) {
@@ -253,8 +320,8 @@ public class IonBinary
         }
         return lenVarUInt7(valuelen);
     }
-    
-    public static int lenTypeDescWithAppropriateLenField(int type, int valuelen) 
+
+    public static int lenTypeDescWithAppropriateLenField(int type, int valuelen)
     {
         switch (type) {
         case IonConstants.tidNull: // null(0)
@@ -270,50 +337,60 @@ public class IonBinary
         case IonConstants.tidString: // string (8)
         case IonConstants.tidClob: // clob(9)
         case IonConstants.tidBlob: // blob(10)
-        case IonConstants.tidTypedecl: // typedecl(13)
+        case IonConstants.tidTypedecl: // 14
             if (valuelen < IonConstants.lnIsVarLen) {
                 return IonConstants.BB_TOKEN_LEN;
             }
             // fall through since the len has to follow
             // the td byte, just like it does in containers
-        case IonConstants.tidList: // list(11)
-        case IonConstants.tidStruct: // struct(12)
-        case IonConstants.tidSexp: // sexp(14)
+        case IonConstants.tidList:   // 11
+        case IonConstants.tidSexp:   // 12
+        case IonConstants.tidStruct: // 13
             return IonConstants.BB_TOKEN_LEN + lenVarUInt7(valuelen);
-            
+
         case IonConstants.tidUnused: // unused(15)
         default:
             throw new IonException("invalid type");
         }
     }
-    
-    
-    public static int lenIonFloat(double value) {
-        // first check for the 0.0 special case
-        if (value == 0.0) return 0;
 
-        // just use the built in Java support for this for the
-        // time being
-        // TODO write "custom" serialization or verify that
-        //      the java routine is doing the right thing
-        long dBits = Double.doubleToRawLongBits(value);
-        return lenVarInt(dBits);
+
+    public static int lenIonFloat(double value) {
+        if (Double.valueOf(value).equals(DOUBLE_POS_ZERO))
+        {
+            // pos zero special case
+            return 0;
+        }
+
+        // always 8-bytes for IEEE-754 64-bit
+        return _ib_FLOAT64_LEN;
     }
+
+    /**
+     * @param bd must not be null.
+     */
     public static int lenIonDecimal(BigDecimal bd) {
         int len = 0;
-        // first check for the 0.0 special case
+        // first check for the 0d0 special case
         if (!BigDecimal.ZERO.equals(bd)) {
             // otherwise this is very expensive (or so I'd bet)
-            BigInteger     bi = bd.unscaledValue();
-            byte[]      bits = bi.toByteArray();
-            int            scale = bd.scale();
+            BigInteger mantissa = bd.unscaledValue();
+            int mantissaByteCount = lenVarInt8(mantissa);
 
+            // We really need the length of the exponent (-scale) but in our
+            // representation the length is the same regardless of sign.
+            int scale = bd.scale();
             len = lenVarInt7(scale);
+
+            // Exponent is always at least one byte.
             if (len == 0) len = 1;
-            len += bits.length;
+
+            len += mantissaByteCount;
         }
         return len;
     }
+
+
     public static int lenIonTimestamp(IonTokenReader.Type.timeinfo di)
     {
         if (di == null) return 0;
@@ -332,21 +409,21 @@ public class IonBinary
     }
     public static int lenIonString(String v) {
         if (v == null) return 0;
-        
+
         int len = 0;
-        
+// BUGBUG: this should be looking for surrogate characters !!!
         for (int ii=0; ii<v.length(); ii++) {
             char c = v.charAt(ii);
             int clen = lenUTF8Char(c);
             if (clen < 1) return -1;
             len += clen;
         }
-        
+
         return len;
     }
     public static int lenUTF8Char(int c) {
         int len = -1;
- 
+
         if ((c & (~0x1FFFFF)) != 0) {
             throw new IonException("invalid character for UTF-8 output");
         }
@@ -366,29 +443,29 @@ public class IonBinary
 
         return len;
     }
-    
-    public static int lenAnnotationListWithLen(String[] annotations, LocalSymbolTable symbolTable) 
+
+    public static int lenAnnotationListWithLen(String[] annotations, LocalSymbolTable symbolTable)
     {
         int annotationLen = 0;
-        
+
         if (annotations != null) {
-            // add up the length of the encoded symbols 
+            // add up the length of the encoded symbols
             for (int ii=0; ii<annotations.length; ii++) {
                 int symid = symbolTable.findSymbol(annotations[ii]);
                 annotationLen += IonBinary.lenVarUInt7(symid);
             }
-        
+
             // now the len of the list
             annotationLen += IonBinary.lenVarUInt7(annotationLen);
-        }        
+        }
         return annotationLen;
     }
-    
-    public static int lenAnnotationListWithLen(ArrayList<Integer> annotations) 
+
+    public static int lenAnnotationListWithLen(ArrayList<Integer> annotations)
     {
         int annotationLen = 0;
 
-        // add up the length of the encoded symbols 
+        // add up the length of the encoded symbols
         for (Integer ii : annotations) {
             int symid = ii.intValue();
             annotationLen += IonBinary.lenVarUInt7(symid);
@@ -399,7 +476,7 @@ public class IonBinary
 
         return annotationLen;
     }
-    
+
     public static int lenIonNullWithTypeDesc() {
         return _ib_TOKEN_LEN;
     }
@@ -474,7 +551,8 @@ public class IonBinary
 
 
 
-    public static class Reader extends BlockedBuffer.BlockedByteInputStream
+    public static final class Reader
+        extends BlockedBuffer.BlockedByteInputStream
     {
         /**
          * @param bb blocked buffer to read from
@@ -491,8 +569,34 @@ public class IonBinary
         {
             super(bb, pos);
         }
+
+        /**
+         * return the underlying bytes as a single buffer
+         *
+         * @return bytes[]
+         * @throws IOException 
+         * @throws UnexpectedEofException if end of file is hit.
+         * @throws IOException if there's other problems reading input.
+         */
+        public byte[] getBytes() throws IOException {
+            if (this._buf == null) return null;
+            int len = _buf.size();
+            byte[] buf = new byte[len];
+            if (this.read(buf) != len) {
+                throw new UnexpectedEofException();
+            }
+            return buf;
+        }
+
         
-        public int readToken() throws IOException
+        /**
+         * Read exactly one byte of input.
+         *
+         * @return 0x00 through 0xFF as a positive int.
+         * @throws UnexpectedEofException if end of file is hit.
+         * @throws IOException if there's other problems reading input.
+         */
+        public int readToken() throws UnexpectedEofException, IOException
         {
             int c = read();
             if (c < 0) throwUnexpectedEOFException();
@@ -503,32 +607,31 @@ public class IonBinary
         {
             int c = read();
             if (c < 0) throwUnexpectedEOFException();
-            c = (c & 0xff);
-            int typeid = IonConstants.getTypeDescriptor(c);
+            int typeid = IonConstants.getTypeCode(c);
             if (typeid == IonConstants.tidTypedecl) {
                 this.readLength(typeid, IonConstants.getLowNibble(c));
                 int alen = this.readVarInt7IntValue();
+                // TODO add skip(int) method instead of this loop.
                 while (alen > 0) {
                     if (this.read() < 0) throwUnexpectedEOFException();
                     alen--;
                 }
                 c = read();
                 if (c < 0) throwUnexpectedEOFException();
-                c = (c & 0xff);
             }
             return c;
         }
 
-        public int[] readAnnotations() throws IOException 
+        public int[] readAnnotations() throws IOException
         {
-            int[] annotations = null; 
-            
+            int[] annotations = null;
+
             int annotationLen = this.readVarUInt7IntValue();
             int annotationPos = this.position(); // pos at the first ann sid
             int annotationEnd = annotationPos + annotationLen;
             int annotationCount = 0;
-            
-            // first we read through and count 
+
+            // first we read through and count
             while(this.position() < annotationEnd) {
                 // read the annotation symbol id itself
                 // and for this first pass we just throw that
@@ -549,20 +652,20 @@ public class IonBinary
                     annotations[annotationIdx++] = sid;
                 }
             }
-            
+
             return annotations;
         }
 
-        public String[] readAnnotations(LocalSymbolTable symbolTable) throws IOException 
+        public String[] readAnnotations(LocalSymbolTable symbolTable) throws IOException
         {
-            String[] annotations = null; 
-            
+            String[] annotations = null;
+
             int annotationLen = this.readVarUInt7IntValue();
             int annotationPos = this.position(); // pos at the first ann sid
             int annotationEnd = annotationPos + annotationLen;
             int annotationCount = 0;
-            
-            // first we read through and count 
+
+            // first we read through and count
             while(this.position() < annotationEnd) {
                 // read the annotation symbol id itself
                 // and for this first pass we just throw that
@@ -583,12 +686,13 @@ public class IonBinary
                     annotations[annotationIdx++] = symbolTable.findSymbol(sid);
                 }
             }
-            
+
             return annotations;
         }
 
-        public int readLength(int td, int ln) throws IOException 
+        public int readLength(int td, int ln) throws IOException
         {
+            // TODO check for invalid lownibbles
             switch (td) {
             case IonConstants.tidNull: // null(0)
             case IonConstants.tidBoolean: // boolean(1)
@@ -602,23 +706,32 @@ public class IonBinary
             case IonConstants.tidString: // string (8)
             case IonConstants.tidClob: // clob(9)
             case IonConstants.tidBlob: // blob(10)
-            case IonConstants.tidTypedecl: // typedecl(13)
+            case IonConstants.tidList:     // 11
+            case IonConstants.tidSexp:     // 12
+            case IonConstants.tidTypedecl: // 14
                 switch (ln) {
                 case 0:
                 case IonConstants.lnIsNullAtom:
                     return 0;
                 case IonConstants.lnIsVarLen:
-                    return readVarUInt7IntValue();                    
+                    return readVarUInt7IntValue();
                 default:
                     return ln;
                 }
-            case IonConstants.tidList: // list(11)
-            case IonConstants.tidStruct: // struct(12)
-            case IonConstants.tidSexp: // sexp(14)
-                if ((ln & IonConstants.lnIsNullContainer) != 0) return 0;
-                return readVarUInt7IntValue();                
+            case IonConstants.tidStruct: // 13
+                switch (ln) {
+                case IonConstants.lnIsEmptyContainer:
+                case IonConstants.lnIsNullStruct:
+                    return 0;
+                case IonConstants.lnIsOrderedStruct:
+                case IonConstants.lnIsVarLen:
+                    return readVarUInt7IntValue();
+                default:
+                    return ln;
+                }
             case IonConstants.tidUnused: // unused(15)
             default:
+                // TODO use InvalidBinaryDataException
                 throw new BlockedBuffer.BlockedBufferException("invalid type id encountered: " + td);
             }
         }
@@ -630,28 +743,28 @@ public class IonBinary
             switch (len) {
             case 8:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= (b & 0xFF) << (7*8);
+                retvalue |= b << (7*8);
             case 7:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= (b & 0xFF) << (6*8);
+                retvalue |= b << (6*8);
             case 6:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= (b & 0xFF) << (5*8);
+                retvalue |= b << (5*8);
             case 5:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= (b & 0xFF) << (4*8);
+                retvalue |= b << (4*8);
             case 4:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= (b & 0xFF) << (3*8);
+                retvalue |= b << (3*8);
             case 3:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= (b & 0xFF) << (2*8);
+                retvalue |= b << (2*8);
             case 2:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= (b & 0xFF) << (1*8);
+                retvalue |= b << (1*8);
             case 1:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= (b & 0xFF) << (0*8);
+                retvalue |= b << (0*8);
             }
             return retvalue;
         }
@@ -662,16 +775,16 @@ public class IonBinary
             switch (len) {
             case 4:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= (b & 0xFF) << (3*8);
+                retvalue |= b << (3*8);
             case 3:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= (b & 0xFF) << (2*8);
+                retvalue |= b << (2*8);
             case 2:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= (b & 0xFF) << (1*8);
+                retvalue |= b << (1*8);
             case 1:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= (b & 0xFF) << (0*8);
+                retvalue |= b << (0*8);
             }
             return retvalue;
         }
@@ -689,25 +802,25 @@ public class IonBinary
                 switch (len - 1) {  // we read 1 already
                 case 7:
                     if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | (b & 0xFF);
+                    retvalue = (retvalue << 8) | b;
                 case 6:
                     if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | (b & 0xFF);
+                    retvalue = (retvalue << 8) | b;
                 case 5:
                     if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | (b & 0xFF);
+                    retvalue = (retvalue << 8) | b;
                 case 4:
                     if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | (b & 0xFF);
+                    retvalue = (retvalue << 8) | b;
                 case 3:
                     if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | (b & 0xFF);
+                    retvalue = (retvalue << 8) | b;
                 case 2:
                     if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | (b & 0xFF);
+                    retvalue = (retvalue << 8) | b;
                 case 1:
                     if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | (b & 0xFF);
+                    retvalue = (retvalue << 8) | b;
                 default:
                 }
                 if (is_negative) {
@@ -716,8 +829,9 @@ public class IonBinary
             }
             return retvalue;
         }
-        /** @throws IOException 
+        /** @throws IOException
          * @deprecated */
+        @Deprecated
         public int readVarInt8IntValue(int len) throws IOException {
             int retvalue = 0;
             boolean is_negative = false;
@@ -738,13 +852,13 @@ public class IonBinary
                     throw new IonException("overflow attempt to read long value into an int");
                 case 3:
                     if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | (b & 0xFF);
+                    retvalue = (retvalue << 8) | b;
                 case 2:
                     if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | (b & 0xFF);
-                case 1:
+                    retvalue = (retvalue << 8) | b;
+
                     if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | (b & 0xFF);
+                    retvalue = (retvalue << 8) | b;
                 }
                 if (is_negative) {
                     retvalue = -retvalue;
@@ -759,28 +873,28 @@ public class IonBinary
             switch (len) {
             case 8:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue = (retvalue << 8) | (b & 0xFF);
+                retvalue = (retvalue << 8) | b;
             case 7:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue = (retvalue << 8) | (b & 0xFF);
+                retvalue = (retvalue << 8) | b;
             case 6:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue = (retvalue << 8) | (b & 0xFF);
+                retvalue = (retvalue << 8) | b;
             case 5:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue = (retvalue << 8) | (b & 0xFF);
+                retvalue = (retvalue << 8) | b;
             case 4:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue = (retvalue << 8) | (b & 0xFF);
+                retvalue = (retvalue << 8) | b;
             case 3:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue = (retvalue << 8) | (b & 0xFF);
+                retvalue = (retvalue << 8) | b;
             case 2:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue = (retvalue << 8) | (b & 0xFF);
+                retvalue = (retvalue << 8) | b;
             case 1:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue = (retvalue << 8) | (b & 0xFF);
+                retvalue = (retvalue << 8) | b;
             default:
             }
             return retvalue;
@@ -794,16 +908,16 @@ public class IonBinary
                 throw new IonException("overflow attempt to read long value into an int");
             case 4:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue = (b & 0xFF);
+                retvalue = b;
             case 3:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue = (retvalue << 8) | (b & 0xFF);
+                retvalue = (retvalue << 8) | b;
             case 2:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue = (retvalue << 8) | (b & 0xFF);
+                retvalue = (retvalue << 8) | b;
             case 1:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue = (retvalue << 8) | (b & 0xFF);
+                retvalue = (retvalue << 8) | b;
             case 0:
             }
             return retvalue;
@@ -849,13 +963,13 @@ public class IonBinary
             }
             return retvalue;
         }
-        public long readVarInt7LongValue() throws IOException 
+        public long readVarInt7LongValue() throws IOException
         {
             long    retvalue = 0;
             boolean is_negative = false;
             int     b;
 
-            // sythetic label "done" (yuck)
+            // synthetic label "done" (yuck)
 done:       for (;;) {
                 // read the first byte - it has the sign bit
                 if ((b = read()) < 0) throwUnexpectedEOFException();
@@ -883,13 +997,13 @@ done:       for (;;) {
             }
             return retvalue;
         }
-        public int readVarInt7IntValue() throws IOException 
+        public int readVarInt7IntValue() throws IOException
         {
             int     retvalue = 0;
             boolean is_negative = false;
             int     b;
 
-            // sythetic label "done" (yuck)
+            // synthetic label "done" (yuck)
 done:       for (;;) {
                 // read the first byte - it has the sign bit
                 if ((b = read()) < 0) throwUnexpectedEOFException();
@@ -931,9 +1045,9 @@ done:       for (;;) {
 
         /**
          * Reads an integer value, returning null to mean -0.
-         * @throws IOException 
+         * @throws IOException
          */
-        public Integer readVarInt7WithNegativeZero() throws IOException 
+        public Integer readVarInt7WithNegativeZero() throws IOException
         {
             int     retvalue = 0;
             boolean is_negative = false;
@@ -986,20 +1100,23 @@ done:       for (;;) {
             return retInteger;
         }
 
-        public double readFloatValue(int len) throws IOException 
+        public double readFloatValue(int len) throws IOException
         {
-            double d = 0.0;
-
-            // first check for the 0.0 special case
-            if (len == 0) {
-                return d;
+            if (len == 0)
+            {
+                // special case, return pos zero
+                return 0.0d;
             }
-            long dBits = readVarInt8LongValue(len);
-            d = Double.longBitsToDouble(dBits);
 
-            return d;
+            if (len != 8)
+            {
+                throw new IonException("Length of float read must be 0 or 8");
+            }
+
+            long dBits = readVarUInt8LongValue(len);
+            return Double.longBitsToDouble(dBits);
         }
-        public BigDecimal readDecimalValue(int len) throws IOException 
+        public BigDecimal readDecimalValue(int len) throws IOException
         {
             BigDecimal bd;
 
@@ -1010,18 +1127,30 @@ done:       for (;;) {
             else {
                 // otherwise we to it the hard way ....
                 int         startpos = this.position();
-                int         scale = this.readVarInt7IntValue();
+                int         exponent = this.readVarInt7IntValue();
                 int         bitlen = len - (this.position() - startpos);
-                byte[]      bits = new byte[bitlen];
 
                 BigInteger value;
-                if (bitlen > 0) {
+                if (bitlen > 0)
+                {
+                    byte[] bits = new byte[bitlen];
                     this.read(bits, 0, bitlen);
-                    value = new BigInteger(bits);
+
+                    int signum = 1;
+                    if (bits[0] < 0)
+                    {
+                        // value is negative, clear the sign
+                        bits[0] &= 0x7F;
+                        signum = -1;
+                    }
+                    value = new BigInteger(signum, bits);
                 }
                 else {
                     value = BigInteger.ZERO;
                 }
+
+                // Ion stores exponent, BigDecimal uses the negation "scale"
+                int scale = -exponent;
                 bd = new BigDecimal(value, scale, MathContext.DECIMAL128);
             }
             return bd;
@@ -1045,12 +1174,12 @@ done:       for (;;) {
             return ti;
         }
 
-        public String readString(int len) throws IOException 
+        public String readString(int len) throws IOException
         {
             StringBuffer sb = new StringBuffer(len);
             int c;
             int endPosition = this.position() + len;
-            
+
             while (this.position() < endPosition) {
                 c = readChar();
                 if (c < 0) throwUnexpectedEOFException();
@@ -1058,12 +1187,12 @@ done:       for (;;) {
             }
 
             if (this.position() < endPosition) throwUnexpectedEOFException();
-        
+
             return sb.toString();
         }
         public int readChar() throws IOException {
             int c = -1, b;
-            
+
             b = read();
             if (b < 0) return -1;
             if ((b & 0x80) == 0) {
@@ -1093,11 +1222,11 @@ done:       for (;;) {
                 b = read();
                 if ((b & 0xc0) != 0x80) throwUTF8Exception();
                 c <<= 6;
-                c |= (b & ~0x80);            
+                c |= (b & ~0x80);
                 b = read();
                 if ((b & 0xc0) != 0x80) throwUTF8Exception();
                 c <<= 6;
-                c |= (b & ~0x80);            
+                c |= (b & ~0x80);
                 b = read();
                 if ((b & 0xc0) != 0x80) throwUTF8Exception();
                 c <<= 6;
@@ -1115,11 +1244,11 @@ done:       for (;;) {
         void throwUnexpectedEOFException() {
             throw new BlockedBuffer.BlockedBufferException("unexpected EOF in value at offset " + this.position());
         }
-     
+
 
         public String readString() throws IOException {
             int td = read();
-            if (((td >> 4) & 0xf) != IonConstants.tidString) {
+            if (IonConstants.getTypeCode(td) != IonConstants.tidString) {
                 throw new IonException("readString helper only works for string(7) not "+((td >> 4 & 0xf)));
             }
             int len = (td & 0xf);
@@ -1133,7 +1262,8 @@ done:       for (;;) {
         }
     }
 
-    public static class Writer extends BlockedBuffer.BlockedByteOutputStream
+    public static final class Writer
+        extends BlockedBuffer.BlockedByteOutputStream
     {
         /**
          * creates writable stream (OutputStream) that writes
@@ -1182,7 +1312,7 @@ done:       for (;;) {
         * of data at a time.
         *
         */
-        static class lhNode 
+        static class lhNode
         {
            int     _hn;
            int     _lownibble;
@@ -1198,27 +1328,14 @@ done:       for (;;) {
            }
         }
 
-        public void startLongWrite(int hn) throws IOException 
+        public void startLongWrite(int hn) throws IOException
         {
             if (debugValidation) _validate();
-           
-            // 13 for the min value that fits, 1 for the typedesc,
-            //  5 for the max varlen (up to 32bit) that might be needed
-            // if the value "goes long".
-        
-            // first we make sure that the initial value will fit in
-            // a single buffer (just to reduce the edge cases later
-            boolean lenAlwaysFollows = !IonConstants.lengthIsEncodedInLowNibble(hn);
-            
-            pushLongHeader(hn, 0, lenAlwaysFollows);
-            
-            if (lenAlwaysFollows) {
-                this.writeTypeDescWithLenForContainer(hn, 0, 0);
-            }
-            else {
-                this.writeTypeDescWithLenForScalars(hn, 0);
-            }
-        
+
+            pushLongHeader(hn, 0, false);
+
+            this.writeCommonHeader(hn, 0);
+
             if (debugValidation) _validate();
         }
 
@@ -1232,18 +1349,20 @@ done:       for (;;) {
 
 
         /**
-        *
-        * @param hn high nibble value (or type id)
-        * @param lownibble is the low nibble value.  If -1, then the low nibble is
-        * pulled from the header node pushed previously.
-         * @throws IOException 
-        */
-        public void patchLongHeader(int hn, int lownibble) throws IOException 
+         * Update the TD/LEN header of a value.
+         *
+         * @param hn high nibble value (or type id)
+         * @param lownibble is the low nibble value.
+         * If -1, then the low nibble is pulled from the header node pushed
+         * previously.  If the header node had lengthFollows==false then this
+         * is ignored and the LN is computed from what was actually written.
+         */
+        public void patchLongHeader(int hn, int lownibble) throws IOException
         {
            int currpos = this.position();
 
            if (debugValidation) _validate();
-           
+
            // get the header description we pushed on the stack a while ago
            PositionMarker pm = this.popPosition();
            lhNode n = (lhNode)pm.getUserData();
@@ -1257,21 +1376,31 @@ done:       for (;;) {
            // calculate the length just the value itself
            // we don't count the type descriptor in the value len
            int writtenValueLen = totallen - IonConstants.BB_TOKEN_LEN;
-           if (n._length_follows) {
-               // if it's a collection we also wrote one empty byte of
-               // the length value (since we have to have at least one)
-               // so that byte is not "value"
-               writtenValueLen--;
-           }
+
            // now we can figure out how long the value is going to be
 
            // This is the length of the length (it does NOT
            // count the typedesc byte however)
            int len_o_len = IonBinary.lenVarUInt7(writtenValueLen);
 
-           if (n._length_follows) {    // containers. Others too?
-               if (writtenValueLen < 1) {
-                   len_o_len = 1;
+           // TODO cleanup this logic.  lengthFollows == is struct
+           if (n._length_follows) {
+               assert hn == IonConstants.tidStruct;
+
+               if (lownibble == IonConstants.lnIsOrderedStruct)
+               {
+                   // leave len_o_len alone
+               }
+               else
+               {
+                   if (writtenValueLen < IonConstants.lnIsVarLen) {
+                       lownibble = writtenValueLen;
+                       len_o_len = 0;
+                   }
+                   else {
+                       lownibble = IonConstants.lnIsVarLen;
+                   }
+                   assert lownibble != IonConstants.lnIsOrderedStruct;
                }
            }
            else {
@@ -1287,14 +1416,9 @@ done:       for (;;) {
            // first we go back to the beginning
            this.setPosition(pm.getPosition());
 
-           // firgure out if we need to move the trailing data to make
+           // figure out if we need to move the trailing data to make
            // room for the variable length length
            int needed = len_o_len;
-           if (n._length_follows) {
-               // we already have some space for this - 1 byte
-               needed--;
-           }
-           
            if (needed > 0) {
                // insert does the heavy lifting of making room for us
                // at the current position for "needed" additional bytes
@@ -1303,7 +1427,7 @@ done:       for (;;) {
 
            // so, we have room (or already had enough) now we can write
            // replacement type descriptor and the length and the reset the pos
-           this.writeToken(IonConstants.makeTypeDescriptorByte(hn, (lownibble & 0x0f)));
+           this.writeByte(IonConstants.makeTypeDescriptor(hn, lownibble));
            if (len_o_len > 0) {
                this.writeVarUInt7Value(writtenValueLen, true);
            }
@@ -1313,30 +1437,30 @@ done:       for (;;) {
                // is the time to remove it.  (which does happen from time to time)
                this.remove(-needed);
            }
-           
+
            // return the cursor to it's correct location,
            // taking into account the added length data
            this.setPosition(currpos + needed);
 
            if (debugValidation) _validate();
-           
+
         }
 
         public void appendToLongValue(CharSequence chars, boolean onlyByteSizedCharacters) throws IOException
         {
             if (debugValidation) _validate();
-   
+
             int len = chars.length();
-   
+
             for (int ii = 0; ii < len; ii++)
             {
                 char c = chars.charAt(ii);
-                if (onlyByteSizedCharacters && (c > 255)) { 
+                if (onlyByteSizedCharacters && (c > 255)) {
                     throw new IonException("escaped character value too large in clob (0 to 255 only)");
                 }
                 writeCharValue(c);
             }
-   
+
             if (debugValidation) _validate();
         }
 
@@ -1345,7 +1469,7 @@ done:       for (;;) {
         * Reads the remainder of a quoted string/symbol into this buffer.
         * The closing quotes are consumed from the reader.
         * <p>
-          XXX  WARNING  XXX
+        * XXX  WARNING  XXX
         * Almost identical logic is found in
         * {@link IonTokenReader#finishScanString(boolean)}
         *
@@ -1363,9 +1487,9 @@ done:       for (;;) {
            throws IOException, UnexpectedEofException
         {
            int c;
-        
+
            if (debugValidation) _validate();
-           
+
            for (;;) {
                c = r.read();
                if (c == terminator) {
@@ -1385,7 +1509,7 @@ done:       for (;;) {
                        write((byte)(0xff & terminator)); // terminators are always ascii characters, like '
                    }
                    // write the terminator we already read past
-                   write((byte)(0xff & terminator)); 
+                   write((byte)(0xff & terminator));
                }
                if (c == -1) {
                    throw new UnexpectedEofException();
@@ -1404,7 +1528,7 @@ done:       for (;;) {
                            if ((c & (~0xff)) != 0) {
                                throw new IonException("escaped character value too large in clob (0 to 255 only)");
                            }
-                           write((byte)(0xff & c));                        
+                           write((byte)(0xff & c));
                        }
                        else {
                            writeCharValue(c);
@@ -1416,7 +1540,7 @@ done:       for (;;) {
                        if ((c & (~0xff)) != 0) {
                            throw new IonException("escaped character value too large in clob (0 to 255 only)");
                        }
-                       write((byte)(0xff & c));                        
+                       write((byte)(0xff & c));
                    }
                    else {
                        writeCharValue(c);
@@ -1427,13 +1551,13 @@ done:       for (;;) {
                // TODO determine if this can really happen.
                throw new UnexpectedEofException();
            }
-        
+
            if (debugValidation) _validate();
-           
+
            return;
         }
 
-       
+
         /*
          * this is a set of routines that put data into an Ion buffer
          * using the various type encodeing techniques
@@ -1468,9 +1592,9 @@ done:       for (;;) {
         /**************************
          *
          * These are the "write value" family, they just write the value
-         * @throws IOException 
+         * @throws IOException
          */
-        public int writeFixedIntValue(long val, int len) throws IOException 
+        public int writeFixedIntValue(long val, int len) throws IOException
         {
             switch (len) {
             case 8: write((byte)((val >> 56) & 0xffL));
@@ -1484,7 +1608,7 @@ done:       for (;;) {
             }
             return len;
         }
-        public int writeVarUInt7Value(int value, int fixed_size) throws IOException 
+        public int writeVarUInt7Value(int value, int fixed_size) throws IOException
         {
             int mask = 0x7F;
             int len = lenVarUInt7(value);
@@ -1512,7 +1636,7 @@ done:       for (;;) {
             }
             return len;
         }
-        public int writeVarUInt7Value(int value, boolean force_zero_write) throws IOException 
+        public int writeVarUInt7Value(int value, boolean force_zero_write) throws IOException
         {
             int mask = 0x7F;
             int len = lenVarUInt7(value);
@@ -1533,32 +1657,31 @@ done:       for (;;) {
             }
             return len;
         }
-        public int writeVarUInt8Value(long value, boolean force_zero_write) throws IOException 
+
+        /**
+         * Writes a uint field of maximum length 8.
+         * Note that this will write from the lowest to highest
+         * order bits in the long value given.
+         */
+        public int writeVarUInt8Value(long value, int len) throws IOException
         {
             long mask = 0xffL;
-            int  len = lenVarUInt8(value);
 
-            // write the rest
-            switch (len - 1) {
-            case 7: write((byte)((value >> (8*7)) & mask));
-            case 6: write((byte)((value >> (8*6)) & mask));
-            case 5: write((byte)((value >> (8*5)) & mask));
-            case 4: write((byte)((value >> (8*4)) & mask));
-            case 3: write((byte)((value >> (8*3)) & mask));
-            case 2: write((byte)((value >> (8*2)) & mask));
-            case 1: write((byte)((value >> (8*1)) & mask));
-            case 0: write((byte)(value & mask));
+            switch (len) {
+            case 8: write((byte)((value >> (56)) & mask));
+            case 7: write((byte)((value >> (48)) & mask));
+            case 6: write((byte)((value >> (40)) & mask));
+            case 5: write((byte)((value >> (32)) & mask));
+            case 4: write((byte)((value >> (24)) & mask));
+            case 3: write((byte)((value >> (16)) & mask));
+            case 2: write((byte)((value >> (8)) & mask));
+            case 1: write((byte)(value & mask));
                     break;
-            case -1:
-                if (force_zero_write) {
-                    write((byte)0x0);
-                    len = 1;
-                }
-                break;
             }
             return len;
         }
-        public int writeVarInt7Value(int value, boolean force_zero_write) throws IOException 
+
+        public int writeVarInt7Value(int value, boolean force_zero_write) throws IOException
         {
             int len = 0;
 
@@ -1592,7 +1715,7 @@ done:       for (;;) {
             }
             return len;
         }
-        public int writeVarInt7Value(long value, boolean force_zero_write) throws IOException 
+        public int writeVarInt7Value(long value, boolean force_zero_write) throws IOException
         {
             int len = 0;
 
@@ -1663,20 +1786,20 @@ done:       for (;;) {
             }
             return len;
         }
-        public int writeFloatValue(double d) throws IOException 
+        public int writeFloatValue(double d) throws IOException
         {
-            // first check for the 0.0 special case
-            if (d == 0.0) return 0;
-
-            // just use the built in Java support for this for the
-            // time being
+            if (Double.valueOf(d).equals(DOUBLE_POS_ZERO))
+            {
+                // pos zero special case
+                return 0;
+            }
 
             // TODO write "custom" serialization or verify that
             //      the java routine is doing the right thing
             long dBits = Double.doubleToRawLongBits(d);
-            return writeVarInt8Value(dBits);
+            return writeVarUInt8Value(dBits, _ib_FLOAT64_LEN);
         }
-        public int writeCharValue(int c) throws IOException 
+        public int writeCharValue(int c) throws IOException
         {
             // TODO: check this encoding, it is from:
             //      http://en.wikipedia.org/wiki/UTF-8
@@ -1686,14 +1809,14 @@ done:       for (;;) {
             // in: java.nio.charset.CharsetDecoder
 
             int len = -1;
-     
+
             if ((c & (~0x1FFFFF)) != 0) {
                 throw new IonException("invalid character for UTF-8 output");
             }
 
             if ((c & (~0x7f)) == 0) {
                 write((byte)(0xff & c ));
-                len = 1; 
+                len = 1;
             }
             else if ((c & (~0x7ff)) == 0) {
                 write((byte)( 0xff & (0xC0 | (c >> 6)) ));
@@ -1726,25 +1849,50 @@ done:       for (;;) {
          *
          *     void write<type>(nibble, ...)
          */
-        public int writeToken(HighNibble hn, int len) throws IOException 
+        public int writeByte(HighNibble hn, int len) throws IOException
         {
-            if (len < 0) throw new IonException("negative token length encountered");
-            if (len > 13) len = 14;
-            byte t = IonConstants.makeTypeDescriptorByte( hn.value(), len );
+            if (len < 0) {
+                throw new IonException("negative token length encountered");
+            }
+            if (len > 13) len = 14; // TODO remove magic numbers
+            int t = IonConstants.makeTypeDescriptor( hn.value(), len );
             write(t);
             return 1;
         }
-        public int writeToken(byte b) throws IOException 
+
+        /**
+         * Write one byte.
+         *
+         * @param b the byte to write.
+         * @return the number of bytes written (always 1).
+         * @throws IOException
+         */
+        public int writeByte(byte b) throws IOException
         {
             write(b);
             return 1;
         }
-        
-        public int writeAnnotations(String[] annotations, LocalSymbolTable symbolTable) throws IOException 
+
+        /**
+         * Write one byte.
+         *
+         * @param b integer containing the byte to write; only the 8 low-order
+         * bits are written.
+         *
+         * @return the number of bytes written (always 1).
+         * @throws IOException
+         */
+        public int writeByte(int b) throws IOException
+        {
+            write(b);
+            return 1;
+        }
+
+        public int writeAnnotations(String[] annotations, LocalSymbolTable symbolTable) throws IOException
         {
             int startPosition = this.position();
             int[] symbols = new int[annotations.length];
-            
+
             int annotationLen = 0;
             for (int ii=0; ii<annotations.length; ii++) {
                 symbols[ii] = symbolTable.findSymbol(annotations[ii]);
@@ -1753,7 +1901,7 @@ done:       for (;;) {
 
             // write the len of the list
             this.writeVarUInt7Value(annotationLen, true);
-            
+
             // write the symbol id's
             for (int ii=0; ii<annotations.length; ii++) {
                 symbols[ii] = symbolTable.findSymbol(annotations[ii]);
@@ -1762,10 +1910,12 @@ done:       for (;;) {
 
             return this.position() - startPosition;
         }
-        public int writeAnnotations(ArrayList<Integer> annotations) throws IOException 
+
+        public int writeAnnotations(ArrayList<Integer> annotations)
+            throws IOException
         {
             int startPosition = this.position();
-            
+
             int annotationLen = 0;
             for (Integer ii : annotations) {
                 annotationLen += IonBinary.lenVarUInt7(ii.intValue());
@@ -1773,7 +1923,7 @@ done:       for (;;) {
 
             // write the len of the list
             this.writeVarUInt7Value(annotationLen, true);
-            
+
             // write the symbol id's
             for (Integer ii : annotations) {
                 this.writeVarUInt7Value(ii.intValue(), true);
@@ -1781,32 +1931,34 @@ done:       for (;;) {
 
             return this.position() - startPosition;
         }
-        
-        public int writeTypeDescWithLenForContainer(int hn, int ln, int len) throws IOException
-        {
-            int returnlen = 0;
 
-            // write the hn and ln as the typedesc
-            returnlen += writeToken(IonConstants.makeTypeDescriptorByte( hn, ln ));
-            returnlen += writeVarUInt7Value(len, true);
-            
-            return returnlen;
+
+        public void writeStubStructHeader(int hn, int ln)
+            throws IOException
+        {
+            // write the hn and ln as the typedesc, we'll patch it later.
+            writeByte(IonConstants.makeTypeDescriptor(hn, ln));
         }
-        public int writeTypeDescWithLenForScalars(int hn, int len) throws IOException
+
+        /**
+         * Write typedesc and length for the common case.
+         */
+        public int writeCommonHeader(int hn, int len)
+            throws IOException
         {
             int returnlen = 0;
 
             // write then len in low nibble
             if (len < IonConstants.lnIsVarLen) {
-                returnlen += writeToken(IonConstants.makeTypeDescriptorByte( hn, len ));
+                returnlen += writeByte(IonConstants.makeTypeDescriptor(hn, len));
             }
             else {
-                returnlen += writeToken( IonConstants.makeTypeDescriptorByte( hn, IonConstants.lnIsVarLen ));
+                returnlen += writeByte(IonConstants.makeTypeDescriptor(hn, IonConstants.lnIsVarLen));
                 returnlen += writeVarUInt7Value(len, false);
             }
             return returnlen;
         }
-        
+
 
         /***************************************
          *
@@ -1815,17 +1967,18 @@ done:       for (;;) {
          *
          */
 
-        public int writeSymbolWithTD(String s, LocalSymbolTable st) throws IOException 
+        public int writeSymbolWithTD(String s, LocalSymbolTable st)
+            throws IOException
         {
             int sid = st.addSymbol(s);
             assert sid > 0;
 
             int vlen = lenVarUInt8(sid);
-            int len = this.writeTypeDescWithLenForScalars(
+            int len = this.writeCommonHeader(
                                  IonConstants.tidSymbol
                                 ,vlen
                            );
-            len += this.writeVarUInt8Value(sid, false);
+            len += this.writeVarUInt8Value(sid, vlen);
 
             return len;
         }
@@ -1834,30 +1987,30 @@ done:       for (;;) {
         /**
          * Writes the full string header + data.
          */
-        public int writeStringWithTD(String s) throws IOException 
+        public int writeStringWithTD(String s) throws IOException
         {
 
             // first we have to see how long this will be in the output
             /// buffer - part of the cost of length prefixed values
             int len = IonBinary.lenIonString(s);
             if (len < 0) this.throwUTF8Exception();
-            
+
             // first we write the type desc and length
-            this.writeTypeDescWithLenForScalars(IonConstants.tidString, len);
-            
+            this.writeCommonHeader(IonConstants.tidString, len);
+
             // now we write just the value out
             for (int ii=0; ii<s.length(); ii++) {
                 char c = s.charAt(ii);
                 this.writeCharValue(c);
             }
-            
+
             return len;
         }
 
         public int writeStringData(String s) throws IOException
         {
             int len = 0;
-            
+
             for (int ii=0; ii<s.length(); ii++) {
                 char c = s.charAt(ii);
                 len += this.writeCharValue(c);
@@ -1868,34 +2021,33 @@ done:       for (;;) {
 
         public int writeNullWithTD(HighNibble hn) throws IOException
         {
-            write(IonConstants.makeTypeDescriptorByte(
-                              hn.value()
-                             ,IonConstants.lnIsNullAtom)
-                        );
+            writeByte(hn, IonConstants.lnIsNullAtom);
             return 1;
         }
-        public int writeTimestampWithTD(IonTokenReader.Type.timeinfo di) throws IOException
+        public int writeTimestampWithTD(IonTokenReader.Type.timeinfo di)
+            throws IOException
         {
             int  returnlen;
 
             if (di == null) {
-                returnlen = this.writeTypeDescWithLenForScalars(
+                returnlen = this.writeCommonHeader(
                                       IonConstants.tidTimestamp
                                      ,IonConstants.lnIsNullAtom);
             }
             else {
                 int vlen = IonBinary.lenIonTimestamp(di);
-                
-                returnlen = this.writeTypeDescWithLenForScalars(
+
+                returnlen = this.writeCommonHeader(
                                           IonConstants.tidTimestamp
                                          ,vlen);
-                    
+
                 returnlen += writeTimestamp(di);
             }
             return returnlen;
         }
 
-        public int writeTimestamp(IonTokenReader.Type.timeinfo di) throws IOException
+        public int writeTimestamp(IonTokenReader.Type.timeinfo di)
+            throws IOException
         {
             int  returnlen = 0;
 
@@ -1910,96 +2062,115 @@ done:       for (;;) {
                 if (tzlen == 0) tzlen = 1;
 
                 if (di.localOffset == null) {
+                    // TODO don't use magic numbers!
                     this.write((byte)(0xff & (0x80 | 0x40))); // negative 0 (no timezone)
                     returnlen ++;
                 }
                 else {
                     returnlen += this.writeVarInt7Value(tzoffset, true);
                 }
-                returnlen += this.writeDecimalValue(bd);
+                returnlen += this.writeDecimalContent(bd);
             }
             return returnlen;
         }
 
-        
-        public int writeDecimalWithTD(BigDecimal  bd) throws IOException 
+
+        public int writeDecimalWithTD(BigDecimal bd) throws IOException
         {
             int returnlen;
             // we only write out the '0' value as the nibble 0
             if (bd == null) {
-                returnlen = this.writeToken(
-                                IonConstants.makeTypeDescriptorByte(
-                                    IonConstants.tidDecimal
-                                  , IonConstants.lnIsNullAtom
-                                )
-                            );
+                returnlen =
+                    this.writeByte(IonDecimalImpl.NULL_DECIMAL_TYPEDESC);
             }
             else if (BigDecimal.ZERO.equals(bd)) {
-                returnlen = this.writeToken(
-                                IonConstants.makeTypeDescriptorByte(
-                                    IonConstants.tidDecimal
-                                  , IonConstants.lnNumericZero
-                                )
-                              );
+                returnlen =
+                    this.writeByte(IonDecimalImpl.ZERO_DECIMAL_TYPEDESC);
             }
             else {
                 // otherwise we to it the hard way ....
                 int len = IonBinary.lenIonDecimal(bd);
-                returnlen = this.writeToken(
-                        IonConstants.makeTypeDescriptorByte(
+
+                // FIXME: this assumes len < 14!
+                assert len < IonConstants.lnIsVarLen;
+                returnlen = this.writeByte(
+                        IonConstants.makeTypeDescriptor(
                             IonConstants.tidDecimal
                           , len
                         )
                       );
-                returnlen += writeDecimalValue(bd);
+                int wroteDecimalLen = writeDecimalContent(bd);
+                assert wroteDecimalLen == len;
+                returnlen += wroteDecimalLen;
             }
             return returnlen;
         }
 
         // also used by writeDate()
-        public int writeDecimalValue(BigDecimal  bd) throws IOException
+        public int writeDecimalContent(BigDecimal bd) throws IOException
         {
             int returnlen = 0;
             // we only write out the '0' value as the nibble 0
             if (bd != null && !BigDecimal.ZERO.equals(bd)) {
-                // otherwise we to it the hard way ....
-                BigInteger  bi    = bd.unscaledValue();
-                byte[]      bits  = bi.toByteArray();
-                int         scale = bd.scale();
+                // otherwise we do it the hard way ....
+                BigInteger mantissa = bd.unscaledValue();
 
-                returnlen += this.writeVarInt7Value(scale, true);
+                boolean isNegative = (mantissa.compareTo(BigInteger.ZERO) < 0);
+                if (isNegative) {
+                    mantissa = mantissa.negate();
+                }
+
+                byte[] bits  = mantissa.toByteArray();
+                int    scale = bd.scale();
+
+                // Ion stores exponent, BigDecimal uses the negation "scale"
+                int exponent = -scale;
+                returnlen += this.writeVarInt7Value(exponent, true);
+
+                // If the first bit is set, we can't use it for the sign,
+                // and we need to write an extra byte to hold it.
+                boolean needExtraByteForSign = ((bits[0] & 0x80) != 0);
+                if (needExtraByteForSign)
+                {
+                    this.write(isNegative ? 0x80 : 0x00);
+                    returnlen++;
+                }
+                else if (isNegative)
+                {
+                    bits[0] |= 0x80;
+                }
                 this.write(bits, 0, bits.length);
                 returnlen += bits.length;
             }
             return returnlen;
         }
-        
-        
+
+
         void throwUTF8Exception()
         {
             throwException("Invalid UTF-8 character encounter in a string at pos " + this.position());
         }
-        
-        void throwException(String s) 
+
+        void throwException(String s)
         {
             throw new BlockedBuffer.BlockedBufferException(s);
         }
     }
 
-    public static class PositionMarker 
+    public static class PositionMarker
     {
         int     _pos;
         Object  _userData;
-        
+
         public PositionMarker() {}
         public PositionMarker(int pos, Object o) {
             _pos = pos;
             _userData = o;
         }
-        
+
         public int getPosition()       { return _pos; }
         public Object getUserData()    { return _userData; }
-        
+
         public void setPosition(int pos) {
             _pos = pos;
         }

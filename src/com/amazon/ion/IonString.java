@@ -8,7 +8,7 @@ package com.amazon.ion;
  * An Ion <code>string</code> value.
  */
 public interface IonString
-    extends IonValue
+    extends IonText
 {
     /**
      * Gets the characters of this string.

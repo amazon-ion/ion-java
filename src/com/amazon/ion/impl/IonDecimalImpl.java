@@ -4,13 +4,13 @@
 
 package com.amazon.ion.impl;
 
-import java.io.IOException;
-import java.math.BigDecimal;
-
 import com.amazon.ion.IonDecimal;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ValueVisitor;
+import java.io.IOException;
+import java.math.BigDecimal;
 
 
 /**
@@ -20,21 +20,22 @@ public final class IonDecimalImpl
     extends IonValueImpl
     implements IonDecimal
 {
-    
-    static final int _decimal_typeDesc = 
-             IonConstants.makeTypeDescriptorByte(
-                         IonConstants.tidDecimal
-                        ,IonConstants.lnIsNullAtom
-            );
-    
+
+    static final int NULL_DECIMAL_TYPEDESC =
+        IonConstants.makeTypeDescriptor(IonConstants.tidDecimal,
+                                        IonConstants.lnIsNullAtom);
+    static final int ZERO_DECIMAL_TYPEDESC =
+        IonConstants.makeTypeDescriptor(IonConstants.tidDecimal,
+                                        IonConstants.lnNumericZero);
+
     private BigDecimal _decimal_value;
-    
+
     /**
      * Constructs a <code>null.decimal</code> element.
      */
     public IonDecimalImpl()
     {
-        super(_decimal_typeDesc);
+        super(NULL_DECIMAL_TYPEDESC);
     }
 
     /**
@@ -45,6 +46,13 @@ public final class IonDecimalImpl
         super(typeDesc);
         assert pos_getType() == IonConstants.tidDecimal;
     }
+
+
+    public IonType getType()
+    {
+        return IonType.DECIMAL;
+    }
+
 
     public float floatValue()
         throws NullValueException
@@ -86,7 +94,7 @@ public final class IonDecimalImpl
         _hasNativeValue = true;
         setDirty();
     }
-    
+
     @Override
     public synchronized boolean isNullValue()
     {
@@ -106,7 +114,7 @@ public final class IonDecimalImpl
     protected int computeLowNibble(int valuelen)
     {
         assert _hasNativeValue == true;
-        
+
         int ln = 0;
         if (_decimal_value == null) {
             ln = IonConstants.lnIsNullAtom;
@@ -125,34 +133,34 @@ public final class IonDecimalImpl
         }
         return ln;
     }
-    
+
     @Override
     protected void doMaterializeValue(IonBinary.Reader reader) throws IOException
     {
         assert this._isPositionLoaded == true && this._buffer != null;
-        
+
         // a native value trumps a buffered value
         if (_hasNativeValue) return;
-        
+
         // the reader will have been positioned for us
         assert reader.position() == this.pos_getOffsetAtValueTD();
 
         // we need to skip over the td to get to the good stuff
         int td = reader.read();
         assert (byte)(0xff & td) == this.pos_getTypeDescriptorByte();
-        
+
         int type = this.pos_getType();
         if (type != IonConstants.tidDecimal) {
             throw new IonException("invalid type desc encountered for value");
         }
-        
+
         int ln = this.pos_getLowNibble();
         switch ((0xf & ln)) {
         case IonConstants.lnIsNullAtom:
             _decimal_value = null;
             break;
         case 0:
-            _decimal_value = BigDecimal.ZERO; 
+            _decimal_value = BigDecimal.ZERO;
             break;
         case IonConstants.lnIsVarLen:
             ln = reader.readVarUInt7IntValue();
@@ -164,14 +172,14 @@ public final class IonDecimalImpl
 
         _hasNativeValue = true;
     }
-    
+
     @Override
     protected void doWriteNakedValue(IonBinary.Writer writer, int valueLen) throws IOException
     {
         assert valueLen == this.getNakedValueLength();
         assert valueLen > 0;
-        
-        int wlen = writer.writeDecimalValue(_decimal_value);
+
+        int wlen = writer.writeDecimalContent(_decimal_value);
         assert wlen == valueLen;
 
         return;

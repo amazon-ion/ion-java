@@ -21,11 +21,12 @@ public class SystemSymbolTableImpl
         ION,
         ION_1_0,
         ION_SYMBOL_TABLE,
-        "name",
-        "version",
-        "imports",
-        "symbols",
-        "max_id"
+        NAME,
+        VERSION,
+        IMPORTS,
+        SYMBOLS,
+        MAX_ID,
+        ION_EMBEDDED_VALUE
     };
 
     public static final int ION_1_0_SID = 2;
@@ -45,6 +46,7 @@ public class SystemSymbolTableImpl
      */
     public static String unknownSymbolName(int id)
     {
+        assert id > 0;
         return "$" + id;
     }
 

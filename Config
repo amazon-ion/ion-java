@@ -22,17 +22,22 @@ package.IonJava = {
     additional-directories = (brazil-documentation);
   };
 
+
+  build-system = happytrails;   # Comes from MiniTrails
+
   build-tools = {
     1.0 = {
       ApacheAnt = 1.7;
       BrazilJavadoc = 1.0;
       HappyTrails = 2.0;
       JDK = 1.5;
+      MiniTrails = 2.0;
     };
   };
 
   test-dependencies = {
     1.0 = {
+      IonTests = 1.0;
       junit = 1.0;
     };
   };

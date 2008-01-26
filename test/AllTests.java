@@ -3,6 +3,7 @@
  */
 
 import com.amazon.ion.BadIonTests;
+import com.amazon.ion.BinaryTest;
 import com.amazon.ion.BlobTest;
 import com.amazon.ion.BoolTest;
 import com.amazon.ion.ClobTest;
@@ -13,6 +14,7 @@ import com.amazon.ion.FloatTest;
 import com.amazon.ion.GoodIonTests;
 import com.amazon.ion.IntTest;
 import com.amazon.ion.ListTest;
+import com.amazon.ion.LoaderTest;
 import com.amazon.ion.NullTest;
 import com.amazon.ion.RoundTripTests;
 import com.amazon.ion.SexpTest;
@@ -21,10 +23,10 @@ import com.amazon.ion.StructTest;
 import com.amazon.ion.SymbolTest;
 import com.amazon.ion.TimestampTest;
 import com.amazon.ion.impl.ByteBufferTest;
+import com.amazon.ion.impl.CharacterReaderTest;
 import com.amazon.ion.impl.ReaderTest;
 import com.amazon.ion.impl.SymbolTableTest;
 import com.amazon.ion.system.SimpleCatalogTest;
-import com.amazon.ion.util.LoaderTest;
 import com.amazon.ion.util.PrinterTest;
 import com.amazon.ion.util.TextTest;
 import junit.framework.Test;
@@ -46,7 +48,7 @@ public class AllTests
         // Low-level facilities.
         suite.addTestSuite(ByteBufferTest.class);
         suite.addTestSuite(TextTest.class);
-
+        suite.addTestSuite(CharacterReaderTest.class);
 
         // General framework tests
         suite.addTestSuite(SimpleCatalogTest.class);
@@ -65,6 +67,9 @@ public class AllTests
         suite.addTestSuite(StructTest.class);
         suite.addTestSuite(SymbolTest.class);
         suite.addTestSuite(TimestampTest.class);
+
+        // binary format tests
+        suite.addTestSuite(BinaryTest.class);
 
         // Utility tests
         suite.addTestSuite(LoaderTest.class);

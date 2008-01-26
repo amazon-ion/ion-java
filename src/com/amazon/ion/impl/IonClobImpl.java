@@ -4,15 +4,15 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonClob;
+import com.amazon.ion.IonException;
+import com.amazon.ion.IonType;
+import com.amazon.ion.ValueVisitor;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
-
-import com.amazon.ion.IonClob;
-import com.amazon.ion.IonException;
-import com.amazon.ion.ValueVisitor;
 
 
 /**
@@ -22,19 +22,17 @@ public final class IonClobImpl
     extends IonLobImpl
     implements IonClob
 {
-    
-    static final int _clob_typeDesc = 
-        IonConstants.makeTypeDescriptorByte(
-                         IonConstants.tidClob
-                        ,IonConstants.lnIsNullAtom
-        );
-    
+
+    static final int NULL_CLOB_TYPEDESC =
+        IonConstants.makeTypeDescriptor(IonConstants.tidClob,
+                                        IonConstants.lnIsNullAtom);
+
     /**
      * Constructs a <code>null.clob</code> element.
      */
     public IonClobImpl()
     {
-        super(_clob_typeDesc);
+        super(NULL_CLOB_TYPEDESC);
     }
 
     /**
@@ -46,11 +44,18 @@ public final class IonClobImpl
         assert pos_getType() == IonConstants.tidClob;
     }
 
+
+    public IonType getType()
+    {
+        return IonType.CLOB;
+    }
+
+
     public Reader newReader(Charset cs)
     {
         InputStream in = newInputStream();
         if (in == null) return null;
-        
+
         makeReady();
         return new InputStreamReader(in, cs);
     }
@@ -59,7 +64,7 @@ public final class IonClobImpl
     public String stringValue(Charset cs)
     {
         makeReady();
-        
+
         // TODO use Charset directly.
         byte[] bytes = newBytes();
         if (bytes == null) return null;

@@ -4,6 +4,8 @@
 
 package com.amazon.ion;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Iterator;
 
 
@@ -29,6 +31,14 @@ public interface IonDatagram
 
 //    public void add(int index, IonValue element)
 //        throws ContainedValueException, NullPointerException;
+
+
+    /**
+     * Returns {@code false} at all times, since datagrams cannot be null.
+     *
+     * @return <code>false</code>
+     */
+    public boolean isNullValue();
 
 
     /**
@@ -75,15 +85,17 @@ public interface IonDatagram
 
 
     /**
-     * {@inheritDoc}
+     * Creates an iterator providing the (direct) elements of this datagram.
+     * Elements will be returned
+     * in order of their appearance in the Ion representation.
      * <p>
      * This iterator returns only user values, ignoring symbol tables and other
      * system values. It does not support the {@link Iterator#remove()}
      * operation.
+     *
      * @see #systemIterator()
      */
-    public Iterator<IonValue> iterator()
-        throws NullValueException;
+    public Iterator<IonValue> iterator();
 
     /**
      * Iterate all values in the datagram, including the otherwise-hidden
@@ -96,12 +108,87 @@ public interface IonDatagram
 
 
     /**
-     * Gets the binary-encoded form of this datagram, suitable for storage or
-     * transmission.
+     * Gets the number of bytes used to encode this datagram.
+     * As a side effect, this method encodes the entire datagram into Ion
+     * binary format.
+
+     * @return the number of bytes in the binary encoding of this datagram.
+     *
+     * @throws IonException if there's an error encoding the data.
+     */
+    public int byteSize()
+        throws IonException;
+
+
+    /**
+     * Copies the binary-encoded form of this datagram into a new byte array.
      *
      * @return a new, non-empty byte array containing the encoded datagram.
+     *
+     * @throws IonException if there's an error encoding the data.
      */
-    public byte[] toBytes();
+    public byte[] toBytes()
+        throws IonException;
+
+
+    /**
+     * Copies the binary-encoded form of this datagram into a given array.
+     * <p>
+     * The given array must be large enough to contain all the bytes of this
+     * datagram.
+     * <p>
+     * An invocation of this method of the form {@code dg.get(a)} behaves in
+     * exactly the same way as the invocation
+     * <pre>
+     *     dg.get(a, 0)
+     * </pre>
+     *
+     * @param dst the array into which bytes are to be written.
+     *
+     * @return the number of bytes copied into {@code dst}.
+     *
+     * @throws IonException if there's an error encoding the data.
+     * @throws IndexOutOfBoundsException if {@code dst.length} is
+     * smaller than the result of {@link #byteSize()}.
+     *
+     * @see #getBytes(byte[],int)
+     */
+    public int getBytes(byte[] dst)
+        throws IonException;
+
+
+    /**
+     * Copies the binary-encoded form of this datagram into a given sub-array.
+     * <p>
+     * The given subarray must be large enough to contain all the bytes of this
+     * datagram.
+     *
+     * @param dst the array into which bytes are to be written.
+     * @param offset the offset within the array of the first byte to be
+     *   written; must be non-negative and no larger than {@code dst.length}
+     *
+     * @return the number of bytes copied into {@code dst}.
+     *
+     * @throws IonException if there's an error encoding the data.
+     * @throws IndexOutOfBoundsException if {@code (dst.length - offset)} is
+     * smaller than the result of {@link #byteSize()}.
+     */
+    public int getBytes(byte[] dst, int offset)
+        throws IonException;
+
+
+    /**
+     * Copies the binary-encoded form of this datagram to a specified stream.
+     *
+     * @param out the output stream to which to write the data.
+     *
+     * @return the number of bytes written.
+     *
+     * @throws IonException if there's an error encoding the data.
+     * @throws IOException if an error occurs writing the data to the stream.
+     */
+    public int getBytes(OutputStream out)
+        throws IOException, IonException;
 
 
     /**

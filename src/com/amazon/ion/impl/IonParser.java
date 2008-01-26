@@ -5,6 +5,12 @@
 package com.amazon.ion.impl;
 
 
+import com.amazon.ion.IonException;
+import com.amazon.ion.LocalSymbolTable;
+import com.amazon.ion.UnexpectedEofException;
+import com.amazon.ion.impl.IonBinary.BufferManager;
+import com.amazon.ion.impl.IonBinary.PositionMarker;
+import com.amazon.ion.util.Text;
 import java.io.IOException;
 import java.io.PushbackReader;
 import java.io.Reader;
@@ -12,13 +18,6 @@ import java.io.StringReader;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
-
-import com.amazon.ion.IonException;
-import com.amazon.ion.LocalSymbolTable;
-import com.amazon.ion.UnexpectedEofException;
-import com.amazon.ion.impl.IonBinary.BufferManager;
-import com.amazon.ion.impl.IonBinary.PositionMarker;
-import com.amazon.ion.util.Text;
 
 
 /**
@@ -34,8 +33,16 @@ public class IonParser
     private ArrayList<Integer>  _annotationList;
 
 
+    /**
+     * @param bb may be null, in which case a new {@link BufferManager} will
+     * be created.
+     *
+     * @throws NullPointerException if r is null.
+     */
     public IonParser(Reader r, BufferManager bb) {
-        _in = new IonTokenReader(new PushbackReader(r));
+        if (r == null) throw new NullPointerException();
+
+        _in = new IonTokenReader(r);
         if (bb != null) {
             _out = bb;
         }
@@ -44,6 +51,9 @@ public class IonParser
         }
     }
 
+    /**
+     * @throws NullPointerException if r is null.
+     */
     public IonParser(Reader r) {
         this(r, new BufferManager());
     }
@@ -76,15 +86,17 @@ public class IonParser
 
     /**
      *
-     * @param symboltable
-     * @param start
-     * @param write_header
+     * @param symboltable must not be null.
+     * @param startPosition
+     *      The position to start writing into our buffer.
+     * @param writeMagicCookie
+     *      Whether we should write the Ion magic cookie before any data.
      * @param consume the preferred number of characters to consume.  More than
      * this number may be read, but we won't stop until we pass this threshold.
      */
     public void parse(LocalSymbolTable symboltable
-                    , int start
-                    , boolean write_header
+                    , int startPosition
+                    , boolean writeMagicCookie
                     , int consume)
     {
         assert symboltable != null;
@@ -95,12 +107,11 @@ public class IonParser
         try {
             _out.openReader();
             _out.openWriter();
-            IonBinary.Writer writer = _out.writer(start);
+            IonBinary.Writer writer = _out.writer(startPosition);
 
-            if (write_header) {
-                // first we'll start the buffer (we'll come back and rewrite the 0 later)
-                writer.writeFixedIntValue(0, 4);
-                writer.writeFixedIntValue(IonConstants.MAGIC_TOKEN, 4);
+            if (writeMagicCookie) {
+                // Start the buffer with the BVM.
+                writer.write(IonConstants.BINARY_VERSION_MARKER_1_0);
             }
 
             do {
@@ -114,10 +125,10 @@ public class IonParser
 
                 //  FIXME need symtab logic here!!!
 
-            } while (consume > this._in.consumed);
+            } while (consume > this._in.getConsumedAmount());
 
             // and we're done
-            finishParsing(start, write_header);
+            this._out.writer().truncate();
         }
         catch (IOException ioe) {
             throw new IonException(ioe.getMessage()+ " at " + this._in.position(),
@@ -148,14 +159,13 @@ public class IonParser
         if (is_annotated) {
             this.closeAnnotations();
         }
-        return;
     }
 
     void startAnnotations() throws IOException
     {
         _annotationList = new ArrayList<Integer>();
         this._out.writer().pushPosition(_annotationList);
-        this._out.writer().write(IonConstants.makeTypeDescriptorByte(IonConstants.tidTypedecl, 0));
+        this._out.writer().write(IonConstants.makeTypeDescriptor(IonConstants.tidTypedecl, 0));
         this._out.writer().writeVarInt7Value(1, true); // we'll have at least 1 byte of annotations
         this._out.writer().write((byte)0);       // and here's at least 1 annotation
     }
@@ -207,7 +217,7 @@ public class IonParser
 
         // the length here is the bytes of annotations + the value we
         // wrote as we parsed it
-        this._out.writer().writeTypeDescWithLenForScalars(
+        this._out.writer().writeCommonHeader(
                                 IonConstants.tidTypedecl
                                ,totalAnnotationAndValueLen
                            );
@@ -249,18 +259,15 @@ public class IonParser
             break;
 
         case tOpenParen:
-            // Houston, we have an expression list
-            startCollectionHeader(IonConstants.tidSexp, 0);
+            // Houston, we have an sexp
             parseSexpBody( );
             break;
         case tOpenSquare:
-            // Houston, we have a data list
-            startCollectionHeader(IonConstants.tidList, 0);
+            // Houston, we have a list
             parseListBody( );
             break;
         case tOpenCurly:
             // Quit calling me Houston and ... it's a struct
-            startCollectionHeader(IonConstants.tidStruct, IonConstants.lnNumericZero);
             parseStructBody( );
             break;
         case tOpenDoubleCurly:
@@ -277,7 +284,6 @@ public class IonParser
                                         + this._in.position());
             }
         }
-        return;
     }
 
     private void transferString(int hn) throws IOException
@@ -297,7 +303,6 @@ public class IonParser
         this._out.writer().appendToLongValue('\"', false, onlyByteSizedCharacters, r);
 
         this._out.writer().patchLongHeader(hn, -1);
-        return;
     }
 
     private void transferLongString(int hn) throws IOException
@@ -326,13 +331,13 @@ public class IonParser
                 this._in.unread(c);
                 break;
             }
-            c = this._in.readEverything();
+            c = this._in.read();
             if (c != '\'') {
                 this._in.unread(c);
                 this._in.unread('\''); // the one we went by before
                 break;
             }
-            c = this._in.readEverything();
+            c = this._in.read();
             if (c != '\'') {
                 this._in.unread(c);
                 this._in.unread('\''); // the one we went by before
@@ -342,12 +347,13 @@ public class IonParser
             this._out.writer().appendToLongValue('\'', true, onlyByteSizedCharacters, r);
         }
         this._out.writer().patchLongHeader(hn, -1);
-        return;
     }
 
     void parseSexpBody( ) throws IOException  {
 
         assert _t == IonTokenReader.Type.tOpenParen;
+
+        _out.writer().startLongWrite(IonConstants.tidSexp);
 
 loop:   for (;;) {
             next(true);
@@ -356,6 +362,8 @@ loop:   for (;;) {
             case tCloseParen:
                 // EOF breaks loop, but we verify close-paren below.
                 break loop;
+            default:
+                // do nothing
             }
             // get the value
             parseAnnotatedValue( true );
@@ -367,14 +375,15 @@ loop:   for (;;) {
 
         // here we backpatch the head of this list
         // TODO shouldn't need to pass high-nibble again.
-        this._out.writer().patchLongHeader(IonConstants.tidSexp, IonConstants.lnNumericZero);
-
-        return;
+        // lownibble is ignored and computed from amount written.
+        this._out.writer().patchLongHeader(IonConstants.tidSexp, 0);
     }
 
     void parseListBody( ) throws IOException  {
 
         assert _t == IonTokenReader.Type.tOpenSquare;
+
+        _out.writer().startLongWrite(IonConstants.tidList);
 
 loop:   for (;;) {
             next(false);
@@ -383,6 +392,8 @@ loop:   for (;;) {
             case tCloseSquare:
                 // EOF breaks loop, but we verify ']' below.
                 break loop;
+            default:
+                // do nothing
             }
             // get the value
             parseAnnotatedValue(false);
@@ -396,15 +407,19 @@ loop:   for (;;) {
         }
 
         // here we backpatch the head of this list
-        this._out.writer().patchLongHeader(IonConstants.tidList, IonConstants.lnNumericZero);
-
-        return;
+        // lownibble is ignored and computed from amount written.
+        this._out.writer().patchLongHeader(IonConstants.tidList, 0);
     }
 
     void parseStructBody(  ) throws IOException  {
         boolean string_name = false;
 
         assert _t == IonTokenReader.Type.tOpenCurly;
+
+        int hn = IonConstants.tidStruct;
+        int ln = IonConstants.lnNumericZero;  // TODO justify
+        _out.writer().pushLongHeader(hn, ln, true);
+        this._out.writer().writeStubStructHeader(hn, ln);
 
         // read string tagged values - legal tags will be recognized
         this._in.pushContext(IonTokenReader.Context.STRUCT);
@@ -435,7 +450,7 @@ loop:   for (;;) {
                 // this._in.inContent = false;
                 int c = this._in.readIgnoreWhitespace();
                 if (c == ':') {
-                    c = this._in.readEverything();
+                    c = this._in.read();
                     if (c == ':') {
                         throw new IonException("member name expected but usertypedesc found at " + this._in.position());
                     }
@@ -470,12 +485,11 @@ loop:   for (;;) {
         // TODO check for "accidental" ordering.
         boolean fieldsAreOrdered = false;
 
-        int lowNibble = (fieldsAreOrdered ? IonConstants.lnIsOrdered : 0);
+        // TODO This code path is WAY ugly and needs cleanup.
+        int lowNibble = (fieldsAreOrdered ? IonConstants.lnIsOrderedStruct : 0);
         this._out.writer().patchLongHeader(IonConstants.tidStruct,
                                   lowNibble);
         this._in.popContext();
-
-        return;
     }
 
     void processFieldName() throws IOException {
@@ -487,8 +501,6 @@ loop:   for (;;) {
 
         int sid = this._symboltable.addSymbol(s);
         this._out.writer().writeVarUInt7Value(sid, true);
-
-        return;
     }
 
     /**
@@ -512,6 +524,8 @@ loop:   for (;;) {
     {
         assert this._in.keyword != null;
 
+        int hn = this._in.keyword.getHighNibble().value();
+
         int token;
         switch (this._in.keyword) {
             case kwTrue:
@@ -531,24 +545,21 @@ loop:   for (;;) {
             case kwNullString:
             case kwNullBlob:
             case kwNullClob:
-                token = IonConstants.makeTypeDescriptorByte(
-                             this._in.keyword.getHighNibble().value()
-                            ,IonConstants.lnIsNullAtom
-                        );
-                break;
             case kwNullList:
             case kwNullSexp:
+                token = IonConstants.makeTypeDescriptor(hn,
+                                         IonConstants.lnIsNullAtom);
+                break;
             case kwNullStruct:
-                token = IonConstants.makeTypeDescriptorByte(
-                             this._in.keyword.getHighNibble().value()
-                            ,IonConstants.lnIsNullContainer
-                        );
+                token = IonConstants.makeTypeDescriptor(
+                                         hn,
+                                         IonConstants.lnIsNullStruct);
                 break;
             default:
                 throw new IllegalStateException("bad keyword token");
         }
 
-        this._out.writer().write((byte)(token & 0xff));
+        this._out.writer().write(token);
     }
 
     void parseCastNumeric(IonTokenReader.Type castto) throws IOException {
@@ -557,24 +568,28 @@ loop:   for (;;) {
         case constPosInt:
             {
                 long l = this._in.intValue.longValue();
-                this._out.writer().writeToken(castto.getHighNibble()
-                                     ,IonBinary.lenVarUInt8(l));
-                this._out.writer().writeVarUInt8Value(l, false);
+                int size = IonBinary.lenVarUInt8(l);
+                this._out.writer().writeByte(
+                        castto.getHighNibble(),
+                        size);
+                this._out.writer().writeVarUInt8Value(l, size);
             }
             break;
         case constNegInt:
-        {
-            long l = 0 - this._in.intValue.longValue();
-            this._out.writer().writeToken(castto.getHighNibble()
-                                 ,IonBinary.lenVarUInt8(l));
-            this._out.writer().writeVarUInt8Value(l, false);
-        }
+            {
+                long l = 0 - this._in.intValue.longValue();
+                int size = IonBinary.lenVarUInt8(l);
+                this._out.writer().writeByte(
+                        castto.getHighNibble(),
+                        size);
+                this._out.writer().writeVarUInt8Value(l, size);
+            }
         break;
         case constFloat:
             {
                 double d = this._in.doubleValue.doubleValue();
                 int len = IonBinary.lenIonFloat(d);
-                this._out.writer().writeToken(castto.getHighNibble(), (byte)len);
+                this._out.writer().writeByte(castto.getHighNibble(), (byte)len);
                 this._out.writer().writeFloatValue(d);
             }
             break;
@@ -609,12 +624,12 @@ loop:   for (;;) {
         // if it's a quote we have a "clob"  (clob)
         if (c == '\"' || c == '\'') {
             if (c == '\'') { // that's 1
-                c = this._in.readEverything();
+                c = this._in.read();
                 if (c != '\'') {
                     throw new IonException("invalid clob or blob value");
                 }
                 // that's 2
-                c = this._in.readEverything();
+                c = this._in.read();
                 if (c != '\'') {
                     throw new IonException("invalid clob or blob value");
                 }
@@ -635,7 +650,7 @@ loop:   for (;;) {
                 throw new IonException("invalid clob value, double curly braces expected at " + this._in.position());
             }
             // we saw 1 close curly, is there a second (or should be)
-            c = this._in.readEverything();
+            c = this._in.read();
             if (c != '}') {
                 throw new IonException("invalid clob value, double curly braces expected at " + this._in.position());
             }
@@ -656,7 +671,7 @@ loop:   for (;;) {
             _out.writer().startLongWrite(IonConstants.tidBlob);
             _out.writer().appendToLongValue(-1, false, true, pbr);
 
-            // we'll have exitted from the reader either on trailing whitespace or
+            // we'll have exited from the reader either on trailing whitespace or
             // the first closing curly brace (the reader will consume the correct
             // number of trailing '=' characters), so skip past any whitespace
             c = bin64reader.terminatingChar();
@@ -671,7 +686,7 @@ loop:   for (;;) {
                 throw new IonException("invalid base64 ending, at least one curly brace was expected at " + this._in.position());
             }
             // we saw 1 close curly, is there a second
-            c = this._in.readEverything();
+            c = this._in.read();
             if (c != '}') {
                 if (c == -1) {
                     throw new UnexpectedEofException();
@@ -684,31 +699,6 @@ loop:   for (;;) {
                 len = IonConstants.lnIsVarLen;
             }
             this._out.writer().patchLongHeader(IonConstants.tidBlob, len);
-        }
-    }
-
-    public void startCollectionHeader(int hn, int ln) throws IOException
-    {
-        _out.writer().pushLongHeader(hn, ln, true);
-        this._out.writer().writeTypeDescWithLenForContainer(hn, ln, 0);
-    }
-
-    /**
-     * Truncates the buffer and (perhaps) update the buffer header's length.
-     * @param start
-     * @param write_header
-     * @throws IOException
-     */
-    void finishParsing(int start, boolean write_header) throws IOException
-    {
-        this._out.writer().truncate();
-
-        if (write_header) {
-            assert start == 0;
-            int len = this._out.buffer().size();
-            // these next two lines are the main reason all that "buffered bytes" code is here
-            this._out.writer().setPosition(0);
-            this._out.writer().writeFixedIntValue(len, 4); // initial length includes itself - hmmm TODO
         }
     }
 

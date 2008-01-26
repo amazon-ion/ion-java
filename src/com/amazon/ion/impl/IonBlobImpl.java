@@ -6,6 +6,7 @@ package com.amazon.ion.impl;
 
 
 import com.amazon.ion.IonBlob;
+import com.amazon.ion.IonType;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,17 +19,16 @@ public final class IonBlobImpl
     implements IonBlob
 {
 
-    static final int _blob_typeDesc = 
-         IonConstants.makeTypeDescriptorByte( 
-                          IonConstants.tidBlob
-                         ,IonConstants.lnIsNullAtom);
-    
+    static final int NULL_BLOB_TYPEDESC =
+         IonConstants.makeTypeDescriptor(IonConstants.tidBlob,
+                                         IonConstants.lnIsNullAtom);
+
     /**
      * Constructs a <code>null.blob</code> element.
      */
     public IonBlobImpl()
     {
-        super(_blob_typeDesc);
+        super(NULL_BLOB_TYPEDESC);
     }
 
     /**
@@ -38,6 +38,12 @@ public final class IonBlobImpl
     {
         super(typeDesc);
         assert pos_getType() == IonConstants.tidBlob;
+    }
+
+
+    public IonType getType()
+    {
+        return IonType.BLOB;
     }
 
 

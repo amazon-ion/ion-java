@@ -4,13 +4,13 @@
 
 package com.amazon.ion.impl;
 
-import java.io.IOException;
-import java.math.BigInteger;
-
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonInt;
+import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ValueVisitor;
+import java.io.IOException;
+import java.math.BigInteger;
 
 
 /**
@@ -23,20 +23,32 @@ public final class IonIntImpl
     implements IonInt
 {
 
-    static final int _posint_typeDesc =
-        IonConstants.makeTypeDescriptorByte(
-                    IonConstants.tidPosInt
-                   ,IonConstants.lnIsNullAtom
-       );
-    static private final Long   ZERO_LONG   = new Long(0);
+    static final int NULL_INT_TYPEDESC =
+        IonConstants.makeTypeDescriptor(IonConstants.tidPosInt,
+                                        IonConstants.lnIsNullAtom);
+    static final int ZERO_INT_TYPEDESC =
+        IonConstants.makeTypeDescriptor(IonConstants.tidPosInt,
+                                        IonConstants.lnNumericZero);
+
+    static private final Long ZERO_LONG = new Long(0);
+
+    // FIXME We can't handle Long.MIN_VALUE at encoding time.
+    static private final BigInteger MIN_VALUE =
+        BigInteger.valueOf(Long.MIN_VALUE + 1);
+
+    static private final BigInteger MAX_VALUE =
+        BigInteger.valueOf(Long.MAX_VALUE);
+
 
     private Long _int_value;
+
+
     /**
      * Constructs a <code>null.int</code> element.
      */
     public IonIntImpl()
     {
-        super(_posint_typeDesc);
+        super(NULL_INT_TYPEDESC);
     }
 
     /**
@@ -48,6 +60,12 @@ public final class IonIntImpl
         assert pos_getType() == IonConstants.tidPosInt
             || pos_getType() == IonConstants.tidNegInt
         ;
+    }
+
+
+    public IonType getType()
+    {
+        return IonType.INT;
     }
 
 
@@ -98,7 +116,9 @@ public final class IonIntImpl
             if (value instanceof BigInteger)
             {
                 BigInteger big = (BigInteger) value;
-                if (big.shiftRight(64).compareTo(BigInteger.ZERO) != 0) {
+                if ((big.compareTo(MIN_VALUE) < 0) ||
+                    (big.compareTo(MAX_VALUE) > 0))
+                {
                     String message =
                         "int too large for this implementation: " + big;
                     throw new IonException(message);
@@ -127,34 +147,48 @@ public final class IonIntImpl
     protected int getNativeValueLength()
     {
         assert _hasNativeValue == true;
+        // TODO streamline following; this is only call site.
         return IonBinary.lenIonInt(_int_value);
     }
 
-
     @Override
-    protected int computeLowNibble(int valuelen)
+    protected int computeTypeDesc(int valuelen)
     {
         assert _hasNativeValue == true;
 
-        int ln = 0;
         if (_int_value == null) {
-            ln = IonConstants.lnIsNullAtom;
+            return NULL_INT_TYPEDESC;
         }
-        else if (_int_value.equals(0)) {
-            ln = IonConstants.lnNumericZero;
+
+        long content = _int_value.longValue();
+        if (content == 0) {
+            return ZERO_INT_TYPEDESC;
         }
-        else {
-            ln = getNativeValueLength();
-            if (ln > IonConstants.lnIsVarLen) {
-                ln = IonConstants.lnIsVarLen;
-            }
+
+        int hn =
+            (content > 0 ? IonConstants.tidPosInt : IonConstants.tidNegInt);
+
+        int ln = valuelen;
+        if (ln > IonConstants.lnIsVarLen) {
+            ln = IonConstants.lnIsVarLen;
         }
-        return ln;
+
+        return IonConstants.makeTypeDescriptor(hn, ln);
+    }
+
+    /**
+     * Never called, since we override {@link #computeTypeDesc}.
+     */
+    @Override
+    protected int computeLowNibble(int valuelen)
+    {
+        throw new UnsupportedOperationException();
     }
 
 
     @Override
-    protected void doMaterializeValue(IonBinary.Reader reader) throws IOException
+    protected void doMaterializeValue(IonBinary.Reader reader)
+        throws IOException
     {
         assert this._isPositionLoaded == true && this._buffer != null;
 
@@ -193,7 +227,8 @@ public final class IonIntImpl
             if (type == IonConstants.tidNegInt) {
                 l = - l;
             }
-            _int_value = new Long(l);break;
+            _int_value = new Long(l);
+            break;
         }
 
         _hasNativeValue = true;
@@ -201,14 +236,15 @@ public final class IonIntImpl
 
 
     @Override
-    protected void doWriteNakedValue(IonBinary.Writer writer, int valueLen) throws IOException
+    protected void doWriteNakedValue(IonBinary.Writer writer, int valueLen)
+        throws IOException
     {
         assert valueLen == this.getNakedValueLength();
         assert valueLen > 0;
 
         long l = (_int_value < 0) ? -_int_value : _int_value;
 
-        int wlen = writer.writeVarUInt8Value(l, false);
+        int wlen = writer.writeVarUInt8Value(l, valueLen);
         assert wlen == valueLen;
 
         return;

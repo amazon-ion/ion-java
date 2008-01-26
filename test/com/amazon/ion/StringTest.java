@@ -12,6 +12,7 @@ public class StringTest
 {
     public static void checkNullString(IonString value)
     {
+        assertSame(IonType.STRING, value.getType());
         assertTrue("isNullValue() is false",   value.isNullValue());
         assertNull("stringValue() isn't null", value.stringValue());
     }
@@ -40,7 +41,7 @@ public class StringTest
 
     public void testFactoryString()
     {
-        IonString value = system().newString();
+        IonString value = system().newNullString();
         checkNullString(value);
         modifyString(value);
     }
@@ -56,6 +57,7 @@ public class StringTest
     public void testEmptyStrings()
     {
         IonString value = (IonString) oneValue("\"\"");
+        assertSame(IonType.STRING, value.getType());
         checkString("", value);
         value = (IonString) oneValue("''''''");
         checkString("", value);
@@ -65,6 +67,7 @@ public class StringTest
     public void testStringBasics()
     {
         IonString value = (IonString) oneValue("\"hello\"");
+        assertSame(IonType.STRING, value.getType());
         assertFalse(value.isNullValue());
         assertEquals("hello", value.stringValue());
 
