@@ -558,4 +558,112 @@ public class BinaryStreamingTest
             }
         }
 
+        public void testBoolean() {
+            IonWriter wr = new IonBinaryWriter();
+            byte[] buffer = null;
+
+            try {
+                wr.startStruct();
+                wr.writeFieldname("Foo");
+                wr.addAnnotation("boolean");
+                wr.writeBool(true);
+                wr.closeStruct();
+                buffer = wr.getBytes();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            IonIterator ir = IonIterator.makeIterator(buffer);
+            if (ir.hasNext()) {
+                ir.next();
+                ir.stepInto();
+                while (ir.hasNext()) {
+                    assertEquals(ir.next(), IonType.BOOL);
+                    assertEquals(ir.getFieldName(), "Foo");
+                    //assertEquals(ir.getAnnotations(), new String[] { "boolean" });
+                    String[] annotations = ir.getAnnotations();
+                    assertTrue(annotations != null && annotations.length == 1);
+                    assertTrue("boolean".equals(annotations[0]));
+                    assertEquals(ir.getBool(), true);
+                }
+            }
+        }
+
+
+        //Test Sample map.
+        //{hello=true, Almost Done.=true, This is a test String.=true, 12242.124598129=12242.124598129, Something=null, false=false, true=true, long=9326, 12=-12}
+        public void testSampleMap() {
+            IonWriter wr = new IonBinaryWriter();
+            byte[] buffer = null;
+
+            try {
+                wr.startStruct();
+                wr.writeFieldname("hello");
+                wr.writeBool(true);
+                wr.writeFieldname("Almost Done.");
+                wr.writeBool(true);
+                wr.writeFieldname("This is a test String.");
+                wr.writeBool(true);
+                wr.writeFieldname("12242.124598129");
+                wr.writeFloat(12242.124598129);
+                wr.writeFieldname("Something");
+                wr.writeNull();
+                wr.writeFieldname("false");
+                wr.writeBool(false);
+                wr.writeFieldname("true");
+                wr.writeBool(true);
+                wr.writeFieldname("long");
+                wr.writeInt((long) 9326);
+                wr.writeFieldname("12");
+                wr.writeInt(-12);
+                wr.closeStruct();
+                buffer = wr.getBytes();
+            } catch (IOException e) {
+
+                throw new RuntimeException(e);
+            }
+
+            IonIterator ir = IonIterator.makeIterator(buffer);
+            if (ir.hasNext()) {
+                ir.next();
+                ir.stepInto();
+                while (ir.hasNext()) {
+                    assertEquals(ir.next(), IonType.BOOL);
+                    assertEquals(ir.getFieldName(), "hello");
+                    assertEquals(ir.getBool(), true);
+                    assertEquals(ir.next(), IonType.BOOL);
+                    assertEquals(ir.getFieldName(), "Almost Done.");
+                    assertEquals(ir.getBool(), true);
+                    assertEquals(ir.next(), IonType.BOOL);
+                    assertEquals(ir.getFieldName(), "This is a test String.");
+                    assertEquals(ir.getBool(), true);
+                    assertEquals(ir.next(), IonType.FLOAT);
+                    assertEquals(ir.getFieldName(), "12242.124598129");
+                    assertEquals(ir.getDouble(), 12242.124598129);
+                    
+                    assertEquals(ir.next(), IonType.NULL);
+                    assertEquals(ir.getFieldName(), "Something");
+                    assertTrue(ir.isNull());
+                    
+                    // not:
+                    //assertEquals(ir.getValueAsString(), null);
+                    assertEquals(ir.getValueAsString(), "null");
+                    
+                    
+                    assertEquals(ir.next(), IonType.BOOL);
+                    assertEquals(ir.getFieldName(), "false");
+                    assertEquals(ir.getBool(), false);
+                    assertEquals(ir.next(), IonType.BOOL);
+                    assertEquals(ir.getFieldName(), "true");
+                    assertEquals(ir.getBool(), true);
+                    assertEquals(ir.next(), IonType.INT);
+                    assertEquals(ir.getFieldName(), "long");
+                    assertEquals(ir.getLong(), (long) 9326);
+                    assertEquals(ir.next(), IonType.INT);
+                    assertEquals(ir.getFieldName(), "12");
+                    assertEquals(ir.getInt(), -12);
+                }
+            }
+        }
+
 }

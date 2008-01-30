@@ -250,7 +250,7 @@ static final boolean _debug_on = false;
             symtab = getSymbolTable();
         }
         
-        int sid = symtab.findSymbol(_field_name); 
+        int sid = symtab.findSymbol(name); 
         if (sid < 1) {
             UnifiedSymbolTable utab = null;
             if (symtab instanceof UnifiedSymbolTable) {
@@ -266,7 +266,7 @@ static final boolean _debug_on = false;
                 this.setSymbolTable(localtable);
                 utab = localtable;
             }
-            sid = utab.addSymbol(_field_name);
+            sid = utab.addSymbol(name);
             _no_local_symbols = false;
         }
         return sid;
@@ -386,7 +386,7 @@ static final boolean _debug_on = false;
     
     public void writeIonValue(IonType t, IonIterator iterator) throws IOException
     {
-        if (iterator.isInStruct()) {
+        if (iterator.isInStruct() && this.isInStruct()) {
             String fieldname = iterator.getFieldName();
             writeFieldname(fieldname);
             if (_debug_on) System.out.print(":");
