@@ -8,7 +8,6 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.BlockedBuffer;
 import com.amazon.ion.impl.IonBinary;
-import com.amazon.ion.impl.IonTimestampImpl;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonConstants;
 import com.amazon.ion.impl.IonTokenReader.Type.timeinfo;
@@ -29,6 +28,8 @@ public final class IonBinaryWriter
     extends IonBaseWriter
 {
 static final boolean _verbose_debug = false;
+
+    static final int UNKNOWN_LENGTH = -1;
     
     
     BufferManager _manager;
@@ -124,8 +125,9 @@ static final boolean _verbose_debug = false;
         boolean in_struct = _patch_in_struct[_patch_stack[_top - 1]];
         return in_struct;
     }
-    
-    void startValue() throws IOException {
+    void startValue(int value_length) throws IOException 
+    {
+        int patch_len = 0;
         
         // start a local symbol table if necessary
         if (_symbol_table == null) {
@@ -140,41 +142,66 @@ static final boolean _verbose_debug = false;
             if (sid < 1) {
                 throw new IllegalStateException();
             }
-            patch(_writer.writeVarUInt7Value(sid, true));
+            patch_len += _writer.writeVarUInt7Value(sid, true);
             super.clearFieldName();
         }
 
         // write annotations
-        int len = 0;
+        int annotations_len = 0;
         int sid_count = super._annotation_count;
         if (sid_count > 0) {
             int[] sids = super.get_annotations_as_ints();
 
-            // FIRST add up the length
+            // FIRST add up the length of the annotation symbols as they'll appear in the buffer
             for (int ii=0; ii<sid_count; ii++) {
                 if (sids[ii] < 1) {
                     throw new IllegalStateException();
                 }
-                len += IonBinary.lenVarUInt7(sids[ii]);
+                annotations_len += IonBinary.lenVarUInt7(sids[ii]);
             }
 
             // THEN write the td byte, optional annotations, this is before the caller
             //      writes out the actual values (plain value) td byte and varlen
             //      an annotation is just like any parent collection header in that it needs
             //      to be in our stack for length patching purposes
-            patch(1);
-            push(IonConstants.tidTypedecl);
-            _writer.write((byte)(IonConstants.tidTypedecl << 4));
+            int td = (IonConstants.tidTypedecl << 4);
+            if (value_length == UNKNOWN_LENGTH) {
+                // if we don't know the value length we push a
+                // patch point onto the backpatch stack
+                if (patch_len > 0) {
+                    patch(patch_len);
+                }
+                patch_len = 1;          // with the call to patch, we've taken care of the patch length
+                push(IonConstants.tidTypedecl);
+                _writer.write((byte)td);
+            }
+            else {
+                // if we know the value length we can write the
+                // annotation header out in full (and avoid the back patching)
+                int annotation_header_len = IonBinary.lenVarUInt7(annotations_len) + annotations_len + value_length;
+                if (annotation_header_len < IonConstants.lnIsVarLen) {
+                    td |= (annotation_header_len & 0xf);
+                    _writer.write((byte)td);
+                    patch_len += 1;
+                }
+                else {
+                    td |= (IonConstants.lnIsVarLen & 0xf);
+                    _writer.write((byte)td);
+                    // add the len of len to the patch total (since we just learned about it)
+                    patch_len += 1 + _writer.writeVarUInt7Value(annotation_header_len, true);
+                }
+            }
             
-            len += _writer.writeVarUInt7Value(len, true);                              /// CAS late night added "len +="
+            patch_len += annotations_len;
+            patch_len += _writer.writeVarUInt7Value(annotations_len, true);                              /// CAS late night added "len +="
             for (int ii=0; ii<sid_count; ii++) {
                 // note that len already has the sum of the actual lengths
                 // added into it so that we could write it out in front
                 _writer.writeVarUInt7Value(sids[ii], true);
             }
-            patch(len);
             super.clearAnnotations();
         }
+        patch(patch_len);
     }
     
     void closeValue() {
@@ -190,7 +217,7 @@ static final boolean _verbose_debug = false;
 
     public void startList() throws IOException
     {
-        startValue();
+        startValue(UNKNOWN_LENGTH);
         patch(1);
         _in_struct = false;
         push(IonConstants.tidList);        
@@ -198,7 +225,7 @@ static final boolean _verbose_debug = false;
     }
     public void startSexp() throws IOException
     {
-        startValue();
+        startValue(UNKNOWN_LENGTH);
         patch(1);
         _in_struct = false;
         push(IonConstants.tidSexp);        
@@ -206,7 +233,7 @@ static final boolean _verbose_debug = false;
     }
     public void startStruct() throws IOException
     {
-        startValue();
+        startValue(UNKNOWN_LENGTH);
         patch(1);
         _in_struct = true;
         push(IonConstants.tidStruct);        
@@ -252,13 +279,13 @@ static final boolean _verbose_debug = false;
 
     public void writeNull() throws IOException
     {
-        startValue();
+        startValue(1);
         _writer.write(IonConstants.tidNull << 4);
         patch(1);
     }
     public void writeNull(IonType type) throws IOException
     {
-        startValue();
+        startValue(1);
         int tid = -1;
         switch (type) {
         case NULL: tid = IonConstants.tidNull; break;
@@ -280,15 +307,16 @@ static final boolean _verbose_debug = false;
     }
     public void writeBool(boolean value) throws IOException
     {
-        startValue();
+        startValue(1);
         int ln = value ? IonConstants.lnBooleanTrue : IonConstants.lnBooleanFalse; 
         _writer.write((IonConstants.tidBoolean << 4) | ln);
         patch(1);
     }
     public void writeInt(byte value) throws IOException
     {
-        startValue();
         int len = IonBinary.lenIonInt(value);
+        startValue(len + 1); // int's are always less than varlen long
+        assert len < IonConstants.lnIsVarLen;
         if (value < 0) {
             _writer.write((IonConstants.tidNegInt << 4) | len);
             _writer.writeVarUInt8Value(-value, len);
@@ -301,8 +329,8 @@ static final boolean _verbose_debug = false;
     }
     public void writeInt(short value) throws IOException
     {
-        startValue();
         int len = IonBinary.lenIonInt(value);
+        startValue(len + 1); // int's are always less than varlen long
         if (value < 0) {
             _writer.write((IonConstants.tidNegInt << 4) | len);
             _writer.writeVarUInt8Value(-value, len);
@@ -315,8 +343,8 @@ static final boolean _verbose_debug = false;
     }
     public void writeInt(int value) throws IOException
     {
-        startValue();
         int len = IonBinary.lenIonInt(value);
+        startValue(len + 1); // int's are always less than varlen long
         if (value < 0) {
             _writer.write((IonConstants.tidNegInt << 4) | len);
             _writer.writeVarUInt8Value(-value, len);
@@ -329,8 +357,8 @@ static final boolean _verbose_debug = false;
     }
     public void writeInt(long value) throws IOException
     {
-        startValue();
         int len = IonBinary.lenIonInt(value);
+        startValue(len + 1); // int's are always less than varlen long
         if (value < 0) {
             _writer.write((IonConstants.tidNegInt << 4) | len);
             _writer.writeVarUInt8Value(-value, len);
@@ -344,16 +372,16 @@ static final boolean _verbose_debug = false;
     public void writeFloat(float value) throws IOException
     {
         double dvalue = value;
-        startValue();
         int len = IonBinary.lenIonFloat(dvalue);
+        startValue(len + 1); // IEEE doubles are always less than varlen long, 8 in fact
         _writer.write((IonConstants.tidFloat << 4) | len);
         len = _writer.writeFloatValue(dvalue);
         patch(1 + len);
     }
     public void writeFloat(double value) throws IOException
     {
-        startValue();
         int len = IonBinary.lenIonFloat(value);
+        startValue(len + 1); // int's are always less than varlen long
         _writer.write((IonConstants.tidFloat << 4) | len);
         len = _writer.writeFloatValue(value);
         patch(1 + len);
@@ -364,13 +392,20 @@ static final boolean _verbose_debug = false;
             writeNull(IonType.DECIMAL);
             return;
         }
-        startValue();
+
         int patch_len = 1;
         int len = IonBinary.lenIonDecimal(value);
-        int ln = (len < IonConstants.lnIsVarLen) ? len : IonConstants.lnIsVarLen; 
+        int ln = len;
+        if (len >= IonConstants.lnIsVarLen) {
+            ln = IonConstants.lnIsVarLen;
+            patch_len += IonBinary.lenVarUInt7(len);
+        }
+        
+        startValue(patch_len + len); // int's are always less than varlen long
+
         _writer.write((IonConstants.tidDecimal << 4) | ln);
-        if (ln == IonConstants.lnIsVarLen) {
-            patch_len += _writer.writeVarUInt7Value(len, true);
+        if (len >= IonConstants.lnIsVarLen) {
+            _writer.writeVarUInt7Value(len, true);
         }
         patch_len += _writer.writeDecimalContent(value);
         patch(patch_len);
@@ -386,13 +421,19 @@ static final boolean _verbose_debug = false;
         di.d = value;
         di.localOffset = null; // IonTimestampImpl.UTC_OFFSET;
         
-        startValue();
         int patch_len = 1;
         int len = IonBinary.lenIonTimestamp(di);
-        int ln = (len < IonConstants.lnIsVarLen) ? len : IonConstants.lnIsVarLen; 
+        int ln = len;
+        if (len >= IonConstants.lnIsVarLen) {
+            ln = IonConstants.lnIsVarLen;
+            patch_len += IonBinary.lenVarUInt7(len);
+        }
+        
+        startValue(patch_len + len); // int's are always less than varlen long
+        
         _writer.write((IonConstants.tidTimestamp << 4) | ln);
-        if (ln == IonConstants.lnIsVarLen) {
-            patch_len += _writer.writeVarUInt7Value(len, true);
+        if (len >= IonConstants.lnIsVarLen) {
+            _writer.writeVarUInt7Value(len, true);
         }
         patch_len += _writer.writeTimestamp(di);
         patch(patch_len);
@@ -408,13 +449,20 @@ static final boolean _verbose_debug = false;
         di.d = value;
         di.localOffset = localOffset;
         
-        startValue();
         int patch_len = 1;
         int len = IonBinary.lenIonTimestamp(di);
-        int ln = (len < IonConstants.lnIsVarLen) ? len : IonConstants.lnIsVarLen; 
+        
+        int ln = len;
+        if (len >= IonConstants.lnIsVarLen) {
+            ln = IonConstants.lnIsVarLen;
+            patch_len += IonBinary.lenVarUInt7(len);
+        }
+        
+        startValue(patch_len + len); // int's are always less than varlen long
+        
         _writer.write((IonConstants.tidTimestamp << 4) | ln);
-        if (ln == IonConstants.lnIsVarLen) {
-            patch_len += _writer.writeVarUInt7Value(len, true);
+        if (len >= IonConstants.lnIsVarLen) {
+            _writer.writeVarUInt7Value(len, true);
         }
         patch_len += _writer.writeTimestamp(di);
         patch(patch_len);
@@ -427,13 +475,20 @@ static final boolean _verbose_debug = false;
             return;
         }
         
-        startValue();
         int patch_len = 1;
         int len = IonBinary.lenIonString(value);
-        int ln = (len < IonConstants.lnIsVarLen) ? len : IonConstants.lnIsVarLen; 
+        
+        int ln = len;
+        if (len >= IonConstants.lnIsVarLen) {
+            ln = IonConstants.lnIsVarLen;
+            patch_len += IonBinary.lenVarUInt7(len);
+        }
+        
+        startValue(patch_len + len); // int's are always less than varlen long
+ 
         _writer.write((IonConstants.tidString << 4) | ln);
-        if (ln == IonConstants.lnIsVarLen) {
-            patch_len += _writer.writeVarUInt7Value(len, true);
+        if (len >= IonConstants.lnIsVarLen) {
+            _writer.writeVarUInt7Value(len, true);
         }
         patch_len += _writer.writeStringData(value);
         patch(patch_len);
@@ -441,9 +496,9 @@ static final boolean _verbose_debug = false;
 
     public void writeSymbol(int symbolId) throws IOException
     {
-        startValue();
         int patch_len = 1;
         int len = IonBinary.lenVarUInt8(symbolId);
+        startValue(len + 1);
         _writer.write((IonConstants.tidSymbol << 4) | len);
         patch_len += _writer.writeVarUInt8Value(symbolId, len);
         patch(patch_len);
@@ -483,12 +538,18 @@ static final boolean _verbose_debug = false;
 
     public void writeClob(byte[] value, int start, int len) throws IOException
     {
-        startValue();
         int patch_len = 1;
-        int ln = (len < IonConstants.lnIsVarLen) ? len : IonConstants.lnIsVarLen; 
+        int ln = len;
+        if (len >= IonConstants.lnIsVarLen) {
+            ln = IonConstants.lnIsVarLen;
+            patch_len += IonBinary.lenVarUInt7(len);
+        }
+
+        startValue(patch_len + len); // int's are always less than varlen long
+        
         _writer.write((IonConstants.tidClob << 4) | ln);
-        if (ln == IonConstants.lnIsVarLen) {
-            patch_len += _writer.writeVarUInt7Value(len, true);
+        if (len >= IonConstants.lnIsVarLen) {
+            _writer.writeVarUInt7Value(len, true);
         }
         _writer.write(value, start, len);
         patch_len += len;
@@ -507,12 +568,18 @@ static final boolean _verbose_debug = false;
 
     public void writeBlob(byte[] value, int start, int len) throws IOException
     {
-        startValue();
         int patch_len = 1;
-        int ln = (len < IonConstants.lnIsVarLen) ? len : IonConstants.lnIsVarLen; 
+        int ln = len;
+        if (len >= IonConstants.lnIsVarLen) {
+            ln = IonConstants.lnIsVarLen;
+            patch_len += IonBinary.lenVarUInt7(len);
+        }
+
+        startValue(patch_len + len); // int's are always less than varlen long
+
         _writer.write((IonConstants.tidBlob << 4) | ln);
-        if (ln == IonConstants.lnIsVarLen) {
-            patch_len += _writer.writeVarUInt7Value(len, true);
+        if (len >= IonConstants.lnIsVarLen) {
+            _writer.writeVarUInt7Value(len, true);
         }
         _writer.write(value, start, len);
         patch_len += len;
@@ -524,14 +591,21 @@ static final boolean _verbose_debug = false;
     @Override
     public void writeBoolList(boolean[] values) throws IOException
     {
-        int len = values.length;
-        startValue();
+        int len = values.length; // 1 byte per boolean
         int patch_len = 1;
-        int ln = (len < IonConstants.lnIsVarLen) ? len : IonConstants.lnIsVarLen; 
-        _writer.write((IonConstants.tidList << 4) | ln);
-        if (ln == IonConstants.lnIsVarLen) {
-            patch_len += _writer.writeVarUInt7Value(len, true);
+        int ln = len;
+        if (len >= IonConstants.lnIsVarLen) {
+            ln = IonConstants.lnIsVarLen;
+            patch_len += IonBinary.lenVarUInt7(len);
         }
+
+        startValue(patch_len + len); // int's are always less than varlen long
+        
+        _writer.write((IonConstants.tidList << 4) | ln);
+        if (len >= IonConstants.lnIsVarLen) {
+            _writer.writeVarUInt7Value(len, true);
+        }
+        
         for (int ii=0; ii<len; ii++) {
             _writer.write(values[ii] ? bool_true : bool_false);
         }
@@ -544,18 +618,25 @@ static final boolean _verbose_debug = false;
     @Override
     public void writeIntList(byte[] values) throws IOException
     {
-        startValue();
         int patch_len = 1;
         int len = 0;
         for (int ii=0; ii<values.length; ii++) {
-            len++;
-            if (values[ii] != 0) len++;
+            len += (values[ii] == 0) ? 1 : 2; // byte long int's are always 1 byte of data (or none)
         }
-        int ln = (len < IonConstants.lnIsVarLen) ? len : IonConstants.lnIsVarLen; 
+        
+        int ln = len;
+        if (len >= IonConstants.lnIsVarLen) {
+            ln = IonConstants.lnIsVarLen;
+            patch_len += IonBinary.lenVarUInt7(len);
+        }
+
+        startValue(patch_len + len); // int's are always less than varlen long
+
         _writer.write((IonConstants.tidList << 4) | ln);
-        if (ln == IonConstants.lnIsVarLen) {
-            patch_len += _writer.writeVarUInt7Value(len, true);
+        if (len >= IonConstants.lnIsVarLen) {
+            _writer.writeVarUInt7Value(len, true);
         }
+
         for (int ii=0; ii<len; ii++) {
             int v = values[ii];
             if (v == 0) {
@@ -576,18 +657,22 @@ static final boolean _verbose_debug = false;
     @Override
     public void writeIntList(short[] values) throws IOException
     {
-        startValue();
         int patch_len = 1;
         int len = 0;
         for (int ii=0; ii<values.length; ii++) {
-            len++;
-            len += IonBinary.lenIonInt(values[ii]);
+            len += IonBinary.lenIonIntWithTypeDesc((long)values[ii]);
         }
-        
-        int ln = (len < IonConstants.lnIsVarLen) ? len : IonConstants.lnIsVarLen; 
+        int ln = len;
+        if (len >= IonConstants.lnIsVarLen) {
+            ln = IonConstants.lnIsVarLen;
+            patch_len += IonBinary.lenVarUInt7(len);
+        }
+
+        startValue(patch_len + len); // int's are always less than varlen long
+
         _writer.write((IonConstants.tidList << 4) | ln);
-        if (ln == IonConstants.lnIsVarLen) {
-            patch_len += _writer.writeVarUInt7Value(len, true);
+        if (len >= IonConstants.lnIsVarLen) {
+            _writer.writeVarUInt7Value(len, true);
         }
         
         for (int ii=0; ii<len; ii++) {
@@ -611,7 +696,6 @@ static final boolean _verbose_debug = false;
     @Override
     public void writeIntList(int[] values) throws IOException
     {
-        startValue();
         int patch_len = 1;
         int len = 0;
         for (int ii=0; ii<values.length; ii++) {
@@ -619,10 +703,17 @@ static final boolean _verbose_debug = false;
             len += IonBinary.lenIonInt(values[ii]);
         }
         
-        int ln = (len < IonConstants.lnIsVarLen) ? len : IonConstants.lnIsVarLen; 
+        int ln = len;
+        if (len >= IonConstants.lnIsVarLen) {
+            ln = IonConstants.lnIsVarLen;
+            patch_len += IonBinary.lenVarUInt7(len);
+        }
+
+        startValue(patch_len + len); // int's are always less than varlen long
+
         _writer.write((IonConstants.tidList << 4) | ln);
-        if (ln == IonConstants.lnIsVarLen) {
-            patch_len += _writer.writeVarUInt7Value(len, true);
+        if (len >= IonConstants.lnIsVarLen) {
+            _writer.writeVarUInt7Value(len, true);
         }
         
         for (int ii=0; ii<len; ii++) {
@@ -646,7 +737,6 @@ static final boolean _verbose_debug = false;
     @Override
     public void writeIntList(long[] values) throws IOException
     {
-        startValue();
         int patch_len = 1;
         int len = 0;
         for (int ii=0; ii<values.length; ii++) {
@@ -654,10 +744,17 @@ static final boolean _verbose_debug = false;
             len += IonBinary.lenIonInt(values[ii]);
         }
         
-        int ln = (len < IonConstants.lnIsVarLen) ? len : IonConstants.lnIsVarLen; 
+        int ln = len;
+        if (len >= IonConstants.lnIsVarLen) {
+            ln = IonConstants.lnIsVarLen;
+            patch_len += IonBinary.lenVarUInt7(len);
+        }
+
+        startValue(patch_len + len); // int's are always less than varlen long
+
         _writer.write((IonConstants.tidList << 4) | ln);
-        if (ln == IonConstants.lnIsVarLen) {
-            patch_len += _writer.writeVarUInt7Value(len, true);
+        if (len >= IonConstants.lnIsVarLen) {
+            _writer.writeVarUInt7Value(len, true);
         }
         
         for (int ii=0; ii<len; ii++) {
@@ -681,19 +778,24 @@ static final boolean _verbose_debug = false;
     @Override
     public void writeFloatList(float[] values) throws IOException
     {
-        startValue();
         int patch_len = 1;
-        
         int len = 0;
         for (int ii=0; ii<values.length; ii++) {
             len++;
             len += IonBinary.lenIonFloat(values[ii]);
         }
         
-        int ln = (len < IonConstants.lnIsVarLen) ? len : IonConstants.lnIsVarLen; 
+        int ln = len;
+        if (len >= IonConstants.lnIsVarLen) {
+            ln = IonConstants.lnIsVarLen;
+            patch_len += IonBinary.lenVarUInt7(len);
+        }
+
+        startValue(patch_len + len); // int's are always less than varlen long
+
         _writer.write((IonConstants.tidList << 4) | ln);
-        if (ln == IonConstants.lnIsVarLen) {
-            patch_len += _writer.writeVarUInt7Value(len, true);
+        if (len >= IonConstants.lnIsVarLen) {
+            _writer.writeVarUInt7Value(len, true);
         }
         
         for (int ii=0; ii<len; ii++) {
@@ -709,19 +811,24 @@ static final boolean _verbose_debug = false;
     @Override
     public void writeFloatList(double[] values) throws IOException
     {
-        startValue();
         int patch_len = 1;
-        
         int len = 0;
         for (int ii=0; ii<values.length; ii++) {
             len++;
             len += IonBinary.lenIonFloat(values[ii]);
         }
         
-        int ln = (len < IonConstants.lnIsVarLen) ? len : IonConstants.lnIsVarLen; 
+        int ln = len;
+        if (len >= IonConstants.lnIsVarLen) {
+            ln = IonConstants.lnIsVarLen;
+            patch_len += IonBinary.lenVarUInt7(len);
+        }
+
+        startValue(patch_len + len); // int's are always less than varlen long
+
         _writer.write((IonConstants.tidList << 4) | ln);
-        if (ln == IonConstants.lnIsVarLen) {
-            patch_len += _writer.writeVarUInt7Value(len, true);
+        if (len >= IonConstants.lnIsVarLen) {
+            _writer.writeVarUInt7Value(len, true);
         }
         
         for (int ii=0; ii<len; ii++) {
@@ -739,9 +846,7 @@ static final boolean _verbose_debug = false;
     {
         String s;
         
-        startValue();
         int patch_len = 1;
-        
         int len = 0;
         for (int ii=0; ii<values.length; ii++) {
             len++;
@@ -755,12 +860,19 @@ static final boolean _verbose_debug = false;
             }
         }
         
-        int ln = (len < IonConstants.lnIsVarLen) ? len : IonConstants.lnIsVarLen; 
-        _writer.write((IonConstants.tidList << 4) | ln);
-        if (ln == IonConstants.lnIsVarLen) {
-            patch_len += _writer.writeVarUInt7Value(len, true);
+        int ln = len;
+        if (len >= IonConstants.lnIsVarLen) {
+            ln = IonConstants.lnIsVarLen;
+            patch_len += IonBinary.lenVarUInt7(len);
         }
-        
+
+        startValue(patch_len + len); // int's are always less than varlen long
+
+        _writer.write((IonConstants.tidList << 4) | ln);
+        if (len >= IonConstants.lnIsVarLen) {
+            _writer.writeVarUInt7Value(len, true);
+        }
+
         for (int ii=0; ii<len; ii++) {
             s = values[ii];
             if (s == null) {

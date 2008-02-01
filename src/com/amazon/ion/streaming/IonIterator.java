@@ -53,9 +53,10 @@ public abstract class IonIterator
     public static IonIterator makeIterator(byte[] buf, int start, int len) {
         IonIterator iter;
         if (has_ion_magic_cookie(buf, start, len)) {
-            start += IonConstants.BINARY_VERSION_MARKER_SIZE;
-            len -= IonConstants.BINARY_VERSION_MARKER_SIZE;
             iter = new IonBinaryIterator(buf, start, len);
+            //start += IonConstants.BINARY_VERSION_MARKER_SIZE;
+            //len -= IonConstants.BINARY_VERSION_MARKER_SIZE;
+            // iter = new IonBinaryIterator(buf, start, len);
         }
         else {
             iter = new IonTextIterator(buf, start, len);
