@@ -13,7 +13,7 @@ public interface IonLob
     extends IonValue
 {
     /**
-     * Creates a new @{link InputStream} that returns the data as raw
+     * Creates a new {@link InputStream} that returns the data as raw
      * bytes.
      *
      * @return a new stream positioned at the start of the lob,
@@ -39,10 +39,10 @@ public interface IonLob
      * may be <code>null</code> to make this an Ion <code>null</code> value.
      */
     public void setBytes(byte[] bytes);
-    
+
     /**
      * Gets the size in bytes of this lob.
-     * 
+     *
      * @return the lob's size in bytes
      */
     public int byteSize();
