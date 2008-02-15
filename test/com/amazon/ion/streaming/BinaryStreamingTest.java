@@ -44,9 +44,11 @@ public class BinaryStreamingTest
         // Test cases
         
         static class TestValue {
-            String  name;
-            IonType itype;
-            Object  value;
+            String   name;
+            IonType  itype;
+            Object   value;
+            String[] annotations;
+            
             TestValue(String tv_name, IonType tv_type, Object tv_value) {
                 name = tv_name;
                 itype = tv_type;
