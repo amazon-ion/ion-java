@@ -26,6 +26,7 @@ import com.amazon.ion.impl.ByteBufferTest;
 import com.amazon.ion.impl.CharacterReaderTest;
 import com.amazon.ion.impl.ReaderTest;
 import com.amazon.ion.impl.SymbolTableTest;
+import com.amazon.ion.streaming.BinaryStreamingTest;
 import com.amazon.ion.system.SimpleCatalogTest;
 import com.amazon.ion.util.PrinterTest;
 import com.amazon.ion.util.TextTest;
@@ -84,6 +85,8 @@ public class AllTests
         suite.addTest(new BadIonTests());
         suite.addTest(new EquivsTests());
         suite.addTest(new RoundTripTests());
+        
+        suite.addTestSuite(BinaryStreamingTest.class);
 
         //$JUnit-END$
 

@@ -23,6 +23,9 @@
 <!--<property name="dir.test.config"  location="${dir.test}/config"/> -->
     <property name="dir.test.classes" location="${dir.output}/test"/>
 
+    <property name="dir.test.data" 
+        location="${brazil.package.IonTests-1.0.base.dir}/iontestdata"/>
+
     <property name="jar.output.src"  location="${dir.release}/${ant.project.name}.jar"/>
     <property name="jar.output.test" location="${dir.release}/${ant.project.name}-test.jar"/>
 
@@ -91,7 +94,20 @@
     <jar destfile="${jar.output.test}" basedir="${dir.test.classes}"/>
   </target>
 
-  <target name="test" depends="jars.test">
+  <target name="-checkForTestData" unless="testdata-exists">
+    <available property="testdata-exists" file="${dir.test.data}" type="dir"/>
+  </target>
+
+  <target name="-cacheTestData" depends="-checkForTestData"
+       unless="testdata-exists">
+    <!-- HT2 (as of 2008-01-28) has an annoying bug: it won't cache packages
+         that have no javalibrary targets.  This task forces HT to pull the
+         package, otherwise our builds will fail. -->
+    <ht2:cache packages="IonTests-1.0"/>
+  </target>
+
+  <target name="test" depends="jars.test, -cacheTestData" 
+      description="Run unit tests">
     <property name="teardown" value="true"/>
     <property name="testcaseOverride" value="()"/>
     <property name="domain" value="test"/>
@@ -117,7 +133,7 @@
 
       <sysproperty key="java.library.path" value="${java.libraryPath.test}" />
       <sysproperty key="com.amazon.iontests.iontestdata.path"
-                   value="${brazil.package.IonTests-1.0.base.dir}/iontestdata"/>
+                   value="${dir.test.data}"/>
 
       <assertions enableSystemAssertions="true">
         <!--
