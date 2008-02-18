@@ -89,13 +89,19 @@ abstract public class IonContainerImpl
         /*
          * TODO: if this is a big container that's not materialized, isEmpty()
          * will do a lot of work materializing it just to throw it out.
-         * Optimization needed.
+         * Optimization needed. Especially since we'll then come in and detach 
+         * all the children we just created.
          */
         else if (!isEmpty())
         {
+            try {
+                for (IonValue child : _contents) {
+                    ((IonValueImpl)child).detachFromContainer();
+                }
+            } catch (IOException ioe) {
+                throw new IonException(ioe);
+            }
             _contents.clear();
-
-            // FIXME all existing children still incorrectly have container set!
             setDirty();
         }
     }
