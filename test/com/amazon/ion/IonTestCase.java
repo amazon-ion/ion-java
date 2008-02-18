@@ -87,9 +87,12 @@ public abstract class IonTestCase
     {
         loadSystemProperties();
 
-        String value = System.getProperty(prop);
+        String value = System.getProperty(prop); 
         if (value == null)
         {
+            value = System.getenv(prop);
+        }
+        if (value == null) {
             String message = "Missing required system property: " + prop;
             throw new IllegalStateException(message);
         }
