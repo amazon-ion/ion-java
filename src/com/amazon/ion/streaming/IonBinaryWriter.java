@@ -4,6 +4,7 @@
 
 package com.amazon.ion.streaming;
 
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.BlockedBuffer;
@@ -606,7 +607,7 @@ static final boolean _verbose_debug = false;
             _writer.writeVarUInt7Value(len, true);
         }
         
-        for (int ii=0; ii<len; ii++) {
+        for (int ii=0; ii<values.length; ii++) {
             _writer.write(values[ii] ? bool_true : bool_false);
         }
         patch_len += len;
@@ -637,7 +638,7 @@ static final boolean _verbose_debug = false;
             _writer.writeVarUInt7Value(len, true);
         }
 
-        for (int ii=0; ii<len; ii++) {
+        for (int ii=0; ii<values.length; ii++) {
             int v = values[ii];
             if (v == 0) {
                 _writer.write(int_tid_0);
@@ -675,7 +676,7 @@ static final boolean _verbose_debug = false;
             _writer.writeVarUInt7Value(len, true);
         }
         
-        for (int ii=0; ii<len; ii++) {
+        for (int ii=0; ii<values.length; ii++) {
             int v = values[ii];
             ln = IonBinary.lenIonInt(v);
             if (v == 0) {
@@ -683,7 +684,7 @@ static final boolean _verbose_debug = false;
             }
             else if (v < 0) {
                 _writer.write((IonConstants.tidNegInt << 4) | ln);
-                _writer.writeVarUInt8Value(-v, ln);
+                _writer.writeVarUInt8Value(-((int)v), ln);
             }
             else {
                 _writer.write((IonConstants.tidPosInt << 4) | ln);
@@ -696,39 +697,44 @@ static final boolean _verbose_debug = false;
     @Override
     public void writeIntList(int[] values) throws IOException
     {
+int tmp;
         int patch_len = 1;
         int len = 0;
         for (int ii=0; ii<values.length; ii++) {
-            len++;
-            len += IonBinary.lenIonInt(values[ii]);
+            //len++; cas 22 feb 2008, also changed to withtypedesc below
+        	tmp = IonBinary.lenIonIntWithTypeDesc((long)values[ii]); 
+            len += tmp; 
         }
+
         
         int ln = len;
         if (len >= IonConstants.lnIsVarLen) {
             ln = IonConstants.lnIsVarLen;
-            patch_len += IonBinary.lenVarUInt7(len);
+            tmp = IonBinary.lenVarUInt7(len);
+            patch_len += tmp; 
+            	
         }
 
         startValue(patch_len + len); // int's are always less than varlen long
 
-        _writer.write((IonConstants.tidList << 4) | ln);
+		_writer.write((IonConstants.tidList << 4) | ln);
         if (len >= IonConstants.lnIsVarLen) {
-            _writer.writeVarUInt7Value(len, true);
+        	tmp = _writer.writeVarUInt7Value(len, true);
         }
         
-        for (int ii=0; ii<len; ii++) {
-            int v = values[ii];
+        for (int ii=0; ii<values.length; ii++) {
+        	int v = values[ii];
             ln = IonBinary.lenIonInt(v);
             if (v == 0) {
                 _writer.write(int_tid_0);
             }
             else if (v < 0) {
                 _writer.write((IonConstants.tidNegInt << 4) | ln);
-                _writer.writeVarUInt8Value(-v, ln);
+                tmp = _writer.writeVarUInt8Value(-((long)v), ln);
             }
             else {
                 _writer.write((IonConstants.tidPosInt << 4) | ln);
-                _writer.writeVarUInt8Value(v, ln);
+                tmp = _writer.writeVarUInt8Value(v, ln);
             }
         }
         patch_len += len;
@@ -740,8 +746,8 @@ static final boolean _verbose_debug = false;
         int patch_len = 1;
         int len = 0;
         for (int ii=0; ii<values.length; ii++) {
-            len++;
-            len += IonBinary.lenIonInt(values[ii]);
+            //len++; cas 22 feb 2008, also changed to withtypedesc below
+            len += IonBinary.lenIonIntWithTypeDesc(values[ii]);
         }
         
         int ln = len;
@@ -757,7 +763,7 @@ static final boolean _verbose_debug = false;
             _writer.writeVarUInt7Value(len, true);
         }
         
-        for (int ii=0; ii<len; ii++) {
+        for (int ii=0; ii<values.length; ii++) {
             long v = values[ii];
             ln = IonBinary.lenIonInt(v);
             if (v == 0) {
@@ -765,6 +771,9 @@ static final boolean _verbose_debug = false;
             }
             else if (v < 0) {
                 _writer.write((IonConstants.tidNegInt << 4) | ln);
+                if (v == Long.MIN_VALUE) {
+                	throw new IonException("negative int value too small");
+                }
                 _writer.writeVarUInt8Value(-v, ln);
             }
             else {
@@ -798,7 +807,7 @@ static final boolean _verbose_debug = false;
             _writer.writeVarUInt7Value(len, true);
         }
         
-        for (int ii=0; ii<len; ii++) {
+        for (int ii=0; ii<values.length; ii++) {
             double v = values[ii];
             ln = IonBinary.lenIonFloat(v);
             _writer.write((IonConstants.tidFloat << 4) | ln);
@@ -831,7 +840,7 @@ static final boolean _verbose_debug = false;
             _writer.writeVarUInt7Value(len, true);
         }
         
-        for (int ii=0; ii<len; ii++) {
+        for (int ii=0; ii<values.length; ii++) {
             double v = values[ii];
             ln = IonBinary.lenIonFloat(v);
             _writer.write((IonConstants.tidFloat << 4) | ln);
@@ -873,7 +882,7 @@ static final boolean _verbose_debug = false;
             _writer.writeVarUInt7Value(len, true);
         }
 
-        for (int ii=0; ii<len; ii++) {
+        for (int ii=0; ii<values.length; ii++) {
             s = values[ii];
             if (s == null) {
                 _writer.write((IonConstants.tidString << 4) | IonConstants.lnIsNullAtom);
@@ -945,7 +954,7 @@ static final boolean _verbose_debug = false;
 
         return total_length;
     }
-    public int writeBytes(OutputStream userstream) throws IOException
+    public int writeBytes(SimpleByteBuffer.SimpleByteWriter userstream) throws IOException
     {
         int total_written = 0;
         ByteWriterOutputStream iout = new ByteWriterOutputStream(userstream);
@@ -1067,10 +1076,15 @@ static final boolean _verbose_debug = false;
         int symbol_list_content_len = 0;
         symbol_list_len = 0;
 
-        Iterator<UnifiedSymbolTable.Symbol> syms = super.getSymbolTableSymbols();
-        while (syms.hasNext()) {
-            UnifiedSymbolTable.Symbol s = syms.next();
+        //Iterator<UnifiedSymbolTable.Symbol> syms = super.getSymbolTableSymbols();
+        //while (syms.hasNext()) {
+        //    UnifiedSymbolTable.Symbol s = syms.next();
+            
+        UnifiedSymbolTable.Symbol[] syms = super.getSymbolArray();
+        for (int ii=0; ii<syms.length; ii++) {
+            UnifiedSymbolTable.Symbol s = syms[ii];
             if (s == null) continue;
+            if (s.source != this._symbol_table) continue; // we only care about our own symbols
             int s_len = IonBinary.lenVarUInt7(s.sid);
             s_len += IonBinary.lenIonStringWithTypeDesc(s.name);
             symbol_list_content_len += s_len;
@@ -1078,8 +1092,9 @@ static final boolean _verbose_debug = false;
         if (symbol_list_content_len > 0) {
             symbol_list_len = 2; // fldid + typedesc
             symbol_list_len += symbol_list_content_len;
-            if (symbol_list_len >= IonConstants.lnIsVarLen) {
-                symbol_list_len += IonBinary.lenVarUInt7(symbol_list_len);
+            // if the content doesn't fit - cas bug fix 22 feb 2008
+            if (symbol_list_content_len >= IonConstants.lnIsVarLen) {
+                symbol_list_len += IonBinary.lenVarUInt7(symbol_list_content_len);
             }
         }
         
@@ -1155,9 +1170,13 @@ static final boolean _verbose_debug = false;
         if (symbol_list_content_len > 0) {
             written_symbols_header_len += out.writeVarUInt(UnifiedSymbolTable.SYMBOLS_SID, true);
             written_symbols_header_len += out.writeTypeDescWithLength(IonConstants.tidStruct, symbol_list_content_len);
-            syms = super.getSymbolTableSymbols();
-            while (syms.hasNext()) {
-                UnifiedSymbolTable.Symbol s = syms.next();
+            //syms = super.getSymbolTableSymbols();
+            //while (syms.hasNext()) {
+            //    UnifiedSymbolTable.Symbol s = syms.next();
+            for (int ii=0; ii<syms.length; ii++) {
+                UnifiedSymbolTable.Symbol s = syms[ii];
+                if (s == null) continue;
+                if (s.source != this._symbol_table) continue; // we only care about our own symbols
                 int s_len = IonBinary.lenIonString(s.name); 
                 int t_len = out.writeVarUInt(s.sid, true);
                 t_len += out.writeTypeDescWithLength(IonConstants.tidString, s_len);

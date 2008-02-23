@@ -666,7 +666,7 @@ public final class IonTextWriter
         }
         return len;
     }
-    public int writeBytes(OutputStream out)
+    public int writeBytes(SimpleByteBuffer.SimpleByteWriter out) // OutputStream out)
         throws IOException
     {
         if (_manager == null) {
@@ -677,7 +677,7 @@ public final class IonTextWriter
         IonBinary.Reader r = _manager.openReader();
         r.setPosition(0); // just in case
         
-        int len = r.writeTo(out, buffer_length);
+        int len = r.writeTo((ByteWriter)out, buffer_length);
         if (buffer_length != buffer_length) {
             throw new IllegalStateException("inconsistant buffer sizes encountered");
         }

@@ -14,6 +14,7 @@ import com.amazon.ion.SystemSymbolTable;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.TreeMap;
 
 /**
  * 
@@ -135,6 +136,7 @@ public final class UnifiedSymbolTable
     boolean                 _is_locked;
     
     HashMap<String, Integer> _id_map;
+    // TreeMap<String, Integer> _id_map;
     
     private UnifiedSymbolTable() {
         _name = null;
@@ -142,12 +144,13 @@ public final class UnifiedSymbolTable
         _system_symbols = null;
         _imports = null;
         _import_count = 0;
-        _symbols = null;
+        _symbols = new Symbol[10];
         _symbol_count = 0;
         _max_id = 0;
         _symbol_offset = 0;
         _has_user_symbols = false;
         _is_locked = false;
+        _id_map = new HashMap<String, Integer>(10);
     }
     
     public UnifiedSymbolTable(UnifiedSymbolTable systemSymbols) {
@@ -304,21 +307,23 @@ public final class UnifiedSymbolTable
             sid = _system_symbols.findSymbol(name);
         }
         if (sid == 0) {
-            if (_id_map != null) {
+            //if (_id_map != null) {
                 Integer isid = _id_map.get(name);
                 if (isid != null) {
                     sid = isid;
                 }
-            }
-            else if (_symbols != null) {
-                for (Symbol sym : _symbols) {
-                    if (sym == null) continue;
-                    if (sym.name.equals(name)) {
-                        sid = sym.sid;
-                        break;
-                    }
-                }
-            }
+            //}
+            //else if (_symbols != null) {
+            //    int nlen = name.length();
+            //    for (Symbol sym : _symbols) {
+            //        if (sym == null) continue;
+            //        String n2 = sym.name;
+            //        if (n2.length() == nlen && n2.equals(name)) {
+            //            sid = sym.sid;
+            //            break;
+            //        }
+            //    }
+            //}
         }
         return sid;
     }
@@ -370,16 +375,28 @@ public final class UnifiedSymbolTable
         if (sym.sid > _max_id) _max_id = sym.sid;
         int offset = sym.sid - _symbol_offset; 
         
-        if (_symbols == null || offset >= _symbols.length) {
+        if (offset >= _symbols.length) {
             int newlen = _symbol_count > 0 ? _symbol_count* 2 : 10;
             Symbol[] temp = new Symbol[newlen];
             if (_symbol_count > 0) {
                 System.arraycopy(_symbols, 0, temp, 0, _symbol_count);
             }
             _symbols = temp;
+            //if (_id_map == null) {
+            //    _id_map = new HashMap<String, Integer>(newlen);
+            //    //_id_map = new TreeMap<String, Integer>();
+            //    for (int ii=0; ii<_symbol_count; ii++) {
+            //        Symbol s = _symbols[ii];
+            //        if (s == null) continue;
+            //        _id_map.put(s.name, s.sid);
+            //    }
+            //}
         }
         
         _symbols[offset] = sym;
+        //if (_id_map != null) {
+            _id_map.put(sym.name, sym.sid);
+        //}
         if (offset >= _symbol_count) _symbol_count = offset + 1;
         if (sym.source == this) _has_user_symbols = true;
     }
@@ -417,6 +434,9 @@ public final class UnifiedSymbolTable
         assert _symbols[sid - _symbol_offset].source == table;
         
         _symbols[sid - _symbol_offset] = null;
+        //if (_id_map != null) {
+            _id_map.remove(name);
+        //}
     }
 
     public UnifiedSymbolTable getImportedTable(String name)
@@ -486,10 +506,15 @@ public final class UnifiedSymbolTable
     }
     int importSymbols(UnifiedSymbolTable newTable, int sidOffset)
     {
-        Iterator<Symbol> symbols = newTable.getAllSymbols();
         int maxsid = -1;
-        while (symbols.hasNext()) { 
-            Symbol sym  = symbols.next();
+    
+        //Iterator<Symbol> symbols = newTable.getAllSymbols();
+        //while (symbols.hasNext()) { 
+        //    Symbol sym  = symbols.next();
+        //    if (sym == null) continue;
+            
+        for (int ii=0; ii< newTable._symbols.length; ii++) {
+            Symbol sym = newTable._symbols[ii];
             if (sym == null) continue;
             int sid = sym.sid + sidOffset;
             defineSymbol(new Symbol(sym.name, sid, newTable));
@@ -515,9 +540,12 @@ public final class UnifiedSymbolTable
         UnifiedSymbolTable usystemSymbols = null;
         if (systemSymbols != null) {
             usystemSymbols = (UnifiedSymbolTable)systemSymbols;
-            Iterator<Symbol> symbols = usystemSymbols.getAllSymbols();
-            while (symbols.hasNext()) {
-                Symbol sym = symbols.next();
+            //Iterator<Symbol> symbols = usystemSymbols.getAllSymbols();
+            //while (symbols.hasNext()) {
+            //    Symbol sym = symbols.next();
+            for (int ii=0; ii<usystemSymbols._symbols.length; ii++) {    
+                Symbol sym = usystemSymbols._symbols[ii];
+                if (sym == null) continue;
                 defineSymbol(new Symbol(sym.name, sym.sid, usystemSymbols));
             }
         }
@@ -595,11 +623,13 @@ public final class UnifiedSymbolTable
                 imports_as_ion.add(imp);
             }
         }
-        Iterator<Symbol> syms = this.getLocalSymbols();
+        //Iterator<Symbol> syms = this.getLocalSymbols();
         IonStruct symlist = null;
-        while (syms.hasNext()) {
-            Symbol sym = syms.next();
-            if (sym.source != this) continue;
+        //while (syms.hasNext()) {
+        //    Symbol sym = syms.next();
+        for (int ii=0; ii<this._symbols.length; ii++) {    
+            Symbol sym = this._symbols[ii];
+            if (sym == null || sym.source != this) continue;
             if (symlist == null) {
                 symlist = sys.newEmptyStruct();
             }
@@ -622,10 +652,13 @@ public final class UnifiedSymbolTable
         master = this;
         candidate = (UnifiedSymbolTable)other;
         
-        Iterator<Symbol> other_syms = candidate.getAllSymbols();
+//        Iterator<Symbol> other_syms = candidate.getAllSymbols();
         
-        while (other_syms.hasNext()) {
-            Symbol sym = other_syms.next();
+//        while (other_syms.hasNext()) {
+//            Symbol sym = other_syms.next();
+        for (int ii=0; ii<candidate._symbols.length; ii++) {
+            Symbol sym = candidate._symbols[ii];
+            if (sym == null) continue;
             int id = master.findSymbol(sym.name);
             if (id != sym.sid) {
                 return false;
@@ -645,21 +678,22 @@ public final class UnifiedSymbolTable
         assert id > 0;
         return "$" + id;
     }
-    public Iterator<Symbol> getAllSymbols() {
+    /* TODO remove this if it proves to be unnecessary
+    public Iterator<Symbol> xxgetAllSymbols() {
         return new SymbolIterator(null, _symbols, _symbol_count);
     }
-    public Iterator<Symbol> getLocalSymbols() {
+    public Iterator<Symbol> xxgetLocalSymbols() {
         return new SymbolIterator(this, _symbols, _symbol_count);
     }
 
-    static final class SymbolIterator implements Iterator<Symbol> 
+    static final class xxSymbolIterator implements Iterator<Symbol> 
     {
         UnifiedSymbolTable _source_table;
         Symbol[] _symbols;
         int      _symbol_count;
         int      _pos;
         
-        SymbolIterator(UnifiedSymbolTable sourceTable, Symbol[] symbols, int symbol_count) {
+        xxSymbolIterator(UnifiedSymbolTable sourceTable, Symbol[] symbols, int symbol_count) {
             if (symbol_count > 0 
              && (symbols == null || symbols.length < symbol_count)) {
                 throw new IllegalArgumentException("count is incompatible with this symbol array");
@@ -691,4 +725,5 @@ public final class UnifiedSymbolTable
             throw new UnsupportedOperationException();
         }
     }
+    */
 }

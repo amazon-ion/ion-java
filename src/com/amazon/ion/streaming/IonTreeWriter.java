@@ -400,7 +400,7 @@ public final class IonTreeWriter
     }
 
 
-    public int writeBytes(OutputStream out)
+    public int writeBytes(SimpleByteBuffer.SimpleByteWriter out) // OutputStream out)
         throws IOException
     {
         IonValue v = getContentAsIonValue();

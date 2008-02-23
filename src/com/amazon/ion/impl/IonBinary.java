@@ -234,7 +234,6 @@ public class IonBinary
         return len;
     }
 
-
     public static int lenVarInt8(BigInteger bi)
     {
         if (bi.compareTo(BigInteger.ZERO) < 0)
@@ -265,6 +264,7 @@ public class IonBinary
             len = _ib_VAR_INT64_LEN_MAX - 1;
             if (longVal < 0) {
                 longVal = -longVal;
+                if (longVal == -longVal) throw new IonException("negative long value out of range");
             }
             while ( (int)( 0x7fL & (longVal>>(7*len)) ) == 0 ) {
                 len--;
@@ -281,13 +281,16 @@ public class IonBinary
     }
     public static int lenIonInt(long v) {
         if (v < 0) {
-            return IonBinary.lenVarUInt8(-v);
+            long v2 = -v;
+            if (v2 == v) throw new IonException("long value out of bounds (too small)");
+            return IonBinary.lenVarUInt8(v2);
         }
         else if (v > 0) {
             return IonBinary.lenVarUInt8(v);
         }
         return 0; // CAS UPDATE, was 1
     }
+    
     public static int lenVarInt(long longVal) {
         int len = 0;
 
@@ -295,7 +298,9 @@ public class IonBinary
         if (longVal != 0) {
             len = _ib_INT64_LEN_MAX - 1;
             if (longVal < 0) {
-                longVal = -longVal;
+                long v2 = -longVal;
+                if (v2 == longVal) throw new IonException("long value out of bounds (too small)");
+                longVal = v2;
             }
             while ( (int)( 0xffL & (longVal >> (8*len)) ) == 0 ) {
                 len--;
@@ -407,13 +412,49 @@ public class IonBinary
 
         return tzlen + bdlen;
     }
-    public static int lenIonString(String v) {
-        if (v == null) return 0;
 
+    // TODO: these appear in 3 source files, just like this.
+    //       I really don't think that's right
+    static final int high_surrogate_value = 0xD800;
+    static final int low_surrogate_value = 0xDC00;
+    static final int surrogate_mask = 0xFC00; // 0x3f << 10; or the top 6 bits
+    static final int surrogate_utf32_offset = 0x10000;
+
+    public static int lenIonString(String v) 
+    {
+        if (v == null) return 0;
         int len = 0;
-// BUGBUG: this should be looking for surrogate characters !!!
+
         for (int ii=0; ii<v.length(); ii++) {
-            char c = v.charAt(ii);
+            int c = v.charAt(ii);
+            
+            // handle the cheap characters quickly
+            if (c < 128) {
+                len++;
+                continue;
+            }
+            
+            /* TODO cas 22 feb 2008
+             * this code needs to be fixed properly to check for the various
+             * surrogate character pairing correctly
+             * // look for surrogate pairs and merge them (and throw on bad data)
+             * if ((c & surrogate_mask) == high_surrogate_value) {
+             *     ii++;
+             *     if (ii >= v.length()) {
+             *         throw new IonException("invalid surrogate paired character for UTF-8 output");
+             *    }
+             *     int c2 = v.charAt(ii);
+             *     if ((c2 & surrogate_mask) != low_surrogate_value) {
+             *         throw new IonException("invalid surrogate paired character for UTF-8 output");
+             *     }
+             *     c = ((c & surrogate_mask) << surrogate_utf32_offset) | (c2 & surrogate_mask);
+             * }
+             * else if ((c & surrogate_mask) == low_surrogate_value) {
+             *     throw new IonException("invalid surrogate paired character for UTF-8 output");
+             * }
+             */
+
+            // and now figure out how long this "complicated" character is
             int clen = lenUTF8Char(c);
             if (clen < 1) return -1;
             len += clen;
@@ -487,13 +528,7 @@ public class IonBinary
         int len = 0;
         if (v != null) {
             long vl = v.longValue();
-            int vlen;
-            if (vl < 0) {
-                vlen = lenVarInt(vl);
-            }
-            else {
-                vlen = lenVarUInt8(vl);
-            }
+            int vlen = lenIonInt(vl);
             len += vlen;
             len += lenLenFieldWithOptionalNibble(vlen);
         }
@@ -824,7 +859,9 @@ public class IonBinary
                 default:
                 }
                 if (is_negative) {
-                    retvalue = -retvalue;
+                    long v2 = -retvalue;
+                    if (v2 == retvalue) throw new IonException("long value out of bounds (too small)");
+                    retvalue = v2;
                 }
             }
             return retvalue;
@@ -861,7 +898,9 @@ public class IonBinary
                     retvalue = (retvalue << 8) | b;
                 }
                 if (is_negative) {
-                    retvalue = -retvalue;
+                    int v2 = -retvalue;
+                    if (v2 == retvalue) throw new IonException("value out of bounds for int (too small)");
+                    retvalue = v2;
                 }
             }
             return retvalue;
@@ -993,7 +1032,9 @@ done:       for (;;) {
                 }
             }
             if (is_negative) {
-                retvalue = -retvalue;
+                long v2 = -retvalue;
+                if (v2 == retvalue) throw new IonException("value out of bounds for long (too small)");
+                retvalue = v2;
             }
             return retvalue;
         }
@@ -1038,7 +1079,9 @@ done:       for (;;) {
                 throw new IonException("var int overflow at: "+this.position());
             }
             if (is_negative) {
-                retvalue = -retvalue;
+                int v2 = -retvalue;
+                if (v2 == retvalue) throw new IonException("value out of bounds for int (too small)");
+                retvalue = v2;
             }
             return retvalue;
         }
@@ -1091,7 +1134,9 @@ done:       for (;;) {
             Integer retInteger = null;
             if (is_negative) {
                 if (retvalue != 0) {
-                    retInteger = new Integer(-retvalue);
+                    int v2 = -retvalue;
+                    if (v2 == retvalue) throw new IonException("value out of bounds for Integer (too small)");
+                    retInteger = new Integer(v2);
                 }
             }
             else {
@@ -1244,7 +1289,6 @@ done:       for (;;) {
         void throwUnexpectedEOFException() {
             throw new BlockedBuffer.BlockedBufferException("unexpected EOF in value at offset " + this.position());
         }
-
 
         public String readString() throws IOException {
             int td = read();
@@ -1691,7 +1735,9 @@ done:       for (;;) {
 
                 len = lenVarInt7(value);
                 if (is_negative = (value < 0)) {
-                    value = -value;
+                    int v2 = -value;
+                    if (v2 == value) throw new IonException("value out of bounds for int (too small)");
+                    value = v2;
                 }
 
                 // we write the first "byte" separately as it has the sign
@@ -1725,7 +1771,9 @@ done:       for (;;) {
 
                 len = lenVarInt(value);
                 if (is_negative = (value < 0)) {
-                    value = -value;
+                    long v2 = -value;
+                    if (v2 == value) throw new IonException("value out of bounds for long (too small)");
+                    value = v2;
                 }
 
                 // we write the first "byte" separately as it has the sign
@@ -1764,7 +1812,9 @@ done:       for (;;) {
 
                 len = lenVarInt(value) - 1;
                 if (is_negative) {
-                    value = -value;
+                    long v2 = -value;
+                    if (v2 == value) throw new IonException("value out of bounds for long (too small)");
+                    value = v2;
                 }
 
                 // we write the first "byte" separately as it has the sign
@@ -1799,7 +1849,17 @@ done:       for (;;) {
             long dBits = Double.doubleToRawLongBits(d);
             return writeVarUInt8Value(dBits, _ib_FLOAT64_LEN);
         }
+        static final int surrogate_mask = 0xFC00; // 0x3f << 10; or the top 6 bits
+        static final int high_surrogate_value = 0xD800;
+        static final int low_surrogate_value = 0xDC00;
         public int writeCharValue(int c) throws IOException
+        {
+            this.start_write();
+            int ret = this._writeCharValue(c);
+            this.end_write();
+            return ret;
+        }
+        final int _writeCharValue(int c) throws IOException
         {
             // TODO: check this encoding, it is from:
             //      http://en.wikipedia.org/wiki/UTF-8
@@ -1809,31 +1869,40 @@ done:       for (;;) {
             // in: java.nio.charset.CharsetDecoder
 
             int len = -1;
-
+            
             if ((c & (~0x1FFFFF)) != 0) {
                 throw new IonException("invalid character for UTF-8 output");
             }
 
             if ((c & (~0x7f)) == 0) {
-                write((byte)(0xff & c ));
+                _write((byte)(0xff & c ));
                 len = 1;
             }
+            // TODO restore this code and / or fix up the call stack to 
+            //      properly handle "partial characters" where we get
+            //      these exception cases
+            //      cas 22 feb 2008
+            //else  if (((c & surrogate_mask) == high_surrogate_value)
+            //       || ((c & surrogate_mask) == low_surrogate_value)) {
+            //    // this routine has no provision for handling half a character !
+            //    this.throwUTF8Exception();
+            //}
             else if ((c & (~0x7ff)) == 0) {
-                write((byte)( 0xff & (0xC0 | (c >> 6)) ));
-                write((byte)( 0xff & (0x80 | (c & 0x3F)) ));
+                _write((byte)( 0xff & (0xC0 | (c >> 6)) ));
+                _write((byte)( 0xff & (0x80 | (c & 0x3F)) ));
                 len = 2;
             }
             else if ((c & (~0xffff)) == 0) {
-                write((byte)( 0xff & (0xE0 |  (c >> 12)) ));
-                write((byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) ));
-                write((byte)( 0xff & (0x80 |  (c & 0x3F)) ));
+                _write((byte)( 0xff & (0xE0 |  (c >> 12)) ));
+                _write((byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) ));
+                _write((byte)( 0xff & (0x80 |  (c & 0x3F)) ));
                 len = 3;
             }
             else if ((c & (~0x7ffff)) == 0) {
-                write((byte)( 0xff & (0xF0 |  (c >> 18)) ));
-                write((byte)( 0xff & (0x80 | ((c >> 12) & 0x3F)) ));
-                write((byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) ));
-                write((byte)( 0xff & (0x80 | (c & 0x3F)) ));
+                _write((byte)( 0xff & (0xF0 |  (c >> 18)) ));
+                _write((byte)( 0xff & (0x80 | ((c >> 12) & 0x3F)) ));
+                _write((byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) ));
+                _write((byte)( 0xff & (0x80 | (c & 0x3F)) ));
                 len = 4;
             }
             else {
@@ -1989,20 +2058,20 @@ done:       for (;;) {
          */
         public int writeStringWithTD(String s) throws IOException
         {
-
             // first we have to see how long this will be in the output
             /// buffer - part of the cost of length prefixed values
             int len = IonBinary.lenIonString(s);
             if (len < 0) this.throwUTF8Exception();
 
             // first we write the type desc and length
-            this.writeCommonHeader(IonConstants.tidString, len);
+            len += this.writeCommonHeader(IonConstants.tidString, len);
 
             // now we write just the value out
-            for (int ii=0; ii<s.length(); ii++) {
-                char c = s.charAt(ii);
-                this.writeCharValue(c);
-            }
+            writeStringData(s);
+            //for (int ii=0; ii<s.length(); ii++) {
+            //    char c = s.charAt(ii);
+            //    this.writeCharValue(c);
+            //}
 
             return len;
         }
@@ -2011,10 +2080,20 @@ done:       for (;;) {
         {
             int len = 0;
 
+            this.start_write();
+            
             for (int ii=0; ii<s.length(); ii++) {
                 char c = s.charAt(ii);
-                len += this.writeCharValue(c);
+                if (c < 128) {
+                    this._write((byte)c);
+                    len++;
+                }
+                else {
+                    len += this._writeCharValue(c);
+                }
             }
+            
+            this.end_write();
 
             return len;
         }

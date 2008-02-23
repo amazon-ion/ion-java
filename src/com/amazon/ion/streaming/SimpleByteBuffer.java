@@ -144,7 +144,9 @@ public final class SimpleByteBuffer
 
         public int read(byte[] dst, int start, int len)
         {
-            if (dst == null || start < 0 || start >= dst.length || len < 0 || start + len > dst.length) {
+            if (dst == null || start < 0 || len < 0 || start + len > dst.length) {
+            	// no need to test this start >= dst.length ||
+            	// since we test start+len > dst.length which is the correct test
                 throw new IllegalArgumentException();
             }
             
@@ -532,22 +534,37 @@ done:       for (;;) {
 
             return ti;
         }
-        
+        static final int surrogate_utf32_offset = 0x10000;
         public String readString(int len) throws IOException
         {
-            StringBuffer sb = new StringBuffer(len);
+//            StringBuffer sb = new StringBuffer(len);
+            char[] chars = new char[len * 2];
+            int ii = 0;
             int c;
             int endPosition = this.position() + len;
 
             while (this.position() < endPosition) {
                 c = readChar();
                 if (c < 0) throwUnexpectedEOFException();
-                sb.append((char)c);
+//                sb.append((char)c);
+                //if (c >= Character.MIN_SURROGATE && c <= Character.MAX_SURROGATE) {
+                if ((c & 0xffff0000) != 0) {
+                    int c1, c2;
+                    c -= surrogate_utf32_offset;
+                    c2 = c & 0x3FF;
+                    c1 = (c & ~0x3FF) >>> 10;
+                    chars[ii++] = (char)c1;
+                    chars[ii++] = (char)c2;
+                }
+                else {
+                    chars[ii++] = (char)c;
+                }
             }
 
             if (this.position() < endPosition) throwUnexpectedEOFException();
 
-            return sb.toString();
+//            return sb.toString();
+            return new String(chars, 0, ii);
         }
         
         public int readChar() throws IOException {
@@ -659,7 +676,14 @@ done:       for (;;) {
             _buffer._eob -= length;
         }
 
-        public void write(byte b)
+        @Override
+        final public void write(int arg0)
+            throws IOException
+        {
+            write((byte)arg0);
+        }
+
+        final public void write(byte b)
         {
             _buffer._bytes[_position++] = b;
             if (_position > _buffer._eob) _buffer._eob = _position;
@@ -1031,7 +1055,7 @@ done:       for (;;) {
             return returnlen;
         }
         
-        public int writeString(String value) throws IOException
+        final public int writeString(String value) throws IOException
         {
             int len = 0;
 
@@ -1044,7 +1068,7 @@ done:       for (;;) {
         }
         
         // TODO: this needs to handle the 16 bit surrogate characters, and it doesn't! 
-        public int writeChar(int c) throws IOException
+        final public int writeChar(int c) throws IOException
         {
             // TODO: check this encoding, it is from:
             //      http://en.wikipedia.org/wiki/UTF-8
@@ -1092,13 +1116,6 @@ done:       for (;;) {
         }
         void throwException(String msg) throws IOException {
             throw new IOException(msg);
-        }
-
-        @Override
-        public void write(int arg0)
-            throws IOException
-        {
-            write((byte)arg0);            
         }
     }
 }

@@ -456,5 +456,5 @@ public interface IonWriter
      * @return number of bytes written to the stream
      * @throws IOException
      */
-    public abstract int    writeBytes(OutputStream out) throws IOException;
+    public abstract int    writeBytes(SimpleByteBuffer.SimpleByteWriter out) throws IOException;
 }

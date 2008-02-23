@@ -446,20 +446,22 @@ public final class IonDatagramImpl
 
     private int updateBuffer() throws IonException
     {
-        _buffer.reader().sync();   // FIXME is this correct?
-
-        int oldSize = _buffer.buffer().size();
-
-        if (this.isDirty()) {
-            for (IonValue child : _userContents) {
-                LocalSymbolTable symtab = child.getSymbolTable();
-                assert symtab != null;
-                ((IonValueImpl) child).updateSymbolTable(symtab);
-            }
-        }
-
+        int oldSize = 0;
+        
         try
         {
+            _buffer.reader().sync();   // FIXME is this correct?
+    
+            oldSize = _buffer.buffer().size();
+    
+            if (this.isDirty()) {
+                for (IonValue child : _userContents) {
+                    LocalSymbolTable symtab = child.getSymbolTable();
+                    assert symtab != null;
+                    ((IonValueImpl) child).updateSymbolTable(symtab);
+                }
+            }
+        
             updateBuffer2(_buffer.writer(BINARY_VERSION_MARKER_SIZE),
                           BINARY_VERSION_MARKER_SIZE,
                           0);
