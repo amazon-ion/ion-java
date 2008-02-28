@@ -196,6 +196,9 @@ public class PrinterTest
 
         value = (IonDecimal) oneValue("100d3");
         checkRendering("100d3", value);
+
+        myPrinter.setPrintDecimalsAsFloats(true);
+        checkRendering("100e3", value);
     }
 
 

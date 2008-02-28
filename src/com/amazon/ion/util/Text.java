@@ -297,6 +297,28 @@ public class Text
         return out;
     }
 
+    /**
+     * Renders text content as ASCII using escapes suitable for Ion strings and
+     * symbols.  No surrounding quotation marks are rendered.
+     *
+     * @param text the text to render.
+     * @param out the stream to recieve the data.
+     *
+     * @return the same instance supplied by the parameter {@code out}.
+     *
+     * @throws IOException if the {@link Appendable} throws an exception.
+     */
+    public static Appendable renderAsAscii(CharSequence text, Appendable out)
+        throws IOException
+    {
+        int len = text.length();
+        for (int i = 0; i < len; i++)
+        {
+            int c = text.charAt(i);
+            renderAsAscii(c, out);
+        }
+        return out;
+    }
 
 ////////////////////////////////////
 
