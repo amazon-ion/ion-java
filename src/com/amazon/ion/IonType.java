@@ -22,5 +22,6 @@ public enum IonType
     CLOB,
     STRUCT,
     LIST,
-    SEXP
+    SEXP,
+    DATAGRAM
 }

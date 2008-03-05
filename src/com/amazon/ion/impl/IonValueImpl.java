@@ -5,6 +5,7 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
+import static com.amazon.ion.util.Equivalence.ionEquals;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
@@ -1399,5 +1400,28 @@ public abstract class IonValueImpl
             }
         }
         return cumulativePositionDelta;
+    }
+
+    /**
+     * Implements equality over values.
+     * This is currently defined using the Equivalence class.
+     *
+     * @see com.amazon.ion.util.Equivalence
+     *
+     * @param   other   The value to compare with.
+     *
+     * @return  A boolean, true if the other value is an Ion Value that is the same
+     *          content and annotations.
+     */
+    @Override
+    public boolean equals(final Object other) {
+        // TODO we can make this more efficient since we have impl details
+        
+        boolean same = false;
+        if (other instanceof IonValue)
+        {
+            same = ionEquals(this, (IonValue) other);
+        }
+        return same;
     }
 }
