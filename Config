@@ -38,7 +38,7 @@ package.IonJava = {
   test-dependencies = {
     1.0 = {
       IonTests = 1.0;
-      junit = 1.0;
+      junit = 4.4;
     };
   };
 

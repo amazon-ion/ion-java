@@ -182,7 +182,7 @@ public final class IonDatagramImpl
 
     public IonType getType()
     {
-        throw new UnsupportedOperationException();
+        return IonType.DATAGRAM;
     }
 
 
