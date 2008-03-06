@@ -20,14 +20,17 @@ public class EquivalenceTest {
 
     private static void assertIonEq(final IonValue v1, final IonValue v2) {
         assertTrue(Equivalence.ionEquals(v1, v2));
+        assertTrue(Equivalence.ionEquals(v2, v1));
     }
 
     private static void assertNotIonEq(final IonValue v1, final IonValue v2) {
         assertFalse(Equivalence.ionEquals(v1, v2));
+        assertFalse(Equivalence.ionEquals(v2, v1));
     }
 
     private static void assertIonEqForm(final IonValue v1, final IonValue v2) {
         assertTrue(Equivalence.ionEqualsByContent(v1, v2));
+        assertTrue(Equivalence.ionEqualsByContent(v2, v1));
     }
 
     private IonValue ion(final String raw) {
@@ -138,6 +141,21 @@ public class EquivalenceTest {
     @Test
     public void testEqualsStruct1() {
         assertIonEq(ion("{ a : 1, b : 2 }"), ion("{ b : 2, a : 1 }"));
+    }
+    
+    @Test
+    public void testEqualsStruct2() {
+        assertNotIonEq(ion("{ a : 1, b : 2 }"), ion("{ b : 2 }"));
+    }
+    
+    @Test
+    public void testEqualsStruct3() {
+        assertNotIonEq(ion("{ a : 1, b : 2 }"), ion("{}"));
+    }
+    
+    @Test
+    public void testEqualsStruct4() {
+        assertNotIonEq(ion("{ a : 1, b : 2 }"), ion("{ a : 1, c : 2 }"));
     }
 
     @Test
@@ -298,5 +316,20 @@ public class EquivalenceTest {
     public void testLob6() {
         assertIonEq(ion("{{}}"),
                     ion("{{}}"));
+    }
+    
+    @Test
+    public void testString1() {
+        assertIonEq(ion("\"hi\""), ion("'''hi'''"));
+    }
+    
+    @Test
+    public void testString2() {
+        assertNotIonEq(ion("\"hi\""), ion("'''Hi'''"));
+    }
+    
+    @Test
+    public void testStringSymbol() {
+        assertNotIonEq(ion("\"hi\""), ion("'hi'"));
     }
 }

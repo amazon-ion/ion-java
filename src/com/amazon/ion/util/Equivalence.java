@@ -15,7 +15,7 @@ import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonLob;
 import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonSymbol;
+import com.amazon.ion.IonText;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonValue;
 
@@ -125,11 +125,8 @@ public final class Equivalence {
     /** Struct type item to aid in struct equality */
     private static class StructItem {
         public final String key;
-
         public final IonValue value;
-
         private final boolean strict;
-
         private int count;
 
         public StructItem(final String myKey,
@@ -148,6 +145,11 @@ public final class Equivalence {
             // as a true bag item
             count = count == -1 ? 1 : count + 1;
         }
+        
+        public int decrementCount() {
+            count -= 1;
+            return count;
+        }
 
         @Override
         public int hashCode() {
@@ -156,13 +158,10 @@ public final class Equivalence {
 
         @Override
         public boolean equals(final Object other) {
-            if (!(other instanceof StructItem)) {
-                return false;
-            }
-
+            // we can assume this is always a struct--internal usage dictates it
             final StructItem sOther = (StructItem) other;
-            return strict == sOther.strict
-                && key.equals(sOther.key)
+            // we can also assume strict is the same--internal usage dictates it
+            return key.equals(sOther.key)
                 && ionEqualsImpl(value, sOther.value, strict)
                 // special case -1 means count matches always (for
                 // searching)
@@ -170,7 +169,11 @@ public final class Equivalence {
         }
     }
 
-    /** We generate a map because we need to access the contents of the set */
+    /**
+     * We generate a map because we need to access the contents of the set
+     * NB -- java.util.Set is missing a get() sort of API which is why this
+     * doesn't work with Set. 
+     */
     private static final Map<StructItem, StructItem> createStructItems(final IonStruct source, final boolean strict) {
         final Map<StructItem, StructItem> values = new HashMap<StructItem, StructItem>();
         for (final IonValue val : source) {
@@ -209,7 +212,7 @@ public final class Equivalence {
         }
 
         // check type
-        result = result && v1.getType().equals(v2.getType());
+        result = result && v1.getType() == v2.getType();
         
         if (result) {
             // now we assume false unless we can prove otherwise
@@ -250,8 +253,8 @@ public final class Equivalence {
                     break;
                 case STRING:
                 case SYMBOL:
-                    result = ((IonSymbol) v1).stringValue().equals(
-                             ((IonSymbol) v2).stringValue());
+                    result = ((IonText) v1).stringValue().equals(
+                             ((IonText) v2).stringValue());
                     break;
                 case BLOB:
                 case CLOB:
@@ -265,9 +268,27 @@ public final class Equivalence {
                         // options here
                         final Map<StructItem, StructItem> items1
                                 = createStructItems(s1, strict);
-                        final Map<StructItem, StructItem> items2
-                                = createStructItems(s2, strict);
-                        result = items1.equals(items2);
+                        boolean inconsistent = false;
+                        for (IonValue val : s2) {
+                            StructItem key =
+                                new StructItem(val.getFieldName(), val, strict);
+                            StructItem active = items1.get(key);
+                            if (active == null) {
+                                // nope we already have an inconsistency
+                                inconsistent = true;
+                                break;
+                            }
+                            if (active.decrementCount() == 0) {
+                                // we have nothing more left
+                                // eliminate it from the source bag
+                                items1.remove(key);
+                            }
+                        }
+                        if (inconsistent) {
+                            result = false;
+                        } else {
+                            result = items1.isEmpty();
+                        }
                     }
                     break;
                 case LIST:
