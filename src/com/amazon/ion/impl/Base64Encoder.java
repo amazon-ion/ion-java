@@ -79,7 +79,7 @@ public class Base64Encoder
         ,new EL(16, 'Q') ,new EL(33, 'h') ,new EL(50, 'y'),
     };
 
-    final static char  URLSafe64IntToCharTerminator = init64IntToCharTerminator(Base64Alphabet);
+    final public static char  URLSafe64IntToCharTerminator = init64IntToCharTerminator(Base64Alphabet);
     final static int[] URLSafe64IntToChar = init64IntToChar(Base64Alphabet);
     final static int[] URLSafe64CharToInt = init64CharToInt(Base64Alphabet);
     static private char init64IntToCharTerminator(EL[] els)
@@ -118,7 +118,10 @@ public class Base64Encoder
         }
         return output;
     }
-
+    public final static boolean isBase64Character(int c) {
+    	if (c < 32 || c > 255) return false;
+    	return (URLSafe64CharToInt[c] > 0);
+    }
     public Base64Encoder() {}
 
     /*********************************************************************

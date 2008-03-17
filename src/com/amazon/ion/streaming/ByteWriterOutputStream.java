@@ -4,6 +4,11 @@
 
 package com.amazon.ion.streaming;
 
+/*
+ *   No longer needed 
+ * 
+ * 
+ 
 import com.amazon.ion.IonException;
 import com.amazon.ion.impl.IonBinary;
 import com.amazon.ion.impl.IonTokenReader;
@@ -11,9 +16,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
-/**
- *
- */
+
 public final class ByteWriterOutputStream
     implements ByteWriter
 {
@@ -82,39 +85,7 @@ public final class ByteWriterOutputStream
         // THIS IS a buggy copy, it should be writing 8 bits per byte, not 7!
         
         throw new UnsupportedOperationException("E_NOT_IMPL");
-        /*
-        int len = 0;
-
-        if (value != 0) {
-            int mask = 0x7F;
-            boolean is_negative = false;
-
-            len = IonBinary.lenVarInt7(value);
-            if (is_negative = (value < 0)) {
-                value = -value;
-            }
-
-            // we write the first "byte" separately as it has the sign
-            int b = (byte)((value >> (7*(len-1))) & mask);
-            if (is_negative)  b |= 0x40; // the sign bit only on the first byte
-            if (len == 1)     b |= 0x80; // the terminator in case the first "byte" is the last
-            write((byte)b);
-
-            // write the rest
-            switch (len) {  // we already wrote 1 byte
-            case 5: write((byte)((value >> (7*3)) & mask));
-            case 4: write((byte)((value >> (7*2)) & mask));
-            case 3: write((byte)((value >> (7*1)) & mask));
-            case 2: write((byte)((value & mask) | 0x80));
-            case 1: // do nothing
-            }
-        }
-        else if (force_zero_write) {
-            write((byte)0x80);
-            len = 1;
-        }
-        return len;
-        */
+       
     }
 
     public int writeInt(int value, int lenToWrite)
@@ -209,7 +180,7 @@ public final class ByteWriterOutputStream
         case 0: write((byte)((value & mask) | 0x80));
                 break;
         }
-        return len;
+        return len
     }
 
     public int writeLong(long value, boolean force_zero_write) throws IOException
@@ -503,3 +474,4 @@ public final class ByteWriterOutputStream
     }
 
 }
+*/

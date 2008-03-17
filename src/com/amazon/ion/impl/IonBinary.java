@@ -233,6 +233,37 @@ public class IonBinary
         }
         return len;
     }
+    
+    // TODO maybe add lenVarInt8(int) to micro-optimize, or?
+
+    public static int lenVarInt8(long longVal) {
+        int len = 0;
+
+        // figure out how many we have bytes we have to write out
+        if (longVal != 0) {
+            len = _ib_INT64_LEN_MAX - 1;
+            if (longVal < 0) {
+            	// note that for Long.MIN_VALUE (0x8000000000000000) the negative
+            	//      is the same, but that's also the bit pattern we need to
+            	//      write out, but the UInt method won't like it, so we just
+            	//      return then value that we actually know.
+            	if (longVal == Long.MIN_VALUE) {
+            		// we need 1 extra byte since the first bit holds the sign separately
+            		return 9;
+            	}
+            	// for any other case just let routine do it's work normally
+                longVal = -longVal;
+            }
+            while ( (int)( 0xffL & (longVal >> (8*len)) ) == 0 ) {
+                len--;
+            }
+            if (((~0x7fL) & (longVal >> (8*len))) != 0) {
+                len++;
+            }
+            len++;
+        }
+        return len;
+    }
 
     public static int lenVarInt8(BigInteger bi)
     {
@@ -253,7 +284,7 @@ public class IonBinary
     }
 
 
-    // TODO maybe add lenVarInt7(int) to micro-optimize
+    // TODO maybe add lenVarInt7(int) to micro-optimize, or?
 
     public static int lenVarInt7(long longVal) {
         int len = 0;
@@ -263,13 +294,21 @@ public class IonBinary
 
             len = _ib_VAR_INT64_LEN_MAX - 1;
             if (longVal < 0) {
+            	// note that for Long.MIN_VALUE (0x8000000000000000) the negative
+            	//      is the same, but that's also the bit pattern we need to
+            	//      write out.
+            	if (longVal == Long.MIN_VALUE) {
+            		//int bitlen = 1 + (Long.SIZE * 8); that is: 65
+            		//int bytelen = ((bitlen + 1) / 7) + 1; (66/7)+1 = 10 bytes
+            		//return bytelen;
+            		return 10;
+            	}
                 longVal = -longVal;
-                if (longVal == -longVal) throw new IonException("negative long value out of range");
             }
-            while ( (int)( 0x7fL & (longVal>>(7*len)) ) == 0 ) {
+            while ( (int)( 0x7fL & (longVal>>>(7*len)) ) == 0 ) {
                 len--;
             }
-            if (((~0x3fL) & (longVal >> (7*len))) != 0) {
+            if (((~0x3fL) & (longVal >>> (7*len))) != 0) {
                 len++;
             }
             if (len < 0) {
@@ -281,36 +320,17 @@ public class IonBinary
     }
     public static int lenIonInt(long v) {
         if (v < 0) {
-            long v2 = -v;
-            if (v2 == v) throw new IonException("long value out of bounds (too small)");
-            return IonBinary.lenVarUInt8(v2);
+        	// note that for Long.MIN_VALUE (0x8000000000000000) the negative
+        	//      is the same, but that's also the bit pattern we need to
+        	//      write out, but the UInt method won't like it, so we just
+        	//      return then value that we actually know.
+        	if (v == Long.MIN_VALUE) return Long.SIZE;
+        	return IonBinary.lenVarUInt8(-v);
         }
         else if (v > 0) {
             return IonBinary.lenVarUInt8(v);
         }
         return 0; // CAS UPDATE, was 1
-    }
-    
-    public static int lenVarInt(long longVal) {
-        int len = 0;
-
-        // figure out how many we have bytes we have to write out
-        if (longVal != 0) {
-            len = _ib_INT64_LEN_MAX - 1;
-            if (longVal < 0) {
-                long v2 = -longVal;
-                if (v2 == longVal) throw new IonException("long value out of bounds (too small)");
-                longVal = v2;
-            }
-            while ( (int)( 0xffL & (longVal >> (8*len)) ) == 0 ) {
-                len--;
-            }
-            if (((~0x7fL) & (longVal >> (8*len))) != 0) {
-                len++;
-            }
-            len++;
-        }
-        return len;
     }
 
     /**
@@ -342,15 +362,13 @@ public class IonBinary
         case IonConstants.tidString: // string (8)
         case IonConstants.tidClob: // clob(9)
         case IonConstants.tidBlob: // blob(10)
+        case IonConstants.tidList:   // 11        -- cas mar 6 2008, moved containers 
+        case IonConstants.tidSexp:   // 12        -- up heresince they now use the same
+        case IonConstants.tidStruct: // 13        -- length encodings as scalars
         case IonConstants.tidTypedecl: // 14
             if (valuelen < IonConstants.lnIsVarLen) {
                 return IonConstants.BB_TOKEN_LEN;
             }
-            // fall through since the len has to follow
-            // the td byte, just like it does in containers
-        case IonConstants.tidList:   // 11
-        case IonConstants.tidSexp:   // 12
-        case IonConstants.tidStruct: // 13
             return IonConstants.BB_TOKEN_LEN + lenVarUInt7(valuelen);
 
         case IonConstants.tidUnused: // unused(15)
@@ -413,13 +431,6 @@ public class IonBinary
         return tzlen + bdlen;
     }
 
-    // TODO: these appear in 3 source files, just like this.
-    //       I really don't think that's right
-    static final int high_surrogate_value = 0xD800;
-    static final int low_surrogate_value = 0xDC00;
-    static final int surrogate_mask = 0xFC00; // 0x3f << 10; or the top 6 bits
-    static final int surrogate_utf32_offset = 0x10000;
-
     public static int lenIonString(String v) 
     {
         if (v == null) return 0;
@@ -433,52 +444,60 @@ public class IonBinary
                 len++;
                 continue;
             }
-            
-            /* TODO cas 22 feb 2008
-             * this code needs to be fixed properly to check for the various
-             * surrogate character pairing correctly
-             * // look for surrogate pairs and merge them (and throw on bad data)
-             * if ((c & surrogate_mask) == high_surrogate_value) {
-             *     ii++;
-             *     if (ii >= v.length()) {
-             *         throw new IonException("invalid surrogate paired character for UTF-8 output");
-             *    }
-             *     int c2 = v.charAt(ii);
-             *     if ((c2 & surrogate_mask) != low_surrogate_value) {
-             *         throw new IonException("invalid surrogate paired character for UTF-8 output");
-             *     }
-             *     c = ((c & surrogate_mask) << surrogate_utf32_offset) | (c2 & surrogate_mask);
-             * }
-             * else if ((c & surrogate_mask) == low_surrogate_value) {
-             *     throw new IonException("invalid surrogate paired character for UTF-8 output");
-             * }
-             */
 
-            // and now figure out how long this "complicated" character is
-            int clen = lenUTF8Char(c);
-            if (clen < 1) return -1;
+            // look for surrogate pairs and merge them (and throw on bad data)
+            if (IonConstants.isHighSurrogate(c)) {
+                ii++;
+                if (ii >= v.length()) {
+                    throw new IonException("invalid string, unpaired high surrogate character");
+                }
+                int c2 = v.charAt(ii);
+                if (!IonConstants.isLowSurrogate(c2)) {
+                	throw new IonException("invalid string, unpaired low surrogate character");
+                }
+                c = IonConstants.makeUnicodeScalar(c, c2);
+            }
+            else if (IonConstants.isLowSurrogate(c)) {
+                throw new IonException("invalid string, unpaired low surrogate character");
+            }
+            
+            if (c > 0x10FFFF || (c > 0xD7FF && c < 0xE000)) {
+            	throw new IonException("invalid string, illegal Unicode scalar (character) encountered");
+            }
+
+            // and now figure out how long this "complicated" (non-ascii) character is
+            int clen = lenUnicodeScalarAsUTF8(c);
+            if (clen < 1) {
+            	throw new IonException("invalid string, illegal Unicode scalar (character) encountered");
+            }
             len += clen;
         }
 
         return len;
     }
-    public static int lenUTF8Char(int c) {
+    public static int lenUnicodeScalarAsUTF8(int c) {
         int len = -1;
 
-        if ((c & (~0x1FFFFF)) != 0) {
-            throw new IonException("invalid character for UTF-8 output");
-        }
+        // this routine presuposes the value is a legal Unicode scalar
+        // (aka character or code point)  The caller of this method is 
+        // expected to have handled the surrogate character issues (i.e.
+        // converted the two surrogates into a single code point)
+        // before calling this routine.
+        
+        //if ((c & (~0x1FFFFF)) != 0) {
+        //    throw new IonException("invalid character for UTF-8 output");
+        //}
 
-        if ((c & (~0x7f)) == 0) {
+        if (c < 0x80) {
             len = 1;
         }
-        else if ((c & (~0x7ff)) == 0) {
+        else if (c < 0x800) {
             len  = 2;
         }
-        else if ((c & (~0xffff)) == 0) {
+        else if (c < 0x10000) {
             len  = 3;
         }
-        else if ((c & (~0x7ffff)) == 0) {
+        else if (c <= 0x10FFFF) { // just about as cheap as & == 0 and checks for some out of range values
             len  = 4;
         }
 
@@ -771,8 +790,9 @@ public class IonBinary
             }
         }
 
+        /*
         public long readFixedIntLongValue(int len) throws IOException {
-            int retvalue = 0;
+            long retvalue = 0;
             int b;
 
             switch (len) {
@@ -823,6 +843,7 @@ public class IonBinary
             }
             return retvalue;
         }
+        */
         public long readVarInt8LongValue(int len) throws IOException {
             long    retvalue = 0;
             boolean is_negative = false;
@@ -835,6 +856,12 @@ public class IonBinary
                 is_negative = ((b & 0x80) != 0);
 
                 switch (len - 1) {  // we read 1 already
+                case 8: // even after reading the 1st byte we may have 8 remaining
+                	    // bytes of value when the value is Long.MIN_VALUE since it
+                	    // has all 8 bytes for data and the ninth for the sign bit
+                	    // all by itself (which we read above)
+                    if ((b = read()) < 0) throwUnexpectedEOFException();
+                    retvalue = (retvalue << 8) | b;
                 case 7:
                     if ((b = read()) < 0) throwUnexpectedEOFException();
                     retvalue = (retvalue << 8) | b;
@@ -859,9 +886,8 @@ public class IonBinary
                 default:
                 }
                 if (is_negative) {
-                    long v2 = -retvalue;
-                    if (v2 == retvalue) throw new IonException("long value out of bounds (too small)");
-                    retvalue = v2;
+                	// this is correct even when retvalue == Long.MIN_VALUE
+                    retvalue = -retvalue;
                 }
             }
             return retvalue;
@@ -898,9 +924,8 @@ public class IonBinary
                     retvalue = (retvalue << 8) | b;
                 }
                 if (is_negative) {
-                    int v2 = -retvalue;
-                    if (v2 == retvalue) throw new IonException("value out of bounds for int (too small)");
-                    retvalue = v2;
+                	// this is correct even when retvalue == Integer.MIN_VALUE
+                    retvalue = -retvalue;
                 }
             }
             return retvalue;
@@ -910,6 +935,8 @@ public class IonBinary
             int b;
 
             switch (len) {
+            default:
+            	throw new IonException("overflow attempt to read long value into an int");
             case 8:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
                 retvalue = (retvalue << 8) | b;
@@ -934,7 +961,7 @@ public class IonBinary
             case 1:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
                 retvalue = (retvalue << 8) | b;
-            default:
+            case 0:
             }
             return retvalue;
         }
@@ -967,6 +994,12 @@ public class IonBinary
 
             for (;;) {
                 if ((b = read()) < 0) throwUnexpectedEOFException();
+                if ((retvalue & 0xFE00000000000000L) != 0) {
+                	// if any of the top 7 bits are set at this point there's
+                	// a problem, because we'll be shifting the into oblivian
+                	// just below, so ...
+                	throw new IonException("overflow attempt to read long value into a long");
+                }
                 retvalue = (retvalue << 7) | (b & 0x7F);
                 if ((b & 0x80) != 0) break;
             }
@@ -1027,14 +1060,19 @@ done:       for (;;) {
                 // for the rest, they're all the same
                 for (;;) {
                     if ((b = read()) < 0) throwUnexpectedEOFException();
+                    if ((retvalue & 0xFE00000000000000L) != 0) {
+                    	// if any of the top 7 bits are set at this point there's
+                    	// a problem, because we'll be shifting the into oblivian
+                    	// just below, so ...
+                    	throw new IonException("overflow attempt to read long value into a long");
+                    }
                     retvalue = (retvalue << 7) | (b & 0x7F);
                     if ((b & 0x80) != 0) break done;
                 }
             }
             if (is_negative) {
-                long v2 = -retvalue;
-                if (v2 == retvalue) throw new IonException("value out of bounds for long (too small)");
-                retvalue = v2;
+            	// this is correct even when retvalue == Long.MIN_VALUE
+                retvalue = -retvalue;
             }
             return retvalue;
         }
@@ -1079,9 +1117,8 @@ done:       for (;;) {
                 throw new IonException("var int overflow at: "+this.position());
             }
             if (is_negative) {
-                int v2 = -retvalue;
-                if (v2 == retvalue) throw new IonException("value out of bounds for int (too small)");
-                retvalue = v2;
+            	// this is correct even when retvalue == Integer.MIN_VALUE
+                retvalue = -retvalue;
             }
             return retvalue;
         }
@@ -1134,9 +1171,9 @@ done:       for (;;) {
             Integer retInteger = null;
             if (is_negative) {
                 if (retvalue != 0) {
-                    int v2 = -retvalue;
-                    if (v2 == retvalue) throw new IonException("value out of bounds for Integer (too small)");
-                    retInteger = new Integer(v2);
+                	// this is correct even when retvalue == Long.MIN_VALUE
+                    retvalue = -retvalue;
+                    retInteger = new Integer(retvalue);
                 }
             }
             else {
@@ -1218,33 +1255,48 @@ done:       for (;;) {
 
             return ti;
         }
-
+        
         public String readString(int len) throws IOException
         {
-            StringBuffer sb = new StringBuffer(len);
+            //StringBuffer sb = new StringBuffer(len);
+        	char[] cb = new char[len]; // since we know the length in bytes (which must be 
+        	                           // greater than or equal to chars) there's no need 
+        							   // for a stringbuffer (even surrgated char's are ok)
+        	int ii=0;
             int c;
             int endPosition = this.position() + len;
 
             while (this.position() < endPosition) {
-                c = readChar();
+                c = readUnicodeScalar();
                 if (c < 0) throwUnexpectedEOFException();
-                sb.append((char)c);
+                //sb.append((char)c);
+                if (c < 0x10000) {
+                	cb[ii++] = (char)c;
+                }
+                else {
+                	cb[ii++] = (char)IonConstants.makeHighSurrogate(c);
+                	cb[ii++] = (char)IonConstants.makeLowSurrogate(c);
+                }
             }
 
             if (this.position() < endPosition) throwUnexpectedEOFException();
 
-            return sb.toString();
+            return new String(cb, 0, ii); // sb.toString();
         }
-        public int readChar() throws IOException {
+        public int readUnicodeScalar() throws IOException {
             int c = -1, b;
 
             b = read();
             if (b < 0) return -1;
+            
+            // ascii is all good
             if ((b & 0x80) == 0) {
                 return b;
             }
 
+            // now we start gluing the multi-byte value together
             if ((b & 0xe0) == 0xc0) {
+            	// for values from 0x80 to 0x7FF (all legal)
                 c = (b & ~0xe0);
                 b = read();
                 if ((b & 0xc0) != 0x80) throwUTF8Exception();
@@ -1252,6 +1304,7 @@ done:       for (;;) {
                 c |= (b & ~0x80);
             }
             else if ((b & 0xf0) == 0xe0) {
+            	// for values from 0x800 to 0xFFFFF (NOT all legal)
                 c = (b & ~0xf0);
                 b = read();
                 if ((b & 0xc0) != 0x80) throwUTF8Exception();
@@ -1261,8 +1314,12 @@ done:       for (;;) {
                 if ((b & 0xc0) != 0x80) throwUTF8Exception();
                 c <<= 6;
                 c |= (b & ~0x80);
+                if (c > 0x00D7FF && c < 0x00E000) {
+                	throw new IonException("illegal surrgate value encountered in input utf-8 stream");
+                }
             }
             else if ((b & 0xf8) == 0xf0) {
+            	// for values from 0x010000 to 0x1FFFFF (NOT all legal)
                 c = (b & ~0xf8);
                 b = read();
                 if ((b & 0xc0) != 0x80) throwUTF8Exception();
@@ -1276,6 +1333,9 @@ done:       for (;;) {
                 if ((b & 0xc0) != 0x80) throwUTF8Exception();
                 c <<= 6;
                 c |= (b & ~0x80);
+                if (c > 0x10FFFF) {
+                	throw new IonException("illegal surrgate value encountered in input utf-8 stream");
+                }
             }
             else {
                 throwUTF8Exception();
@@ -1332,17 +1392,26 @@ done:       for (;;) {
         public Writer(BlockedBuffer bb, int off) { super(bb, off); }
 
         Stack<PositionMarker> _pos_stack;
+        Stack<Integer>        _pending_high_surrogate_stack;
+        int                   _pending_high_surrogate;
         public void pushPosition(Object o)
         {
             PositionMarker pm = new PositionMarker(this.position(), o);
             if (_pos_stack == null) {
                 _pos_stack = new Stack<PositionMarker>();
+                _pending_high_surrogate_stack = new Stack<Integer>();
             }
             _pos_stack.push(pm);
+            _pending_high_surrogate_stack.push(_pending_high_surrogate);
+            _pending_high_surrogate = 0;
         }
         public PositionMarker popPosition()
         {
+        	if (_pending_high_surrogate != 0) {
+        		throw new IonException("unmatched high surrogate encountered in input, illegal utf-16 character sequence");
+        	}
             PositionMarker pm = _pos_stack.pop();
+            _pending_high_surrogate = _pending_high_surrogate_stack.pop();
             return pm;
         }
 
@@ -1408,6 +1477,8 @@ done:       for (;;) {
            if (debugValidation) _validate();
 
            // get the header description we pushed on the stack a while ago
+           // pop also checks to make sure we don't have a dangling high 
+           // surrogate pending 
            PositionMarker pm = this.popPosition();
            lhNode n = (lhNode)pm.getUserData();
            int totallen = currpos - pm.getPosition();
@@ -1489,7 +1560,8 @@ done:       for (;;) {
            if (debugValidation) _validate();
 
         }
-
+        
+        // TODO - this may have problems with unicode utf16/utf8 conversions
         public void appendToLongValue(CharSequence chars, boolean onlyByteSizedCharacters) throws IOException
         {
             if (debugValidation) _validate();
@@ -1498,16 +1570,71 @@ done:       for (;;) {
 
             for (int ii = 0; ii < len; ii++)
             {
-                char c = chars.charAt(ii);
-                if (onlyByteSizedCharacters && (c > 255)) {
-                    throw new IonException("escaped character value too large in clob (0 to 255 only)");
+                int c = chars.charAt(ii);
+                if (onlyByteSizedCharacters) {
+                	if (c > 255) {
+                		throw new IonException("escaped character value too large in clob (0 to 255 only)");
+                	}
+                	write((byte)(0xff & c));
                 }
-                writeCharValue(c);
+                else {
+                	if (_pending_high_surrogate != 0) {
+                    	if ((c & IonConstants.surrogate_mask) != IonConstants.low_surrogate_value) {
+                    		throw new IonException("unmatched high surrogate character encountered, invalid utf-16");
+                    	}
+                		c = IonConstants.makeUnicodeScalar(_pending_high_surrogate, c);
+                		_pending_high_surrogate = 0;
+                	}
+                	else if ((c & IonConstants.surrogate_mask) == IonConstants.high_surrogate_value) {
+                		ii++;
+                		if (ii < len) {
+                			int c2 = chars.charAt(ii);
+                        	if ((c2 & IonConstants.surrogate_mask) != IonConstants.low_surrogate_value) {
+                        		throw new IonException("unmatched high surrogate character encountered, invalid utf-16");
+                        	}
+                			c = IonConstants.makeUnicodeScalar(c, c2);
+                		}
+                		else {
+                			// a trailing high surrogate, we just remember it for later
+                			// and (hopefully, and usually, the low surrogate will be
+                			// appended shortly
+                			_pending_high_surrogate = c;
+                			break;
+                		}
+                	}
+                	else if ((c & IonConstants.surrogate_mask) == IonConstants.low_surrogate_value) {
+                		throw new IonException("unmatched low surrogate character encountered, invalid utf-16");
+                	}                    
+                    writeUnicodeScalarAsUTF8(c);
+                }
             }
 
             if (debugValidation) _validate();
         }
 
+        // helper for appendToLongValue below - this never cares about surrogates
+        // as it only consumes terminators which are ascii
+        final boolean isLongTerminator(int terminator, PushbackReader r) throws IOException {
+        	int c;
+
+        	// look for terminator 2 - if it's not there put back what we saw
+        	c = r.read();
+			if (c != terminator) {
+				r.unread(c);
+	            return false;
+			}
+
+			// look for terminator 3 - otherwise put back what we saw and the
+			// preceeding terminator we found above
+        	c = r.read();
+			if (c != terminator) {
+				r.unread(c);
+				r.unread(terminator);
+	            return false;
+			}
+            // we found 3 in a row - now that's a long terminator
+            return true;
+        }
 
         /**
         * Reads the remainder of a quoted string/symbol into this buffer.
@@ -1530,75 +1657,81 @@ done:       for (;;) {
                                      )
            throws IOException, UnexpectedEofException
         {
-           int c;
+        	int c;
 
-           if (debugValidation) _validate();
+        	if (debugValidation) {
+        		if (terminator == -1 && longstring) {
+        			throw new IllegalStateException("longstrings have to have a terminator, no eof termination");
+        		}
+        		_validate();
+        	}
 
-           for (;;) {
-               c = r.read();
-               if (c == terminator) {
-                   if (!longstring) {
-                       // if it's not a long string one quote is enough
-                       break;
-                   }
-                   // otherwise we need two more to really be done
-                   c = r.read();
-                   if (c == terminator) {
-                       c = r.read();
-                       if (c == terminator) {
-                           // now we're done, this string is closed
-                           break;
-                       }
-                       // otherwise we have another terminator to put back
-                       write((byte)(0xff & terminator)); // terminators are always ascii characters, like '
-                   }
-                   // write the terminator we already read past
-                   write((byte)(0xff & terminator));
-               }
-               if (c == -1) {
-                   throw new UnexpectedEofException();
-               }
-               if (terminator != -1) {
-                   if (!longstring && (c == '\n' || c == '\r')) {
-                       throw new IonException("unexpected line terminator encountered in quoted string");
-                   }
-                   if (c == '\\') {
-                       c = IonTokenReader.readEscapedCharacter(r);
-                       // EOF throws UnexpectedEofException
-                   }
-                   // TODO can this move up into prior if?
-                   if (c != IonTokenReader.EMPTY_ESCAPE_SEQUENCE) {
-                       if (onlyByteSizedCharacters) {
-                           if ((c & (~0xff)) != 0) {
-                               throw new IonException("escaped character value too large in clob (0 to 255 only)");
-                           }
-                           write((byte)(0xff & c));
-                       }
-                       else {
-                           writeCharValue(c);
-                       }
-                   }
-               }
-               else {
-                   if (onlyByteSizedCharacters) {
-                       if ((c & (~0xff)) != 0) {
-                           throw new IonException("escaped character value too large in clob (0 to 255 only)");
-                       }
-                       write((byte)(0xff & c));
-                   }
-                   else {
-                       writeCharValue(c);
-                   }
-               }
-           }
-           if (c != terminator) {
-               // TODO determine if this can really happen.
-               throw new UnexpectedEofException();
-           }
+			for (;;) {
+				c = r.read();  // we put off the surrogate logic as long as possible (so not here)
+				if (c == terminator) {
+					if (!longstring || isLongTerminator(terminator, r)) {
+						// if it's not a long string one quote is enough otherwise look ahead
+						break;
+					}
+				}
+				else if (c == -1) {
+					throw new UnexpectedEofException();
+				}
+				if (terminator != -1) {
+					// here we'll handle embedded new line detection and escaped characters
+					if (!longstring && (c == '\n' || c == '\r')) {
+						throw new IonException("unexpected line terminator encountered in quoted string");
+					}
+					if (c == '\\') {
+						// before we "unescape the character" here we have to check for a dangling 
+						// high surrogate since '\\' isn't a valid low surrogate and it'll be consumed
+						// before we check surrogate handling belowe
+						if (_pending_high_surrogate != 0) {
+							throw new IonException("unmatched high surrogate encountered");
+						}
+						c = IonTokenReader.readEscapedCharacter(r);
+						// for the slash followed by a real new line (ascii 10)
+						if (c == IonTokenReader.EMPTY_ESCAPE_SEQUENCE) {
+							continue;
+						}
+						// EOF will have thrown UnexpectedEofException in readEscapedCharacter()
+					}
+				}
+				if (onlyByteSizedCharacters) {
+					if ((c & (~0xff)) != 0) {
+						throw new IonException("escaped character value too large in clob (0 to 255 only)");
+					}
+					write((byte)(0xff & c));
+				}
+				else {
+					if (_pending_high_surrogate != 0) {
+						if ((c & IonConstants.surrogate_mask) != IonConstants.low_surrogate_value) {
+							throw new IonException("unmatched high surrogate character encountered, invalid utf-16");
+						}
+						c = IonConstants.makeUnicodeScalar(_pending_high_surrogate, c);
+						_pending_high_surrogate = 0;
+					}
+					else if ((c & IonConstants.surrogate_mask) == IonConstants.high_surrogate_value) {
+						int c2 = r.read();
+						if ((c2 & IonConstants.surrogate_mask) != IonConstants.low_surrogate_value) {
+							throw new IonException("unmatched high surrogate character encountered, invalid utf-16");
+						}
+						c = IonConstants.makeUnicodeScalar(c, c2);
+					}
+					else if ((c & IonConstants.surrogate_mask) == IonConstants.low_surrogate_value) {
+						throw new IonException("unmatched low surrogate character encountered, invalid utf-16");
+					}
+					writeUnicodeScalarAsUTF8(c);
+				}
+			}
+        	
+			if (c != terminator) {
+			   	// TODO determine if this can really happen.
+			   	throw new UnexpectedEofException();
+			}
+           	if (debugValidation) _validate();
 
-           if (debugValidation) _validate();
-
-           return;
+           	return;
         }
 
 
@@ -1735,13 +1868,12 @@ done:       for (;;) {
 
                 len = lenVarInt7(value);
                 if (is_negative = (value < 0)) {
-                    int v2 = -value;
-                    if (v2 == value) throw new IonException("value out of bounds for int (too small)");
-                    value = v2;
+                    value = -value;
                 }
 
                 // we write the first "byte" separately as it has the sign
-                int b = (byte)((value >> (7*(len-1))) & mask);
+                // note that we don't want to sign extend here (later we don't care)
+                int b = (byte)((value >>> (7*(len-1))) & mask);
                 if (is_negative)  b |= 0x40; // the sign bit only on the first byte
                 if (len == 1)     b |= 0x80; // the terminator in case the first "byte" is the last
                 write((byte)b);
@@ -1769,15 +1901,18 @@ done:       for (;;) {
                 long mask = 0x7fL;
                 boolean is_negative = false;
 
-                len = lenVarInt(value);
+                len = lenVarInt8(value);
                 if (is_negative = (value < 0)) {
-                    long v2 = -value;
-                    if (v2 == value) throw new IonException("value out of bounds for long (too small)");
-                    value = v2;
+                	// note that for Long.MIN_VALUE (0x8000000000000000) the negative
+                	//      is the same, but that's also the bit pattern we need to
+                	//      write out - so not worries (except sign extension)
+                    value = -value;
                 }
 
                 // we write the first "byte" separately as it has the sign
-                int b = (byte)((value >> (7*len)) & mask);
+                // and we really don't want to sign extend here (in case we're operating
+                // on the dreaded MIN_VALUE value
+                int b = (byte)((value >>> (7*len)) & mask);
                 if (is_negative)  b |= 0x40; // the sign bit
                 if (len == 1)     b |= 0x80; // the terminator in case the first "byte" is the last
                 write((byte)b);
@@ -1810,20 +1945,25 @@ done:       for (;;) {
                 long mask = 0xffL;
                 boolean is_negative = (value < 0);
 
-                len = lenVarInt(value) - 1;
+                len = lenVarInt8(value) - 1;
                 if (is_negative) {
-                    long v2 = -value;
-                    if (v2 == value) throw new IonException("value out of bounds for long (too small)");
-                    value = v2;
+                	// we just let MIN_VALUE wrap back to itself
+                    value = -value;
                 }
 
                 // we write the first "byte" separately as it has the sign
-                int b = (byte)((value >> (8*len)) & 0x7fL);
+                // note that for MIN_VALUE (where the high byte is 0x80 both
+                // before and after the negation above this will strip off the
+                // high bit, and write out 0x80 - just the sign.  Since the
+                // output length will be 9 below we'll write out the high order
+                // byte as the value portion.
+                int b = (byte)((value >>> (8*len)) & 0x7fL);
                 if (is_negative)  b |= 0x80; // the sign bit
                 write((byte)b);
 
                 // write the rest
                 switch (len - 1) {  // we already wrote 1 byte
+                case 7: write((byte)((value >> (8*7)) & mask)); // but for MIN_VALUE we might have a full 9 bytes of output
                 case 6: write((byte)((value >> (8*6)) & mask));
                 case 5: write((byte)((value >> (8*5)) & mask));
                 case 4: write((byte)((value >> (8*4)) & mask));
@@ -1849,56 +1989,49 @@ done:       for (;;) {
             long dBits = Double.doubleToRawLongBits(d);
             return writeVarUInt8Value(dBits, _ib_FLOAT64_LEN);
         }
-        static final int surrogate_mask = 0xFC00; // 0x3f << 10; or the top 6 bits
-        static final int high_surrogate_value = 0xD800;
-        static final int low_surrogate_value = 0xDC00;
-        public int writeCharValue(int c) throws IOException
+        public int writeUnicodeScalarAsUTF8(int c) throws IOException
         {
             this.start_write();
-            int ret = this._writeCharValue(c);
+            int ret = this._writeUnicodeScalarAsUTF8(c);
             this.end_write();
             return ret;
         }
-        final int _writeCharValue(int c) throws IOException
+        final int _writeUnicodeScalarAsUTF8(int c) throws IOException
         {
-            // TODO: check this encoding, it is from:
+            // TO DO: check this encoding, it is from:
             //      http://en.wikipedia.org/wiki/UTF-8
             // we probably should use some sort of Java supported
-            // libaray for this.  this class might be of interest:
+            // library for this.  this class might be of interest:
             //     CharsetDecoder(Charset cs, float averageCharsPerByte, float maxCharsPerByte)
             // in: java.nio.charset.CharsetDecoder
 
             int len = -1;
-            
-            if ((c & (~0x1FFFFF)) != 0) {
-                throw new IonException("invalid character for UTF-8 output");
-            }
 
-            if ((c & (~0x7f)) == 0) {
+            // first the quick, easy and common case - ascii
+            if (c < 0x80) {
                 _write((byte)(0xff & c ));
                 len = 1;
             }
-            // TODO restore this code and / or fix up the call stack to 
-            //      properly handle "partial characters" where we get
-            //      these exception cases
-            //      cas 22 feb 2008
-            //else  if (((c & surrogate_mask) == high_surrogate_value)
-            //       || ((c & surrogate_mask) == low_surrogate_value)) {
-            //    // this routine has no provision for handling half a character !
-            //    this.throwUTF8Exception();
-            //}
-            else if ((c & (~0x7ff)) == 0) {
+            else if (c < 0x800) {
+            	// 2 bytes characters from 0x000080 to 0x0007FF
                 _write((byte)( 0xff & (0xC0 | (c >> 6)) ));
                 _write((byte)( 0xff & (0x80 | (c & 0x3F)) ));
                 len = 2;
             }
-            else if ((c & (~0xffff)) == 0) {
+            else if (c < 0x10000) {
+            	// 3 byte characters from 0x800 to 0xFFFF
+            	// but only 0x800–0xD7FF and 0xE000–0xFFFF are valid
+            	if (c > 0xD7FF && c < 0xE000) {
+            		this.throwUTF8Exception();
+            	}
                 _write((byte)( 0xff & (0xE0 |  (c >> 12)) ));
                 _write((byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) ));
                 _write((byte)( 0xff & (0x80 |  (c & 0x3F)) ));
                 len = 3;
             }
-            else if ((c & (~0x7ffff)) == 0) {
+            else if (c <= 0x10FFFF) {
+            	// 4 byte characters 0x010000 to 0x10FFFF
+            	// these are are valid 
                 _write((byte)( 0xff & (0xF0 |  (c >> 18)) ));
                 _write((byte)( 0xff & (0x80 | ((c >> 12) & 0x3F)) ));
                 _write((byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) ));
@@ -2083,13 +2216,32 @@ done:       for (;;) {
             this.start_write();
             
             for (int ii=0; ii<s.length(); ii++) {
-                char c = s.charAt(ii);
+                int c = s.charAt(ii);
                 if (c < 128) {
+                	// don't even both to call the "utf8" converter for ascii
                     this._write((byte)c);
                     len++;
                 }
                 else {
-                    len += this._writeCharValue(c);
+                	if (c >= 0xD800) {
+                		if (IonConstants.isHighSurrogate(c)) {
+                			// houston we have a high surrogate (let's hope it has a partner
+                			if (ii >= s.length()) {
+                				 throw new IonException("invalid string, unpaired high surrogate character");
+                			}
+                			int c2 = s.charAt(ii++);
+                			if (!IonConstants.isLowSurrogate(c2)) {
+                				throw new IonException("invalid string, unpaired high surrogate character");                				
+                			}
+                			c = IonConstants.makeUnicodeScalar(c, c2);
+                		}
+                		else if (IonConstants.isLowSurrogate(c)) {
+                			// it's a loner low surrogate - that's an error
+                			throw new IonException("invalid string, unpaired low surrogate character");
+                		}
+                		// from 0xE000 up the _writeUnicodeScalar will check for us
+                	}
+                    len += this._writeUnicodeScalarAsUTF8(c);
                 }
             }
             

@@ -26,6 +26,53 @@ public class IonConstants
 
     public final static int INT32_SIZE            = 4;
 
+    // these are used for various Unicode translation where
+    // we need to convert the utf-16 Java characters into
+    // unicode scalar values (utf-32 more or less) and back
+    public static final int high_surrogate_value = 0xD800;
+    public static final int low_surrogate_value = 0xDC00;
+    public static final int surrogate_mask = 0xFC00; // 0x3f << 10; or the top 6 bits is the marker the low 10 is the 1/2 character
+    public static final int surrogate_value_mask = ~0xFC00; // 0x3f << 10; or the top 6 bits is the marker the low 10 is the 1/2 character
+    public static final int surrogate_utf32_offset = 0x10000;
+    public static final int surrogate_utf32_shift = 10;
+    
+    // these help convert from Java UTF-16 to Unicode Scalars (aka unicode code 
+    // points (aka characters)) which are "32" bit values (really just 21 bits)
+    // the DON'T check validity of their input, they expect that to have happened
+    // already.  This is a perf issue since normally this check has been done
+    // to detect that these routines should be called at all - no need to do it
+    // twice.  
+    public static final int makeUnicodeScalar(int high_surrogate, int low_surrogate) {
+    	int c;
+    	c = (high_surrogate & surrogate_value_mask) << surrogate_utf32_shift;
+    	c |= (low_surrogate & surrogate_value_mask);
+    	c += surrogate_utf32_offset;
+    	return c;
+    }
+    public static final int makeHighSurrogate(int unicodeScalar) {
+    	int c;
+    	c = unicodeScalar - surrogate_utf32_offset;
+    	c >>>= surrogate_utf32_shift;
+    	c |= high_surrogate_value;
+    	return c;
+    }
+    public static final int makeLowSurrogate(int unicodeScalar) {
+    	int c;
+    	c = unicodeScalar - surrogate_utf32_offset;
+    	c &= surrogate_value_mask;
+    	c |= low_surrogate_value;
+    	return c;
+    }
+    public static final boolean isHighSurrogate(int c) {
+    	boolean is;
+    	is = (c & surrogate_mask) == high_surrogate_value;
+    	return is;
+    }
+    public static final boolean isLowSurrogate(int c) {
+    	boolean is;
+    	is = (c & surrogate_mask) == low_surrogate_value;
+    	return is;
+    }
 
     /**
      * The byte sequence indicating use of Ion 1.0 binary format.

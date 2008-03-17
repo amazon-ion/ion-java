@@ -10,8 +10,6 @@ import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.IonTokenReader.Type.timeinfo;
 import java.io.IOException;
-import java.util.Iterator;
-import java.util.Stack;
 
 /**
  *  Base type for Ion writers.  This handles the writeIonEvents and default
@@ -57,7 +55,7 @@ static final boolean _debug_on = false;
         }
         _external_symbol_table = externalSymbolTable;
         if (_symbol_table == null) {
-            UnifiedSymbolTable symbol_table = new UnifiedSymbolTable(_external_symbol_table);
+            UnifiedSymbolTable symbol_table = new UnifiedSymbolTable(externalSymbolTable.getSystemSymbolTable());
             symbol_table.addImportedTable(_external_symbol_table);
             _symbol_table = symbol_table;
         }
@@ -409,7 +407,7 @@ static final boolean _debug_on = false;
     
     public void writeIonValue(IonType t, IonIterator iterator) throws IOException
     {
-        if (iterator.isInStruct() && this.isInStruct()) {
+        if (/* iterator.isInStruct() && */ this.isInStruct()) {
             String fieldname = iterator.getFieldName();
             writeFieldname(fieldname);
             if (_debug_on) System.out.print(":");

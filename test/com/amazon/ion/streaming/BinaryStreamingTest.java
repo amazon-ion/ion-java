@@ -4,9 +4,16 @@
 
 package com.amazon.ion.streaming;
 
+import com.amazon.ion.IonDatagram;
+import com.amazon.ion.IonStruct;
+import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
+import com.amazon.ion.IonValue;
+import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.impl.IonTokenReader;
+import com.amazon.ion.system.SystemFactory;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -369,21 +376,34 @@ public class BinaryStreamingTest
             
             TestValue[] testvalues = {
                    // new TestValue( , , ),
-                   new TestValue("Null",          IonType.NULL, null),
+/*
+new TestValue("Null",          IonType.NULL, null),
+new TestValue("Null.null",     IonType.NULL, IonType.NULL),
+new TestValue("Null.bool",     IonType.NULL, IonType.BOOL),
+new TestValue("Null.int",      IonType.NULL, IonType.INT),
+new TestValue("Null.float",    IonType.NULL, IonType.FLOAT),
+new TestValue("Null.decimal",  IonType.NULL, IonType.DECIMAL),
+new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
+*/
+
+            	   new TestValue("Null",          IonType.NULL, null),
                    new TestValue("Null.null",     IonType.NULL, IonType.NULL),
                    new TestValue("Null.bool",     IonType.NULL, IonType.BOOL),
+                   
                    new TestValue("Null.int",      IonType.NULL, IonType.INT),
                    new TestValue("Null.float",    IonType.NULL, IonType.FLOAT),
                    new TestValue("Null.decimal",  IonType.NULL, IonType.DECIMAL),
+  
                    new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
                    new TestValue("Null.string",   IonType.NULL, IonType.STRING),
                    new TestValue("Null.symbol",   IonType.NULL, IonType.SYMBOL),
+
                    new TestValue("Null.clob",     IonType.NULL, IonType.CLOB),
                    new TestValue("Null.blob",     IonType.NULL, IonType.BLOB),
                    new TestValue("Null.list",     IonType.NULL, IonType.LIST),
                    new TestValue("Null.sexp",     IonType.NULL, IonType.SEXP),
                    new TestValue("Null.struct",   IonType.NULL, IonType.STRUCT),
-                   
+                
                    new TestValue("bool_true",     IonType.BOOL, Boolean.TRUE),
                    new TestValue("bool_false",    IonType.BOOL, Boolean.FALSE),
                    
@@ -528,7 +548,87 @@ public class BinaryStreamingTest
  
         }
 
-        
+        public void testValue1()
+        throws Exception
+        {
+        	String s = 
+        		 "item_view::{item_id:\"B00096H8Q4\",marketplace_id:2,"
+        		+"product:{item_name:["
+        		+"{value:'''Method 24CT Leather Wipes''',lang:EN_CA},"
+        		+"{value:'''Method 24CT Chiffons de Cuir''',lang:FR_CA}],"
+        		+"list_price:{value:18.23,unit:EUR},}"
+        		+",index_suppressed:true,"
+        		+"offline_store_only:true,version:2,}";
+        	IonIterator ir = IonIterator.makeIterator(s);
+        	IonWriter wr = new IonBinaryWriter();
+        	wr.writeIonEvents(ir);
+            byte[] buffer = wr.getBytes();
+            dumpBuffer(buffer, buffer.length);
+            
+        	return;
+        }
+        public void testValue2()
+        throws Exception
+        {
+        	String s = 
+        		 "item_view::{item_id:\"B00096H8Q4\",marketplace_id:2,"
+        		+"product:{item_name:["
+        		+"{value:'''Method 24CT Leather Wipes''',lang:EN_CA},"
+        		+"{value:'''Method 24CT Chiffons de Cuir''',lang:FR_CA}],"
+        		+"list_price:{value:18.23,unit:EUR},}"
+        		+",index_suppressed:true,"
+        		+"offline_store_only:true,version:2,}";
+        	IonSystem sys = SystemFactory.newSystem();
+        	IonDatagram dg = sys.getLoader().load(s);
+        	IonValue v = dg.get(0);
+        	IonValue v2 = ((IonStruct)v).get("offline_store_only");
+        	LocalSymbolTable sym = v.getSymbolTable();
+        	assert v2.getSymbolTable() == sym;
+        	IonIterator ir = IonIterator.makeIterator(s);
+        	UnifiedSymbolTable u = new UnifiedSymbolTable(sym);
+        	u.setName("items");
+        	u.setVersion(1);
+        	u.lock();
+        	IonWriter wr = new IonBinaryWriter(u);
+        	
+        	wr.writeIonEvents(ir);
+            byte[] buffer = wr.getBytes();
+            dumpBuffer(buffer, buffer.length);
+            
+        	return;
+        }
+        void dumpBuffer(byte[] buffer, int len) 
+        {        	
+        	for (int ii=0; ii<len; ii++) {
+            	int b = ((int)buffer[ii]) & 0xff;
+            	if ((ii & 0xf) == 0) {
+            		System.out.println();
+            		String x = "     "+ii;
+            		if (x.length() > 5)  x = x.substring(x.length() - 6);
+            		System.out.print(x+": ");
+            	}
+            	String y = "00"+Integer.toHexString(b);
+            	y = y.substring(y.length() - 2);
+            	System.out.print(y+" ");
+            }
+            System.out.println();
+            
+        	for (int ii=0; ii<len; ii++) {
+            	int b = ((int)buffer[ii]) & 0xff;
+            	if ((ii & 0xf) == 0) {
+            		System.out.println();
+            		String x = "     "+ii;
+            		if (x.length() > 5)  x = x.substring(x.length() - 6);
+            		System.out.print(x+": ");
+            	}
+            	String y = "  " + (char)((b >= 32 && b < 128) ? b : ' ');
+            	y = y.substring(y.length() - 2);
+            	System.out.print(y+" ");
+            }
+            System.out.println();
+
+            
+        }
         public void testBoolValue()
             throws Exception
         {

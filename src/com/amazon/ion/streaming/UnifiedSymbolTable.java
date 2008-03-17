@@ -11,10 +11,10 @@ import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.StaticSymbolTable;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
+import com.amazon.ion.impl.IonBinary;
+import com.amazon.ion.impl.IonConstants;
+
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-import java.util.TreeMap;
 
 /**
  * 
@@ -114,12 +114,17 @@ public final class UnifiedSymbolTable
     public static class Symbol {
         public int                sid;
         public String             name;
+        public int                name_len, sid_len, td_len;
         public UnifiedSymbolTable source;
         public Symbol() {}
         public Symbol(String symbolName, int symbolId, UnifiedSymbolTable table) {
             name   = symbolName;
             sid    = symbolId;
             source = table;
+            name_len = IonBinary.lenIonString(symbolName);
+            sid_len  = IonBinary.lenVarUInt7(sid); 
+            td_len   = IonBinary.lenLenFieldWithOptionalNibble(name_len);
+            td_len  += IonConstants.BB_TOKEN_LEN;
         }
     }
     
@@ -168,7 +173,7 @@ public final class UnifiedSymbolTable
         this(getSystemSymbolTableInstance());
         int minid = this._system_symbols.getMaxId();
         int maxid = symboltable.getMaxId();
-        for (int ii=minid + 1; ii < maxid; ii++) {
+        for (int ii=minid + 1; ii <= maxid; ii++) {
             String name = symboltable.findKnownSymbol(ii);
             if (name == null) continue;
             this.defineSymbol(name, ii);
