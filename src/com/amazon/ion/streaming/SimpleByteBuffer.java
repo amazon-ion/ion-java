@@ -27,8 +27,8 @@ public final class SimpleByteBuffer
     int     _start;
     int     _eob;
     boolean _is_read_only;
-    
-   
+
+
     public SimpleByteBuffer(byte[] bytes) {
         this(bytes, 0, bytes.length, false);
     }
@@ -53,7 +53,7 @@ public final class SimpleByteBuffer
         int length = _eob - _start;
         return length;
     }
-    
+
     public byte[] getBytes()
     {
         int length = _eob - _start;
@@ -72,9 +72,9 @@ public final class SimpleByteBuffer
         if (datalength > length) {
             throw new IllegalArgumentException("insufficient space in destination buffer");
         }
-        
+
         System.arraycopy(_bytes, _start, buffer, offset, datalength);
-        
+
         return datalength;
 
     }
@@ -98,12 +98,12 @@ public final class SimpleByteBuffer
         int length = _eob - _start;
         out.write(_bytes, _start, length);
     }
-    
-    static final class SimpleByteReader implements ByteReader 
+
+    static final class SimpleByteReader implements ByteReader
     {
         SimpleByteBuffer _buffer;
         int              _position;
-        
+
         SimpleByteReader(SimpleByteBuffer bytebuffer) {
             _buffer = bytebuffer;
             _position = bytebuffer._start;
@@ -149,11 +149,11 @@ public final class SimpleByteBuffer
         public int read(byte[] dst, int start, int len)
         {
             if (dst == null || start < 0 || len < 0 || start + len > dst.length) {
-            	// no need to test this start >= dst.length ||
-            	// since we test start+len > dst.length which is the correct test
+                // no need to test this start >= dst.length ||
+                // since we test start+len > dst.length which is the correct test
                 throw new IllegalArgumentException();
             }
-            
+
             if (_position >= _buffer._eob) return 0;
             int readlen = len;
             if (readlen + _position > _buffer._eob) readlen = _buffer._eob - _position;
@@ -174,7 +174,7 @@ public final class SimpleByteBuffer
 
             switch (len) {
             default:
-            	throw new IonException("value too large for Java long");
+                throw new IonException("value too large for Java long");
             case 8:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
                 retvalue = (retvalue << 8) | b;
@@ -200,7 +200,7 @@ public final class SimpleByteBuffer
                 if ((b = read()) < 0) throwUnexpectedEOFException();
                 retvalue = (retvalue << 8) | b;
             case 0:
-            	// do nothing, it's just a 0 length is a 0 value
+                // do nothing, it's just a 0 length is a 0 value
             }
             return retvalue;
         }
@@ -287,7 +287,7 @@ done:       for (;;) {
             }
             return retvalue;
         }
-        
+
         /**
          * Reads an integer value, returning null to mean -0.
          * @throws IOException
@@ -384,12 +384,12 @@ done:       for (;;) {
                 // special case, return pos zero
                 return 0.0d;
             }
-        
+
             if (len != 8)
             {
                 throw new IOException("Length of float read must be 0 or 8");
             }
-        
+
             long dBits = this.readULong(len);
             return Double.longBitsToDouble(dBits);
         }
@@ -468,9 +468,9 @@ done:       for (;;) {
         }
         public String readString(int len) throws IOException
         {
-        	// len is bytes, which is greater than or equal to java
-        	// chars even after utf8 to utf16 decoding nonsense
-        	// the char array is way faster than using string buffer
+            // len is bytes, which is greater than or equal to java
+            // chars even after utf8 to utf16 decoding nonsense
+            // the char array is way faster than using string buffer
             char[] chars = new char[len];
             int ii = 0;
             int c;
@@ -482,7 +482,7 @@ done:       for (;;) {
                 if (c < 0x10000) {
                     chars[ii++] = (char)c;
                 }
-                else { // when c is >= 0x10000 we need surrogate encoding 
+                else { // when c is >= 0x10000 we need surrogate encoding
                     chars[ii++] = (char)IonConstants.makeHighSurrogate(c);
                     chars[ii++] = (char)IonConstants.makeLowSurrogate(c);
                 }
@@ -491,7 +491,7 @@ done:       for (;;) {
 
             return new String(chars, 0, ii);
         }
-        
+
         public int readUnicodeScalar() throws IOException {
             int c = -1, b;
 
@@ -503,7 +503,7 @@ done:       for (;;) {
 
             // now we start gluing the multi-byte value together
             if ((b & 0xe0) == 0xc0) {
-            	// for values from 0x80 to 0x7FF (all legal)
+                // for values from 0x80 to 0x7FF (all legal)
                 c = (b & ~0xe0);
                 b = read();
                 if ((b & 0xc0) != 0x80) throwUTF8Exception();
@@ -511,7 +511,7 @@ done:       for (;;) {
                 c |= (b & ~0x80);
             }
             else if ((b & 0xf0) == 0xe0) {
-            	// for values from 0x800 to 0xFFFFF (NOT all legal)
+                // for values from 0x800 to 0xFFFFF (NOT all legal)
                 c = (b & ~0xf0);
                 b = read();
                 if ((b & 0xc0) != 0x80) throwUTF8Exception();
@@ -522,11 +522,11 @@ done:       for (;;) {
                 c <<= 6;
                 c |= (b & ~0x80);
                 if (c > 0x00D7FF && c < 0x00E000) {
-                	throw new IonException("illegal surrogate value encountered in input utf-8 stream");
+                    throw new IonException("illegal surrogate value encountered in input utf-8 stream");
                 }
             }
             else if ((b & 0xf8) == 0xf0) {
-            	// for values from 0x010000 to 0x1FFFFF (NOT all legal)
+                // for values from 0x010000 to 0x1FFFFF (NOT all legal)
                 c = (b & ~0xf8);
                 b = read();
                 if ((b & 0xc0) != 0x80) throwUTF8Exception();
@@ -541,7 +541,7 @@ done:       for (;;) {
                 c <<= 6;
                 c |= (b & ~0x80);
                 if (c > 0x10FFFF) {
-                	throw new IonException("illegal utf value encountered in input utf-8 stream");
+                    throw new IonException("illegal utf value encountered in input utf-8 stream");
                 }
             }
             else {
@@ -560,20 +560,20 @@ done:       for (;;) {
             throw new IOException("int in stream is too long for a Java int 32 use readLong()");
         }
     }
-    
-    static final class SimpleByteWriter extends OutputStream implements ByteWriter 
+
+    static final class SimpleByteWriter extends OutputStream implements ByteWriter
     {
         private static final int _ib_FLOAT64_LEN         =    8;
         private static final Double DOUBLE_POS_ZERO = Double.valueOf(0.0);
 
         SimpleByteBuffer _buffer;
         int              _position;
-        
+
         SimpleByteWriter(SimpleByteBuffer bytebuffer) {
             _buffer = bytebuffer;
             _position = bytebuffer._start;
         }
-        
+
         public int position()
         {
             return _position - _buffer._start;
@@ -590,7 +590,7 @@ done:       for (;;) {
             }
             _position = pos;
         }
-        
+
         public void insert(int length)
         {
             if (length < 0) {
@@ -620,7 +620,7 @@ done:       for (;;) {
 
         final public void write(byte b)
         {
-        	 _buffer._bytes[_position++] = b;
+            _buffer._bytes[_position++] = b;
             if (_position > _buffer._eob) _buffer._eob = _position;
         }
 
@@ -630,11 +630,11 @@ done:       for (;;) {
             if (bytes == null || start < 0 || start >= bytes.length || len < 0 || start + len > bytes.length) {
                 throw new IllegalArgumentException();
             }
-            
+
             System.arraycopy(bytes, start, _buffer._bytes, _position, len);
             _position += len;
             if (_position > _buffer._eob) _buffer._eob = _position;
-            
+
             return;
         }
 
@@ -646,7 +646,7 @@ done:       for (;;) {
         public int writeTypeDescWithLength(int typeid, int lenOfLength, int valueLength)
         {
             int written_len = 1;
-            
+
             int td = ((typeid & 0xf) << 4);
             if (valueLength >= IonConstants.lnIsVarLen) {
                 td |= IonConstants.lnIsVarLen;
@@ -663,7 +663,7 @@ done:       for (;;) {
         public int writeTypeDescWithLength2(int typeid, int valueLength)
         {
             int written_len = 1;
-            
+
             int td = ((typeid & 0xf) << 4);
             if (valueLength >= IonConstants.lnIsVarLen) {
                 td |= IonConstants.lnIsVarLen;
@@ -712,14 +712,14 @@ done:       for (;;) {
             else if (force_zero_write) {
                 write((byte)0x80);
                 assert len == 1;
-                
+
             }
             else {
-            	assert len == 0;
+                assert len == 0;
             }
             return len;
         }
-        
+
         public int writeVarUInt(int value, int len, boolean force_zero_write)
         {
             int mask = 0x7F;
@@ -746,27 +746,27 @@ done:       for (;;) {
         }
 
         public int writeIonInt(int value, int len)
-		{
-			return writeIonInt((long)value, len);
-		}
+        {
+            return writeIonInt((long)value, len);
+        }
 
-		public int writeIonInt(long value, int len)
+        public int writeIonInt(long value, int len)
         {
             // we shouldn't be writing out 0's as an Ion int value
             if (value == 0) {
-            	assert len == 0;
-            	return len;  // aka 0
+                assert len == 0;
+                return len;  // aka 0
             }
-            
+
             // figure out how many we have bytes we have to write out
             long mask = 0xffL;
             boolean is_negative = (value < 0);
 
             assert len == IonBinary.lenIonInt(value);
 
-            if (is_negative) {  
+            if (is_negative) {
                 value = -value;
-                // note for Long.MIN_VALUE the negation returns 
+                // note for Long.MIN_VALUE the negation returns
                 // itself as a value, but that's also the correct
                 // "positive" value to write out anyway, so it
                 // all works out
@@ -797,18 +797,18 @@ done:       for (;;) {
                 int b;
                 if (value < 0) {
                     value = -value;
-	                // we write the first "byte" separately as it has the sign
+                    // we write the first "byte" separately as it has the sign
                     // and we have to deal with the oddball MIN_VALUE case
                     if (value == Long.MIN_VALUE) {
-                    	// we use the shift without sign extension as this
-                    	// represents a positive value (even though it's neg)
-                    	b = (byte)((value >>> (7*len)) & mask);
-                    	// len must be greater than 1 so we don't need to set the high bit
+                        // we use the shift without sign extension as this
+                        // represents a positive value (even though it's neg)
+                        b = (byte)((value >>> (7*len)) & mask);
+                        // len must be greater than 1 so we don't need to set the high bit
                     }
                     else {
-                    	// here, and hereafter, we don't care about sign extension
-                    	b = (byte)((value >>> (7*len)) & mask);
-                    	if (len == 1) b |= 0x80; // the terminator in case the first "byte" is the last
+                        // here, and hereafter, we don't care about sign extension
+                        b = (byte)((value >>> (7*len)) & mask);
+                        if (len == 1) b |= 0x80; // the terminator in case the first "byte" is the last
                     }
                     // we don't worry about stepping on a data bit here as
                     // we have extra bits at the max size and below that we've
@@ -817,10 +817,10 @@ done:       for (;;) {
                     write((byte)b);
                 }
                 else {
-	                // we write the first "byte" separately as it has the sign
-	                b = (byte)((value >>> (7*len)) & mask);
-	                if (len == 1) b |= 0x80; // the terminator in case the first "byte" is the last
-	                write((byte)b);
+                    // we write the first "byte" separately as it has the sign
+                    b = (byte)((value >>> (7*len)) & mask);
+                    if (len == 1) b |= 0x80; // the terminator in case the first "byte" is the last
+                    write((byte)b);
                 }
 
                 // write the rest
@@ -842,7 +842,7 @@ done:       for (;;) {
                 assert len == 1;
             }
             else {
-            	assert len == 0;
+                assert len == 0;
             }
             return len;
         }
@@ -871,13 +871,13 @@ done:       for (;;) {
                     assert len == 1;
                 }
                 else {
-                	assert len == 0;
+                    assert len == 0;
                 }
                 break;
             }
             return len;
         }
-        
+
         public int writeULong(long value, int lenToWrite) throws IOException
         {
             switch (lenToWrite) {
@@ -892,7 +892,7 @@ done:       for (;;) {
             }
             return lenToWrite;
         }
-        
+
         public int writeFloat(double value) throws IOException
         {
             if (Double.valueOf(value).equals(DOUBLE_POS_ZERO))
@@ -949,17 +949,17 @@ done:       for (;;) {
         throws IOException
         {
             int  returnlen = 0;
-    
+
             if (di != null) {
                 long l = di.d.getTime();
                 BigDecimal bd = new BigDecimal(l);
                 bd.setScale(13); // millisecond time has 13 significant digits
-    
+
                 int  tzoffset = (di.localOffset == null) ? 0 : di.localOffset.intValue();
-    
+
                 int  tzlen = IonBinary.lenVarInt7(tzoffset);
                 if (tzlen == 0) tzlen = 1;
-    
+
                 if (di.localOffset == null) {
                     // TODO don't use magic numbers!
                     this.write((byte)(0xff & (0x80 | 0x40))); // negative 0 (no timezone)
@@ -972,38 +972,38 @@ done:       for (;;) {
             }
             return returnlen;
         }
-        
+
         final public int writeString(String value) throws IOException
         {
             int len = 0;
-            
+
             for (int ii=0; ii<value.length(); ii++) {
                 int c = value.charAt(ii);
                 if (c < 128) {
-                	// don't even both to call the "utf8" converter for ascii
+                    // don't even both to call the "utf8" converter for ascii
                     write((byte)c);
                     len++;
                 }
                 else {
-                	if (c >= 0xD800) {
-                		if (IonConstants.isHighSurrogate(c)) {
-                			ii++;
-                			// houston we have a high surrogate (let's hope it has a partner
-                			if (ii >= value.length()) {
-                				 throw new IonException("invalid string, unpaired high surrogate character");
-                			}
-                			int c2 = value.charAt(ii);
-                			if (!IonConstants.isLowSurrogate(c2)) {
-                				throw new IonException("invalid string, unpaired high surrogate character");
-                			}
-                			c = IonConstants.makeUnicodeScalar(c, c2);
-                		}
-                		else if (IonConstants.isLowSurrogate(c)) {
-                			// it's a loner low surrogate - that's an error
-                			throw new IonException("invalid string, unpaired low surrogate character");
-                		}
-                		// from 0xE000 up the _writeUnicodeScalar will check for us
-                	}
+                    if (c >= 0xD800) {
+                        if (IonConstants.isHighSurrogate(c)) {
+                            ii++;
+                            // houston we have a high surrogate (let's hope it has a partner
+                            if (ii >= value.length()) {
+                                throw new IonException("invalid string, unpaired high surrogate character");
+                            }
+                            int c2 = value.charAt(ii);
+                            if (!IonConstants.isLowSurrogate(c2)) {
+                                throw new IonException("invalid string, unpaired high surrogate character");
+                            }
+                            c = IonConstants.makeUnicodeScalar(c, c2);
+                        }
+                        else if (IonConstants.isLowSurrogate(c)) {
+                            // it's a loner low surrogate - that's an error
+                            throw new IonException("invalid string, unpaired low surrogate character");
+                        }
+                        // from 0xE000 up the _writeUnicodeScalar will check for us
+                    }
                     len += writeUnicodeScalarAsUTF8(c);
                 }
             }
@@ -1011,7 +1011,7 @@ done:       for (;;) {
         }
         final public int writeUnicodeScalarAsUTF8(int c) throws IOException
         {
-        	// TO DO: check this encoding, it is from:
+            // TO DO: check this encoding, it is from:
             //      http://en.wikipedia.org/wiki/UTF-8
             // we probably should use some sort of Java supported
             // library for this.  this class might be of interest:
@@ -1026,25 +1026,25 @@ done:       for (;;) {
                 len = 1;
             }
             else if (c < 0x800) {
-            	// 2 bytes characters from 0x000080 to 0x0007FF
+                // 2 bytes characters from 0x000080 to 0x0007FF
                 write((byte)( 0xff & (0xC0 | (c >> 6)) ));
                 write((byte)( 0xff & (0x80 | (c & 0x3F)) ));
                 len = 2;
             }
             else if (c < 0x10000) {
-            	// 3 byte characters from 0x800 to 0xFFFF
-            	// but only 0x800–0xD7FF and 0xE000–0xFFFF are valid
-            	if (c > 0xD7FF && c < 0xE000) {
-            		this.throwUTF8Exception();
-            	}
+                // 3 byte characters from 0x800 to 0xFFFF
+                // but only 0x800...0xD7FF and 0xE000...0xFFFF are valid
+                if (c > 0xD7FF && c < 0xE000) {
+                    this.throwUTF8Exception();
+                }
                 write((byte)( 0xff & (0xE0 |  (c >> 12)) ));
                 write((byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) ));
                 write((byte)( 0xff & (0x80 |  (c & 0x3F)) ));
                 len = 3;
             }
             else if (c <= 0x10FFFF) {
-            	// 4 byte characters 0x010000 to 0x10FFFF
-            	// these are are valid 
+                // 4 byte characters 0x010000 to 0x10FFFF
+                // these are are valid
                 write((byte)( 0xff & (0xF0 |  (c >> 18)) ));
                 write((byte)( 0xff & (0x80 | ((c >> 12) & 0x3F)) ));
                 write((byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) ));
@@ -1057,7 +1057,7 @@ done:       for (;;) {
             return len;
 
         }
-        void throwUTF8Exception() throws IOException 
+        void throwUTF8Exception() throws IOException
         {
             throwException("Invalid UTF-8 character encounter in a string at pos " + this.position());
         }
