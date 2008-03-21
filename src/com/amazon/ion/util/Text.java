@@ -308,7 +308,7 @@ public class Text
      *
      * @throws IOException if the {@link Appendable} throws an exception.
      */
-    public static Appendable renderAsAscii(CharSequence text, Appendable out)
+    public static Appendable printAsAscii(CharSequence text, Appendable out)
         throws IOException
     {
         int len = text.length();

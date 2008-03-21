@@ -392,13 +392,13 @@ public class Printer
             if (myOptions.symbolAsString)
             {
                 myOut.append('\"');
-                Text.renderAsAscii(text, myOut);
+                Text.printAsAscii(text, myOut);
                 myOut.append('\"');
             }
             else if (Text.symbolNeedsQuoting(text, myQuoteOperators))
             {
                 myOut.append('\'');
-                Text.renderAsAscii(text, myOut);
+                Text.printAsAscii(text, myOut);
                 myOut.append('\'');
             }
             else
@@ -411,7 +411,7 @@ public class Printer
         public void writeString(String text) throws IOException
         {
             myOut.append('\"');
-            Text.renderAsAscii(text, myOut);
+            Text.printAsAscii(text, myOut);
             myOut.append('\"');
         }
 
@@ -799,7 +799,7 @@ public class Printer
             throws IOException
         {
             myOut.append('\"');
-            Text.renderAsAscii(text, myOut);
+            Text.printAsAscii(text, myOut);
             myOut.append('\"');
         }
 
