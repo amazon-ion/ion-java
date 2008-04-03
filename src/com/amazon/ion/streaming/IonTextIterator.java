@@ -45,7 +45,8 @@ public final class IonTextIterator
     
 
     IonTextTokenizer    _scanner;
-    UnifiedSymbolTable  _symbol_table ;
+    UnifiedCatalog 		_catalog;
+    UnifiedSymbolTable  _current_symtab;
     
     boolean         _eof;
     State           _state;
@@ -56,6 +57,7 @@ public final class IonTextIterator
     boolean         _value_ready;
     boolean         _value_is_container;
     boolean         _is_null;
+    int             _value_token;  // used to distiguish int from hex int
     IonType         _value_type;
     String          _field_name;
     int             _annotation_count;
@@ -136,7 +138,7 @@ public final class IonTextIterator
                        , other._parser_state_stack, 0
                        , this._parser_state_stack.length);
         
-        other._symbol_table = this._symbol_table;
+        other._current_symtab = this._current_symtab;
         
         other._current_depth = this._current_depth;
         other._eof = this._eof;
@@ -167,11 +169,6 @@ public final class IonTextIterator
         State s = _parser_state_stack[_parser_state_top];
         return s;
     }
-    void makeNullValue(IonType t) {
-        _is_null = true;
-        _value_type = t;
-    }
-    
     void push_container_state(IonType newContainer) {
         if (_container_state_top >= _container_state_stack.length) {
             int newlen = _container_state_stack.length * 2;
@@ -206,17 +203,28 @@ public final class IonTextIterator
         _value_is_container = false;
     }
     private IonTextIterator() {}
-    public IonTextIterator(byte[] buf, int start, int len) {
-        this(new IonTextTokenizer(buf, start, len));
-    }
     public IonTextIterator(byte[] buf) {
-        this(new IonTextTokenizer(buf));
+        this(new IonTextTokenizer(buf), null);
+    }
+    public IonTextIterator(byte[] buf, int start, int len) {
+        this(new IonTextTokenizer(buf, start, len), null);
     }
     public IonTextIterator(String ionText) {
-        this(new IonTextTokenizer(ionText));
+        this(new IonTextTokenizer(ionText), null);
     }
-    IonTextIterator(IonTextTokenizer scanner) {
+    public IonTextIterator(byte[] buf, UnifiedCatalog catalog) {
+        this(new IonTextTokenizer(buf), catalog);
+    }
+    public IonTextIterator(byte[] buf, int start, int len, UnifiedCatalog catalog) {
+        this(new IonTextTokenizer(buf, start, len), catalog);
+    }
+    public IonTextIterator(String ionText, UnifiedCatalog catalog) {
+        this(new IonTextTokenizer(ionText), catalog);
+    }
+    IonTextIterator(IonTextTokenizer scanner, UnifiedCatalog catalog) {
         this._scanner = scanner;
+        this._catalog = catalog;
+        this._current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
         _state = IonTextIterator.State_read_datagram;
     }
     
@@ -315,21 +323,89 @@ public final class IonTextIterator
     public boolean hasNext() 
     {    
         if (_eof) return false;
-        if (_lookahead_type != null) return true;
         
-        _lookahead_type = lookahead();
-        _eof = (_lookahead_type == null);
+        if (_lookahead_type == null) {
+        	_lookahead_type = lookahead();
+        	_eof = (_lookahead_type == null);
+        }
 
         return !_eof;
     }
     @Override
     public IonType next() 
     {
-        if (_lookahead_type == null && !hasNext()) {
-            throw new NoSuchElementException();
+    	IonType t = null;
+    	
+    	while (!_eof && t == null) {
+    		if (_lookahead_type == null) {
+    			if (!hasNext()) break;
+    		}
+            t = _lookahead_type;
+            _lookahead_type = null;
+            
+            // while we're at the top level we look for system values,
+            // like symbol tables and ion version markers
+            if (this._current_depth == 0) {
+		        switch (t) {
+		        case SYMBOL:
+		    		if (UnifiedSymbolTable.ION_1_0.equals(this.getString())) {
+		    			t = null;
+		    			_current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
+		    		}
+		    		break;
+		        case STRUCT:
+		        	if (_annotation_count > 0) {
+		        		// TODO - this should be done with flags set while we're 
+		        		// recognizing the annotations below
+		        		if (hasAnnotation(UnifiedSymbolTable.ION_1_0)) {
+		        			 UnifiedSymbolTable local = loadSymbolTable();
+		        			 if (local != null) {
+		        				 _current_symtab = local;
+		        				 t = null;
+		        			 }
+		        		}
+		        		else if (_catalog != null && hasAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE)) {
+		        			UnifiedSymbolTable shared = loadSymbolTable();
+		        			 if (shared != null) {
+		        				 _catalog.putTable(shared);
+		        				 // we want to return sharede symbol tables: t = null;
+		        			 }
+		        		}
+		        	}
+		        	break;
+		        case SEXP:
+		        	if (_annotation_count > 0) {
+		        		if (hasAnnotation(UnifiedSymbolTable.ION_EMBEDDED_VALUE)) {
+	        			// TODO: WTF? why are there embedded values in a text input stream
+	        			//       fill this in later
+		        		}
+		        	}
+		        	break;
+		    	default:
+		    		break;
+		        }
+    		}
+            else {
+            	// down in the value stack we just look for an embedded value
+            	// otherwise we don't care about anything
+		        switch (t) {
+		        case SEXP:
+		        	if (_annotation_count > 0) {
+		        		if (hasAnnotation(UnifiedSymbolTable.ION_EMBEDDED_VALUE)) {
+		        			// TODO: WTF? why are there embedded values in a text input stream
+		        			//       fill this in later
+		        		}
+		        	}
+		        	break;
+		    	default:
+		    		break;
+		        }
+
+            }
+    	}
+        if (t == null) {
+        	throw new NoSuchElementException();
         }
-        IonType t = _lookahead_type;
-        _lookahead_type = null;
         return t;
     }
     
@@ -375,9 +451,114 @@ public final class IonTextIterator
             }
         }
     }
+    IonType lookahead_non_debug() {
+        _value_ready = false;
+        _value_is_container = false;
+        for (;;) {
+            if (_eof) return null;
+    
+            int token = _scanner.lookahead(0);
+            Matches found = _state.nextTokens[token];
+
+            _state = found.transition_method(this);
+            if (_container_state_top < _current_depth) {
+                return null; // test is for skipping nested children, turned into eof by hasNext()
+            }
+            if (_value_ready && isValueCurrent()) {
+            	return _value_type;
+            }
+        }
+    }
+    private final boolean isValueCurrent() {
+    	boolean is_current;
+    	if (_value_is_container) {
+    		is_current = (_container_state_top == _current_depth + 1);
+    	}
+    	else { 
+    		is_current = (_container_state_top == _current_depth);
+    	}
+    	return is_current;
+    }
     void error() {
         throw new IonParsingException("syntax error. parser in state " + _state.toString()+ _scanner.input_position());
     }
+    
+    UnifiedSymbolTable loadSymbolTable() {
+    	UnifiedSymbolTable temp = _current_symtab;
+    	_current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
+    	UnifiedSymbolTable table = new UnifiedSymbolTable(_current_symtab);
+
+    	this.stepInto();
+    	
+    	while(this.hasNext()) {
+    		next();
+    		switch (this.getFieldId()) {
+			case UnifiedSymbolTable.VERSION_SID:
+    			table.setVersion(this.getInt());
+				break;
+    		case UnifiedSymbolTable.MAX_ID_SID:
+    			table.setMaxId(this.getInt());
+    			break;
+    		case UnifiedSymbolTable.NAME_SID:
+    			table.setName(this.getString());
+    			break;
+    		case UnifiedSymbolTable.SYMBOLS_SID:
+    			loadSymbolStruct(table);
+    			break;
+    		case UnifiedSymbolTable.IMPORTS_SID:
+    			loadImportList(table);
+    			break;
+			default:
+				break;
+    		}
+    	}
+    	this.stepOut();
+    	
+    	_current_symtab = temp;    	
+    	return table;
+    }
+	void loadSymbolStruct(UnifiedSymbolTable table) {
+		this.stepInto();
+		while (this.hasNext()) {
+			if (next() == IonType.STRING) {
+				table.defineSymbol(this.getString(), this.getFieldId());
+			}
+		}
+		this.stepOut();
+	}
+	void loadImportList(UnifiedSymbolTable table) {
+		int maxid = -1;
+		int version = -1;
+		String name = null;
+		
+		this.stepInto();
+		while (this.hasNext()) {
+			next();
+			switch (this.getFieldId()) {
+			case UnifiedSymbolTable.MAX_ID_SID:
+				maxid = this.getInt();
+				break;
+			case UnifiedSymbolTable.NAME_SID:
+				name = this.getString();
+				break;
+			case UnifiedSymbolTable.VERSION_SID:
+				version = this.getInt();
+				break;
+			default:
+				break;
+			}
+		}
+		this.stepOut();
+		
+		if (name != null && version > 0) {
+			UnifiedSymbolTable imported = _catalog.getTable(name, version);
+			if (imported != null) {
+				table.addImportedTable(imported, maxid);
+			}
+		}
+	}
+
+	
     @Override
     public int getTypeId()
     {
@@ -410,30 +591,23 @@ public final class IonTextIterator
     @Override
     public UnifiedSymbolTable getSymbolTable() 
     {
-        return _symbol_table;
-    }
-
-    @Override
-    public void setSymbolTable(UnifiedSymbolTable  externalsymboltable) 
-    {
-        if (_symbol_table == null) {
-            _symbol_table = new UnifiedSymbolTable(UnifiedSymbolTable.getSystemSymbolTableInstance()); 
+        if (_current_symtab == null) {
+            _current_symtab = new UnifiedSymbolTable(UnifiedSymbolTable.getSystemSymbolTableInstance()); 
         }
-        _symbol_table.addImportedTable(externalsymboltable);
+        return _current_symtab;
     }
-
     
     @Override
     public int[] getAnnotationIds()
     {
-        if (!_value_ready || _symbol_table == null) {
+        if (!_value_ready || _current_symtab == null) {
             throw new IllegalStateException();
         }
         int[] ids = null;
         if (_annotation_count > 0) {
             ids = new int[_annotation_count];
             for (int ii=0; ii<_annotation_count; ii++) {
-                ids[ii] = _symbol_table.findSymbol(_annotations[ii]);
+                ids[ii] = _current_symtab.findSymbol(_annotations[ii]);
             }
         }
         return ids;
@@ -451,6 +625,17 @@ public final class IonTextIterator
             System.arraycopy(_annotations, 0, annotations, 0, _annotation_count);
         }
         return annotations;
+    }
+
+    public boolean hasAnnotation(String annotation)
+    {
+        if (!_value_ready) {
+            throw new IllegalStateException();
+        }
+        for (int ii=0; ii<_annotation_count; ii++) {
+        	if (_annotations[ii].equals(annotation)) return true;
+        }
+        return false;
     }
 
     @Override
@@ -472,12 +657,12 @@ public final class IonTextIterator
     @Override
     public int getFieldId()
     {
-        if (!_value_ready || _symbol_table == null) {
+        if (!_value_ready || _current_symtab == null) {
             throw new IllegalStateException();
         }
         int id = 0;
         if (_field_name != null) {
-            id = _symbol_table.findSymbol(_field_name);
+            id = _current_symtab.findSymbol(_field_name);
         }
         return id;
     }
@@ -610,7 +795,29 @@ public final class IonTextIterator
     {
         switch (_value_type) {
             case INT:
-                int intvalue = Integer.parseInt(_scanner.getValueAsString(_value_start, _value_end));
+                String s;
+                int intvalue;
+                if (this._value_token == IonTextTokenizer.TOKEN_INT) {
+                	s = _scanner.getValueAsString(_value_start, _value_end);
+                	intvalue = Integer.parseInt(s);
+                }
+                else if (this._value_token == IonTextTokenizer.TOKEN_HEX) {
+                	int start = _value_start + 2; // skip over the "0x" header
+                	int c1 = _scanner.getByte(_value_start);
+                	boolean is_negative = false;
+                	if (c1 == '-') {
+                		start++;
+                		is_negative = true;
+                	} else if (c1 == '+') {
+                		start++;                		
+                	}
+                	s = _scanner.getValueAsString(start, _value_end);
+                	intvalue = Integer.parseInt(s, 16);
+                	if (is_negative) intvalue = -intvalue;
+                }
+                else {
+                	throw new IllegalStateException("unexpected token created an int");
+                }
                 return intvalue;
             case FLOAT:
                 double d = getDouble();
@@ -629,7 +836,29 @@ public final class IonTextIterator
     {
         switch (_value_type) {
             case INT:
-                long longvalue = Long.parseLong(_scanner.getValueAsString(_value_start, _value_end));
+            	String s;
+                long longvalue;
+                if (this._value_token == IonTextTokenizer.TOKEN_INT) {
+                	s = _scanner.getValueAsString(_value_start, _value_end);
+                	longvalue = Long.parseLong(s);
+                }
+                else if (this._value_token == IonTextTokenizer.TOKEN_HEX) {
+                	int start = _value_start + 2; // skip over the "0x" header
+                	int c1 = _scanner.getByte(_value_start);
+                	boolean is_negative = false;
+                	if (c1 == '-') {
+                		start++;
+                		is_negative = true;
+                	} else if (c1 == '+') {
+                		start++;                		
+                	}
+                	s = _scanner.getValueAsString(start, _value_end);
+                	longvalue = Long.parseLong(s, 16);
+                	if (is_negative) longvalue = -longvalue;
+                }
+                else {
+                	throw new IllegalStateException("unexpected token created an int");
+                }
                 return longvalue;
             case FLOAT:
                 double d = getDouble();
@@ -699,24 +928,55 @@ public final class IonTextIterator
         switch (_value_type) {
             case STRING:
             case SYMBOL:
-                String value = _scanner.getValueAsString(_value_start, _value_end);
-                return value;
+                break;                
             default:
-                break;
+                throw new IllegalStateException("current value is not a symbol or string");
         }
-        throw new IllegalStateException("current value is not a symbol or string");
+        String value;
+        if (_extended_value_count > 0) {
+        	int pos = _scanner.startValueAsString();
+        	for (int ii=0; ii<_extended_value_count; ii++) {
+        		int start = this._extended_value_start[ii];
+        		int end   = this._extended_value_end[ii];
+        		_scanner.continueValueAsString(start, end);
+        	}
+        	value = _scanner.closeValueAsString(pos);
+        }
+        else {
+        	value = _scanner.getValueAsString(_value_start, _value_end);
+        }
+        if (_value_type.equals(IonType.SYMBOL)) {
+        	if (this._is_null) {
+        		value = "null.symbol";
+        	}
+        	else {
+	        	// we have to "wash" the value through a symbol table to address
+	        	// cases like $007 
+	        	UnifiedSymbolTable syms = this.getSymbolTable();
+	        	int sid = syms.findSymbol(value);
+	        	if (sid <= 0) {
+	        		if (syms.isLocked()) {
+	        			_current_symtab = new UnifiedSymbolTable(syms);
+	        			syms = _current_symtab; 
+	        		}
+	        		sid = syms.addSymbol(value);
+	        	}
+	        	value = syms.findSymbol(sid);
+        	}
+        }
+        return value;
     }
 
     @Override
     public int getSymbolId()
     {
-        if (this._symbol_table == null) {
+        if (this._current_symtab == null) {
             throw new IllegalStateException();
         }
         switch (_value_type) {
             case SYMBOL:
                 String value = _scanner.getValueAsString(_value_start, _value_end);
-                int sid = _symbol_table.findSymbol(value);
+                int sid = _current_symtab.findSymbol(value);
                 return sid;
             default:
                 break;
@@ -725,7 +985,13 @@ public final class IonTextIterator
     }
 
     public InputStream getByteStream() {
-        InputStream valuestream = new ValueByteStream(_scanner._r, _extended_value_count, _extended_value_start, _extended_value_end);
+    	InputStream valuestream; 
+    	if (_extended_value_count > 0 || _value_end < 0 || _value_start < 0) {
+    		valuestream = new ValueByteStream(_scanner._r, _extended_value_count, _extended_value_start, _extended_value_end);    		
+    	}
+    	else {
+    		valuestream = new ValueByteStream(_scanner._r, _value_start, _value_end);
+    	}
         
         switch (_value_type) {
         case CLOB:
@@ -755,12 +1021,14 @@ public final class IonTextIterator
     {
         InputStream bytestream = this.getByteStream();
         byte[] bytes = null;
+        int c, len, pos = 0;
         
         try {
-            int len = getLobByteLength(bytestream);
+            len = getLobByteLength(bytestream);
             bytes = new  byte[len];
-            int c, pos = 0;
-            bytestream.reset();
+            
+            bytestream = this.getByteStream();
+            // TODO: implement reset() on the underlying Lob streams: bytestream.reset();
             
             while ((c = bytestream.read()) >= 0) {
                 bytes[pos++] = (byte)(c & 0xff);
@@ -800,14 +1068,30 @@ public final class IonTextIterator
             this.array_pos = 0;
             this.start = this.starts[this.array_pos];
             this.end = this.ends[this.array_pos];
-            this.pos = 0;
+            this.pos = this.start;
+        }
+        ValueByteStream(IonTextBufferedStream in, int start, int end)
+        {
+            this.in = in;
+            this.count = 0;
+            this.starts = null;
+            this.ends = null;
+            this.array_pos = 0;
+            this.start = start;
+            this.end = end;
+            this.pos = start;
         }
         @Override
         public void reset() {
-            this.array_pos = 0;
-            this.start = this.starts[this.array_pos];
-            this.end = this.ends[this.array_pos];
-            this.pos = 0;
+        	if (count > 0) {
+        		this.array_pos = 0;
+        		this.start = this.starts[this.array_pos];
+        		this.end = this.ends[this.array_pos];
+        	}
+        	else {
+        		// nothing to do in the no-array of positions case
+        	}
+        	this.pos = this.start;
         }
         @Override
         public void close()
@@ -831,7 +1115,7 @@ public final class IonTextIterator
                 }
                 this.start = this.starts[this.array_pos];
                 this.end = this.ends[this.array_pos];
-                this.pos = 0;
+                this.pos = this.start;
             }
             int c = this.in.getByte(pos++);
             if ((c & 0x80) != 0) {
@@ -906,9 +1190,12 @@ public final class IonTextIterator
     }
 
     static class ValueEscapedCharInputStream extends InputStream  {
+    	static final int NO_LOOKAHEAD = Integer.MIN_VALUE;
         InputStream _in;
+        int         _lookahead;
         ValueEscapedCharInputStream(InputStream in) {
             _in = in;
+            _lookahead = NO_LOOKAHEAD;
         }
         @Override
         public void close()
@@ -924,10 +1211,32 @@ public final class IonTextIterator
         public int read()
             throws IOException
         {
-            int c2, c = _in.read();
-            if (c < 0) return c;
-            if (c == '\\') {
-                switch (c) {
+            int c2, c;
+            if (_lookahead == NO_LOOKAHEAD) { 
+            	c = _in.read();
+            }
+            else {
+            	c = _lookahead;
+            	_lookahead = NO_LOOKAHEAD;
+            }
+            
+            if (c == '\r') {
+            	c2 = _in.read();
+            	if (c2 != '\n') {
+            		_lookahead = c2;
+            	}
+            	c = '\n';
+            }
+            else if (c == '\n') {
+            	c2 = _in.read();
+            	if (c2 != '\r') {
+            		_lookahead = c2;
+            	}
+            	c = '\n';
+            }
+            else if (c == '\\') {
+            	c2 = _in.read();
+                switch (c2) {
                 case -1:
                     throw new IonParsingException(new UnexpectedEofException());
                 case 't':  return '\t';
@@ -967,11 +1276,21 @@ public final class IonTextIterator
                     return c2 + c; // high nibble + lowest nibble
                 case '0':
                     return 0;
+                case '\r':
+                	c = _in.read();
+                    if (c == '\n') {
+                    	c = read();
+                    }
+                    break;
                 case '\n':
-                    return read();
+                	c = _in.read();
+                    if (c == '\r') {
+                    	c = read();
+                    }
+                    break;
                 default:
                     throw new IonParsingException("invalid escape sequence \"\\"
-                                           + (char) c + "\" [" + c + "]");
+                                           + (char) c2 + "\" [" + c2 + "]");
                 }
             }
             return c;
@@ -1030,7 +1349,7 @@ public final class IonTextIterator
                )
               && _scanner.lookahead(1) == IonTextTokenizer.TOKEN_DOUBLE_COLON 
             ) {
-        	int kw = _scanner.keyword(_scanner._start, _scanner._end);
+        	int kw = _scanner.keyword(_scanner.getStart(), _scanner.getEnd());
         	switch (kw) {
         	case IonTextTokenizer.KEYWORD_FALSE:
         	case IonTextTokenizer.KEYWORD_TRUE:
@@ -1060,11 +1379,17 @@ public final class IonTextIterator
         _extended_value_start = temp1;
         _extended_value_end   = temp2;
     }
-    void makeValue(IonType t) {
+    void makeNullValue(IonType t) {
+	    _is_null = true;
+	    _value_ready = true;
+	    _value_type = t;
+	}
+	void makeValue(IonType t, int token) {
         _extended_value_count = 0;
+        _value_token = token;
         _value_type = t;
-        _value_start = _scanner.getValueStart();
-        _value_end   = _scanner.getValueEnd();
+        _value_start = _scanner.getStart();
+        _value_end   = _scanner.getEnd();
         if (t.equals(IonType.SYMBOL) && _value_start >= _value_end) {
         	throw new IonParsingException("symbols have to have some content" + this._scanner.input_position());
         }
@@ -1072,11 +1397,14 @@ public final class IonTextIterator
         _value_ready = true;
         _scanner.consumeToken();
     }
-    void openValue(IonType t) {
+    void openValue(IonType t, int token) {
         _extended_value_count = 0;
+        _value_token = token;
         _value_type = t;
         _is_null = false;
-        appendValue();
+        _value_start = -1;
+        _value_end = -2;
+        appendValue(token);
     }
     void closeValue(IonType t) {
         if (!t.equals(_value_type)) {
@@ -1087,14 +1415,37 @@ public final class IonTextIterator
         }
         _value_ready = true;
     }
-    void appendValue() {
+    void appendValue(int token) {
+        int start = _scanner.getStart();
+        int end = _scanner.getEnd();
+        
+        // see: IonTextTokenizer.java
+        //public static final int TOKEN_STRING1 = string in double quotes (") some > 255
+        //public static final int TOKEN_STRING2 = part of a string in triple quotes (''') some > 255
+        //public static final int TOKEN_STRING3 = string in double quotes (") all <= 255
+        //public static final int TOKEN_STRING4 = part of a string in triple quotes (''') all chars <= 255
+        switch (token) {
+        case IonTextTokenizer.TOKEN_STRING1:
+        	assert (_value_token == IonTextTokenizer.TOKEN_STRING1 || _value_token == IonTextTokenizer.TOKEN_STRING3);
+        	_value_token = IonTextTokenizer.TOKEN_STRING1;
+        	break;
+        case IonTextTokenizer.TOKEN_STRING2:
+        	assert (_value_token == IonTextTokenizer.TOKEN_STRING2 || _value_token == IonTextTokenizer.TOKEN_STRING4);
+        	_value_token = IonTextTokenizer.TOKEN_STRING2;
+        	break;
+        default:
+        	break;
+        }
+        appendValue(start, end);
+        _scanner.consumeToken();
+    }
+    void appendValue(int start, int end) {
         if (_extended_value_count >= _extended_value_start.length) {
             grow_extended_values();
         }
-        _extended_value_start[_extended_value_count] = _scanner.getValueStart();
-        _extended_value_end[_extended_value_count]   = _scanner.getValueEnd();
+        _extended_value_start[_extended_value_count] = start;
+        _extended_value_end[_extended_value_count]   = end;
         _extended_value_count++;
-        _scanner.consumeToken();
     }
     void consumeToken(int token) {
         int current_token = _scanner.lookahead(0); 
@@ -1380,7 +1731,17 @@ public final class IonTextIterator
         }
         @Override
         State transition_method(IonTextIterator parser) {
-            parser.makeValue(IonType.INT);
+            parser.makeValue(IonType.INT, IonTextTokenizer.TOKEN_INT);
+            return parser.pop_parser_state();
+        }
+    }
+    static class Lookahead_read_plain_value_hex extends Matches {
+    	Lookahead_read_plain_value_hex() {
+            match_token = IonTextTokenizer.TOKEN_HEX;
+        }
+        @Override
+        State transition_method(IonTextIterator parser) {
+            parser.makeValue(IonType.INT, IonTextTokenizer.TOKEN_HEX);
             return parser.pop_parser_state();
         }
     }
@@ -1390,7 +1751,7 @@ public final class IonTextIterator
         }
         @Override
         State transition_method(IonTextIterator parser) {
-            parser.makeValue(IonType.FLOAT);
+            parser.makeValue(IonType.FLOAT, IonTextTokenizer.TOKEN_FLOAT);
             return parser.pop_parser_state();
         }
     }
@@ -1400,7 +1761,7 @@ public final class IonTextIterator
         }
         @Override
         State transition_method(IonTextIterator parser) {
-            parser.makeValue(IonType.DECIMAL);
+            parser.makeValue(IonType.DECIMAL, IonTextTokenizer.TOKEN_DECIMAL);
             return parser.pop_parser_state();
         }
     }
@@ -1410,7 +1771,7 @@ public final class IonTextIterator
         }
         @Override
         State transition_method(IonTextIterator parser) {
-            parser.makeValue(IonType.TIMESTAMP);
+            parser.makeValue(IonType.TIMESTAMP, IonTextTokenizer.TOKEN_TIMESTAMP);
             return parser.pop_parser_state();
         }
     }
@@ -1420,19 +1781,21 @@ public final class IonTextIterator
         }
         @Override
         State transition_method(IonTextIterator parser) {
-            int keyword = parser._scanner.keyword(parser._scanner.getValueStart(), parser._scanner.getValueEnd());
+        	int start = parser._scanner.getStart();
+        	int end = parser._scanner.getEnd();
+            int keyword = parser._scanner.keyword(start, end);
             if (keyword == IonTextTokenizer.KEYWORD_TRUE) {
-                parser.makeValue(IonType.BOOL);
+                parser.makeValue(IonType.BOOL, IonTextTokenizer.TOKEN_SYMBOL1);
             }
             else if (keyword == IonTextTokenizer.KEYWORD_FALSE) {
-                parser.makeValue(IonType.BOOL);
+                parser.makeValue(IonType.BOOL, IonTextTokenizer.TOKEN_SYMBOL1);
             }
             else if (keyword == IonTextTokenizer.KEYWORD_NULL) {
                 parser._scanner.consumeToken();
                 return State_read_null;
             }
             else {
-                parser.makeValue(IonType.SYMBOL);
+                parser.makeValue(IonType.SYMBOL, IonTextTokenizer.TOKEN_SYMBOL1);
             }
             return parser.pop_parser_state();
         }
@@ -1443,7 +1806,7 @@ public final class IonTextIterator
         }
         @Override
         State transition_method(IonTextIterator parser) {
-            parser.makeValue(IonType.SYMBOL);
+            parser.makeValue(IonType.SYMBOL, IonTextTokenizer.TOKEN_SYMBOL2);
             return parser.pop_parser_state();
         }
     }
@@ -1453,7 +1816,7 @@ public final class IonTextIterator
         }
         @Override
         State transition_method(IonTextIterator parser) {
-            parser.makeValue(IonType.SYMBOL);
+            parser.makeValue(IonType.SYMBOL, IonTextTokenizer.TOKEN_SYMBOL3);
             return parser.pop_parser_state();
         }
     }
@@ -1463,7 +1826,31 @@ public final class IonTextIterator
         }
         @Override
         State transition_method(IonTextIterator parser) {
-            parser.makeValue(IonType.SYMBOL);
+        	int start;
+            int lookahead_char = parser._scanner.peek_char();
+            if (parser._scanner.isOperatorCharacter(lookahead_char)) {
+            	start = parser._scanner.getStart();
+            	parser.consumeToken(IonTextTokenizer.TOKEN_DOT);
+            	int token = parser._scanner.lookahead(0);
+            	if (token != IonTextTokenizer.TOKEN_SYMBOL3) {
+            		parser.error();
+            	}
+            	parser._scanner.setNextStart(start); // back up and grab the '.' that started all this
+            	parser.makeValue(IonType.SYMBOL, IonTextTokenizer.TOKEN_DOT);
+            }
+            else {
+            	parser.makeValue(IonType.SYMBOL, IonTextTokenizer.TOKEN_SYMBOL3);
+            }
+            return parser.pop_parser_state();
+        }
+    }
+    static class Lookahead_read_plain_value_comma_as_identifier_extended extends Matches {
+    	Lookahead_read_plain_value_comma_as_identifier_extended() {
+            match_token = IonTextTokenizer.TOKEN_COMMA;
+        }
+        @Override
+        State transition_method(IonTextIterator parser) {
+            parser.makeValue(IonType.SYMBOL, IonTextTokenizer.TOKEN_COMMA);
             return parser.pop_parser_state();
         }
     }
@@ -1473,7 +1860,7 @@ public final class IonTextIterator
         }
         @Override
         State transition_method(IonTextIterator parser) {
-            parser.makeValue(IonType.STRING);
+            parser.makeValue(IonType.STRING, IonTextTokenizer.TOKEN_STRING1);
             return parser.pop_parser_state();
         }
     }
@@ -1488,7 +1875,7 @@ public final class IonTextIterator
         }
         @Override
         State transition_method(IonTextIterator parser) {
-            parser.makeValue(IonType.STRING);
+        	parser.openValue(IonType.STRING, match_token);
             int token;
             for (;;) {
             	token = parser._scanner.lookahead(0);
@@ -1497,8 +1884,9 @@ public final class IonTextIterator
             	) {
             		break;
             	}
-                parser.appendValue();
+                parser.appendValue(token);
             }
+            parser.closeValue(IonType.STRING);
             return parser.pop_parser_state();
         }
     }
@@ -1513,8 +1901,7 @@ public final class IonTextIterator
         }
         @Override
         State transition_method(IonTextIterator parser) {
-        	int start = -1, end = -1;
-            parser.consumeToken(IonTextTokenizer.TOKEN_OPEN_DOUBLE_BRACE);
+        	parser.consumeToken(IonTextTokenizer.TOKEN_OPEN_DOUBLE_BRACE);
             int lookahead_char = parser._scanner.lob_lookahead();
               
             // if (parser._scanner.lookahead(0) == IonTextTokenizer.TOKEN_STRING1 ) { // or parser.peek() == '"'
@@ -1522,25 +1909,33 @@ public final class IonTextIterator
             	if (parser._scanner.lookahead(0) != IonTextTokenizer.TOKEN_STRING3) {
             		parser.error();
             	}
-            	parser.makeValue(IonType.CLOB);
+            	parser.makeValue(IonType.CLOB, IonTextTokenizer.TOKEN_STRING3);
             }
             //else if (parser._scanner.lookahead(0) == IonTextTokenizer.TOKEN_STRING4 ) { // or parser.peek() == '\''
             else if (lookahead_char == '\'') {
-            	if (parser._scanner.lookahead(0) != IonTextTokenizer.TOKEN_STRING4) {
+            	int token = parser._scanner.lookahead(0); 
+            	if (token != IonTextTokenizer.TOKEN_STRING4) {
             		parser.error();
             	}
-            	parser.openValue(IonType.CLOB);
-            	while (parser._scanner.lookahead(0) == IonTextTokenizer.TOKEN_STRING4) {
-            		parser.appendValue();
+            	parser.openValue(IonType.CLOB, token);
+            	for (;;) {
+            		token = parser._scanner.lookahead(0);
+            		if (token != IonTextTokenizer.TOKEN_STRING4) break;
+            		parser.appendValue(token);
             	}
             	parser.closeValue(IonType.CLOB);
             }
+            else if (lookahead_char == '}') {
+            	// put a "fake" start and end in to simulate a 0 length token
+            	parser._scanner.setNextStart(0);
+            	parser._scanner.setNextEnd(0);
+            	parser._scanner.enqueueToken(IonTextTokenizer.TOKEN_BLOB);
+            	parser.makeValue(IonType.BLOB, IonTextTokenizer.TOKEN_BLOB);
+            }
             else {
             	parser._scanner.scanBase64Value(parser);
-            	start = parser._scanner._start;
-            	end = parser._scanner._end;
-            	parser._scanner.enqueueToken(IonTextTokenizer.TOKEN_BLOB, start, end);
-            	parser.makeValue(IonType.BLOB);
+            	parser._scanner.enqueueToken(IonTextTokenizer.TOKEN_BLOB);
+            	parser.makeValue(IonType.BLOB, IonTextTokenizer.TOKEN_BLOB);
             }
             // this checks to see that we have a single close and the
             // next character is another close (and it consumes the
@@ -1564,6 +1959,7 @@ public final class IonTextIterator
         new Lookahead_read_plain_value_open_brace(),
         new Lookahead_read_plain_value_open_square(),
         new Lookahead_read_plain_value_int(),
+        new Lookahead_read_plain_value_hex(),
         new Lookahead_read_plain_value_float(),
         new Lookahead_read_plain_value_decimal(),
         new Lookahead_read_plain_value_timestamp(),
@@ -1582,6 +1978,7 @@ public final class IonTextIterator
         new Lookahead_read_plain_value_open_brace(),
         new Lookahead_read_plain_value_open_square(),
         new Lookahead_read_plain_value_int(),
+        new Lookahead_read_plain_value_hex(),
         new Lookahead_read_plain_value_float(),
         new Lookahead_read_plain_value_decimal(),
         new Lookahead_read_plain_value_timestamp(),
@@ -1589,6 +1986,7 @@ public final class IonTextIterator
         new Lookahead_read_plain_value_identifier_literal(),
         new Lookahead_read_plain_value_identifier_extended(),
         new Lookahead_read_plain_value_dot_as_identifier_extended(),
+        // new Lookahead_read_plain_value_comma_as_identifier_extended(),
         new Lookahead_read_plain_value_string_literal(),
         new Lookahead_read_plain_value_string_literal2(),
         new Lookahead_read_plain_value_string_literal_extended(),
@@ -1641,7 +2039,9 @@ public final class IonTextIterator
             if (parser._scanner.lookahead(0) != IonTextTokenizer.TOKEN_SYMBOL1) {
                 parser.error();
             }
-            int keyword = parser._scanner.keyword(parser._scanner.getValueStart(), parser._scanner.getValueEnd());
+            int start = parser._scanner.getStart(); 
+            int end   = parser._scanner.getEnd();
+            int keyword = parser._scanner.keyword(start, end);
             switch (keyword) {
             	case IonTextTokenizer.KEYWORD_NULL:     parser.makeNullValue(IonType.NULL);     break;
                 case IonTextTokenizer.KEYWORD_BOOL:     parser.makeNullValue(IonType.BOOL);     break;
@@ -1724,9 +2124,6 @@ public final class IonTextIterator
             parser.push_parser_state( State_read_sexp_value );
             parser.push_parser_state(State_close_value);
             return State_read_plain_value_sexp;
-            
-            //parser.makeValue(IonType.SYMBOL);
-            //return State_read_sexp_value;
         }
     }
     static class Lookahead_read_sexp_value_identifier_literal extends Matches {
@@ -1744,9 +2141,6 @@ public final class IonTextIterator
             parser.push_parser_state( State_read_sexp_value );
             parser.push_parser_state(State_close_value);
             return State_read_plain_value_sexp;
-            
-            //parser.makeValue(IonType.SYMBOL);
-            //return State_read_sexp_value;
         }
 
     }
@@ -1758,7 +2152,7 @@ public final class IonTextIterator
         State transition_method(IonTextIterator parser) {
             parser.clearAnnotationList();
             parser.clearFieldname();
-            parser.makeValue(IonType.SYMBOL);
+            parser.makeValue(IonType.SYMBOL, IonTextTokenizer.TOKEN_SYMBOL3);
             return State_read_sexp_value;
         }
     }
@@ -1966,7 +2360,9 @@ public final class IonTextIterator
         }
         @Override
         State transition_method(IonTextIterator parser) {
-        	int kw = parser._scanner.keyword(parser._scanner._start, parser._scanner._end);
+        	int start = parser._scanner.getStart();
+        	int end   = parser._scanner.getEnd();
+        	int kw = parser._scanner.keyword(start, end);
         	switch (kw) {
         	case IonTextTokenizer.KEYWORD_TRUE:
         	case IonTextTokenizer.KEYWORD_FALSE:

@@ -15,87 +15,84 @@ import junit.framework.TestSuite;
 
 
 public class GoodIonStreamingTests extends DirectoryTestSuite {
+	
+	public static TestSuite suite()
+    {
+        return new GoodIonStreamingTests();
+    }
 
-	    private static class GoodIonTestCase
-	        extends FileTestCase
-	    {
+    public GoodIonStreamingTests()
+    {
+        super("good");
+    }
 
-	        public GoodIonTestCase(File ionFile)
-	        {
-	            super(ionFile);
-	        }
+    @Override
+    protected FileTestCase makeTest(File ionFile)
+    {
+        String fileName = ionFile.getName();
+        // this test is here to get rid of the warning, and ... you never know
+        if (fileName == null || fileName.length() < 1) throw new IllegalArgumentException("files should have names");
+        return new GoodIonTestCase(ionFile);
+    }
 
-	        public void runTest()
-	            throws Exception
-	        {
-	        	iterateIon(myTestFile);
-	        }
-	        void iterateIon(File myTestFile) {
-	        	IonIterator it;
-	        	int len = (int)myTestFile.length();
-	        	byte[] buf = new byte[len];
-	        	
-	        	FileInputStream in;
-	        	BufferedInputStream bin; 
-				try {
-					in = new FileInputStream(myTestFile);
-					bin = new BufferedInputStream(in);
-					bin.read(buf);
-				} catch (FileNotFoundException e) {
-					throw new RuntimeException(e);
-		        } catch (IOException ioe) {
-		        	throw new RuntimeException(ioe);
-				} 
-	        	it = IonIterator.makeIterator(buf);
-	        	walkIterator(it);
-		    }
-	        void walkIterator(IonIterator it) {
-	        	while (it.hasNext()) {
-		        	IonType t = it.next();
-		        	switch (t) {
-		        	case NULL:
-		        	case BOOL:
-		        	case INT:
-		            case FLOAT:
-		        	case DECIMAL:
-		        	case TIMESTAMP:
-		        	case STRING:
-		        	case SYMBOL:
-		        	case BLOB:
-		        	case CLOB:
-		        		break;
-		        	case STRUCT:
-		        	case LIST:
-		        	case SEXP:
-		        		it.stepInto();
-		        		walkIterator(it);
-		        		it.stepOut();
-		        		break;
-		        	}
+    private static class GoodIonTestCase
+        extends FileTestCase
+    {
+
+        public GoodIonTestCase(File ionFile)
+        {
+            super(ionFile);
+        }
+
+        public void runTest()
+            throws Exception
+        {
+        	iterateIon(myTestFile);
+        }
+        void iterateIon(File myTestFile) {
+        	IonIterator it;
+        	int len = (int)myTestFile.length();
+        	byte[] buf = new byte[len];
+        	
+        	FileInputStream in;
+        	BufferedInputStream bin; 
+			try {
+				in = new FileInputStream(myTestFile);
+				bin = new BufferedInputStream(in);
+				bin.read(buf);
+			} catch (FileNotFoundException e) {
+				throw new RuntimeException(e);
+	        } catch (IOException ioe) {
+	        	throw new RuntimeException(ioe);
+			} 
+        	it = IonIterator.makeIterator(buf);
+        	walkIterator(it);
+	    }
+        void walkIterator(IonIterator it) {
+        	while (it.hasNext()) {
+	        	IonType t = it.next();
+	        	switch (t) {
+	        	case NULL:
+	        	case BOOL:
+	        	case INT:
+	            case FLOAT:
+	        	case DECIMAL:
+	        	case TIMESTAMP:
+	        	case STRING:
+	        	case SYMBOL:
+	        	case BLOB:
+	        	case CLOB:
+	        		break;
+	        	case STRUCT:
+	        	case LIST:
+	        	case SEXP:
+	        		it.stepInto();
+	        		walkIterator(it);
+	        		it.stepOut();
+	        		break;
 	        	}
-	        	return;
-	        }
-	    }
-	    
-	    
-
-
-	    public static TestSuite suite()
-	    {
-	        return new GoodIonStreamingTests();
-	    }
-
-
-	    public GoodIonStreamingTests()
-	    {
-	        super("good");
-	    }
-
-
-	    @Override
-	    protected FileTestCase makeTest(File ionFile)
-	    {
-	        String fileName = ionFile.getName();
-	        return new GoodIonTestCase(ionFile);
-	    }
+        	}
+        	return;
+        }
+    }
 }

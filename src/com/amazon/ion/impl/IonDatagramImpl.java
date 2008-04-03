@@ -32,7 +32,7 @@ public final class IonDatagramImpl
 {
     static private final int DATAGRAM_TYPEDESC  =
         IonConstants.makeTypeDescriptor(IonConstants.tidSexp,
-                                        IonConstants.lnIsDatagram);
+                                        IonConstants.lnIsEmptyContainer);
 
     private final static String[] EMPTY_STRING_ARRAY = new String[0];
 
@@ -73,72 +73,62 @@ public final class IonDatagramImpl
     }
 
 
-    public IonDatagramImpl(IonSystemImpl system, Reader ionText)
+    /**
+	 * Creates a datagram wrapping bytes containing Ion text or binary data.
+	 *
+	 * @param ionData may be either Ion binary data, or UTF-8 Ion text.
+	 * <em>This method assumes ownership of the array</em> and may modify it at
+	 * will.
+	 *
+	 * @throws NullPointerException if any parameter is null.
+	 * @throws IonException if there's a syntax error in the Ion content.
+	 */
+	public IonDatagramImpl(IonSystemImpl system, byte[] ionData)
+	{
+	    this(system.newSystemReader(ionData));
+	}
+
+
+	/**
+	 *
+	 * @param buffer is filled with Ion data.
+	 *
+	 * @throws NullPointerException if any parameter is null.
+	 */
+	public IonDatagramImpl(IonSystemImpl system, BufferManager buffer)
+	{
+	    this(new SystemReader(system, buffer));
+	}
+
+
+	public IonDatagramImpl(IonSystemImpl system, Reader ionText)
     {
-        this(system, system.newLocalSymbolTable(), ionText);
+        this(system 
+        	,system.newLocalSymbolTable()
+        	,ionText);
     }
 
 
     /**
      * @throws NullPointerException if any parameter is null.
      */
-    public IonDatagramImpl(IonSystemImpl system,
+	public IonDatagramImpl(IonSystemImpl system,
                            LocalSymbolTable initialSymbolTable,
                            Reader ionText)
     {
         this(new SystemReader(system,
                               system.getCatalog(),
                               initialSymbolTable, ionText));
-
-        // If the synthetic local table has anything in it, inject it.
-        if (initialSymbolTable.size() != 0 || initialSymbolTable.hasImports())
-        {
-            IonStruct ionRep = initialSymbolTable.getIonRepresentation();
-            assert ionRep.getSymbolTable() != null;
-            assert _contents.size() != 0;
-
-            _contents.add(0, ionRep);
-            ((IonValueImpl)ionRep)._container = this;
-
-            setDirty();
-        }
+        
+        place_symbol_table(initialSymbolTable);
     }
-
-
-    /**
-     * Creates a datagram wrapping bytes containing Ion text or binary data.
-     *
-     * @param ionData may be either Ion binary data, or UTF-8 Ion text.
-     * <em>This method assumes ownership of the array</em> and may modify it at
-     * will.
-     *
-     * @throws NullPointerException if any parameter is null.
-     * @throws IonException if there's a syntax error in the Ion content.
-     */
-    public IonDatagramImpl(IonSystemImpl system, byte[] ionData)
-    {
-        this(system.newSystemReader(ionData));
-    }
-
-
-    /**
-     *
-     * @param buffer is filled with Ion data.
-     *
-     * @throws NullPointerException if any parameter is null.
-     */
-    public IonDatagramImpl(IonSystemImpl system, BufferManager buffer)
-    {
-        this(new SystemReader(system, buffer));
-    }
-
 
     /**
      * Workhorse constructor this does the actual work.
      *
      * @throws NullPointerException if any parameter is null.
      */
-    public IonDatagramImpl(SystemReader rawStream)
+    IonDatagramImpl(SystemReader rawStream)
     {
         super(DATAGRAM_TYPEDESC, true);
 
@@ -164,6 +154,7 @@ public final class IonDatagramImpl
         try {
             materialize();
             // This ends up in doMaterializeValue below.
+            place_symbol_table(rawStream.getLocalSymbolTable());  // cas
         }
         catch (IOException e) {
             throw new IonException(e);
@@ -180,12 +171,35 @@ public final class IonDatagramImpl
     //=========================================================================
 
 
-    public IonType getType()
+    private void place_symbol_table(LocalSymbolTable initialSymbolTable) {
+	    // If the synthetic local table has anything in it, inject it.
+	    if (initialSymbolTable.size() != 0 || initialSymbolTable.hasImports())
+	    {
+	        IonStruct ionRep = initialSymbolTable.getIonRepresentation();
+	        assert ionRep.getSymbolTable() != null;
+	        assert _contents.size() != 0;
+	        
+	        if (ionRep.getContainer() == null) {
+	            // TODO why insert at zero?  Should we just append?
+	            // Should grab the ST from the last elt of either kind?
+	        	_contents.add(0, ionRep);
+	        	((IonValueImpl)ionRep)._container = this;
+	        }
+	        else {
+	        	if (ionRep.getContainer() != this) {
+	        		throw new IonException("symbol table is in the wrong datagram!");
+	        	}
+	        }
+	
+	        setDirty();
+	    }
+	}
+
+
+	public IonType getType()
     {
         return IonType.DATAGRAM;
     }
-
-
 
     // FIXME need to make add more solid, maintain symbol tables etc.
 
@@ -193,37 +207,47 @@ public final class IonDatagramImpl
     public void add(IonValue element)
         throws ContainedValueException, NullPointerException
     {
-        validateNewChild(element);
-
-        // FIXME here we assume that we're inserting a user value!
-
-        LocalSymbolTable symtab;
-        int userSize = _userContents.size();
-        if (userSize == 0)
-        {
-            symtab = _system.newLocalSymbolTable();
-            IonStruct ionRep = symtab.getIonRepresentation();
-
-            // TODO why insert at zero?  Should we just append?
-            // Should grab the ST from the last elt of either kind?
-            _contents.add(0, ionRep);
-
-            ((IonValueImpl)ionRep)._container = this;
-        }
-        else
-        {
-            symtab = _userContents.get(userSize - 1).getSymbolTable();
-            assert symtab != null;
-        }
-
-        add(_contents.size(), element, true);
-        assert element.getSymbolTable() == null;
-
-        // FIXME this doesn't reset any extant encoded data
-        ((IonValueImpl)element).setSymbolTable(symtab);
-        _userContents.add(element);
+    	boolean isSystem = false;
+        add(element, isSystem);
     }
 
+    public void add(IonValue element, boolean isSystem)
+    	throws ContainedValueException, NullPointerException
+	{
+	    validateNewChild(element);
+	    
+	    LocalSymbolTable symtab = element.getSymbolTable();
+	    
+	    if (symtab == null) {
+	    	int userSize = _userContents.size();
+	    	int fullsize = _contents.size();
+	    	if (userSize > 0) {
+	    		symtab = _userContents.get(userSize - 1).getSymbolTable();	    		
+	    	}
+	    	else if (fullsize > 0) {
+	    		symtab = _contents.get(fullsize - 1).getSymbolTable();
+	    	}
+	    	if (symtab == null) {
+		    	assert _contents.size() == 0;
+		    	symtab = _system.newLocalSymbolTable();
+		    	IonStructImpl ionsymtab = (IonStructImpl)symtab.getIonRepresentation();
+		    	_contents.add(ionsymtab);
+		    	ionsymtab.setSymbolTable(symtab);
+		    	ionsymtab._container = this;
+	    	}
+	    	// FIXME this doesn't reset any extant encoded data
+	       	((IonValueImpl)element).setSymbolTable(symtab);
+	    }
+	    assert symtab != null;
+	
+	    add(_contents.size(), element, true);
+// cas removed (1 apr 2008):	    assert element.getSymbolTable() == null;
+	    
+	    if (!isSystem) {
+	       	_userContents.add(element);
+	    }
+	}
+    
     @Override
     public void add(int index, IonValue element)
         throws ContainedValueException, NullPointerException
@@ -425,6 +449,9 @@ public final class IonDatagramImpl
     @Override
     protected void doMaterializeValue(IonBinary.Reader reader) throws IOException
     {
+    	assert _contents !=  null && _contents.size() == 0;
+    	assert _userContents !=  null && _userContents.size() == 0;
+
         while (_rawStream.hasNext())
         {
             IonValueImpl child = (IonValueImpl) _rawStream.next();

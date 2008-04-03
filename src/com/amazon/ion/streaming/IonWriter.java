@@ -220,7 +220,7 @@ public interface IonWriter
      * @param localOffset minutes from UTC where the value was authored
      * @throws IOException
      */
-    public abstract void writeTimestamp(Date value, int localOffset) throws IOException;
+    public abstract void writeTimestamp(Date value, Integer localOffset) throws IOException;
     /**
      * write symbolId out as an IonSymbol value.  The value does not
      * have to be valid in the symbol table, unless the output is

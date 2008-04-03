@@ -56,7 +56,7 @@ static final boolean _debug_on = false;
         _external_symbol_table = externalSymbolTable;
         if (_symbol_table == null) {
             UnifiedSymbolTable symbol_table = new UnifiedSymbolTable(externalSymbolTable.getSystemSymbolTable());
-            symbol_table.addImportedTable(_external_symbol_table);
+            symbol_table.addImportedTable(_external_symbol_table, 0);
             _symbol_table = symbol_table;
         }
     }
@@ -217,6 +217,8 @@ static final boolean _debug_on = false;
         }
         else {
             _annotations_type = IonType.STRING;
+            // FIXME: annotations need to be "washed" through a symbol
+            //        table to address issues like $0234 -> $234 or 'xyzzx'
             _annotations[_annotation_count++] = annotation;
         }
         return;
@@ -418,7 +420,11 @@ static final boolean _debug_on = false;
             if (_debug_on) System.out.print(";");
         }
         
-        switch (t) {
+        if (iterator.isNull()) {
+        	this.writeNull(iterator.getType());
+        }
+        else {
+        	switch (t) {
             case NULL:
                 writeNull();
                 if (_debug_on) System.out.print("-");
@@ -441,6 +447,12 @@ static final boolean _debug_on = false;
                 break;
             case TIMESTAMP:
                 timeinfo ti = iterator.getTimestamp();
+                if (ti == null) {
+                	throw new IllegalStateException("this should exist");
+                }
+                if (ti.d == null) {
+                	throw new IllegalStateException("this should exist");
+                }
                 writeTimestamp(ti.d, ti.localOffset);
                 if (_debug_on) System.out.print("t");
                 break;
@@ -487,7 +499,7 @@ static final boolean _debug_on = false;
                 closeSexp();
                 if (_debug_on) System.out.print(")");
                 break;
+        	}
         }
     }
-
 }

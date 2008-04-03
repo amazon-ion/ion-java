@@ -160,10 +160,12 @@ public abstract class IonTextBufferedStream extends InputStream
         public final int read()
             throws IOException
         {
-            if (_pos >= _end) return -1;
-            return _buffer[_pos++];
+        	int c; 
+    		if (_pos >= _end) return -1;
+    		c = _buffer[_pos++];
+            return c; 
         }
-        
+
         @Override
         public final int read(byte[] bytes, int offset, int len) throws IOException
         {

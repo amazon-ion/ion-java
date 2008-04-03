@@ -111,17 +111,7 @@ public class IonTokenReader
          * straight from the string to compute the value.
          */
         public static class timeinfo {
-            // FIXME SimpleDateFormat isn't thread-safe!
-            private static final SimpleDateFormat xDATE_PARSER;
-            private static final SimpleDateFormat xDATE_TIME_MINS_PARSER;
-            private static final SimpleDateFormat xDATE_TIME_SECS_PARSER;
-
-            static {
-                xDATE_PARSER           = newFormat("yyyy-MM-dd");
-                xDATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
-                xDATE_TIME_SECS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm:ss");
-            }
-
+        	
             private static SimpleDateFormat newFormat(String pattern) {
                 SimpleDateFormat f = new SimpleDateFormat(pattern);
                 f.setLenient(false);
@@ -1223,7 +1213,7 @@ sizedloop:
          * @deprecated Use {@link Text#needsEscapeForAsciiRendering(int)} instead
          */
         public static boolean needsEscape(int c) {
-            return Text.needsEscapeForAsciiRendering(c);
+            return Text.needsEscapeForAsciiRendering(c, -2);
         }
 
     }
@@ -1351,7 +1341,7 @@ sizedloop:
             if (! Text.isNumericStopChar(c)) {
                 final String message =
                     position() + ": Numeric value followed by illegal character "
-                    + Text.getEscapeString(c);
+                    + Text.getEscapeString(c, -2);
                 throw new IonException(message);
             }
             this.unread(c);

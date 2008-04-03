@@ -192,13 +192,6 @@ public final class IonTreeIterator
 
         return utable;
     }
-    
-    @Override
-    public void setSymbolTable(UnifiedSymbolTable  externalsymboltable) 
-    {
-        // TODO: this is being ignored right now or is it a ...
-        // BUGBUG:
-    }
 
     @Override
     public IonType getType()

@@ -8,7 +8,6 @@ import java.io.IOException;
 
 import junit.framework.TestSuite;
 
-import com.amazon.ion.BadIonTests;
 import com.amazon.ion.DirectoryTestSuite;
 import com.amazon.ion.FileTestCase;
 import com.amazon.ion.IonException;
@@ -18,6 +17,7 @@ public class BadIonStreamingTests extends DirectoryTestSuite {
     private static class BadIonStreamingTestCase
     	extends FileTestCase
 	{
+    	private final static boolean _debug_output_errors = false;
 	    private final boolean myFileIsBinary;
 	
 	    public BadIonStreamingTestCase(File ionFile, boolean binary)
@@ -33,11 +33,13 @@ public class BadIonStreamingTests extends DirectoryTestSuite {
 	        	iterateIon();
 	            fail("Expected IonException parsing "
 	                 + myTestFile.getAbsolutePath());
-	        } catch (IonException e) { 
-	        	/* good */ 
-	        	System.out.print(this.myTestFile.getName());
-	        	System.out.print(": ");
-	        	System.out.println(e.getMessage());
+	        } catch (IonException e) {
+	        	/* good - we're expecting an error, there are testing bad input */
+	        	if (_debug_output_errors) {
+		        	System.out.print(this.myTestFile.getName());
+		        	System.out.print(": ");
+		        	System.out.println(e.getMessage());
+	        	}
 	        }
 	    }
 	    
@@ -79,6 +81,7 @@ public class BadIonStreamingTests extends DirectoryTestSuite {
 	        	case SYMBOL:
 	        	case BLOB:
 	        	case CLOB:
+	        		if (this.myFileIsBinary) break; // really a no op to shut up the warning
 	        		break;
 	        	case STRUCT:
 	        	case LIST:

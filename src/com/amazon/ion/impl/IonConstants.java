@@ -73,6 +73,11 @@ public class IonConstants
     	is = (c & surrogate_mask) == low_surrogate_value;
     	return is;
     }
+    public static final boolean isSurrogate(int c) {
+    	boolean is;
+    	is = (c & (surrogate_mask | (low_surrogate_value - high_surrogate_value))) == high_surrogate_value;
+    	return is;
+    }
 
     /**
      * The byte sequence indicating use of Ion 1.0 binary format.
@@ -106,6 +111,8 @@ public class IonConstants
     public static final int tidStruct       = 13; // d
     public static final int tidTypedecl     = 14; // e
     public static final int tidUnused       = 15; // f
+    
+    public static final int tidDATAGRAM     = 16; // not a real type id
 
 /* this is just here to help programmer productivity ...
     switch (((td & 0xf0) >> 4)) {
@@ -190,17 +197,14 @@ public class IonConstants
     }
 
     // TODO unify these
-    public static final int lnIsNullAtom       = 0x0f;
-    public static final int lnIsNullSequence   = 0x0f;
-    public static final int lnIsNullStruct     = 0x0f;
+    public static final int lnIsNull           = 0x0f;
+    public static final int lnIsNullAtom       = lnIsNull;
+    public static final int lnIsNullSequence   = lnIsNull;
+    public static final int lnIsNullStruct     = lnIsNull;
 
     public static final int lnIsEmptyContainer = 0x00;
     public static final int lnIsOrderedStruct  = 0x01;
     public static final int lnIsVarLen         = 0x0e;
-
-    /** @deprecated */
-    @Deprecated
-    public static final int lnIsDatagram      = 0x04;
 
     public static final int lnBooleanTrue     = 0x01;
     public static final int lnBooleanFalse    = 0x00;

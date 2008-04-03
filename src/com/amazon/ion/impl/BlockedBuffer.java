@@ -1178,7 +1178,7 @@ static final boolean test_with_no_version_checking = false;
         {
             if (_buf == null) throw new IOException("stream is closed");
             fail_on_version_change();
-            if (_pos >= _buf.size()) throw new IllegalArgumentException();
+            if (_pos > _buf.size()) throw new IllegalArgumentException();
 
             int startingPos = _pos;
             int localEnd = _pos + len;
@@ -1202,7 +1202,7 @@ static final boolean test_with_no_version_checking = false;
         {
             if (_buf == null) throw new IOException("stream is closed");
             fail_on_version_change();
-            if (_pos >= _buf.size()) throw new IllegalArgumentException();
+            if (_pos > _buf.size()) throw new IllegalArgumentException();
 
             int startingPos = _pos;
             int localEnd = _pos + len;
@@ -1237,7 +1237,7 @@ static final boolean test_with_no_version_checking = false;
         {
             if (_buf == null) throw new IOException("stream is closed");
             fail_on_version_change();
-            if (_pos >= _buf.size()) throw new IllegalArgumentException();
+            if (_pos > _buf.size()) throw new IllegalArgumentException();
 
             int startingPos = _pos;
             int localEnd = _pos + len;

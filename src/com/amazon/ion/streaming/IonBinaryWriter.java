@@ -122,6 +122,7 @@ static final boolean _verbose_debug = false;
         return _patch_offsets[_patch_stack[_top - 1]];
     }
     int topType() {
+    	if (_top == 0) return IonConstants.tidDATAGRAM;
         return _patch_types[_patch_stack[_top - 1]];
     }
     boolean topInStruct() {
@@ -287,10 +288,11 @@ static final boolean _verbose_debug = false;
         super.writeFieldnameId(id);
     }
 
+    static private final int NULL_BYTE = (IonConstants.makeTypeDescriptor(IonConstants.tidNull, IonConstants.lnIsNull)); 
     public void writeNull() throws IOException
     {
         startValue(1);
-        _writer.write(IonConstants.tidNull << 4);
+        _writer.write(NULL_BYTE);
         patch(1);
     }
     public void writeNull(IonType type) throws IOException
@@ -444,7 +446,7 @@ static final boolean _verbose_debug = false;
         patch(patch_len);
     }
     
-    public void writeTimestamp(Date value, int localOffset) throws IOException
+    public void writeTimestamp(Date value, Integer localOffset) throws IOException
     {
         if (value == null) {
             writeNull(IonType.TIMESTAMP);
@@ -501,6 +503,19 @@ static final boolean _verbose_debug = false;
 
     public void writeSymbol(int symbolId) throws IOException
     {
+    	if (symbolId == UnifiedSymbolTable.ION_1_0_SID) {
+    		int type = topType();
+    		if ((type == IonConstants.tidSexp || type == IonConstants.tidDATAGRAM)
+    		 && (this._annotation_count == 0) 
+    		) {
+    			// TODO - is this user level or system level?
+    			// 		  if it's user level we do NOT do this, if it
+    			//		  is system level we MIGHT do this (or we might
+    			//		  do this elsewhere
+    			// push_symbol_table(UnifiedSymbolTable.getSystemSymbolTableInstance());
+    			// push(IonConstants.tidDATAGRAM);
+    		}
+    	}
         int patch_len = 1;
         int len = IonBinary.lenVarUInt8(symbolId);
         startValue(len + 1);
@@ -515,14 +530,22 @@ static final boolean _verbose_debug = false;
         writeSymbol(symbolId);
     }
     int makeSymbol(String name) {
-        int sid = _symbol_table.findSymbol(name);
-        if (sid > 0) return sid;
+        int sid;
         
-        sid = _system_symbols.findSymbol(name);
-        if (sid > 0) return sid;
+        if (_symbol_table != null) {
+        	sid = _symbol_table.findSymbol(name);
+        	if (sid > 0) return sid;
+        }
         
         if (_no_local_symbols) {
-            _symbol_table = new UnifiedSymbolTable((UnifiedSymbolTable)_system_symbols);
+        	UnifiedSymbolTable syssyms; 
+        	if (_system_symbols instanceof UnifiedSymbolTable) {
+        		syssyms = (UnifiedSymbolTable)_system_symbols;
+        	}
+        	else {
+        		syssyms = UnifiedSymbolTable.getSystemSymbolTableInstance();
+        	}
+            _symbol_table = new UnifiedSymbolTable(syssyms);
             _no_local_symbols = false;
         }
         
@@ -931,7 +954,9 @@ int tmp;
         }
         
         int symbol_table_length = 0;
-        if (!_no_local_symbols || _symbol_table.hasImports()) {
+        if (!_no_local_symbols 
+         || (_symbol_table != null && _symbol_table.hasImports())
+        ) {
             symbol_table_length = lenSymbolTable();
         }
         
@@ -946,8 +971,9 @@ int tmp;
     public byte[] getBytes() throws IOException
     {
         int total_length = getOutputLen();
+        byte[] bytes = null;
         
-        byte[] bytes = new byte[total_length];
+        bytes = new byte[total_length];
         SimpleByteBuffer outbuf = new SimpleByteBuffer(bytes);
         SimpleByteWriter writer = (SimpleByteWriter) outbuf.getWriter();
         int written_len = writeBytes(writer); 
@@ -978,7 +1004,9 @@ int tmp;
         iout.write(IonConstants.BINARY_VERSION_MARKER_1_0, 0, IonConstants.BINARY_VERSION_MARKER_1_0.length);
         total_written += IonConstants.BINARY_VERSION_MARKER_1_0.length;
         
-        if (!_no_local_symbols || _symbol_table.hasImports()) {
+        if (!_no_local_symbols 
+         || (_symbol_table != null && _symbol_table.hasImports())
+        ) {
             total_written += writeSymbolTable(iout);
         }
         
@@ -1012,15 +1040,17 @@ int tmp;
             }
             int vlen = _patch_lengths[patch_idx]; //_patch_list[patch_idx + IonBinaryWriter.POSITION_OFFSET];
             int ptd = _patch_types[patch_idx]; // _patch_list[patch_idx + IonBinaryWriter.TID_OFFSET];
-            //if (ptd < 0) {
-            //    ptd = -ptd;
-            //}
-            //ptd = ptd - 1;
-            int lenolen = (vlen < IonConstants.lnIsVarLen) ? 0 : IonBinary.lenVarUInt7(vlen); 
-            total_written += iout.writeTypeDescWithLength(ptd, lenolen, vlen);
+            if (ptd == IonConstants.tidDATAGRAM) {
+            	// here we could write out the local symbol table (but we're not right now
+            	// FIXME - either add this logic or remove the push() of the datagram
+            }
+            else {
+            	int lenolen = (vlen < IonConstants.lnIsVarLen) ? 0 : IonBinary.lenVarUInt7(vlen); 
+            	total_written += iout.writeTypeDescWithLength(ptd, lenolen, vlen);
 
-            // skip the typedesc byte we have written here
-            pos += bufferstream.skip(1);
+            	// skip the typedesc byte we have written here
+            	pos += bufferstream.skip(1);
+            }
             
             // find the next patch point, if there's one left
             //patch_idx += LIST_WIDTH;

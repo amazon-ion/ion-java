@@ -36,18 +36,17 @@ public class LocalSymbolTableImpl
     private final SystemSymbolTable _systemSymbols;
     private final ImportedTable[]   _importedTables;
 
-
-    private static class hideMe {
-        private hideMe() {}
-    }
-
-
-    private LocalSymbolTableImpl(hideMe dummy,
-                                 SystemSymbolTable systemSymbolTable)
-    {
-        _systemSymbols = systemSymbolTable;
-        _importedTables = null;
-    }
+    // This should no longer be necessary TODO remove this
+    //private static class hideMe {
+    //    private hideMe() {}
+    //}
+    //
+    //private LocalSymbolTableImpl(hideMe dummy,
+    //                             SystemSymbolTable systemSymbolTable)
+    //{
+    //    _systemSymbols = systemSymbolTable;
+    //    _importedTables = null;
+    //}
 
     /**
      * Constructs an empty symbol table.
@@ -61,7 +60,8 @@ public class LocalSymbolTableImpl
 
         _symtabElement = new IonStructImpl();
         // FIXME this is really scary and brain-twisty.
-        ((IonStructImpl)_symtabElement).setSymbolTable(new LocalSymbolTableImpl(new hideMe(), systemSymbolTable));
+        //((IonStructImpl)_symtabElement).setSymbolTable(new LocalSymbolTableImpl(new hideMe(), systemSymbolTable));
+        ((IonStructImpl)_symtabElement).setSymbolTable(this);
         _symtabElement.addTypeAnnotation(systemSymbolTable.getSystemId());
 
         _symbolsStruct = new IonStructImpl();
@@ -76,7 +76,6 @@ public class LocalSymbolTableImpl
     {
         this(system.getSystemSymbolTable());
     }
-
 
     public LocalSymbolTableImpl(IonSystem system,
                                 IonCatalog catalog,
@@ -158,7 +157,6 @@ public class LocalSymbolTableImpl
 
         super.doDefineSymbol(name, id);
     }
-
 
     public synchronized int findSymbol(String name) {
         int sid = _systemSymbols.findSymbol(name);

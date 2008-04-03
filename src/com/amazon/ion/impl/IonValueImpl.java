@@ -530,7 +530,7 @@ public abstract class IonValueImpl
         this.getTypeAnnotations();
 
         _buffer = null;
-        _symboltable = null;               // ----------------------- CAS ADDED
+        // cas removed (1 apr 2008): _symboltable = null;               // ----------------------- CAS ADDED
         _isMaterialized     = false;
         _isPositionLoaded   = false;
         _isDirty            = true;

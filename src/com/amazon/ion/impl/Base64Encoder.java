@@ -500,6 +500,7 @@ public class Base64Encoder
                 if (xfer > needed) xfer = needed;
                 System.arraycopy(this._outbuf, this._outBufPos, cbuf, dstPos, xfer);
                 this._outBufPos += xfer;
+                dstPos += xfer;
                 needed -= xfer;
             }
             return dstPos;

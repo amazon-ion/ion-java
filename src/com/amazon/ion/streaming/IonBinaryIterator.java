@@ -83,15 +83,17 @@ public final class IonBinaryIterator
         return event+"";
     }
     
+
     SimpleByteBuffer    _buffer;
     ByteReader          _reader;
-    UnifiedSymbolTable  _symbols;
+    UnifiedCatalog		_catalog;
+    UnifiedSymbolTable  _current_symtab;
     int                 _parent_tid;  // using -1 for eof (or bof aka undefined) and 16 for datagram
     
     boolean _eof;
     int     _local_end;
     
-    static final int TID_DATAGRAM       = 16;
+    // static final int TID_DATAGRAM       = IonConstants.tidDATAGRAM; // 16;
     
     static final int S_INVALID          = 0;
     static final int S_BEFORE_TID       = 1;
@@ -115,32 +117,60 @@ public final class IonBinaryIterator
     
     IonBinaryIterator() {}
     
-    IonBinaryIterator(byte[] buf, int start, int len) 
+    // public to allow someone to DECLARE this buf to be binary
+    // irrespective of the presense or absense of an Ion Version 
+    // Marker (aka magic cookie)
+    public IonBinaryIterator(byte[] buf) 
     {
-        this(  null
-             , new SimpleByteBuffer(buf, start, len)
-             , UnifiedSymbolTable.getSystemSymbolTableInstance()
+    	this ( buf, 0, buf.length );
+    }
+
+    public IonBinaryIterator(byte[] buf, int start, int len) 
+    {
+        this(  new SimpleByteBuffer(buf, start, len)
+             , null
+        	 , null
         );
     }
-    IonBinaryIterator(IonType parent, UnifiedSymbolTable symboltable, byte[] buf, int start, int len) 
+    public IonBinaryIterator(byte[] buf, UnifiedCatalog catalog) 
     {
-        this(  parent
-             , new SimpleByteBuffer(buf, start, len)
-             , symboltable
+    	this ( buf, 0, buf.length, catalog );
+    }
+    public IonBinaryIterator(byte[] buf, int start, int len, UnifiedCatalog catalog) 
+    {
+        this(  new SimpleByteBuffer(buf, start, len)
+             , null
+        	 , catalog
         );
     }
-    IonBinaryIterator(IonType parent, SimpleByteBuffer ssb, UnifiedSymbolTable symboltable) 
+    //
+    // sometime (in the far distant future) we might want to allow the caller to 
+    // pass in the parent of this value - but not now
+    //
+    //IonBinaryIterator(IonType parent, UnifiedCatalog catalog, byte[] buf, int start, int len) 
+    //{
+    //    this( new SimpleByteBuffer(buf, start, len)
+    //    	, parent
+    //        , catalog
+    //    );
+    //}
+    IonBinaryIterator( SimpleByteBuffer ssb, IonType parent, UnifiedCatalog catalog ) 
     {
         _buffer = ssb;
         _reader = _buffer.getReader();
         _local_end = _buffer._eob;
         _state = S_BEFORE_TID;
-        _symbols = symboltable;
-        _parent_tid = (parent == null) ? TID_DATAGRAM : get_tid_from_ion_type(parent);
-        // _expect_symbol_table = (parent == null || parent.equals(IonType.SEXP));
+        _catalog = catalog;
+        _current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
+        _parent_tid = (parent == null) ? IonConstants.tidDATAGRAM : get_tid_from_ion_type(parent);
     }
+    
     final boolean expect_symbol_table() {
-        boolean expected =  (_parent_tid == IonConstants.tidSexp || _parent_tid == IonBinaryIterator.TID_DATAGRAM);
+    	// FIXME - this should be looking at tidSexp, it should be looking at
+    	//         is embedded value or is datagram instead !!
+        boolean expected =  (  _parent_tid == IonConstants.tidSexp 
+        					|| _parent_tid == IonConstants.tidDATAGRAM
+        					);
         return expected;
     }
     final boolean is_in_struct() {
@@ -148,21 +178,6 @@ public final class IonBinaryIterator
         return is_struct;
     }
 
-    /*
-    static  boolean has_ion_magic_cookie(byte[] buffer, int offset, int len) {
-    
-        IonConstants.BINARY_VERSION_MARKER_1_0
-    
-        boolean is_cookie = (len >= 4
-         && buffer[ offset + 0] == (byte)0xe0
-         && buffer[ offset + 1] == (byte)0x01
-         && buffer[ offset + 2] == (byte)0x00
-         && buffer[ offset + 3] == (byte)0xea
-        );
-        return is_cookie;
-    }
-    */
-    
     @Override
     public boolean hasNext()
     {
@@ -334,6 +349,9 @@ public final class IonBinaryIterator
         switch (tid) {
         case IonConstants.tidNull:      // 0
             t = IonType.NULL;
+            if ((_value_tid & 0xf) != IonConstants.lnIsNull) {
+            	throw new IonException("invalid type descriptor byte encountered at "+_reader.position());
+            }
             break;
         case IonConstants.tidBoolean:   // 1
             t = IonType.BOOL;
@@ -384,6 +402,12 @@ public final class IonBinaryIterator
         case IonConstants.tidNull:      // 0
         case IonConstants.tidBoolean:   // 1
             return 0;
+        case IonConstants.tidStruct:    // 13 D
+        	if ((tid & 0xf) == 1) {
+        		// if this is an ordered struct (with the magic length
+        		// of 1) then fake it as a var length (which is actually is)
+        		tid = (tid & 0xf0) | 14;
+        	}
         case IonConstants.tidPosInt:    // 2
         case IonConstants.tidNegInt:    // 3
         case IonConstants.tidFloat:     // 4
@@ -395,7 +419,6 @@ public final class IonBinaryIterator
         case IonConstants.tidBlob:      // 10 A
         case IonConstants.tidList:      // 11 B
         case IonConstants.tidSexp:      // 12 C
-        case IonConstants.tidStruct:    // 13 D
         case IonConstants.tidTypedecl:  // 14 E
             int len = tid & 0xf;
             if (len == 14) {
@@ -418,18 +441,24 @@ public final class IonBinaryIterator
             int vlen = _reader.read(cookie, 0, cookie.length);
             if (vlen == cookie.length) {
                 boolean is_magic = true;
-                for (int ii=0; ii<cookie.length; ii++) {
-                    if ((cookie[ii] & 0xff) != (IonConstants.BINARY_VERSION_MARKER_1_0[ii + 1] & 0xff)) {
-                        is_magic = false;
-                        break;
-                    }
+                // note the "off by 1" difference in the indices, we already read
+                // the first byte of the cookie before calling this method, so we
+                // only have to check the remaining bytes
+                if      ((cookie[0] & 0xff) != (IonConstants.BINARY_VERSION_MARKER_1_0[1] & 0xff)) {
+                	is_magic = false;
+                }
+                else if ((cookie[1] & 0xff) != (IonConstants.BINARY_VERSION_MARKER_1_0[2] & 0xff)) {
+                	is_magic = false;
+                }
+                else if ((cookie[2] & 0xff) != (IonConstants.BINARY_VERSION_MARKER_1_0[3] & 0xff)) {
+                	is_magic = false;
                 }
                 if (is_magic) {
                     // there's magic here!  start over with 
                     // a fresh new symbol table!
                     this.resetSymbolTable();
                     _state = IonBinaryIterator.S_BEFORE_TID;
-                    td = -1; // this says we used up the value
+                    td = -1; // this says we used up the value and the caller can skip it
                 }
                 else {
                     // the magic was lost, go back to your regularly
@@ -441,7 +470,6 @@ public final class IonBinaryIterator
         catch (IOException e) {
             throw new IonException(e);
         }
-        
         return td;
     }
     
@@ -457,10 +485,17 @@ public final class IonBinaryIterator
             
             while (_reader.position() < aend && !is_symbol_table) {
                 int a = _reader.readVarUInt();
-                if (a == SystemSymbolTable.ION_SYMBOL_TABLE_SID
-                 || a == SystemSymbolTable.ION_1_0_SID
-                ) {
-                    is_symbol_table = loadLocalSymbolTable(a, original_position, aend);
+                switch (a) {
+                case SystemSymbolTable.ION_SYMBOL_TABLE_SID:
+                case SystemSymbolTable.ION_1_0_SID:
+                    is_symbol_table = loadSymbolTable(a, original_position, aend);
+                    break;
+                case SystemSymbolTable.ION_EMBEDDED_VALUE_SID:
+                	// TODO - we should do embedded value processing here
+                	// like: is_embedded_value = true;
+                	break;
+                default:
+                	break;
                 }
             }
         }
@@ -478,9 +513,11 @@ public final class IonBinaryIterator
         return typedesc;
     }
 
-    boolean loadLocalSymbolTable(int annotationid, int original_start, int contents_start) throws IOException 
+    boolean loadSymbolTable(int annotationid, int original_start, int contents_start) throws IOException 
     {
         boolean is_symbol_table = false;
+        boolean is_local_table = (annotationid == SystemSymbolTable.ION_1_0_SID);
+        
         _reader.position(contents_start);
         
         int td = _reader.read();
@@ -514,10 +551,14 @@ public final class IonBinaryIterator
                     local.setMaxId(getInt());
                     break;
                 case SystemSymbolTable.NAME_SID:
-                    local.setName(getString());
+                	if (!is_local_table) {
+                		local.setName(getString());
+                	}
+                	// TODO should we throw here if it's local table is true?
                     break;
                 case SystemSymbolTable.IMPORTS_SID:
                     // BUGBUG: we should be looking these up somewhere !!
+                	// TODO: in the catalog (which we now have)
                     break;
                 case SystemSymbolTable.SYMBOLS_SID:
                     stepInto();
@@ -532,7 +573,10 @@ public final class IonBinaryIterator
                     stepOut();
                     break;
                 case SystemSymbolTable.VERSION_SID:
-                    local.setVersion(getInt());
+                	if (!is_local_table) {
+                		local.setVersion(getInt());
+                	}
+                	// TODO should we throw here if it's local table is true?
                     break;
                 default:
                     break;
@@ -543,10 +587,14 @@ public final class IonBinaryIterator
             // we've read it, it must be a symbol table
             is_symbol_table = true;
 
-            this._symbols = local;
-            //this._in_struct = was_struct;
+            if (is_local_table) {
+            	this._current_symtab = local;
+            }
+            else {
+            	this._catalog.putTable(local);
+            }
             this._parent_tid = prev_parent_tid;
-            this._local_end = prev_end;
+            this._local_end  = prev_end;
         
             int value_start = _reader.position();
             if (value_start >= this._local_end) {
@@ -637,7 +685,7 @@ public final class IonBinaryIterator
         _parent_tid_stack[_top] = _parent_tid;
         // _in_struct_stack[_top] = _in_struct;
         _local_end_stack[_top] = _local_end;
-        _symbol_stack[_top] = _symbols;
+        _symbol_stack[_top] = _current_symtab;
         _top++;
         
         // now we set up for this collections contents
@@ -682,7 +730,7 @@ public final class IonBinaryIterator
         //_in_struct = _in_struct_stack[_top];
         _parent_tid = _parent_tid_stack[_top];
         _local_end = _local_end_stack[_top];
-        _symbols   = _symbol_stack[_top];
+        _current_symtab   = _symbol_stack[_top];
         // _expect_symbol_table = _;
         
         _reader.position(next_start);
@@ -692,24 +740,12 @@ public final class IonBinaryIterator
     
     @Override
     public UnifiedSymbolTable getSymbolTable() {
-        return _symbols;
-    }
-
-    @Override
-    public void setSymbolTable(UnifiedSymbolTable  externalsymboltable) 
-    {
-        if (_symbols != null && SystemSymbolTable.ION_1_0.equals(_symbols.getName())) {
-            _symbols = new UnifiedSymbolTable(_symbols);
-        }
-        if (_symbols == null) {
-            _symbols = new UnifiedSymbolTable(UnifiedSymbolTable.getSystemSymbolTableInstance()); 
-        }
-        _symbols.addImportedTable(externalsymboltable);
+        return _current_symtab;
     }
     
     public void resetSymbolTable() 
     {
-        _symbols = UnifiedSymbolTable.getSystemSymbolTableInstance();
+        _current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
     }
     
     
@@ -776,13 +812,13 @@ public final class IonBinaryIterator
     {
         int[] ids = getAnnotationIds();
         if (ids == null) return null;
-        if (_symbols == null) {
+        if (_current_symtab == null) {
             throw new IllegalStateException();
         }
 
         String[] annotations = new String[ids.length];
         for (int ii=0; ii<ids.length; ii++) {
-            annotations[ii] = _symbols.findSymbol(ids[ii]);
+            annotations[ii] = _current_symtab.findSymbol(ids[ii]);
         }
         
         return annotations;
@@ -821,10 +857,10 @@ public final class IonBinaryIterator
     @Override
     public String getFieldName()
     {
-        if (_value_field_id == -1 || _symbols == null) {
+        if (_value_field_id == -1 || _current_symtab == null) {
             throw new IllegalStateException();
         }
-        return _symbols.findSymbol(_value_field_id);
+        return _current_symtab.findSymbol(_value_field_id);
     }
     
     @SuppressWarnings("deprecation")
@@ -1112,10 +1148,10 @@ public final class IonBinaryIterator
         try {
             if (tid == IonConstants.tidSymbol) {
                 long sid = _reader.readULong(_value_len);
-                if (_symbols == null) {
+                if (_current_symtab == null) {
                     
                 }
-                string_value = _symbols.findSymbol((int)sid);
+                string_value = _current_symtab.findSymbol((int)sid);
             }
             else {
                 string_value = _reader.readString(_value_len);

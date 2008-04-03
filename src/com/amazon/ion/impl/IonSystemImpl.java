@@ -52,6 +52,7 @@ public class IonSystemImpl
     implements IonSystem
 {
     private SystemSymbolTableImpl mySystemSymbols = new SystemSymbolTableImpl();
+    private LocalSymbolTableImpl  mySystemSymbolsAsLocal = new LocalSymbolTableImpl(mySystemSymbols);
     private IonCatalog myCatalog;
     private IonLoader  myLoader = new LoaderImpl(this);
 
@@ -70,6 +71,10 @@ public class IonSystemImpl
     public SystemSymbolTableImpl getSystemSymbolTable()
     {
         return mySystemSymbols;
+    }
+    public LocalSymbolTableImpl getSystemSymbolTableAsLocal()
+    {
+    	return mySystemSymbolsAsLocal;
     }
 
     public SystemSymbolTable getSystemSymbolTable(String systemId)
@@ -118,16 +123,30 @@ public class IonSystemImpl
     public IonDatagram newDatagram(IonValue initialChild)
         throws ContainedValueException
     {
-        if (initialChild.getContainer() != null)
-        {
-            initialChild = clone(initialChild);
+    	if (initialChild != null) {
+    		if (!(initialChild instanceof IonValueImpl)) {
+    			throw new IonException("this Ion system can't mix with instances from other system impl's");
+    		}
+    		if (initialChild.getContainer() != null) {
+    			initialChild = clone(initialChild);
+    		}
         }
 
         IonDatagramImpl datagram = new IonDatagramImpl(this);
-
-        // This will fail if initialChild instanceof IonDatagram:
-        datagram.add(initialChild);
-
+        
+        if (initialChild != null) {
+        	//LocalSymbolTable symtab = initialChild.getSymbolTable();
+        	//if (symtab == null) {
+        	//	symtab = this.newLocalSymbolTable();
+        	//	IonValue ionRep = symtab.getIonRepresentation();
+        	//	datagram.add(ionRep, true);
+        	//	((IonValueImpl)initialChild).setSymbolTable(symtab);
+        	//}
+        	
+        	// This will fail if initialChild instanceof IonDatagram:
+        	datagram.add(initialChild);
+        }
+        
         return datagram;
     }
 
@@ -325,7 +344,7 @@ public class IonSystemImpl
         }
         else if (valueIsSystemId(value))
         {
-            symtab = new LocalSymbolTableImpl(mySystemSymbols);
+            symtab = new LocalSymbolTableImpl( mySystemSymbols );
         }
 
         return symtab;

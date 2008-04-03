@@ -236,7 +236,7 @@ public class Text
             {
                 for (int ii = 0; ii < length; ii++) {
                     c = symbol.charAt(ii);
-                    if (needsEscapeForAsciiRendering(c)
+                    if (needsEscapeForAsciiRendering(c, '\'')
                         || !isIdentifierFollowChar(c))
                     {
                         return true;
@@ -252,10 +252,12 @@ public class Text
 
     //=========================================================================
 
-    public static boolean needsEscapeForAsciiRendering(int c) {
+    public static boolean needsEscapeForAsciiRendering(int c, int quote) {
         switch (c) {
         case '\"':
+        	return (quote == '\"');
         case '\'':
+        	return (quote == '\'');
         case '\\':
             return true;
         default:
@@ -263,7 +265,7 @@ public class Text
         }
     }
 
-    public static Appendable renderAsAscii(int c, Appendable out)
+    public static Appendable renderAsAscii(int c, int quote, Appendable out)
         throws IOException
     {
         switch (c) {
@@ -275,8 +277,10 @@ public class Text
             case '\u0008': return out.append("\\b");
             case '\u0007': return out.append("\\a");
             case '\u000B': return out.append("\\v");
-            case '\"':     return out.append("\\\"");
-            case '\'':     return out.append("\\\'");
+            case '\"':     if (quote != c) break;
+                           else return out.append("\\\"");
+            case '\'':     if (quote != c) break;
+                           else return out.append("\\\'");
             case '\\':     return out.append("\\\\");
             default:
                 break;
@@ -308,14 +312,14 @@ public class Text
      *
      * @throws IOException if the {@link Appendable} throws an exception.
      */
-    public static Appendable printAsAscii(CharSequence text, Appendable out)
+    public static Appendable printAsAscii(CharSequence text, int quote, Appendable out)
         throws IOException
     {
         int len = text.length();
         for (int i = 0; i < len; i++)
         {
             int c = text.charAt(i);
-            renderAsAscii(c, out);
+            renderAsAscii(c, quote, out);
         }
         return out;
     }
@@ -468,21 +472,18 @@ public class Text
         return flags;
     }
 
-    public static String getEscapeString(int c) {
-        if (c < 0) {
-            throw new IllegalArgumentException("fatal - unescapable int character to escape");
-        }
+    public static String getEscapeString(int c, int quote) {
         switch (c) {
-        case '\u0007':    return "\\a";
-        case '\u0008':    return "\\b";
+        case '\u0007':     return "\\a";
+        case '\u0008':     return "\\b";
         case '\f':         return "\\f";
         case '\n':         return "\\n";
         case '\r':         return "\\r";
         case '\t':         return "\\t";
-        case '\u000b':    return "\\v";
+        case '\u000b':     return "\\v";
         case '\\':         return "\\\\";
-        case '\"':         return "\\\"";
-        case '\'':         return "\\\'";
+        case '\"':         if (quote == c) return "\\\""; else break;
+        case '\'':         if (quote == c) return "\\\'"; else break;
         case '/':          return "\\/";
         case '?':          return "\\?";
         default:
@@ -490,6 +491,9 @@ public class Text
                 return "\\0";
             }
             else if (c < 32) {
+                if (c < 0) {
+                    throw new IllegalArgumentException("fatal - unescapable int character to escape");
+                }
                 return "\\x"+Integer.toHexString(c & 0xFF);
             }
             else if (c > '~') {

@@ -14,9 +14,11 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.nio.CharBuffer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 
 /**
  * A concrete implementation of IonWriter which writes the
@@ -42,7 +44,8 @@ public final class IonTextWriter
     OutputStream  _user_out;
 
     boolean     _in_struct;
-    boolean     _pending_comma;
+    boolean     _pending_separator;
+    int         _separator_character;
     
     int         _top;
     int []      _stack_parent_type = new int[10];
@@ -66,8 +69,7 @@ public final class IonTextWriter
         _user_out = null;
         _manager = new BufferManager(); 
         _output = new PrintStream(_manager.openWriter());
-        _pretty = prettyPrint;
-        _utf8_as_ascii = utf8AsAscii;
+        initFlags(prettyPrint, utf8AsAscii);
     }
     public IonTextWriter(OutputStream out, boolean prettyPrint, boolean utf8AsAscii) {
         _user_out = out;
@@ -78,10 +80,13 @@ public final class IonTextWriter
         else {
             _output = new PrintStream(out);
         }
-        _pretty = prettyPrint;
-        _utf8_as_ascii = utf8AsAscii;
+        initFlags(prettyPrint, utf8AsAscii);
     }
-
+    void initFlags(boolean prettyPrint, boolean utf8AsAscii) {
+    	_pretty = prettyPrint;
+    	_utf8_as_ascii = utf8AsAscii;
+    	_separator_character = ' ';
+    }
     public boolean isInStruct() {
         return this._in_struct;
     }
@@ -92,7 +97,19 @@ public final class IonTextWriter
         }
         _stack_parent_type[_top] = typeid; 
         _stack_in_struct[_top] = _in_struct;
-        _stack_pending_comma[_top] = _pending_comma;
+        _stack_pending_comma[_top] = _pending_separator;
+        switch (typeid) {
+        case IonConstants.tidSexp:
+        	_separator_character = ' ';
+        	break;
+        case IonConstants.tidList:
+        case IonConstants.tidStruct:
+        	_separator_character = ',';
+        	break;
+        default:
+        	_separator_character = _pretty ? '\n' : ' ';
+        break;
+        }
         _top++;
     }
     void growStack() {
@@ -109,7 +126,24 @@ public final class IonTextWriter
     }
     int pop() {
         _top--;
-        return _stack_parent_type[_top];
+        int typeid = _stack_parent_type[_top];  // popped parent
+        
+        int parentid = (_top > 0) ? _stack_parent_type[_top - 1] : -1;
+        switch (parentid) {
+        case -1:
+        case IonConstants.tidSexp:
+        	_separator_character = ' ';
+        	break;
+        case IonConstants.tidList:
+        case IonConstants.tidStruct:
+        	_separator_character = ',';
+        	break;
+        default:
+        	_separator_character = _pretty ? '\n' : ' ';
+        break;
+        }
+
+        return typeid;
     }
     int topType() {
         return _stack_parent_type[_top - 1];
@@ -137,13 +171,17 @@ public final class IonTextWriter
     }
     void startValue() throws IOException 
     {
-        if (_pending_comma) {
-            _output.append(',');
-            
-        }
         if (_pretty) {
+        	if (_separator_character != '\n') {
+        		_output.append((char)_separator_character);
+        	}
             _output.println();
             printLeadingWhiteSpace();
+        }
+        else if (_pending_separator) {
+        	_output.append((char)_separator_character);
+            // _output.append(',');
+            
         }
 
         // write field name
@@ -152,7 +190,8 @@ public final class IonTextWriter
             if (name == null) {
                 throw new IllegalArgumentException("structure members require a field name");
             }
-            _output.append(name);
+            CharSequence escapedname = escapeSymbol(name);
+            _output.append(escapedname);
             _output.append(':');
             super.clearFieldName();
         }
@@ -163,7 +202,8 @@ public final class IonTextWriter
             String[] annotations = super.get_annotations_as_strings();
             for (int ii=0; ii<annotation_count; ii++) {
                 String name = annotations[ii];
-                _output.append(name);
+                CharSequence escapedname = escapeSymbol(name);
+                _output.append(escapedname);
                 _output.append(':');
                 _output.append(':');
             }
@@ -172,7 +212,7 @@ public final class IonTextWriter
     }
     
     void closeValue() {
-        _pending_comma = true;
+        _pending_separator = true;
     }
 
     public void startList()
@@ -182,7 +222,7 @@ public final class IonTextWriter
         _in_struct = false;
         push(IonConstants.tidList);        
         _output.append('[');
-        _pending_comma = false;
+        _pending_separator = false;
       }
     public void startSexp()
         throws IOException
@@ -191,7 +231,7 @@ public final class IonTextWriter
         _in_struct = false;
         push(IonConstants.tidSexp);        
         _output.append('(');
-        _pending_comma = false;
+        _pending_separator = false;
     }
     public void startStruct()
         throws IOException
@@ -200,12 +240,12 @@ public final class IonTextWriter
         _in_struct = true;
         push(IonConstants.tidStruct);        
         _output.append('{');
-        _pending_comma = false;
+        _pending_separator = false;
     }
     public void closeList()
         throws IOException
     {
-        _pending_comma = topPendingComma();
+        _pending_separator = topPendingComma();
         if (pop() != IonConstants.tidList) {
             throw new IllegalStateException("mismatched close");
         }
@@ -217,7 +257,7 @@ public final class IonTextWriter
     public void closeSexp()
         throws IOException
     {
-        _pending_comma = topPendingComma();
+        _pending_separator = topPendingComma();
         if (pop() != IonConstants.tidSexp) {
             throw new IllegalStateException("mismatched close");
         }
@@ -229,7 +269,7 @@ public final class IonTextWriter
     public void closeStruct()
         throws IOException
     {
-        _pending_comma = topPendingComma();
+        _pending_separator = topPendingComma();
         if (pop() != IonConstants.tidStruct) {
             throw new IllegalStateException("mismatched close");
         }
@@ -248,27 +288,26 @@ public final class IonTextWriter
     public void writeNull(IonType type) throws IOException
     {
         startValue();
-        _output.append("null.");
         
-        String typename = null;
+        String nullimage = null;
 
         switch (type) {
-        case NULL: typename = "null"; break;
-        case BOOL: typename = "bool"; break;
-        case INT: typename = "int"; break;
-        case FLOAT: typename = "float"; break;
-        case DECIMAL: typename = "decimal"; break;
-        case TIMESTAMP: typename = "timestamp"; break;
-        case SYMBOL: typename = "symbol"; break;
-        case STRING: typename = "string"; break;
-        case BLOB: typename = "blob"; break;
-        case CLOB: typename = "clob"; break;
-        case SEXP: typename = "sexp"; break;
-        case LIST: typename = "list"; break;
-        case STRUCT: typename = "struct"; break;
+        case NULL:      nullimage = "null";           break;
+        case BOOL:      nullimage = "null.bool";      break;
+        case INT:       nullimage = "null.int";       break;
+        case FLOAT:     nullimage = "null.float";     break;
+        case DECIMAL:   nullimage = "null.decimal";   break;
+        case TIMESTAMP: nullimage = "null.timestamp"; break;
+        case SYMBOL:    nullimage = "null.symbol";    break;
+        case STRING:    nullimage = "null.string";    break;
+        case BLOB:      nullimage = "null.blob";      break;
+        case CLOB:      nullimage = "null.clob";      break;
+        case SEXP:      nullimage = "null.sexp";      break;
+        case LIST:      nullimage = "null.list";      break;
+        case STRUCT:    nullimage = "null.struct";    break;
         }
         
-        _output.append(typename);
+        _output.append(nullimage);
         closeValue();
     }
     public void writeBool(boolean value)
@@ -309,16 +348,47 @@ public final class IonTextWriter
     public void writeFloat(float value)
         throws IOException
     {
-        startValue();
-        _output.append(Double.toString(value));
-        closeValue();
+    	writeFloat((double)value);
     }
 
     public void writeFloat(double value)
         throws IOException
     {
         startValue();
-        _output.append(Double.toString(value));
+        
+        // shortcut zero cases
+        if (value == 0.0) {
+            // XXX use the raw bits to avoid boxing and distinguish +/-0e0
+            long bits = Double.doubleToLongBits(value);
+            if (bits == 0L) {
+                // positive zero
+            	_output.append("0e0");
+            }
+            else {
+                // negative zero
+            	_output.append("-0e0");
+            }
+        }
+        else if (Double.isNaN(value)) {
+        	_output.append("nan");
+        }
+        else if (Double.isInfinite(value)) {
+        	if (value > 0) {
+            	_output.append("+inf");
+            }
+        	else {
+        		_output.append("-inf");
+        	}
+        }
+        else {
+            BigDecimal decimal = new BigDecimal(value);
+            BigInteger unscaled = decimal.unscaledValue();
+
+            _output.append(unscaled.toString());
+            _output.append('e');
+            _output.append(Integer.toString(-decimal.scale()));
+        }
+
         closeValue();
     }
 
@@ -326,49 +396,72 @@ public final class IonTextWriter
         throws IOException
     {
         startValue();
-        String image = value.toPlainString();
-        image = image.replace('e', 'd');
-        image = image.replace('E', 'd');
-        _output.append(image);
+        BigInteger unscaled = value.unscaledValue();
+
+        _output.append(unscaled.toString());
+        _output.append('d');
+        _output.append(Integer.toString(-value.scale()));
+        
         closeValue();
     }
-    static final long SECONDS_IN_A_DAY = 24 * 60 * 60;
-    public void writeTimestamp(Date value, int localOffset)
+    
+    private static final SimpleDateFormat TIMESTAMP_FORMATTER =
+        new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
+
+    static {
+        TIMESTAMP_FORMATTER.setLenient(false);
+        // TODO share this timezone instance
+        TIMESTAMP_FORMATTER.setTimeZone(TimeZone.getTimeZone("GMT"));
+    }
+    public void writeTimestamp(Date value, Integer localOffset)
         throws IOException
     {
-        //  "yyyy-MM-dd'T'HH:mm:ss.SSS"
-        //  2001-07-04T12:08:56.235 
-        startValue();
-        long day = value.getTime();
-        long temp1 = day / 1000;
-        long temp2 = temp1 / SECONDS_IN_A_DAY;
-        
-        SimpleDateFormat sdf;
-        
-        if (temp1 * 1000 != day) {
-            // there are fractional seconds, use everything
-            // use fractional seconds (3 decimal place for java
-            sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS"); 
-        }
-        else if (temp2 * SECONDS_IN_A_DAY != day) {
-            // we can round to seconds (there's no fration, but is some time)
-            sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-        }
-        else  {
-            // the time value is empty, just use the day
-            sdf = new SimpleDateFormat("yyyy-MM-dd");
-        }
-        String offset;
-        if (localOffset != 0) {
-            offset = "Z";
-        }
-        else {
-            offset = Integer.toString(localOffset);
-        }
-        String datetime = sdf.format(value);
-        _output.append(datetime);
-        _output.append(offset);
-        closeValue();
+         startValue();
+
+         // TODO push this into IonTimestamp
+         // Adjust UTC time back to local time
+         int  deltaMinutes = (localOffset == null) ? 0 : localOffset.intValue();
+         long deltaMillis = deltaMinutes * 60 * 1000;
+         value.setTime(value.getTime() + deltaMillis);
+
+         // SimpleDateFormat is not threadsafe!
+         String dateTimeRendered;
+         synchronized(TIMESTAMP_FORMATTER) {
+             dateTimeRendered = TIMESTAMP_FORMATTER.format(value);
+         }
+         _output.append(dateTimeRendered);
+
+         if (localOffset == null) {
+        	 _output.append("-00:00");
+         }
+         else  if (deltaMinutes == 0) {
+        	 _output.append('Z');
+         }
+         else {
+             if (deltaMinutes < 0) {
+                 _output.append('-');
+                 deltaMinutes = -deltaMinutes;
+             }
+             else {
+                 _output.append('+');
+             }
+
+             int hours   = deltaMinutes / 60;
+             int minutes = deltaMinutes - (hours * 60);
+
+             if (hours < 10) {
+            	 _output.append('0');
+             }
+             _output.append(Integer.toString(hours));
+
+             _output.append(':');
+
+             if (minutes < 10) {
+            	 _output.append('0');
+             }
+             _output.append(Integer.toString(minutes));
+         }
+         closeValue();
     }
     public void writeTimestampUTC(Date value)
         throws IOException
@@ -389,9 +482,9 @@ public final class IonTextWriter
         for (int ii=0; ii<value.length(); ii++) {
             char c = value.charAt(ii);
             switch (c) {
-                case '"': //   \"  double quote
-                case '\\': //   \\  backslash
-                    return escapeStringHelper(value, ii);
+            case '"': //   \"  double quote
+            case '\\': //   \\  backslash
+                return escapeStringHelper(value, ii);
             default:
                 if (c < 32 || c > 127) {
                     return escapeStringHelper(value, ii);
@@ -412,48 +505,53 @@ public final class IonTextWriter
             }
             else if (c < 128) {
                 switch (c) {
-                    case '"': //   \"  double quote
-                        sb.append("\\\"");
-                        break;
-                    case '\'': //   \'  single quote 
-                        sb.append("\\\'");
-                        break;
-                    case '\\': //   \\  backslash
-                        sb.append("\\\\");
-                        break;
-                    default: 
-                        sb.append(c);
-                        break;
+                case '"':   //   \"  double quote
+                //case '\'':  //   \'  single quote 
+                case '\\':  //   \\  backslash
+                    sb.append('\\');
+                    break;
+                default: 
+                    break;
                 }
+                sb.append(c);
             }
-            if (c == 128) {
-                sb.append("\\u0100");
+            else if (c == 128) {
+                sb.append('\\'+"u0100");
             }
-            else if (Character.isHighSurrogate(c)) {
+            else if (IonConstants.isHighSurrogate(c)) {
                 ii++;
                 char c2 = value.charAt(ii);
-                if (ii >= value.length() || !Character.isLowSurrogate(c2)) {
+                if (ii >= value.length() || !IonConstants.isLowSurrogate(c2)) {
                     throw new IllegalArgumentException("string is not valid UTF-16");
                 }
-                int uc = Character.toCodePoint(c, c2);
+                int uc = IonConstants.makeUnicodeScalar(c, c2);
                 appendUTF8Char(sb, uc);
+            }
+            else if (IonConstants.isLowSurrogate(c)) {
+                throw new IllegalArgumentException("string is not valid UTF-16");
+            }
+            else {
+            	appendUTF8Char(sb, c);
             }
         }
         return sb;
     }
     // escape sequences for character below ascii 32 (space)
     static final String [] LOW_ESCAPE_SEQUENCES = {
-          "\\0",   "\\x01", "\\x02", "\\x03", 
-          "\\x04", "\\x05", "\\x06", "\\a",
-          "\\b",   "\\t",   "\\n",   "\\v",
-          "\\f",   "\\r",   "\\x0e", "\\x0f",
-          "\\x10", "\\x11", "\\x12", "\\x13",
-          "\\x14", "\\x15", "\\x16", "\\x17",
-          "\\x18", "\\x19", "\\x1a", "\\x1b",
-          "\\x1c", "\\x1d", "\\x1e", "\\x1f",
+          "0",   "x01", "x02", "x03", 
+          "x04", "x05", "x06", "a",
+          "b",   "t",   "n",   "v",
+          "f",   "r",   "x0e", "x0f",
+          "x10", "x11", "x12", "x13",
+          "x14", "x15", "x16", "x17",
+          "x18", "x19", "x1a", "x1b",
+          "x1c", "x1d", "x1e", "x1f",
     };
     String lowEscapeSequence(char c) {
-        return LOW_ESCAPE_SEQUENCES[c];
+    	if (c == 13) {
+    		return '\\'+LOW_ESCAPE_SEQUENCES[c];
+    	}
+        return '\\'+LOW_ESCAPE_SEQUENCES[c];
     }
     void appendUTF8Char(StringBuilder sb, int uc) {
         String image;
@@ -461,10 +559,10 @@ public final class IonTextWriter
             image = Integer.toHexString(uc);
             int len = image.length();
             if (len <= 4) {
-                sb.append("\\u0000", 0, 6 - 4);
+                sb.append('\\'+"u0000", 0, 6 - len);
             }
             else {
-                sb.append("\\U00000000", 0, 10 - len);
+                sb.append('\\'+"U00000000", 0, 10 - len);
             }
             sb.append(image);
         }
@@ -515,17 +613,29 @@ public final class IonTextWriter
     }
     static final boolean [] VALID_SYMBOL_CHARACTERS = makeValidSymbolCharacterHelperArray();
     static boolean [] makeValidSymbolCharacterHelperArray() {
+        boolean [] is_valid = makeValidLeadingSymbolCharacterHelperArray();
+        // basically we add the digits '0' through '9' to the list
+        // of characters that are valid in an unquoted symbol to
+        // the list of characters that are valid to start a symbol
+        for (int c = '0'; c <= '9'; c++) is_valid[c] = true;
+        return is_valid;
+    }
+    static final boolean [] VALID_LEADING_SYMBOL_CHARACTERS = makeValidLeadingSymbolCharacterHelperArray();
+    static boolean [] makeValidLeadingSymbolCharacterHelperArray() {
         boolean [] is_valid = new boolean[128];
         for (int c = 'a'; c <= 'z'; c++) is_valid[c] = true;
         for (int c = 'A'; c <= 'Z'; c++) is_valid[c] = true;
-        for (int c = '0'; c <= '9'; c++) is_valid[c] = true;
         is_valid['_'] = true;
         is_valid['$'] = true;
         return is_valid;
     }
     CharSequence escapeSymbol(String value) {
-        for (int ii=0; ii<value.length(); ii++) {
-            char c = value.charAt(ii);
+    	char c = value.charAt(0);
+        if (c > 127 || !VALID_LEADING_SYMBOL_CHARACTERS[c]) {
+            return escapeSymbolHelper(value, 0);
+        }
+        for (int ii=1; ii<value.length(); ii++) {
+            c = value.charAt(ii);
             if (c > 127 || !VALID_SYMBOL_CHARACTERS[c]) {
                 return escapeSymbolHelper(value, ii);
             }
@@ -545,28 +655,32 @@ public final class IonTextWriter
             }
             else if (c < 128) {
                 switch (c) {
-                    case '\'': //   \'  single quote 
-                        sb.append("\\\'");
-                        break;
-                    case '\\': //   \\  backslash
-                        sb.append("\\\\");
-                        break;
-                    default: 
-                        sb.append(c);
-                        break;
+                case '\'': //   \'  single quote 
+                case '\\': //   \\  backslash
+                	sb.append('\\');
+                    break;
+                default: 
+                    break;
                 }
+                sb.append(c);
             }
-            if (c == 128) {
-                sb.append("\\u0100");
+            else if (c == 128) {
+                sb.append('\\'+"u0100");
             }
-            else if (Character.isHighSurrogate(c)) {
+            else if (IonConstants.isHighSurrogate(c)) {
                 ii++;
                 char c2 = value.charAt(ii);
-                if (ii >= value.length() || !Character.isLowSurrogate(c2)) {
+                if (ii >= value.length() || !IonConstants.isLowSurrogate(c2)) {
                     throw new IllegalArgumentException("string is not valid UTF-16");
                 }
-                int uc = Character.toCodePoint(c, c2);
+                int uc = IonConstants.makeUnicodeScalar(c, c2);
                 appendUTF8Char(sb, uc);
+            }
+            else if (IonConstants.isLowSurrogate(c)) {
+                throw new IllegalArgumentException("string is not valid UTF-16");
+            }
+            else {
+            	appendUTF8Char(sb, c);
             }
         }
         sb.append('\'');
@@ -621,9 +735,17 @@ public final class IonTextWriter
                 _output.append(lowEscapeSequence(c));
             }
             else if (c == 128) {
-                _output.append("\\u0100");
+                _output.append('\\'+"u0100");
             }
             else {
+                switch (c) {
+                case '"':  //   \"  double quote
+                case '\\': //   \\  backslash
+                	_output.append('\\');
+                    break;
+                default: 
+                    break;
+                }
                 _output.append(c);
             }
         }
@@ -639,10 +761,13 @@ public final class IonTextWriter
         if (_manager == null) {
             throw new IllegalStateException("this writer was not created with buffer backing"); 
         }
-        byte[] bytes = new byte[_manager.buffer().size()];
+        byte[] bytes = null;
+        int len = _manager.buffer().size();
+        bytes = new byte[len];
         IonBinary.Reader r = _manager.openReader();
+        r.sync();
         r.setPosition(0); // just in case
-        int len = r.read(bytes);
+        len = r.read(bytes);
         if (len != _manager.buffer().size()) {
             throw new IllegalStateException("inconsistant buffer sizes encountered");
         }
@@ -659,6 +784,7 @@ public final class IonTextWriter
             throw new IllegalArgumentException();
         }
         IonBinary.Reader r = _manager.openReader();
+        r.sync();
         r.setPosition(0); // just in case
         int len = r.read(bytes, offset, buffer_length);
         if (buffer_length != _manager.buffer().size()) {
@@ -675,6 +801,7 @@ public final class IonTextWriter
         int buffer_length = _manager.buffer().size();
         
         IonBinary.Reader r = _manager.openReader();
+        r.sync();
         r.setPosition(0); // just in case
         
         int len = r.writeTo((ByteWriter)out, buffer_length);
