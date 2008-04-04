@@ -12,8 +12,8 @@ import java.io.IOException;
  */
 public class Text
 {
-
-
+	public static final int EscapeAllQuoteCharactersCharacter = -2;
+	
     private static final boolean[] IDENTIFIER_START_CHAR_FLAGS;
     private static final boolean[] IDENTIFIER_FOLLOW_CHAR_FLAGS;
     static
@@ -251,6 +251,19 @@ public class Text
 
 
     //=========================================================================
+    @Deprecated
+    public static boolean needsEscapeForAsciiRendering(int c) {
+        switch (c) {
+        case '\"':
+        	return true;
+        case '\'':
+        	return true;
+        case '\\':
+            return true;
+        default:
+            return (c < 32 || c > 126);
+        }
+    }
 
     public static boolean needsEscapeForAsciiRendering(int c, int quote) {
         switch (c) {
@@ -264,7 +277,14 @@ public class Text
             return (c < 32 || c > 126);
         }
     }
-
+    
+    @Deprecated
+    public static Appendable renderAsAscii(int c, Appendable out)
+    	throws IOException
+    {
+    	return renderAsAscii(c, EscapeAllQuoteCharactersCharacter, out);
+    }
+    
     public static Appendable renderAsAscii(int c, int quote, Appendable out)
         throws IOException
     {
@@ -277,10 +297,18 @@ public class Text
             case '\u0008': return out.append("\\b");
             case '\u0007': return out.append("\\a");
             case '\u000B': return out.append("\\v");
-            case '\"':     if (quote != c) break;
-                           else return out.append("\\\"");
-            case '\'':     if (quote != c) break;
-                           else return out.append("\\\'");
+            case '\"':	   if (quote == c 
+            				|| quote == EscapeAllQuoteCharactersCharacter
+            			   ) {
+            				   return out.append("\\\"");            	
+            			   }
+            			   break;
+            case '\'':     if (quote == c 
+            				|| quote == EscapeAllQuoteCharactersCharacter
+            			   ) {
+        					   return out.append("\\\'");            	
+			   			   }
+						   break;
             case '\\':     return out.append("\\\\");
             default:
                 break;
@@ -301,6 +329,24 @@ public class Text
         return out;
     }
 
+    /**
+     * Renders text content as ASCII using escapes suitable for Ion strings and
+     * symbols.  No surrounding quotation marks are rendered.
+     *
+     * @param text the text to render.
+     * @param out the stream to recieve the data.
+     *
+     * @return the same instance supplied by the parameter {@code out}.
+     *
+     * @throws IOException if the {@link Appendable} throws an exception.
+     */
+    @Deprecated
+    public static Appendable printAsAscii(CharSequence text, Appendable out)
+        throws IOException
+    {
+    	return printAsAscii(text, EscapeAllQuoteCharactersCharacter, out);
+    }
+    
     /**
      * Renders text content as ASCII using escapes suitable for Ion strings and
      * symbols.  No surrounding quotation marks are rendered.
@@ -482,8 +528,18 @@ public class Text
         case '\t':         return "\\t";
         case '\u000b':     return "\\v";
         case '\\':         return "\\\\";
-        case '\"':         if (quote == c) return "\\\""; else break;
-        case '\'':         if (quote == c) return "\\\'"; else break;
+        case '\"':         if (quote == c
+        					|| quote == EscapeAllQuoteCharactersCharacter
+        				   ) {
+        					   return "\\\"";
+        				   }
+        				   break;
+        case '\'':		   if (quote == c
+							|| quote == EscapeAllQuoteCharactersCharacter
+		   				   ) {
+			   				   return "\\\'";
+		   				   }
+		   				   break;         
         case '/':          return "\\/";
         case '?':          return "\\?";
         default:

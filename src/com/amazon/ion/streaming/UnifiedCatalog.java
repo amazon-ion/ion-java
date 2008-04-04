@@ -64,11 +64,15 @@ public class UnifiedCatalog
             	// asked for (see CAVEAT above)
                 assert !versions.isEmpty();
                 
-                Map.Entry<Integer, UnifiedSymbolTable> entry;
-                entry = versions.lastEntry();
-                assert entry != null;
+                // FIXME in Java 5 this works:                
+                st = versions.get(versions.lastKey());
                 
-                st = entry.getValue();
+                // FIXME in Java 6 this works:
+                //Map.Entry<Integer, UnifiedSymbolTable> entry;
+                //entry = versions.lastEntry();
+                //assert entry != null;
+                //st = entry.getValue();
+                
                 assert st != null;
             }
         }
