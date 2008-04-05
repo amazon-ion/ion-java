@@ -21,6 +21,8 @@ public abstract class DirectoryTestSuite
     {
         super();
 
+        setName(getClass().getName());
+
         File goodFilesDir = IonTestCase.getTestdataFile(testdataDir);
         String[] fileNames = goodFilesDir.list();
         if (fileNames == null)
