@@ -65,7 +65,7 @@ public class EquivIonStreamingTests extends DirectoryTestSuite {
 	        	String[] a1 = it1.getAnnotations();
 	        	String[] a2 = it2.getAnnotations();
 	        	if (a1 == null) {
-	        		assert a1 != null && a2 != null;
+	        		assert a1 == null && a2 == null;
 	        	}
 	        	else {
 	        		assert a1.length == a2.length;
