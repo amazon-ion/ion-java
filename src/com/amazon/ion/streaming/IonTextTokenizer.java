@@ -307,6 +307,8 @@ static final boolean _debug = false;
         other._has_saved_symbol = this._has_saved_symbol;
         other._saved_symbol.setLength(0);
         other._saved_symbol.append(this._saved_symbol);
+        //other._saved_symbol_len = this._saved_symbol_len;
+        //System.arraycopy(this._saved_symbol_buf, 0, other._saved_symbol_buf, 0, other._saved_symbol_len);
 
         other._token_lookahead_current = this._token_lookahead_current;
         other._token_lookahead_next_available = this._token_lookahead_next_available;
@@ -339,6 +341,7 @@ static final boolean _debug = false;
         _has_saved_symbol = false;
         _has_marked_symbol = false;
         _saved_symbol.setLength(0);
+        //_saved_symbol_len = 0;
         //_start = -1; 
         //_end = -1;
     }
@@ -594,15 +597,8 @@ loop:   for (;;) {
             case '\'':
                 t = read_quoted_symbol(c);
                 break loop;
-            //case '~': case '`': case '!': case '@': case '#': 
-            //case '%': case '^': case '&': case '*': 
-            //case '=': case ';': case '?':
-            //case '>': case '<': case '|': case '\\':
-            	
-           	// case '.': case '+': case '-': case '/': 
            	case '<': case '>': case '*': case '=': case '^': case '&': case '|': 
            	case '~': case ';': case '!': case '?': case '@': case '%': case '`': 
-
             	t = this.read_symbol_extended(c);
             	break loop;
             case '"':
@@ -782,15 +778,16 @@ loop:   for (;;) {
         		}
         		c = '\n';
         	}
-        	else if (c == '\n') {
-        		c2 = _r.read();
-        		if (c2 != '\r') {
-        			_peek_ahead_char = c2;
-        		}
-        		else {
-        			_char_length++;
-        		}
-        	}
+        	// not needed
+        	//else if (c == '\n') {
+        	//	c2 = _r.read();
+        	//	if (c2 != '\r') {
+        	//		_peek_ahead_char = c2;
+        	//	}
+        	//	else {
+        	//		_char_length++;
+        	//	}
+        	//}
             return c;
         }
         else if ((c & (0x80 | 0x40 | 0x20)) == (0x80 | 0x40)) {
@@ -904,6 +901,8 @@ loop:   for (;;) {
     	int start, end;
         _saved_symbol.setLength(0);
         _saved_symbol.append((char)c);
+        //_saved_symbol_len = 0;
+        //saved_symbol_append((char)c);
         start = currentCharStart();
         setNextStart(start);
         
@@ -923,7 +922,8 @@ loop:   for (;;) {
             case '$': case '_':
             case '0': case '1': case '2': case '3': case '4':
             case '5': case '6': case '7': case '8': case '9':
-                _saved_symbol.append((char)c);
+            	_saved_symbol.append((char)c);
+                //saved_symbol_append((char)c);
                 break;
             default:
             	this.unread_char(c);
@@ -988,6 +988,8 @@ loop:   for (;;) {
     	int start, end;
         _saved_symbol.setLength(0);
         _saved_symbol.append((char)c);
+    	//_saved_symbol_len = 0;
+    	//saved_symbol_append((char)c);
         start = currentCharStart();
         setNextStart(start);
         
@@ -1015,8 +1017,9 @@ loop:   for (;;) {
 
            	case '.': case '+': case '-': case '/': 
            	case '<': case '>': case '*': case '=': case '^': case '&': case '|': 
-           	case '~': case ';': case '!': case '?': case '@': case '%': case '`': 
-                _saved_symbol.append((char)c);
+           	case '~': case ';': case '!': case '?': case '@': case '%': case '`':
+           		_saved_symbol.append((char)c);
+                //saved_symbol_append((char)c);
                 break;
             default:
                 this.unread_char(c);
@@ -1602,14 +1605,38 @@ loop:   for (;;) {
         String value = closeValueAsString(pos);
         return value;
     }
+    
+    
+    /*
+    private char[] _saved_symbol_buf = new char[32];
+    private int    _saved_symbol_len = 0;
+    private final void saved_symbol_grow(int needed) {
+    	int len;
+    	for (len = _saved_symbol_buf.length; len < needed; len *= 2);
+    	char[] temp = new char[len];
+    	System.arraycopy(_saved_symbol_buf, 0, temp, 0, _saved_symbol_len);
+    	_saved_symbol_buf = temp;
+    }
+    private final void saved_symbol_append(char c) {
+    	if (_saved_symbol_len >= _saved_symbol_buf.length) {
+    		saved_symbol_grow(_saved_symbol_len + 1);
+    	}
+    	_saved_symbol_buf[_saved_symbol_len++] = c;
+    }
+    */
+    
     int startValueAsString() {
     	int pos = _r.position(); 
         _saved_symbol.setLength(0);
+    	//_saved_symbol_len = 0;
         return pos;
     }
     void continueValueAsString(int start, int end) {
     	int lookahead = IonTextTokenizer.EMPTY_PEEKAHEAD;
-        _r.setPosition(start);	
+        _r.setPosition(start);
+        //if (_saved_symbol_len + end - start > _saved_symbol_buf.length) {
+        //	saved_symbol_grow(_saved_symbol_len + end - start);
+        //}
         try {
             while (lookahead != IonTextTokenizer.EMPTY_PEEKAHEAD || _r.position() < end) {
                 int c;
@@ -1644,9 +1671,11 @@ loop:   for (;;) {
                         int c2 = IonConstants.makeLowSurrogate(c);
                         c  = IonConstants.makeHighSurrogate(c);
                         _saved_symbol.append((char)c2);
+                        //saved_symbol_append((char)c2);
                     }
                 }
                 _saved_symbol.append((char)c);
+                //saved_symbol_append((char)c);
             }
         }
         catch (IOException e){
@@ -1772,6 +1801,7 @@ loop:   for (;;) {
     
     String closeValueAsString(int pos) {
         String value = _saved_symbol.toString();
+    	//String value = new String(_saved_symbol_buf, 0, _saved_symbol_len);
         _r.setPosition(pos);
         return value;
     }
@@ -1783,12 +1813,14 @@ loop:   for (;;) {
     		unicodeScalar = IonConstants.makeHighSurrogate(unicodeScalar);
     	}
     	_saved_symbol.append((char)unicodeScalar);
+    	//saved_symbol_append((char)unicodeScalar);
     	
     	// this odd construct is in place to prepare for converting _saved_symbol
     	// to a locally managed character array instead of the more expensive
     	// stringbuffer
     	if (c2 != 0) {
-    		_saved_symbol.append((char)c2);	
+    		_saved_symbol.append((char)c2);
+    		//saved_symbol_append((char)c2);	
     	}
     }
 

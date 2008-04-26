@@ -49,7 +49,7 @@ public class RoundTripTests
         }
 
 
-        private String render(IonDatagram datagram)
+        private String renderSystemView(IonDatagram datagram)
             throws IOException
         {
             // TODO use Printer in raw mode.
@@ -65,7 +65,22 @@ public class RoundTripTests
             return text;
         }
 
-
+        private String renderUserView(IonDatagram datagram)
+        throws IOException
+	    {
+	        // TODO use Printer in raw mode.
+	        for (Iterator i = datagram.iterator(); i.hasNext();)
+	        {
+	            IonValue value = (IonValue) i.next();
+	            myPrinter.print(value, myBuilder);
+	            myBuilder.append('\n');
+	        }
+	
+	        String text = myBuilder.toString();
+	        myBuilder.setLength(0);
+	        return text;
+	    }
+	
         private byte[] encode(IonDatagram datagram)
         {
             return datagram.toBytes();
@@ -80,7 +95,7 @@ public class RoundTripTests
             IonDatagram values = readIonText(myTestFile);
 
             // Turn the DOM back into text...
-            String text1   = render(values);
+            String text1   = renderSystemView(values);
             byte[] binary1 = encode(values);
             checkBinaryHeader(binary1);
 
@@ -98,7 +113,7 @@ public class RoundTripTests
                 throw new IonException(message, e);
             }
 
-            String text2FromText   = render(values);
+            String text2FromText   = renderUserView(values);
             byte[] binary2FromText = encode(values);
             checkBinaryHeader(binary2FromText);
 
@@ -107,13 +122,13 @@ public class RoundTripTests
 
             values = loader.load(binary1);
 
-            String text2FromBinary   = render(values);
+            String text2FromBinary   = renderUserView(values);
             byte[] binary2FromBinary = encode(values);
             checkBinaryHeader(binary2FromBinary);
             assertEquals(binary1.length, binary2FromBinary.length);
 
-            assertEquals("rendering from text vs from binary,",
-                         text2FromText, text2FromBinary);
+            assertTrue("rendering from text vs from binary,",
+            		compareRenderedTextImages(text2FromText, text2FromBinary));
 
             assertEquals("encoded size from text vs from binary",
                          binary2FromText.length,
@@ -129,6 +144,24 @@ public class RoundTripTests
         }
     }
 
+    private final static String ivm = "$ion_1_0";
+    static boolean compareRenderedTextImages(String s1, String s2) {
+    	assert (s1 != null);
+    	assert (s2 != null);
+    	
+    	if (s1 == s2) return true;
+    	if (s1.equals(s2)) return true;
+
+    	if (!s1.startsWith(ivm)) {
+    		s1 = ivm + " " + s1;
+    	}
+		if (!s2.startsWith(ivm)) {
+			s2 = ivm + " " + s2;
+		}
+		// TODO the next step is, if they are still not the same, then
+		//      convert them to binary and back to string and compare again
+    	return s1.equals(s2);
+    }
 
 
     public static TestSuite suite()

@@ -302,7 +302,11 @@ public class IonSystemImpl
     // System Elements
 
     /**
-     * TODO this doesn't recognize general $ion_X_Y (and it should).
+     * checks the value to see if it is a symbol and has the
+     * form $ION_ddd_ddd.  Where ddd is 1 or more decimal
+     * digits.  This includes the current value of $ION_1_0
+     * which is really the only valid system id today, but
+     * there may be more later.
      */
     private final boolean valueIsSystemId(IonValue value)
     {
@@ -310,14 +314,54 @@ public class IonSystemImpl
         {
             IonSymbol symbol = (IonSymbol) value;
             int sid = symbol.intValue();
-            if (sid > 0)
+            if (sid == SystemSymbolTableImpl.ION_1_0_SID)
             {
-                return sid == SystemSymbolTableImpl.ION_1_0_SID;
+                return true;
             }
-
-            return SystemSymbolTable.ION_1_0.equals(symbol.stringValue());
+            String image = symbol.stringValue();
+            if (SystemSymbolTable.ION_1_0.equals(image))
+            {
+            	return true;
+            }
+            if (!image.startsWith(SystemSymbolTable.ION)) {
+            	return false;
+            }
+            // now we see if the rest of the symbol is _DDD_DDD
+            int underscore1 = SystemSymbolTable.ION.length();
+            int underscore2 = image.indexOf('_', underscore1 + 1);
+            if (underscore2 < 0)
+            {
+            	return false;
+            }
+            if (!isUnderscoreAndDigits(image, underscore1, underscore2))
+            {
+            	return false;
+            }
+            if (!isUnderscoreAndDigits(image, underscore2, image.length()))
+            {
+            	return false;
+            }
+            return true;
         }
         return false;
+    }
+    
+    boolean isUnderscoreAndDigits(String image, int firstChar, int lastChar)
+    {
+    	// you have to have enought characters for the underscore and
+    	// at least 1 digit
+    	if (lastChar - firstChar < 2) return false;
+    	
+    	// make sure the first character is the underscore
+    	if (image.charAt(firstChar) != '_') return false;
+    	
+    	// make sure all the remaining characters are digits
+    	for (int ii = firstChar + 1; ii < lastChar; ii++) {
+            if (!Character.isDigit(image.charAt(ii))) return false; 
+        }
+    	
+    	// it must be "_ddd" then
+    	return true;
     }
 
     public final boolean valueIsStaticSymbolTable(IonValue value)
@@ -335,7 +379,8 @@ public class IonSystemImpl
 
         if (value instanceof IonStruct)
         {
-            if (value.hasTypeAnnotation(SystemSymbolTable.ION_1_0))
+        	if (AbstractSymbolTable.getSymbolTableType(value).equals(SymbolTableType.LOCAL))
+            //if (value.hasTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE)) // cas 25 apr 2008 was: ION_1_0
             {
                 symtab = new LocalSymbolTableImpl(this, catalog,
                                                   (IonStruct) value,
@@ -344,7 +389,13 @@ public class IonSystemImpl
         }
         else if (valueIsSystemId(value))
         {
-            symtab = new LocalSymbolTableImpl( mySystemSymbols );
+        	symtab = value.getSymbolTable();
+        	if (symtab == null
+        	 || symtab.getMaxId() != mySystemSymbols.getMaxId()
+        	) {
+        		symtab = new LocalSymbolTableImpl( mySystemSymbols );
+        		((IonValueImpl)value).setSymbolTable(symtab);
+        	}
         }
 
         return symtab;

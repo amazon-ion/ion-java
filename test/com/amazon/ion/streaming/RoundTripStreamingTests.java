@@ -92,9 +92,9 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
         {
         	boolean is_first = true;
             // iterator used to be .systemIterator()
-            for (Iterator i = datagram.iterator(); i.hasNext();)
-            {
-                IonValue value = (IonValue) i.next();
+        	Iterator it = datagram.iterator();
+            while (it.hasNext()) {
+                IonValue value = (IonValue) it.next();
                 if (is_first) {
                 	is_first = false;
                 }
@@ -184,10 +184,7 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
                 
                 boolean datagrams_are_equal = Equivalence.ionEquals(this.ion, other.ion);
         		if (!datagrams_are_equal) {
-        			System.out.println("\n------------------------------\n");
-        			dump_binary(this.title, this.binary);
-        			System.out.println("\n");
-        			dump_binary(other.title, other.binary);
+        			dump_datagrams(other);
         			datagrams_are_equal = Equivalence.ionEquals(this.ion, other.ion);
         		}
                 assertTrue("datagram: " + vs, Equivalence.ionEquals(this.ion, other.ion));
@@ -262,12 +259,18 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
         		}
         		boolean datagrams_are_equal = Equivalence.ionEquals(dg1, dg2);
         		if (!datagrams_are_equal) {
-        			System.out.println("\n------------------------------\n");
-        			dump_binary(this.title, this.binary);
-        			dump_binary(other.title, other.binary);
+        			dump_datagrams(other);
         			datagrams_are_equal = Equivalence.ionEquals(dg1, dg2);
         		}
         		assertTrue("resulting datagrams should be the same in "+title, datagrams_are_equal);
+        	}
+        	
+        	void dump_datagrams(roundTripBufferResults other) {
+        		System.out.println("\n------------------------------\n");
+				System.out.println(this.string);
+				dump_binary(this.title, this.binary);
+				System.out.println("\n");
+				dump_binary(other.title, other.binary);
         	}
         	
         	void dump_binary(String title, byte[] buf)
@@ -317,28 +320,27 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
         roundTripBufferResults roundTripBuffer(String pass, byte[] testBuffer) 
         throws IOException
         {
-        	roundTripBufferResults results = new roundTripBufferResults(pass+" original");
-        	roundTripBufferResults in = new roundTripBufferResults(pass + " copy");
+        	roundTripBufferResults stream = new roundTripBufferResults(pass+" stream");
+        	roundTripBufferResults tree = new roundTripBufferResults(pass + " tree");
         	
             IonDatagram inputDatagram = loader().load(testBuffer);
 
             // Turn the DOM back into text...
-            in.string   = makeString(inputDatagram);
-            in.utf8_buf = in.string.getBytes("UTF-8");
-            in.binary   = makeBinary(inputDatagram);
-            in.ion      = inputDatagram;
-            checkBinaryHeader(in.binary);            
+            tree.string     = makeString(inputDatagram);
+            tree.utf8_buf   = tree.string.getBytes("UTF-8");
+            tree.binary     = makeBinary(inputDatagram);
+            tree.ion        = inputDatagram;
+            checkBinaryHeader(tree.binary);            
 
-            results.utf8_buf = makeText(testBuffer);
-            results.string   = makeString(testBuffer);
-            results.binary   = makeBinary(testBuffer);
-            results.ion      = makeTree(testBuffer);
+            stream.utf8_buf = makeText(testBuffer);
+            stream.string   = makeString(testBuffer);
+            stream.binary   = makeBinary(testBuffer);
+            stream.ion      = makeTree(testBuffer);
+            checkBinaryHeader(stream.binary);
             
-            checkBinaryHeader(results.binary);
+            tree.compareResultsPass1(stream, myLoader);
             
-            in.compareResultsPass1(results, myLoader);
-            
-            return results;
+            return stream;
         }
         
         IonIterator makeIterator(byte [] testBuffer) {

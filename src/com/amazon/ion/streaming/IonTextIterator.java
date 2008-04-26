@@ -41,7 +41,7 @@ public final class IonTextIterator
    
 //////////////////////////////////////////////////////////////////////////debug
     static final boolean _debug = false;
-
+    static final boolean _debug_all_system = false; 
     
 
     IonTextTokenizer    _scanner;
@@ -94,8 +94,6 @@ public final class IonTextIterator
         this._scanner.restore_state();
     }
     void copy_state_to(IonTextIterator other) {
-        
-        
         
         other._annotation_count = this._annotation_count;
         if (this._annotation_count > 0) { 
@@ -281,7 +279,6 @@ public final class IonTextIterator
         return size;
     }
     
-    
     @Override
     public void stepInto()
     {
@@ -322,90 +319,132 @@ public final class IonTextIterator
     @Override
     public boolean hasNext() 
     {    
-        if (_eof) return false;
+        boolean has_next = hasNextHelper();
+        
+        while (has_next) {
+        	if (!checkForSystemValuesToSkipOrProcess()) break;
+        	_lookahead_type = null;
+        	has_next = hasNextHelper();
+        }
+        
+        // if we have a "next" then we better not be at eof
+        // and visa versa
+        assert has_next == !_eof;
+        
+        return has_next;
+    }
+    private boolean hasNextHelper() 
+    {   
+    	if (_eof) return false;
         
         if (_lookahead_type == null) {
         	_lookahead_type = lookahead();
         	_eof = (_lookahead_type == null);
         }
 
-        return !_eof;
+        return !_eof;    	
+    }
+    private boolean checkForSystemValuesToSkipOrProcess() {
+    	boolean skip_value = false;
+    	
+        // we only look for system values at the top level,
+    	if (_current_depth == 0) {
+    	
+    		// the only system value we skip at the top
+    		// is a local symbol table, but we process the
+    		// version symbol, and shared symbol tables too
+	        switch (_lookahead_type) {
+	        case SYMBOL:
+	    		if (UnifiedSymbolTable.ION_1_0.equals(this.getString())) {
+	    			_current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
+	    			skip_value = true;
+	    		}
+	    		break;
+	        case STRUCT:
+
+	        	/*
+	        	it looks like we'll need to "save" this state to avoid
+	        	having to make a big copy (hard to say which is cheaper really)
+	        	
+	        	to save state we need a token stream with:
+	        		token_marker: start, end
+	        		type, value TM,  annotations TM's fieldname TM	        	
+	        	*/
+
+	        	if (_annotation_count > 0) {
+	        		// TODO - this should be done with flags set while we're 
+	        		// recognizing the annotations below (in the fullness of time)
+	        		if (hasAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE)) { // cas 25 apr 2008 was: ION_1_0
+	        			
+	        			if (_debug_all_system) this.save_state();
+	        			
+	        			 UnifiedSymbolTable local = loadSymbolTable();
+	        			 if (local != null) {
+	        				 _current_symtab = local;
+	        				 skip_value = true;
+	        			 }
+	        			 
+	        			 if (_debug_all_system) this.restore_state();
+	        			 
+	        		}
+	        		else if (_catalog != null && hasAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE)) {
+	        			UnifiedSymbolTable shared = loadSymbolTable();
+	        			 if (shared != null) {
+	        				 _catalog.putTable(shared);
+	        				 // TODO: don't we want to return shared symbol tables?
+	        				 skip_value = true;
+	        			 }
+	        		}
+	        	}
+	        	break;
+	        case SEXP:
+	        	if (_annotation_count > 0) {
+	        		if (hasAnnotation(UnifiedSymbolTable.ION_EMBEDDED_VALUE)) {
+        			// TODO: WTF? why are there embedded values in a text input stream
+        			//       fill this in later, especially at the top, datagram, level
+	        		}
+	        	}
+	        	break;
+	    	default:
+	    		break;
+	        }
+		}
+        else {
+        	// down in the value stack we just look for an embedded value
+        	// otherwise we don't care about anything
+	        switch (_lookahead_type) {
+	        case SEXP:
+	        	if (_annotation_count > 0) {
+	        		if (hasAnnotation(UnifiedSymbolTable.ION_EMBEDDED_VALUE)) {
+	        			// TODO: WTF? why are there embedded values in a text input stream
+	        			//       fill this in later
+	        		}
+	        	}
+	        	break;
+	    	default:
+	    		break;
+	        }
+    	}
+    	
+    	return _debug_all_system ? false : skip_value;
     }
     @Override
     public IonType next() 
     {
-    	IonType t = null;
-    	
-    	while (!_eof && t == null) {
-    		if (_lookahead_type == null) {
-    			if (!hasNext()) break;
-    		}
-            t = _lookahead_type;
-            _lookahead_type = null;
-            
-            // while we're at the top level we look for system values,
-            // like symbol tables and ion version markers
-            if (this._current_depth == 0) {
-		        switch (t) {
-		        case SYMBOL:
-		    		if (UnifiedSymbolTable.ION_1_0.equals(this.getString())) {
-		    			t = null;
-		    			_current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
-		    		}
-		    		break;
-		        case STRUCT:
-		        	if (_annotation_count > 0) {
-		        		// TODO - this should be done with flags set while we're 
-		        		// recognizing the annotations below
-		        		if (hasAnnotation(UnifiedSymbolTable.ION_1_0)) {
-		        			 UnifiedSymbolTable local = loadSymbolTable();
-		        			 if (local != null) {
-		        				 _current_symtab = local;
-		        				 t = null;
-		        			 }
-		        		}
-		        		else if (_catalog != null && hasAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE)) {
-		        			UnifiedSymbolTable shared = loadSymbolTable();
-		        			 if (shared != null) {
-		        				 _catalog.putTable(shared);
-		        				 // we want to return sharede symbol tables: t = null;
-		        			 }
-		        		}
-		        	}
-		        	break;
-		        case SEXP:
-		        	if (_annotation_count > 0) {
-		        		if (hasAnnotation(UnifiedSymbolTable.ION_EMBEDDED_VALUE)) {
-	        			// TODO: WTF? why are there embedded values in a text input stream
-	        			//       fill this in later
-		        		}
-		        	}
-		        	break;
-		    	default:
-		    		break;
-		        }
-    		}
-            else {
-            	// down in the value stack we just look for an embedded value
-            	// otherwise we don't care about anything
-		        switch (t) {
-		        case SEXP:
-		        	if (_annotation_count > 0) {
-		        		if (hasAnnotation(UnifiedSymbolTable.ION_EMBEDDED_VALUE)) {
-		        			// TODO: WTF? why are there embedded values in a text input stream
-		        			//       fill this in later
-		        		}
-		        	}
-		        	break;
-		    	default:
-		    		break;
-		        }
-
-            }
-    	}
-        if (t == null) {
-        	throw new NoSuchElementException();
-        }
+		if (_lookahead_type == null) {
+			// we check just in case the caller didn't call hasNext() 
+			if (!hasNext()) {
+	        	// so if there really no next, it's a problem here
+	        	throw new NoSuchElementException();
+	        }
+			// if there's something to return then it better have a type
+			assert _lookahead_type != null;
+		}
+		
+		// if we return the lookahead type from next, it's gone
+		// this will force hasNext() to look again
+		IonType t = _lookahead_type;
+		_lookahead_type = null;
         return t;
     }
     
@@ -503,7 +542,16 @@ public final class IonTextIterator
     			table.setName(this.getString());
     			break;
     		case UnifiedSymbolTable.SYMBOLS_SID:
-    			loadSymbolStruct(table);
+    			switch (this.getType()) {
+    			case STRUCT:
+    				loadSymbolStruct(table);
+    				break;
+    			case LIST:
+    				loadSymbolList(table);
+    				break;
+    			default:
+    				throw new IonException("symbols member of a symbol table must be a list or a struct, not a "+getType());
+    			}
     			break;
     		case UnifiedSymbolTable.IMPORTS_SID:
     			loadImportList(table);
@@ -521,7 +569,18 @@ public final class IonTextIterator
 		this.stepInto();
 		while (this.hasNext()) {
 			if (next() == IonType.STRING) {
-				table.defineSymbol(this.getString(), this.getFieldId());
+				int sid = this.getFieldId();
+				table.defineSymbol(this.getString(), sid);
+			}
+		}
+		this.stepOut();
+	}
+	void loadSymbolList(UnifiedSymbolTable table) {
+		this.stepInto();
+		while (this.hasNext()) {
+			if (next() == IonType.STRING) {
+				int sid = table.getMaxId() + 1;
+				table.defineSymbol(this.getString(), sid);
 			}
 		}
 		this.stepOut();

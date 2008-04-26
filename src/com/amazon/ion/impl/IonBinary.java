@@ -88,6 +88,8 @@ public class IonBinary
                 }
                 throw new IonException(buf.toString());
             }
+            
+            reader.setPosition(0); // cas 19 apr 2008
         }
         catch (IOException e)
         {
@@ -663,15 +665,24 @@ public class IonBinary
             if (c < 0) throwUnexpectedEOFException();
             int typeid = IonConstants.getTypeCode(c);
             if (typeid == IonConstants.tidTypedecl) {
-                this.readLength(typeid, IonConstants.getLowNibble(c));
-                int alen = this.readVarInt7IntValue();
-                // TODO add skip(int) method instead of this loop.
-                while (alen > 0) {
-                    if (this.read() < 0) throwUnexpectedEOFException();
-                    alen--;
-                }
-                c = read();
-                if (c < 0) throwUnexpectedEOFException();
+            	int lownibble = IonConstants.getLowNibble(c);
+            	if (lownibble == 0) {
+            		// 0xE0 is the first byte of the IonVersionMarker
+            		// so we'll return it as is, the caller has to
+            		// verify the remaining bytes and handle them
+            		// appropriately - so here we do nothing
+            	}
+            	else {
+	                this.readLength(typeid, lownibble);
+	                int alen = this.readVarInt7IntValue();
+	                // TODO add skip(int) method instead of this loop.
+	                while (alen > 0) {
+	                    if (this.read() < 0) throwUnexpectedEOFException();
+	                    alen--;
+	                }
+	                c = read();
+	                if (c < 0) throwUnexpectedEOFException();
+            	}
             }
             return c;
         }

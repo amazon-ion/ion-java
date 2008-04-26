@@ -19,6 +19,7 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.StaticSymbolTable;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.system.SimpleCatalog;
 import java.util.Iterator;
 
@@ -30,6 +31,10 @@ public class SymbolTableTest
 {
     public final int ION_1_0_MAX_ID =
         system().getSystemSymbolTable(ION_1_0).getMaxId();
+    
+    // cas 25 apr 2008
+	public final String SymbolTablePrefix = SystemSymbolTable.ION_SYMBOL_TABLE + "::";
+
 
     public final static int IMPORTED_1_MAX_ID = 2;
     public final static int IMPORTED_2_MAX_ID = 4;
@@ -114,7 +119,9 @@ public class SymbolTableTest
     public void testLocalTable()
     {
         String text =
-            "$ion_1_0::{" +
+            // cas 25 apr 2008, was "$ion_1_0::" +
+        	SymbolTablePrefix + 
+        	"{" +
             "  symbols:{ $100:\"foo\"," +
             "            $101:\"bar\"}," +
             "}\n" +
@@ -134,12 +141,16 @@ public class SymbolTableTest
     public void testLocalTableReplacement()
     {
         String text =
-            "$ion_1_0::{" +
+            // cas 25 apr 2008 was: "$ion_1_0::" +
+        	SymbolTablePrefix + 
+        	"{" +
             "  symbols:{ $100:\"foo\"," +
             "            $101:\"bar\"}," +
             "}\n" +
             "bar foo\n" +
-            "$ion_1_0::{" +
+            // cas 25 apr 2008, was "$ion_1_0::" +
+            SymbolTablePrefix + 
+        	"{" +
             "  symbols:{ $13:\"foo\"}," +
             "}\n" +
             "bar foo";
@@ -173,7 +184,9 @@ public class SymbolTableTest
         throws Exception
     {
         String text =
-            "$ion_1_0::{" +
+            // cas 25 apr 2008, was "$ion_1_0::" +
+        	SymbolTablePrefix + 
+        	"{" +
             "  symbols:{ $100:\"foo\"," +
             "            $101:\"bar\"}," +
             "}\n" +
@@ -246,7 +259,8 @@ public class SymbolTableTest
         throws Exception
     {
         String text =
-            "$ion_symbol_table::{" +
+        	SymbolTablePrefix + 
+        	"{" +
             "  name: \"test table\"," +
             "  version: 1,\n" +
             "  symbols:{ $100:\"foo\"," +
@@ -292,7 +306,9 @@ public class SymbolTableTest
             system().getSystemSymbolTable("$ion_1_0").findSymbol("name");
 
         String importingText =
-            "$ion_1_0::{" +
+            // cas 25 apr 2008, was "$ion_1_0::" +
+        	SymbolTablePrefix + 
+        	"{" +
             "  symbols:{" +
             "    $" + nameSid + ":'''shadow'''," +
             "    $25:'''local25'''," +
@@ -314,15 +330,20 @@ public class SymbolTableTest
         int shadowId = ION_1_0_MAX_ID + 1;
 
         String importingText =
-            "$ion_1_0\n" +
-            "$ion_symbol_table::{" +
-            "  name:'''imported''', version:1," +
+            // cas 25 apr 2008, was "$ion_1_0::" +
+        	"$ion_1_0 "+
+        	SymbolTablePrefix + 
+        	"{" +
+            "  name:'''imported''', " +
+            "  version:1," +
             "  symbols:{" +
             "    $1:'''imported 1'''," +
             "    $2:'''imported 2'''," +
             "  }" +
             "}\n" +
-            "$ion_1_0::{" +
+            // cas 25 apr 2008, was "$ion_1_0::" +
+            SymbolTablePrefix + 
+        	"{" +
             "  imports:[{name:'''imported''', version:1, max_id:2}]," +
             "  symbols:{" +
             "    $" + shadowId + ":'''shadow'''," +
@@ -361,7 +382,9 @@ public class SymbolTableTest
         SymbolTable importedTable = registerImportedV1();
 
         String text =
-            "$ion_1_0::{" +
+            // cas 25 apr 2008, was "$ion_1_0::" +
+        	SymbolTablePrefix + 
+        	"{" +
             "  symbols:{ $100:\"dates\",\n" +
             "            $101:\"whenDate\"},\n" +
             "  imports:[{name:'''imported''',version:1}],\n" +
@@ -376,7 +399,7 @@ public class SymbolTableTest
         // Check that the encoded table has max_id on import
         byte[] binary = dg.toBytes();
         dg = loader().load(binary);
-        IonStruct symtabStruct = (IonStruct) dg.systemGet(0);
+        IonStruct symtabStruct = (IonStruct) dg.systemGet(1); // cas 22 apr 2008 was: (0);
         IonList imports = (IonList) symtabStruct.get("imports");
         IonStruct importStruct = (IonStruct) imports.get(0);
         checkString("imported", importStruct.get("name"));
@@ -395,7 +418,9 @@ public class SymbolTableTest
         SymbolTable importedTable = registerImportedV1();
 
         String text =
-            "$ion_1_0::{" +
+            // cas 25 apr 2008, was "$ion_1_0::" +
+        	SymbolTablePrefix + 
+        	"{" +
             "  symbols:{ $" + local1id + ":\"local1\"," +
             "            $" + local2id + ":\"local2\"}," +
             "  imports:[{name:\"imported\", version:1," +
@@ -438,7 +463,9 @@ public class SymbolTableTest
         registerImportedV2();
 
         String text =
-            "$ion_1_0::{" +
+            // cas 25 apr 2008, was "$ion_1_0::" +
+        	SymbolTablePrefix + 
+        	"{" +
             "  symbols:{ $" + local1id + ":\"local1\"," +
             "            $" + local2id + ":\"local2\"}," +
             "  imports:[{name:\"imported\", version:2,}]," +
@@ -483,7 +510,9 @@ public class SymbolTableTest
 
         // fred5 is not in table version 2, so it gets local symbol
         String text =
-            "$ion_1_0::{" +
+            // cas 25 apr 2008, was "$ion_1_0::" +
+        	SymbolTablePrefix + 
+        	"{" +
             "  imports:[{name:\"imported\", version:2,}]," +
             "}\n" +
             "local1 local2 'imported 1' 'imported 2' fred3 fred5";
@@ -514,7 +543,9 @@ public class SymbolTableTest
     public void testLocalWithBadMaxId()
     {
         String text =
-            "$ion_1_0::{" +
+            // cas 25 apr 2008, was "$ion_1_0::" +
+        	SymbolTablePrefix + 
+        	"{" +
             "  imports:[{name:\"imported\", version:1," +
             "            max_id:buggy" +                   // max_id not an int
             "}]," +
@@ -523,7 +554,9 @@ public class SymbolTableTest
         badValue(text);
 
         text =
-            "$ion_1_0::{" +
+            // cas 25 apr 2008 was: "$ion_1_0::{" +
+        	SymbolTablePrefix + 
+        	"{" +
             "  imports:[{name:\"imported\", version:1}]," +
             // No max_id, and table is not in catalog.
             "}\n" +
@@ -532,7 +565,9 @@ public class SymbolTableTest
 
 
         text =
-            "$ion_1_0::{" +
+        	// cas 25 apr 2008 was: "$ion_1_0::{" +
+        	SymbolTablePrefix + 
+        	"{" +
             "  imports:[{name:\"imported\", version:1," +
             "            max_id:0" +                     // max_id not positive
             "}]," +
@@ -548,7 +583,9 @@ public class SymbolTableTest
     public void testStaticTableMissingName()
     {
         String text =
-            "$ion_symbol_table::{" +
+            // cas 25 apr 2008 was: "$ion_symbol_table::{" +
+        	SymbolTablePrefix + 
+        	"{" +
             "  version:1," +
             "  symbols:{ $100:\"x\" }\n" +
             "}";
@@ -559,7 +596,9 @@ public class SymbolTableTest
     public void testStaticTableMissingVersion()
     {
         String text =
-            "$ion_symbol_table::{" +
+            // cas 25 apr 2008 was: "$ion_symbol_table::{" +
+        	SymbolTablePrefix + 
+        	"{" +
             "  name:\"test\"," +
             "  symbols:{ $100:\"x\" }\n" +
             "}\n" +
@@ -577,7 +616,9 @@ public class SymbolTableTest
     {
         // Name must be a string
         String text =
-            "$ion_symbol_table::{" +
+            // cas 25 apr 2008 was: "$ion_symbol_table::{" +
+        	SymbolTablePrefix + 
+        	"{" +
             "  name:test," +                  // Here's the bug
             "  version:1," +
             "  symbols:{ $100:\"x\" }\n" +
@@ -587,7 +628,9 @@ public class SymbolTableTest
 
         // Name must be a non-empty
         text =
-            "$ion_symbol_table::{" +
+            // cas 25 apr 2008 was: "$ion_symbol_table::{" +
+        	SymbolTablePrefix + 
+        	"{" +
             "  name:\"\"," +                  // Here's the bug
             "  version:1," +
             "  symbols:{ $100:\"x\" }\n" +
@@ -597,7 +640,9 @@ public class SymbolTableTest
 
         // Name must be a non-null
         text =
-            "$ion_symbol_table::{" +
+            // cas 25 apr 2008 was: "$ion_symbol_table::{" +
+        	SymbolTablePrefix + 
+        	"{" +
             "  name:null.string," +                  // Here's the bug
             "  version:1," +
             "  symbols:{ $100:\"x\" }\n" +
@@ -609,7 +654,9 @@ public class SymbolTableTest
     public void testVersionNotInt()
     {
         String text =
-            "$ion_symbol_table::{" +
+            // cas 25 apr 2008 was: "$ion_symbol_table::{" +
+        	SymbolTablePrefix + 
+        	"{" +
             "  name:\"test\"," +
             "  version:'1'," +                  // Here's the bug
             "  symbols:{ $100:\"x\" }\n" +
@@ -621,7 +668,9 @@ public class SymbolTableTest
     public void testNullVersion()
     {
         String text =
-            "$ion_symbol_table::{" +
+            // cas 25 apr 2008 was: "$ion_symbol_table::{" +
+        	SymbolTablePrefix + 
+        	"{" +
             "  name:\"test\"," +
             "  version:null," +                  // Here's the bug
             "  symbols:{ $100:\"x\" }\n" +
@@ -630,7 +679,9 @@ public class SymbolTableTest
         badValue(text);
 
         text =
-            "$ion_symbol_table::{" +
+            // cas 25 apr 2008 was: "$ion_symbol_table::{" +
+        	SymbolTablePrefix + 
+        	"{" +
             "  name:\"test\"," +
             "  version:null.int," +                  // Here's the bug
             "  symbols:{ $100:\"x\" }\n" +
@@ -639,7 +690,9 @@ public class SymbolTableTest
         badValue(text);
 
         text =
-            "$ion_symbol_table::{" +
+            // cas 25 apr 2008 was: "$ion_symbol_table::{" +
+        	SymbolTablePrefix + 
+        	"{" +
             "  name:\"test\"," +
             "  version:null.bool," +                  // Here's the bug
             "  symbols:{ $100:\"x\" }\n" +
@@ -651,7 +704,9 @@ public class SymbolTableTest
     public void testSymbolsFieldNotStruct()
     {
         String text =
-            "$ion_symbol_table::{" +
+            // cas 25 apr 2008 was: "$ion_symbol_table::{" +
+        	SymbolTablePrefix + 
+        	"{" +
             "  name:test," +
             "  version:1," +
             "  symbols:[[$100,\"x\"]]\n" +
@@ -664,7 +719,9 @@ public class SymbolTableTest
     public void testSymbolNotString()
     {
         String text =
-            "$ion_symbol_table::{" +
+            // cas 25 apr 2008 was: "$ion_symbol_table::{" +
+        	SymbolTablePrefix + 
+        	"{" +
             "  name:\"test\", version:1," +
             "  symbols:{ $100:dates }\n" +
             "}\n" +
@@ -672,7 +729,9 @@ public class SymbolTableTest
         badValue(text);
 
         text =
-            "$ion_symbol_table::{" +
+            // cas 25 apr 2008 was: "$ion_symbol_table::{" +
+        	SymbolTablePrefix + 
+        	"{" +
             "  name:\"test\", version:1," +
             "  symbols:{ $100:100 }\n" +
             "}\n" +

@@ -186,6 +186,8 @@ public class SystemReader
             // so parse another value out of the input
             if (_parser != null) {
                 boolean freshBuffer = _buffer_offset == 0;
+                // cas 22 apr 2008: 
+                freshBuffer = false; // this is really the "write magic cookie" flag
                 _parser.parse(_currentSymbolTable
                               ,_buffer_offset
                               ,freshBuffer
@@ -253,10 +255,10 @@ public class SystemReader
             // sync with the binary.  That's okay, though: if the bytes are
             // requested it will be updated.
 
-            _curr = (IonValueImpl)newLocalSymbtab.getIonRepresentation();
-            assert _curr.getSymbolTable() == null || _curr.getSymbolTable().getSystemSymbolTable() == _system.getSystemSymbolTable();
+        	IonValueImpl localsym = (IonValueImpl)newLocalSymbtab.getIonRepresentation();
+            assert localsym.getSymbolTable() == null || localsym.getSymbolTable().getSystemSymbolTable() == _system.getSystemSymbolTable();
             assert _system.getSystemSymbolTable() == newLocalSymbtab.getSystemSymbolTable();
-            _curr.setSymbolTable(newLocalSymbtab);  // the symbol table of a symbol table struct is itself
+            // _curr.setSymbolTable(newLocalSymbtab);  // the symbol table of a symbol table struct is itself
             _currentSymbolTable = newLocalSymbtab;
             _currentIsHidden = true;
         }
@@ -267,7 +269,7 @@ public class SystemReader
                 new StaticSymbolTableImpl(_system, (IonStruct) _curr);
             _catalog.putTable(newTable);
             
-            // FIXME: really?  I don't this shared tables need to be (or
+            // FIXME: really?  I don't think shared tables need to be (or
             //		  should be hidden.  They should be user values.
             _currentIsHidden = true;
         }

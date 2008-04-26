@@ -34,6 +34,9 @@ import java.util.NoSuchElementException;
 public final class IonBinaryIterator
     extends IonIterator
 {
+	static final boolean _debug_return_system_values = false;
+	
+	
     // TODO------------------------------------------------------------------------------------------
     static final boolean _verbose_debug = false;
     static String getTidAsString(int tid) {
@@ -129,7 +132,7 @@ public final class IonBinaryIterator
     {
         this(  new SimpleByteBuffer(buf, start, len)
              , null
-        	 , null
+        	 , new UnifiedCatalog()
         );
     }
     public IonBinaryIterator(byte[] buf, UnifiedCatalog catalog) 
@@ -487,7 +490,7 @@ public final class IonBinaryIterator
                 int a = _reader.readVarUInt();
                 switch (a) {
                 case SystemSymbolTable.ION_SYMBOL_TABLE_SID:
-                case SystemSymbolTable.ION_1_0_SID:
+                // cas 25 apr 2008: removed case SystemSymbolTable.ION_1_0_SID:
                     is_symbol_table = loadSymbolTable(a, original_position, aend);
                     break;
                 case SystemSymbolTable.ION_EMBEDDED_VALUE_SID:
@@ -502,21 +505,25 @@ public final class IonBinaryIterator
         catch (IOException e) {
             throw new IonException(e);
         }
-        if (is_symbol_table) {
-            // make our caller read the upcoming byte
-            typedesc = -1;
-        }
-        else {
-            // we changed our minds, everything is as is should be
-            _reader.position(original_position);
-        }
+        
+// FIXME: return everything ... 
+ 		if (!_debug_return_system_values) {
+	        if (is_symbol_table) {
+	            // make our caller read the upcoming byte
+	            typedesc = -1;
+	        }
+	        else {
+	            // we changed our minds, everything is as is should be
+	            _reader.position(original_position);
+	       }
+		}
         return typedesc;
     }
 
     boolean loadSymbolTable(int annotationid, int original_start, int contents_start) throws IOException 
     {
         boolean is_symbol_table = false;
-        boolean is_local_table = (annotationid == SystemSymbolTable.ION_1_0_SID);
+        boolean is_local_table = (annotationid == SystemSymbolTable.ION_SYMBOL_TABLE_SID); // cas 25 apr 2008: was ION_1-0
         
         _reader.position(contents_start);
         
@@ -561,12 +568,29 @@ public final class IonBinaryIterator
                 	// TODO: in the catalog (which we now have)
                     break;
                 case SystemSymbolTable.SYMBOLS_SID:
+                	boolean manual_sid;
+                	switch (this.getType()) {
+                	case STRUCT:
+                		manual_sid = true;
+                		break;
+                	case LIST:
+                		manual_sid = false;
+                		break;
+                	default:
+                		throw new IonException("the symbols member of a symbol table must be a list or a struct value, not a "+getType());
+                	}
                     stepInto();
                     while (hasNext()) {
                         if (next() != IonType.STRING) {
                             continue; // we could error here, but open content says don't bother
                         }
-                        int sid = getFieldId();
+                        int sid;
+                        if (manual_sid) {
+                        	sid = getFieldId();
+                        }
+                        else {
+                        	sid = local.getMaxId() + 1;
+                        }
                         String symbol = getString();
                         local.defineSymbol(symbol, sid);
                     }

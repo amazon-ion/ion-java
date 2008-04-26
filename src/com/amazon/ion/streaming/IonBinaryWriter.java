@@ -1173,7 +1173,7 @@ int tmp;
         total_len_written += out.writeTypeDescWithLength2(IonConstants.tidTypedecl, total_len);
         
         total_len_written += out.writeVarUInt(1, 1, true); // length of the 1 annotation
-        total_len_written += out.writeVarUInt(UnifiedSymbolTable.ION_1_0_SID, 1, true);
+        total_len_written += out.writeVarUInt(UnifiedSymbolTable.ION_SYMBOL_TABLE_SID, 1, true); // cas 25 apr 2008 was: ION_1_0_SID
         
         total_len_written += out.writeTypeDescWithLength2(IonConstants.tidStruct, content_len);
         

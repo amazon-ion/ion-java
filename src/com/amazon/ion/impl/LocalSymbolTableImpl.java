@@ -59,10 +59,9 @@ public class LocalSymbolTableImpl
         _maxId = systemSymbolTable.getMaxId();
 
         _symtabElement = new IonStructImpl();
-        // FIXME this is really scary and brain-twisty.
-        //((IonStructImpl)_symtabElement).setSymbolTable(new LocalSymbolTableImpl(new hideMe(), systemSymbolTable));
+
         ((IonStructImpl)_symtabElement).setSymbolTable(this);
-        _symtabElement.addTypeAnnotation(systemSymbolTable.getSystemId());
+        _symtabElement.addTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE); // cas 25 apr 2008 was: systemSymbolTable.getSystemId());
 
         _symbolsStruct = new IonStructImpl();
         _symtabElement.put(SystemSymbolTable.SYMBOLS, _symbolsStruct);
@@ -74,6 +73,7 @@ public class LocalSymbolTableImpl
      */
     public LocalSymbolTableImpl(IonSystem system)
     {
+    	// assert system != null;
         this(system.getSystemSymbolTable());
     }
 
@@ -84,7 +84,8 @@ public class LocalSymbolTableImpl
     {
         assert system != null;
         assert systemSymbolTable != null;
-        assert asymboltable.hasTypeAnnotation(SystemSymbolTable.ION_1_0);
+        assert asymboltable.hasTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE);  // was: ION_1_0
+
         _systemSymbols = systemSymbolTable;
         _symtabElement = asymboltable;
         _maxId = _systemSymbols.getMaxId();
