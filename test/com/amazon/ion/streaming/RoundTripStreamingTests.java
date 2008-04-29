@@ -166,6 +166,7 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
         	roundTripBufferResults(String t) {
         		title = t;
         	}
+        	String      name;
         	String      title;
         	String 		string;
         	byte[]      utf8_buf;
@@ -323,6 +324,13 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
         	roundTripBufferResults stream = new roundTripBufferResults(pass+" stream");
         	roundTripBufferResults tree = new roundTripBufferResults(pass + " tree");
         	
+        	if (this.getName().equals("strings_nl.ion")) {
+        		stream.name = this.getName() + " (as stream)";        		
+        	}
+
+        	stream.name = this.getName() + " (as stream)";
+        	tree.name = this.getName() + " (as IonValue)";
+
             IonDatagram inputDatagram = loader().load(testBuffer);
 
             // Turn the DOM back into text...

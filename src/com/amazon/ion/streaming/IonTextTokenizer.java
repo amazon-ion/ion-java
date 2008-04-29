@@ -1693,32 +1693,23 @@ loop:   for (;;) {
             c = '\u0000';
             break;
         case '\r':
+        	int pos = _r.position();
         	c = _r.read();
-        	if (c == '\n') {
-        		// we eat a '\r' '\n' sequence
-        		c = EMPTY_ESCAPE_SEQUENCE;
-        	}
-        	else if (c == '\\') {
-        		c = read_escaped_char_in_string();
+        	if (c != '\n') {
+        		// if it's not a <CR><NL> we back up since we are not 
+        		// going to consume more then the <CR> in this case
+        		_r.setPosition(pos);
         	}
         	else {
-        		// otherwise we return the character we read ahead (right after the '\n'
+        		// do nothing, we eat a <nl> after the <CR> as the
+        		// DOS new line character sequence
         	}
+        	// we eat backslash new line sequences
+    		c = EMPTY_ESCAPE_SEQUENCE;
         	break;
         case '\n':  // slash-new line the new line eater
-        	c = _r.read();
-        	if (c == '\r') {
-        		// we eat a '\n' '\r' sequence
-        		c = EMPTY_ESCAPE_SEQUENCE;
-        	}
-        	else if (c == '\\') {
-        		// this is really '\\' '\n' '\\' ???
-        		c = read_escaped_char_in_string();
-        	}
-        	else {
-        		// otherwise we return the character we read ahead (right after the '\n'
-        	}
-        	break;
+        	c = EMPTY_ESCAPE_SEQUENCE;
+	        break;
         case 'a':
             //    \u0007  \a  alert BEL
             c = '\u0007';
