@@ -342,6 +342,15 @@ public class DatagramTest
     }
 
 
+    /**
+     * Catches a simple case that failed for some time.
+     */
+    public void testToString()
+    {
+        IonDatagram dg = loader().load("{a:b}");
+        assertEquals("{a:b}", dg.toString());
+    }
+
 
     // FIXME implement embedding
     public void XXXtestEmbedding()
