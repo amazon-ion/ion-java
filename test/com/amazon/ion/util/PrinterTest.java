@@ -196,6 +196,9 @@ public class PrinterTest
 
         value = (IonDecimal) oneValue("100d3");
         checkRendering("100d3", value);
+
+        myPrinter.setPrintDecimalsAsFloats(true);
+        checkRendering("100e3", value);
     }
 
 
@@ -392,14 +395,23 @@ public class PrinterTest
         checkRendering("'%'", value);
 
         value.setValue("Oh, \"Hello!\"");
-        checkRendering("'Oh, \\\"Hello!\\\"'", value);
+        checkRendering("'Oh, \"Hello!\"'", value);
+        // not: checkRendering("'Oh, \\\"Hello!\\\"'", value);
 
         myPrinter.setPrintSymbolsAsStrings(true);
         checkRendering("\"Oh, \\\"Hello!\\\"\"", value);
         myPrinter.setPrintSymbolsAsStrings(false);
 
+        value.setValue("Oh, 'Hello there!'");
+        checkRendering("'Oh, \\\'Hello there!\\\''", value);
+
+        myPrinter.setPrintSymbolsAsStrings(true);
+        checkRendering("\"Oh, 'Hello there!'\"", value);
+        myPrinter.setPrintSymbolsAsStrings(false);
+
         value.addTypeAnnotation("an");
-        checkRendering("an::'Oh, \\\"Hello!\\\"'", value);
+        checkRendering("an::'Oh, \\\'Hello there!\\\''", value);
+        // was: checkRendering("an::'Oh, \\\"Hello there!\\\"'", value);
 
         // TODO check escaping
     }

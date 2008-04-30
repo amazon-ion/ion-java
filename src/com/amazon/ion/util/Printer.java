@@ -40,6 +40,7 @@ public class Printer
     public class Options
         implements Cloneable
     {
+        public boolean decimalAsFloat;
         public boolean skipAnnotations;
         public boolean sexpAsList;
         public boolean symbolAsString;
@@ -100,6 +101,22 @@ public class Printer
     public synchronized void setSkipAnnotations(boolean ignore)
     {
         myOptions.skipAnnotations = ignore;
+    }
+
+
+    /**
+     * Sets whether this printer renders decimals as floats, this using 'e'
+     * notation for all real values.
+     * By default, this is <code>false</code>.
+     */
+    public synchronized boolean getPrintDecimalsAsFloats()
+    {
+        return myOptions.decimalAsFloat;
+    }
+
+    public synchronized void setPrintDecimalsAsFloats(boolean decimalsAsFloats)
+    {
+        myOptions.decimalAsFloat = decimalsAsFloats;
     }
 
 
@@ -172,6 +189,7 @@ public class Printer
      */
     public synchronized void setJsonMode()
     {
+        myOptions.decimalAsFloat    = true;
         myOptions.skipAnnotations   = true;
         myOptions.sexpAsList        = true;
         myOptions.symbolAsString    = true;
@@ -374,13 +392,13 @@ public class Printer
             if (myOptions.symbolAsString)
             {
                 myOut.append('\"');
-                escapeToAscii(text);
+                Text.printAsAscii(text, '\"', myOut);
                 myOut.append('\"');
             }
             else if (Text.symbolNeedsQuoting(text, myQuoteOperators))
             {
                 myOut.append('\'');
-                escapeToAscii(text);
+                Text.printAsAscii(text, '\'', myOut);
                 myOut.append('\'');
             }
             else
@@ -393,19 +411,8 @@ public class Printer
         public void writeString(String text) throws IOException
         {
             myOut.append('\"');
-            escapeToAscii(text);
+            Text.printAsAscii(text, '\"', myOut);
             myOut.append('\"');
-        }
-
-        protected void escapeToAscii(String text)
-            throws IOException
-        {
-            int len = text.length();
-            for (int i = 0; i < len; i++)
-            {
-                int c = text.charAt(i);
-                Text.renderAsAscii(c, myOut);
-            }
         }
 
 
@@ -471,7 +478,7 @@ public class Printer
                     int c;
                     while ((c = byteStream.read()) != -1)
                     {
-                        Text.renderAsAscii(c, myOut);
+                        Text.renderAsAscii(c, '\"', myOut);
                     }
                 }
                 finally
@@ -514,7 +521,7 @@ public class Printer
                 BigInteger unscaled = decimal.unscaledValue();
 
                 myOut.append(unscaled.toString());
-                myOut.append('d');
+                myOut.append(myOptions.decimalAsFloat ? 'e' : 'd');
                 myOut.append(Integer.toString(-decimal.scale()));
             }
         }
@@ -792,7 +799,7 @@ public class Printer
             throws IOException
         {
             myOut.append('\"');
-            escapeToAscii(text);
+            Text.printAsAscii(text, '\"', myOut);
             myOut.append('\"');
         }
 
