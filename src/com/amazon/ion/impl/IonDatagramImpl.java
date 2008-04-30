@@ -16,7 +16,6 @@ import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonBinary.BufferManager;
-import com.amazon.ion.util.Printer;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Reader;
@@ -571,24 +570,5 @@ public final class IonDatagramImpl
     @Override
     public BufferManager getBuffer() {
         return this._buffer;
-    }
-
-    @Override
-    public String toString()
-    {
-        Printer p = new Printer();
-        StringBuilder builder = new StringBuilder();
-        try {
-            p.print(this, builder);
-            for (IonValue element : _contents)
-            {
-                p.print(element, builder);
-                builder.append('\n');
-            }
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-        return builder.toString();
     }
 }
