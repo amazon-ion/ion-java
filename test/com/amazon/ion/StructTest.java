@@ -359,7 +359,7 @@ public class StructTest
         catch (NullPointerException e) { }
     }
 
-    public void testBadAddss()
+    public void testBadAdds()
     {
         IonStruct value = system().newNullStruct();
         IonBool nullBool = system().newNullBool();
@@ -387,5 +387,26 @@ public class StructTest
     {
         IonStruct value = (IonStruct) oneValue("{a:b,c:d,e:f}");
         testIteratorRemove(value);
+    }
+
+
+    public void testClearRemovesChildsContainer()
+    {
+        IonValue val = system().newString("test");
+        IonStruct s = system().newNullStruct();
+        s.put("f", val);
+        s.clear();
+        assertNull("Removed value should have null container",
+                   val.getContainer());
+    }
+
+    public void testMakeNullRemovesChildsContainer()
+    {
+        IonValue val = system().newString("test");
+        IonStruct s = system().newNullStruct();
+        s.put("f", val);
+        s.makeNull();
+        assertNull("Removed value should have null container",
+                   val.getContainer());
     }
 }

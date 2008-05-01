@@ -93,9 +93,8 @@ abstract public class IonContainerImpl
          */
         else if (!isEmpty())
         {
+            detachAllChildren();
             _contents.clear();
-
-            // FIXME all existing children still incorrectly have container set!
             setDirty();
         }
     }
@@ -104,9 +103,25 @@ abstract public class IonContainerImpl
     {
         if (!isNullValue())
         {
+            if (_contents != null)
+            {
+                detachAllChildren();
+                _contents = null;
+            }
             _contents = null;
             _hasNativeValue = true;
             setDirty();
+        }
+    }
+
+    private void detachAllChildren()
+    {
+        try {
+            for (IonValue child : _contents) {
+                ((IonValueImpl)child).detachFromContainer();
+            }
+        } catch (IOException ioe) {
+            throw new IonException(ioe);
         }
     }
 
