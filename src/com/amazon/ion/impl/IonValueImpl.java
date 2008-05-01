@@ -307,13 +307,13 @@ public abstract class IonValueImpl
             break;
 
         case IonConstants.tidTypedecl: // 14
-        	// the only case where this is valid is if this is
-        	// really an IonVersionMaker
-        	assert IonConstants.getLowNibble(typedesc) == 0;
-        	value = new IonSymbolImpl(SystemSymbolTable.ION_1_0);
-        	((IonSymbolImpl)value).setIsIonVersionMarker(true);
-        	break;
-        	
+            // the only case where this is valid is if this is
+            // really an IonVersionMaker
+            assert IonConstants.getLowNibble(typedesc) == 0;
+            value = new IonSymbolImpl(SystemSymbolTable.ION_1_0);
+            ((IonSymbolImpl)value).setIsIonVersionMarker(true);
+            break;
+            
         default:
             throw new IonException("invalid type "+typeId+" ("+typedesc+") encountered");
         }
@@ -428,7 +428,7 @@ public abstract class IonValueImpl
     public LocalSymbolTable getSymbolTable() {
         if (this._symboltable != null)  return this._symboltable;
         if (this._container != null)    return this._container.getSymbolTable();
-                		
+                        
         // this._symboltable = new LocalSymbolTableImpl();
         // FIXME: this assert will break right now !
         if (this._symboltable == null) {
@@ -546,11 +546,12 @@ public abstract class IonValueImpl
         this.getTypeAnnotations();
 
         _buffer = null;
-        // cas removed (1 apr 2008): _symboltable = null;               // ----------------------- CAS ADDED
-        _isMaterialized     = false;
+        // cas removed (1 apr 2008): _symboltable = null;
+        _isMaterialized     = false;   // because there's no buffer
         _isPositionLoaded   = false;
         _isDirty            = true;
 
+        _fieldSid           =  0;
         _entry_start        = -1;
         _value_td_start     = -1;
         _value_content_start= -1;
@@ -617,40 +618,40 @@ public abstract class IonValueImpl
         this._next_start = this._value_content_start + vlen;
 
         if (type == IonConstants.tidTypedecl) {
-        	// check for the special case of the typedecl that is a binary version marker
-        	if (this._type_desc == (IonConstants.BINARY_VERSION_MARKER_1_0[0] & 0xff)) {
-        		// read the remaining (3) bytes of the IonVersionMarker
-        		for (int ii=1; ii<IonConstants.BINARY_VERSION_MARKER_SIZE; ii++) {
-        			int b = valueReader.read();
-        			if ((b & 0xff) != (IonConstants.BINARY_VERSION_MARKER_1_0[ii] & 0xff)) {
-        				throw new IonException("illegal value encoded at "+this._value_content_start);
-        			}
-        		}
-	            // fixup the "next start" position, since when we set this
-        		// the value length was "wrong"
-        		vlen = IonConstants.BINARY_VERSION_MARKER_SIZE - 1;
-        		this._next_start = this._value_content_start + vlen;
-        		this._isSystemValue = true;
-        	}
-        	else {
-	            // read past the annotation list
-	            int annotationListLength = valueReader.readVarUInt7IntValue();
-	            assert annotationListLength > 0;  // TODO throw if bad
-	            this._value_td_start = valueReader.position() + annotationListLength;
-	            valueReader.setPosition(this._value_td_start);
-	            // read the actual values type desc
-	            this._type_desc = valueReader.readToken();
-	            // TODO check that td != annotation (illegal nested annotation)
-	
-	            int ln = pos_getLowNibble();
-	            if ((ln == IonConstants.lnIsVarLen)
-	                || (this._type_desc == IonStructImpl.ORDERED_STRUCT_TYPEDESC))
-	            {
-	                // Skip over the extended length to find the content start.
-	                valueReader.readVarUInt7IntValue();
-	            }
-	            this._value_content_start = valueReader.position();
-        	}
+            // check for the special case of the typedecl that is a binary version marker
+            if (this._type_desc == (IonConstants.BINARY_VERSION_MARKER_1_0[0] & 0xff)) {
+                // read the remaining (3) bytes of the IonVersionMarker
+                for (int ii=1; ii<IonConstants.BINARY_VERSION_MARKER_SIZE; ii++) {
+                    int b = valueReader.read();
+                    if ((b & 0xff) != (IonConstants.BINARY_VERSION_MARKER_1_0[ii] & 0xff)) {
+                        throw new IonException("illegal value encoded at "+this._value_content_start);
+                    }
+                }
+                // fixup the "next start" position, since when we set this
+                // the value length was "wrong"
+                vlen = IonConstants.BINARY_VERSION_MARKER_SIZE - 1;
+                this._next_start = this._value_content_start + vlen;
+                this._isSystemValue = true;
+            }
+            else {
+                // read past the annotation list
+                int annotationListLength = valueReader.readVarUInt7IntValue();
+                assert annotationListLength > 0;  // TODO throw if bad
+                this._value_td_start = valueReader.position() + annotationListLength;
+                valueReader.setPosition(this._value_td_start);
+                // read the actual values type desc
+                this._type_desc = valueReader.readToken();
+                // TODO check that td != annotation (illegal nested annotation)
+    
+                int ln = pos_getLowNibble();
+                if ((ln == IonConstants.lnIsVarLen)
+                    || (this._type_desc == IonStructImpl.ORDERED_STRUCT_TYPEDESC))
+                {
+                    // Skip over the extended length to find the content start.
+                    valueReader.readVarUInt7IntValue();
+                }
+                this._value_content_start = valueReader.position();
+            }
         }
     }
 
@@ -1255,7 +1256,7 @@ public abstract class IonValueImpl
             // Update the position in our token.
             // TODO short-circuit on zero delta.
             if (cumulativePositionDelta != 0) {
-            	shiftTokenAndChildren(cumulativePositionDelta);
+                shiftTokenAndChildren(cumulativePositionDelta);
             }
             writer.setPosition(this.pos_getOffsetofNextValue());
         }
@@ -1318,7 +1319,7 @@ public abstract class IonValueImpl
 //int oldLength = pos_getOffsetofNextValue() - oldPosition;
 //int nakedLength = getNakedValueLength(); 
 //int newLength = 
-//	((_fieldName == null) ? 0 : IonBinary.lenVarUInt7(getSymbolTable().addSymbol(_fieldName)))
+//  ((_fieldName == null) ? 0 : IonBinary.lenVarUInt7(getSymbolTable().addSymbol(_fieldName)))
 //  + nakedLength
 //  + getTypeDescriptorAndLengthOverhead(nakedLength);
 
