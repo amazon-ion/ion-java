@@ -89,18 +89,12 @@ abstract public class IonContainerImpl
         /*
          * TODO: if this is a big container that's not materialized, isEmpty()
          * will do a lot of work materializing it just to throw it out.
-         * Optimization needed. Especially since we'll then come in and detach 
+         * Optimization needed. Especially since we'll then come in and detach
          * all the children we just created.
          */
         else if (!isEmpty())
         {
-            try {
-                for (IonValue child : _contents) {
-                    ((IonValueImpl)child).detachFromContainer();
-                }
-            } catch (IOException ioe) {
-                throw new IonException(ioe);
-            }
+            detachAllChildren();
             _contents.clear();
             setDirty();
         }
@@ -110,9 +104,24 @@ abstract public class IonContainerImpl
     {
         if (!isNullValue())
         {
-            _contents = null;
+            if (_contents != null)
+            {
+                detachAllChildren();
+                _contents = null;
+            }
             _hasNativeValue = true;
             setDirty();
+        }
+    }
+
+    private void detachAllChildren()
+    {
+        try {
+            for (IonValue child : _contents) {
+                ((IonValueImpl)child).detachFromContainer();
+            }
+        } catch (IOException ioe) {
+            throw new IonException(ioe);
         }
     }
 
@@ -331,7 +340,7 @@ abstract public class IonContainerImpl
                                            int cumulativePositionDelta)
         throws IOException
     {
-    	// overriden in sexp and datagram to handle Ion Version Marker (magic cookie)
+        // overriden in sexp and datagram to handle Ion Version Marker (magic cookie)
         if (_contents != null)
         {
             for (int ii = 0; ii < _contents.size(); ii++)
@@ -503,9 +512,9 @@ abstract public class IonContainerImpl
         {
             // TODO: should we copy the symbols to the parent, if there are
             // any?
-        	if (!(this instanceof IonDatagramImpl)) {
-        		concrete.setSymbolTable(null);
-        	}
+            if (!(this instanceof IonDatagramImpl)) {
+                concrete.setSymbolTable(null);
+            }
             concrete.clear_position_and_buffer();
         }
 
@@ -519,7 +528,7 @@ abstract public class IonContainerImpl
 
         _contents.add(index, element);
         concrete._elementid = index;
-       	updateElementIds(index + 1); // start at the next element, this one is fine
+        updateElementIds(index + 1); // start at the next element, this one is fine
 
         // We shouldn't force the child to be dirty, since we haven't
         // unsynched its materialized and binary copies.
@@ -533,11 +542,11 @@ abstract public class IonContainerImpl
     }
     void updateElementIds(int startingIndex)
     {
-    	while (startingIndex<this._contents.size()) {
-    		IonValueImpl v = (IonValueImpl)this._contents.get(startingIndex);
-    		v._elementid = startingIndex;
-    		startingIndex++;
-    	}
+        while (startingIndex<this._contents.size()) {
+            IonValueImpl v = (IonValueImpl)this._contents.get(startingIndex);
+            v._elementid = startingIndex;
+            startingIndex++;
+        }
     }
 
     void clear_position_and_buffer()
@@ -569,15 +578,15 @@ abstract public class IonContainerImpl
 
         //try
         //{
-        	int pos = concrete._elementid;
-        	IonValue child = _contents.get(pos);
+            int pos = concrete._elementid;
+            IonValue child = _contents.get(pos);
             if (child == concrete) // Yes, instance identity.
             {
                 try {
-	            	_contents.remove(pos);
-	                concrete.detachFromContainer();
-	                updateElementIds(pos);
-	                this.setDirty();
+                    _contents.remove(pos);
+                    concrete.detachFromContainer();
+                    updateElementIds(pos);
+                    this.setDirty();
                 }
                 catch (IOException e) {
                     throw new IonException(e);
@@ -585,7 +594,7 @@ abstract public class IonContainerImpl
                 return true;
             }
 
-            //if we know the index there's no need to 
+            //if we know the index there's no need to
             //for (Iterator i = _contents.iterator(); i.hasNext();)
             //{
             //    IonValue child = (IonValue) i.next();
