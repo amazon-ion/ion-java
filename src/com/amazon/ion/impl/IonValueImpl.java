@@ -530,11 +530,12 @@ public abstract class IonValueImpl
         this.getTypeAnnotations();
 
         _buffer = null;
-        _symboltable = null;               // ----------------------- CAS ADDED
-        _isMaterialized     = false;
+        _symboltable = null;
+        _isMaterialized     = false;       // because there's no buffer
         _isPositionLoaded   = false;
         _isDirty            = true;
 
+        _fieldSid           =  0;
         _entry_start        = -1;
         _value_td_start     = -1;
         _value_content_start= -1;
@@ -1416,7 +1417,7 @@ public abstract class IonValueImpl
     @Override
     public boolean equals(final Object other) {
         // TODO we can make this more efficient since we have impl details
-        
+
         boolean same = false;
         if (other instanceof IonValue)
         {
