@@ -202,6 +202,7 @@ abstract public class IonContainerImpl
             IonValueImpl child;
             reader.setPosition(pos);
             child = IonValueImpl.makeValueFromReader(0, reader, buffer, symtab, this);
+            child._elementid = _contents.size();
             _contents.add(child);
             pos = child.pos_getOffsetofNextValue();
         }
@@ -576,44 +577,22 @@ abstract public class IonContainerImpl
         // its backing store.
         IonValueImpl concrete = (IonValueImpl) element;
 
-        //try
-        //{
-            int pos = concrete._elementid;
-            IonValue child = _contents.get(pos);
-            if (child == concrete) // Yes, instance identity.
-            {
-                try {
-                    _contents.remove(pos);
-                    concrete.detachFromContainer();
-                    updateElementIds(pos);
-                    this.setDirty();
-                }
-                catch (IOException e) {
-                    throw new IonException(e);
-                }
-                return true;
+        int pos = concrete._elementid;
+        IonValue child = _contents.get(pos);
+        if (child == concrete) // Yes, instance identity.
+        {
+            try {
+                _contents.remove(pos);
+                concrete.detachFromContainer();
+                updateElementIds(pos);
+                this.setDirty();
             }
+            catch (IOException e) {
+                throw new IonException(e);
+            }
+            return true;
+        }
 
-            //if we know the index there's no need to
-            //for (Iterator i = _contents.iterator(); i.hasNext();)
-            //{
-            //    IonValue child = (IonValue) i.next();
-            //    if (child == concrete) // Yes, instance identity.
-            //    {
-            //        i.remove();
-            //
-            //        concrete.detachFromContainer();
-            //
-            //        this.setDirty();
-            //
-            //        return true;
-            //    }
-            //}
-        //}
-        //catch (IOException e)
-        //{
-        //    throw new IonException(e);
-        //}
         String message =
             "element is not in materialized contents of its container";
         throw new IllegalStateException(message);

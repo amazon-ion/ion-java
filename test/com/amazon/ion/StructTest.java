@@ -422,4 +422,14 @@ public class StructTest
         assertNull("Removed value should have null container",
                    val.getContainer());
     }
+    
+    public void testRemoveAfterClone()
+    {
+        IonStruct s1 = (IonStruct) oneValue("{a:1,b:2}");
+        IonStruct s2 = (IonStruct) system().clone(s1);
+
+        IonValue v = s2.get("b");
+        s2.remove(v);
+    }
+    
 }

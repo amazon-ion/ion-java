@@ -276,6 +276,7 @@ public final class IonStructImpl
             reader.setPosition(pos);
             int sid = reader.readVarUInt7IntValue();
             child = makeValueFromReader(sid, reader, buffer, symtab, this);
+            child._elementid = _contents.size();
             _contents.add(child);
             pos = child.pos_getOffsetofNextValue();
         }
