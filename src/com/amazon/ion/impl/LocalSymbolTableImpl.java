@@ -36,18 +36,17 @@ public class LocalSymbolTableImpl
     private final SystemSymbolTable _systemSymbols;
     private final ImportedTable[]   _importedTables;
 
-
-    private static class hideMe {
-        private hideMe() {}
-    }
-
-
-    private LocalSymbolTableImpl(hideMe dummy,
-                                 SystemSymbolTable systemSymbolTable)
-    {
-        _systemSymbols = systemSymbolTable;
-        _importedTables = null;
-    }
+    // This should no longer be necessary TODO remove this
+    //private static class hideMe {
+    //    private hideMe() {}
+    //}
+    //
+    //private LocalSymbolTableImpl(hideMe dummy,
+    //                             SystemSymbolTable systemSymbolTable)
+    //{
+    //    _systemSymbols = systemSymbolTable;
+    //    _importedTables = null;
+    //}
 
     /**
      * Constructs an empty symbol table.
@@ -60,9 +59,9 @@ public class LocalSymbolTableImpl
         _maxId = systemSymbolTable.getMaxId();
 
         _symtabElement = new IonStructImpl();
-        // FIXME this is really scary and brain-twisty.
-        ((IonStructImpl)_symtabElement).setSymbolTable(new LocalSymbolTableImpl(new hideMe(), systemSymbolTable));
-        _symtabElement.addTypeAnnotation(systemSymbolTable.getSystemId());
+
+        ((IonStructImpl)_symtabElement).setSymbolTable(this);
+        _symtabElement.addTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE); // cas 25 apr 2008 was: systemSymbolTable.getSystemId());
 
         _symbolsStruct = new IonStructImpl();
         _symtabElement.put(SystemSymbolTable.SYMBOLS, _symbolsStruct);
@@ -74,9 +73,9 @@ public class LocalSymbolTableImpl
      */
     public LocalSymbolTableImpl(IonSystem system)
     {
+    	// assert system != null;
         this(system.getSystemSymbolTable());
     }
-
 
     public LocalSymbolTableImpl(IonSystem system,
                                 IonCatalog catalog,
@@ -85,7 +84,8 @@ public class LocalSymbolTableImpl
     {
         assert system != null;
         assert systemSymbolTable != null;
-        assert asymboltable.hasTypeAnnotation(SystemSymbolTable.ION_1_0);
+        assert asymboltable.hasTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE);  // was: ION_1_0
+
         _systemSymbols = systemSymbolTable;
         _symtabElement = asymboltable;
         _maxId = _systemSymbols.getMaxId();
@@ -158,7 +158,6 @@ public class LocalSymbolTableImpl
 
         super.doDefineSymbol(name, id);
     }
-
 
     public synchronized int findSymbol(String name) {
         int sid = _systemSymbols.findSymbol(name);

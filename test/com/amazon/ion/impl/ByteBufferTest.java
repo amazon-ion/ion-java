@@ -24,10 +24,10 @@ public class ByteBufferTest
         
         // Write enough data to overflow the first block
         byte[] initialData = new byte[BlockedBuffer._defaultBlockSizeMin + 5];
-        writer.write(initialData, 0, initialData.length);
         
         // Now insert some stuff at the beginning
         try {
+            writer.write(initialData, 0, initialData.length);
             writer.setPosition(0);
             writer.insert(10);
         }
@@ -43,10 +43,10 @@ public class ByteBufferTest
         
         // Write enough data to overflow the first block
         byte[] initialData = new byte[BlockedBuffer._defaultBlockSizeMin + 5];
-        writer.write(initialData, 0, initialData.length);
         
         // Now insert lots of stuff at the beginning
         try {
+            writer.write(initialData, 0, initialData.length);
             writer.setPosition(0);
             writer.insert(5000);
         }

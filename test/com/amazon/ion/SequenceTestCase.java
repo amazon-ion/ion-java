@@ -245,4 +245,23 @@ public abstract class SequenceTestCase
         }
         catch (IllegalArgumentException e) { }
     }
+
+
+    public void testClearRemovesChildsContainer()
+    {
+        IonValue val = system().newString("test");
+        IonSequence seq = newSequence(val);
+        seq.clear();
+        assertNull("Removed value should have null container",
+                   val.getContainer());
+    }
+
+    public void testMakeNullRemovesChildsContainer()
+    {
+        IonValue val = system().newString("test");
+        IonSequence seq = newSequence(val);
+        seq.makeNull();
+        assertNull("Removed value should have null container",
+                   val.getContainer());
+    }
 }

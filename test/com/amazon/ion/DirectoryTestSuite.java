@@ -21,9 +21,16 @@ public abstract class DirectoryTestSuite
     {
         super();
 
+        setName(getClass().getName());
+
         File goodFilesDir = IonTestCase.getTestdataFile(testdataDir);
-        String[] list = goodFilesDir.list();
-        String[] fileNames = list;
+        String[] fileNames = goodFilesDir.list();
+        if (fileNames == null)
+        {
+            String message =
+                "testdataDir is not a directory: " + testdataDir;
+            throw new IllegalArgumentException(message);
+        }
 
         // Sort the fileNames so they are listed in order.
         Arrays.sort(fileNames);

@@ -298,36 +298,4 @@ public class ListTest
         list2 = reload(list1);
         assertIonEquals(list1, list2);
     }
-
-    public void testClear1() {
-        IonList list = system().newEmptyList();
-        IonValue val = system().newString("test");
-        list.add(val);
-        list.clear();
-        list.add(val);
-    }
-
-    public void testClear2() {
-        IonList list = system().newEmptyList();
-        IonValue val = system().newString("test");
-        list.add(val);
-        list.clear();
-        IonList list2 = system().newEmptyList();
-        list2.add(val);
-    }
-
-    public void testClear3() {
-        IonList list = system().newEmptyList();
-        IonValue val = system().newString("test");
-        list.add(val);
-        list.clear();
-        IonContainer container = val.getContainer();
-        if (container != null) {
-            container.remove(val);
-        }
-        list.add(val);
-    }
-
-
-    
 }

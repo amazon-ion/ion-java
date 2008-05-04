@@ -26,7 +26,7 @@ public final class IonFloatImpl
 
     static private final Double ZERO_DOUBLE = new Double(0);
 
-    static private final int SIZE_OF_IEEE_754_64_BITS = 8;
+    // not needed: static private final int SIZE_OF_IEEE_754_64_BITS = 8;
 
 
     private Double _float_value;

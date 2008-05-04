@@ -127,10 +127,18 @@ public abstract class IonSequenceImpl
         wrapper.addTypeAnnotation(SystemSymbolTable.ION_EMBEDDED_VALUE);
 
         String systemId = symtab.getSystemSymbolTable().getSystemId();
-        // TODO inject systemId ($ion_1_0)
-        // TODO inject symtab
-        // TODO inject value
-
+        // TO DO inject systemId ($ion_1_0)
+        IonSymbolImpl sysid = new IonSymbolImpl();
+        sysid.setValue(systemId);
+        wrapper.add(sysid);
+        
+        // TO DO inject symtab
+        IonStructImpl symtabion = (IonStructImpl)symtab.getIonRepresentation();
+        wrapper.add(symtabion);
+        
+        // TO DO inject value
+        wrapper.add(element);
+        
         assert wrapper._isSystemValue; // so we can unwrap it
         super.add(wrapper);
     }

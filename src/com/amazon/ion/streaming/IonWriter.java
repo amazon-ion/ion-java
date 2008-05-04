@@ -8,7 +8,6 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.util.Date;
 
@@ -221,7 +220,7 @@ public interface IonWriter
      * @param localOffset minutes from UTC where the value was authored
      * @throws IOException
      */
-    public abstract void writeTimestamp(Date value, int localOffset) throws IOException;
+    public abstract void writeTimestamp(Date value, Integer localOffset) throws IOException;
     /**
      * write symbolId out as an IonSymbol value.  The value does not
      * have to be valid in the symbol table, unless the output is
@@ -456,5 +455,5 @@ public interface IonWriter
      * @return number of bytes written to the stream
      * @throws IOException
      */
-    public abstract int    writeBytes(OutputStream out) throws IOException;
+    public abstract int    writeBytes(SimpleByteBuffer.SimpleByteWriter out) throws IOException;
 }

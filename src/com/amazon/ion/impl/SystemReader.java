@@ -23,7 +23,7 @@ public class SystemReader
     implements IonReader
 {
     private final IonSystemImpl _system;
-    private final IonCatalog _catalog;
+    private final IonCatalog    _catalog;
 
     private Reader           _input;
     private IonParser        _parser;
@@ -34,8 +34,8 @@ public class SystemReader
 
     private boolean      _at_eof;
     private boolean      _currentIsHidden;
-    private IonValue     _curr;
-    private IonValue     _next;
+    private IonValueImpl _curr;
+    private IonValueImpl _next;
 
 
     /**
@@ -52,7 +52,7 @@ public class SystemReader
                         IonCatalog catalog,
                         Reader input)
     {
-        this(system, catalog, system.newLocalSymbolTable(), input);
+        this(system, catalog, getSystemSymbolTableAsLocal(system), input);
     }
 
     /**
@@ -113,12 +113,24 @@ public class SystemReader
 
         _system = system;
         _catalog = catalog;
+        
         // TODO this should be an unmodifiable bootstram symtab.
-        _currentSymbolTable = system.newLocalSymbolTable();
+        _currentSymbolTable = getSystemSymbolTableAsLocal(system);
         _buffer = buffer;
         _buffer_offset = reader.position();
     }
-
+    
+    // TODO: replace this with a better option, this shouldn't be a
+    //       table anyone could edit, and we should have a way to
+    // 		 tell that it's a system symbol table and not just an
+    //		 empty local symbol table.
+    static LocalSymbolTable getSystemSymbolTableAsLocal(IonSystemImpl system) {
+    	LocalSymbolTable lst;
+    	
+    	lst = new LocalSymbolTableImpl(system.getSystemSymbolTable());
+    	
+    	return lst;
+    }
 
     public IonSystemImpl getSystem() {
         return _system;
@@ -174,6 +186,8 @@ public class SystemReader
             // so parse another value out of the input
             if (_parser != null) {
                 boolean freshBuffer = _buffer_offset == 0;
+                // cas 22 apr 2008: 
+                freshBuffer = false; // this is really the "write magic cookie" flag
                 _parser.parse(_currentSymbolTable
                               ,_buffer_offset
                               ,freshBuffer
@@ -222,7 +236,7 @@ public class SystemReader
                 _next = null;
 
                 checkCurrentForHiddens();
-
+                
                 return _curr;
             }
         }
@@ -233,6 +247,7 @@ public class SystemReader
     {
         LocalSymbolTable newLocalSymbtab =
             _system.handleLocalSymbolTable(_catalog, _curr);
+
         if (newLocalSymbtab != null)
         {
             // Note that we may be replacing the encoded systemId symbol
@@ -240,7 +255,10 @@ public class SystemReader
             // sync with the binary.  That's okay, though: if the bytes are
             // requested it will be updated.
 
-            _curr = newLocalSymbtab.getIonRepresentation();
+        	IonValueImpl localsym = (IonValueImpl)newLocalSymbtab.getIonRepresentation();
+            assert localsym.getSymbolTable() == null || localsym.getSymbolTable().getSystemSymbolTable() == _system.getSystemSymbolTable();
+            assert _system.getSystemSymbolTable() == newLocalSymbtab.getSystemSymbolTable();
+            // _curr.setSymbolTable(newLocalSymbtab);  // the symbol table of a symbol table struct is itself
             _currentSymbolTable = newLocalSymbtab;
             _currentIsHidden = true;
         }
@@ -250,10 +268,12 @@ public class SystemReader
             StaticSymbolTable newTable =
                 new StaticSymbolTableImpl(_system, (IonStruct) _curr);
             _catalog.putTable(newTable);
+            
+            // FIXME: really?  I don't think shared tables need to be (or
+            //		  should be hidden.  They should be user values.
             _currentIsHidden = true;
         }
-        else
-        {
+        else {
             _currentIsHidden = false;
         }
     }

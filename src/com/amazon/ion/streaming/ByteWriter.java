@@ -25,16 +25,15 @@ public interface ByteWriter
         public void remove(int length);
         
         public void writeTypeDesc(int typeDescByte) throws IOException;
-        public int  writeTypeDescWithLength(int typeid, int valueLenth) throws IOException;
+        public int  writeTypeDescWithLength(int typeid, int lenOfLength, int valueLenth) throws IOException;
         
-        public int  writeLong(long value, boolean force_zero_write) throws IOException;
-        public int  writeVarLong(long value, boolean force_zero_write) throws IOException;
-        public int  writeVarULong(long value, boolean force_zero_write) throws IOException;
+        public int  writeIonInt(long value, int len) throws IOException;
+        public int  writeVarInt(long value, int len, boolean force_zero_write) throws IOException;
+        public int  writeVarUint(long value, int len, boolean force_zero_write) throws IOException;
 
-        public int  writeInt(int value, int lenToWrite) throws IOException;
-        public int  writeInt(int value, boolean force_zero_write) throws IOException;
-        public int  writeVarInt(int value, boolean force_zero_write) throws IOException;
-        public int  writeVarUInt(int value, boolean force_zero_write) throws IOException;
+        public int  writeIonInt(int value, int len) throws IOException;
+        public int  writeVarInt(int value, int len, boolean force_zero_write) throws IOException;
+        public int  writeVarUInt(int value, int len, boolean force_zero_write) throws IOException;
 
         public int  writeFloat(double value) throws IOException;
         public int  writeDecimal(BigDecimal value) throws IOException;

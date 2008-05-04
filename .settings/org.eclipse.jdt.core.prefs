@@ -1,4 +1,4 @@
-#Tue Dec 11 17:02:01 PST 2007
+#Fri Feb 22 17:44:58 PST 2008
 eclipse.preferences.version=1
 org.eclipse.jdt.core.builder.cleanOutputFolder=clean
 org.eclipse.jdt.core.builder.duplicateResourceTask=warning
@@ -113,7 +113,7 @@ org.eclipse.jdt.core.formatter.alignment_for_superinterfaces_in_enum_declaration
 org.eclipse.jdt.core.formatter.alignment_for_superinterfaces_in_type_declaration=17
 org.eclipse.jdt.core.formatter.alignment_for_throws_clause_in_constructor_declaration=32
 org.eclipse.jdt.core.formatter.alignment_for_throws_clause_in_method_declaration=32
-org.eclipse.jdt.core.formatter.blank_lines_after_imports=1
+org.eclipse.jdt.core.formatter.blank_lines_after_imports=2
 org.eclipse.jdt.core.formatter.blank_lines_after_package=1
 org.eclipse.jdt.core.formatter.blank_lines_before_field=1
 org.eclipse.jdt.core.formatter.blank_lines_before_first_class_body_declaration=0
@@ -123,7 +123,7 @@ org.eclipse.jdt.core.formatter.blank_lines_before_method=1
 org.eclipse.jdt.core.formatter.blank_lines_before_new_chunk=1
 org.eclipse.jdt.core.formatter.blank_lines_before_package=0
 org.eclipse.jdt.core.formatter.blank_lines_between_import_groups=1
-org.eclipse.jdt.core.formatter.blank_lines_between_type_declarations=1
+org.eclipse.jdt.core.formatter.blank_lines_between_type_declarations=2
 org.eclipse.jdt.core.formatter.brace_position_for_annotation_type_declaration=end_of_line
 org.eclipse.jdt.core.formatter.brace_position_for_anonymous_type_declaration=next_line
 org.eclipse.jdt.core.formatter.brace_position_for_array_initializer=end_of_line

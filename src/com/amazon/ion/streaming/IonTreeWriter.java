@@ -21,7 +21,6 @@ import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.util.Date;
 
@@ -33,12 +32,12 @@ import java.util.Date;
 public final class IonTreeWriter
     extends IonBaseWriter
 {
-    IonSystem       _sys;
+    IonSystem       	_sys;
     
-    boolean         _in_struct;
-    IonContainer    _current_parent;
-    int             _parent_stack_top = 0;
-    IonContainer[]  _parent_stack = new IonContainer[10];
+    boolean         	_in_struct;
+    IonContainer    	_current_parent;
+    int             	_parent_stack_top = 0;
+    IonContainer[]  	_parent_stack = new IonContainer[10];
     
     public IonTreeWriter(IonSystem sys) {
         _sys = sys;
@@ -278,7 +277,7 @@ public final class IonTreeWriter
         append(v);
     }
 
-    public void writeTimestamp(Date value, int localOffset)
+    public void writeTimestamp(Date value, Integer localOffset)
         throws IOException
     {
         IonTimestamp v = _sys.newUtcTimestamp(value);
@@ -365,6 +364,9 @@ public final class IonTreeWriter
             throw new IllegalStateException("not all containers are closed");
         }
         v = _current_parent;
+        if (!(v instanceof IonDatagram)) {
+        	v = this._sys.newDatagram(v);
+        }
         return v;
     }
     public byte[] getBytes()
@@ -400,7 +402,7 @@ public final class IonTreeWriter
     }
 
 
-    public int writeBytes(OutputStream out)
+    public int writeBytes(SimpleByteBuffer.SimpleByteWriter out) // OutputStream out)
         throws IOException
     {
         IonValue v = getContentAsIonValue();

@@ -71,20 +71,6 @@ public interface ByteReader
     public int  readTypeDesc() throws IOException;
     
     /**
-     * reads the next len bytes as a signed long.  This uses
-     * 8 bits per byte and expects the bytes in bigendian order. 
-     * The first bit (0x80) of the first byte is the sign of the
-     * overall value, the remaining 7 bits are treated as part
-     * of the absolute value of the number (as are the 8 bits in
-     * any remaining bytes) It
-     * returns the aggregated bytes as a Java long (signed 64 bit
-     * value) correctly signed. 
-     * @param len number of bytes to read into the long
-     * @return long value read
-     * @throws IOException
-     */
-    public long readLong(int len) throws IOException;
-    /**
      * reads the upcoming bytes as a signed long.  This uses
      * 7 bits per byte, expects the bytes in bigendian order, and
      * looks for the high order bit (0x80) to be set to mark the
@@ -120,18 +106,6 @@ public interface ByteReader
      */
     public long readULong(int len) throws IOException;
 
-    /**
-     * reads the upcoming bytes as a unsigned int.  This uses
-     * 7 bits per byte, expects the bytes in bigendian order, and
-     * looks for the high order bit (0x80) to be set to mark the
-     * end of the value. It does not include a sign bit so all 7 bits
-     * in the first byte are treated as positive. It
-     * returns the aggregated bytes as a Java int (signed 32 bit
-     * value). 
-     * @return int value read
-     * @throws IOException
-     */
-    public int  readInt(int len) throws IOException;
     /**
      * reads the upcoming bytes as a signed int.  This uses
      * 7 bits per byte, expects the bytes in bigendian order, and

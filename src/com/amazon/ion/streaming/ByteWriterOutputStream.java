@@ -4,25 +4,28 @@
 
 package com.amazon.ion.streaming;
 
+/*
+ *   No longer needed 
+ * 
+ * 
+ 
+import com.amazon.ion.IonException;
 import com.amazon.ion.impl.IonBinary;
 import com.amazon.ion.impl.IonTokenReader;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
-/**
- *
- */
+
 public final class ByteWriterOutputStream
     implements ByteWriter
 {
     private static final int _ib_FLOAT64_LEN         =    8;
     private static final Double DOUBLE_POS_ZERO = Double.valueOf(0.0);
 
-    OutputStream _out;
+    SimpleByteBuffer.SimpleByteWriter _out;
     
-    public ByteWriterOutputStream(OutputStream out) {
+    public ByteWriterOutputStream(SimpleByteBuffer.SimpleByteWriter out) {
         _out = out;
     }
 
@@ -82,39 +85,7 @@ public final class ByteWriterOutputStream
         // THIS IS a buggy copy, it should be writing 8 bits per byte, not 7!
         
         throw new UnsupportedOperationException("E_NOT_IMPL");
-        /*
-        int len = 0;
-
-        if (value != 0) {
-            int mask = 0x7F;
-            boolean is_negative = false;
-
-            len = IonBinary.lenVarInt7(value);
-            if (is_negative = (value < 0)) {
-                value = -value;
-            }
-
-            // we write the first "byte" separately as it has the sign
-            int b = (byte)((value >> (7*(len-1))) & mask);
-            if (is_negative)  b |= 0x40; // the sign bit only on the first byte
-            if (len == 1)     b |= 0x80; // the terminator in case the first "byte" is the last
-            write((byte)b);
-
-            // write the rest
-            switch (len) {  // we already wrote 1 byte
-            case 5: write((byte)((value >> (7*3)) & mask));
-            case 4: write((byte)((value >> (7*2)) & mask));
-            case 3: write((byte)((value >> (7*1)) & mask));
-            case 2: write((byte)((value & mask) | 0x80));
-            case 1: // do nothing
-            }
-        }
-        else if (force_zero_write) {
-            write((byte)0x80);
-            len = 1;
-        }
-        return len;
-        */
+       
     }
 
     public int writeInt(int value, int lenToWrite)
@@ -134,7 +105,9 @@ public final class ByteWriterOutputStream
 
             len = IonBinary.lenVarInt7(value);
             if (is_negative = (value < 0)) {
-                value = -value;
+                int v2 = -value;
+                if (v2 == value) throw new IonException("value out of bounds for int (too small)");
+                value = v2;
             }
 
             // we write the first "byte" separately as it has the sign
@@ -207,7 +180,7 @@ public final class ByteWriterOutputStream
         case 0: write((byte)((value & mask) | 0x80));
                 break;
         }
-        return len;
+        return len
     }
 
     public int writeLong(long value, boolean force_zero_write) throws IOException
@@ -221,7 +194,9 @@ public final class ByteWriterOutputStream
 
             len = IonBinary.lenVarInt(value) - 1;
             if (is_negative) {
-                value = -value;
+                long v2 = -value;
+                if (v2 == value) throw new IonException("value out of bounds for long (too small)");
+                value = v2;
             }
 
             // we write the first "byte" separately as it has the sign
@@ -258,7 +233,9 @@ public final class ByteWriterOutputStream
 
             len = IonBinary.lenVarInt(value);
             if (is_negative = (value < 0)) {
-                value = -value;
+                long v2 = -value;
+                if (v2 == value) throw new IonException("value out of bounds for long (too small)");
+                value = v2;
             }
 
             // we write the first "byte" separately as it has the sign
@@ -409,44 +386,52 @@ public final class ByteWriterOutputStream
         }
         return returnlen;
     }
+    
     static final int high_surrogate_value = 0xD800;
     static final int low_surrogate_value = 0xDC00;
     static final int surrogate_mask = 0xFC00; // 0x3f << 10; or the top 6 bits
     static final int surrogate_utf32_offset = 0x10000;
-
     // TODO: port this surrogate handling back into the various writers (and 
     //       stringlen routines) perhaps while refactoring these write 
     //       routines into a common class/interface/etc
+    // done for IonBinary lenString and lenChar
     public int writeString(String value) throws IOException
     {
         int len = 0;
 
         for (int ii=0; ii<value.length(); ii++) {
             int c = value.charAt(ii);
-            int surrogate_test = (c & surrogate_mask);
-            if (surrogate_test != 0) {
-                if (surrogate_test == high_surrogate_value) {
-                    ii++;
-                    if (ii >= value.length()) {
-                        throwException("high surrogate character missing low surrogate, endcountered in Java string, invalid UTF-16 value");
+            if (c < 128) {
+                // check out the common case and don't waste time on it.
+                _out.write((byte)(c & 0xff));
+                len++;
+            }
+            else {
+                int surrogate_test = (c & surrogate_mask);
+                if (surrogate_test != 0) {
+                    if (surrogate_test == high_surrogate_value) {
+                        ii++;
+                        if (ii >= value.length()) {
+                            throwException("high surrogate character missing low surrogate, endcountered in Java string, invalid UTF-16 value");
+                        }
+                        int c2 = value.charAt(ii);
+                        if ((c2 & surrogate_mask) != low_surrogate_value) {
+                            throwException("unmatched high surrogate character endcountered in Java string, invalid UTF-16 value");
+                        }
+                        c = ((c & ~surrogate_mask) << 10) | (c2 & ~surrogate_mask);
+                        c +=  surrogate_utf32_offset;
                     }
-                    int c2 = value.charAt(ii);
-                    if ((c2 & surrogate_mask) != low_surrogate_value) {
-                        throwException("unmatched high surrogate character endcountered in Java string, invalid UTF-16 value");
+                    else if (surrogate_test == low_surrogate_value) {
+                        throwException("unmatched low surrogate character endcountered in Java string (no preceding high surrogate), invalid UTF-16 value");
                     }
-                    c = ((c & ~surrogate_mask) << 10) | (c2 & ~surrogate_mask);
-                    c +=  surrogate_utf32_offset;
-                }
-                else if (surrogate_test == low_surrogate_value) {
-                    throwException("unmatched low surrogate character endcountered in Java string (no preceding high surrogate), invalid UTF-16 value");
+                    len += writeChar(c);
                 }
             }
-            len += writeChar(c);
         }
         return len;
     }
     
-    public int writeChar(int c) throws IOException
+    final public int writeChar(int c) throws IOException
     {
         // TODO: check this encoding, it is from:
         //      http://en.wikipedia.org/wiki/UTF-8
@@ -489,3 +474,4 @@ public final class ByteWriterOutputStream
     }
 
 }
+*/

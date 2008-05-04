@@ -26,12 +26,20 @@ import com.amazon.ion.impl.ByteBufferTest;
 import com.amazon.ion.impl.CharacterReaderTest;
 import com.amazon.ion.impl.ReaderTest;
 import com.amazon.ion.impl.SymbolTableTest;
+import com.amazon.ion.impl.IonEqualsTest;
+import com.amazon.ion.streaming.BadIonStreamingTests;
 import com.amazon.ion.streaming.BinaryStreamingTest;
+import com.amazon.ion.streaming.EquivIonStreamingTests;
+import com.amazon.ion.streaming.GoodIonStreamingTests;
+import com.amazon.ion.streaming.RoundTripStreamingTests;
 import com.amazon.ion.system.SimpleCatalogTest;
 import com.amazon.ion.util.PrinterTest;
 import com.amazon.ion.util.TextTest;
+import com.amazon.ion.util.EquivalenceTest;
+
 import junit.framework.Test;
 import junit.framework.TestSuite;
+import junit.framework.JUnit4TestAdapter;
 
 
 /**
@@ -80,13 +88,21 @@ public class AllTests
         suite.addTestSuite(SymbolTableTest.class);
         suite.addTestSuite(DatagramTest.class);
 
+        // equality testing
+        suite.addTest(new JUnit4TestAdapter(EquivalenceTest.class));
+        suite.addTest(new JUnit4TestAdapter(IonEqualsTest.class));
+
         // General processing test suite
         suite.addTest(new GoodIonTests());
         suite.addTest(new BadIonTests());
         suite.addTest(new EquivsTests());
         suite.addTest(new RoundTripTests());
-        
+
         suite.addTestSuite(BinaryStreamingTest.class);
+        suite.addTest(new BadIonStreamingTests());
+        suite.addTest(new GoodIonStreamingTests());
+        suite.addTest(new EquivIonStreamingTests());
+        suite.addTest(new RoundTripStreamingTests());
 
         //$JUnit-END$
 

@@ -93,8 +93,6 @@ public interface IonValue
     /**
      * Gets an enumeration value identifying the core Ion data type of this
      * object.
-     * <p/>
-     * <b>WARNING:</b> this method is not implemented by {@link IonDatagram}.
      *
      * @return a non-<code>null</code> enumeration value.
      */

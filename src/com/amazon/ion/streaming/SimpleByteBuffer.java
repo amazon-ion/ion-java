@@ -4,8 +4,11 @@
 
 package com.amazon.ion.streaming;
 
+import com.amazon.ion.IonException;
 import com.amazon.ion.impl.IonBinary;
+import com.amazon.ion.impl.IonConstants;
 import com.amazon.ion.impl.IonTokenReader;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
@@ -24,7 +27,8 @@ public final class SimpleByteBuffer
     int     _start;
     int     _eob;
     boolean _is_read_only;
-    
+
+
     public SimpleByteBuffer(byte[] bytes) {
         this(bytes, 0, bytes.length, false);
     }
@@ -49,7 +53,7 @@ public final class SimpleByteBuffer
         int length = _eob - _start;
         return length;
     }
-    
+
     public byte[] getBytes()
     {
         int length = _eob - _start;
@@ -68,9 +72,9 @@ public final class SimpleByteBuffer
         if (datalength > length) {
             throw new IllegalArgumentException("insufficient space in destination buffer");
         }
-        
+
         System.arraycopy(_bytes, _start, buffer, offset, datalength);
-        
+
         return datalength;
 
     }
@@ -94,12 +98,12 @@ public final class SimpleByteBuffer
         int length = _eob - _start;
         out.write(_bytes, _start, length);
     }
-    
-    static final class SimpleByteReader implements ByteReader 
+
+    static final class SimpleByteReader implements ByteReader
     {
         SimpleByteBuffer _buffer;
         int              _position;
-        
+
         SimpleByteReader(SimpleByteBuffer bytebuffer) {
             _buffer = bytebuffer;
             _position = bytebuffer._start;
@@ -144,10 +148,12 @@ public final class SimpleByteBuffer
 
         public int read(byte[] dst, int start, int len)
         {
-            if (dst == null || start < 0 || start >= dst.length || len < 0 || start + len > dst.length) {
+            if (dst == null || start < 0 || len < 0 || start + len > dst.length) {
+                // no need to test this start >= dst.length ||
+                // since we test start+len > dst.length which is the correct test
                 throw new IllegalArgumentException();
             }
-            
+
             if (_position >= _buffer._eob) return 0;
             int readlen = len;
             if (readlen + _position > _buffer._eob) readlen = _buffer._eob - _position;
@@ -161,89 +167,14 @@ public final class SimpleByteBuffer
             return read();
         }
 
-        public int readInt(int len) throws IOException
-        {
-            int retvalue = 0;
-            int b;
-
-            switch (len) {
-            case 8:
-                if ((b = read()) < 0) throwUnexpectedEOFException();
-                if (b != 0) throwIntOverflowExeption();
-            case 7:
-                if ((b = read()) < 0) throwUnexpectedEOFException();
-                if (b != 0) throwIntOverflowExeption();
-            case 6:
-                if ((b = read()) < 0) throwUnexpectedEOFException();
-                if (b != 0) throwIntOverflowExeption();
-            case 5:
-                if ((b = read()) < 0) throwUnexpectedEOFException();
-                if (b != 0) throwIntOverflowExeption();
-            case 4:
-                if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= b << (3*8);
-            case 3:
-                if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= b << (2*8);
-            case 2:
-                if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= b << (1*8);
-            case 1:
-                if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue |= b << (0*8);
-            }
-            return retvalue;
-        }
-
-        public long readLong(int len) throws IOException
-        {
-            long    retvalue = 0;
-            boolean is_negative = false;
-            int     b;
-
-            if (len > 0) {
-                // read the first byte
-                if ((b = read()) < 0) throwUnexpectedEOFException();
-                retvalue = (b & 0x7F);
-                is_negative = ((b & 0x80) != 0);
-
-                switch (len - 1) {  // we read 1 already
-                case 7:
-                    if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | b;
-                case 6:
-                    if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | b;
-                case 5:
-                    if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | b;
-                case 4:
-                    if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | b;
-                case 3:
-                    if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | b;
-                case 2:
-                    if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | b;
-                case 1:
-                    if ((b = read()) < 0) throwUnexpectedEOFException();
-                    retvalue = (retvalue << 8) | b;
-                default:
-                }
-                if (is_negative) {
-                    retvalue = -retvalue;
-                }
-            }
-            return retvalue;
-        }
-        
         public long readULong(int len) throws IOException
         {
             long    retvalue = 0;
             int b;
 
             switch (len) {
+            default:
+                throw new IonException("value too large for Java long");
             case 8:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
                 retvalue = (retvalue << 8) | b;
@@ -268,7 +199,8 @@ public final class SimpleByteBuffer
             case 1:
                 if ((b = read()) < 0) throwUnexpectedEOFException();
                 retvalue = (retvalue << 8) | b;
-            default:
+            case 0:
+                // do nothing, it's just a 0 length is a 0 value
             }
             return retvalue;
         }
@@ -345,6 +277,7 @@ done:       for (;;) {
                 // for the rest, they're all the same
                 for (;;) {
                     if ((b = read()) < 0) throwUnexpectedEOFException();
+                    if ((retvalue & 0xFE00000000000000L) != 0) throwIntOverflowExeption();
                     retvalue = (retvalue << 7) | (b & 0x7F);
                     if ((b & 0x80) != 0) break done;
                 }
@@ -354,7 +287,7 @@ done:       for (;;) {
             }
             return retvalue;
         }
-        
+
         /**
          * Reads an integer value, returning null to mean -0.
          * @throws IOException
@@ -451,12 +384,12 @@ done:       for (;;) {
                 // special case, return pos zero
                 return 0.0d;
             }
-        
+
             if (len != 8)
             {
                 throw new IOException("Length of float read must be 0 or 8");
             }
-        
+
             long dBits = this.readULong(len);
             return Double.longBitsToDouble(dBits);
         }
@@ -468,6 +401,7 @@ done:       for (;;) {
 
             for (;;) {
                 if ((b = read()) < 0) throwUnexpectedEOFException();
+                if ((retvalue & 0xFE00000000000000L) != 0) throwIntOverflowExeption();
                 retvalue = (retvalue << 7) | (b & 0x7F);
                 if ((b & 0x80) != 0) break;
             }
@@ -532,34 +466,44 @@ done:       for (;;) {
 
             return ti;
         }
-        
         public String readString(int len) throws IOException
         {
-            StringBuffer sb = new StringBuffer(len);
+            // len is bytes, which is greater than or equal to java
+            // chars even after utf8 to utf16 decoding nonsense
+            // the char array is way faster than using string buffer
+            char[] chars = new char[len];
+            int ii = 0;
             int c;
             int endPosition = this.position() + len;
 
             while (this.position() < endPosition) {
-                c = readChar();
+                c = readUnicodeScalar();
                 if (c < 0) throwUnexpectedEOFException();
-                sb.append((char)c);
+                if (c < 0x10000) {
+                    chars[ii++] = (char)c;
+                }
+                else { // when c is >= 0x10000 we need surrogate encoding
+                    chars[ii++] = (char)IonConstants.makeHighSurrogate(c);
+                    chars[ii++] = (char)IonConstants.makeLowSurrogate(c);
+                }
             }
-
             if (this.position() < endPosition) throwUnexpectedEOFException();
 
-            return sb.toString();
+            return new String(chars, 0, ii);
         }
-        
-        public int readChar() throws IOException {
+
+        public int readUnicodeScalar() throws IOException {
             int c = -1, b;
 
             b = read();
-            if (b < 0) return -1;
-            if ((b & 0x80) == 0) {
+            // ascii is all good, even -1 (eof)
+            if (b < 0x80) {
                 return b;
             }
 
+            // now we start gluing the multi-byte value together
             if ((b & 0xe0) == 0xc0) {
+                // for values from 0x80 to 0x7FF (all legal)
                 c = (b & ~0xe0);
                 b = read();
                 if ((b & 0xc0) != 0x80) throwUTF8Exception();
@@ -567,6 +511,7 @@ done:       for (;;) {
                 c |= (b & ~0x80);
             }
             else if ((b & 0xf0) == 0xe0) {
+                // for values from 0x800 to 0xFFFFF (NOT all legal)
                 c = (b & ~0xf0);
                 b = read();
                 if ((b & 0xc0) != 0x80) throwUTF8Exception();
@@ -576,8 +521,12 @@ done:       for (;;) {
                 if ((b & 0xc0) != 0x80) throwUTF8Exception();
                 c <<= 6;
                 c |= (b & ~0x80);
+                if (c > 0x00D7FF && c < 0x00E000) {
+                    throw new IonException("illegal surrogate value encountered in input utf-8 stream");
+                }
             }
             else if ((b & 0xf8) == 0xf0) {
+                // for values from 0x010000 to 0x1FFFFF (NOT all legal)
                 c = (b & ~0xf8);
                 b = read();
                 if ((b & 0xc0) != 0x80) throwUTF8Exception();
@@ -591,6 +540,9 @@ done:       for (;;) {
                 if ((b & 0xc0) != 0x80) throwUTF8Exception();
                 c <<= 6;
                 c |= (b & ~0x80);
+                if (c > 0x10FFFF) {
+                    throw new IonException("illegal utf value encountered in input utf-8 stream");
+                }
             }
             else {
                 throwUTF8Exception();
@@ -608,20 +560,20 @@ done:       for (;;) {
             throw new IOException("int in stream is too long for a Java int 32 use readLong()");
         }
     }
-    
-    static final class SimpleByteWriter extends OutputStream implements ByteWriter 
+
+    static final class SimpleByteWriter extends OutputStream implements ByteWriter
     {
         private static final int _ib_FLOAT64_LEN         =    8;
         private static final Double DOUBLE_POS_ZERO = Double.valueOf(0.0);
 
         SimpleByteBuffer _buffer;
         int              _position;
-        
+
         SimpleByteWriter(SimpleByteBuffer bytebuffer) {
             _buffer = bytebuffer;
             _position = bytebuffer._start;
         }
-        
+
         public int position()
         {
             return _position - _buffer._start;
@@ -638,7 +590,7 @@ done:       for (;;) {
             }
             _position = pos;
         }
-        
+
         public void insert(int length)
         {
             if (length < 0) {
@@ -659,7 +611,14 @@ done:       for (;;) {
             _buffer._eob -= length;
         }
 
-        public void write(byte b)
+        @Override
+        final public void write(int arg0)
+            throws IOException
+        {
+            write((byte)arg0);
+        }
+
+        final public void write(byte b)
         {
             _buffer._bytes[_position++] = b;
             if (_position > _buffer._eob) _buffer._eob = _position;
@@ -671,11 +630,11 @@ done:       for (;;) {
             if (bytes == null || start < 0 || start >= bytes.length || len < 0 || start + len > bytes.length) {
                 throw new IllegalArgumentException();
             }
-            
+
             System.arraycopy(bytes, start, _buffer._bytes, _position, len);
             _position += len;
             if (_position > _buffer._eob) _buffer._eob = _position;
-            
+
             return;
         }
 
@@ -684,40 +643,59 @@ done:       for (;;) {
             write((byte)(typeDescByte & 0xff));
         }
 
-        public int writeTypeDescWithLength(int typeid, int valueLength)
+        public int writeTypeDescWithLength(int typeid, int lenOfLength, int valueLength)
         {
             int written_len = 1;
-            
+
             int td = ((typeid & 0xf) << 4);
-            if (valueLength >= 14) {
-                td |= (byte)14;
-                writeTypeDesc((byte)td);
-                written_len += writeVarUInt(valueLength, true);
+            if (valueLength >= IonConstants.lnIsVarLen) {
+                td |= IonConstants.lnIsVarLen;
+                writeTypeDesc(td);
+                written_len += writeVarUInt(valueLength, lenOfLength, true);
             }
             else {
                 td |= (valueLength & 0xf);
-                writeTypeDesc((byte)td);
+                writeTypeDesc(td);
             }
             return written_len;
         }
 
-        public int writeInt(int value, boolean force_zero_write)
+        public int writeTypeDescWithLength2(int typeid, int valueLength)
         {
-            // TODO ??? do we need this?
-            throw new UnsupportedOperationException();
-/*            int len = 0;
+            int written_len = 1;
+
+            int td = ((typeid & 0xf) << 4);
+            if (valueLength >= IonConstants.lnIsVarLen) {
+                td |= IonConstants.lnIsVarLen;
+                writeTypeDesc(td);
+                int lenOfLength = IonBinary.lenVarUInt7(valueLength);
+                written_len += writeVarUInt(valueLength, lenOfLength, true);
+            }
+            else {
+                td |= (valueLength & 0xf);
+                writeTypeDesc(td);
+            }
+            return written_len;
+        }
+
+        public int writeVarInt(int value, int len, boolean force_zero_write)
+        {
+            // int len = 0;
 
             if (value != 0) {
                 int mask = 0x7F;
                 boolean is_negative = false;
 
-                len = IonBinary.lenVarInt7(value);
+                assert len == IonBinary.lenVarInt7(value);
                 if (is_negative = (value < 0)) {
                     value = -value;
                 }
 
                 // we write the first "byte" separately as it has the sign
-                int b = (byte)((value >> (7*(len-1))) & mask);
+                // changed shift operator from >> to >>>, we don't want to
+                // sign extend, this is only a problem with MIN_VALUE where
+                // negating the value (above) still results in a negative number
+                int b = (byte)((value >>> (7*(len-1))) & mask);
                 if (is_negative)  b |= 0x40; // the sign bit only on the first byte
                 if (len == 1)     b |= 0x80; // the terminator in case the first "byte" is the last
                 write((byte)b);
@@ -733,57 +711,22 @@ done:       for (;;) {
             }
             else if (force_zero_write) {
                 write((byte)0x80);
-                len = 1;
+                assert len == 1;
+
             }
-            return len;
-*/        }
-
-        public int writeInt(int value, int lenToWrite)
-        {
-            // TODO ??? do we need this?
-            throw new UnsupportedOperationException();
-        }
-
-        public int writeVarInt(int value, boolean force_zero_write)
-        {
-
-            int len = 0;
-
-            if (value != 0) {
-                int mask = 0x7F;
-                boolean is_negative = false;
-
-                len = IonBinary.lenVarInt7(value);
-                if (is_negative = (value < 0)) {
-                    value = -value;
-                }
-
-                // we write the first "byte" separately as it has the sign
-                int b = (byte)((value >> (7*(len-1))) & mask);
-                if (is_negative)  b |= 0x40; // the sign bit only on the first byte
-                if (len == 1)     b |= 0x80; // the terminator in case the first "byte" is the last
-                write((byte)b);
-
-                // write the rest
-                switch (len) {  // we already wrote 1 byte
-                case 5: write((byte)((value >> (7*3)) & mask));
-                case 4: write((byte)((value >> (7*2)) & mask));
-                case 3: write((byte)((value >> (7*1)) & mask));
-                case 2: write((byte)((value & mask) | 0x80));
-                case 1: // do nothing
-                }
-            }
-            else if (force_zero_write) {
-                write((byte)0x80);
-                len = 1;
+            else {
+                assert len == 0;
             }
             return len;
         }
-        
-        public int writeVarUInt(int value, boolean force_zero_write)
+
+        public int writeVarUInt(int value, int len, boolean force_zero_write)
         {
             int mask = 0x7F;
-            int len = IonBinary.lenVarUInt7(value);
+            if (value < 0) {
+                throw new IllegalArgumentException("signed int where unsigned (>= 0) was expected");
+            }
+            assert len == IonBinary.lenVarUInt7(value);
 
             switch (len - 1) {
             case 4: write((byte)((value >> (7*4)) & mask));
@@ -802,94 +745,87 @@ done:       for (;;) {
             return len;
         }
 
-        public int writeVarUInt(int value, int fixed_size) throws IOException
+        public int writeIonInt(int value, int len)
         {
-            int mask = 0x7F;
-            int len = IonBinary.lenVarUInt7(value);
-        
-            if (fixed_size > 0) {
-                if (fixed_size < len) {
-                    throwException(
-                             "overflow, fixed size ("
-                            +fixed_size
-                            +") too small for value ("
-                            +value
-                            +")"
-                    );
-                }
-                len = fixed_size;
-            }
-        
-            switch (len-1) {
-            case 4: write((byte)((value >> (7*4)) & mask));
-            case 3: write((byte)((value >> (7*3)) & mask));
-            case 2: write((byte)((value >> (7*2)) & mask));
-            case 1: write((byte)((value >> (7*1)) & mask));
-            case 0: write((byte)((value & mask) | 0x80));
-                    break;
-            }
-            return len;
+            return writeIonInt((long)value, len);
         }
 
-        public int writeLong(long value, boolean force_zero_write)
+        public int writeIonInt(long value, int len)
         {
-            int  len = 0;
+            // we shouldn't be writing out 0's as an Ion int value
+            if (value == 0) {
+                assert len == 0;
+                return len;  // aka 0
+            }
 
             // figure out how many we have bytes we have to write out
-            if (value != 0) {
-                long mask = 0xffL;
-                boolean is_negative = (value < 0);
+            long mask = 0xffL;
+            boolean is_negative = (value < 0);
 
-                len = IonBinary.lenVarInt(value) - 1;
-                if (is_negative) {
-                    value = -value;
-                }
+            assert len == IonBinary.lenIonInt(value);
 
-                // we write the first "byte" separately as it has the sign
-                int b = (byte)((value >> (8*len)) & 0x7fL);
-                if (is_negative)  b |= 0x80; // the sign bit
-                write((byte)b);
-
-                // write the rest
-                switch (len - 1) {  // we already wrote 1 byte
-                case 6: write((byte)((value >> (8*6)) & mask));
-                case 5: write((byte)((value >> (8*5)) & mask));
-                case 4: write((byte)((value >> (8*4)) & mask));
-                case 3: write((byte)((value >> (8*3)) & mask));
-                case 2: write((byte)((value >> (8*2)) & mask));
-                case 1: write((byte)((value >> (8*1)) & mask));
-                case 0: write((byte)(value & mask));
-                }
-                len++;
+            if (is_negative) {
+                value = -value;
+                // note for Long.MIN_VALUE the negation returns
+                // itself as a value, but that's also the correct
+                // "positive" value to write out anyway, so it
+                // all works out
             }
-            else if (force_zero_write) {
-                write((byte)0x80);
-                len = 1;
+
+            // write the rest
+            switch (len) {  // we already wrote 1 byte
+            case 8: write((byte)((value >> (8*7)) & mask));
+            case 7: write((byte)((value >> (8*6)) & mask));
+            case 6: write((byte)((value >> (8*5)) & mask));
+            case 5: write((byte)((value >> (8*4)) & mask));
+            case 4: write((byte)((value >> (8*3)) & mask));
+            case 3: write((byte)((value >> (8*2)) & mask));
+            case 2: write((byte)((value >> (8*1)) & mask));
+            case 1: write((byte)(value & mask));
             }
+
             return len;
         }
 
-        public int writeVarLong(long value, boolean force_zero_write)
+        public int writeVarInt(long value, int len, boolean force_zero_write)
         {
-            int len = 0;
+            //int len = 0;
 
             if (value != 0) {
                 long mask = 0x7fL;
-                boolean is_negative = false;
-
-                len = IonBinary.lenVarInt(value);
-                if (is_negative = (value < 0)) {
+                assert len == IonBinary.lenVarInt8(value);
+                int b;
+                if (value < 0) {
                     value = -value;
+                    // we write the first "byte" separately as it has the sign
+                    // and we have to deal with the oddball MIN_VALUE case
+                    if (value == Long.MIN_VALUE) {
+                        // we use the shift without sign extension as this
+                        // represents a positive value (even though it's neg)
+                        b = (byte)((value >>> (7*len)) & mask);
+                        // len must be greater than 1 so we don't need to set the high bit
+                    }
+                    else {
+                        // here, and hereafter, we don't care about sign extension
+                        b = (byte)((value >>> (7*len)) & mask);
+                        if (len == 1) b |= 0x80; // the terminator in case the first "byte" is the last
+                    }
+                    // we don't worry about stepping on a data bit here as
+                    // we have extra bits at the max size and below that we've
+                    // already taken the sign bit into account
+                    b |= 0x40; // the sign bit
+                    write((byte)b);
                 }
-
-                // we write the first "byte" separately as it has the sign
-                int b = (byte)((value >> (7*len)) & mask);
-                if (is_negative)  b |= 0x40; // the sign bit
-                if (len == 1)     b |= 0x80; // the terminator in case the first "byte" is the last
-                write((byte)b);
+                else {
+                    // we write the first "byte" separately as it has the sign
+                    b = (byte)((value >>> (7*len)) & mask);
+                    if (len == 1) b |= 0x80; // the terminator in case the first "byte" is the last
+                    write((byte)b);
+                }
 
                 // write the rest
                 switch (len - 1) {  // we already wrote 1 byte
+                case 9: write((byte)((value >>> (7*9)) & mask));
                 case 8: write((byte)((value >> (7*8)) & mask));
                 case 7: write((byte)((value >> (7*7)) & mask));
                 case 6: write((byte)((value >> (7*6)) & mask));
@@ -903,16 +839,19 @@ done:       for (;;) {
             }
             else if (force_zero_write) {
                 write((byte)0x80);
-                len = 0;
+                assert len == 1;
             }
-
+            else {
+                assert len == 0;
+            }
             return len;
         }
 
-        public int writeVarULong(long value, boolean force_zero_write)
+        public int writeVarUint(long value, int len, boolean force_zero_write)
         {
             int mask = 0x7F;
-            int len = IonBinary.lenVarUInt7(value);
+            assert len == IonBinary.lenVarUInt7(value);
+            assert value > 0;
 
             switch (len - 1) {
             case 9: write((byte)((value >> (7*9)) & mask));
@@ -926,16 +865,19 @@ done:       for (;;) {
             case 1: write((byte)((value >> (7*1)) & mask));
             case 0: write((byte)((value & mask) | 0x80L));
                     break;
-            case -1: // or 0
+            case -1: // or len == 0
                 if (force_zero_write) {
                     write((byte)0x80);
-                    len = 1;
+                    assert len == 1;
+                }
+                else {
+                    assert len == 0;
                 }
                 break;
             }
             return len;
         }
-        
+
         public int writeULong(long value, int lenToWrite) throws IOException
         {
             switch (lenToWrite) {
@@ -950,7 +892,7 @@ done:       for (;;) {
             }
             return lenToWrite;
         }
-        
+
         public int writeFloat(double value) throws IOException
         {
             if (Double.valueOf(value).equals(DOUBLE_POS_ZERO))
@@ -983,7 +925,7 @@ done:       for (;;) {
 
                 // Ion stores exponent, BigDecimal uses the negation "scale"
                 int exponent = -scale;
-                returnlen += this.writeInt(exponent, true);
+                returnlen += this.writeIonInt(exponent, IonBinary.lenVarUInt7(exponent));
 
                 // If the first bit is set, we can't use it for the sign,
                 // and we need to write an extra byte to hold it.
@@ -1007,74 +949,102 @@ done:       for (;;) {
         throws IOException
         {
             int  returnlen = 0;
-    
+
             if (di != null) {
                 long l = di.d.getTime();
                 BigDecimal bd = new BigDecimal(l);
                 bd.setScale(13); // millisecond time has 13 significant digits
-    
+
                 int  tzoffset = (di.localOffset == null) ? 0 : di.localOffset.intValue();
-    
+
                 int  tzlen = IonBinary.lenVarInt7(tzoffset);
                 if (tzlen == 0) tzlen = 1;
-    
+
                 if (di.localOffset == null) {
                     // TODO don't use magic numbers!
                     this.write((byte)(0xff & (0x80 | 0x40))); // negative 0 (no timezone)
                     returnlen ++;
                 }
                 else {
-                    returnlen += writeInt(tzoffset, true);
+                    returnlen += writeIonInt(tzoffset, IonBinary.lenVarUInt7(tzoffset));
                 }
                 returnlen += writeDecimal(bd);
             }
             return returnlen;
         }
-        
-        public int writeString(String value) throws IOException
+
+        final public int writeString(String value) throws IOException
         {
             int len = 0;
 
             for (int ii=0; ii<value.length(); ii++) {
-                char c = value.charAt(ii);
-                len += writeChar(c);
+                int c = value.charAt(ii);
+                if (c < 128) {
+                    // don't even both to call the "utf8" converter for ascii
+                    write((byte)c);
+                    len++;
+                }
+                else {
+                    if (c >= 0xD800) {
+                        if (IonConstants.isHighSurrogate(c)) {
+                            ii++;
+                            // houston we have a high surrogate (let's hope it has a partner
+                            if (ii >= value.length()) {
+                                throw new IonException("invalid string, unpaired high surrogate character");
+                            }
+                            int c2 = value.charAt(ii);
+                            if (!IonConstants.isLowSurrogate(c2)) {
+                                throw new IonException("invalid string, unpaired high surrogate character");
+                            }
+                            c = IonConstants.makeUnicodeScalar(c, c2);
+                        }
+                        else if (IonConstants.isLowSurrogate(c)) {
+                            // it's a loner low surrogate - that's an error
+                            throw new IonException("invalid string, unpaired low surrogate character");
+                        }
+                        // from 0xE000 up the _writeUnicodeScalar will check for us
+                    }
+                    len += writeUnicodeScalarAsUTF8(c);
+                }
             }
-
             return len;
         }
-        
-        // TODO: this needs to handle the 16 bit surrogate characters, and it doesn't! 
-        public int writeChar(int c) throws IOException
+        final public int writeUnicodeScalarAsUTF8(int c) throws IOException
         {
-            // TODO: check this encoding, it is from:
+            // TO DO: check this encoding, it is from:
             //      http://en.wikipedia.org/wiki/UTF-8
             // we probably should use some sort of Java supported
-            // libaray for this.  this class might be of interest:
+            // library for this.  this class might be of interest:
             //     CharsetDecoder(Charset cs, float averageCharsPerByte, float maxCharsPerByte)
             // in: java.nio.charset.CharsetDecoder
-    
+
             int len = -1;
-    
-            if ((c & (~0x1FFFFF)) != 0) {
-                throwException("invalid character for UTF-8 output");
-            }
-    
-            if ((c & (~0x7f)) == 0) {
+
+            // first the quick, easy and common case - ascii
+            if (c < 0x80) {
                 write((byte)(0xff & c ));
                 len = 1;
             }
-            else if ((c & (~0x7ff)) == 0) {
+            else if (c < 0x800) {
+                // 2 bytes characters from 0x000080 to 0x0007FF
                 write((byte)( 0xff & (0xC0 | (c >> 6)) ));
                 write((byte)( 0xff & (0x80 | (c & 0x3F)) ));
                 len = 2;
             }
-            else if ((c & (~0xffff)) == 0) {
+            else if (c < 0x10000) {
+                // 3 byte characters from 0x800 to 0xFFFF
+                // but only 0x800...0xD7FF and 0xE000...0xFFFF are valid
+                if (c > 0xD7FF && c < 0xE000) {
+                    this.throwUTF8Exception();
+                }
                 write((byte)( 0xff & (0xE0 |  (c >> 12)) ));
                 write((byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) ));
                 write((byte)( 0xff & (0x80 |  (c & 0x3F)) ));
                 len = 3;
             }
-            else if ((c & (~0x7ffff)) == 0) {
+            else if (c <= 0x10FFFF) {
+                // 4 byte characters 0x010000 to 0x10FFFF
+                // these are are valid
                 write((byte)( 0xff & (0xF0 |  (c >> 18)) ));
                 write((byte)( 0xff & (0x80 | ((c >> 12) & 0x3F)) ));
                 write((byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) ));
@@ -1085,20 +1055,14 @@ done:       for (;;) {
                 this.throwUTF8Exception();
             }
             return len;
+
         }
-        void throwUTF8Exception() throws IOException 
+        void throwUTF8Exception() throws IOException
         {
             throwException("Invalid UTF-8 character encounter in a string at pos " + this.position());
         }
         void throwException(String msg) throws IOException {
             throw new IOException(msg);
-        }
-
-        @Override
-        public void write(int arg0)
-            throws IOException
-        {
-            write((byte)arg0);            
         }
     }
 }

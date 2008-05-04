@@ -89,18 +89,12 @@ abstract public class IonContainerImpl
         /*
          * TODO: if this is a big container that's not materialized, isEmpty()
          * will do a lot of work materializing it just to throw it out.
-         * Optimization needed. Especially since we'll then come in and detach 
+         * Optimization needed. Especially since we'll then come in and detach
          * all the children we just created.
          */
         else if (!isEmpty())
         {
-            try {
-                for (IonValue child : _contents) {
-                    ((IonValueImpl)child).detachFromContainer();
-                }
-            } catch (IOException ioe) {
-                throw new IonException(ioe);
-            }
+            detachAllChildren();
             _contents.clear();
             setDirty();
         }
@@ -110,9 +104,24 @@ abstract public class IonContainerImpl
     {
         if (!isNullValue())
         {
-            _contents = null;
+            if (_contents != null)
+            {
+                detachAllChildren();
+                _contents = null;
+            }
             _hasNativeValue = true;
             setDirty();
+        }
+    }
+
+    private void detachAllChildren()
+    {
+        try {
+            for (IonValue child : _contents) {
+                ((IonValueImpl)child).detachFromContainer();
+            }
+        } catch (IOException ioe) {
+            throw new IonException(ioe);
         }
     }
 
@@ -193,6 +202,7 @@ abstract public class IonContainerImpl
             IonValueImpl child;
             reader.setPosition(pos);
             child = IonValueImpl.makeValueFromReader(0, reader, buffer, symtab, this);
+            child._elementid = _contents.size();
             _contents.add(child);
             pos = child.pos_getOffsetofNextValue();
         }
@@ -331,6 +341,7 @@ abstract public class IonContainerImpl
                                            int cumulativePositionDelta)
         throws IOException
     {
+        // overriden in sexp and datagram to handle Ion Version Marker (magic cookie)
         if (_contents != null)
         {
             for (int ii = 0; ii < _contents.size(); ii++)
@@ -479,7 +490,7 @@ abstract public class IonContainerImpl
     {
         final IonValueImpl concrete = ((IonValueImpl) element);
 
-        // TODO: true to reuse the byte array if it is present
+        // TODO: try to reuse the byte array if it is present
         // and the symbol tables are compatible or
         // the value is big enough to justify embedding
         // a copy of its symbol table in the stream
@@ -502,6 +513,9 @@ abstract public class IonContainerImpl
         {
             // TODO: should we copy the symbols to the parent, if there are
             // any?
+            if (!(this instanceof IonDatagramImpl)) {
+                concrete.setSymbolTable(null);
+            }
             concrete.clear_position_and_buffer();
         }
 
@@ -512,7 +526,10 @@ abstract public class IonContainerImpl
             _contents = new ArrayList<IonValue>();
             _hasNativeValue = true;
         }
+
         _contents.add(index, element);
+        concrete._elementid = index;
+        updateElementIds(index + 1); // start at the next element, this one is fine
 
         // We shouldn't force the child to be dirty, since we haven't
         // unsynched its materialized and binary copies.
@@ -522,6 +539,14 @@ abstract public class IonContainerImpl
         if (setDirty)
         {
             this.setDirty();
+        }
+    }
+    void updateElementIds(int startingIndex)
+    {
+        while (startingIndex<this._contents.size()) {
+            IonValueImpl v = (IonValueImpl)this._contents.get(startingIndex);
+            v._elementid = startingIndex;
+            startingIndex++;
         }
     }
 
@@ -552,27 +577,22 @@ abstract public class IonContainerImpl
         // its backing store.
         IonValueImpl concrete = (IonValueImpl) element;
 
-        try
+        int pos = concrete._elementid;
+        IonValue child = _contents.get(pos);
+        if (child == concrete) // Yes, instance identity.
         {
-            for (Iterator i = _contents.iterator(); i.hasNext();)
-            {
-                IonValue child = (IonValue) i.next();
-                if (child == concrete) // Yes, instance identity.
-                {
-                    i.remove();
-
-                    concrete.detachFromContainer();
-
-                    this.setDirty();
-
-                    return true;
-                }
+            try {
+                _contents.remove(pos);
+                concrete.detachFromContainer();
+                updateElementIds(pos);
+                this.setDirty();
             }
+            catch (IOException e) {
+                throw new IonException(e);
+            }
+            return true;
         }
-        catch (IOException e)
-        {
-            throw new IonException(e);
-        }
+
         String message =
             "element is not in materialized contents of its container";
         throw new IllegalStateException(message);

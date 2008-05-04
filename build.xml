@@ -94,7 +94,6 @@
     <jar destfile="${jar.output.test}" basedir="${dir.test.classes}"/>
   </target>
 
-
   <target name="-checkForTestData" unless="testdata-exists">
     <available property="testdata-exists" file="${dir.test.data}" type="dir"/>
   </target>
