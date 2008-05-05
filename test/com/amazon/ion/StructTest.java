@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion;
@@ -348,6 +348,30 @@ public class StructTest
         catch (IllegalArgumentException e) { }
     }
 
+    public void testPutNull()
+    {
+        IonStruct value = system().newNullStruct();
+        value.put("f", null);
+        assertTrue(value.isNullValue());
+
+        value.clear();
+        value.put("f", null);
+        assertTrue(value.isEmpty());
+
+        value.put("f", system().newInt(1));
+        value.put("f", null);
+        assertTrue(value.isEmpty());
+
+        value.put("g", system().newInt(1));
+        value.put("f", null);
+        assertEquals(1, value.size());
+
+        value.add("f", system().newInt(2));
+        value.add("f", system().newInt(3));
+        value.put("f", null);
+        assertEquals(1, value.size());
+    }
+
     public void testBadPuts()
     {
         IonStruct value = system().newNullStruct();
@@ -364,12 +388,6 @@ public class StructTest
             fail("Expected IllegalArgumentException");
         }
         catch (IllegalArgumentException e) { }
-
-        try {
-            value.put("f", null);
-            fail("Expected NullPointerException");
-        }
-        catch (NullPointerException e) { }
     }
 
     public void testBadAdds()
@@ -422,14 +440,62 @@ public class StructTest
         assertNull("Removed value should have null container",
                    val.getContainer());
     }
-    
+
     public void testRemoveAfterClone()
     {
         IonStruct s1 = (IonStruct) oneValue("{a:1,b:2}");
-        IonStruct s2 = (IonStruct) system().clone(s1);
+        IonStruct s2 = system().clone(s1);
 
         IonValue v = s2.get("b");
         s2.remove(v);
+        assertNull(s2.get("b"));
     }
-    
+
+    public void testRemoveAll()
+    {
+        IonStruct s = (IonStruct) oneValue("{a:1,b:2,b:3,c:4,d:5}");
+
+        boolean changed = s.removeAll("d");
+        assertTrue(changed);
+        assertEquals(4, s.size());
+        assertNull(s.get("d"));
+
+        changed = s.removeAll("q");
+        assertFalse(changed);
+        assertEquals(4, s.size());
+        assertNull(s.get("d"));
+
+        changed = s.removeAll("b", "a");
+        assertTrue(changed);
+        assertEquals(1, s.size());
+        checkInt(4, s.get("c"));
+
+        try {
+            s.removeAll((String[]) null);
+            fail("Expected NullPointerException");
+        }
+        catch (NullPointerException e) { }
+    }
+
+    public void testRetainAll()
+    {
+        IonStruct s = (IonStruct) oneValue("{a:1,b:2,b:3,c:4,d:5}");
+
+        boolean changed = s.retainAll("d", "b", "a", "c");
+        assertFalse(changed);
+        assertEquals(5, s.size());
+
+        changed = s.retainAll("b", "c");
+        assertTrue(changed);
+        assertEquals(3, s.size());
+        assertNull(s.get("a"));
+        assertNull(s.get("d"));
+
+        changed = s.retainAll("b", "c");
+        assertFalse(changed);
+
+        changed = s.retainAll("b", "a");
+        assertTrue(changed);
+        assertEquals(2, s.size());
+    }
 }

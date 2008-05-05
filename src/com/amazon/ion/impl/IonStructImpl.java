@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion.impl;
@@ -111,7 +111,7 @@ public final class IonStructImpl
         // TODO maintain _isOrdered
 
         validateFieldName(fieldName);
-        validateNewChild(value);
+        if (value != null) validateNewChild(value);
 
         makeReady();
 
@@ -137,12 +137,15 @@ public final class IonStructImpl
             size = 0;
         }
 
-        IonValueImpl concrete = (IonValueImpl) value;
-        add(size, concrete, true);
+        if (value != null)
+        {
+            IonValueImpl concrete = (IonValueImpl) value;
+            add(size, concrete, true);
 
-        // This should be true because we've validated that its not contained.
-        assert value.getFieldName() == null;
-        concrete.setFieldName(fieldName);
+            // This is true because we've validated that its not contained.
+            assert value.getFieldName() == null;
+            concrete.setFieldName(fieldName);
+        }
     }
 
 
@@ -159,6 +162,53 @@ public final class IonStructImpl
         // This should be true because we've validated that its not contained.
         assert value.getFieldName() == null;
         concrete.setFieldName(fieldName);
+    }
+
+
+    public boolean removeAll(String... fieldNames)
+    {
+        boolean removedAny = false;
+        for (Iterator<IonValue> i = iterator(); i.hasNext();)
+        {
+            IonValue field = i.next();
+            if (isListedField(field, fieldNames))
+            {
+                i.remove();
+                removedAny = true;
+            }
+        }
+        return removedAny;
+    }
+
+    public boolean retainAll(String... fieldNames)
+    {
+        boolean removedAny = false;
+        for (Iterator<IonValue> i = iterator(); i.hasNext();)
+        {
+            IonValue field = i.next();
+            if (! isListedField(field, fieldNames))
+            {
+                i.remove();
+                removedAny = true;
+            }
+        }
+        return removedAny;
+    }
+
+    /**
+     *
+     * @param field must not be null.  It is not required to have a field name.
+     * @param fields must not be null, and must not contain and nulls.
+     * @return true if {@code field.getFieldName()} is in {@code fields}.
+     */
+    private static boolean isListedField(IonValue field, String[] fields)
+    {
+        String fieldName = field.getFieldName();
+        for (String key : fields)
+        {
+            if (key.equals(fieldName)) return true;
+        }
+        return false;
     }
 
 
