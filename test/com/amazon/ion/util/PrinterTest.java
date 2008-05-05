@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion.util;
@@ -81,14 +81,28 @@ public class PrinterTest
         IonNull value = (IonNull) oneValue("an::null");
         checkRendering("an::null", value);
 
-        value.addTypeAnnotation("b");
-        checkRendering("an::b::null", value);
+        value.addTypeAnnotation("+");
+        value.addTypeAnnotation("\u0000");
+        checkRendering("an::'+'::'\\0'::null", value);
 
-        myPrinter.setPrintSymbolsAsStrings(true);
-        checkRendering("\"an\"::\"b\"::null", value);
+        myPrinter.setPrintSymbolAsString(true);
+        checkRendering("\"an\"::\"+\"::\"\\0\"::null", value);
+        myPrinter.setPrintStringAsJson(true);
+        checkRendering("\"an\"::\"+\"::\"\\u0000\"::null", value);
+        myPrinter.setPrintSymbolAsString(false);
+        myPrinter.setPrintStringAsJson(false);
 
         myPrinter.setSkipAnnotations(true);
         checkRendering("null", value);
+        myPrinter.setSkipAnnotations(false);
+
+        IonSexp s = system().newEmptySexp();
+        s.add(value);
+        checkRendering("(an::+::'\\0'::null)", s);
+        myPrinter.setPrintSymbolAsString(true);
+        checkRendering("(\"an\"::\"+\"::\"\\0\"::null)", s);
+        myPrinter.setPrintStringAsJson(true);
+        checkRendering("(\"an\"::\"+\"::\"\\u0000\"::null)", s);
     }
 
 
@@ -102,6 +116,11 @@ public class PrinterTest
         {
             BlobTest.TestData td = BlobTest.TEST_DATA[i];
             value.setBytes(td.bytes);
+
+            myPrinter.setPrintBlobAsString(true);
+            checkRendering("\"" + td.base64 + "\"", value);
+
+            myPrinter.setPrintBlobAsString(false);
             checkRendering("{{" + td.base64 + "}}", value);
         }
 
@@ -110,8 +129,6 @@ public class PrinterTest
 
         value.addTypeAnnotation("an");
         checkRendering("an::{{}}", value);
-
-
     }
 
 
@@ -148,6 +165,21 @@ public class PrinterTest
 
         value.addTypeAnnotation("an");
         checkRendering("an::{{\"\"}}", value);
+
+        myPrinter.setPrintClobAsString(true);
+        checkRendering("an::\"\"", value);
+
+        value.clearTypeAnnotations();
+        value.setBytes(ClobTest.SAMPLE_ASCII_AS_UTF8);
+        checkRendering("\"" + ClobTest.SAMPLE_ASCII + "\"", value);
+
+        value = (IonClob) oneValue("{{'''Ab\\0'''}}");
+        myPrinter.setPrintClobAsString(false);
+        checkRendering("{{\"Ab\\0\"}}", value);
+        myPrinter.setPrintClobAsString(true);
+        checkRendering("\"Ab\\0\"", value);
+        myPrinter.setPrintStringAsJson(true);
+        checkRendering("\"Ab\\u0000\"", value);
     }
 
 
@@ -197,7 +229,7 @@ public class PrinterTest
         value = (IonDecimal) oneValue("100d3");
         checkRendering("100d3", value);
 
-        myPrinter.setPrintDecimalsAsFloats(true);
+        myPrinter.setPrintDecimalAsFloat(true);
         checkRendering("100e3", value);
     }
 
@@ -311,7 +343,7 @@ public class PrinterTest
 
         myPrinter.setPrintSexpAsList(true);
         checkRendering("[null,123,'!=',hello,'null']", value);
-        myPrinter.setPrintSymbolsAsStrings(true);
+        myPrinter.setPrintSymbolAsString(true);
         checkRendering("[null,123,\"!=\",\"hello\",\"null\"]", value);
 
         value = (IonSexp) oneValue("()");
@@ -319,7 +351,7 @@ public class PrinterTest
         myPrinter.setPrintSexpAsList(false);
         checkRendering("()", value);
 
-        myPrinter.setPrintSymbolsAsStrings(false);
+        myPrinter.setPrintSymbolAsString(false);
         value.addTypeAnnotation("an");
         checkRendering("an::()", value);
     }
@@ -339,6 +371,11 @@ public class PrinterTest
 
         value.addTypeAnnotation("an");
         checkRendering("an::\"Oh, \\\"Hello!\\\"\"", value);
+
+        value = system().newString("Ab\u0000");
+        checkRendering("\"Ab\\0\"", value);
+        myPrinter.setPrintStringAsJson(true);
+        checkRendering("\"Ab\\u0000\"", value);
 
         // TODO check escaping
     }
@@ -360,7 +397,7 @@ public class PrinterTest
         value.add("foo", int123());
         checkRendering("{foo:null,'123':null,foo:123}", value);
 
-        myPrinter.setPrintSymbolsAsStrings(true);
+        myPrinter.setPrintSymbolAsString(true);
         checkRendering("{\"foo\":null,\"123\":null,\"foo\":123}", value);
 
         value = (IonStruct) oneValue("{}");
@@ -368,6 +405,12 @@ public class PrinterTest
 
         value.addTypeAnnotation("an");
         checkRendering("\"an\"::{}", value);
+
+        value.addTypeAnnotation("\u0007");
+        value.put("A\u0000", system().newInt(12));
+        checkRendering("\"an\"::\"\\a\"::{\"A\\0\":12}", value);
+        myPrinter.setPrintStringAsJson(true);
+        checkRendering("\"an\"::\"\\u0007\"::{\"A\\u0000\":12}", value);
     }
 
 
@@ -398,22 +441,30 @@ public class PrinterTest
         checkRendering("'Oh, \"Hello!\"'", value);
         // not: checkRendering("'Oh, \\\"Hello!\\\"'", value);
 
-        myPrinter.setPrintSymbolsAsStrings(true);
+        myPrinter.setPrintSymbolAsString(true);
         checkRendering("\"Oh, \\\"Hello!\\\"\"", value);
-        myPrinter.setPrintSymbolsAsStrings(false);
+        myPrinter.setPrintSymbolAsString(false);
 
         value.setValue("Oh, 'Hello there!'");
         checkRendering("'Oh, \\\'Hello there!\\\''", value);
 
-        myPrinter.setPrintSymbolsAsStrings(true);
+        myPrinter.setPrintSymbolAsString(true);
         checkRendering("\"Oh, 'Hello there!'\"", value);
-        myPrinter.setPrintSymbolsAsStrings(false);
+        myPrinter.setPrintSymbolAsString(false);
 
         value.addTypeAnnotation("an");
         checkRendering("an::'Oh, \\\'Hello there!\\\''", value);
-        // was: checkRendering("an::'Oh, \\\"Hello there!\\\"'", value);
 
         // TODO check escaping
+
+        value = system().newSymbol("Ab\u0000");
+        checkRendering("'Ab\\0'", value);
+        myPrinter.setPrintSymbolAsString(true);
+        checkRendering("\"Ab\\0\"", value);
+        myPrinter.setPrintStringAsJson(true);
+        checkRendering("\"Ab\\u0000\"", value);
+        myPrinter.setPrintSymbolAsString(false);
+        checkRendering("'Ab\\0'", value);
     }
 
 
@@ -444,5 +495,10 @@ public class PrinterTest
 
         myPrinter.setPrintTimestampAsString(true);
         checkRendering("an::\"2007-05-15T18:45:00.000-10:01\"", value);
+
+        myPrinter.setJsonMode();
+        checkRendering("" + value.getMillis(), value);
+
+        // TODO test printTimestampAsMillis
     }
 }

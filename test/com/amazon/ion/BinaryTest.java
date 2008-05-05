@@ -6,6 +6,7 @@ package com.amazon.ion;
 
 import java.util.Arrays;
 
+import com.amazon.ion.impl.IonConstants;
 import com.amazon.ion.impl.IonSystemImpl;
 
 public class BinaryTest extends IonTestCase
@@ -49,8 +50,13 @@ public class BinaryTest extends IonTestCase
     private static String MAGIC_COOKIE = "E0 01 00 EA ";
 
     // MC + $ion_1_0::{symbols : null.struct}
-    private static String EMPTY_HEADER = MAGIC_COOKIE + "E5 81 82 D2 87 DF ";
+    private static String EMPTY_HEADER = MAGIC_COOKIE; 
 
+    
+// FIXME (cas) + "E5 81 82 D2 87 DF ";
+
+    
+    
     /**
      * Loads a string literal as Ion bytes no cookie required.
      * We encode the string literal as hex digits as it is convenient to read.
@@ -125,8 +131,10 @@ public class BinaryTest extends IonTestCase
 
     public void testBinReadFloat02()
     {
-        // $ion_1_0::{} 1e0
-        IonValue val = ion("E3 81 82 D0 48 3F F0 00 00 00 00 00 00");
+        // was: $ion_1_0::{} 1e0
+    	// now: $ion_symbol_table::{} 1e0
+    	String symbolTableAnnotation = Integer.toHexString((SystemSymbolTable.ION_SYMBOL_TABLE_SID + 0x80));
+        IonValue val = ion("E3 81 " + symbolTableAnnotation +" D0 48 3F F0 00 00 00 00 00 00");
 
         assertTrue(val instanceof IonFloat);
         assertTrue(((IonFloat) val).doubleValue() == 1.0);

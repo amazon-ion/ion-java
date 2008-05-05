@@ -4,7 +4,8 @@
 
 package com.amazon.ion.impl;
 
-// for scanner: import com.amazon.ion.scanner.ByteWriter;
+//import com.amazon.ion.streaming.ByteWriter;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.SortedSet;
@@ -26,7 +27,7 @@ import java.io.OutputStream;
  *
  * @author Chris Suver, 3 Feb 2007
  */
-public class BlockedBuffer
+final public class BlockedBuffer
 {
     ///////////////////////////////////////////////////////////////////////////////
     //
@@ -42,7 +43,11 @@ public class BlockedBuffer
     int                 _mutation_version;
     Object              _mutator;
 
+// BUGBUG - this is just a test, it shouldn't be in checked in code
+static final boolean test_with_no_version_checking = false;
+    
     void start_mutate(Object caller, int version) {
+        if (test_with_no_version_checking) return;
         if (_mutation_version != 0 || _mutator != null)
             throw new BlockedBufferException("lock conflict");
         if (version != _version)
@@ -51,6 +56,7 @@ public class BlockedBuffer
         _mutation_version = version;
     }
     int end_mutate(Object caller) {
+        if (test_with_no_version_checking) return _version;
         if (_version != _mutation_version)
             throw new BlockedBufferException("version mismatch failure");
         if (caller != _mutator)
@@ -62,6 +68,7 @@ public class BlockedBuffer
         return _version;
     }
     boolean mutation_in_progress(Object caller, int version) {
+        if (test_with_no_version_checking) return false;
         if (_mutation_version != version)
             throw new BlockedBufferException("unexpected update lock conflict");
         if (caller != _mutator)
@@ -995,7 +1002,7 @@ public class BlockedBuffer
         public boolean notifyRemove(int pos, int len);
         public int     getMemberIdOffset();
     }
-    private static class PositionMonitor implements Monitor
+    private final static class PositionMonitor implements Monitor
     {
         int _pos;
         PositionMonitor(int pos) { _pos = pos; }
@@ -1004,7 +1011,7 @@ public class BlockedBuffer
         public boolean notifyRemove(int pos, int len) { return false; }
 
     }
-    private static class CompareMonitor implements Comparator<Monitor> {
+    private final static class CompareMonitor implements Comparator<Monitor> {
         static CompareMonitor instance = new CompareMonitor();
         private CompareMonitor() {}
         static CompareMonitor getComparator()
@@ -1090,12 +1097,12 @@ public class BlockedBuffer
         }
 
         @Override
-        public void mark(int readlimit) {
+        public final void mark(int readlimit) {
             this._mark = this._pos;
         }
 
         @Override
-        public void reset() throws IOException {
+        public final void reset() throws IOException {
             if (this._mark == -1) throw new IOException("mark not set");
             _set_position(this._mark);
         }
@@ -1103,7 +1110,7 @@ public class BlockedBuffer
         /**
          * the current offset in the buffer
          */
-        public int position() {
+        public final int position() {
             return this._pos;
         }
 
@@ -1112,8 +1119,9 @@ public class BlockedBuffer
          * The current position is lost during this call.
          *
          */
-        public void sync() {
-            if (_buf == null) new IOException("stream is closed");
+        public final void sync() throws IOException
+        {
+            if (_buf == null) throw new IOException("stream is closed");
             _version = _buf.getVersion();
             _curr = null;
             _pos = 0;
@@ -1122,7 +1130,7 @@ public class BlockedBuffer
          * debug api to force check for internal validity of the
          * underlying buffer
          */
-        public boolean _validate() {
+        public final boolean _validate() {
             return this._buf._validate();
         }
 
@@ -1133,9 +1141,9 @@ public class BlockedBuffer
          * @param pos new offset to read from
          * @return this stream
          */
-        public BlockedByteInputStream setPosition(int pos) throws IOException
+        public final BlockedByteInputStream setPosition(int pos) throws IOException
         {
-            if (_buf == null) new IOException("stream is closed");
+            if (_buf == null) throw new IOException("stream is closed");
             fail_on_version_change();
 
             if (pos < 0 || pos > _buf.size()) {
@@ -1148,7 +1156,7 @@ public class BlockedBuffer
             fail_on_version_change();
             return this;
         }
-        private void _set_position(int pos)
+        private final void _set_position(int pos)
         {
             _pos = pos;
             _curr = _buf.findBlockForRead(this, _version, _curr, pos);
@@ -1160,17 +1168,17 @@ public class BlockedBuffer
          * byte buffer.  Once closed it cannot be used.
          */
         @Override
-        public void close() throws IOException
+        public final void close() throws IOException
         {
             this._buf = null;
             this._pos = -1;
         }
 
-        public int writeTo(OutputStream out, int len) throws IOException
+        public final int writeTo(OutputStream out, int len) throws IOException
         {
             if (_buf == null) throw new IOException("stream is closed");
             fail_on_version_change();
-            if (_pos >= _buf.size()) throw new IllegalArgumentException();
+            if (_pos > _buf.size()) throw new IllegalArgumentException();
 
             int startingPos = _pos;
             int localEnd = _pos + len;
@@ -1189,15 +1197,12 @@ public class BlockedBuffer
             fail_on_version_change();
             return _pos - startingPos;
         }
-
 /*
- * this will come back when the scanner code is integrated
-
-        public int writeTo(ByteWriter out, int len) throws IOException
+        public final int writeTo(ByteWriter out, int len) throws IOException
         {
             if (_buf == null) throw new IOException("stream is closed");
             fail_on_version_change();
-            if (_pos >= _buf.size()) throw new IllegalArgumentException();
+            if (_pos > _buf.size()) throw new IllegalArgumentException();
 
             int startingPos = _pos;
             int localEnd = _pos + len;
@@ -1217,7 +1222,6 @@ public class BlockedBuffer
             return _pos - startingPos;
         }
 */
-
         /**
          * reads (up to) {@code len} bytes from the buffer and copies them into
          * the user supplied byte array (bytes) starting at offset
@@ -1229,11 +1233,11 @@ public class BlockedBuffer
          *   if {@code (dst.length - offset) < len}
          */
         @Override
-        public int read(byte[] bytes, int offset, int len) throws IOException
+        public final int read(byte[] bytes, int offset, int len) throws IOException
         {
             if (_buf == null) throw new IOException("stream is closed");
             fail_on_version_change();
-            if (_pos >= _buf.size()) throw new IllegalArgumentException();
+            if (_pos > _buf.size()) throw new IllegalArgumentException();
 
             int startingPos = _pos;
             int localEnd = _pos + len;
@@ -1267,7 +1271,7 @@ public class BlockedBuffer
          * if there is no data available to be read.
          */
         @Override
-        public int read() throws IOException
+        public final int read() throws IOException
         {
             if (_buf == null) {
                 throw new IOException("input stream is closed");
@@ -1285,7 +1289,7 @@ public class BlockedBuffer
             fail_on_version_change();
             return nextByte;
         }
-        private void fail_on_version_change() throws IOException
+        private final void fail_on_version_change() throws IOException
         {
             if (_buf.getVersion() != _version) {
                 this.close();
@@ -1294,7 +1298,7 @@ public class BlockedBuffer
         }
 
         @Override
-        public long skip(long n) throws IOException
+        public final long skip(long n) throws IOException
         {
             if (n < 0 || n > Integer.MAX_VALUE) throw new IllegalArgumentException("we only handle buffer less than "+Integer.MAX_VALUE+" bytes in length");
             if (_buf == null) throw new IOException("stream is closed");
@@ -1375,7 +1379,7 @@ public class BlockedBuffer
         /**
          * the current offset in the buffer
          */
-        public int position() {
+        public final int position() {
             return this._pos;
         }
 
@@ -1384,8 +1388,9 @@ public class BlockedBuffer
          * The current position is lost during this call.
          *
          */
-        public void sync() {
-            if (_buf == null) new IOException("stream is closed");
+        public final void sync() throws IOException 
+        {
+            if (_buf == null) throw new IOException("stream is closed");
             _version = _buf.getVersion();
             _pos = 0;
             _curr = null;
@@ -1395,7 +1400,7 @@ public class BlockedBuffer
          * debug api to force check for internal validity of the
          * underlying buffer
          */
-        public boolean _validate() {
+        public final boolean _validate() {
             return this._buf._validate();
         }
 
@@ -1408,9 +1413,9 @@ public class BlockedBuffer
          * past the end, which can be written on and returns
          * -1 if read.
          */
-        public BlockedByteOutputStream setPosition(int pos) throws IOException
+        public final BlockedByteOutputStream setPosition(int pos) throws IOException
         {
-            if (_buf == null) new IOException("stream is closed");
+            if (_buf == null) throw new IOException("stream is closed");
             fail_on_version_change();
 
             if (pos < 0 || pos > _buf.size()) {
@@ -1422,7 +1427,7 @@ public class BlockedBuffer
             fail_on_version_change();
             return this;
         }
-        private void _set_position(int pos)
+        private final void _set_position(int pos)
         {
             _pos = pos;
             _curr = _buf.findBlockForRead(this, _version, _curr, pos);
@@ -1435,7 +1440,7 @@ public class BlockedBuffer
          * byte buffer.  Once closed it cannot be used.
          */
         @Override
-        public void close() throws IOException
+        public final void close() throws IOException
         {
             this._buf = null;
             this._pos = -1;
@@ -1449,9 +1454,9 @@ public class BlockedBuffer
          * high order bits are ignored.
          */
         @Override
-        public void write(int b) throws IOException
+        public final void write(int b) throws IOException
         {
-            if (_buf == null) new IOException("stream is closed");
+            if (_buf == null) throw new IOException("stream is closed");
 
             _buf.start_mutate(this, _version);
 
@@ -1460,7 +1465,13 @@ public class BlockedBuffer
             _version = _buf.end_mutate(this);
             return;
         }
-        private void _write(int b) throws IOException
+        final void start_write() {
+            _buf.start_mutate(this, _version);
+        }
+        final void end_write() {
+            _version = _buf.end_mutate(this);
+        }
+        final void _write(int b) throws IOException
         {
             if (bytesAvailableToWriteInCurr(_pos) < 1) {
                 _curr = _buf.findBlockForWrite(this, _version, _curr, _pos);
@@ -1474,7 +1485,7 @@ public class BlockedBuffer
                 if (_pos > _buf._buf_limit ) _buf._buf_limit = _pos;
             }
         }
-        private int bytesAvailableToWriteInCurr(int pos) {
+        private final int bytesAvailableToWriteInCurr(int pos) {
             assert _curr != null;
             assert _curr._offset <= pos;
             assert _curr._offset + _curr._limit >= pos;
@@ -1482,7 +1493,8 @@ public class BlockedBuffer
             if (_curr._idx < this._buf._next_block_position - 1) {
                 return _curr.bytesAvailableToRead(pos);
             }
-            return _curr.bytesAvailableToWrite(pos);
+            int ret = _curr._buffer.length - (pos - _curr._offset);
+            return ret; // _curr.bytesAvailableToWrite(pos);
         }
         /**
          * Writes len bytes from the specified byte array starting
@@ -1490,14 +1502,14 @@ public class BlockedBuffer
          * in this output stream.
          */
         @Override
-        public void write(byte[] b, int off, int len)
+        public final void write(byte[] b, int off, int len) throws IOException
         {
-            if (_buf == null) new IOException("stream is closed");
+            if (_buf == null) throw new IOException("stream is closed");
             _buf.start_mutate(this, _version);
             _write(b, off, len);
             _version = _buf.end_mutate(this);
         }
-        private void _write(byte[] b, int off, int len)
+        private final void _write(byte[] b, int off, int len)
         {
             int end_b = off + len;
             while (off < end_b)
@@ -1534,14 +1546,14 @@ public class BlockedBuffer
          * in this output stream.
          * @throws IOException
          */
-        public void write(InputStream bytestream) throws IOException
+        public final void write(InputStream bytestream) throws IOException
         {
-            if (_buf == null) new IOException("stream is closed");
+            if (_buf == null) throw new IOException("stream is closed");
             _buf.start_mutate(this, _version);
             _write(bytestream);
             _version = _buf.end_mutate(this);
         }
-        private void _write(InputStream bytestream) throws IOException
+        private final void _write(InputStream bytestream) throws IOException
         {
             int written = 0;
             for (;;)
@@ -1579,9 +1591,9 @@ public class BlockedBuffer
          * position in this output stream.  No data is written
          * into the output stream.
          */
-        public void insert(int len) throws IOException
+        public final void insert(int len) throws IOException
         {
-            if (_buf == null) new IOException("stream is closed");
+            if (_buf == null) throw new IOException("stream is closed");
             if (len < 0) {
                 throw new IllegalArgumentException();
             }
@@ -1599,9 +1611,9 @@ public class BlockedBuffer
          * order byte of the passed in int is written the
          * high order bits are ignored.
          */
-        public void insert(byte b) throws IOException
+        public final void insert(byte b) throws IOException
         {
-            if (_buf == null) new IOException("stream is closed");
+            if (_buf == null) throw new IOException("stream is closed");
             _buf.start_mutate(this, _version);
             _buf.insert(this, _version, _curr, _pos, 1);
             _write(b);
@@ -1613,9 +1625,9 @@ public class BlockedBuffer
          * byte array starting at in the user array at offset off
          * to the current position in this output stream.
          */
-        public void insert(byte[] b, int off, int len) throws IOException
+        public final void insert(byte[] b, int off, int len) throws IOException
         {
-            if (_buf == null) new IOException("stream is closed");
+            if (_buf == null) throw new IOException("stream is closed");
             _buf.start_mutate(this, _version);
             _buf.insert(this, _version, _curr, _pos, len);
             _write(b, off, len);
@@ -1626,9 +1638,9 @@ public class BlockedBuffer
          * byte array starting at in the user array at offset off
          * to the current position in this output stream.
          */
-        public void remove(int len) throws IOException
+        public final void remove(int len) throws IOException
         {
-            if (_buf == null) new IOException("stream is closed");
+            if (_buf == null) throw new IOException("stream is closed");
             _buf.start_mutate(this, _version);
             _curr = _buf.remove(this, _version, _curr, _pos, len);
             _version = _buf.end_mutate(this);
@@ -1638,15 +1650,15 @@ public class BlockedBuffer
          * call the last previously written or read byte will be
          * the end of the buffer.
          */
-        public void truncate() throws IOException
+        public final void truncate() throws IOException
         {
-            if (_buf == null) new IOException("stream is closed");
+            if (_buf == null) throw new IOException("stream is closed");
             _buf.start_mutate(this, _version);
             _curr = _buf.truncate(this, _version, _pos);
             _version = _buf.end_mutate(this);
         }
 
-        private void fail_on_version_change() throws IOException
+        private final void fail_on_version_change() throws IOException
         {
             if (_buf.getVersion() != _version) {
                 this.close();

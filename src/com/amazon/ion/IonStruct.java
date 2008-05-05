@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion;
@@ -48,19 +48,18 @@ public interface IonStruct
 
 
     /**
-     * Puts a new field mapping in this struct, replacing existing mappings
-     * with the same name.
-     * If this is <code>null.struct</code>, then it becomes a single-field
-     * struct.
+     * Puts a new field in this struct, replacing all existing fields
+     * with the same name. If {@code child == null} then all existing fields
+     * with the given name will be removed.
      * <p>
-     * Note that multiple fields with the given name may already exist in this
-     * struct; they will all be removed and replaced by the new one.
+     * If this is <code>null.struct</code> and {@code child != null} then this
+     * becomes a single-field struct.
      *
      * @param fieldName the name of the new field.
      * @param child the value of the new field.
      *
      * @throws NullPointerException
-     *   if {@code fieldName} or {@code child} is <code>null</code>.
+     *   if {@code fieldName} is <code>null</code>.
      * @throws ContainedValueException
      *   if {@code child} is already part of a container.
      * @throws IllegalArgumentException
@@ -76,8 +75,8 @@ public interface IonStruct
      * If this is <code>null.struct</code>, then it becomes a single-field
      * struct.
      * <p>
-     * Note that a field with the given name may already exist in this struct,
-     * in which case this method will result in repeated fields.
+     * If a field with the given name already exists in this struct,
+     * this call will result in repeated fields.
      *
      * @param fieldName the name of the new field.
      * @param child the value of the new field.
@@ -95,8 +94,39 @@ public interface IonStruct
 
 
     /**
+     * Removes from this struct all fields with names in the given list.
+     *
+     * If multiple fields with a given name exist in this struct,
+     * they will all be removed.
+     *
+     * @param fieldNames the names of the fields to remove.
+     *
+     * @return true if this struct changed as a result of this call.
+     *
+     * @throws NullPointerException
+     *   if {@code fieldName}, or any element within it, is <code>null</code>.
+     */
+    public boolean removeAll(String... fieldNames);
+
+
+    /**
+     * Retains only the fields in this struct that have one of the given names.
+     * In other words, removes all fields with names that are not in
+     * {@code fieldNames}.
+     *
+     * @param fieldNames the names of the fields to retain.
+     *
+     * @return true if this struct changed as a result of this call.
+     *
+     * @throws NullPointerException
+     *   if {@code fieldName}, or any element within it, is <code>null</code>.
+     */
+    public boolean retainAll(String... fieldNames);
+
+
+    /**
      * Creates a deep copy of an element and puts it into this struct,
-     * replacing existing mappings with the same name.
+     * replacing existing fields with the same name.
      * If this is <code>null.struct</code>, then it becomes a single-field
      * struct.
      * <p>

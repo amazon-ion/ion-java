@@ -4,6 +4,10 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonException;
+import com.amazon.ion.UnexpectedEofException;
+import com.amazon.ion.impl.IonConstants.HighNibble;
+import com.amazon.ion.util.Text;
 import java.io.IOException;
 import java.io.PushbackReader;
 import java.io.Reader;
@@ -14,11 +18,6 @@ import java.util.Date;
 import java.util.Stack;
 import java.util.TimeZone;
 import java.util.regex.Pattern;
-
-import com.amazon.ion.IonException;
-import com.amazon.ion.UnexpectedEofException;
-import com.amazon.ion.impl.IonConstants.HighNibble;
-import com.amazon.ion.util.Text;
 
 /**
  *
@@ -111,16 +110,6 @@ public class IonTokenReader
          * straight from the string to compute the value.
          */
         public static class timeinfo {
-            // FIXME SimpleDateFormat isn't thread-safe!
-            private static final SimpleDateFormat xDATE_PARSER;
-            private static final SimpleDateFormat xDATE_TIME_MINS_PARSER;
-            private static final SimpleDateFormat xDATE_TIME_SECS_PARSER;
-
-            static {
-                xDATE_PARSER           = newFormat("yyyy-MM-dd");
-                xDATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
-                xDATE_TIME_SECS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm:ss");
-            }
 
             private static SimpleDateFormat newFormat(String pattern) {
                 SimpleDateFormat f = new SimpleDateFormat(pattern);
@@ -513,7 +502,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
     public int getConsumedAmount() {
         return in.getConsumedAmount();
     }
-    
+
     public int getLineNumber() {
         return in.getLineNumber();
     }
@@ -1218,14 +1207,6 @@ sizedloop:
             }
             throw new IllegalStateException("Invalid reader type encountered (probably an uninitialized object)");
         }
-
-        /**
-         * @deprecated Use {@link Text#needsEscapeForAsciiRendering(int)} instead
-         */
-        public static boolean needsEscape(int c) {
-            return Text.needsEscapeForAsciiRendering(c);
-        }
-
     }
 
     EscapedCharacterReader _ecr = new EscapedCharacterReader();
@@ -1238,6 +1219,7 @@ sizedloop:
      * of the escape sequence.
      * @deprecated
      * */
+    @Deprecated
     public static int readEscapedCharacter(PushbackReader r) throws IOException
     {
         EscapedCharacterReader ecr = new EscapedCharacterReader();
@@ -1351,7 +1333,7 @@ sizedloop:
             if (! Text.isNumericStopChar(c)) {
                 final String message =
                     position() + ": Numeric value followed by illegal character "
-                    + Text.getEscapeString(c);
+                    + Text.getEscapeString(c, -2);
                 throw new IonException(message);
             }
             this.unread(c);

@@ -4,10 +4,15 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonException;
+import com.amazon.ion.IonInt;
+import com.amazon.ion.IonList;
 import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
+import com.amazon.ion.IonText;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.util.Printer;
 import java.io.IOException;
 import java.util.HashMap;
@@ -30,10 +35,17 @@ public abstract class AbstractSymbolTable
     protected IonStruct _symtabElement;
 
     /**
-     * The <code>symbols</code> field of the {@link #_symtabElement}.
+     * The <code>symbols</code> field of the {@link #_symtabElement}
+     * when the symbols are provided as a struct with manually assigned
+     * symbol ids for the fieldid values.
      */
     protected IonStruct _symbolsStruct;
 
+    /**
+     * The <code>symbols</code> field of the {@link #_symtabElement} when
+     * the symbols are provided as a list of strings.
+     */
+    protected IonList _symbolsList;
 
     /**
      *
@@ -169,8 +181,86 @@ public abstract class AbstractSymbolTable
             }
             this._symbolsStruct = symbolsStruct;
         }
-        else if (symbolsElt != null) {
-            errors.append(" Field 'symbols' must be a struct.");
+        else if (symbolsElt instanceof IonList) {
+            Printer printer = new Printer();
+            IonList symbolsList = (IonList) symbolsElt;
+            if (_maxId == 0) {
+            	_maxId = symbolsElt.getSymbolTable().getSystemSymbolTable().getMaxId();
+            }
+            
+            for (IonValue v : symbolsList)
+            {
+                // TODO check for ill-formed field name.
+                String symbolName = null;
+                if (v instanceof IonString) {
+                    symbolName = ((IonString)v).stringValue();
+                }
+                if (symbolName == null || symbolName.length() == 0) {
+                    errors.append(" Bad symbol name ");
+                    try {
+                        printer.print(v, errors);
+                    }
+                    catch (IOException e) { }
+                    errors.append('.');
+                    continue;
+                }
+
+                int sid = _maxId + 1;
+
+                doDefineSymbol(symbolName, sid);
+
+                if (sid > _maxId) _maxId = sid;
+            }
+            this._symbolsList = symbolsList;
         }
+        else if (symbolsElt != null) {
+            errors.append(" Field 'symbols' must be a struct or list.");
+        }
+    }
+        
+    /**
+     * Examines the IonValue candidateTable and checks if it is a
+     * viable symbol table.  If it is this returns which type of
+     * symbol table it might be.  This does not validate the full
+     * contents, it examines the value type (struct), the annotations
+     * and just enough contents to distiguish between the possible
+     * types.
+     * @param candidateTable value to be check
+     * @return (@link SymbolTableType) possible type of table, or {@link SymbolTableType#INVALID}
+     */
+    public static SymbolTableType getSymbolTableType(IonValue candidateTable)
+    {
+    	SymbolTableType type = SymbolTableType.INVALID;
+    	
+    	if ((candidateTable instanceof IonStruct)
+    	 && (candidateTable.hasTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE))
+    	) {
+			IonStruct struct = (IonStruct)candidateTable;
+			IonValue  ionname = struct.get(SystemSymbolTable.NAME);
+			IonValue version = struct.get(SystemSymbolTable.VERSION);
+			if (ionname == null) {
+				if (version != null) {
+					throw new IonException("invalid local symbol table, version is not allowed");
+				}
+				type = SymbolTableType.LOCAL;
+			}
+			else {
+				if (!(ionname instanceof IonString)
+				 || (ionname.isNullValue())
+				 || (version != null && !(version instanceof IonInt))
+				) {
+					throw new IonException("invalid symbol table, the name field must be a string value and version must be an int");
+				}
+				String name = ((IonText)ionname).stringValue();
+				if (name.equals(SystemSymbolTable.ION_1_0)) {
+					type = SymbolTableType.SYSTEM;
+				}
+				else {
+					type = SymbolTableType.SHARED;
+				}
+			}
+    	}
+    	
+    	return type;
     }
 }

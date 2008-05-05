@@ -4,12 +4,45 @@
 
 package com.amazon.ion;
 
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+
 
 
 
 public class StringTest
     extends IonTestCase
 {
+	private static final boolean _debug_output = false;
+    public static void testDummy() {
+    	int u =  0x10400; // 0x10FFFE; // 0xD800 + 2;  // 'a'; //
+    	
+    	char[] c = Character.toChars(u);
+    	
+    	CharBuffer cb = CharBuffer.wrap(c);
+    	
+    	byte[] b = null;
+		try {
+			b = Charset.forName("UTF-8").newEncoder().encode(cb).array();
+		} catch (CharacterCodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    	
+    	for (int ii=0; ii<c.length; ii++) {
+    		if (_debug_output) {
+    			System.out.println("char "+ii+" = "+Integer.toHexString((((int)c[ii]))));
+    		}
+    	}
+    	for (int ii=0; ii<b.length; ii++) {
+    		if (_debug_output) {
+    			System.out.println("byte "+ii+" = "+Integer.toHexString((((int)b[ii]) & 0xff)));
+    		}
+    	}
+    	return;
+    }
     public static void checkNullString(IonString value)
     {
         assertSame(IonType.STRING, value.getType());
@@ -168,11 +201,11 @@ public class StringTest
         String expected;
         IonString value;
 
-        expected = "\u0123 \u1234 \ufeed";
+        expected = "\u0123 \u1234 \uceed"; // was \ufeed but that's an illegal unicode scalar
         value = (IonString) oneValue('"'+expected+'"');
         checkString(expected, value);
 
-        expected = "\u0000 \u0007 \u0012 \u0123 \u1234 \ufeed";
+        expected = "\u0000 \u0007 \u0012 \u0123 \u1234 \uceed"; // was \ufeed but that's an illegal unicode scalar
         value = (IonString) oneValue('"'+expected+'"');
         checkString(expected, value);
 
