@@ -4,6 +4,10 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonException;
+import com.amazon.ion.UnexpectedEofException;
+import com.amazon.ion.impl.IonConstants.HighNibble;
+import com.amazon.ion.util.Text;
 import java.io.IOException;
 import java.io.PushbackReader;
 import java.io.Reader;
@@ -14,11 +18,6 @@ import java.util.Date;
 import java.util.Stack;
 import java.util.TimeZone;
 import java.util.regex.Pattern;
-
-import com.amazon.ion.IonException;
-import com.amazon.ion.UnexpectedEofException;
-import com.amazon.ion.impl.IonConstants.HighNibble;
-import com.amazon.ion.util.Text;
 
 /**
  *
@@ -111,7 +110,7 @@ public class IonTokenReader
          * straight from the string to compute the value.
          */
         public static class timeinfo {
-        	
+
             private static SimpleDateFormat newFormat(String pattern) {
                 SimpleDateFormat f = new SimpleDateFormat(pattern);
                 f.setLenient(false);
@@ -503,7 +502,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
     public int getConsumedAmount() {
         return in.getConsumedAmount();
     }
-    
+
     public int getLineNumber() {
         return in.getLineNumber();
     }
@@ -1208,14 +1207,6 @@ sizedloop:
             }
             throw new IllegalStateException("Invalid reader type encountered (probably an uninitialized object)");
         }
-
-        /**
-         * @deprecated Use {@link Text#needsEscapeForAsciiRendering(int)} instead
-         */
-        public static boolean needsEscape(int c) {
-            return Text.needsEscapeForAsciiRendering(c, -2);
-        }
-
     }
 
     EscapedCharacterReader _ecr = new EscapedCharacterReader();
@@ -1228,6 +1219,7 @@ sizedloop:
      * of the escape sequence.
      * @deprecated
      * */
+    @Deprecated
     public static int readEscapedCharacter(PushbackReader r) throws IOException
     {
         EscapedCharacterReader ecr = new EscapedCharacterReader();

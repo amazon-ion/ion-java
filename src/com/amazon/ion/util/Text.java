@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion.util;
@@ -12,8 +12,10 @@ import java.io.IOException;
  */
 public class Text
 {
-	public static final int EscapeAllQuoteCharactersCharacter = -2;
-	
+    private enum EscapeMode { ION, JSON }
+
+    public static final int ANY_SURROUNDING_QUOTES = -2;
+
     private static final boolean[] IDENTIFIER_START_CHAR_FLAGS;
     private static final boolean[] IDENTIFIER_FOLLOW_CHAR_FLAGS;
     static
@@ -236,7 +238,7 @@ public class Text
             {
                 for (int ii = 0; ii < length; ii++) {
                     c = symbol.charAt(ii);
-                    if (needsEscapeForAsciiRendering(c, '\'')
+                    if (needsEscapeForAsciiPrinting(c, '\'')
                         || !isIdentifierFollowChar(c))
                     {
                         return true;
@@ -255,9 +257,9 @@ public class Text
     public static boolean needsEscapeForAsciiRendering(int c) {
         switch (c) {
         case '\"':
-        	return true;
+            return true;
         case '\'':
-        	return true;
+            return true;
         case '\\':
             return true;
         default:
@@ -265,76 +267,149 @@ public class Text
         }
     }
 
-    public static boolean needsEscapeForAsciiRendering(int c, int quote) {
+    /**
+     * Determines whether a single character needs an escape sequence for
+     * printing within an Ion text value.
+     *
+     * @param c the character to be printed (by some other means).
+     * @param surroundingQuoteChar must be either {@code '\''}, {@code '\"'},
+     * or {@link #ANY_SURROUNDING_QUOTES}.
+     *
+     * @return {@code true} if the character needs to be escaped.
+     */
+    public static boolean needsEscapeForAsciiPrinting(int c,
+                                                      int surroundingQuoteChar)
+    {
         switch (c) {
         case '\"':
-        	return (quote == '\"');
+            return (surroundingQuoteChar == '\"');
         case '\'':
-        	return (quote == '\'');
+            return (surroundingQuoteChar == '\'');
         case '\\':
             return true;
         default:
             return (c < 32 || c > 126);
         }
     }
-    
+
     @Deprecated
     public static Appendable renderAsAscii(int c, Appendable out)
-    	throws IOException
-    {
-    	return renderAsAscii(c, EscapeAllQuoteCharactersCharacter, out);
-    }
-    
-    public static Appendable renderAsAscii(int c, int quote, Appendable out)
         throws IOException
     {
+        printAsIon(out, c, ANY_SURROUNDING_QUOTES);
+        return out;
+    }
+
+    /**
+     * Prints a single character in Ion ASCII text format, using escapes
+     * suitable for a specified quoting context.
+     *
+     * @param out the stream to receive the data.
+     * @param c the character to print.
+     * @param surroundingQuoteChar must be either {@code '\''}, {@code '\"'},
+     * or {@link #ANY_SURROUNDING_QUOTES}.
+     */
+    public static void printAsIon(Appendable out, int c,
+                                  int surroundingQuoteChar)
+        throws IOException
+    {
+        printChar(out, c, surroundingQuoteChar, EscapeMode.ION);
+    }
+
+    /**
+     * Prints a single character in JSON string format, escaping as necessary.
+     *
+     * @param out the stream to receive the data.
+     * @param c the character to print.
+     */
+    public static void printAsJson(Appendable out, int c)
+        throws IOException
+    {
+        // JSON only allows double-quote strings.
+        printChar(out, c, '"', EscapeMode.JSON);
+    }
+
+    private static void printChar(Appendable out, int c, int quote,
+                                  EscapeMode mode)
+        throws IOException
+    {
+        // JSON only allows uHHHH numeric escapes.
         switch (c) {
-            case 0:        return out.append("\\0");
-            case '\t':     return out.append("\\t");
-            case '\n':     return out.append("\\n");
-            case '\r':     return out.append("\\r");
-            case '\f':     return out.append("\\f");
-            case '\u0008': return out.append("\\b");
-            case '\u0007': return out.append("\\a");
-            case '\u000B': return out.append("\\v");
-            case '\"':	   if (quote == c 
-            				|| quote == EscapeAllQuoteCharactersCharacter
-            			   ) {
-            				   return out.append("\\\"");            	
-            			   }
-            			   break;
-            case '\'':     if (quote == c 
-            				|| quote == EscapeAllQuoteCharactersCharacter
-            			   ) {
-        					   return out.append("\\\'");            	
-			   			   }
-						   break;
-            case '\\':     return out.append("\\\\");
+            case 0:
+                out.append(mode == EscapeMode.ION ? "\\0" : "\\u0000");
+                return;
+            case '\t':
+                out.append("\\t");
+                return;
+            case '\n':
+                out.append("\\n");
+                return;
+            case '\r':
+                out.append("\\r");
+                return;
+            case '\f':
+                out.append("\\f");
+                return;
+            case '\u0008':
+                out.append("\\b");
+                return;
+            case '\u0007':
+                out.append(mode == EscapeMode.ION ? "\\a" : "\\u0007");
+                return;
+            case '\u000B':
+                out.append("\\v");
+                return;
+            case '\"':
+                if (quote == c || quote == ANY_SURROUNDING_QUOTES) {
+                    out.append("\\\"");
+                    return;
+                }
+                break;
+            case '\'':
+                if (quote == c || quote == ANY_SURROUNDING_QUOTES) {
+                    out.append("\\\'");
+                    return;
+                }
+                break;
+            case '\\':
+                out.append("\\\\");
+                return;
             default:
                 break;
         }
 
         if (c < 32) {
-            out.append("\\x");
-            out.append(Integer.toHexString(c & 0xFF));
+            if (mode == EscapeMode.JSON) {
+                printCharAsFourHexDigits(out, c);
+            }
+            else {
+                out.append("\\x");
+                out.append(Integer.toHexString(c & 0xFF));
+            }
         }
-        else if (c > 126) {
-            String s = Integer.toHexString(c);
-            out.append("\\u0000".substring(0, 6-s.length()));
-            out.append(s);
+        else if (c > 126) { // FIXME this is broken for chars over 2 bytes
+            printCharAsFourHexDigits(out, c);
         }
         else {
             out.append((char) c);
         }
-        return out;
     }
+
+    private static void printCharAsFourHexDigits(Appendable out, int c)
+        throws IOException
+    {
+        String s = Integer.toHexString(c);
+        out.append("\\u0000".substring(0, 6-s.length()));
+        out.append(s);
+    }
+
 
     /**
      * Renders text content as ASCII using escapes suitable for Ion strings and
      * symbols.  No surrounding quotation marks are rendered.
      *
      * @param text the text to render.
-     * @param out the stream to recieve the data.
+     * @param out the stream to receive the data.
      *
      * @return the same instance supplied by the parameter {@code out}.
      *
@@ -344,33 +419,58 @@ public class Text
     public static Appendable printAsAscii(CharSequence text, Appendable out)
         throws IOException
     {
-    	return printAsAscii(text, EscapeAllQuoteCharactersCharacter, out);
+        printAsIon(out, text, ANY_SURROUNDING_QUOTES);
+        return out;
     }
-    
+
     /**
-     * Renders text content as ASCII using escapes suitable for Ion strings and
-     * symbols.  No surrounding quotation marks are rendered.
+     * Prints characters as Ion ASCII text content, using escapes suitable for
+     * a specified quoting context. No surrounding quotation marks are printed.
      *
+     * @param out the stream to receive the data.
      * @param text the text to render.
-     * @param out the stream to recieve the data.
-     *
-     * @return the same instance supplied by the parameter {@code out}.
+     * @param surroundingQuoteChar must be either {@code '\''}, {@code '\"'},
+     * or {@link #ANY_SURROUNDING_QUOTES}.
      *
      * @throws IOException if the {@link Appendable} throws an exception.
      */
-    public static Appendable printAsAscii(CharSequence text, int quote, Appendable out)
+    public static void printAsIon(Appendable out, CharSequence text,
+                                  int surroundingQuoteChar)
+        throws IOException
+    {
+        printChars(out, text, surroundingQuoteChar, EscapeMode.ION);
+    }
+
+
+    /**
+     * Prints characters as JSON ASCII text content.
+     * No surrounding quotation marks are printed.
+     *
+     * @param out the stream to receive the data.
+     * @param text the text to render.
+     *
+     * @throws IOException if the {@link Appendable} throws an exception.
+     */
+    public static void printAsJson(Appendable out, CharSequence text)
+        throws IOException
+    {
+        printChars(out, text, '"', EscapeMode.JSON);
+    }
+
+    private static void printChars(Appendable out, CharSequence text,
+                                   int surroundingQuoteChar, EscapeMode mode)
         throws IOException
     {
         int len = text.length();
         for (int i = 0; i < len; i++)
         {
             int c = text.charAt(i);
-            renderAsAscii(c, quote, out);
+            printChar(out, c, surroundingQuoteChar, mode);
         }
-        return out;
     }
 
-////////////////////////////////////
+
+    ////////////////////////////////////
 
     static boolean isLetterOrDigit(int c) {
         switch (c) {
@@ -518,7 +618,7 @@ public class Text
         return flags;
     }
 
-    public static String getEscapeString(int c, int quote) {
+    public static String getEscapeString(int c, int surroundingQuoteChar) {
         switch (c) {
         case '\u0007':     return "\\a";
         case '\u0008':     return "\\b";
@@ -528,18 +628,18 @@ public class Text
         case '\t':         return "\\t";
         case '\u000b':     return "\\v";
         case '\\':         return "\\\\";
-        case '\"':         if (quote == c
-        					|| quote == EscapeAllQuoteCharactersCharacter
-        				   ) {
-        					   return "\\\"";
-        				   }
-        				   break;
-        case '\'':		   if (quote == c
-							|| quote == EscapeAllQuoteCharactersCharacter
-		   				   ) {
-			   				   return "\\\'";
-		   				   }
-		   				   break;         
+        case '\"':         if (surroundingQuoteChar == c
+                            || surroundingQuoteChar == ANY_SURROUNDING_QUOTES
+                        ) {
+                            return "\\\"";
+                        }
+                        break;
+        case '\'':           if (surroundingQuoteChar == c
+                            || surroundingQuoteChar == ANY_SURROUNDING_QUOTES
+                            ) {
+                                return "\\\'";
+                            }
+                            break;
         case '/':          return "\\/";
         case '?':          return "\\?";
         default:

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion.util;
@@ -31,20 +31,21 @@ import java.util.TimeZone;
 
 /**
  * Renders {@link IonValue}s to text.
- *
- * <b>Caveats</b><br/>
- * Float will render unpredictably and may change type to decimal.
  */
 public class Printer
 {
     public class Options
         implements Cloneable
     {
+        public boolean blobAsString;
+        public boolean clobAsString;
         public boolean decimalAsFloat;
         public boolean skipAnnotations;
         public boolean sexpAsList;
+        public boolean stringAsJson;
         public boolean symbolAsString;
         public boolean timestampAsString;
+        public boolean timestampAsMillis;
         public boolean untypedNulls;
 //      public boolean skipSystemValues = true;
 
@@ -105,18 +106,48 @@ public class Printer
 
 
     /**
-     * Sets whether this printer renders decimals as floats, this using 'e'
+     * Sets whether this printer renders blobs as Base64 strings.
+     * By default, this is <code>false</code>.
+     */
+    public synchronized boolean getPrintBlobAsString()
+    {
+        return myOptions.blobAsString;
+    }
+
+    public synchronized void setPrintBlobAsString(boolean blobAsString)
+    {
+        myOptions.blobAsString = blobAsString;
+    }
+
+
+    /**
+     * Sets whether this printer renders clobs as ASCII strings.
+     * By default, this is <code>false</code>.
+     */
+    public synchronized boolean getPrintClobAsString()
+    {
+        return myOptions.clobAsString;
+    }
+
+    public synchronized void setPrintClobAsString(boolean clobAsString)
+    {
+        myOptions.clobAsString = clobAsString;
+    }
+
+
+    /**
+     * Sets whether this printer renders decimals as floats, thus using 'e'
      * notation for all real values.
      * By default, this is <code>false</code>.
      */
-    public synchronized boolean getPrintDecimalsAsFloats()
+    public synchronized boolean getPrintDecimalAsFloat()
     {
         return myOptions.decimalAsFloat;
     }
 
-    public synchronized void setPrintDecimalsAsFloats(boolean decimalsAsFloats)
+    public synchronized void setPrintDecimalAsFloat(boolean decimalAsFloat)
     {
-        myOptions.decimalAsFloat = decimalsAsFloats;
+        myOptions.decimalAsFloat = decimalAsFloat;
     }
 
 
@@ -136,17 +167,46 @@ public class Printer
 
 
     /**
+     * Sets whether this printer renders strings using JSON escapes.
+     * By default, this is <code>false</code>.
+     */
+    public synchronized boolean getPrintStringlAsJson()
+    {
+        return myOptions.stringAsJson;
+    }
+
+    public synchronized void setPrintStringAsJson(boolean stringAsJson)
+    {
+        myOptions.stringAsJson = stringAsJson;
+    }
+
+
+    /**
      * Sets whether this printer renders symbols as strings.
      * By default, this is <code>false</code>.
      */
-    public synchronized boolean getPrintSymbolsAsStrings()
+    public synchronized boolean getPrintSymbolAsString()
     {
         return myOptions.symbolAsString;
     }
 
-    public synchronized void setPrintSymbolsAsStrings(boolean symbolsAsStrings)
+    public synchronized void setPrintSymbolAsString(boolean symbolAsString)
     {
-        myOptions.symbolAsString = symbolsAsStrings;
+        myOptions.symbolAsString = symbolAsString;
+    }
+
+    /**
+     * Sets whether this printer renders timestamps as millisecond values.
+     * By default, this is <code>false</code>.
+     */
+    public synchronized boolean getPrintTimestampAsMillis()
+    {
+        return myOptions.timestampAsMillis;
+    }
+
+    public synchronized void setPrintTimestampAsMillis(boolean timestampAsMillis)
+    {
+        myOptions.timestampAsMillis = timestampAsMillis;
     }
 
     /**
@@ -182,18 +242,18 @@ public class Printer
 
     /**
      * Configures this printer's options to render legal JSON text.
-     * <p>
-     * TODO render decimal as float.
-     * TODO use JSON text escapes.
-     * TODO how to print blob/clob as JSON?
      */
     public synchronized void setJsonMode()
     {
+        myOptions.blobAsString      = true;
+        myOptions.clobAsString      = true;
         myOptions.decimalAsFloat    = true;
         myOptions.skipAnnotations   = true;
         myOptions.sexpAsList        = true;
+        myOptions.stringAsJson      = true;
         myOptions.symbolAsString    = true;
-        myOptions.timestampAsString = true;
+        myOptions.timestampAsString = false;
+        myOptions.timestampAsMillis = true;
         myOptions.untypedNulls      = true;
     }
 
@@ -391,14 +451,12 @@ public class Printer
         {
             if (myOptions.symbolAsString)
             {
-                myOut.append('\"');
-                Text.printAsAscii(text, '\"', myOut);
-                myOut.append('\"');
+                writeString(text);
             }
             else if (Text.symbolNeedsQuoting(text, myQuoteOperators))
             {
                 myOut.append('\'');
-                Text.printAsAscii(text, '\'', myOut);
+                Text.printAsIon(myOut, text, '\'');
                 myOut.append('\'');
             }
             else
@@ -411,7 +469,14 @@ public class Printer
         public void writeString(String text) throws IOException
         {
             myOut.append('\"');
-            Text.printAsAscii(text, '\"', myOut);
+            if (myOptions.stringAsJson)
+            {
+                Text.printAsJson(myOut, text);
+            }
+            else
+            {
+                Text.printAsIon(myOut, text, '\"');
+            }
             myOut.append('\"');
         }
 
@@ -437,9 +502,9 @@ public class Printer
             }
             else
             {
-                myOut.append("{{");
+                myOut.append(myOptions.blobAsString ? "\"" : "{{");
                 value.appendBase64(myOut);
-                myOut.append("}}");
+                myOut.append(myOptions.blobAsString ? "\"" : "}}");
             }
         }
 
@@ -470,15 +535,30 @@ public class Printer
             }
             else
             {
-                myOut.append("{{\"");
+                if (! myOptions.clobAsString)
+                {
+                    myOut.append("{{");
+                }
+                myOut.append('"');
 
                 InputStream byteStream = value.newInputStream();
                 try
                 {
                     int c;
-                    while ((c = byteStream.read()) != -1)
+                    // if-statement hoisted above loop for efficiency
+                    if (myOptions.stringAsJson)
                     {
-                        Text.renderAsAscii(c, '\"', myOut);
+                        while ((c = byteStream.read()) != -1)
+                        {
+                            Text.printAsJson(myOut, c);
+                        }
+                    }
+                    else
+                    {
+                        while ((c = byteStream.read()) != -1)
+                        {
+                            Text.printAsIon(myOut, c, '"');
+                        }
                     }
                 }
                 finally
@@ -486,7 +566,11 @@ public class Printer
                     byteStream.close();
                 }
 
-                myOut.append("\"}}");
+                myOut.append('"');
+                if (! myOptions.clobAsString)
+                {
+                    myOut.append("}}");
+                }
             }
         }
 
@@ -698,6 +782,10 @@ public class Printer
             {
                 writeNull("timestamp");
             }
+            else if (myOptions.timestampAsMillis)
+            {
+                myOut.append(Long.toString(value.getMillis()));
+            }
             else
             {
                 boolean asString = myOptions.timestampAsString;
@@ -773,7 +861,6 @@ public class Printer
                 }
             }
         } // PrinterVisitor.visit(IonTimestamp)
-
     }
 
     /**
@@ -782,7 +869,7 @@ public class Printer
      */
     @Deprecated
     public final static class JsonPrinterVisitor
-        extends PrinterVisitor
+    extends PrinterVisitor
     {
         public JsonPrinterVisitor(Options options, Appendable out)
         {
@@ -791,20 +878,20 @@ public class Printer
 
         @Override
         public void writeAnnotations(IonValue value)
-            throws IOException
+        throws IOException
         {}
 
         @Override
         public void writeSymbol(String text)
-            throws IOException
+        throws IOException
         {
             myOut.append('\"');
-            Text.printAsAscii(text, '\"', myOut);
+            Text.printAsIon(myOut, text, '\"');
             myOut.append('\"');
         }
 
         public void writeFloat(BigDecimal value)
-            throws IOException
+        throws IOException
         {
             BigInteger unscaled = value.unscaledValue();
 
