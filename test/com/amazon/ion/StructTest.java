@@ -451,6 +451,19 @@ public class StructTest
         assertNull(s2.get("b"));
     }
 
+    public void testPutOfClone()
+    {
+        IonStruct s = system().newEmptyStruct();
+
+        IonList v1 = system().newEmptyList();
+        IonList v2 = system().clone(v1);
+        s.put("f", v2);
+
+        v1 = system().newList(system().newInt(12));
+        v2 = system().clone(v1);
+        s.put("g", v2);
+    }
+
     public void testRemoveAll()
     {
         IonStruct s = (IonStruct) oneValue("{a:1,b:2,b:3,c:4,d:5}");

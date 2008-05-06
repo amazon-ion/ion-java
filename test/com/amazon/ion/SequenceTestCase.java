@@ -264,4 +264,17 @@ public abstract class SequenceTestCase
         assertNull("Removed value should have null container",
                    val.getContainer());
     }
+
+    public void testPutOfClone()
+    {
+        IonSequence s = newSequence();
+
+        IonList v1 = system().newEmptyList();
+        IonList v2 = system().clone(v1);
+        s.add(v2);
+
+        v1 = system().newList(system().newInt(12));
+        v2 = system().clone(v1);
+        s.add(v2);
+    }
 }
