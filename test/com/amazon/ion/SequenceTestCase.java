@@ -232,7 +232,7 @@ public abstract class SequenceTestCase
 
         try {
             newSequence(children);
-            fail("Expected IllegalArgumentException");
+            fail("Expected IllegalArgumentException: adding Datagram to sequence");
         }
         catch (IllegalArgumentException e) { }
 
@@ -241,7 +241,7 @@ public abstract class SequenceTestCase
         first = system().newInt(13);
         try {
             newSequence(first, dg);
-            fail("Expected IllegalArgumentException");
+            fail("Expected IllegalArgumentException: adding Datagram to sequence");
         }
         catch (IllegalArgumentException e) { }
     }
@@ -265,7 +265,7 @@ public abstract class SequenceTestCase
                    val.getContainer());
     }
 
-    public void testPutOfClone()
+    public void testAddOfClone()
     {
         IonSequence s = newSequence();
 
@@ -274,6 +274,11 @@ public abstract class SequenceTestCase
         s.add(v2);
 
         v1 = system().newList(system().newInt(12));
+        v2 = system().clone(v1);
+        s.add(v2);
+
+        v1 = system().newNullList();
+        v1.addTypeAnnotation("type");
         v2 = system().clone(v1);
         s.add(v2);
     }
