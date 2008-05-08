@@ -460,6 +460,7 @@ public class StructTest
         s.put("f", v2);
 
         v1 = system().newList(system().newInt(12));
+        v1.addTypeAnnotation("hi");
         v2 = system().clone(v1);
         s.put("g", v2);
     }

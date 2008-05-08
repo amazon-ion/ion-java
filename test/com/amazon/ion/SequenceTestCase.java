@@ -274,10 +274,11 @@ public abstract class SequenceTestCase
         s.add(v2);
 
         v1 = system().newList(system().newInt(12));
+        v1.addTypeAnnotation("foo");
         v2 = system().clone(v1);
         s.add(v2);
         v2.addTypeAnnotation("foo");
-        
+
         v1.deepMaterialize();
 
         IonDatagram dg = system().newDatagram(s);
