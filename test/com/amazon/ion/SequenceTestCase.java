@@ -276,10 +276,12 @@ public abstract class SequenceTestCase
         v1 = system().newList(system().newInt(12));
         v2 = system().clone(v1);
         s.add(v2);
+        v2.addTypeAnnotation("foo");
+        
+        v1.deepMaterialize();
 
-        v1 = system().newNullList();
-        v1.addTypeAnnotation("type");
-        v2 = system().clone(v1);
-        s.add(v2);
+        IonDatagram dg = system().newDatagram(s);
+        byte[] buf = dg.toBytes();
+        assertNotNull("there should be a buffer", buf);
     }
 }

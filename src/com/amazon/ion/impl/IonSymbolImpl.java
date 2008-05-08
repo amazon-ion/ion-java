@@ -80,6 +80,9 @@ public final class IonSymbolImpl
         if (mySid == UNKNOWN_SYMBOL_ID) {
             assert _hasNativeValue == true && isDirty();
             LocalSymbolTable symtab = getSymbolTable();
+            if (symtab == null) {
+            	symtab = materializeSymbolTable();
+            }
             if (symtab != null) {
                 mySid = symtab.addSymbol(_get_value());
             }

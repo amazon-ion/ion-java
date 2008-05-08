@@ -37,11 +37,11 @@ public final class IonDatagramImpl
 
     private final static String[] EMPTY_STRING_ARRAY = new String[0];
 
-
-    /**
-     * The system that created this datagram.
-     */
-    private IonSystem _system;
+   // CAS symtab: moved _system to IonValueImpl 
+   // /**
+   //  * The system that created this datagram.
+   //  */
+   // private IonSystem _system;
 
     /**
      * Used while constructing, then set to null.
@@ -121,9 +121,6 @@ public final class IonDatagramImpl
         this(new SystemReader(system,
                               system.getCatalog(),
                               initialSymbolTable, ionText));
-        
-// TODO: ?? really place_symbol_table(initialSymbolTable);
-
     }
 
     /**
@@ -134,7 +131,7 @@ public final class IonDatagramImpl
     IonDatagramImpl(SystemReader rawStream)
     {
         super(DATAGRAM_TYPEDESC, true);
-
+        
         _userContents = new ArrayList<IonValue>();
 
         // This is only used during construction.
@@ -486,6 +483,18 @@ public final class IonDatagramImpl
     {
         return 0;
     }
+    
+    /**
+     * Overrides IonValueImpl to NOT create a symbol table. At
+     * the datagram the symbol table isn't a valid concept for
+     * ownership.  This returning null will cause the child to
+     * create a symbol table instead.
+     */
+    @Override
+    protected LocalSymbolTable materializeSymbolTable()
+    {
+    	return null;
+    }
 
     /**
      * Overrides IonValueImpl.container copy to add code to
@@ -617,6 +626,9 @@ public final class IonDatagramImpl
                     LocalSymbolTable symtab = ichild.getSymbolTable();
 
                     // FIXME: remove or restore - why would we assert this? assert symtab != null;
+                    if (symtab == null) {
+                    	symtab = ichild.materializeSymbolTable();
+                    }
                     if (symtab != null) {
                         ichild.updateSymbolTable(symtab);
 
