@@ -93,7 +93,6 @@ public class AllTests
         suite.addTest(new EquivsTests());
         suite.addTest(new RoundTripTests());
 
-
         //$JUnit-END$
 
         return suite;

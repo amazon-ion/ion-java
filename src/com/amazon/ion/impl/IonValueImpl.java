@@ -8,6 +8,7 @@ import static com.amazon.ion.util.Equivalence.ionEquals;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
+import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.NullValueException;
@@ -145,6 +146,17 @@ public abstract class IonValueImpl
      * stored in at a parent container.
      */
     protected LocalSymbolTable _symboltable;
+    
+    /**
+     * The instance maintains a reference back to the system that
+     * created it so that it can create a symbol table when it
+     * is forced to, and not before.  Generally the symbol table
+     * is created as high on the container tree as possible.  However
+     * a localsymboltable may need to be created on any value if
+     * the symbol id is being requested for a fieldname, the int
+     * value of an IonSymbol or an annotation.
+     */
+    protected IonSystem _system;
 
 
     /**
@@ -168,7 +180,7 @@ public abstract class IonValueImpl
                        ,LocalSymbolTable symboltable
                        )
     {
-        assert symboltable != null;
+// cas symtab:    	assert symboltable != null;
 
         _fieldSid    = fieldSID;
         _buffer      = buffer;
@@ -213,7 +225,7 @@ public abstract class IonValueImpl
                                     ,IonContainerImpl container
     ) {
         IonValueImpl value;
-        assert symboltable != null;
+// cas symtab:       assert symboltable != null;
 
         try {
             IonBinary.Reader reader = buffer.reader();
@@ -244,7 +256,7 @@ public abstract class IonValueImpl
         throws IOException
     {
         IonValueImpl value;
-        assert symboltable != null;
+// cas symtab:        assert symboltable != null;
 
         int pos = reader.position();
         int tdb = reader.readActualTypeDesc();
@@ -369,8 +381,13 @@ public abstract class IonValueImpl
     {
         if (this._fieldSid == 0 && this._fieldName != null)
         {
-            this._fieldSid = getSymbolTable().addSymbol(this._fieldName);
-            // TODO define behavior if there's no symbol table!
+        	LocalSymbolTable symtab = getSymbolTable();
+        	if (symtab == null) {
+        		// TODO - or we could throw here
+        		symtab = materializeSymbolTable();
+        	}
+        	assert symtab != null;
+            _fieldSid = symtab.addSymbol(this._fieldName);
         }
         return this._fieldSid;
     }
@@ -431,6 +448,7 @@ public abstract class IonValueImpl
                         
         // this._symboltable = new LocalSymbolTableImpl();
         // FIXME: this assert will break right now !
+// cas symtab:        just remove this block
         if (this._symboltable == null) {
         assert this._symboltable != null || this._symboltable == null;
         }
@@ -547,6 +565,9 @@ public abstract class IonValueImpl
 
         _buffer = null;
         // cas removed (1 apr 2008): _symboltable = null;
+        // TODO: should this be if (!(_container instanceof IonDatagram)) _symboltable = null;
+        //       that is push all symbol tables up to the immediate datagram child members?
+        //       since there's no buffer there's no binary ...
         _isMaterialized     = false;   // because there's no buffer
         _isPositionLoaded   = false;
         _isDirty            = true;
@@ -809,6 +830,24 @@ public abstract class IonValueImpl
         assert _hasNativeValue;
         this._isMaterialized = true;
     }
+    
+    protected LocalSymbolTable materializeSymbolTable()
+    {
+    	LocalSymbolTable symtab = _symboltable;
+    	if (symtab == null && _container != null) {
+    		symtab = _container.materializeSymbolTable();
+    	}
+		if (symtab == null) {
+			synchronized (this) {
+    			// TODO - should this be here or can we put this off
+    			//        even longer (until someone asks for the binary
+    			//        buffer, for example)
+    			_symboltable = _system.newLocalSymbolTable();
+    			symtab = _symboltable;
+			}
+		}
+    	return symtab;
+    }
 
     protected synchronized void materializeAnnotations(IonBinary.Reader reader) throws IOException
     {
@@ -978,8 +1017,9 @@ public abstract class IonValueImpl
 
         LocalSymbolTable symtab =  this.getSymbolTable();
         if (symtab == null) {
-            // TODO:  what should we do here?  Perhaps create a default table?
-            throw new IonException("can't serialize symbols without a symbol table");
+        	symtab = this.materializeSymbolTable();
+// cas symtab:            // TODO:  what should we do here?  Perhaps create a default table?
+// cas symtab:            throw new IonException("can't serialize symbols without a symbol table");
         }
 
         // first add up the length of the annotations symbol id lengths
@@ -1467,7 +1507,7 @@ public abstract class IonValueImpl
     @Override
     public boolean equals(final Object other) {
         // TODO we can make this more efficient since we have impl details
-
+        
         boolean same = false;
         if (other instanceof IonValue)
         {

@@ -232,7 +232,7 @@ public abstract class SequenceTestCase
 
         try {
             newSequence(children);
-            fail("Expected IllegalArgumentException");
+            fail("Expected IllegalArgumentException: adding Datagram to sequence");
         }
         catch (IllegalArgumentException e) { }
 
@@ -241,7 +241,7 @@ public abstract class SequenceTestCase
         first = system().newInt(13);
         try {
             newSequence(first, dg);
-            fail("Expected IllegalArgumentException");
+            fail("Expected IllegalArgumentException: adding Datagram to sequence");
         }
         catch (IllegalArgumentException e) { }
     }
@@ -263,5 +263,25 @@ public abstract class SequenceTestCase
         seq.makeNull();
         assertNull("Removed value should have null container",
                    val.getContainer());
+    }
+
+    public void testAddOfClone()
+    {
+        IonSequence s = newSequence();
+
+        IonList v1 = system().newEmptyList();
+        IonList v2 = system().clone(v1);
+        s.add(v2);
+
+        v1 = system().newList(system().newInt(12));
+        v2 = system().clone(v1);
+        s.add(v2);
+        v2.addTypeAnnotation("foo");
+        
+        v1.deepMaterialize();
+
+        IonDatagram dg = system().newDatagram(s);
+        byte[] buf = dg.toBytes();
+        assertNotNull("there should be a buffer", buf);
     }
 }
