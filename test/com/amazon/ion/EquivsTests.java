@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion;
@@ -18,6 +18,7 @@ public class EquivsTests
             super(ionText);
         }
 
+        @Override
         public void runTest()
             throws Exception
         {

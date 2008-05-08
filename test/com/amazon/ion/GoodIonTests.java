@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion;
@@ -22,6 +22,7 @@ public class GoodIonTests
             myFileIsBinary = binary;
         }
 
+        @Override
         public void runTest()
             throws Exception
         {
@@ -31,7 +32,9 @@ public class GoodIonTests
             }
             else
             {
-                readIonText(myTestFile);
+                IonDatagram datagram = readIonText(myTestFile);
+                // Flush out any problems in the encoded data.
+                datagram.deepMaterialize();
             }
         }
     }

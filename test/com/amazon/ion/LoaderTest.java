@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion;
@@ -286,6 +286,13 @@ public class LoaderTest
     }
 
 
+    public void testDeepMaterialize()
+        throws Exception
+    {
+        File testdataFile = getTestdataFile("good/structs.ion");
+        IonDatagram dg = loader().load(testdataFile);
+        dg.deepMaterialize();
+    }
 
     public static void main(String[] args)
         throws Exception
