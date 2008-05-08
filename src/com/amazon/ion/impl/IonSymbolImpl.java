@@ -130,6 +130,9 @@ public final class IonSymbolImpl
 
     	_is_IonVersionMarker = isIVM;
     	_isSystemValue = true;
+        _hasNativeValue = true;
+        _isMaterialized = true;
+
     	mySid = SystemSymbolTable.ION_1_0_SID;
     }
 
