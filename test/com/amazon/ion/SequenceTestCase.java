@@ -6,6 +6,7 @@ package com.amazon.ion;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 
 
 
@@ -285,4 +286,21 @@ public abstract class SequenceTestCase
         byte[] buf = dg.toBytes();
         assertNotNull("there should be a buffer", buf);
     }
+
+    public void testRemoveViaIteratorThenDirect()
+    {
+        IonSequence s = newSequence();
+        IonInt v0 = system().newInt(0);
+        IonInt v1 = system().newInt(1);
+        s.add(v0);
+        s.add(v1);
+
+        Iterator<IonValue> i = s.iterator();
+        assertSame(v0, i.next());
+        i.remove();
+
+        assertSame(v1, i.next());
+        s.remove(v1);
+    }
+
 }

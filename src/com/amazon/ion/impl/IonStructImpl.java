@@ -118,14 +118,21 @@ public final class IonStructImpl
         int size;
         if (_contents != null) {
             try {
-                for (Iterator i = _contents.iterator(); i.hasNext();)
+                // Walk backwards to minimize array movement
+                int lowestRemovedIndex = -1;
+                for (int i = _contents.size() - 1; i >= 0; i--)
                 {
-                    IonValue child = (IonValue) i.next();
+                    IonValue child = _contents.get(i);
                     if (fieldName.equals(child.getFieldName()))
                     {
-                        i.remove();
+                        _contents.remove(i);
                         ((IonValueImpl)child).detachFromContainer();
+                        lowestRemovedIndex = i;
                     }
+                }
+                if (lowestRemovedIndex >= 0)
+                {
+                    updateElementIds(lowestRemovedIndex);
                 }
             }
             catch (IOException e) {
