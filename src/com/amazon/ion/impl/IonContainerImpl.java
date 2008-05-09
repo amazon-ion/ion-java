@@ -511,9 +511,8 @@ abstract public class IonContainerImpl
         }
         else
         {
-            // TODO: should we copy the symbols to the parent, if there are
-            // any?
             if (!(this instanceof IonDatagramImpl)) {
+            	concrete.makeReady();
                 concrete.setSymbolTable(null);
             }
             concrete.clear_position_and_buffer();

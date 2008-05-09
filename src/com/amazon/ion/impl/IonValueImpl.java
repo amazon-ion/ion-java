@@ -876,6 +876,7 @@ public abstract class IonValueImpl
         int len = sids.length;
         this._annotations = new String[len];
         LocalSymbolTable symtab = getSymbolTable();
+       	assert symtab != null || len < 1 ;
         for (int ii=0; ii<len; ii++) {
             int id = sids[ii];
             this._annotations[ii] = symtab.findSymbol(id);
