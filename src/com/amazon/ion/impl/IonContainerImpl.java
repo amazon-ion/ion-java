@@ -511,9 +511,8 @@ abstract public class IonContainerImpl
         }
         else
         {
-            // TODO: should we copy the symbols to the parent, if there are
-            // any?
             if (!(this instanceof IonDatagramImpl)) {
+                concrete.makeReady();
                 concrete.setSymbolTable(null);
             }
             concrete.clear_position_and_buffer();
@@ -593,9 +592,7 @@ abstract public class IonContainerImpl
             return true;
         }
 
-        String message =
-            "element is not in materialized contents of its container";
-        throw new IllegalStateException(message);
+        throw new AssertionError("element's index is not correct");
     }
 
     public Iterator<IonValue> iterator()
@@ -642,10 +639,12 @@ abstract public class IonContainerImpl
                 throw new UnsupportedOperationException();
             }
 
+            IonValueImpl concrete = (IonValueImpl) current;
+
             it.remove();
             try
             {
-                ((IonValueImpl) current).detachFromContainer();
+                concrete.detachFromContainer();
             }
             catch (IOException e)
             {
@@ -653,6 +652,7 @@ abstract public class IonContainerImpl
             }
             finally
             {
+                updateElementIds(concrete.getElementId());
                 setDirty();
             }
         }

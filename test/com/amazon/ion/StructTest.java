@@ -4,6 +4,8 @@
 
 package com.amazon.ion;
 
+import java.util.Iterator;
+
 
 
 public class StructTest
@@ -460,6 +462,7 @@ public class StructTest
         s.put("f", v2);
 
         v1 = system().newList(system().newInt(12));
+        v1.addTypeAnnotation("hi");
         v2 = system().clone(v1);
         s.put("g", v2);
     }
@@ -510,5 +513,43 @@ public class StructTest
         changed = s.retainAll("b", "a");
         assertTrue(changed);
         assertEquals(2, s.size());
+    }
+
+    public void testRemoveViaIteratorThenDirect()
+    {
+        IonStruct s = system().newEmptyStruct();
+        IonInt v0 = system().newInt(0);
+        IonInt v1 = system().newInt(1);
+        s.put("a", v0);
+        s.put("b", v1);
+
+        // Remove first elt via iteration, then second directly
+        Iterator<IonValue> i = s.iterator();
+        assertSame(v0, i.next());
+        i.remove();
+        assertSame(v1, i.next());
+        s.remove(v1);
+
+        // Remove second elt via iteration, then first directly
+        s.put("a", v0);
+        s.put("b", v1);
+        i = s.iterator();
+        i.next();
+        i.next();
+        i.remove();
+        s.remove(v0);
+    }
+
+    public void testPutMaintainsIndexes()
+    {
+        IonStruct s = system().newEmptyStruct();
+        s.add("a", system().newInt(1));
+        s.add("b", system().newNull());
+        s.add("a", system().newInt(2));
+        assertEquals(3, s.size());  // repeated field
+
+        // This removes both fields above.  Ensure we don't screw up b's index
+        s.put("a", system().newNull());
+        s.remove(s.get("b"));
     }
 }
