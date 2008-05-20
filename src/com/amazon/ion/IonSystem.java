@@ -7,6 +7,7 @@ package com.amazon.ion;
 import java.io.Reader;
 import java.util.Collection;
 import java.util.Date;
+import java.util.Iterator;
 
 /**
  * Entry point to all things Ion.
@@ -141,7 +142,10 @@ public interface IonSystem
      * @return a new reader instance.
      *
      * @throws NullPointerException if <code>ionText</code> is null.
+     *
+     * @deprecated Use {@link #iterate(Reader)}.
      */
+    @Deprecated
     public IonReader newReader(Reader ionText);
 
 
@@ -153,7 +157,10 @@ public interface IonSystem
      * @return a new reader instance.
      *
      * @throws NullPointerException if <code>ionText</code> is null.
+     *
+     * @deprecated Use {@link #iterate(String)}.
      */
+    @Deprecated
     public IonReader newReader(String ionText);
 
 
@@ -166,7 +173,7 @@ public interface IonSystem
      *
      * @throws NullPointerException if <code>ionText</code> is null.
      *
-     * @deprecated Use {@link #newReader(String)}.
+     * @deprecated Use {@link #iterate(String)}.
      */
     @Deprecated
     public IonReader newTextReader(String ionText);
@@ -179,7 +186,7 @@ public interface IonSystem
      *
      * @throws NullPointerException if <code>ionText</code> is null.
      *
-     * @deprecated Use {@link #newReader(Reader)}.
+     * @deprecated Use {@link #iterate(Reader)}.
      */
     @Deprecated
     public IonReader newTextReader(Reader ionText);
@@ -195,9 +202,54 @@ public interface IonSystem
      * @return a new reader instance.
      *
      * @throws NullPointerException if <code>ionData</code> is null.
+     *
+     * @deprecated Use {@link #iterate(byte[])}.
      */
+    @Deprecated
     public IonReader newReader(byte[] ionData);
 
+
+
+    /**
+     * Creates an iterator over a stream of Ion text data.
+     * Values returned by the iterator have no container.
+     *
+     * @param ionText a stream of Ion text data.  The caller is responsible for
+     * closing the Reader after iteration is complete.
+     *
+     * @return a new iterator instance.
+     *
+     * @throws NullPointerException if <code>ionText</code> is null.
+     */
+    public Iterator<IonValue> iterate(Reader ionText);
+
+
+    /**
+     * Creates an iterator over a string containing Ion text data.
+     * Values returned by the iterator have no container.
+     *
+     * @param ionText must not be null.
+     *
+     * @return a new iterator instance.
+     *
+     * @throws NullPointerException if <code>ionText</code> is null.
+     */
+    public Iterator<IonValue> iterate(String ionText);
+
+
+    /**
+     * Creates an iterator over Ion data.
+     * Values returned by the iterator have no container.
+     *
+     * @param ionData may be either Ion binary data or (UTF-8) Ion text.
+     * <em>This method assumes ownership of the array</em> and may modify it at
+     * will.
+     *
+     * @return a new iterator instance.
+     *
+     * @throws NullPointerException if <code>ionData</code> is null.
+     */
+    public Iterator<IonValue> iterate(byte[] ionData);
 
 
     /**

@@ -43,6 +43,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -133,7 +134,7 @@ public class IonSystemImpl
         }
 
         IonDatagramImpl datagram = new IonDatagramImpl(this);
-        
+
         if (initialChild != null) {
         	//LocalSymbolTable symtab = initialChild.getSymbolTable();
         	//if (symtab == null) {
@@ -142,11 +143,11 @@ public class IonSystemImpl
         	//	datagram.add(ionRep, true);
         	//	((IonValueImpl)initialChild).setSymbolTable(symtab);
         	//}
-        	
+
         	// This will fail if initialChild instanceof IonDatagram:
         	datagram.add(initialChild);
         }
-        
+
         assert datagram._system == this;
         return datagram;
     }
@@ -174,6 +175,11 @@ public class IonSystemImpl
     // IonReader creation
 
 
+    public Iterator<IonValue> iterate(Reader reader)
+    {
+        return new UserReader(this, this.newLocalSymbolTable(), reader);
+    }
+
     public IonReader newReader(Reader reader)
     {
         return new UserReader(this, this.newLocalSymbolTable(), reader);
@@ -186,6 +192,14 @@ public class IonSystemImpl
     public IonReader newTextReader(Reader reader)
     {
         return newReader(reader);
+    }
+
+
+    public Iterator<IonValue> iterate(String ionText)
+    {
+        return new UserReader(this,
+                              this.newLocalSymbolTable(),
+                              new StringReader(ionText));
     }
 
 
@@ -203,6 +217,13 @@ public class IonSystemImpl
     public IonReader newTextReader(String ionText)
     {
         return newReader(ionText);
+    }
+
+
+    public Iterator<IonValue> iterate(byte[] ionData)
+    {
+        SystemReader systemReader = newSystemReader(ionData);
+        return new UserReader(systemReader);
     }
 
 
@@ -346,21 +367,21 @@ public class IonSystemImpl
         }
         return false;
     }
-    
+
     boolean isUnderscoreAndDigits(String image, int firstChar, int lastChar)
     {
     	// you have to have enought characters for the underscore and
     	// at least 1 digit
     	if (lastChar - firstChar < 2) return false;
-    	
+
     	// make sure the first character is the underscore
     	if (image.charAt(firstChar) != '_') return false;
-    	
+
     	// make sure all the remaining characters are digits
     	for (int ii = firstChar + 1; ii < lastChar; ii++) {
-            if (!Character.isDigit(image.charAt(ii))) return false; 
+            if (!Character.isDigit(image.charAt(ii))) return false;
         }
-    	
+
     	// it must be "_ddd" then
     	return true;
     }
@@ -430,7 +451,7 @@ public class IonSystemImpl
 
     public IonValue singleValue(String ionText)
     {
-        IonReader reader = newTextReader(ionText);
+        IonReader reader = newReader(ionText);
         return singleValue(reader);
     }
 
