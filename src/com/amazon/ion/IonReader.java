@@ -15,7 +15,9 @@ import java.util.Iterator;
  * <p>
  * Implementations of this interface may not be safe for use by multiple
  * threads.
+ * @deprecated
  */
+@Deprecated
 public interface IonReader
     extends Iterator<IonValue>
 {
