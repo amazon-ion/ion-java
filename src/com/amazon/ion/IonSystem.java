@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion;
@@ -134,80 +134,6 @@ public interface IonSystem
      */
     @Deprecated
     public void setLoader(IonLoader loader);
-
-
-    /**
-     * Creates a reader for iterating over a stream of Ion text data.
-     *
-     * @return a new reader instance.
-     *
-     * @throws NullPointerException if <code>ionText</code> is null.
-     *
-     * @deprecated Use {@link #iterate(Reader)}.
-     */
-    @Deprecated
-    public IonReader newReader(Reader ionText);
-
-
-    /**
-     * Creates a reader for iterating over a string containing Ion text data.
-     *
-     * @param ionText must not be null.
-     *
-     * @return a new reader instance.
-     *
-     * @throws NullPointerException if <code>ionText</code> is null.
-     *
-     * @deprecated Use {@link #iterate(String)}.
-     */
-    @Deprecated
-    public IonReader newReader(String ionText);
-
-
-    /**
-     * Creates a reader for iterating over a string containing Ion text data.
-     *
-     * @param ionText must not be null.
-     *
-     * @return a new reader instance.
-     *
-     * @throws NullPointerException if <code>ionText</code> is null.
-     *
-     * @deprecated Use {@link #iterate(String)}.
-     */
-    @Deprecated
-    public IonReader newTextReader(String ionText);
-
-
-    /**
-     * Creates a reader for iterating over a stream of Ion text data.
-     *
-     * @return a new reader instance.
-     *
-     * @throws NullPointerException if <code>ionText</code> is null.
-     *
-     * @deprecated Use {@link #iterate(Reader)}.
-     */
-    @Deprecated
-    public IonReader newTextReader(Reader ionText);
-
-
-    /**
-     * Creates a reader for iterating over Ion data.
-     *
-     * @param ionData may be either Ion binary data or (UTF-8) Ion text.
-     * <em>This method assumes ownership of the array</em> and may modify it at
-     * will.
-     *
-     * @return a new reader instance.
-     *
-     * @throws NullPointerException if <code>ionData</code> is null.
-     *
-     * @deprecated Use {@link #iterate(byte[])}.
-     */
-    @Deprecated
-    public IonReader newReader(byte[] ionData);
-
 
 
     /**

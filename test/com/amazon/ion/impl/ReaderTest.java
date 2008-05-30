@@ -1,15 +1,10 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonReader;
-import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonTestCase;
-import com.amazon.ion.IonValue;
-import com.amazon.ion.LocalSymbolTable;
-import com.amazon.ion.SymbolTable;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -36,6 +31,12 @@ public class ReaderTest
 
     //=========================================================================
     // Test cases
+
+    public void testNothing()
+    {
+    }
+
+/* jonker 2008-05-29 Disabled everything while we (temporarily) remove IonReader
 
     public void testSimpleScan()
     {
@@ -153,4 +154,5 @@ public class ReaderTest
         iterator.next();
         checkEmptyIterator(iterator);
     }
+    */
 }

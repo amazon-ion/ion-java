@@ -1,20 +1,20 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonReader;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import java.io.IOException;
 import java.io.Reader;
+import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 public class UserReader
-    implements IonReader
+    implements Iterator<IonValue>
 {
     private SystemReader _systemReader;
 

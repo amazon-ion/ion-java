@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion.impl;
@@ -7,7 +7,6 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
@@ -16,11 +15,12 @@ import com.amazon.ion.impl.IonBinary.BufferManager;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
+import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 
 public class SystemReader
-    implements IonReader
+    implements Iterator<IonValue>
 {
     private final IonSystemImpl _system;
     private final IonCatalog    _catalog;
@@ -113,22 +113,22 @@ public class SystemReader
 
         _system = system;
         _catalog = catalog;
-        
+
         // TODO this should be an unmodifiable bootstram symtab.
         _currentSymbolTable = getSystemSymbolTableAsLocal(system);
         _buffer = buffer;
         _buffer_offset = reader.position();
     }
-    
+
     // TODO: replace this with a better option, this shouldn't be a
     //       table anyone could edit, and we should have a way to
     // 		 tell that it's a system symbol table and not just an
     //		 empty local symbol table.
     static LocalSymbolTable getSystemSymbolTableAsLocal(IonSystemImpl system) {
     	LocalSymbolTable lst;
-    	
+
     	lst = new LocalSymbolTableImpl(system.getSystemSymbolTable());
-    	
+
     	return lst;
     }
 
@@ -186,7 +186,7 @@ public class SystemReader
             // so parse another value out of the input
             if (_parser != null) {
                 boolean freshBuffer = _buffer_offset == 0;
-                // cas 22 apr 2008: 
+                // cas 22 apr 2008:
                 freshBuffer = false; // this is really the "write magic cookie" flag
                 _parser.parse(_currentSymbolTable
                               ,_buffer_offset
@@ -236,7 +236,7 @@ public class SystemReader
                 _next = null;
 
                 checkCurrentForHiddens();
-                
+
                 return _curr;
             }
         }
@@ -268,7 +268,7 @@ public class SystemReader
             StaticSymbolTable newTable =
                 new StaticSymbolTableImpl(_system, (IonStruct) _curr);
             _catalog.putTable(newTable);
-            
+
             // FIXME: really?  I don't think shared tables need to be (or
             //		  should be hidden.  They should be user values.
             _currentIsHidden = true;

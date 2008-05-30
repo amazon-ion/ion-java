@@ -15,6 +15,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
+import java.util.Iterator;
 
 /**
  *
@@ -116,14 +117,13 @@ public class LoaderTest
         try
         {
             Reader reader = new InputStreamReader(fileStream, "UTF-8");
-            IonReader i = system().newReader(reader);
+            Iterator<IonValue> i = system().iterate(reader);
             while (i.hasNext())
             {
                 IonValue value = i.next();
                 assertFalse(value.isNullValue());
                 assertNull(value.getContainer());
             }
-            i.close();
         }
         finally
         {

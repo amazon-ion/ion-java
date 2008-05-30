@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 import com.amazon.ion.BadIonTests;
@@ -24,22 +24,22 @@ import com.amazon.ion.SymbolTest;
 import com.amazon.ion.TimestampTest;
 import com.amazon.ion.impl.ByteBufferTest;
 import com.amazon.ion.impl.CharacterReaderTest;
+import com.amazon.ion.impl.IonEqualsTest;
+import com.amazon.ion.impl.IterationTest;
 import com.amazon.ion.impl.ReaderTest;
 import com.amazon.ion.impl.SymbolTableTest;
-import com.amazon.ion.impl.IonEqualsTest;
 import com.amazon.ion.streaming.BadIonStreamingTests;
 import com.amazon.ion.streaming.BinaryStreamingTest;
 import com.amazon.ion.streaming.EquivIonStreamingTests;
 import com.amazon.ion.streaming.GoodIonStreamingTests;
 import com.amazon.ion.streaming.RoundTripStreamingTests;
 import com.amazon.ion.system.SimpleCatalogTest;
+import com.amazon.ion.util.EquivalenceTest;
 import com.amazon.ion.util.PrinterTest;
 import com.amazon.ion.util.TextTest;
-import com.amazon.ion.util.EquivalenceTest;
-
+import junit.framework.JUnit4TestAdapter;
 import junit.framework.Test;
 import junit.framework.TestSuite;
-import junit.framework.JUnit4TestAdapter;
 
 
 /**
@@ -82,6 +82,7 @@ public class AllTests
 
         // Utility tests
         suite.addTestSuite(LoaderTest.class);
+        suite.addTestSuite(IterationTest.class);
         suite.addTestSuite(ReaderTest.class);
         suite.addTestSuite(PrinterTest.class);
 
