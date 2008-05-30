@@ -31,6 +31,20 @@ import java.util.TimeZone;
 
 /**
  * Renders {@link IonValue}s to text.
+ * <p>
+ * By default, output is in a compact format with minimal whitespace.
+ * For example:
+ * <pre>
+ *    annot::{f1:["hello","goodbye"],'another field':long::0}
+ * </pre>
+ * The format can be tuned through various properties on the Printer instance,
+ * as well as through the {@link Printer.Options} structure.
+ * <p>
+ * While printers are inexpensive to create, their configuration facilities
+ * make them useful as shared resources. Printers are safe for use from
+ * multiple threads.  Changes to configuration settings (<em>e.g.</em>,
+ * {@link #setJsonMode()}) do not affect concurrently-running calls to
+ * {@link #print}.
  */
 public class Printer
 {

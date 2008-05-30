@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion.impl;
@@ -17,7 +17,6 @@ import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonNull;
-import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
@@ -180,20 +179,6 @@ public class IonSystemImpl
         return new UserReader(this, this.newLocalSymbolTable(), reader);
     }
 
-    public IonReader newReader(Reader reader)
-    {
-        return new UserReader(this, this.newLocalSymbolTable(), reader);
-    }
-
-    /**
-     *  @deprecated Use {@link #newReader(Reader)}.
-     */
-    @Deprecated
-    public IonReader newTextReader(Reader reader)
-    {
-        return newReader(reader);
-    }
-
 
     public Iterator<IonValue> iterate(String ionText)
     {
@@ -203,31 +188,7 @@ public class IonSystemImpl
     }
 
 
-    public IonReader newReader(String ionText)
-    {
-        return new UserReader(this,
-                              this.newLocalSymbolTable(),
-                              new StringReader(ionText));
-    }
-
-    /**
-     *  @deprecated Use {@link #newReader(String)}.
-     */
-    @Deprecated
-    public IonReader newTextReader(String ionText)
-    {
-        return newReader(ionText);
-    }
-
-
     public Iterator<IonValue> iterate(byte[] ionData)
-    {
-        SystemReader systemReader = newSystemReader(ionData);
-        return new UserReader(systemReader);
-    }
-
-
-    public IonReader newReader(byte[] ionData)
     {
         SystemReader systemReader = newSystemReader(ionData);
         return new UserReader(systemReader);
@@ -428,22 +389,15 @@ public class IonSystemImpl
     //-------------------------------------------------------------------------
     // DOM creation
 
-    private IonValue singleValue(IonReader reader)
+    private IonValue singleValue(Iterator<IonValue> iterator)
     {
-        try
+        if (iterator.hasNext())
         {
-            if (reader.hasNext())
+            IonValue value = iterator.next();
+            if (! iterator.hasNext())
             {
-                IonValue value = reader.next();
-                if (! reader.hasNext())
-                {
-                    return value;
-                }
+                return value;
             }
-        }
-        finally
-        {
-            reader.close();
         }
 
         throw new IonException("not a single value");
@@ -451,14 +405,14 @@ public class IonSystemImpl
 
     public IonValue singleValue(String ionText)
     {
-        IonReader reader = newReader(ionText);
-        return singleValue(reader);
+        Iterator<IonValue> iterator = iterate(ionText);
+        return singleValue(iterator);
     }
 
     public IonValue singleValue(byte[] ionData)
     {
-        IonReader reader = newReader(ionData);
-        return singleValue(reader);
+        Iterator<IonValue> iterator = iterate(ionData);
+        return singleValue(iterator);
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion;
@@ -87,7 +87,7 @@ public abstract class IonTestCase
     {
         loadSystemProperties();
 
-        String value = System.getProperty(prop); 
+        String value = System.getProperty(prop);
         if (value == null)
         {
             value = System.getenv(prop);
@@ -260,21 +260,21 @@ public abstract class IonTestCase
      * Parses text as a single Ion value.  If the text contains more than that,
      * a failure is thrown.
      *
-     * @param scanner must not be <code>null</code>.
+     * @param iterator must not be <code>null</code>.
      * @return a single value, or <code>null</code> if the scanner has nothing
      * on it.
      */
-    public IonValue oneValue(IonReader scanner)
+    public IonValue singleValue(Iterator<IonValue> iterator)
     {
         IonValue value = null;
 
-        if (scanner.hasNext())
+        if (iterator.hasNext())
         {
-            value = scanner.next();
+            value = iterator.next();
 
-            if (scanner.hasNext())
+            if (iterator.hasNext())
             {
-                IonValue part = scanner.next();
+                IonValue part = iterator.next();
                 fail("Found unexpected part: " + part);
             }
         }
@@ -295,7 +295,7 @@ public abstract class IonTestCase
     {
         IonValue value = null;
 
-        Iterator<IonValue> iterator = system().newReader(text);
+        Iterator<IonValue> iterator = system().iterate(text);
         if (iterator.hasNext())
         {
             value = iterator.next();
