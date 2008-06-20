@@ -33,7 +33,7 @@ public class FloatTest
         }
         catch (NullValueException e) { }
 
-        assertNull("toBigDecimal() isn't null", value.toBigDecimal());
+        assertNull("toBigDecimal() isn't null", value.bigDecimalValue());
     }
 
 
@@ -44,11 +44,11 @@ public class FloatTest
         value.setValue(fVal);
         assertEquals(fVal, value.floatValue());
         assertEquals((double) fVal, value.doubleValue());
-        assertEquals(fVal, value.toBigDecimal().floatValue());
+        assertEquals(fVal, value.bigDecimalValue().floatValue());
 
         value.setValue(A_DOUBLE);
         assertEquals(A_DOUBLE, value.doubleValue());
-        assertEquals(A_DOUBLE, value.toBigDecimal().doubleValue());
+        assertEquals(A_DOUBLE, value.bigDecimalValue().doubleValue());
 
         value.setValue(null);
         checkNullFloat(value);

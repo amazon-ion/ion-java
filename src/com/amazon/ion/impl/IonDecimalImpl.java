@@ -70,7 +70,14 @@ public final class IonDecimalImpl
         return _decimal_value.doubleValue();
     }
 
+    @Deprecated
     public BigDecimal toBigDecimal()
+        throws NullValueException
+    {
+        return bigDecimalValue();
+    }
+
+    public BigDecimal bigDecimalValue()
         throws NullValueException
     {
         makeReady();

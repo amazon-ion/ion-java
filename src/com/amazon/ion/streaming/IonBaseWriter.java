@@ -4,8 +4,10 @@
 
 package com.amazon.ion.streaming;
 
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.IonTokenReader.Type.timeinfo;
@@ -394,11 +396,11 @@ static final boolean _debug_on = false;
 
     public void writeIonValue(IonValue value) throws IOException
     {
-        IonIterator value_iterator = new IonTreeIterator(value);
+        IonReader value_iterator = new IonTreeIterator(value);
         writeIonEvents(value_iterator);
     }
     
-    public void writeIonEvents(IonIterator iterator) throws IOException
+    public void writeIonEvents(IonReader iterator) throws IOException
     {
         while (iterator.hasNext()) {
             IonType t = iterator.next();
@@ -407,7 +409,7 @@ static final boolean _debug_on = false;
         return;
     }
     
-    public void writeIonValue(IonType t, IonIterator iterator) throws IOException
+    public void writeIonValue(IonType t, IonReader iterator) throws IOException
     {
         if (/* iterator.isInStruct() && */ this.isInStruct()) {
             String fieldname = iterator.getFieldName();
@@ -420,7 +422,7 @@ static final boolean _debug_on = false;
             if (_debug_on) System.out.print(";");
         }
         
-        if (iterator.isNull()) {
+        if (iterator.isNullValue()) {
         	this.writeNull(iterator.getType());
         }
         else {
@@ -430,19 +432,19 @@ static final boolean _debug_on = false;
                 if (_debug_on) System.out.print("-");
                 break;
             case BOOL:
-                writeBool(iterator.getBool());
+                writeBool(iterator.booleanValue());
                 if (_debug_on) System.out.print("b");
                 break;
             case INT:
-                writeInt(iterator.getLong());
+                writeInt(iterator.longValue());
                 if (_debug_on) System.out.print("i");
                 break;
             case FLOAT:
-                writeFloat(iterator.getDouble());
+                writeFloat(iterator.doubleValue());
                 if (_debug_on) System.out.print("f");
                 break;
             case DECIMAL:
-                writeDecimal(iterator.getBigDecimal());
+                writeDecimal(iterator.bigDecimalValue());
                 if (_debug_on) System.out.print("d");
                 break;
             case TIMESTAMP:
@@ -457,19 +459,19 @@ static final boolean _debug_on = false;
                 if (_debug_on) System.out.print("t");
                 break;
             case STRING:
-                writeString(iterator.getString());
+                writeString(iterator.stringValue());
                 if (_debug_on) System.out.print("$");
                 break;
             case SYMBOL:
-                writeSymbol(iterator.getString());
+                writeSymbol(iterator.stringValue());
                 if (_debug_on) System.out.print("y");
                 break;
             case BLOB:
-                writeBlob(iterator.getBytes());
+                writeBlob(iterator.newBytes());
                 if (_debug_on) System.out.print("B");
                 break;
             case CLOB:
-                writeClob(iterator.getBytes());
+                writeClob(iterator.newBytes());
                 if (_debug_on) System.out.print("L");
                 break;
             case STRUCT:

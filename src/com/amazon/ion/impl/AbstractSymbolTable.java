@@ -172,7 +172,7 @@ public abstract class AbstractSymbolTable
                         continue;
                     }
 
-                    int sid = ((IonValueImpl)v).getFieldNameId();
+                    int sid = ((IonValueImpl)v).getFieldId();
 
                     doDefineSymbol(symbolName, sid);
 
@@ -187,7 +187,7 @@ public abstract class AbstractSymbolTable
             if (_maxId == 0) {
             	_maxId = symbolsElt.getSymbolTable().getSystemSymbolTable().getMaxId();
             }
-            
+
             for (IonValue v : symbolsList)
             {
                 // TODO check for ill-formed field name.
@@ -217,7 +217,7 @@ public abstract class AbstractSymbolTable
             errors.append(" Field 'symbols' must be a struct or list.");
         }
     }
-        
+
     /**
      * Examines the IonValue candidateTable and checks if it is a
      * viable symbol table.  If it is this returns which type of
@@ -231,7 +231,7 @@ public abstract class AbstractSymbolTable
     public static SymbolTableType getSymbolTableType(IonValue candidateTable)
     {
     	SymbolTableType type = SymbolTableType.INVALID;
-    	
+
     	if ((candidateTable instanceof IonStruct)
     	 && (candidateTable.hasTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE))
     	) {
@@ -260,7 +260,7 @@ public abstract class AbstractSymbolTable
 				}
 			}
     	}
-    	
+
     	return type;
     }
 }

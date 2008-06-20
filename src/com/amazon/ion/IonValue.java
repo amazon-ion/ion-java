@@ -124,14 +124,27 @@ public interface IonValue
      */
     public String getFieldName();
 
-    
+
     /**
      * Gets the field name attached to this value,
      * or <code>null</code> if this is not part of an {@link IonStruct}.
+     *
+     * @deprecated Renamed to {@link #getFieldId()}.
      */
+    @Deprecated
     public int getFieldNameId();
 
-    
+
+    /**
+     * Gets the symbol ID of the field name attached to this value.
+     *
+     * @return the symbol ID of the field name, if this is part of an
+     * {@link IonStruct}. If this is not a field, or if the symbol ID cannot be
+     * determined, this method returns a value <em>less than one</em>.
+     */
+    public int getFieldId();
+
+
     /**
      * Gets the container of this value,
      * or <code>null</code> if this is not part of one.
@@ -144,6 +157,7 @@ public interface IonValue
      * as strings, or <code>null</code> if there are none.
      * @deprecated Use {@link #getTypeAnnotations()} instead.
      */
+    @Deprecated
     public String[] getTypeAnnotationStrings();
 
 

@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import junit.framework.TestSuite;
 import com.amazon.ion.DirectoryTestSuite;
 import com.amazon.ion.FileTestCase;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.impl.IonTokenReader.Type.timeinfo;
 
@@ -26,8 +27,8 @@ public class EquivIonStreamingTests extends DirectoryTestSuite {
 	        public void runTest()
 	            throws Exception
 	        {
-	        	IonIterator it1 = openIterator(myTestFile);
-	        	IonIterator it2 = openIterator(myTestFile);
+	        	IonReader it1 = openIterator(myTestFile);
+	        	IonReader it2 = openIterator(myTestFile);
 
 	        	iterateAndCompare(it1, it2);
 
@@ -35,8 +36,8 @@ public class EquivIonStreamingTests extends DirectoryTestSuite {
 	        	assert it2.hasNext() == false && it2.getDepth() == 0;
 	        }
 	        
-	        IonIterator openIterator(File f) {
-	        	IonIterator it;
+	        IonReader openIterator(File f) {
+	        	IonReader it;
 	        	int len = (int)myTestFile.length();
 	        	byte[] buf = new byte[len];
 	        	
@@ -54,14 +55,14 @@ public class EquivIonStreamingTests extends DirectoryTestSuite {
 	        	it = IonIterator.makeIterator(buf);
 	        	return it;
 		    }
-	        void compareFieldNames(IonIterator it1, IonIterator it2) {
+	        void compareFieldNames(IonReader it1, IonReader it2) {
 	        	String f1 = it1.getFieldName();
 	        	String f2 = it2.getFieldName();
 	        	assert f1 != null && f2 != null;
 	        	assert f1.equals(f2);
 	        	return;
 	        }
-	        void compareAnnotations(IonIterator it1, IonIterator it2) {
+	        void compareAnnotations(IonReader it1, IonReader it2) {
 	        	String[] a1 = it1.getAnnotations();
 	        	String[] a2 = it2.getAnnotations();
 	        	if (a1 == null) {
@@ -78,20 +79,20 @@ public class EquivIonStreamingTests extends DirectoryTestSuite {
 	        	}
 	        	return;
 	        }
-	        void compareScalars(IonType t, IonIterator it1, IonIterator it2) {
+	        void compareScalars(IonType t, IonReader it1, IonReader it2) {
         		switch (t) {
         		case BOOL:
-        			assert it1.getBool() == it2.getBool();
+        			assert it1.booleanValue() == it2.booleanValue();
         			break;
         		case INT:
-        			assert it1.getLong() == it2.getLong();
+        			assert it1.longValue() == it2.longValue();
         			break;
         		case FLOAT:
-        			assert it1.getDouble() == it2.getDouble();
+        			assert it1.doubleValue() == it2.doubleValue();
         			break;
         		case DECIMAL:
-        			BigDecimal bd1 = it1.getBigDecimal();
-        			BigDecimal bd2 = it2.getBigDecimal();
+        			BigDecimal bd1 = it1.bigDecimalValue();
+        			BigDecimal bd2 = it2.bigDecimalValue();
         			assert bd1.equals(bd2);
         			break;
         		case TIMESTAMP:
@@ -103,14 +104,14 @@ public class EquivIonStreamingTests extends DirectoryTestSuite {
         			break;
         		case STRING:
         		case SYMBOL:
-        			String s1 = it1.getString();
-        			String s2 = it2.getString();
+        			String s1 = it1.stringValue();
+        			String s2 = it2.stringValue();
         			assert s1.equals(s2);
         			break;
         		case BLOB:
         		case CLOB:
-        			byte[] b1 = it1.getBytes();
-        			byte[] b2 = it2.getBytes();
+        			byte[] b1 = it1.newBytes();
+        			byte[] b2 = it2.newBytes();
         			assert b1 != null && b2 != null;
         			assert b1.length == b2.length;
         			for (int ii=0; ii<b1.length; ii++) {
@@ -123,7 +124,7 @@ public class EquivIonStreamingTests extends DirectoryTestSuite {
         	    	throw new IllegalStateException("iterated to a type that's not expected");
         		}
 	        }
-	        void iterateAndCompare(IonIterator it1, IonIterator it2) {
+	        void iterateAndCompare(IonReader it1, IonReader it2) {
 	        	while (it1.hasNext() && it2.hasNext()) {
 	        		IonType t1 = it1.next();
 	        		IonType t2 = it2.next();
@@ -132,15 +133,15 @@ public class EquivIonStreamingTests extends DirectoryTestSuite {
 	        		}
 	        		compareAnnotations(it1, it2);
 	        		assert t1.equals(t2);
-		        	if (it1.isNull() || it2.isNull()) {
+		        	if (it1.isNullValue() || it2.isNullValue()) {
 		        		// remember - anything can be a null value
-		        		assert it1.isNull() && it2.isNull();
+		        		assert it1.isNullValue() && it2.isNullValue();
 		        		continue;
 		        	}
 
 	        		switch (t1) {
 	        		case NULL:
-	        			assert it1.isNull() && it2.isNull();
+	        			assert it1.isNullValue() && it2.isNullValue();
 	        			break;
 	        		case BOOL:
 	        		case INT:

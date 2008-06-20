@@ -40,19 +40,19 @@ public final class IonTextWriter
     boolean      _utf8_as_ascii;
     PrintStream  _output;
 
-    BufferManager _manager; 
+    BufferManager _manager;
     OutputStream  _user_out;
 
     boolean     _in_struct;
     boolean     _pending_separator;
     int         _separator_character;
-    
+
     int         _top;
     int []      _stack_parent_type = new int[10];
     boolean[]   _stack_in_struct = new boolean[10];
     boolean[]   _stack_pending_comma = new boolean[10];
-     
-    
+
+
     public IonTextWriter() {
         this(false, true);
     }
@@ -67,7 +67,7 @@ public final class IonTextWriter
     }
     public IonTextWriter(boolean prettyPrint, boolean utf8AsAscii) {
         _user_out = null;
-        _manager = new BufferManager(); 
+        _manager = new BufferManager();
         _output = new PrintStream(_manager.openWriter());
         initFlags(prettyPrint, utf8AsAscii);
     }
@@ -83,31 +83,31 @@ public final class IonTextWriter
         initFlags(prettyPrint, utf8AsAscii);
     }
     void initFlags(boolean prettyPrint, boolean utf8AsAscii) {
-    	_pretty = prettyPrint;
-    	_utf8_as_ascii = utf8AsAscii;
-    	_separator_character = ' ';
+        _pretty = prettyPrint;
+        _utf8_as_ascii = utf8AsAscii;
+        _separator_character = ' ';
     }
     public boolean isInStruct() {
         return this._in_struct;
     }
-    void push(int typeid) 
+    void push(int typeid)
     {
         if (_top >= _stack_in_struct.length) {
             growStack();
         }
-        _stack_parent_type[_top] = typeid; 
+        _stack_parent_type[_top] = typeid;
         _stack_in_struct[_top] = _in_struct;
         _stack_pending_comma[_top] = _pending_separator;
         switch (typeid) {
         case IonConstants.tidSexp:
-        	_separator_character = ' ';
-        	break;
+            _separator_character = ' ';
+            break;
         case IonConstants.tidList:
         case IonConstants.tidStruct:
-        	_separator_character = ',';
-        	break;
+            _separator_character = ',';
+            break;
         default:
-        	_separator_character = _pretty ? '\n' : ' ';
+            _separator_character = _pretty ? '\n' : ' ';
         break;
         }
         _top++;
@@ -127,19 +127,19 @@ public final class IonTextWriter
     int pop() {
         _top--;
         int typeid = _stack_parent_type[_top];  // popped parent
-        
+
         int parentid = (_top > 0) ? _stack_parent_type[_top - 1] : -1;
         switch (parentid) {
         case -1:
         case IonConstants.tidSexp:
-        	_separator_character = ' ';
-        	break;
+            _separator_character = ' ';
+            break;
         case IonConstants.tidList:
         case IonConstants.tidStruct:
-        	_separator_character = ',';
-        	break;
+            _separator_character = ',';
+            break;
         default:
-        	_separator_character = _pretty ? '\n' : ' ';
+            _separator_character = _pretty ? '\n' : ' ';
         break;
         }
 
@@ -169,19 +169,19 @@ public final class IonTextWriter
        }
        _output.append(closeChar);
     }
-    void startValue() throws IOException 
+    void startValue() throws IOException
     {
         if (_pretty) {
-        	if (_separator_character != '\n') {
-        		_output.append((char)_separator_character);
-        	}
+            if (_pending_separator && _separator_character != '\n') {
+                _output.append((char)_separator_character);
+            }
             _output.println();
             printLeadingWhiteSpace();
         }
         else if (_pending_separator) {
-        	_output.append((char)_separator_character);
+            _output.append((char)_separator_character);
             // _output.append(',');
-            
+
         }
 
         // write field name
@@ -210,7 +210,7 @@ public final class IonTextWriter
             super.clearAnnotations();
         }
     }
-    
+
     void closeValue() {
         _pending_separator = true;
     }
@@ -220,7 +220,7 @@ public final class IonTextWriter
     {
         startValue();
         _in_struct = false;
-        push(IonConstants.tidList);        
+        push(IonConstants.tidList);
         _output.append('[');
         _pending_separator = false;
       }
@@ -229,7 +229,7 @@ public final class IonTextWriter
     {
         startValue();
         _in_struct = false;
-        push(IonConstants.tidSexp);        
+        push(IonConstants.tidSexp);
         _output.append('(');
         _pending_separator = false;
     }
@@ -238,7 +238,7 @@ public final class IonTextWriter
     {
         startValue();
         _in_struct = true;
-        push(IonConstants.tidStruct);        
+        push(IonConstants.tidStruct);
         _output.append('{');
         _pending_separator = false;
     }
@@ -288,7 +288,7 @@ public final class IonTextWriter
     public void writeNull(IonType type) throws IOException
     {
         startValue();
-        
+
         String nullimage = null;
 
         switch (type) {
@@ -306,7 +306,7 @@ public final class IonTextWriter
         case LIST:      nullimage = "null.list";      break;
         case STRUCT:    nullimage = "null.struct";    break;
         }
-        
+
         _output.append(nullimage);
         closeValue();
     }
@@ -348,37 +348,37 @@ public final class IonTextWriter
     public void writeFloat(float value)
         throws IOException
     {
-    	writeFloat((double)value);
+        writeFloat((double)value);
     }
 
     public void writeFloat(double value)
         throws IOException
     {
         startValue();
-        
+
         // shortcut zero cases
         if (value == 0.0) {
             // XXX use the raw bits to avoid boxing and distinguish +/-0e0
             long bits = Double.doubleToLongBits(value);
             if (bits == 0L) {
                 // positive zero
-            	_output.append("0e0");
+                _output.append("0e0");
             }
             else {
                 // negative zero
-            	_output.append("-0e0");
+                _output.append("-0e0");
             }
         }
         else if (Double.isNaN(value)) {
-        	_output.append("nan");
+            _output.append("nan");
         }
         else if (Double.isInfinite(value)) {
-        	if (value > 0) {
-            	_output.append("+inf");
+            if (value > 0) {
+                _output.append("+inf");
             }
-        	else {
-        		_output.append("-inf");
-        	}
+            else {
+                _output.append("-inf");
+            }
         }
         else {
             BigDecimal decimal = new BigDecimal(value);
@@ -401,10 +401,10 @@ public final class IonTextWriter
         _output.append(unscaled.toString());
         _output.append('d');
         _output.append(Integer.toString(-value.scale()));
-        
+
         closeValue();
     }
-    
+
     private static final SimpleDateFormat TIMESTAMP_FORMATTER =
         new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
 
@@ -432,10 +432,10 @@ public final class IonTextWriter
          _output.append(dateTimeRendered);
 
          if (localOffset == null) {
-        	 _output.append("-00:00");
+             _output.append("-00:00");
          }
          else  if (deltaMinutes == 0) {
-        	 _output.append('Z');
+             _output.append('Z');
          }
          else {
              if (deltaMinutes < 0) {
@@ -450,14 +450,14 @@ public final class IonTextWriter
              int minutes = deltaMinutes - (hours * 60);
 
              if (hours < 10) {
-            	 _output.append('0');
+                 _output.append('0');
              }
              _output.append(Integer.toString(hours));
 
              _output.append(':');
 
              if (minutes < 10) {
-            	 _output.append('0');
+                 _output.append('0');
              }
              _output.append(Integer.toString(minutes));
          }
@@ -492,7 +492,7 @@ public final class IonTextWriter
             }
         }
         return value;
-    }    
+    }
     CharSequence escapeStringHelper(String value, int firstNonAscii) {
         StringBuilder sb = new StringBuilder(value.length());
         for (int jj=0; jj<firstNonAscii; jj++) {
@@ -506,11 +506,11 @@ public final class IonTextWriter
             else if (c < 128) {
                 switch (c) {
                 case '"':   //   \"  double quote
-                //case '\'':  //   \'  single quote 
+                //case '\'':  //   \'  single quote
                 case '\\':  //   \\  backslash
                     sb.append('\\');
                     break;
-                default: 
+                default:
                     break;
                 }
                 sb.append(c);
@@ -531,14 +531,14 @@ public final class IonTextWriter
                 throw new IllegalArgumentException("string is not valid UTF-16");
             }
             else {
-            	appendUTF8Char(sb, c);
+                appendUTF8Char(sb, c);
             }
         }
         return sb;
     }
     // escape sequences for character below ascii 32 (space)
     static final String [] LOW_ESCAPE_SEQUENCES = {
-          "0",   "x01", "x02", "x03", 
+          "0",   "x01", "x02", "x03",
           "x04", "x05", "x06", "a",
           "b",   "t",   "n",   "v",
           "f",   "r",   "x0e", "x0f",
@@ -548,9 +548,9 @@ public final class IonTextWriter
           "x1c", "x1d", "x1e", "x1f",
     };
     String lowEscapeSequence(char c) {
-    	if (c == 13) {
-    		return '\\'+LOW_ESCAPE_SEQUENCES[c];
-    	}
+        if (c == 13) {
+            return '\\'+LOW_ESCAPE_SEQUENCES[c];
+        }
         return '\\'+LOW_ESCAPE_SEQUENCES[c];
     }
     void appendUTF8Char(StringBuilder sb, int uc) {
@@ -630,7 +630,7 @@ public final class IonTextWriter
         return is_valid;
     }
     CharSequence escapeSymbol(String value) {
-    	char c = value.charAt(0);
+        char c = value.charAt(0);
         if (c > 127 || !VALID_LEADING_SYMBOL_CHARACTERS[c]) {
             return escapeSymbolHelper(value, 0);
         }
@@ -641,7 +641,7 @@ public final class IonTextWriter
             }
         }
         return value;
-    }    
+    }
     CharSequence escapeSymbolHelper(String value, int firstNonAscii) {
         StringBuilder sb = new StringBuilder(value.length());
         sb.append('\'');
@@ -655,11 +655,11 @@ public final class IonTextWriter
             }
             else if (c < 128) {
                 switch (c) {
-                case '\'': //   \'  single quote 
+                case '\'': //   \'  single quote
                 case '\\': //   \\  backslash
-                	sb.append('\\');
+                    sb.append('\\');
                     break;
-                default: 
+                default:
                     break;
                 }
                 sb.append(c);
@@ -680,7 +680,7 @@ public final class IonTextWriter
                 throw new IllegalArgumentException("string is not valid UTF-16");
             }
             else {
-            	appendUTF8Char(sb, c);
+                appendUTF8Char(sb, c);
             }
         }
         sb.append('\'');
@@ -696,13 +696,13 @@ public final class IonTextWriter
         throws IOException
     {
         TextStream ts = new TextStream(new ByteArrayInputStream(value, start, len));
-        
+
         startValue();
         _output.append("{{");
         // base64 encoding is 6 bits per char so
         // it evens out at 3 bytes in 4 characters
         char[] buf = new char[_pretty ? 80 : 400];
-        CharBuffer cb = CharBuffer.wrap(buf); 
+        CharBuffer cb = CharBuffer.wrap(buf);
         if (_pretty) _output.append(" ");
         for (;;) {
             int clen = ts.read(buf, 0, buf.length);
@@ -717,18 +717,18 @@ public final class IonTextWriter
         throws IOException
     {
         writeClob(value, 0, value.length);
-    
+
     }
     public void writeClob(byte[] value, int start, int len)
         throws IOException
     {
         startValue();
         _output.append("{{");
-        
+
         if (_pretty) _output.append(" ");
         _output.append('"');
-        
-        int end = start + len;        
+
+        int end = start + len;
         for (int ii=start; ii<end; ii++) {
             char c = (char)(value[ii] & 0xff);
             if (c < 32 ) {
@@ -741,9 +741,9 @@ public final class IonTextWriter
                 switch (c) {
                 case '"':  //   \"  double quote
                 case '\\': //   \\  backslash
-                	_output.append('\\');
+                    _output.append('\\');
                     break;
-                default: 
+                default:
                     break;
                 }
                 _output.append(c);
@@ -752,14 +752,14 @@ public final class IonTextWriter
         _output.append('"');
         if (_pretty) _output.append(" ");
         _output.append("}}");
-        closeValue();    
+        closeValue();
     }
 
     public byte[] getBytes()
         throws IOException
     {
         if (_manager == null) {
-            throw new IllegalStateException("this writer was not created with buffer backing"); 
+            throw new IllegalStateException("this writer was not created with buffer backing");
         }
         byte[] bytes = null;
         int len = _manager.buffer().size();
@@ -777,7 +777,7 @@ public final class IonTextWriter
         throws IOException
     {
         if (_manager == null) {
-            throw new IllegalStateException("this writer was not created with buffer backing"); 
+            throw new IllegalStateException("this writer was not created with buffer backing");
         }
         int buffer_length = _manager.buffer().size();
         if (buffer_length > maxlen) {
@@ -796,14 +796,14 @@ public final class IonTextWriter
         throws IOException
     {
         if (_manager == null) {
-            throw new IllegalStateException("this writer was not created with buffer backing"); 
+            throw new IllegalStateException("this writer was not created with buffer backing");
         }
         int buffer_length = _manager.buffer().size();
-        
+
         IonBinary.Reader r = _manager.openReader();
         r.sync();
         r.setPosition(0); // just in case
-        
+
         int len = r.writeTo((ByteWriter)out, buffer_length);
         if (buffer_length != buffer_length) {
             throw new IllegalStateException("inconsistant buffer sizes encountered");

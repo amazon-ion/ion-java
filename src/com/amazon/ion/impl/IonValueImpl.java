@@ -146,7 +146,7 @@ public abstract class IonValueImpl
      * stored in at a parent container.
      */
     protected LocalSymbolTable _symboltable;
-    
+
     /**
      * The instance maintains a reference back to the system that
      * created it so that it can create a symbol table when it
@@ -325,7 +325,7 @@ public abstract class IonValueImpl
             value = new IonSymbolImpl(SystemSymbolTable.ION_1_0);
             ((IonSymbolImpl)value).setIsIonVersionMarker(true);
             break;
-            
+
         default:
             throw new IonException("invalid type "+typeId+" ("+typedesc+") encountered");
         }
@@ -377,19 +377,25 @@ public abstract class IonValueImpl
         return _fieldName;
     }
 
-    public int getFieldNameId()
+    public int getFieldId()
     {
         if (this._fieldSid == 0 && this._fieldName != null)
         {
-        	LocalSymbolTable symtab = getSymbolTable();
-        	if (symtab == null) {
-        		// TODO - or we could throw here
-        		symtab = materializeSymbolTable();
-        	}
-        	assert symtab != null;
+            LocalSymbolTable symtab = getSymbolTable();
+            if (symtab == null) {
+                // TODO - or we could throw here
+                symtab = materializeSymbolTable();
+            }
+            assert symtab != null;
             _fieldSid = symtab.addSymbol(this._fieldName);
         }
         return this._fieldSid;
+    }
+
+    @Deprecated
+    public final int getFieldNameId()
+    {
+        return getFieldId();
     }
 
     public final IonContainer getContainer()
@@ -439,20 +445,20 @@ public abstract class IonValueImpl
         return null;
     }
 
-    // Not really: overridden for struct, which really needs to have a 
+    // Not really: overridden for struct, which really needs to have a
     // symbol table.  Everyone needs to have a symbol table since they
     // may have fieldnames or annotations (or this may be a symbol value)
     public LocalSymbolTable getSymbolTable() {
         if (this._symboltable != null)  return this._symboltable;
         if (this._container != null)    return this._container.getSymbolTable();
-                        
+
         // this._symboltable = new LocalSymbolTableImpl();
         // FIXME: this assert will break right now !
 // cas symtab:        just remove this block
         if (this._symboltable == null) {
         assert this._symboltable != null || this._symboltable == null;
         }
-        
+
         return this._symboltable;
     }
 
@@ -631,7 +637,7 @@ public abstract class IonValueImpl
         // this first length is our overall length
         // whether we have annotations or not
         int type = this.pos_getType();
-        
+
         // vlen might get reset later if this is a IonVersionMarker
         int vlen = valueReader.readLength(type, this.pos_getLowNibble());
 
@@ -663,7 +669,7 @@ public abstract class IonValueImpl
                 // read the actual values type desc
                 this._type_desc = valueReader.readToken();
                 // TODO check that td != annotation (illegal nested annotation)
-    
+
                 int ln = pos_getLowNibble();
                 if ((ln == IonConstants.lnIsVarLen)
                     || (this._type_desc == IonStructImpl.ORDERED_STRUCT_TYPEDESC))
@@ -830,7 +836,7 @@ public abstract class IonValueImpl
         assert _hasNativeValue;
         this._isMaterialized = true;
     }
-    
+
     protected LocalSymbolTable materializeSymbolTable()
     {
     	LocalSymbolTable symtab = _symboltable;
@@ -1358,8 +1364,8 @@ public abstract class IonValueImpl
 
 //int oldPosition = pos_getOffsetAtFieldId();
 //int oldLength = pos_getOffsetofNextValue() - oldPosition;
-//int nakedLength = getNakedValueLength(); 
-//int newLength = 
+//int nakedLength = getNakedValueLength();
+//int newLength =
 //  ((_fieldName == null) ? 0 : IonBinary.lenVarUInt7(getSymbolTable().addSymbol(_fieldName)))
 //  + nakedLength
 //  + getTypeDescriptorAndLengthOverhead(nakedLength);
@@ -1424,7 +1430,7 @@ public abstract class IonValueImpl
     {
         if (_container instanceof IonStruct)
         {
-            int fieldSid = this.getFieldNameId();
+            int fieldSid = this.getFieldId();
             assert fieldSid > 0;
             assert writer.position() == this.pos_getOffsetAtFieldId();
 
@@ -1508,7 +1514,7 @@ public abstract class IonValueImpl
     @Override
     public boolean equals(final Object other) {
         // TODO we can make this more efficient since we have impl details
-        
+
         boolean same = false;
         if (other instanceof IonValue)
         {

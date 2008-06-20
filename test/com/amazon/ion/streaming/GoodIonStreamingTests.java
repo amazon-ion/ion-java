@@ -2,6 +2,7 @@ package com.amazon.ion.streaming;
 
 import com.amazon.ion.DirectoryTestSuite;
 import com.amazon.ion.FileTestCase;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 
 import java.io.BufferedInputStream;
@@ -50,7 +51,7 @@ public class GoodIonStreamingTests extends DirectoryTestSuite {
         	iterateIon(myTestFile);
         }
         void iterateIon(File myTestFile) {
-        	IonIterator it;
+        	IonReader it;
         	int len = (int)myTestFile.length();
         	byte[] buf = new byte[len];
         	
@@ -68,7 +69,7 @@ public class GoodIonStreamingTests extends DirectoryTestSuite {
         	it = IonIterator.makeIterator(buf);
         	walkIterator(it);
 	    }
-        void walkIterator(IonIterator it) {
+        void walkIterator(IonReader it) {
         	while (it.hasNext()) {
 	        	IonType t = it.next();
 	        	switch (t) {

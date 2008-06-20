@@ -13,6 +13,7 @@ import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonLob;
 import com.amazon.ion.IonNull;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonSystem;
@@ -41,10 +42,10 @@ public final class IonTreeIterator
     IonValue _next;
     IonValue _curr;
     boolean  _eof;
-    
+
     Object[] _stack = new Object[10];
     int      _top;
-    
+
     void push() {
         if (_top > (_stack.length - 2)) {
             Object[] temp = new Object[_stack.length * 2];
@@ -52,22 +53,22 @@ public final class IonTreeIterator
             _stack = temp;
         }
         _stack[_top++] = _root;
-        _stack[_top++] = _iter; 
+        _stack[_top++] = _iter;
     }
-    
+
     @SuppressWarnings("unchecked")
     void pop() {
         assert _top >= 2;
         assert _stack != null;
         assert (_stack[_top - 1] instanceof Iterator);
         assert (_stack[_top - 2] instanceof IonValue);
-        
+
         _top--;
         _iter = (Iterator<IonValue>)_stack[_top];
         _top--;
         _root = (IonValue)_stack[_top];
     }
-    
+
     IonTreeIterator(IonValue value) {
         _root = value;
         _curr = null;
@@ -83,13 +84,13 @@ public final class IonTreeIterator
         }
     }
 
-    
+
     @Override
     public boolean hasNext()
     {
         if (this._eof) return false;
         if (this._next != null) return true;
-        
+
         if (this._iter == null) {
             this._next = this._root;
         }
@@ -108,10 +109,10 @@ public final class IonTreeIterator
         }
         this._curr = this._next;
         this._next = null;
-        
+
         return this._curr.getType();
     }
-    
+
     @Override
     public int getContainerSize() {
         if (!(this._curr instanceof IonContainer)) {
@@ -140,20 +141,20 @@ public final class IonTreeIterator
         }
         pop();
     }
-    
+
     @Override
     public int getDepth() {
         return _top/2;
     }
 
     @Deprecated
-    public void position(IonIterator other)
+    public void position(IonReader other)
     {
         if (!(other instanceof IonTreeIterator)) {
             throw new IllegalArgumentException("invalid iterator type, classes must match");
         }
         IonTreeIterator iother = (IonTreeIterator)other;
-        
+
         this._eof = iother._eof;
         this._curr = iother._curr;
         this._root = iother._root;
@@ -168,15 +169,15 @@ public final class IonTreeIterator
                 this.next();
                 if (this._curr == iother._curr) break;
             }
-        }       
+        }
     }
-    
+
     @Override
-    public UnifiedSymbolTable getSymbolTable() 
+    public UnifiedSymbolTable getSymbolTable()
     {
         UnifiedSymbolTable utable = null;
         SymbolTable symboltable = null;
-        
+
         if (_curr != null) {
             symboltable = _curr.getSymbolTable();
         }
@@ -227,32 +228,32 @@ public final class IonTreeIterator
 
         int [] ids = new int[annotations.length];
         SymbolTable sym = _curr.getSymbolTable();
-        
+
         for (int ii=0; ii<annotations.length; ii++) {
             ids[ii] = sym.findSymbol(annotations[ii]);
         }
-    
+
         return ids;
     }
 
     @Override
-    public Iterator<Integer> getAnnotationIdIterator()
+    public Iterator<Integer> iterateAnnotationIds()
     {
         int [] ids = getAnnotationIds();
         if (ids == null) return null;
         return new IdIterator(ids);
     }
-    
+
     @Override
-    public Iterator<String> getAnnotationIterator()
+    public Iterator<String> iterateAnnotations()
     {
         String [] annotations = getAnnotations();
         if (annotations == null) return null;
-        
+
         return new StringIterator(annotations);
     }
 
-    
+
     @Override
     public boolean isInStruct()
     {
@@ -264,12 +265,12 @@ public final class IonTreeIterator
     }
 
     @Override
-    public boolean isNull()
+    public boolean isNullValue()
     {
         if (_curr instanceof IonNull) return true;
         if (_curr == null) {
             throw new IllegalStateException("curr of iterator is not yet set");
-    
+
         }
         return _curr.isNullValue();
     }
@@ -277,7 +278,9 @@ public final class IonTreeIterator
     @Override
     public int getFieldId()
     {
-        return (_curr == null) ? null : _curr.getFieldNameId();
+        // FIXME why does this return null? What does that even mean for int?
+        // FIXME IonValueImpl.getFieldId doesn't return -1 as specced here!
+        return (_curr == null) ? null : _curr.getFieldId();
     }
 
     @Override
@@ -293,17 +296,17 @@ public final class IonTreeIterator
     }
 
     @Override
-    public boolean getBool()
+    public boolean booleanValue()
     {
         if (_curr instanceof IonBool) {
             return ((IonBool)_curr).booleanValue();
         }
         throw new IllegalStateException("current value is not a boolean");
-    
+
     }
 
     @Override
-    public int getInt()
+    public int intValue()
     {
         if (_curr instanceof IonInt)  {
             return ((IonInt)_curr).intValue();
@@ -318,7 +321,7 @@ public final class IonTreeIterator
     }
 
     @Override
-    public long getLong()
+    public long longValue()
     {
         if (_curr instanceof IonInt)  {
             return ((IonInt)_curr).longValue();
@@ -333,7 +336,7 @@ public final class IonTreeIterator
     }
 
     @Override
-    public double getDouble()
+    public double doubleValue()
     {
         if (_curr instanceof IonFloat)  {
             return (int)((IonFloat)_curr).doubleValue();
@@ -345,10 +348,10 @@ public final class IonTreeIterator
     }
 
     @Override
-    public BigDecimal getBigDecimal()
+    public BigDecimal bigDecimalValue()
     {
         if (_curr instanceof IonDecimal)  {
-            return ((IonDecimal)_curr).toBigDecimal();
+            return ((IonDecimal)_curr).bigDecimalValue();
         }
         throw new IllegalStateException("current value is not an ion decimal");
     }
@@ -362,11 +365,11 @@ public final class IonTreeIterator
             ti.localOffset = ((IonTimestamp)_curr).getLocalOffset();
             return ti;
         }
-        throw new IllegalStateException("current value is not a timestamp");    
+        throw new IllegalStateException("current value is not a timestamp");
     }
 
     @Override
-    public Date getDate()
+    public Date dateValue()
     {
         if (_curr instanceof IonTimestamp)  {
             return ((IonTimestamp)_curr).dateValue();
@@ -375,7 +378,7 @@ public final class IonTreeIterator
     }
 
     @Override
-    public String getString()
+    public String stringValue()
     {
         if (_curr == null) return null;
         if (_curr instanceof IonText) {
@@ -394,11 +397,20 @@ public final class IonTreeIterator
         throw new IllegalStateException("current value is not a symbol");
     }
 
-    @Override
-    public byte[] getBytes()
+    public int byteSize()
     {
         if (_curr instanceof IonLob) {
-            IonLob lob = (IonLob)_curr; 
+            IonLob lob = (IonLob)_curr;
+            return lob.byteSize();
+        }
+        throw new IllegalStateException("current value is not an ion blob or clob");
+    }
+
+    @Override
+    public byte[] newBytes()
+    {
+        if (_curr instanceof IonLob) {
+            IonLob lob = (IonLob)_curr;
             int loblen = lob.byteSize();
             byte[] buffer = new byte[loblen];
             InputStream is = lob.newInputStream();
@@ -420,7 +432,7 @@ public final class IonTreeIterator
     public int getBytes(byte[] buffer, int offset, int len)
     {
         if (_curr instanceof IonLob) {
-            IonLob lob = (IonLob)_curr; 
+            IonLob lob = (IonLob)_curr;
             int loblen = lob.byteSize();
             if (loblen > len) {
                 throw new IllegalArgumentException("insufficient space in buffer for this value");
@@ -441,7 +453,7 @@ public final class IonTreeIterator
     }
 
     @Override
-    public String getValueAsString()
+    public String valueToString()
     {
         return (_curr == null) ? null : _curr.toString();
     }
@@ -450,7 +462,7 @@ public final class IonTreeIterator
     {
         String [] _values;
         int       _pos;
-        
+
         StringIterator(String[] values) {
             _values = values;
         }
@@ -470,7 +482,7 @@ public final class IonTreeIterator
     {
         int []  _values;
         int     _pos;
-        
+
         IdIterator(int[] values) {
             _values = values;
         }

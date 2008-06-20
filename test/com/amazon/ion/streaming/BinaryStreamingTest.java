@@ -5,11 +5,13 @@
 package com.amazon.ion.streaming;
 
 import com.amazon.ion.IonDatagram;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.impl.IonTokenReader;
 import com.amazon.ion.system.SystemFactory;
@@ -213,7 +215,7 @@ public class BinaryStreamingTest
             }
             return;
         }
-        void readAndTestValue(IonIterator r) throws IOException {
+        void readAndTestValue(IonReader r) throws IOException {
             
             IonType t = r.next();
             String fieldname = r.getFieldName();
@@ -239,20 +241,20 @@ public class BinaryStreamingTest
                 case NULL:
                     break;
                 case BOOL:
-                    assertTrue( ((Boolean)value).equals(r.getBool()));
+                    assertTrue( ((Boolean)value).equals(r.booleanValue()));
                     break;
                 case INT:
                     if (value instanceof Byte) {
-                        assertTrue( ((Byte)value).equals(r.getInt()) );
+                        assertTrue( ((Byte)value).equals(r.intValue()) );
                     }
                     else if (value instanceof Short) {
-                        assertTrue( ((Short)value).equals(r.getInt()) );
+                        assertTrue( ((Short)value).equals(r.intValue()) );
                     }
                     else if (value instanceof Integer) {
-                        assertTrue( ((Integer)value).equals(r.getInt()) );
+                        assertTrue( ((Integer)value).equals(r.intValue()) );
                     }
                     else if (value instanceof Long) {
-                        assertTrue( ((Long)value).equals(r.getLong()) );
+                        assertTrue( ((Long)value).equals(r.longValue()) );
                     }
                     else {
                         throw new IllegalStateException("we only test Byte, Short, Integer, or Long values against an IonInt");
@@ -260,11 +262,11 @@ public class BinaryStreamingTest
                     break;
                 case FLOAT:
                     if (value instanceof Float) {
-                        double d = r.getDouble();
+                        double d = r.doubleValue();
                         assertTrue( ((Float)value).equals( (float)d ) );
                     }
                     else if (value instanceof Double) {
-                        double d = r.getDouble();
+                        double d = r.doubleValue();
                         assertTrue( ((Double)value).equals( d ) );
                     }
                     else {
@@ -273,7 +275,7 @@ public class BinaryStreamingTest
                     break;
                 case DECIMAL:
                     BigDecimal bd1 = null;
-                        BigDecimal bd2 = r.getBigDecimal();
+                        BigDecimal bd2 = r.bigDecimalValue();
                     if (value instanceof Double) {
                         bd1 = makeBigDecimal((Double)value);
                     }
@@ -313,7 +315,7 @@ public class BinaryStreamingTest
                     break;
                 case STRING:
                     if (value instanceof String) {
-                        assertTrue( ((String)value).equals(r.getString()) );
+                        assertTrue( ((String)value).equals(r.stringValue()) );
                     }
                     else {
                         throw new IllegalStateException("we only write String to an IonString");
@@ -321,7 +323,7 @@ public class BinaryStreamingTest
                     break;
                 case SYMBOL:
                     if (value instanceof String) {
-                        assertTrue( ((String)value).equals( r.getString()) );
+                        assertTrue( ((String)value).equals( r.stringValue()) );
                     }
                     else if (value instanceof Integer) {
                         assertTrue( ((Integer)value).equals( r.getSymbolId()) );
@@ -334,7 +336,7 @@ public class BinaryStreamingTest
                     
                     if (value instanceof byte[]) {
                         byte[] b1 = (byte[])value;
-                        byte[] b2 = r.getBytes();
+                        byte[] b2 = r.newBytes();
                         assertTrue( bytesEqual(b1, b2) );
                     }
                     else {
@@ -344,7 +346,7 @@ public class BinaryStreamingTest
                 case CLOB:
                     if (value instanceof byte[]) {
                         byte[] c1 = (byte[])value;
-                        byte[] c2 = r.getBytes();
+                        byte[] c2 = r.newBytes();
                         assertTrue( bytesEqual(c1, c2) );
                     }
                     else {
@@ -536,7 +538,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
                 throw new Exception(e);
             }
             
-            IonIterator r = IonIterator.makeIterator(buffer);
+            IonReader r = IonIterator.makeIterator(buffer);
             IonType t;
             
             t = r.next();
@@ -561,7 +563,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
     		+"list_price:{value:18.23,unit:EUR},}"
     		+",index_suppressed:true,"
     		+"offline_store_only:true,version:2,}";
-    	IonIterator ir = IonIterator.makeIterator(s);
+    	IonReader ir = IonIterator.makeIterator(s);
     	IonWriter wr = new IonBinaryWriter();
     	wr.writeIonEvents(ir);
         byte[] buffer = wr.getBytes();
@@ -586,7 +588,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
     	IonValue v2 = ((IonStruct)v).get("offline_store_only");
     	LocalSymbolTable sym = v.getSymbolTable();
     	assert v2.getSymbolTable() == sym;
-    	IonIterator ir = IonIterator.makeIterator(s);
+    	IonReader ir = IonIterator.makeIterator(s);
     	UnifiedSymbolTable u = new UnifiedSymbolTable(sym);
     	u.setName("items");
     	u.setVersion(1);
@@ -649,14 +651,14 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
             throw new Exception(e);
         }
 
-        IonIterator ir = IonIterator.makeIterator(buffer);
+        IonReader ir = IonIterator.makeIterator(buffer);
         if (ir.hasNext()) {
             ir.next();
             ir.stepInto();
             while (ir.hasNext()) {
                 IonType t = ir.next();
                 String name = ir.getFieldName();
-                boolean value = ir.getBool();
+                boolean value = ir.booleanValue();
                 assertTrue( value );
                 if (BinaryStreamingTest._debug_flag) {
                 	System.out.println(t + " " + name +": " + value);
@@ -684,7 +686,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         System.arraycopy(buffer, 0, doublebuffer, 0, buffer.length);
         System.arraycopy(buffer, 0, doublebuffer, buffer.length, buffer.length);
         
-        IonIterator ir = IonIterator.makeIterator(doublebuffer);
+        IonReader ir = IonIterator.makeIterator(doublebuffer);
         
         // first copy
         assertTrue(ir.next().equals(IonType.STRUCT));
@@ -697,7 +699,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         if (annotations != null) { // just to shut eclipse up, we already tested this above
             assertTrue("boolean".equals(annotations[0]));
         }
-        assertEquals(ir.getBool(), true);
+        assertEquals(ir.booleanValue(), true);
         ir.stepOut();
         
         // second copy
@@ -709,7 +711,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         assertNotNull(annotations);
         assertEquals(1, annotations.length);
         assertEquals("boolean", annotations[0]);
-        assertEquals(true, ir.getBool());
+        assertEquals(true, ir.booleanValue());
         ir.stepOut();
         
         assertEquals(false, ir.hasNext());
@@ -731,7 +733,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
             throw new RuntimeException(e);
         }
 
-        IonIterator ir = IonIterator.makeIterator(buffer);
+        IonReader ir = IonIterator.makeIterator(buffer);
         if (ir.hasNext()) {
             ir.next();
             ir.stepInto();
@@ -744,7 +746,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
                 if (annotations != null) { // just to shut eclipse up, we already tested this above
                     assertTrue("boolean".equals(annotations[0]));
                 }
-                assertEquals(ir.getBool(), true);
+                assertEquals(ir.booleanValue(), true);
             }
         }
     }
@@ -792,49 +794,49 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
             throw new RuntimeException(e);
         }
 
-        IonIterator ir = IonIterator.makeIterator(buffer);
+        IonReader ir = IonIterator.makeIterator(buffer);
         if (ir.hasNext()) {
             ir.next();
             ir.stepInto();
             while (ir.hasNext()) {
                 assertEquals(ir.next(), IonType.BOOL);
                 assertEquals(ir.getFieldName(), "hello");
-                assertEquals(ir.getBool(), true);
+                assertEquals(ir.booleanValue(), true);
                 
                 assertEquals(ir.next(), IonType.BOOL);
                 assertEquals(ir.getFieldName(), "Almost Done.");
-                assertEquals(ir.getBool(), true);
+                assertEquals(ir.booleanValue(), true);
                 
                 assertEquals(ir.next(), IonType.BOOL);
                 assertEquals(ir.getFieldName(), "This is a test String.");
-                assertEquals(ir.getBool(), true);
+                assertEquals(ir.booleanValue(), true);
                 
                 assertEquals(ir.next(), IonType.FLOAT);
                 assertEquals(ir.getFieldName(), "12242.124598129");
-                assertEquals(ir.getDouble(), 12242.124598129);
+                assertEquals(ir.doubleValue(), 12242.124598129);
                 
                 assertEquals(ir.next(), IonType.NULL);
                 assertEquals(ir.getFieldName(), "Something");
-                assertTrue(ir.isNull());
+                assertTrue(ir.isNullValue());
                 // not:
                 //assertEquals(ir.getValueAsString(), null);
-                assertEquals(ir.getValueAsString(), "null");
+                assertEquals(ir.valueToString(), "null");
                 
                 assertEquals(ir.next(), IonType.BOOL);
                 assertEquals(ir.getFieldName(), "false");
-                assertEquals(ir.getBool(), false);
+                assertEquals(ir.booleanValue(), false);
                 
                 assertEquals(ir.next(), IonType.BOOL);
                 assertEquals(ir.getFieldName(), "true");
-                assertEquals(ir.getBool(), true);
+                assertEquals(ir.booleanValue(), true);
                 
                 assertEquals(ir.next(), IonType.INT);
                 assertEquals(ir.getFieldName(), "long");
-                assertEquals(ir.getLong(), 9326L);
+                assertEquals(ir.longValue(), 9326L);
                 
                 assertEquals(ir.next(), IonType.INT);
                 assertEquals(ir.getFieldName(), "12");
-                assertEquals(ir.getInt(), -12);
+                assertEquals(ir.intValue(), -12);
             }
         }
     }
@@ -878,7 +880,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         
         bytes = wr.getBytes();
         
-        IonIterator ir = IonIterator.makeIterator(bytes);
+        IonReader ir = IonIterator.makeIterator(bytes);
         assertTrue(ir.hasNext());
         ir.next();
         ir.stepInto();
@@ -886,37 +888,37 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.INT);
         assertEquals(ir.getFieldName(), "12");
-        assertEquals(ir.getInt(), -12);
+        assertEquals(ir.intValue(), -12);
         
         assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.FLOAT);
         assertEquals(ir.getFieldName(), "12242.124598129");
-        assertEquals(ir.getDouble(), 12242.124598129);
+        assertEquals(ir.doubleValue(), 12242.124598129);
         
         assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.BOOL);
         assertEquals(ir.getFieldName(), "Almost Done.");
-        assertEquals(ir.getBool(), true);
+        assertEquals(ir.booleanValue(), true);
         
         assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.BOOL);
         assertEquals(ir.getFieldName(), "This is a test String.");
-        assertEquals(ir.getBool(), true);
+        assertEquals(ir.booleanValue(), true);
         
         assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.BOOL);
         assertEquals(ir.getFieldName(), "false");
-        assertEquals(ir.getBool(), false);
+        assertEquals(ir.booleanValue(), false);
         
         assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.INT);
         assertEquals(ir.getFieldName(), "long");
-        assertEquals(ir.getLong(), 9326L);    
+        assertEquals(ir.longValue(), 9326L);    
         
         assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.BOOL);
         assertEquals(ir.getFieldName(), "true");
-        assertEquals(ir.getBool(), true);
+        assertEquals(ir.booleanValue(), true);
         
         assertFalse(ir.hasNext());
         ir.stepOut();

@@ -70,7 +70,14 @@ public final class IonSymbolImpl
         return this.getSymbolTable().findSymbol(this.intValue());
     }
 
+    @Deprecated
     public int intValue()
+        throws NullValueException
+    {
+        return getSymbolId();
+    }
+
+    public int getSymbolId()
         throws NullValueException
     {
         validateThisNotNull();
@@ -124,7 +131,7 @@ public final class IonSymbolImpl
     protected boolean isIonVersionMarker() {
     	return _is_IonVersionMarker;
     }
-    protected void setIsIonVersionMarker(boolean isIVM) 
+    protected void setIsIonVersionMarker(boolean isIVM)
     {
     	assert SystemSymbolTable.ION_1_0.equals(this._get_value());
 
@@ -174,7 +181,7 @@ public final class IonSymbolImpl
             mySid = symtab.addSymbol(this._get_value());
         }
     }
-    
+
     // TODO rename to getContentLength (from IonValueImpl)
     protected int getNakedValueLength() throws IOException
     {
@@ -188,7 +195,7 @@ public final class IonSymbolImpl
         }
         return len;
     }
-    
+
     /**
      * Length of the core header.
      * @param contentLength length of the core value.
@@ -234,7 +241,7 @@ public final class IonSymbolImpl
 	        if (type != IonConstants.tidSymbol) {
 	            throw new IonException("invalid type desc encountered for value");
 	        }
-	
+
 	        int ln = this.pos_getLowNibble();
 	        switch ((0xf & ln)) {
 	        case IonConstants.lnIsNullAtom:
@@ -252,7 +259,7 @@ public final class IonSymbolImpl
 	            break;
 	        }
         }
-        
+
         _hasNativeValue = true;
     }
 
@@ -263,7 +270,7 @@ public final class IonSymbolImpl
     {
         assert valueLen == this.getNakedValueLength();
         assert valueLen > 0;
-        
+
         if (this.isIonVersionMarker()) {
         	writer.write(IonConstants.BINARY_VERSION_MARKER_1_0);
         	assert valueLen == IonConstants.BINARY_VERSION_MARKER_SIZE;

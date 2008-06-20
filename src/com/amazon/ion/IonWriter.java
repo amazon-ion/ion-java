@@ -2,11 +2,9 @@
  * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
  */
 
-package com.amazon.ion.streaming;
+package com.amazon.ion;
 
-import com.amazon.ion.IonType;
-import com.amazon.ion.IonValue;
-import com.amazon.ion.SymbolTable;
+import com.amazon.ion.streaming.UnifiedSymbolTable;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
@@ -23,16 +21,16 @@ import java.util.Date;
  * common scalars to the output.  For binary this output can be
  * optimized for some performance gain, but for text and tree
  * these are simply convienience covers.
- * 
+ *
  * The annotations must be written before the contents of a value
  * is written.  Once the contents have been written the "pending
  * annotations" are erase, so they are must be reset if they need
  * to be applied to the next value.
- * 
+ *
  * Similarly the field name must be written before the value is
  * written if the value is a field in a structure.  The field name
  * is also "erased" once used, so it must be set for each field.
- * 
+ *
  * Once all the values have been written into the writer the
  * caller can use getBytes() or writeBytes() to get the cached output
  * as a byte array (either a new one allocated by the writer or
@@ -42,17 +40,17 @@ public interface IonWriter
 {
     /**
      * sets the symbol table to use for encoding to be the passed
-     * in symbol table. 
+     * in symbol table.
      * @param symbols base symbol table for encoding
      */
     public abstract void setSymbolTable(UnifiedSymbolTable symbols);
-    
+
     /**
      * writes the fieldname symbol id into the pending fieldname
      * slot awaiting the field value write.  The id is expected
      * to be already present in the symbol table (but this is not
      * checked). This throws if the writer is not currently in
-     * a struct value. The pending fieldname is cleared once the 
+     * a struct value. The pending fieldname is cleared once the
      * value is written.
      * @param id symbol id of the fieldname to write
      */
@@ -66,7 +64,7 @@ public interface IonWriter
      * @param name symbol text to write
      */
     public abstract void writeFieldname(String name);
-    
+
     /**
      * writes a set of annotations as the full list of annotations
      * to prefix the next value with.  The list of pending annotations
@@ -74,7 +72,7 @@ public interface IonWriter
      * copies the string references on this call, so the user
      * array is unaffected by the call and is does not need to
      * be preserved.  The references to the string therein are
-     * needed by the writer (and should not be mutated) until the 
+     * needed by the writer (and should not be mutated) until the
      * value is written.
      * @param annotations string array with the annotations
      */
@@ -88,25 +86,25 @@ public interface IonWriter
     public abstract void writeAnnotationIds(int[] annotationIds);
     /**
      * add the passed in string to the list of annotations to be
-     * written as a prefix to the next value.  The list of pending 
-     * annotations will be cleared once the value is written.  
+     * written as a prefix to the next value.  The list of pending
+     * annotations will be cleared once the value is written.
      * @param annotation string annotation to be included in the annotation list
      */
     public abstract void addAnnotation(String annotation);
     /**
      * add the passed in int as the symbol id of the annotation to be
-     * added to the annoation list and written as a prefix to the next 
-     * value.  The list of pending annotations will be cleared once the value is written.  
+     * added to the annoation list and written as a prefix to the next
+     * value.  The list of pending annotations will be cleared once the value is written.
      * @param annotationId symbol id of annotation to be included in the annotation list
      */
     public abstract void addAnnotationId(int annotationId);
-    
+
     /**
      * writes the contents of the passed in Ion value to the output.
      * This also writes the values annotations and the values field
      * names (if it is in a structure) along with the values contents.
      * This does a deep write, which writes the contents of any
-     * containers encountered. 
+     * containers encountered.
      */
     public abstract void writeIonValue(IonValue value) throws IOException;
 
@@ -116,18 +114,18 @@ public interface IonWriter
      * This also writes the values annotations and the values field
      * names (if it is in a structure) along with the values contents.
      * This does a deep write, which writes the contents of any
-     * containers encountered. 
+     * containers encountered.
      */
-    public abstract void writeIonValue(IonType t, IonIterator iterator) throws IOException;
+    public abstract void writeIonValue(IonType t, IonReader iterator) throws IOException;
 
     /**
-     * writes the remainting contents of the passed in iterator to the 
-     * output. This also writes the values annotations and the values 
-     * field names (if it is in a structure) along with the values 
-     * contents. This does a deep write, which writes the contents of 
-     * any containers encountered. 
+     * writes the remainting contents of the passed in iterator to the
+     * output. This also writes the values annotations and the values
+     * field names (if it is in a structure) along with the values
+     * contents. This does a deep write, which writes the contents of
+     * any containers encountered.
      */
-    public abstract void writeIonEvents(IonIterator iterator) throws IOException;
+    public abstract void writeIonEvents(IonReader iterator) throws IOException;
 
     /**
      * write a value of type Null (null or null.null).
@@ -141,8 +139,8 @@ public interface IonWriter
      */
     public abstract void writeNull(IonType type) throws IOException;
     /**
-     * writes a non-null boolean value (true or false) as an IonBool 
-     * to output.  
+     * writes a non-null boolean value (true or false) as an IonBool
+     * to output.
      * @param value true or false as desired
      * @throws IOException
      */
@@ -172,7 +170,7 @@ public interface IonWriter
      */
     public abstract void writeInt(long value) throws IOException;
     /**
-     * writes a 32 bit binary floaing point value, a Java float, 
+     * writes a 32 bit binary floaing point value, a Java float,
      * as an IonFloat.  Currently IonFloat values are output as
      * 64 bit IEEE 754 big endian values.  As a result writeFloat
      * is simply a convienience method which casts the float
@@ -182,7 +180,7 @@ public interface IonWriter
      */
     public abstract void writeFloat(float value) throws IOException;
     /**
-     * writes a 64 bit binary floaing point value, a Java double, 
+     * writes a 64 bit binary floaing point value, a Java double,
      * as an IonFloat.  Currently IonFloat values are output as
      * 64 bit IEEE 754 big endian values.  IonFloat preserves all
      * valid floating point values, including -0.0, Nan and +/-infinity.
@@ -193,7 +191,7 @@ public interface IonWriter
      */
     public abstract void writeFloat(double value) throws IOException;
     /**
-     * writes a BigDecimal value as an IonDecimal.  Ion uses an 
+     * writes a BigDecimal value as an IonDecimal.  Ion uses an
      * arbitrarily long sign/value and an arbitartily long signed
      * exponent to write the value. This preserves
      * all of the BigDecimal digits, the number of
@@ -242,7 +240,7 @@ public interface IonWriter
      * lengths may not match.  In addition some Java strings are not
      * valid as they may contain only one of the two needed surrogate
      * charaters necesssary to define the Unicode code point to be
-     * output, an exception will be raised if this case is encountered. 
+     * output, an exception will be raised if this case is encountered.
      * @param value Java String to be written
      * @throws IOException
      */
@@ -255,7 +253,7 @@ public interface IonWriter
      */
     public abstract void writeClob(byte[] value) throws IOException;
     /**
-     * writes a portion of the byte array out as an IonClob value.  This 
+     * writes a portion of the byte array out as an IonClob value.  This
      * copies the porition of the byte array that is written.
      * @param value bytes to be written
      * @param start offset of the first byte in value to write
@@ -271,7 +269,7 @@ public interface IonWriter
      */
     public abstract void writeBlob(byte[] value) throws IOException;
     /**
-     * writes a portion of the byte array out as an IonBlob value.  This 
+     * writes a portion of the byte array out as an IonBlob value.  This
      * copies the porition of the byte array that is written.
      * @param value bytes to be written
      * @param start offset of the first byte in value to write
@@ -279,23 +277,23 @@ public interface IonWriter
      * @throws IOException
      */
     public abstract void writeBlob(byte[] value, int start, int len) throws IOException;
-    
+
     /**
-     * writes a struct header for and IonStruct and prepares to write 
-     * the structures fields.  This must be matched by a closeStruct() 
+     * writes a struct header for and IonStruct and prepares to write
+     * the structures fields.  This must be matched by a closeStruct()
      * at the end of the field list.
      * @throws IOException
      */
     public abstract void startStruct() throws IOException;
     /**
-     * writes a list header for an IonList and prepares to write the 
+     * writes a list header for an IonList and prepares to write the
      * lists members.  This must be matched by a closeList() at the end
      * of the members.
      * @throws IOException
      */
     public abstract void startList() throws IOException;
     /**
-     * writes a list header for an IonSexp and prepares to write the 
+     * writes a list header for an IonSexp and prepares to write the
      * lists members.  This must be matched by a closeList() at the end
      * of the members.
      * @throws IOException
@@ -325,7 +323,7 @@ public interface IonWriter
      * an IonStruct.  This is especially useful when it
      * is not clear whether field names need to be
      * written or not.
-     * @return boolean 
+     * @return boolean
      */
     public abstract boolean isInStruct();
 
@@ -419,7 +417,7 @@ public interface IonWriter
      * @return current symbol table
      */
     public abstract SymbolTable getSymbolTable();
-    
+
     /**
      * returns the current contents of the write as a new byte
      * array.  This allocates an array of the size needed to exactly
@@ -455,5 +453,5 @@ public interface IonWriter
      * @return number of bytes written to the stream
      * @throws IOException
      */
-    public abstract int    writeBytes(SimpleByteBuffer.SimpleByteWriter out) throws IOException;
+//    public abstract int    writeBytes(SimpleByteBuffer.SimpleByteWriter out) throws IOException;
 }

@@ -73,7 +73,14 @@ public final class IonFloatImpl
         return _float_value.doubleValue();
     }
 
+    @Deprecated
     public BigDecimal toBigDecimal()
+        throws NullValueException
+    {
+        return bigDecimalValue();
+    }
+
+    public BigDecimal bigDecimalValue()
         throws NullValueException
     {
         makeReady();
