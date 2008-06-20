@@ -43,7 +43,25 @@ public final class IonNullImpl
         assert pos_getType() == IonConstants.tidNull;
     }
 
+    /**
+     * makes a copy of this IonNull which, as it has no
+     * value (as such), is immutable.
+     * This calls IonValueImpl to copy the annotations and the 
+     * field name if appropriate.  The symbol table is not
+     * copied as the value is fully materialized and the symbol
+     * table is unnecessary.
+     */
+    public IonNullImpl clone() throws CloneNotSupportedException
+    {
+    	IonNullImpl clone = new IonNullImpl();
+    	
+    	makeReady();
+    	super.copyFrom(this);
 
+    	return clone;
+    }
+
+    
     public IonType getType()
     {
         return IonType.NULL;

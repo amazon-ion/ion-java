@@ -34,6 +34,79 @@ abstract public class IonContainerImpl
     {
         super(typeDesc);
     }
+    
+    /**
+     * throws a CloneNotSupportedException as this is a
+     * parent type that should not be directly created.
+     * Instances should constructed of either IonSexpImpl
+     * IonListImpl or IonStructImpl as needed.
+     */
+    public IonContainerImpl clone() throws CloneNotSupportedException
+    {
+    	throw new CloneNotSupportedException();
+    }
+    
+    /**
+     * this copies the annotations and the field name if
+     * either of these exists from the passed in instance.
+     * It overwrites these values on the current instance.
+     * Since these will be the string representations it
+     * is unnecessary to update the symbol table ... yet.
+     * @param source instance to copy from
+     */
+    protected void copyFrom(IonContainerImpl source) throws CloneNotSupportedException
+    {
+    	// first copy the annotations and such, which
+    	// will materialize the value as needed.
+    	// This will materialize the field name and
+    	// annotations if present.  And it will instanciate
+    	// the immediate children (but it is not
+    	// a deep materialization, so we'll live with
+    	// it for now).
+    	super.copyFrom(source);
+
+    	// now we can copy the contents
+    	
+    	// first see if this value is null (and we're really
+    	// done here)
+    	if (source.isNullValue()) {
+    		makeNull();
+    	}
+    	else {
+    		// it's not null so there better be something there
+    		// at least 0 children :)
+    		assert source._contents != null;
+
+    		// and we'll need a contents array to hold at least 0
+    		// children
+    		if (this._contents == null) {
+    			int len = source._contents.size();
+    			if (len < 1) len = 10;
+    			this._contents = new ArrayList<IonValue>(len);
+    		}
+    		// we should have an empty content list at this point
+    		assert this._contents.size() == 0;
+
+    		if (false && source._buffer != null && !source.isDirty()) {
+	    		// if this is buffer backed, and not dirty
+	    		// then we can do a binary copy
+    			
+    			// TODO: offer this optimized path, however this requires
+    			//       a variety of general purpose binary buffer handling
+    			//       and should probably be done along with the lazy
+    			//       "copy on write" reference/copy optimizations
+    			//       - which is really a project in its own right
+	    	} 
+	    	else {
+	        	// if this is not buffer backed, we just have to
+	        	// do a deep copy
+	    		for (IonValue child : source._contents) {
+	    			IonValue copy = child.clone();
+	    			this.add(copy);
+	    		}
+	    	}
+    	}
+    }
 
     public int size()
         throws NullValueException
@@ -80,6 +153,7 @@ abstract public class IonContainerImpl
 
     public void clear()
     {
+    	checkForLock();
         if (isNullValue())
         {
             _contents = new ArrayList<IonValue>();
@@ -99,9 +173,21 @@ abstract public class IonContainerImpl
             setDirty();
         }
     }
+    
+    public void lock() {
+    	if (_isLocked) return;
+    	synchronized (this) {
+    		deepMaterialize();
+    		for (IonValue child : this._contents) {
+    			child.lock();
+    		}
+    		_isLocked = true;
+    	}
+    }
 
     public void makeNull()
     {
+    	checkForLock();
         if (!isNullValue())
         {
             if (_contents != null)
@@ -265,6 +351,7 @@ abstract public class IonContainerImpl
     @Override
     public void updateSymbolTable(LocalSymbolTable symtab)
     {
+    	// the "super" copy of this method will check the lock
         super.updateSymbolTable(symtab);
         if (this._contents != null) {
             for (IonValue v : this._contents) {
@@ -419,6 +506,8 @@ abstract public class IonContainerImpl
     protected void add(IonValue child)
         throws NullPointerException, IllegalArgumentException
     {
+    	checkForLock();
+
         // We do this here to avoid materialization if element is bad.
         validateNewChild(child);
 
@@ -440,6 +529,7 @@ abstract public class IonContainerImpl
     protected void add(int index, IonValue child)
         throws ContainedValueException, NullPointerException
     {
+    	checkForLock();
         validateNewChild(child);
         add(index, child, true);
     }
@@ -565,6 +655,7 @@ abstract public class IonContainerImpl
 
     public boolean remove(IonValue element)
     {
+    	checkForLock();
         validateThisNotNull();
         if (element.getContainer() != this)
             return false;

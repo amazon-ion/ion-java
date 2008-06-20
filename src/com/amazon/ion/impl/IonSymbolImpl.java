@@ -52,7 +52,24 @@ public final class IonSymbolImpl
         assert pos_getType() == IonConstants.tidSymbol;
     }
 
+    /**
+     * makes a copy of this IonString. This calls up to
+     * IonTextImpl to copy the string itself and that in
+     * turn calls IonValueImpl to copy 
+     * the annotations and the field name if appropriate.  
+     * The symbol table is not copied as the value is fully 
+     * materialized and the symbol table is unnecessary.
+     */
+    public IonSymbolImpl clone() throws CloneNotSupportedException
+    {
+    	IonSymbolImpl clone = new IonSymbolImpl();
+    	
+    	clone.copyFrom(this);
+    	clone.mySid = 0;
 
+    	return clone;
+    }
+    
     public IonType getType()
     {
         return IonType.SYMBOL;
@@ -101,6 +118,8 @@ public final class IonSymbolImpl
     @Override
     public void setValue(String value)
     {
+    	checkForLock();
+
         if ("".equals(value)) {
             throw new EmptySymbolException();
         }
@@ -131,7 +150,7 @@ public final class IonSymbolImpl
     protected boolean isIonVersionMarker() {
     	return _is_IonVersionMarker;
     }
-    protected void setIsIonVersionMarker(boolean isIVM)
+    protected void setIsIonVersionMarker(boolean isIVM) 
     {
     	assert SystemSymbolTable.ION_1_0.equals(this._get_value());
 
@@ -175,13 +194,14 @@ public final class IonSymbolImpl
         // TODO do we really need to materialize?
         makeReady();
 
+        // the super method will check for the lock
         super.updateSymbolTable(symtab);
 
         if (mySid < 1 && this.isNullValue() == false) {
             mySid = symtab.addSymbol(this._get_value());
         }
     }
-
+    
     // TODO rename to getContentLength (from IonValueImpl)
     protected int getNakedValueLength() throws IOException
     {
@@ -195,7 +215,7 @@ public final class IonSymbolImpl
         }
         return len;
     }
-
+    
     /**
      * Length of the core header.
      * @param contentLength length of the core value.
@@ -241,7 +261,7 @@ public final class IonSymbolImpl
 	        if (type != IonConstants.tidSymbol) {
 	            throw new IonException("invalid type desc encountered for value");
 	        }
-
+	
 	        int ln = this.pos_getLowNibble();
 	        switch ((0xf & ln)) {
 	        case IonConstants.lnIsNullAtom:
@@ -259,7 +279,7 @@ public final class IonSymbolImpl
 	            break;
 	        }
         }
-
+        
         _hasNativeValue = true;
     }
 
@@ -270,7 +290,7 @@ public final class IonSymbolImpl
     {
         assert valueLen == this.getNakedValueLength();
         assert valueLen > 0;
-
+        
         if (this.isIonVersionMarker()) {
         	writer.write(IonConstants.BINARY_VERSION_MARKER_1_0);
         	assert valueLen == IonConstants.BINARY_VERSION_MARKER_SIZE;

@@ -107,6 +107,16 @@ public interface IonValue
      * @return <code>true</code> if this value is one of the Ion null values.
      */
     public boolean isNullValue();
+    
+    
+    /**
+     * Used to determine if the current value has been locked. Locked 
+     * values cannot be mutated.  They are also safe for simultaneous 
+     * read from multiple threads.
+     * 
+     * @return <code>true</code> if this value is locked and safe for multi-threaded reads.
+     */
+    public boolean  isLocked();
 
 
     /**
@@ -124,7 +134,7 @@ public interface IonValue
      */
     public String getFieldName();
 
-
+    
     /**
      * Gets the field name attached to this value,
      * or <code>null</code> if this is not part of an {@link IonStruct}.
@@ -134,7 +144,7 @@ public interface IonValue
     @Deprecated
     public int getFieldNameId();
 
-
+    
     /**
      * Gets the symbol ID of the field name attached to this value.
      *
@@ -183,7 +193,7 @@ public interface IonValue
      * @throws IonException if <code>annotations</code> is empty.
      */
     public void clearTypeAnnotations();
-
+    
 
     /**
      * Adds a user type annotation to the annotations attached to
@@ -222,7 +232,27 @@ public interface IonValue
      */
     public void deepMaterialize();
 
+    
+    /**
+     * Marks this instance and its children as locked.  Locked values
+     * cannot be modified.  In addition locked value are safe for read
+     * from multiple threads.  This may require materializing the Java
+     * forms of the values.
+     */
+    public void lock();
 
+    
+    /**
+     * Creates a copy of this value and all its children.  The
+     * cloned values will be created in the context of the same
+     * IonSystem that the orignal was in.  The clones may share  
+	 * static symbol tables.  They will have independant local 
+	 * symbol tables if any are needed.  The cloned value will 
+	 * be unlocked whether or not the original was locked.
+     */
+    public IonValue clone() throws CloneNotSupportedException;
+    
+    
     /**
      * Returns a canonical text representation of this value.
      * For more configurable rendering, see {@link com.amazon.ion.util.Printer}.

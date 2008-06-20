@@ -134,7 +134,13 @@ public class IonBinary
             {
                 throw new IonException(e);
             }
+        }
 
+        public BufferManager clone() throws CloneNotSupportedException
+        {
+        	BlockedBuffer buffer_clone = this._buf.clone();
+        	BufferManager clone = new BufferManager(buffer_clone);
+        	return clone;
         }
 
         public IonBinary.Reader openReader() {

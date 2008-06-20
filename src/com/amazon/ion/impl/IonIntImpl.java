@@ -62,6 +62,25 @@ public final class IonIntImpl
         ;
     }
 
+    /**
+     * makes a copy of this IonInt including a copy
+     * of the Long value which is "naturally" immutable.
+     * This calls IonValueImpl to copy the annotations and the 
+     * field name if appropriate.  The symbol table is not
+     * copied as the value is fully materialized and the symbol
+     * table is unnecessary.
+     */
+    public IonIntImpl clone() throws CloneNotSupportedException
+    {
+    	IonIntImpl clone = new IonIntImpl();
+    	
+    	makeReady();
+    	super.copyFrom(this);
+        clone.setValue(this._int_value);
+
+    	return clone;
+    }
+
 
     public IonType getType()
     {
@@ -95,16 +114,19 @@ public final class IonIntImpl
 
     public void setValue(int value)
     {
+    	// base setValue will check for the lock
         setValue(new Long(value));
     }
 
     public void setValue(long value)
     {
-        setValue(new Long(value));
+    	// base setValue will check for the lock
+    	setValue(new Long(value));
     }
 
     public void setValue(Number value)
     {
+    	checkForLock();
         if (value == null)
         {
             _int_value = null;

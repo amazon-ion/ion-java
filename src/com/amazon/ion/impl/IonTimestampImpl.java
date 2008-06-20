@@ -46,6 +46,27 @@ public final class IonTimestampImpl
         assert pos_getType() == IonConstants.tidTimestamp;
     }
 
+    /**
+     * makes a copy of this IonTimestamp. This calls up to
+     * IonValueImpl to copy 
+     * the annotations and the field name if appropriate. 
+     * It then copies the time stamp value itself.
+     */
+    public IonTimestampImpl clone() throws CloneNotSupportedException
+    {
+    	IonTimestampImpl clone = new IonTimestampImpl();
+    	
+    	clone.copyFrom(this);
+    	if (this.isNullValue()) {
+    		clone._timestamp_value = null;
+    	}
+    	else {
+    		clone._timestamp_value = this._timestamp_value.clone(); 
+    	}
+
+    	return clone;
+    }
+    
 
     public IonType getType()
     {
@@ -74,7 +95,9 @@ public final class IonTimestampImpl
 
     public void setTime(Date value)
     {
-        /* I assume that if setTime is called, most of the time a change will
+    	checkForLock();
+
+    	/* I assume that if setTime is called, most of the time a change will
          * occur, and most of the time it won't be called again.  Thus we
          * should assume that we should be optimized for encoding.
          */
@@ -113,12 +136,14 @@ public final class IonTimestampImpl
 
     public void setMillis(long millis)
     {
+    	// setTime(Date) will check for the lock
         setTime(new Date(millis));
     }
 
 
     public void setMillisUtc(long millis)
     {
+    	// setTime(Date) will check for the lock
         setTime(new Date(millis));
         _timestamp_value.localOffset = UTC_OFFSET;
     }
@@ -126,6 +151,8 @@ public final class IonTimestampImpl
 
     public void setCurrentTime()
     {
+    	checkForLock();
+
         Date date = new Date();
         if (_timestamp_value == null)
         {
@@ -141,6 +168,7 @@ public final class IonTimestampImpl
 
     public void setCurrentTimeUtc()
     {
+    	// setCurrentTime() will check for the lock
         setCurrentTime();
         _timestamp_value.localOffset = UTC_OFFSET;
     }
@@ -148,6 +176,7 @@ public final class IonTimestampImpl
     public void setLocalOffset(int minutes)
         throws NullValueException
     {
+    	// setLocalOffset(Integer) will check for the lock
         setLocalOffset(new Integer(minutes));
     }
 
@@ -155,6 +184,8 @@ public final class IonTimestampImpl
     public void setLocalOffset(Integer minutes)
         throws NullValueException
     {
+    	checkForLock();
+
         validateThisNotNull();
         assert (_timestamp_value != null);
 

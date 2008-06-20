@@ -69,6 +69,19 @@ public class IonSexpImpl
         assert pos_getType() == IonConstants.tidSexp;
     }
 
+    /**
+     * creates a copy of this IonSexpImpl.  Most of the work
+     * is actually done by IonContainerImpl.copyFrom() and
+     * IonValueImpl.copyFrom().
+     */
+    public IonSexpImpl clone() throws CloneNotSupportedException
+    {
+    	IonSexpImpl clone = new IonSexpImpl();
+    	
+    	clone.copyFrom(this);
+    	
+    	return clone;
+    }
 
     public IonType getType()
     {

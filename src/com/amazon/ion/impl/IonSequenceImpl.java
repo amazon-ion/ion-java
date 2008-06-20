@@ -107,6 +107,7 @@ public abstract class IonSequenceImpl
     public void add(IonValue element)
         throws ContainedValueException, NullPointerException
     {
+    	// super.add will check for the lock
         super.add(element);
     }
 
@@ -115,12 +116,15 @@ public abstract class IonSequenceImpl
     public void add(int index, IonValue element)
         throws ContainedValueException, NullPointerException
     {
+    	// super.add will check for the lock
         super.add(index, element);
     }
 
     public void addEmbedded(IonValue element)
         throws NullPointerException
     {
+    	checkForLock();
+
         LocalSymbolTable symtab = element.getSymbolTable();
 
         IonSexpImpl wrapper = new IonSexpImpl();

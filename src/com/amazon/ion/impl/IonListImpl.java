@@ -71,6 +71,20 @@ public final class IonListImpl
         assert pos_getType() == IonConstants.tidList;
     }
 
+    /**
+     * creates a copy of this IonListImpl.  Most of the work
+     * is actually done by IonContainerImpl.copyFrom() and
+     * IonValueImpl.copyFrom().
+     */
+    public IonListImpl clone() throws CloneNotSupportedException
+    {
+    	IonListImpl clone = new IonListImpl();
+    	
+    	clone.copyFrom(this);
+    	
+    	return clone;
+    }
+
 
     public IonType getType()
     {

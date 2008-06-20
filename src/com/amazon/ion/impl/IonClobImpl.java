@@ -44,6 +44,22 @@ public final class IonClobImpl
         assert pos_getType() == IonConstants.tidClob;
     }
 
+    /**
+     * makes a copy of this IonClob including an independant 
+     * copy of the bytes. It also calls IonValueImpl to copy 
+     * the annotations and the field name if appropriate.  
+     * The symbol table is not copied as the value is fully 
+     * materialized and the symbol table is unnecessary.
+     */
+    public IonClobImpl clone() throws CloneNotSupportedException
+    {
+    	IonClobImpl clone = new IonClobImpl();
+    	
+    	clone.copyFrom(this);
+    	
+    	return clone;
+    }
+
 
     public IonType getType()
     {

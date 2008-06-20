@@ -8,7 +8,6 @@ import static com.amazon.ion.util.Equivalence.ionEquals;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.NullValueException;
@@ -120,7 +119,12 @@ public abstract class IonValueImpl
      * Note that a value with no buffer is always dirty.
      */
     private boolean      _isDirty;
-
+    
+    /**
+     * Tracks whether or not this instance is locked.  Locked values
+     * may not be mutated and must be thread safe for reading.
+     */
+    protected boolean    _isLocked;
 
     boolean              _isSystemValue;
 
@@ -146,7 +150,7 @@ public abstract class IonValueImpl
      * stored in at a parent container.
      */
     protected LocalSymbolTable _symboltable;
-
+    
     /**
      * The instance maintains a reference back to the system that
      * created it so that it can create a symbol table when it
@@ -156,7 +160,7 @@ public abstract class IonValueImpl
      * the symbol id is being requested for a fieldname, the int
      * value of an IonSymbol or an annotation.
      */
-    protected IonSystem _system;
+    protected IonSystemImpl _system;
 
 
     /**
@@ -171,6 +175,43 @@ public abstract class IonValueImpl
         _hasNativeValue     = false;
         _isDirty            = true;
         pos_setTypeDescriptorByte(typedesc);
+    }
+    
+    /**
+     * the base classes in IonValue(Impl) should not be called for
+     * cloning directly. The user should be calling clone on the
+     * actualy (leaf) instances class (such as IonIntImpl).  The
+     * shared clone work is handled in copyFrom(src) in any base
+     * classes that need to support this - including IonValueImpl,
+     * IonContainerImpl, IonTextImpl and IonLobImpl.
+     */
+    public IonValueImpl clone() throws CloneNotSupportedException
+    {
+    	throw new CloneNotSupportedException();
+    }
+
+    /**
+     * this copies the annotations and the field name if
+     * either of these exists from the passed in instance.
+     * It overwrites these values on the current instance.
+     * Since these will be the string representations it
+     * is unnecessary to update the symbol table ... yet.
+     * @param source instance to copy from
+     */
+    protected void copyFrom(IonValueImpl source)
+    {
+    	// first this instance has to be ready
+    	// (although it probably is)
+    	makeReady();
+    	
+    	// getting the type annotations will also force the
+    	// this instance to be "ready" (i.e. it will call
+    	// MakeReady()) which we'll want.
+    	String[] a = source.getTypeAnnotations();
+    	_annotations = a; // and we don't care if it's null or not
+
+    	String s = source.getFieldName();
+   		this.setFieldName(s);
     }
 
     protected void init(int fieldSID
@@ -325,7 +366,7 @@ public abstract class IonValueImpl
             value = new IonSymbolImpl(SystemSymbolTable.ION_1_0);
             ((IonSymbolImpl)value).setIsIonVersionMarker(true);
             break;
-
+            
         default:
             throw new IonException("invalid type "+typeId+" ("+typedesc+") encountered");
         }
@@ -381,12 +422,12 @@ public abstract class IonValueImpl
     {
         if (this._fieldSid == 0 && this._fieldName != null)
         {
-            LocalSymbolTable symtab = getSymbolTable();
-            if (symtab == null) {
-                // TODO - or we could throw here
-                symtab = materializeSymbolTable();
-            }
-            assert symtab != null;
+        	LocalSymbolTable symtab = getSymbolTable();
+        	if (symtab == null) {
+        		// TODO - or we could throw here
+        		symtab = materializeSymbolTable();
+        	}
+        	assert symtab != null;
             _fieldSid = symtab.addSymbol(this._fieldName);
         }
         return this._fieldSid;
@@ -417,12 +458,30 @@ public abstract class IonValueImpl
     public final boolean isDirty() {
         return _isDirty;
     }
+    
+    public void lock() {
+    	if (_isLocked) return;
+    	synchronized (this) {
+    		deepMaterialize();
+    		_isLocked = true;
+    	}
+    }
+    
+    public final boolean isLocked() {
+    	return _isLocked;
+    }
+    
+    protected void checkForLock() {
+    	if (!_isLocked) return;
+    	throw new IonException("locked values cannot be modified");
+    }
 
     /**
      * Marks this element, and it's container, dirty.  This forces the binary
      * buffer to be updated when it's next needed.
      */
     protected void setDirty() {
+    	checkForLock();
         if (this._isDirty == false) {
             this._isDirty = true;
             if (this._container != null) {
@@ -445,24 +504,25 @@ public abstract class IonValueImpl
         return null;
     }
 
-    // Not really: overridden for struct, which really needs to have a
+    // Not really: overridden for struct, which really needs to have a 
     // symbol table.  Everyone needs to have a symbol table since they
     // may have fieldnames or annotations (or this may be a symbol value)
     public LocalSymbolTable getSymbolTable() {
         if (this._symboltable != null)  return this._symboltable;
         if (this._container != null)    return this._container.getSymbolTable();
-
+                        
         // this._symboltable = new LocalSymbolTableImpl();
         // FIXME: this assert will break right now !
 // cas symtab:        just remove this block
         if (this._symboltable == null) {
         assert this._symboltable != null || this._symboltable == null;
         }
-
+        
         return this._symboltable;
     }
 
     public void setSymbolTable(LocalSymbolTable symtab) {
+    	checkForLock();
         this._symboltable = symtab;
     }
 
@@ -493,6 +553,7 @@ public abstract class IonValueImpl
 
     public void clearTypeAnnotations()
     {
+    	checkForLock();
         makeReady();
         this._annotations = null;
         this.setDirty();
@@ -511,6 +572,7 @@ public abstract class IonValueImpl
 
     public void removeTypeAnnotation(String annotation)
     {
+    	checkForLock();
         if (!this.hasTypeAnnotation(annotation)) return;
 
         String[] temp = (_annotations.length == 1) ? null : new String[_annotations.length - 1];
@@ -525,6 +587,7 @@ public abstract class IonValueImpl
     }
     public void addTypeAnnotation(String annotation)
     {
+    	checkForLock();
         if (hasTypeAnnotation(annotation)) return;
 
         // allocate a larger array and copy if necessary
@@ -637,7 +700,7 @@ public abstract class IonValueImpl
         // this first length is our overall length
         // whether we have annotations or not
         int type = this.pos_getType();
-
+        
         // vlen might get reset later if this is a IonVersionMarker
         int vlen = valueReader.readLength(type, this.pos_getLowNibble());
 
@@ -669,7 +732,7 @@ public abstract class IonValueImpl
                 // read the actual values type desc
                 this._type_desc = valueReader.readToken();
                 // TODO check that td != annotation (illegal nested annotation)
-
+    
                 int ln = pos_getLowNibble();
                 if ((ln == IonConstants.lnIsVarLen)
                     || (this._type_desc == IonStructImpl.ORDERED_STRUCT_TYPEDESC))
@@ -836,7 +899,7 @@ public abstract class IonValueImpl
         assert _hasNativeValue;
         this._isMaterialized = true;
     }
-
+    
     protected LocalSymbolTable materializeSymbolTable()
     {
     	LocalSymbolTable symtab = _symboltable;
@@ -1236,6 +1299,8 @@ public abstract class IonValueImpl
      */
     public void updateSymbolTable(LocalSymbolTable symtab)
     {
+    	checkForLock();
+    	
         // TODO can any of this be short-circuited?
 
         if (this._annotations != null) {
@@ -1364,8 +1429,8 @@ public abstract class IonValueImpl
 
 //int oldPosition = pos_getOffsetAtFieldId();
 //int oldLength = pos_getOffsetofNextValue() - oldPosition;
-//int nakedLength = getNakedValueLength();
-//int newLength =
+//int nakedLength = getNakedValueLength(); 
+//int newLength = 
 //  ((_fieldName == null) ? 0 : IonBinary.lenVarUInt7(getSymbolTable().addSymbol(_fieldName)))
 //  + nakedLength
 //  + getTypeDescriptorAndLengthOverhead(nakedLength);
@@ -1514,7 +1579,7 @@ public abstract class IonValueImpl
     @Override
     public boolean equals(final Object other) {
         // TODO we can make this more efficient since we have impl details
-
+        
         boolean same = false;
         if (other instanceof IonValue)
         {
