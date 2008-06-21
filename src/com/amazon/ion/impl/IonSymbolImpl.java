@@ -231,6 +231,16 @@ public final class IonSymbolImpl
     	}
         return len;
     }
+    
+    @Override
+    void clearSymbols()
+    {
+    	this.stringValue();
+    	this.mySid = 0;
+    	super.clearSymbols();
+    	
+    }
+
 
     @Override
     protected void doMaterializeValue(IonBinary.Reader reader)

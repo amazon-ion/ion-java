@@ -130,8 +130,12 @@ public final class IonDatagramImpl
      * Since these will be the string representations it
      * is unnecessary to update the symbol table ... yet.
      * @param source instance to copy from
+     * @throws IOException 
+     * @throws IllegalArgumentException 
+     * @throws NullPointerException 
+     * @throws  
      */
-    protected void copyFrom(IonContainerImpl source) throws CloneNotSupportedException
+    protected void copyFrom(IonContainerImpl source) throws CloneNotSupportedException, NullPointerException, IllegalArgumentException, IOException
     {
     	// first copy the annotations and such, which
     	// will materialize the value as needed.
@@ -289,11 +293,15 @@ public final class IonDatagramImpl
     {
         int systemPos = this._contents.size();
         int userPos = isSystem ? -1 : this._userContents.size();
-        this.add( element, systemPos, userPos );
+        try {
+			this.add( element, systemPos, userPos );
+		} catch (IOException e) {
+			throw new IonException(e);
+		}
     }
     
     private void add(IonValue element, int systemPos, int userPos)
-        throws ContainedValueException, NullPointerException
+        throws ContainedValueException, NullPointerException, IOException
     {
         validateNewChild(element);
 

@@ -160,7 +160,7 @@ public abstract class IonValueImpl
      * the symbol id is being requested for a fieldname, the int
      * value of an IonSymbol or an annotation.
      */
-    protected IonSystemImpl _system;
+    IonSystemImpl _system;
 
 
     /**
@@ -523,9 +523,23 @@ public abstract class IonValueImpl
 
     public void setSymbolTable(LocalSymbolTable symtab) {
     	checkForLock();
-        this._symboltable = symtab;
+    	if (this._symboltable != symtab) {
+    		clearSymbols();
+    		this._symboltable = symtab;
+    	}
     }
 
+    void clearSymbols()
+    {
+    	if (this._fieldSid > 0) {
+    		if (this._fieldName == null) {
+    			this._fieldName = this.getSymbolTable().findKnownSymbol(this._fieldSid);
+    		}
+    		this._fieldSid = 0;
+    		this._symboltable = null;
+    	}
+    }
+    
     public int getElementId() {
         return this._elementid;
     }

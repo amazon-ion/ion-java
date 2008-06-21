@@ -53,8 +53,12 @@ abstract public class IonContainerImpl
      * Since these will be the string representations it
      * is unnecessary to update the symbol table ... yet.
      * @param source instance to copy from
+     * @throws IOException 
+     * @throws IllegalArgumentException 
+     * @throws NullPointerException 
+     * @throws ContainedValueException 
      */
-    protected void copyFrom(IonContainerImpl source) throws CloneNotSupportedException
+    protected void copyFrom(IonContainerImpl source) throws CloneNotSupportedException, ContainedValueException, NullPointerException, IllegalArgumentException, IOException
     {
     	// first copy the annotations and such, which
     	// will materialize the value as needed.
@@ -502,9 +506,11 @@ abstract public class IonContainerImpl
      *   if {@code child} is already part of a container.
      * @throws IllegalArgumentException
      *   if {@code child} is an {@link IonDatagram}.
+     * @throws IOException 
+     * @throws ContainedValueException 
      */
     protected void add(IonValue child)
-        throws NullPointerException, IllegalArgumentException
+        throws NullPointerException, IllegalArgumentException, ContainedValueException, IOException
     {
     	checkForLock();
 
@@ -522,12 +528,13 @@ abstract public class IonContainerImpl
      *   if {@code child} is {@code null}.
      * @throws ContainedValueException
      *   if {@code child} is already part of a container.
+     * @throws IOException 
      * @throws IllegalArgumentException
      *   if {@code child} is an {@link IonDatagram}.
      */
 
     protected void add(int index, IonValue child)
-        throws ContainedValueException, NullPointerException
+        throws ContainedValueException, NullPointerException, IOException
     {
     	checkForLock();
         validateNewChild(child);
@@ -574,9 +581,10 @@ abstract public class IonContainerImpl
      *        must not be null.
      * @throws NullPointerException
      *         if the element is <code>null</code>.
+     * @throws IOException 
      */
     protected void add(int index, IonValue element, boolean setDirty)
-        throws ContainedValueException, NullPointerException
+        throws ContainedValueException, NullPointerException, IOException
     {
         final IonValueImpl concrete = ((IonValueImpl) element);
 
@@ -601,6 +609,7 @@ abstract public class IonContainerImpl
         }
         else
         {
+        	concrete.deepMaterialize();
             if (!(this instanceof IonDatagramImpl)) {
                 concrete.makeReady();
                 concrete.setSymbolTable(null);
@@ -651,6 +660,18 @@ abstract public class IonContainerImpl
             }
         }
         super.clear_position_and_buffer();
+    }
+   
+    @Override
+    void clearSymbols()
+    {
+    	super.clearSymbols();
+    	if (this._contents != null) {
+    		for (int ii=0; ii<this._contents.size(); ii++) {
+    			IonValueImpl v = (IonValueImpl)this._contents.get(ii);
+    			v.clearSymbols();
+    		}
+    	}
     }
 
     public boolean remove(IonValue element)
