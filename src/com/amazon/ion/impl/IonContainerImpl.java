@@ -178,12 +178,12 @@ abstract public class IonContainerImpl
         }
     }
     
-    public void lock() {
+    public void makeReadOnly() {
     	if (_isLocked) return;
     	synchronized (this) {
     		deepMaterialize();
     		for (IonValue child : this._contents) {
-    			child.lock();
+    			child.makeReadOnly();
     		}
     		_isLocked = true;
     	}

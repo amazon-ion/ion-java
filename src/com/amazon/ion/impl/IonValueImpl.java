@@ -459,7 +459,7 @@ public abstract class IonValueImpl
         return _isDirty;
     }
     
-    public void lock() {
+    public void makeReadOnly() {
     	if (_isLocked) return;
     	synchronized (this) {
     		deepMaterialize();
@@ -467,7 +467,7 @@ public abstract class IonValueImpl
     	}
     }
     
-    public final boolean isLocked() {
+    public final boolean isReadOnly() {
     	return _isLocked;
     }
     
