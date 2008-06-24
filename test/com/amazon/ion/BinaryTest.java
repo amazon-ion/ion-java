@@ -4,16 +4,14 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.system.SystemFactory;
 import java.util.Arrays;
-
-import com.amazon.ion.impl.IonConstants;
-import com.amazon.ion.impl.IonSystemImpl;
 
 public class BinaryTest extends IonTestCase
 {
-    private static final IonSystem sys = new IonSystemImpl();
+    private static final IonSystem sys = SystemFactory.newSystem();
 
-    private static byte[] hexToBytes(final String hex)
+    public static byte[] hexToBytes(final String hex)
     {
         String[] hexChunks = hex.split("\\s+");
         byte[] data = new byte[hexChunks.length];
@@ -47,16 +45,16 @@ public class BinaryTest extends IonTestCase
         return builder.toString();
     }
 
-    private static String MAGIC_COOKIE = "E0 01 00 EA ";
+    public static String MAGIC_COOKIE = "E0 01 00 EA ";
 
     // MC + $ion_1_0::{symbols : null.struct}
-    private static String EMPTY_HEADER = MAGIC_COOKIE; 
+    private static String EMPTY_HEADER = MAGIC_COOKIE;
 
-    
+
 // FIXME (cas) + "E5 81 82 D2 87 DF ";
 
-    
-    
+
+
     /**
      * Loads a string literal as Ion bytes no cookie required.
      * We encode the string literal as hex digits as it is convenient to read.

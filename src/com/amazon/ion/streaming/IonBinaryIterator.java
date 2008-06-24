@@ -847,19 +847,21 @@ public final class IonBinaryIterator
         return annotations;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public Iterator<Integer> iterateAnnotationIds()
     {
         int[] ids = getAnnotationIds();
-        if (ids == null) return null;
+        if (ids == null) return (Iterator<Integer>) EMPTY_ITERATOR;
         return new IonTreeIterator.IdIterator(ids);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public Iterator<String> iterateAnnotations()
     {
         String[] ids = getAnnotations();
-        if (ids == null) return null;
+        if (ids == null) return (Iterator<String>) EMPTY_ITERATOR;
         return new IonTreeIterator.StringIterator(ids);
     }
 
@@ -1166,6 +1168,10 @@ public final class IonBinaryIterator
         int tid = (_value_tid >>> 4);
         if (tid != IonConstants.tidSymbol && tid != IonConstants.tidString) {
             throw new IllegalStateException();
+        }
+
+        if ((_value_tid & 0xf) == IonConstants.lnIsNullAtom) {
+            return null;
         }
 
         try {

@@ -31,6 +31,12 @@ import java.util.NoSuchElementException;
 public abstract class IonIterator
     implements IonReader
 {
+    static final protected Iterator<?> EMPTY_ITERATOR = new Iterator() {
+        public boolean hasNext() { return false; }
+        public Object  next()    { throw new NoSuchElementException(); }
+        public void    remove()  { throw new UnsupportedOperationException(); }
+    };
+
     /**
      * Creates an IonIterator instance over a byte array.
      *

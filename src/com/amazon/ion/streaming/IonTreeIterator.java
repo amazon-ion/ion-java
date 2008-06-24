@@ -236,20 +236,21 @@ public final class IonTreeIterator
         return ids;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public Iterator<Integer> iterateAnnotationIds()
     {
         int [] ids = getAnnotationIds();
-        if (ids == null) return null;
+        if (ids == null) return (Iterator<Integer>) EMPTY_ITERATOR;
         return new IdIterator(ids);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public Iterator<String> iterateAnnotations()
     {
         String [] annotations = getAnnotations();
-        if (annotations == null) return null;
-
+        if (annotations == null) return (Iterator<String>) EMPTY_ITERATOR;
         return new StringIterator(annotations);
     }
 
