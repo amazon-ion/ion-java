@@ -86,7 +86,10 @@ package com.amazon.ion;
  * <p>
  * <b>Instances of {@code IonValue} are not thread-safe!</b>
  * Your application must perform its own synchronization if you need to access
- * nodes from multiple threads.
+ * nodes from multiple threads.  Alternatively, you can invoke
+ * {@link #makeReadOnly()} from a single thread, after which point the value
+ * (and all contained values, recursively) will be both immutable and
+ * thread-safe.
  */
 public interface IonValue
 {
@@ -110,6 +113,18 @@ public interface IonValue
 
 
     /**
+     * Determines whether this value is read-only.  Such values are safe for
+     * simultaneous read from multiple threads.
+     *
+     * @return <code>true</code> if this value is read-only and safe for
+     * multi-threaded reads.
+     *
+     * @see #makeReadOnly()
+     */
+    public boolean  isReadOnly();
+
+
+    /**
      * Gets the symbol table used to encode this value.
      *
      * @return the symbol table, or <code>null</code> if this value is not
@@ -124,14 +139,27 @@ public interface IonValue
      */
     public String getFieldName();
 
-    
+
     /**
      * Gets the field name attached to this value,
      * or <code>null</code> if this is not part of an {@link IonStruct}.
+     *
+     * @deprecated Renamed to {@link #getFieldId()}.
      */
+    @Deprecated
     public int getFieldNameId();
 
-    
+
+    /**
+     * Gets the symbol ID of the field name attached to this value.
+     *
+     * @return the symbol ID of the field name, if this is part of an
+     * {@link IonStruct}. If this is not a field, or if the symbol ID cannot be
+     * determined, this method returns a value <em>less than one</em>.
+     */
+    public int getFieldId();
+
+
     /**
      * Gets the container of this value,
      * or <code>null</code> if this is not part of one.
@@ -144,6 +172,7 @@ public interface IonValue
      * as strings, or <code>null</code> if there are none.
      * @deprecated Use {@link #getTypeAnnotations()} instead.
      */
+    @Deprecated
     public String[] getTypeAnnotationStrings();
 
 
@@ -205,8 +234,33 @@ public interface IonValue
     /**
      * Ensures that this value, and all contained data, is fully materialized
      * into {@link IonValue} instances from any underlying Ion binary buffer.
+     *
+     * @deprecated
      */
+    @Deprecated
     public void deepMaterialize();
+
+
+    /**
+     * Marks this instance and its children to be immutable.
+     * In addition, read-only values are safe for simultaneous use
+     * from multiple threads.  This may require materializing the Java
+     * forms of the values.
+     *
+     * @see #isReadOnly()
+     */
+    public void makeReadOnly();
+
+
+    /**
+     * Creates a copy of this value and all its children.  The
+     * cloned values will be created in the context of the same
+     * IonSystem that the orignal was in.  The clones may share
+	 * static symbol tables.  They will have independant local
+	 * symbol tables if any are needed.  The cloned value will
+	 * be unlocked whether or not the original was locked.
+     */
+    public IonValue clone() throws CloneNotSupportedException;
 
 
     /**

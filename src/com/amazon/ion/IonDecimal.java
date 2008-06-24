@@ -38,8 +38,20 @@ public interface IonDecimal
      *
      * @return the <code>BigDecimal</code> value,
      * or <code>null</code> if <code>this.isNullValue()</code>.
+     *
+     * @deprecated Renamed to {@link #bigDecimalValue()}.
      */
+    @Deprecated
     public BigDecimal toBigDecimal();
+
+    /**
+     * Gets the value of this Ion <code>int</code> as a Java
+     * {@link BigDecimal} value.
+     *
+     * @return the <code>BigDecimal</code> value,
+     * or <code>null</code> if <code>this.isNullValue()</code>.
+     */
+    public BigDecimal bigDecimalValue();
 
     /**
      * Sets the value of this element.

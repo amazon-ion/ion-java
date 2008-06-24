@@ -26,6 +26,39 @@ public abstract class IonLobImpl
     {
         super(typeDesc);
     }
+    
+    public IonLobImpl clone() throws CloneNotSupportedException
+    {
+    	throw new CloneNotSupportedException("you must clone a specific Ion type");
+    }
+
+    /**
+     * this copies the contents of the lob from the source to
+     * this instance (or the "null-ness" if the sourc is null).
+     * It delegates up to IonValueImpl to copy the annotations
+     * and field name as necessary.
+     * @param source instance to copy from
+     */
+    protected void copyFrom(IonLobImpl source)
+    {
+    	super.copyFrom(source);
+
+    	if (source.isNullValue()) {
+    		// force this value to be a null value
+            _lob_value = null;
+    	}
+    	else {
+    		int len = source.byteSize();
+    		if (_lob_value == null || _lob_value.length != len) {
+    			_lob_value = new byte[len];
+    		}
+    		byte[] source_bytes = source.newBytes();
+    		System.arraycopy(source_bytes, 0, _lob_value, 0, len);
+    	}
+    	_hasNativeValue = true;
+    	setDirty();
+    	return;
+    }
 
     public InputStream newInputStream()
     {
@@ -44,6 +77,8 @@ public abstract class IonLobImpl
 
     public void setBytes(byte[] bytes)
     {
+    	checkForLock();
+
         // TODO copy data?
         _lob_value = bytes;
         _hasNativeValue = true;

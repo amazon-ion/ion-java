@@ -32,8 +32,21 @@ public interface IonSymbol
      * symbol table.  Otherwise, return {@link #UNKNOWN_SYMBOL_ID}.
      *
      * @throws NullValueException if this is <code>null.symbol</code>.
+     * @deprecated Use {@link #getSymbolId()} instead.
      */
+    @Deprecated
     public int intValue()
+        throws NullValueException;
+
+    /**
+     * Gets the integer symbol id used in the binary encoding of this symbol.
+     *
+     * @return an integer greater than zero, if this value has an associated
+     * symbol table.  Otherwise, return {@link #UNKNOWN_SYMBOL_ID}.
+     *
+     * @throws NullValueException if this is <code>null.symbol</code>.
+     */
+    public int getSymbolId()
         throws NullValueException;
 
 

@@ -50,6 +50,24 @@ public final class IonFloatImpl
 //            || pos_getLowNibble() == SIZE_OF_IEEE_754_64_BITS;
     }
 
+    /**
+     * makes a copy of this IonFloat including a copy
+     * of the double value which is "naturally" immutable.
+     * This calls IonValueImpl to copy the annotations and the 
+     * field name if appropriate.  The symbol table is not
+     * copied as the value is fully materialized and the symbol
+     * table is unnecessary.
+     */
+    public IonFloatImpl clone() throws CloneNotSupportedException
+    {
+    	IonFloatImpl clone = new IonFloatImpl();
+    	
+    	makeReady();
+    	super.copyFrom(this);
+        clone.setValue(this._float_value);
+
+    	return clone;
+    }
 
     public IonType getType()
     {
@@ -73,7 +91,14 @@ public final class IonFloatImpl
         return _float_value.doubleValue();
     }
 
+    @Deprecated
     public BigDecimal toBigDecimal()
+        throws NullValueException
+    {
+        return bigDecimalValue();
+    }
+
+    public BigDecimal bigDecimalValue()
         throws NullValueException
     {
         makeReady();
@@ -83,16 +108,19 @@ public final class IonFloatImpl
 
     public void setValue(float value)
     {
+    	// base set value will check for the lock
         setValue(new Double(value));
     }
 
     public void setValue(double value)
     {
+    	// base setValue will check for the lock
         setValue(new Double(value));
     }
 
     public void setValue(BigDecimal value)
     {
+    	checkForLock();
         if (value == null)
         {
             _float_value = null;
@@ -107,6 +135,7 @@ public final class IonFloatImpl
 
     public void setValue(Double d)
     {
+    	checkForLock();
         _float_value = d;
         _hasNativeValue = true;
         setDirty();

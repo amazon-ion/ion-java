@@ -52,7 +52,24 @@ public final class IonSymbolImpl
         assert pos_getType() == IonConstants.tidSymbol;
     }
 
+    /**
+     * makes a copy of this IonString. This calls up to
+     * IonTextImpl to copy the string itself and that in
+     * turn calls IonValueImpl to copy 
+     * the annotations and the field name if appropriate.  
+     * The symbol table is not copied as the value is fully 
+     * materialized and the symbol table is unnecessary.
+     */
+    public IonSymbolImpl clone() throws CloneNotSupportedException
+    {
+    	IonSymbolImpl clone = new IonSymbolImpl();
+    	
+    	clone.copyFrom(this);
+    	clone.mySid = 0;
 
+    	return clone;
+    }
+    
     public IonType getType()
     {
         return IonType.SYMBOL;
@@ -70,7 +87,14 @@ public final class IonSymbolImpl
         return this.getSymbolTable().findSymbol(this.intValue());
     }
 
+    @Deprecated
     public int intValue()
+        throws NullValueException
+    {
+        return getSymbolId();
+    }
+
+    public int getSymbolId()
         throws NullValueException
     {
         validateThisNotNull();
@@ -94,6 +118,8 @@ public final class IonSymbolImpl
     @Override
     public void setValue(String value)
     {
+    	checkForLock();
+
         if ("".equals(value)) {
             throw new EmptySymbolException();
         }
@@ -168,6 +194,7 @@ public final class IonSymbolImpl
         // TODO do we really need to materialize?
         makeReady();
 
+        // the super method will check for the lock
         super.updateSymbolTable(symtab);
 
         if (mySid < 1 && this.isNullValue() == false) {
@@ -204,6 +231,16 @@ public final class IonSymbolImpl
     	}
         return len;
     }
+    
+    @Override
+    void clearSymbols()
+    {
+    	this.stringValue();
+    	this.mySid = 0;
+    	super.clearSymbols();
+    	
+    }
+
 
     @Override
     protected void doMaterializeValue(IonBinary.Reader reader)

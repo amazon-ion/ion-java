@@ -5,10 +5,13 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.ContainedValueException;
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.ValueVisitor;
+
+import java.io.IOException;
 import java.util.Collection;
 
 /**
@@ -69,6 +72,23 @@ public class IonSexpImpl
         assert pos_getType() == IonConstants.tidSexp;
     }
 
+    /**
+     * creates a copy of this IonSexpImpl.  Most of the work
+     * is actually done by IonContainerImpl.copyFrom() and
+     * IonValueImpl.copyFrom().
+     */
+    public IonSexpImpl clone() throws CloneNotSupportedException
+    {
+    	IonSexpImpl clone = new IonSexpImpl();
+    	
+    	try {
+			clone.copyFrom(this);
+    	} catch (IOException e) {
+			throw new IonException(e);
+		}
+    	
+    	return clone;
+    }
 
     public IonType getType()
     {

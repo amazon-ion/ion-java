@@ -6,6 +6,7 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonDatagram;
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
@@ -65,10 +66,13 @@ public abstract class IonSequenceImpl
      *
      * @throws ContainedValueException if any value in <code>elements</code>
      * has <code>{@link IonValue#getContainer()} != null</code>.
+     * @throws IOException 
+     * @throws IllegalArgumentException 
+     * @throws NullPointerException 
      */
     protected IonSequenceImpl(int typeDesc,
                               Collection<? extends IonValue> elements)
-        throws ContainedValueException
+        throws ContainedValueException, NullPointerException, IllegalArgumentException
     {
         this(typeDesc);
         assert _contents == null;
@@ -82,7 +86,11 @@ public abstract class IonSequenceImpl
             for (Iterator i = elements.iterator(); i.hasNext();)
             {
                 IonValue element = (IonValue) i.next();
-                super.add(element);
+                try {
+					super.add(element);
+    			} catch (IOException e) {
+    				throw new IonException(e);
+    			}
             }
 
             // FIXME if add of a child fails, prior children have bad container
@@ -107,7 +115,12 @@ public abstract class IonSequenceImpl
     public void add(IonValue element)
         throws ContainedValueException, NullPointerException
     {
-        super.add(element);
+    	// super.add will check for the lock
+        try {
+			super.add(element);
+		} catch (IOException e) {
+			throw new IonException(e);
+		}
     }
 
     @Override
@@ -115,12 +128,19 @@ public abstract class IonSequenceImpl
     public void add(int index, IonValue element)
         throws ContainedValueException, NullPointerException
     {
-        super.add(index, element);
+    	// super.add will check for the lock
+        try {
+			super.add(index, element);
+		} catch (IOException e) {
+			throw new IonException(e);
+		}
     }
 
     public void addEmbedded(IonValue element)
         throws NullPointerException
     {
+    	checkForLock();
+
         LocalSymbolTable symtab = element.getSymbolTable();
 
         IonSexpImpl wrapper = new IonSexpImpl();
@@ -140,7 +160,11 @@ public abstract class IonSequenceImpl
         wrapper.add(element);
         
         assert wrapper._isSystemValue; // so we can unwrap it
-        super.add(wrapper);
+        try {
+			super.add(wrapper);
+		} catch (IOException e) {
+			throw new IonException(e);
+		}
     }
 
     @Override

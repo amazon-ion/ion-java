@@ -34,7 +34,7 @@ public class DecimalTest
         }
         catch (NullValueException e) { }
 
-        assertNull("toBigDecimal() isn't null", value.toBigDecimal());
+        assertNull("toBigDecimal() isn't null", value.bigDecimalValue());
     }
 
 
@@ -45,11 +45,11 @@ public class DecimalTest
         value.setValue(fVal);
         assertEquals(fVal, value.floatValue());
         assertEquals((double) fVal, value.doubleValue());
-        assertEquals(fVal, value.toBigDecimal().floatValue());
+        assertEquals(fVal, value.bigDecimalValue().floatValue());
 
         value.setValue(A_DOUBLE);
         assertEquals(A_DOUBLE, value.doubleValue());
-        assertEquals(A_DOUBLE, value.toBigDecimal().doubleValue());
+        assertEquals(A_DOUBLE, value.bigDecimalValue().doubleValue());
 
         value.setValue(null);
         checkNullDecimal(value);
@@ -82,7 +82,7 @@ public class DecimalTest
         assertEquals(1.0F, value.floatValue());
         assertEquals(1.0D, value.doubleValue());
 
-        assertEquals(new BigDecimal(1).setScale(1), value.toBigDecimal());
+        assertEquals(new BigDecimal(1).setScale(1), value.bigDecimalValue());
         // TODO more...
 
         value = (IonDecimal) oneValue("a::1.0");
@@ -148,7 +148,7 @@ public class DecimalTest
         assertEquals(1, dg.size());
 
         IonDecimal value = (IonDecimal) dg.get(0);
-        BigDecimal dec = value.toBigDecimal();
+        BigDecimal dec = value.bigDecimalValue();
         checkDecimal(10, 1, dec);
         assertEquals(1,  dec.intValue());
 
@@ -156,7 +156,7 @@ public class DecimalTest
         assertEquals(1, dg.size());
 
         value = (IonDecimal) dg.get(0);
-        dec = value.toBigDecimal();
+        dec = value.bigDecimalValue();
         checkDecimal(-10, 1, dec);
         assertEquals(-1, dec.intValue());
     }
@@ -171,6 +171,6 @@ public class DecimalTest
         assertEquals(2,   one_00.scale());
 
         IonDecimal value = (IonDecimal) oneValue("1.00");
-        assertEquals(one_00, value.toBigDecimal());
+        assertEquals(one_00, value.bigDecimalValue());
     }
 }

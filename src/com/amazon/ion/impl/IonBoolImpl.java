@@ -38,7 +38,25 @@ public final class IonBoolImpl
         assert pos_getType() == IonConstants.tidBoolean;
     }
 
-
+    /**
+     * makes a copy of this IonBool including a copy
+     * of the Boolean value which is "naturally" immutable.
+     * This calls IonValueImpl to copy the annotations and the 
+     * field name if appropriate.  The symbol table is not
+     * copied as the value is fully materialized and the symbol
+     * table is unnecessary.
+     */
+    public IonBoolImpl clone() throws CloneNotSupportedException
+    {
+    	IonBoolImpl clone = new IonBoolImpl();
+    	
+    	makeReady();
+    	super.copyFrom(this);
+        clone.setValue(this._bool_value);
+    	
+    	return clone;
+    }
+    
     public IonType getType()
     {
         return IonType.BOOL;
@@ -48,6 +66,7 @@ public final class IonBoolImpl
     public boolean booleanValue()
         throws NullValueException
     {
+    	checkForLock();
         makeReady();
         if (_bool_value == null) throw new NullValueException();
         return _bool_value;
@@ -55,11 +74,13 @@ public final class IonBoolImpl
 
     public void setValue(boolean b)
     {
+    	// the called setValue will check if this is locked
         setValue(Boolean.valueOf(b));
     }
 
     public void setValue(Boolean b)
     {
+    	checkForLock();
         _bool_value = b;
         _hasNativeValue = true;
         setDirty();

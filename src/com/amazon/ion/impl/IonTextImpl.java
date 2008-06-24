@@ -24,6 +24,36 @@ abstract class IonTextImpl
          super(typeDesc);
      }
 
+    /**
+     * throws a CloneNotSupportedException as this is a
+     * parent type that should not be directly created.
+     * Instances should constructed of either IonStringImpl
+     * or IonSymbolImpl as needed.
+     */
+    public IonTextImpl clone() throws CloneNotSupportedException
+    {
+    	throw new CloneNotSupportedException();
+    }
+    
+    /**
+     * this copies the annotations and the field name if
+     * either of these exists from the passed in instance.
+     * It overwrites these values on the current instance.
+     * Since these will be the string representations it
+     * is unnecessary to update the symbol table ... yet.
+     * @param source instance to copy from
+     */
+    protected void copyFrom(IonTextImpl source)
+    {
+    	// first copy the annotations and such, which
+    	// will materialize the value as needed.
+    	super.copyFrom(source);
+
+    	// now we can copy the text as a string
+    	String s = source.getValue();
+    	_text_value = s;
+    }
+
 
     public String getValue()
         throws NullValueException
@@ -35,6 +65,7 @@ abstract class IonTextImpl
 
     public void setValue(String value)
     {
+    	checkForLock();
         _text_value = value;
         _hasNativeValue = true;
         setDirty();

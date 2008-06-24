@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion.system;
@@ -25,6 +25,8 @@ public final class SystemFactory
      * <p>
      * The catalog used by the new instance will be a {@link SimpleCatalog}
      * with no initial entries.
+     *
+     * @return a new {@link IonSystem} instance; not null.
      */
     public static IonSystem newSystem()
     {
@@ -32,8 +34,17 @@ public final class SystemFactory
     }
 
 
+    /**
+     * Constructs a new system instance with the given catalog.
+     *
+     * @return a new {@link IonSystem} instance; not null.
+     *
+     * @throws NullPointerException if {@code catalog} is null.
+     */
     public static IonSystem newSystem(IonCatalog catalog)
     {
+        if (catalog == null) throw new NullPointerException("catalog is null");
+
         return new IonSystemImpl(catalog);
     }
 }

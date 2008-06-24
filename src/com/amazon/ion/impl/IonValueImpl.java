@@ -8,7 +8,6 @@ import static com.amazon.ion.util.Equivalence.ionEquals;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.NullValueException;
@@ -120,7 +119,12 @@ public abstract class IonValueImpl
      * Note that a value with no buffer is always dirty.
      */
     private boolean      _isDirty;
-
+    
+    /**
+     * Tracks whether or not this instance is locked.  Locked values
+     * may not be mutated and must be thread safe for reading.
+     */
+    protected boolean    _isLocked;
 
     boolean              _isSystemValue;
 
@@ -156,7 +160,7 @@ public abstract class IonValueImpl
      * the symbol id is being requested for a fieldname, the int
      * value of an IonSymbol or an annotation.
      */
-    protected IonSystem _system;
+    IonSystemImpl _system;
 
 
     /**
@@ -171,6 +175,43 @@ public abstract class IonValueImpl
         _hasNativeValue     = false;
         _isDirty            = true;
         pos_setTypeDescriptorByte(typedesc);
+    }
+    
+    /**
+     * the base classes in IonValue(Impl) should not be called for
+     * cloning directly. The user should be calling clone on the
+     * actualy (leaf) instances class (such as IonIntImpl).  The
+     * shared clone work is handled in copyFrom(src) in any base
+     * classes that need to support this - including IonValueImpl,
+     * IonContainerImpl, IonTextImpl and IonLobImpl.
+     */
+    public IonValueImpl clone() throws CloneNotSupportedException
+    {
+    	throw new CloneNotSupportedException();
+    }
+
+    /**
+     * this copies the annotations and the field name if
+     * either of these exists from the passed in instance.
+     * It overwrites these values on the current instance.
+     * Since these will be the string representations it
+     * is unnecessary to update the symbol table ... yet.
+     * @param source instance to copy from
+     */
+    protected void copyFrom(IonValueImpl source)
+    {
+    	// first this instance has to be ready
+    	// (although it probably is)
+    	makeReady();
+    	
+    	// getting the type annotations will also force the
+    	// this instance to be "ready" (i.e. it will call
+    	// MakeReady()) which we'll want.
+    	String[] a = source.getTypeAnnotations();
+    	_annotations = a; // and we don't care if it's null or not
+
+    	String s = source.getFieldName();
+   		this.setFieldName(s);
     }
 
     protected void init(int fieldSID
@@ -377,7 +418,7 @@ public abstract class IonValueImpl
         return _fieldName;
     }
 
-    public int getFieldNameId()
+    public int getFieldId()
     {
         if (this._fieldSid == 0 && this._fieldName != null)
         {
@@ -390,6 +431,12 @@ public abstract class IonValueImpl
             _fieldSid = symtab.addSymbol(this._fieldName);
         }
         return this._fieldSid;
+    }
+
+    @Deprecated
+    public final int getFieldNameId()
+    {
+        return getFieldId();
     }
 
     public final IonContainer getContainer()
@@ -411,12 +458,30 @@ public abstract class IonValueImpl
     public final boolean isDirty() {
         return _isDirty;
     }
+    
+    public void makeReadOnly() {
+    	if (_isLocked) return;
+    	synchronized (this) {
+    		deepMaterialize();
+    		_isLocked = true;
+    	}
+    }
+    
+    public final boolean isReadOnly() {
+    	return _isLocked;
+    }
+    
+    protected void checkForLock() {
+    	if (!_isLocked) return;
+    	throw new IonException("locked values cannot be modified");
+    }
 
     /**
      * Marks this element, and it's container, dirty.  This forces the binary
      * buffer to be updated when it's next needed.
      */
     protected void setDirty() {
+    	checkForLock();
         if (this._isDirty == false) {
             this._isDirty = true;
             if (this._container != null) {
@@ -457,9 +522,24 @@ public abstract class IonValueImpl
     }
 
     public void setSymbolTable(LocalSymbolTable symtab) {
-        this._symboltable = symtab;
+    	checkForLock();
+    	if (this._symboltable != symtab) {
+    		clearSymbols();
+    		this._symboltable = symtab;
+    	}
     }
 
+    void clearSymbols()
+    {
+    	if (this._fieldSid > 0) {
+    		if (this._fieldName == null) {
+    			this._fieldName = this.getSymbolTable().findKnownSymbol(this._fieldSid);
+    		}
+    		this._fieldSid = 0;
+    		this._symboltable = null;
+    	}
+    }
+    
     public int getElementId() {
         return this._elementid;
     }
@@ -487,6 +567,7 @@ public abstract class IonValueImpl
 
     public void clearTypeAnnotations()
     {
+    	checkForLock();
         makeReady();
         this._annotations = null;
         this.setDirty();
@@ -505,6 +586,7 @@ public abstract class IonValueImpl
 
     public void removeTypeAnnotation(String annotation)
     {
+    	checkForLock();
         if (!this.hasTypeAnnotation(annotation)) return;
 
         String[] temp = (_annotations.length == 1) ? null : new String[_annotations.length - 1];
@@ -519,6 +601,7 @@ public abstract class IonValueImpl
     }
     public void addTypeAnnotation(String annotation)
     {
+    	checkForLock();
         if (hasTypeAnnotation(annotation)) return;
 
         // allocate a larger array and copy if necessary
@@ -1230,6 +1313,8 @@ public abstract class IonValueImpl
      */
     public void updateSymbolTable(LocalSymbolTable symtab)
     {
+    	checkForLock();
+    	
         // TODO can any of this be short-circuited?
 
         if (this._annotations != null) {
@@ -1424,7 +1509,7 @@ public abstract class IonValueImpl
     {
         if (_container instanceof IonStruct)
         {
-            int fieldSid = this.getFieldNameId();
+            int fieldSid = this.getFieldId();
             assert fieldSid > 0;
             assert writer.position() == this.pos_getOffsetAtFieldId();
 

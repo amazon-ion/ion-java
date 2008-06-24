@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 
-<project name="IonJava" basedir="." default="release"
+<project name="IonJava" basedir="." default="test"
   xmlns:ht2b="antlib:amazon.ht2.mini.trails.ant"
   xmlns:ht2="antlib:amazon.ht2.trails.ant">
 

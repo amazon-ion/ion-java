@@ -46,7 +46,7 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * The standard, public implementation of Ion.
+ * The standard implementation of Ion.
  */
 public class IonSystemImpl
     implements IonSystem

@@ -152,7 +152,7 @@ public class IntTest
         testRoundTrip(BigInteger.valueOf(-98102));
         testRoundTrip(BigInteger.valueOf(Long.MIN_VALUE+1));
         // FIXME: encoder can't handle Long.MIN_VALUE
-//        testRoundTrip(BigInteger.valueOf(Long.MIN_VALUE));
+        // testRoundTrip(BigInteger.valueOf(Long.MIN_VALUE));
     }
 
     public void testLongs()

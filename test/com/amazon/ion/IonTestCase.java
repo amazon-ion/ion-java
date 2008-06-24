@@ -434,7 +434,7 @@ public abstract class IonTestCase
         assertSame(IonType.SYMBOL, value.getType());
         IonSymbol sym = (IonSymbol) value;
         assertEquals("symbol name", name, sym.stringValue());
-        assertEquals("symbol id", id, sym.intValue());
+        assertEquals("symbol id", id, sym.getSymbolId());
     }
 
     public void checkSymbol(String name, int id, SymbolTable symtab)
@@ -517,15 +517,15 @@ public abstract class IonTestCase
                     public void visit(IonDecimal expected) throws Exception
                     {
                         assertEquals("decimal value",
-                                     expected.toBigDecimal(),
-                                     ((IonDecimal)found).toBigDecimal());
+                                     expected.bigDecimalValue(),
+                                     ((IonDecimal)found).bigDecimalValue());
                     }
 
                     public void visit(IonFloat expected) throws Exception
                     {
                         assertEquals("float value",
-                                     expected.toBigDecimal(),
-                                     ((IonFloat)found).toBigDecimal());
+                                     expected.bigDecimalValue(),
+                                     ((IonFloat)found).bigDecimalValue());
                     }
 
                     public void visit(IonInt expected) throws Exception

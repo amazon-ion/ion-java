@@ -1,13 +1,5 @@
 package com.amazon.ion.util;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDecimal;
@@ -20,29 +12,36 @@ import com.amazon.ion.IonText;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import java.io.IOException;
+import java.io.InputStream;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
 /**
  * Provides strict equivalence between two Ion Values.
- * 
+ *
  * <p>
  * Basic usage of this class is as follows.
- * 
+ *
  * <pre>
  *   IonValue v1 = ...;
  *   IonValue v2 = ...;
  *   com.amazon.ion.util.Equivalence.ionEquals( v1, v2 );
  * </pre>
- * 
+ *
  * More likely, a static import would make using this class easier.
- * 
+ *
  * <pre>
  *   import static com.amazon.authority.ion.Equivalence.ionEquals;
  *   ...
  *   boolean equivalent = ionEquals( v1, v2 );
  * </pre>
- * 
+ *
  * </p>
- * 
+ *
  * <p>
  * <h3>Ion Equivalence</h3>
  * In order to make Ion a useful model to describe data, we must first define
@@ -50,7 +49,7 @@ import com.amazon.ion.IonValue;
  * with respect to Ion values mean that if two Ion values, X and Y, are
  * equivalent, they represent the same data and can be substituted for the other
  * without loss of information.
- * 
+ *
  * This relationship is:
  * <ul>
  * <li> symmetric: X is equivalent to Y if and only if Y is equivalent to X.
@@ -59,42 +58,42 @@ import com.amazon.ion.IonValue;
  * equivalent to Z. </li>
  * <li> reflexive: X is equivalent to X. </li>
  * </ul>
- * 
+ *
  * <h4>Ordered Sequence Equivalence</h4>
  * When an ordered sequence (i.e. tuple) of elements is specified in this
  * document, equivalence over such an ordered sequence is defined as follows.
- * 
+ *
  * A tuple, A = (a1, a2, ..., an), is equivalent to another tuple, B = (b1, b2,
  * ..., bm) if and only if the cardinality (number of elements) of A equals the
  * cardinality of B (i.e. n == m) and ai is equivalent to bi for i = 1 ... n.
- * 
+ *
  * <h4>Un-Ordered Sequence Equivalence</h4>
  * When an un-ordered sequence (i.e. bag or multi-set) is specified in this
  * document, equivalence over such a sequence is defined as follows.
- * 
+ *
  * A bag, A = {a1, a2, ..., an} is equivalent to B = {b1, b2, ..., bm} if and
  * only if the cardinality of A is equal to the cardinality of B and for each
  * element, x, in A there exists a distinct element, y, in B for which x is
  * equivalent to y.
- * 
+ *
  * <h4>Values</h4>
  * Any arbitrary, atomic value in the Ion Language can be denoted as the tuple,
  * (A, V), where A is an ordered list of annotations, and V is an Ion Primitive
  * Data or Ion Complex Data value. The list of annotations, A is an tuple of Ion
  * Symbols (a specific type of Ion Primitive).
  * </p>
- * 
+ *
  * @author Almann Goo
  */
 public final class Equivalence {
-	
-	private static final boolean _debug_stop_on_false = true; 
+
+	private static final boolean _debug_stop_on_false = true;
 
     private Equivalence() {
     }
 
     /** Compare LOB content by stream--assuming non-null. */
-    private static int lobContentCompare(final IonLob lob1, final IonLob lob2) 
+    private static int lobContentCompare(final IonLob lob1, final IonLob lob2)
     {
         int in1 = lob1.byteSize();
         int in2 = lob2.byteSize();
@@ -172,7 +171,7 @@ public final class Equivalence {
             // as a true bag item
             count = count == -1 ? 1 : count + 1;
         }
-        
+
         public int decrementCount() {
             count -= 1;
             return count;
@@ -187,7 +186,7 @@ public final class Equivalence {
         public boolean equals(final Object other) {
             // we can assume this is always a struct--internal usage dictates it
             final StructItem sOther = (StructItem) other;
-            
+
             // we can also assume strict is the same--internal usage dictates it
             boolean answer = key.equals(sOther.key)
                 && ionEqualsImpl(value, sOther.value, strict)
@@ -203,7 +202,7 @@ public final class Equivalence {
 		public int compareTo(StructItem other) {
             // we can also assume strict is the same--internal usage dictates it
             int answer = 0;
-            
+
             answer = key.compareTo(other.key);
             if (answer == 0) {
             	answer = ionCompareToImpl(value, other.value, strict);
@@ -228,7 +227,7 @@ public final class Equivalence {
     /**
      * We generate a map because we need to access the contents of the set
      * NB -- java.util.Set is missing a get() sort of API which is why this
-     * doesn't work with Set. 
+     * doesn't work with Set.
      */
     private static final Map<StructItem, StructItem> createStructItems(final IonStruct source, final boolean strict) {
         final Map<StructItem, StructItem> values = new HashMap<StructItem, StructItem>();
@@ -247,12 +246,12 @@ public final class Equivalence {
         }
         return values;
     }
-    
+
     private static int ionCompareAnnotations(String[] an1, String[] an2)
     {
     	int result = 0;
     	String s1, s2;
-    	
+
     	if (an1 == null || an2 == null) {
     		if (an1 != null) result =  1;
     		if (an2 != null) result = -1;
@@ -274,20 +273,20 @@ public final class Equivalence {
     	}
     	return result;
     }
-    
+
     private static final boolean ionEqualsImpl(final IonValue v1,
                                                final IonValue v2,
-                                               final boolean strict) 
+                                               final boolean strict)
     {
     	return (ionCompareToImpl(v1, v2, strict) == 0);
     }
-    
+
     static int ionCompareToImpl(final IonValue v1,
                                 final IonValue v2,
                                 final boolean strict)
     {
     	int result = 0;
-    	
+
         boolean      bo1, bo2;
         BigInteger   bi1, bi2;
         double       do1, do2;
@@ -298,8 +297,8 @@ public final class Equivalence {
         IonValue     stop_value;
         IonValue     next1, next2;
         String[]     an1, an2;
-        
-        
+
+
         if (_debug_stop_on_false) {
         	stop_value = null;
         }
@@ -325,7 +324,7 @@ public final class Equivalence {
             	if (!v1.isNullValue()) result = 1;
             	if (!v2.isNullValue()) result = -1;
             	// othersize they're equal (and null values)
-            	
+
             }
             else {
                 // value compare only if both are not null
@@ -346,7 +345,7 @@ public final class Equivalence {
                     break;
                 case INT:
                 	bi1 = ((IonInt) v1).toBigInteger();
-                	bi2 = ((IonInt) v2).toBigInteger(); 
+                	bi2 = ((IonInt) v2).toBigInteger();
                     result = bi1.compareTo(bi2);
                     break;
                 case FLOAT:
@@ -355,8 +354,8 @@ public final class Equivalence {
                     result = Double.compare(do1, do2);
                     break;
                 case DECIMAL:
-                	de1 = ((IonDecimal) v1).toBigDecimal();
-                	de2 = ((IonDecimal) v2).toBigDecimal();
+                	de1 = ((IonDecimal) v1).bigDecimalValue();
+                	de2 = ((IonDecimal) v2).bigDecimalValue();
                     result = de1.compareTo(de2);
                     break;
                 case TIMESTAMP:
@@ -395,7 +394,7 @@ public final class Equivalence {
                 case STRUCT:
                     final IonStruct s1 = (IonStruct) v1;
                     final IonStruct s2 = (IonStruct) v2;
-                    result = s1.size() - s2.size(); 
+                    result = s1.size() - s2.size();
                     if (result == 0) {
                         // unfortunately struct's interface doesn't give us much
                         // options here
@@ -430,7 +429,7 @@ public final class Equivalence {
                 case DATAGRAM:
                     final IonContainer c1 = (IonContainer) v1;
                     final IonContainer c2 = (IonContainer) v2;
-                    result = c1.size() - c2.size(); 
+                    result = c1.size() - c2.size();
                     if (result == 0) {
                         Iterator<IonValue> iter1 = c1.iterator();
                         Iterator<IonValue> iter2 = c2.iterator();
@@ -449,7 +448,7 @@ public final class Equivalence {
                 }
             }
         }
-        
+
         // if the values are otherwise equal, but the caller wants strict
         // comparison, then we check the annotations
         if (strict && (result == 0)) {
@@ -473,12 +472,12 @@ public final class Equivalence {
 
     /**
      * Defines strict data equivalence over two Ion Values.
-     * 
+     *
      * @param v1
      *            The first Ion value to compare.
      * @param v2
      *            The second Ion value to compare.
-     * 
+     *
      * @return true if two Ion Values represent the same data.
      */
     public static final boolean ionEquals(final IonValue v1, final IonValue v2) {
@@ -488,12 +487,12 @@ public final class Equivalence {
     /**
      * Defines structural data equivalence over two Ion Values. That is,
      * equivalence without considering any annotations.
-     * 
+     *
      * @param v1
      *            The first Ion value to compare.
      * @param v2
      *            The second Ion value to compare.
-     * 
+     *
      * @return true if two Ion Values represent the same data without regard to
      *         annotations.
      */

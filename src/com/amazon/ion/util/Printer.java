@@ -615,7 +615,7 @@ public class Printer
             }
             else
             {
-                BigDecimal decimal = value.toBigDecimal();
+                BigDecimal decimal = value.bigDecimalValue();
                 BigInteger unscaled = decimal.unscaledValue();
 
                 myOut.append(unscaled.toString());
@@ -655,7 +655,7 @@ public class Printer
                 }
                 else
                 {
-                    BigDecimal decimal = value.toBigDecimal();
+                    BigDecimal decimal = value.bigDecimalValue();
                     BigInteger unscaled = decimal.unscaledValue();
 
                     myOut.append(unscaled.toString());
@@ -960,7 +960,7 @@ public class Printer
             if (value.isNullValue()) {
                 myOut.append("null");
             } else {
-                writeFloat(value.toBigDecimal());
+                writeFloat(value.bigDecimalValue());
             }
         }
 
@@ -970,7 +970,7 @@ public class Printer
             if (value.isNullValue()) {
                 myOut.append("null");
             } else {
-                writeFloat(value.toBigDecimal());
+                writeFloat(value.bigDecimalValue());
             }
         }
 

@@ -5,10 +5,13 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.ContainedValueException;
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.ValueVisitor;
+
+import java.io.IOException;
 import java.util.Collection;
 
 /**
@@ -69,6 +72,24 @@ public final class IonListImpl
     {
         super(typeDesc);
         assert pos_getType() == IonConstants.tidList;
+    }
+
+    /**
+     * creates a copy of this IonListImpl.  Most of the work
+     * is actually done by IonContainerImpl.copyFrom() and
+     * IonValueImpl.copyFrom().
+     */
+    public IonListImpl clone() throws CloneNotSupportedException
+    {
+    	IonListImpl clone = new IonListImpl();
+    	
+    	try {
+			clone.copyFrom(this);
+		} catch (IOException e) {
+			throw new IonException(e);
+		}
+    	
+    	return clone;
     }
 
 

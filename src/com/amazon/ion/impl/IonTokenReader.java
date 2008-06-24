@@ -135,7 +135,14 @@ public class IonTokenReader
                 this.d = null;
                 this.localOffset = null;
             }
-
+            
+            public timeinfo clone() throws CloneNotSupportedException
+            {
+            	timeinfo clone = new timeinfo();
+            	clone.localOffset = this.localOffset;
+            	clone.d = (Date)this.d.clone();
+            	return clone;
+            }
 
             static final private String DATE_REGEX =
                 "\\d\\d\\d\\d-[01]\\d-[0-3]\\d";
