@@ -32,12 +32,12 @@ import java.util.Date;
 public final class IonTreeWriter
     extends IonBaseWriter
 {
-    IonSystem       	_sys;
+    IonSystem           _sys;
     
-    boolean         	_in_struct;
-    IonContainer    	_current_parent;
-    int             	_parent_stack_top = 0;
-    IonContainer[]  	_parent_stack = new IonContainer[10];
+    boolean             _in_struct;
+    IonContainer        _current_parent;
+    int                 _parent_stack_top = 0;
+    IonContainer[]      _parent_stack = new IonContainer[10];
     
     public IonTreeWriter(IonSystem sys) {
         _sys = sys;
@@ -365,7 +365,7 @@ public final class IonTreeWriter
         }
         v = _current_parent;
         if (!(v instanceof IonDatagram)) {
-        	v = this._sys.newDatagram(v);
+            v = this._sys.newDatagram(v);
         }
         return v;
     }

@@ -33,7 +33,7 @@ import java.util.NoSuchElementException;
 public final class IonBinaryIterator
     extends IonIterator
 {
-	static final boolean _debug_return_system_values = false;
+    static final boolean _debug_return_system_values = false;
 
 
     // TODO------------------------------------------------------------------------------------------
@@ -88,7 +88,7 @@ public final class IonBinaryIterator
 
     SimpleByteBuffer    _buffer;
     ByteReader          _reader;
-    UnifiedCatalog		_catalog;
+    UnifiedCatalog      _catalog;
     UnifiedSymbolTable  _current_symtab;
     int                 _parent_tid;  // using -1 for eof (or bof aka undefined) and 16 for datagram
 
@@ -124,25 +124,25 @@ public final class IonBinaryIterator
     // Marker (aka magic cookie)
     public IonBinaryIterator(byte[] buf)
     {
-    	this ( buf, 0, buf.length );
+        this ( buf, 0, buf.length );
     }
 
     public IonBinaryIterator(byte[] buf, int start, int len)
     {
         this(  new SimpleByteBuffer(buf, start, len)
              , null
-        	 , new UnifiedCatalog()
+             , new UnifiedCatalog()
         );
     }
     public IonBinaryIterator(byte[] buf, UnifiedCatalog catalog)
     {
-    	this ( buf, 0, buf.length, catalog );
+        this ( buf, 0, buf.length, catalog );
     }
     public IonBinaryIterator(byte[] buf, int start, int len, UnifiedCatalog catalog)
     {
         this(  new SimpleByteBuffer(buf, start, len)
              , null
-        	 , catalog
+             , catalog
         );
     }
     //
@@ -152,7 +152,7 @@ public final class IonBinaryIterator
     //IonBinaryIterator(IonType parent, UnifiedCatalog catalog, byte[] buf, int start, int len)
     //{
     //    this( new SimpleByteBuffer(buf, start, len)
-    //    	, parent
+    //      , parent
     //        , catalog
     //    );
     //}
@@ -168,11 +168,11 @@ public final class IonBinaryIterator
     }
 
     final boolean expect_symbol_table() {
-    	// FIXME - this should be looking at tidSexp, it should be looking at
-    	//         is embedded value or is datagram instead !!
+        // FIXME - this should be looking at tidSexp, it should be looking at
+        //         is embedded value or is datagram instead !!
         boolean expected =  (  _parent_tid == IonConstants.tidSexp
-        					|| _parent_tid == IonConstants.tidDATAGRAM
-        					);
+                            || _parent_tid == IonConstants.tidDATAGRAM
+                            );
         return expected;
     }
     final boolean is_in_struct() {
@@ -352,7 +352,7 @@ public final class IonBinaryIterator
         case IonConstants.tidNull:      // 0
             t = IonType.NULL;
             if ((_value_tid & 0xf) != IonConstants.lnIsNull) {
-            	throw new IonException("invalid type descriptor byte encountered at "+_reader.position());
+                throw new IonException("invalid type descriptor byte encountered at "+_reader.position());
             }
             break;
         case IonConstants.tidBoolean:   // 1
@@ -405,11 +405,11 @@ public final class IonBinaryIterator
         case IonConstants.tidBoolean:   // 1
             return 0;
         case IonConstants.tidStruct:    // 13 D
-        	if ((tid & 0xf) == 1) {
-        		// if this is an ordered struct (with the magic length
-        		// of 1) then fake it as a var length (which is actually is)
-        		tid = (tid & 0xf0) | 14;
-        	}
+            if ((tid & 0xf) == 1) {
+                // if this is an ordered struct (with the magic length
+                // of 1) then fake it as a var length (which is actually is)
+                tid = (tid & 0xf0) | 14;
+            }
         case IonConstants.tidPosInt:    // 2
         case IonConstants.tidNegInt:    // 3
         case IonConstants.tidFloat:     // 4
@@ -447,13 +447,13 @@ public final class IonBinaryIterator
                 // the first byte of the cookie before calling this method, so we
                 // only have to check the remaining bytes
                 if      ((cookie[0] & 0xff) != (IonConstants.BINARY_VERSION_MARKER_1_0[1] & 0xff)) {
-                	is_magic = false;
+                    is_magic = false;
                 }
                 else if ((cookie[1] & 0xff) != (IonConstants.BINARY_VERSION_MARKER_1_0[2] & 0xff)) {
-                	is_magic = false;
+                    is_magic = false;
                 }
                 else if ((cookie[2] & 0xff) != (IonConstants.BINARY_VERSION_MARKER_1_0[3] & 0xff)) {
-                	is_magic = false;
+                    is_magic = false;
                 }
                 if (is_magic) {
                     // there's magic here!  start over with
@@ -493,11 +493,11 @@ public final class IonBinaryIterator
                     is_symbol_table = loadSymbolTable(a, original_position, aend);
                     break;
                 case SystemSymbolTable.ION_EMBEDDED_VALUE_SID:
-                	// TODO - we should do embedded value processing here
-                	// like: is_embedded_value = true;
-                	break;
+                    // TODO - we should do embedded value processing here
+                    // like: is_embedded_value = true;
+                    break;
                 default:
-                	break;
+                    break;
                 }
             }
         }
@@ -506,22 +506,24 @@ public final class IonBinaryIterator
         }
 
 // FIXME: return everything ...
- 		if (!_debug_return_system_values) {
-	        if (is_symbol_table) {
-	            // make our caller read the upcoming byte
-	            typedesc = -1;
-	        }
-	        else {
-	            // we changed our minds, everything is as is should be
-	            _reader.position(original_position);
-	       }
-		}
+        if (!_debug_return_system_values) {
+            if (is_symbol_table) {
+                // make our caller read the upcoming byte
+                typedesc = -1;
+            }
+            else {
+                // we changed our minds, everything is as is should be
+                _reader.position(original_position);
+           }
+        }
         return typedesc;
     }
 
     boolean loadSymbolTable(int annotationid, int original_start, int contents_start) throws IOException
     {
         boolean is_symbol_table = false;
+
+        // FIXME logic is incorrect, its local only when there's no name field
         boolean is_local_table = (annotationid == SystemSymbolTable.ION_SYMBOL_TABLE_SID); // cas 25 apr 2008: was ION_1-0
 
         _reader.position(contents_start);
@@ -557,27 +559,27 @@ public final class IonBinaryIterator
                     local.setMaxId(intValue());
                     break;
                 case SystemSymbolTable.NAME_SID:
-                	if (!is_local_table) {
-                		local.setName(stringValue());
-                	}
-                	// TODO should we throw here if it's local table is true?
+                    if (!is_local_table) {
+                        local.setName(stringValue());
+                    }
+                    // TODO should we throw here if it's local table is true?
                     break;
                 case SystemSymbolTable.IMPORTS_SID:
                     // BUGBUG: we should be looking these up somewhere !!
-                	// TODO: in the catalog (which we now have)
+                    // TODO: in the catalog (which we now have)
                     break;
                 case SystemSymbolTable.SYMBOLS_SID:
-                	boolean manual_sid;
-                	switch (this.getType()) {
-                	case STRUCT:
-                		manual_sid = true;
-                		break;
-                	case LIST:
-                		manual_sid = false;
-                		break;
-                	default:
-                		throw new IonException("the symbols member of a symbol table must be a list or a struct value, not a "+getType());
-                	}
+                    boolean manual_sid;
+                    switch (this.getType()) {
+                    case STRUCT:
+                        manual_sid = true;
+                        break;
+                    case LIST:
+                        manual_sid = false;
+                        break;
+                    default:
+                        throw new IonException("the symbols member of a symbol table must be a list or a struct value, not a "+getType());
+                    }
                     stepInto();
                     while (hasNext()) {
                         if (next() != IonType.STRING) {
@@ -585,10 +587,10 @@ public final class IonBinaryIterator
                         }
                         int sid;
                         if (manual_sid) {
-                        	sid = getFieldId();
+                            sid = getFieldId();
                         }
                         else {
-                        	sid = local.getMaxId() + 1;
+                            sid = local.getMaxId() + 1;
                         }
                         String symbol = stringValue();
                         local.defineSymbol(symbol, sid);
@@ -596,10 +598,10 @@ public final class IonBinaryIterator
                     stepOut();
                     break;
                 case SystemSymbolTable.VERSION_SID:
-                	if (!is_local_table) {
-                		local.setVersion(intValue());
-                	}
-                	// TODO should we throw here if it's local table is true?
+                    if (!is_local_table) {
+                        local.setVersion(intValue());
+                    }
+                    // TODO should we throw here if it's local table is true?
                     break;
                 default:
                     break;
@@ -611,10 +613,10 @@ public final class IonBinaryIterator
             is_symbol_table = true;
 
             if (is_local_table) {
-            	this._current_symtab = local;
+                this._current_symtab = local;
             }
             else {
-            	this._catalog.putTable(local);
+                this._catalog.putTable(local);
             }
             this._parent_tid = prev_parent_tid;
             this._local_end  = prev_end;

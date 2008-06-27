@@ -73,66 +73,66 @@ public abstract class IonIterator
     }
     
     /**
-	     * Creates an IonIterator instance over Ion in text format in a Java
-	     * String.  The text may be parsed incrementally.
-	     *
-	     * @param ionText must not be null.
-	     * @throws IonException if there's a problem reading the cookie, or if the
-	     * data does not start with {@link IonConstants#BINARY_VERSION_MARKER_1_0}.
-	     */
+     * Creates an IonIterator instance over Ion in text format in a Java
+     * String.  The text may be parsed incrementally.
+     *
+     * @param ionText must not be null.
+     * @throws IonException if there's a problem reading the cookie, or if the
+     * data does not start with {@link IonConstants#BINARY_VERSION_MARKER_1_0}.
+     */
     public static IonReader makeIterator(String ionText) {
         IonReader iter;
-	        iter = new IonTextIterator(ionText);
-	        return iter;
-	    }
-	   
-	    /**
-	     * Creates an IonIterator instance over a byte array.
-	     *
-	     * @param buf must not be null.
-	     * @throws IonException if there's a problem reading the cookie, or if the
-	     * data does not start with {@link IonConstants#BINARY_VERSION_MARKER_1_0}.
-	     */
+        iter = new IonTextIterator(ionText);
+        return iter;
+    }
+       
+    /**
+     * Creates an IonIterator instance over a byte array.
+     *
+     * @param buf must not be null.
+     * @throws IonException if there's a problem reading the cookie, or if the
+     * data does not start with {@link IonConstants#BINARY_VERSION_MARKER_1_0}.
+     */
     public static IonReader makeIterator(byte[] buf, UnifiedCatalog catalog) {
         IonReader iter = makeIterator(buf, 0, buf.length, catalog);
-	        return iter;
-	    }
-	    
-	    /**
-	     * Creates an IonIterator instance over a portion of a byte array.
-	     *
-	     * @param buf must not be null.
-	     * @param start must be non-negative and less than the length of buf.
-	     * @param len must be non-negative and not extend (from start) past the end of buf.
-	     * @throws IonException if there's a problem reading the cookie, or if the
-	     * data does not start with {@link IonConstants#BINARY_VERSION_MARKER_1_0}.
-	     */
+        return iter;
+    }
+    
+    /**
+     * Creates an IonIterator instance over a portion of a byte array.
+     *
+     * @param buf must not be null.
+     * @param start must be non-negative and less than the length of buf.
+     * @param len must be non-negative and not extend (from start) past the end of buf.
+     * @throws IonException if there's a problem reading the cookie, or if the
+     * data does not start with {@link IonConstants#BINARY_VERSION_MARKER_1_0}.
+     */
     public static IonReader makeIterator(byte[] buf, int start, int len, UnifiedCatalog catalog) {
         IonReader iter;
-	        if (has_ion_magic_cookie(buf, start, len)) {
-	            iter = new IonBinaryIterator(buf, start, len, catalog);
-	        }
-	        else {
-	            iter = new IonTextIterator(buf, start, len, catalog);
-	        }
-	        return iter;
-	    }
-	    
-	    /**
-	     * Creates an IonIterator instance over Ion in text format in a Java
-	     * String.  The text may be parsed incrementally.
-	     *
-	     * @param ionText must not be null.
-	     * @throws IonException if there's a problem reading the cookie, or if the
-	     * data does not start with {@link IonConstants#BINARY_VERSION_MARKER_1_0}.
-	     */
+        if (has_ion_magic_cookie(buf, start, len)) {
+            iter = new IonBinaryIterator(buf, start, len, catalog);
+        }
+        else {
+            iter = new IonTextIterator(buf, start, len, catalog);
+        }
+        return iter;
+    }
+        
+    /**
+     * Creates an IonIterator instance over Ion in text format in a Java
+     * String.  The text may be parsed incrementally.
+     *
+     * @param ionText must not be null.
+     * @throws IonException if there's a problem reading the cookie, or if the
+     * data does not start with {@link IonConstants#BINARY_VERSION_MARKER_1_0}.
+     */
     public static IonReader makeIterator(String ionText, UnifiedCatalog catalog) {
         IonReader iter;
-	        iter = new IonTextIterator(ionText, catalog);
-	        return iter;
-	    }
+        iter = new IonTextIterator(ionText, catalog);
+        return iter;
+    }
 
-	/**
+    /**
      * Creates an IonIterator instance over an existing IonValue. Typically
      * this is used to open an iterator over a collection, such as an
      * IonStruct.
