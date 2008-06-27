@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion;
@@ -43,7 +43,7 @@ public interface IonLob
     /**
      * Gets the size in bytes of this lob.
      *
-     * @return the lob's size in bytes
+     * @return the lob's size in bytes.
      */
     public int byteSize();
 }
