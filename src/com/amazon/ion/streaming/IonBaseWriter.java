@@ -25,11 +25,11 @@ static final boolean _debug_on = false;
     UnifiedSymbolTable  _external_symbol_table;
     LocalSymbolTable    _symbol_table;
     boolean             _no_local_symbols = true;
-    
+
     IonType     _field_name_type;     // really ion type is only used for int, string or null (unknown)
     String      _field_name;
     int         _field_name_sid;
-    
+
     IonType     _annotations_type;     // really ion type is only used for int, string or null (unknown)
     int         _annotation_count;
     String[]    _annotations;
@@ -50,19 +50,16 @@ static final boolean _debug_on = false;
     {
         _symbol_table = symbols;
     }
-    
-    public void setExternalSymbolTable(UnifiedSymbolTable externalSymbolTable) {
-        if (_external_symbol_table != null) {
-            throw new IllegalStateException("only 1 external symbol table is valid");
-        }
-        _external_symbol_table = externalSymbolTable;
+
+    public void importSharedSymbolTable(UnifiedSymbolTable sharedSymbolTable) {
         if (_symbol_table == null) {
-            UnifiedSymbolTable symbol_table = new UnifiedSymbolTable(externalSymbolTable.getSystemSymbolTable());
-            symbol_table.addImportedTable(_external_symbol_table, 0);
+            UnifiedSymbolTable symbol_table =
+                new UnifiedSymbolTable(sharedSymbolTable.getSystemSymbolTable());
             _symbol_table = symbol_table;
         }
+        ((UnifiedSymbolTable)_symbol_table).addImportedTable(sharedSymbolTable, 0);
     }
-    
+
     String getSymbolTableName() {
         if (_symbol_table instanceof UnifiedSymbolTable) {
             return ((UnifiedSymbolTable)_symbol_table).getName();
@@ -133,13 +130,13 @@ static final boolean _debug_on = false;
         }
         return 0;
     }
-    
+
     public void clearAnnotations()
     {
         _annotation_count = 0;
         _annotations_type = IonType.NULL;
     }
-    
+
     String[] get_annotations_as_strings() {
         if (_annotations_type == IonType.INT) {
             SymbolTable symtab = getSymbolTable();
@@ -155,7 +152,7 @@ static final boolean _debug_on = false;
         }
         return _annotations;
     }
-    
+
     int[] get_annotations_as_ints() {
         if (_annotations_type == IonType.STRING) {
             for (int ii=0; ii<_annotation_count; ii++) {
@@ -174,10 +171,10 @@ static final boolean _debug_on = false;
         if (length > newlen) {
             newlen = length;
         }
-        
+
         String[] temp1 = new String[newlen];
         int[]    temp2 = new int[newlen];
-        
+
         if (_annotation_count > 0) {
             if (_annotations_type == IonType.STRING) {
                 System.arraycopy(_annotations, 0, temp1, 0, _annotation_count);
@@ -189,7 +186,7 @@ static final boolean _debug_on = false;
         _annotations = temp1;
         _annotation_sids = temp2;
     }
-    
+
     public void writeAnnotations(String[] annotations)
     {
         _annotations_type = IonType.STRING;
@@ -209,7 +206,7 @@ static final boolean _debug_on = false;
         System.arraycopy(annotationIds, 0, _annotation_sids, 0, annotationIds.length);
         _annotation_count = annotationIds.length;
     }
-    
+
     public void addAnnotation(String annotation)
     {
         growAnnotations(_annotation_count + 1);
@@ -259,14 +256,14 @@ static final boolean _debug_on = false;
         }
         return _field_name;
     }
-    
+
     int get_field_name_as_int() {
         if (_field_name_type == IonType.STRING) {
             _field_name_sid = add_local_symbol(_field_name);
         }
         return _field_name_sid;
     }
-    int add_local_symbol(String name) 
+    int add_local_symbol(String name)
     {
         SymbolTable symtab = getSymbolTable();
         if (symtab == null) {
@@ -274,8 +271,8 @@ static final boolean _debug_on = false;
             setSymbolTable(temp);
             symtab = getSymbolTable();
         }
-        
-        int sid = symtab.findSymbol(name); 
+
+        int sid = symtab.findSymbol(name);
         if (sid < 1) {
             UnifiedSymbolTable utab = null;
             if (symtab instanceof UnifiedSymbolTable) {
@@ -313,7 +310,7 @@ static final boolean _debug_on = false;
         _field_name_type = IonType.INT;
         _field_name_sid = id;
     }
-   
+
     public void writeStringList(String[] values)
         throws IOException
     {
@@ -323,7 +320,7 @@ static final boolean _debug_on = false;
         }
         closeList();
     }
- 
+
     public void writeBoolList(boolean[] values)
         throws IOException
     {
@@ -399,7 +396,7 @@ static final boolean _debug_on = false;
         IonReader value_iterator = new IonTreeIterator(value);
         writeIonEvents(value_iterator);
     }
-    
+
     public void writeIonEvents(IonReader iterator) throws IOException
     {
         while (iterator.hasNext()) {
@@ -408,7 +405,7 @@ static final boolean _debug_on = false;
         }
         return;
     }
-    
+
     public void writeIonValue(IonType t, IonReader iterator) throws IOException
     {
         if (/* iterator.isInStruct() && */ this.isInStruct()) {
@@ -416,17 +413,17 @@ static final boolean _debug_on = false;
             writeFieldname(fieldname);
             if (_debug_on) System.out.print(":");
         }
-        String [] a = iterator.getAnnotations(); 
+        String [] a = iterator.getAnnotations();
         if (a != null) {
             writeAnnotations(a);
             if (_debug_on) System.out.print(";");
         }
-        
+
         if (iterator.isNullValue()) {
-        	this.writeNull(iterator.getType());
+            this.writeNull(iterator.getType());
         }
         else {
-        	switch (t) {
+            switch (t) {
             case NULL:
                 writeNull();
                 if (_debug_on) System.out.print("-");
@@ -450,10 +447,10 @@ static final boolean _debug_on = false;
             case TIMESTAMP:
                 timeinfo ti = iterator.getTimestamp();
                 if (ti == null) {
-                	throw new IllegalStateException("this should exist");
+                    throw new IllegalStateException("this should exist");
                 }
                 if (ti.d == null) {
-                	throw new IllegalStateException("this should exist");
+                    throw new IllegalStateException("this should exist");
                 }
                 writeTimestamp(ti.d, ti.localOffset);
                 if (_debug_on) System.out.print("t");
@@ -501,7 +498,7 @@ static final boolean _debug_on = false;
                 closeSexp();
                 if (_debug_on) System.out.print(")");
                 break;
-        	}
+            }
         }
     }
 }
