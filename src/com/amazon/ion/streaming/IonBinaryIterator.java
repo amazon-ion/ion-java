@@ -565,8 +565,8 @@ public final class IonBinaryIterator
                     // TODO should we throw here if it's local table is true?
                     break;
                 case SystemSymbolTable.IMPORTS_SID:
-                    // BUGBUG: we should be looking these up somewhere !!
-                    // TODO: in the catalog (which we now have)
+                	// get the import table name, version, maxid and add it to the imports
+                	loadSymbolTableImportList(local);
                     break;
                 case SystemSymbolTable.SYMBOLS_SID:
                     boolean manual_sid;
@@ -627,6 +627,73 @@ public final class IonBinaryIterator
             }
         }
         return is_symbol_table;
+    }
+
+    void loadSymbolTableImportList(UnifiedSymbolTable local) {
+    	assert (this.getFieldId() == SystemSymbolTable.IMPORTS_SID);
+    	assert (this.getType().equals(IonType.LIST));
+    	
+    	this.stepInto();
+    	while (this.hasNext()) {
+    		IonType t = this.next();
+    		if (IonType.STRUCT.equals(t)) {
+    			loadSymbolTableImport(local);    			
+    		}
+    	}
+    	this.stepOut();
+    }
+    
+    void loadSymbolTableImport(UnifiedSymbolTable local) 
+    {
+    	assert (this.getFieldId() == SystemSymbolTable.IMPORTS_SID);
+    	assert (this.getType().equals(IonType.STRUCT));
+    	
+    	String name = null;
+    	int    version = -1;
+    	int    maxid = -1;
+
+    	this.stepInto();
+    	while (this.hasNext()) {
+    		IonType t = this.next();
+    		switch(this.getFieldId()) {
+    		case UnifiedSymbolTable.NAME_SID:
+    			if (IonType.STRING.equals(t) || IonType.SYMBOL.equals(t)) {
+    				name = this.stringValue();
+    			}
+    			else throw new IonException("Symbol Table Import Name is not a string, it's a "+t.toString());
+    			break;
+    		case UnifiedSymbolTable.VERSION_SID:
+    			if (IonType.INT.equals(t)) {
+    				version = this.intValue();
+    			}
+    			else throw new IonException("Symbol Table Import Version is not an int, it's a "+t.toString());
+    			break;
+    		case UnifiedSymbolTable.MAX_ID_SID:
+    			if (IonType.INT.equals(t)) {
+    				maxid = this.intValue();
+    			}
+    			else throw new IonException("Symbol Table Import Max ID is not an int, it's a "+t.toString());
+    			break;
+    		default:
+    			// we just ignore anything else as "open content"
+    			break;
+    		}
+    	}
+    	UnifiedSymbolTable itab = null;
+    	if (version != -1) {
+    		itab = this._catalog.getTable(name, version);
+    	}
+    	else {
+    		itab = this._catalog.getTable(name);
+    	}
+    	if (itab == null) {
+    		throw new IonException("Import Symbol Table not found: "
+    				  + name
+    				  + ( (version == -1) ? "" : " version: "+version)
+    		);
+    	}
+    	local.addImportedTable(itab, (maxid == -1) ? itab.getMaxId() : maxid);
+    	this.stepOut();
     }
 
     @Override
@@ -770,7 +837,14 @@ public final class IonBinaryIterator
 
     public void resetSymbolTable()
     {
-        _current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
+    	if ( _current_symtab == null
+    	 || !_current_symtab._is_locked
+    	 ||  _current_symtab.getMaxId() != UnifiedSymbolTable.getSystemSymbolTableInstance().getMaxId()
+    	) {
+    		// we only need to "reset" the symbol table if it isn't 
+    		// the system symbol table already
+    		_current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
+    	}
     }
 
 

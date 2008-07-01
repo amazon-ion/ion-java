@@ -393,7 +393,7 @@ public final class IonTreeIterator
     {
         if (_curr == null) return -1;
         if (_curr instanceof IonSymbol) {
-            return ((IonSymbol)_curr).intValue();
+            return ((IonSymbol)_curr).getSymbolId();
         }
         throw new IllegalStateException("current value is not a symbol");
     }
