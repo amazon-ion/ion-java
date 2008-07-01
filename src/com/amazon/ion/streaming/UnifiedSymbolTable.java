@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion.streaming;
@@ -15,31 +15,30 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.impl.IonBinary;
 import com.amazon.ion.impl.IonConstants;
-
 import java.util.HashMap;
 
 /**
- * 
+ *
  * UnifiedSymbolTable supports all the current symbol table
  * interfaces.  It is a static symbol table when the table
  * has been locked.  Is is a local symbol table when the it
  * is unlocked and has no more than 1 imported table. It is
  * a system symbol table when the name is the ion magic name
  * system symbol table name.
- * 
+ *
  * symbol "inheritance" is":
  *  first load system symbol table
  *   then imported tables in order offset by prev _max_id
  *        and we remember their "max id" so they get a range
  *        and skip any names already present
  *   then local names from the new max id
- * 
+ *
  */
 public final class UnifiedSymbolTable
     implements SymbolTable, LocalSymbolTable, StaticSymbolTable,
     SystemSymbolTable
 {
-    
+
     public final int UNKNOWN_SID = 0;
     /**
      * The system symbol <tt>'$ion'</tt>, as defined by Ion 1.0.
@@ -110,9 +109,25 @@ public final class UnifiedSymbolTable
         UnifiedSymbolTable.MAX_ID,
         UnifiedSymbolTable.ION_EMBEDDED_VALUE
     };
-    
-    private static UnifiedSymbolTable _system_1_0_symbols = null;
-    
+
+    private final static UnifiedSymbolTable _system_1_0_symbols;
+    static {
+        UnifiedSymbolTable systab = new UnifiedSymbolTable();
+
+        systab.setSystemSymbolTable(systab);
+        systab.setName(SystemSymbolTable.ION_1_0);
+        systab.setVersion(1);
+
+        for (int ii=0; ii<SYSTEM_SYMBOLS.length; ii++) {
+            systab.defineSymbol(new Symbol(SYSTEM_SYMBOLS[ii], ii+1, systab));
+        }
+
+        // we lock it because no one should be adding symbols to
+        // the system symbol table.
+        systab.lock();
+        _system_1_0_symbols = systab;
+    }
+
     public static class Symbol {
         public int                sid;
         public String             name;
@@ -124,15 +139,15 @@ public final class UnifiedSymbolTable
             sid    = symbolId;
             source = table;
             name_len = IonBinary.lenIonString(symbolName);
-            sid_len  = IonBinary.lenVarUInt7(sid); 
+            sid_len  = IonBinary.lenVarUInt7(sid);
             td_len   = IonBinary.lenLenFieldWithOptionalNibble(name_len);
             td_len  += IonConstants.BB_TOKEN_LEN;
         }
         public String toString() {
-        	return "Symbol:"+sid+(name != null ? "-"+name : "");
+            return "Symbol:"+sid+(name != null ? "-"+name : "");
         }
     }
-    
+
     String                  _name;
     int                     _version;
     UnifiedSymbolTable      _system_symbols;
@@ -146,7 +161,7 @@ public final class UnifiedSymbolTable
     boolean                 _is_locked;
 
     HashMap<String, Integer> _id_map;
-    
+
     private UnifiedSymbolTable() {
         _name = null;
         _version = 0;
@@ -161,7 +176,7 @@ public final class UnifiedSymbolTable
         _is_locked = false;
         _id_map = new HashMap<String, Integer>(10);
     }
-    
+
     public UnifiedSymbolTable(UnifiedSymbolTable systemSymbols) {
         this();
         if (!systemSymbols.isSystemTable()) {
@@ -171,51 +186,36 @@ public final class UnifiedSymbolTable
         _max_id = importSymbols(systemSymbols, 0, 0);
         _symbol_offset = _max_id + 1;
     }
-    
+
     // TODO this should be removed during integration !!
     UnifiedSymbolTable(SymbolTable symboltable) {
         this(getSystemSymbolTableInstance());
+
+        if (symboltable instanceof StaticSymbolTable)
+        {
+            StaticSymbolTable sst = (StaticSymbolTable) symboltable;
+            _name = sst.getName();
+            _version = sst.getVersion();
+        }
+
         int minid = this._system_symbols.getMaxId();
         int maxid = symboltable.getMaxId();
         for (int ii=minid + 1; ii <= maxid; ii++) {
             String name = symboltable.findKnownSymbol(ii);
+            // FIXME shouldn't happen, we decided to not allow removing symbols
             if (name == null) continue;
             this.defineSymbol(name, ii);
         }
     }
-    public static UnifiedSymbolTable getSystemSymbolTableInstance() 
-    {
-        if (_system_1_0_symbols == null) {
-        	init_system_instance();
-        	assert  _system_1_0_symbols != null;
-        }
-        return _system_1_0_symbols ;
-    }
-    
-    private static synchronized void init_system_instance()
-    {
-    	// in the event someone has been waiting for the
-    	// lock to release before getting into this method
-    	if (_system_1_0_symbols != null) return;
-    	
-    	UnifiedSymbolTable systab = new UnifiedSymbolTable();
 
-    	systab.setSystemSymbolTable(systab);
-    	systab.setName(SystemSymbolTable.ION_1_0);
-    	systab.setVersion(1);
-    
-    	for (int ii=0; ii<SYSTEM_SYMBOLS.length; ii++) {
-    		systab.defineSymbol(new Symbol(SYSTEM_SYMBOLS[ii], ii+1, systab));
-    	}
-    	
-    	// we lock it because no one should be adding symbols to
-    	// the system symbol table.
-    	systab.lock();
-    	_system_1_0_symbols = systab;
+    public static UnifiedSymbolTable getSystemSymbolTableInstance()
+    {
+        return _system_1_0_symbols;
     }
-    
+
     public void lock() {
         _is_locked = true;
+        // TODO validate that name and version (and maxId?) are legal
     }
     public void unlock() {
         _is_locked = false;
@@ -234,8 +234,8 @@ public final class UnifiedSymbolTable
     public boolean isSystemTable() {
         // the is locked test is a short cut since most tables are local and
         // locked, therefore the bool gets us out of here in a hurry
-        return (_is_locked 
-             && this._name != null 
+        return (_is_locked
+             && this._name != null
              && this._name.equals(SystemSymbolTable.ION_1_0)
              );
     }
@@ -260,7 +260,7 @@ public final class UnifiedSymbolTable
         if (_is_locked) {
             throw new IllegalStateException("can't change locked symbol table");
         }
-    
+
     }
     public void setVersion(int version)
     {
@@ -338,7 +338,7 @@ public final class UnifiedSymbolTable
                     try {
                         sid = Integer.parseInt(sidText);
                         if (sid < 0) {
-                        	sid = IonSymbol.UNKNOWN_SYMBOL_ID;
+                            sid = IonSymbol.UNKNOWN_SYMBOL_ID;
                         }
                         // else fall through
                     }
@@ -395,17 +395,17 @@ public final class UnifiedSymbolTable
             defineSymbol(new Symbol(name, id, this));
         }
     }
-    private void defineSymbol(Symbol sym) 
+    private void defineSymbol(Symbol sym)
     {
         assert !_is_locked;
-        
+
         if (sym.sid > _max_id) _max_id = sym.sid;
-        int offset = sym.sid - _symbol_offset; 
-        
+        int offset = sym.sid - _symbol_offset;
+
         if (offset >= _symbols.length) {
             int newlen = _symbol_count > 0 ? _symbol_count* 2 : 10;
             while (newlen < offset) {
-            	newlen *= 2;
+                newlen *= 2;
             }
             Symbol[] temp = new Symbol[newlen];
             if (_symbol_count > 0) {
@@ -413,10 +413,10 @@ public final class UnifiedSymbolTable
             }
             _symbols = temp;
         }
-        
+
         _symbols[offset] = sym;
         _id_map.put(sym.name, sym.sid);
-        
+
         if (offset >= _symbol_count) _symbol_count = offset + 1;
         if (sym.source == this) _has_user_symbols = true;
     }
@@ -438,21 +438,21 @@ public final class UnifiedSymbolTable
         }
         int sid = this.findSymbol(name);
         if (sid == UNKNOWN_SID) return;
-        
+
         removeSymbol(name, sid, this);
     }
-    private void removeSymbol(String name, int sid, UnifiedSymbolTable table) 
+    private void removeSymbol(String name, int sid, UnifiedSymbolTable table)
     {
         assert !_is_locked;
         assert sid > 0 && sid <= _symbol_count && sid <= _max_id;
-        
+
         if (_system_symbols != null && sid <= _system_symbols.getMaxId()) {
             throw new IllegalArgumentException("you can't remove system symbols");
         }
-        
+
         assert _symbols[sid - _symbol_offset].name.equals(name);
         assert _symbols[sid - _symbol_offset].source == table;
-        
+
         _symbols[sid - _symbol_offset] = null;
         //if (_id_map != null) {
             _id_map.remove(name);
@@ -475,6 +475,13 @@ public final class UnifiedSymbolTable
         }
         return table;
     }
+
+    /**
+     *
+     * @param newTable
+     * @param maxId
+     *   the largest symbol ID to import; if zero, import all symbols.
+     */
     public void addImportedTable(UnifiedSymbolTable newTable, int maxId)
     {
         if (_has_user_symbols) {
@@ -504,7 +511,7 @@ public final class UnifiedSymbolTable
                 }
             }
         }
-        
+
         if (_imports == null || _import_count >= _imports.length) {
             int newlen = _import_count > 0 ? _import_count * 2 : 10;
             UnifiedSymbolTable[] temp = new UnifiedSymbolTable[newlen];
@@ -514,7 +521,7 @@ public final class UnifiedSymbolTable
             _imports = temp;
         }
         _imports[_import_count++] = newTable;
-        
+
         int offset = _max_id - newTable.getSystemSymbolTable().getMaxId();
         int newmax = importSymbols(newTable, offset, maxId);
         if (newmax > _max_id) {
@@ -524,6 +531,15 @@ public final class UnifiedSymbolTable
 
         return;
     }
+
+    /**
+     *
+     * @param newTable
+     * @param sidOffset
+     * @param maxId
+     *   the largest symbol ID to import; if zero, import all symbols.
+     * @return
+     */
     int importSymbols(UnifiedSymbolTable newTable, int sidOffset, int maxId)
     {
         int maxsid = -1;
@@ -556,7 +572,7 @@ public final class UnifiedSymbolTable
         UnifiedSymbolTable usystemSymbols = null;
         if (systemSymbols != null) {
             usystemSymbols = (UnifiedSymbolTable)systemSymbols;
-            for (int ii=0; ii<usystemSymbols._symbols.length; ii++) {    
+            for (int ii=0; ii<usystemSymbols._symbols.length; ii++) {
                 Symbol sym = usystemSymbols._symbols[ii];
                 if (sym == null) continue;
                 defineSymbol(new Symbol(sym.name, sym.sid, usystemSymbols));
@@ -564,7 +580,7 @@ public final class UnifiedSymbolTable
         }
         _system_symbols = usystemSymbols;
     }
-    
+
     public boolean hasImports()
     {
         return (_import_count > 0);
@@ -578,10 +594,10 @@ public final class UnifiedSymbolTable
     //       able to take a UnifiedSymbolTable and synthisize an Ion
     //       value from it, by using the public API's to see the useful
     //       contents.  But what about open content?  If the origin of
-    //		 the symbol table was an IonValue you could get the sys
-    //		 from it, and update it, thereby preserving any extra bits.
-    //		 If, OTOH, it was sythesized from scratch (a common case)
-    //		 then extra content doesn't matter.
+    //         the symbol table was an IonValue you could get the sys
+    //         from it, and update it, thereby preserving any extra bits.
+    //         If, OTOH, it was sythesized from scratch (a common case)
+    //         then extra content doesn't matter.
     //
     IonSystem _sys_holder = null;
     public void setSystem(IonSystem sys) {
@@ -590,7 +606,7 @@ public final class UnifiedSymbolTable
     public IonSystem getSystem() {
         return _sys_holder;
     }
-    public UnifiedSymbolTable[] getImportedTables() 
+    public UnifiedSymbolTable[] getImportedTables()
     {
         UnifiedSymbolTable[] imports = null;
         if (this._import_count > 0) {
@@ -601,7 +617,7 @@ public final class UnifiedSymbolTable
         }
         return imports;
     }
-    
+
     public IonStruct getIonRepresentation() {
         return getIonRepresentation(_sys_holder);
     }
@@ -628,7 +644,7 @@ public final class UnifiedSymbolTable
             }
         }
         IonStruct symlist = null;
-        for (int ii=0; ii<this._symbols.length; ii++) {    
+        for (int ii=0; ii<this._symbols.length; ii++) {
             Symbol sym = this._symbols[ii];
             if (sym == null || sym.source != this) continue;
             if (symlist == null) {
@@ -645,7 +661,7 @@ public final class UnifiedSymbolTable
     {
         UnifiedSymbolTable master;
         UnifiedSymbolTable candidate;
-        
+
         if (!(other instanceof UnifiedSymbolTable)) {
             throw new IllegalArgumentException("sorry, both instances must be UnifiedSymbolTable's");
         }
@@ -661,7 +677,7 @@ public final class UnifiedSymbolTable
                 return false;
             }
         }
-        
+
         return true;
     }
     /**
@@ -675,5 +691,5 @@ public final class UnifiedSymbolTable
         assert id > 0;
         return "$" + id;
     }
-    
-    }
+
+}
