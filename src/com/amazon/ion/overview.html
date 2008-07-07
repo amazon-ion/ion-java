@@ -1,4 +1,4 @@
-<!-- Copyright (c) 2007 Amazon.com, Inc.  All rights reserved. -->
+<!-- Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. -->
 <html>
 <body>
 IonJava is the reference implementation of the
@@ -20,9 +20,9 @@ the main factory and facade for all Ion processing.  This release includes
 one implementation of that interface,
 {@link com.amazon.ion.system.StandardIonSystem}.
 <p>
-The intend architectural pattern is for your application to instantiate a
-single instance of
-{@link com.amazon.ion.system.StandardIonSystem StandardIonSystem} and use it
+The intend architectural pattern is for your application to acquire a
+single system instance from the 
+{@link com.amazon.ion.system.SystemFactory SystemFactory} and use it
 throughout the application.  The {@code IonSystem} interface provides access
 to all other components, including the capability to construct
 {@link com.amazon.ion.IonValue IonValue} hierarchies.  Note that objects
@@ -31,11 +31,12 @@ another {@code IonSystem}!  For example, the following code is <b>not
 guaranteed to work</b>:
 
 <pre>
-    IonSystem sys1 = new StandardIonSystem();
-    IonSystem sys2 = new StandardIonSystem();
-
-    IonInt value = sys1.newInt(23);
-    sys2.clone(value);
+    IonSystem sys1 = SystemFactory.newSystem();
+    IonSystem sys2 = SystemFactory.newSystem();
+    
+    IonList parent = sys1.newEmptyList();
+    IonInt  child  = sys1.newInt(23);
+    parent.add(child);
 </pre>
 
 
@@ -48,7 +49,7 @@ This release defines two mechanisms for accepting Ion data:
     This "all at once" input mechanism is intended for document-oriented
     applications.
   </li>
-  <li>{@link com.amazon.ion.IonReader IonReader} reads an input stream by
+  <li>Iteration reads an input stream by
     iterating over its top-level elements.  This "one at a time" input
     mechanism is intended for stream-oriented applications.
   </li>
@@ -63,10 +64,10 @@ You can reuse a loader many times, even from multiple threads.  The system
 factory also maintains a "default loader" so you don't have to pass one around,
 see {@link com.amazon.ion.IonSystem#getLoader()}.
 <p>
-In contrast, {@code IonReader}s are not reusable: they are extensions of
+In contrast, iterators are not reusable: they are extensions of
 {@link java.util.Iterator} so they are used once and then discarded.
-Use the various {@code new*Reader()} factory methods on {@code IonSystem} to
-create readers.
+Use the various {@code iterate()} factory methods on {@code IonSystem} to
+create iterators.
 <p>
 <b>Note:</b> There is currently no SAX- or StAX-like mechanism for fine-grained
 streaming.

@@ -30,7 +30,7 @@ public interface IonTimestamp
 
 
     /**
-     * Gets the value of this Ion <code>timestamp</code> as the number of 
+     * Gets the value of this Ion <code>timestamp</code> as the number of
      * milliseconds since 1970-01-01T00:00:00Z.  This method
      * will return the same result for all Ion representations of the same
      * instant, regardless of the local offset.
@@ -44,8 +44,8 @@ public interface IonTimestamp
 
 
     /**
-     * Sets this timestamp to represent the point in time that is 
-     * <code>millis</code> milliseconds after 1970-01-01T00:00:00Z. 
+     * Sets this timestamp to represent the point in time that is
+     * <code>millis</code> milliseconds after 1970-01-01T00:00:00Z.
      * <p>
      * This method does not change the local offset part.
      * If this is <code>null.timestamp</code>, then the local offset will be
@@ -60,7 +60,7 @@ public interface IonTimestamp
 
 
     /**
-     * Sets this timestamp to represent the point in time that is 
+     * Sets this timestamp to represent the point in time that is
      * <code>millis</code> milliseconds after 1970-01-01T00:00:00Z,
      * and sets the local offset to UTC.
      *
@@ -69,7 +69,7 @@ public interface IonTimestamp
      */
     public void setMillisUtc(long millis);
 
-    
+
     /**
      * Gets the local offset (in minutes) of this timestamp, or <code>null</code> if
      * it's unknown (<em>i.e.</em>, <code>-00:00</code>).
@@ -99,7 +99,7 @@ public interface IonTimestamp
      */
     public void setTime(Date value);
 
-    
+
     /**
      * Sets the time portion of this timestamp to the current time, leaving the
      * local offset portion unchanged.
@@ -109,13 +109,14 @@ public interface IonTimestamp
      */
     public void setCurrentTime();
 
-    
+    // TODO add setCurrentTimeLocal();
+
     /**
      * Sets the time portion of this timestamp to the current time, and the
      * local offset portion to UTC.
      */
     public void setCurrentTimeUtc();
-    
+
 
     /**
      * Sets the local-offset portion of this timestamp.  The time portion is

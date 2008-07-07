@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion;
@@ -253,12 +253,14 @@ public interface IonValue
 
 
     /**
-     * Creates a copy of this value and all its children.  The
-     * cloned values will be created in the context of the same
-     * IonSystem that the orignal was in.  The clones may share
-	 * static symbol tables.  They will have independant local
-	 * symbol tables if any are needed.  The cloned value will
-	 * be unlocked whether or not the original was locked.
+     * Creates a copy of this value and all its children.    The clones may share
+     * static symbol tables.  They will have independant local
+     * symbol tables if any are needed.  The cloned value will
+     * be modifiable whether or not this one {@link #isReadOnly()}.
+     * <p>
+     * The cloned values will be created in the context of the same
+     * {@link IonSystem} as this instance; if you want a copy using a different
+     * system, then use {@link IonSystem#clone(IonValue)} instead.
      */
     public IonValue clone() throws CloneNotSupportedException;
 
