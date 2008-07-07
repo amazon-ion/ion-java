@@ -132,10 +132,10 @@ public final class IonDatagramImpl
      * Since these will be the string representations it
      * is unnecessary to update the symbol table ... yet.
      * @param source instance to copy from
-     * @throws IOException 
-     * @throws IllegalArgumentException 
-     * @throws NullPointerException 
-     * @throws  
+     * @throws IOException
+     * @throws IllegalArgumentException
+     * @throws NullPointerException
+     * @throws
      */
     @Override
     protected void copyFrom(IonContainerImpl source) throws CloneNotSupportedException, NullPointerException, IllegalArgumentException, IOException
@@ -306,6 +306,7 @@ public final class IonDatagramImpl
     private void add(IonValue element, int systemPos, int userPos)
         throws ContainedValueException, NullPointerException, IOException
     {
+        checkForLock(); // before we start modifying anything
         validateNewChild(element);
 
         // here we are going to FORCE this member to have a symbol
