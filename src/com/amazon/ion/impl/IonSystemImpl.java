@@ -74,7 +74,7 @@ public class IonSystemImpl
     }
     public LocalSymbolTableImpl getSystemSymbolTableAsLocal()
     {
-    	return mySystemSymbolsAsLocal;
+        return mySystemSymbolsAsLocal;
     }
 
     public SystemSymbolTable getSystemSymbolTable(String systemId)
@@ -123,28 +123,28 @@ public class IonSystemImpl
     public IonDatagram newDatagram(IonValue initialChild)
         throws ContainedValueException
     {
-    	if (initialChild != null) {
-    		if (!(initialChild instanceof IonValueImpl)) {
-    			throw new IonException("this Ion system can't mix with instances from other system impl's");
-    		}
-    		if (initialChild.getContainer() != null) {
-    			initialChild = clone(initialChild);
-    		}
+        if (initialChild != null) {
+            if (!(initialChild instanceof IonValueImpl)) {
+                throw new IonException("this Ion system can't mix with instances from other system impl's");
+            }
+            if (initialChild.getContainer() != null) {
+                initialChild = clone(initialChild);
+            }
         }
 
         IonDatagramImpl datagram = new IonDatagramImpl(this);
 
         if (initialChild != null) {
-        	//LocalSymbolTable symtab = initialChild.getSymbolTable();
-        	//if (symtab == null) {
-        	//	symtab = this.newLocalSymbolTable();
-        	//	IonValue ionRep = symtab.getIonRepresentation();
-        	//	datagram.add(ionRep, true);
-        	//	((IonValueImpl)initialChild).setSymbolTable(symtab);
-        	//}
+            //LocalSymbolTable symtab = initialChild.getSymbolTable();
+            //if (symtab == null) {
+            //    symtab = this.newLocalSymbolTable();
+            //    IonValue ionRep = symtab.getIonRepresentation();
+            //    datagram.add(ionRep, true);
+            //    ((IonValueImpl)initialChild).setSymbolTable(symtab);
+            //}
 
-        	// This will fail if initialChild instanceof IonDatagram:
-        	datagram.add(initialChild);
+            // This will fail if initialChild instanceof IonDatagram:
+            datagram.add(initialChild);
         }
 
         assert datagram._system == this;
@@ -296,7 +296,7 @@ public class IonSystemImpl
         if (value instanceof IonSymbol && ! value.isNullValue())
         {
             IonSymbol symbol = (IonSymbol) value;
-            int sid = symbol.intValue();
+            int sid = symbol.getSymbolId();
             if (sid == SystemSymbolTableImpl.ION_1_0_SID)
             {
                 return true;
@@ -304,25 +304,25 @@ public class IonSystemImpl
             String image = symbol.stringValue();
             if (SystemSymbolTable.ION_1_0.equals(image))
             {
-            	return true;
+                return true;
             }
             if (!image.startsWith(SystemSymbolTable.ION)) {
-            	return false;
+                return false;
             }
             // now we see if the rest of the symbol is _DDD_DDD
             int underscore1 = SystemSymbolTable.ION.length();
             int underscore2 = image.indexOf('_', underscore1 + 1);
             if (underscore2 < 0)
             {
-            	return false;
+                return false;
             }
             if (!isUnderscoreAndDigits(image, underscore1, underscore2))
             {
-            	return false;
+                return false;
             }
             if (!isUnderscoreAndDigits(image, underscore2, image.length()))
             {
-            	return false;
+                return false;
             }
             return true;
         }
@@ -331,26 +331,32 @@ public class IonSystemImpl
 
     boolean isUnderscoreAndDigits(String image, int firstChar, int lastChar)
     {
-    	// you have to have enought characters for the underscore and
-    	// at least 1 digit
-    	if (lastChar - firstChar < 2) return false;
+        // you have to have enought characters for the underscore and
+        // at least 1 digit
+        if (lastChar - firstChar < 2) return false;
 
-    	// make sure the first character is the underscore
-    	if (image.charAt(firstChar) != '_') return false;
+        // make sure the first character is the underscore
+        if (image.charAt(firstChar) != '_') return false;
 
-    	// make sure all the remaining characters are digits
-    	for (int ii = firstChar + 1; ii < lastChar; ii++) {
+        // make sure all the remaining characters are digits
+        for (int ii = firstChar + 1; ii < lastChar; ii++) {
             if (!Character.isDigit(image.charAt(ii))) return false;
         }
 
-    	// it must be "_ddd" then
-    	return true;
+        // it must be "_ddd" then
+        return true;
     }
 
     public final boolean valueIsStaticSymbolTable(IonValue value)
     {
-        return (value instanceof IonStruct
-                && value.hasTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE));
+        if (value instanceof IonStruct
+            && value.hasTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE))
+        {
+            IonStruct struct = (IonStruct) value;
+            IonValue nameField = struct.get(SystemSymbolTable.NAME);
+            return (nameField != null && !nameField.isNullValue());
+        }
+        return false;
     }
 
     public final LocalSymbolTable handleLocalSymbolTable(IonCatalog catalog,
@@ -362,7 +368,7 @@ public class IonSystemImpl
 
         if (value instanceof IonStruct)
         {
-        	if (AbstractSymbolTable.getSymbolTableType(value).equals(SymbolTableType.LOCAL))
+            if (AbstractSymbolTable.getSymbolTableType(value).equals(SymbolTableType.LOCAL))
             //if (value.hasTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE)) // cas 25 apr 2008 was: ION_1_0
             {
                 symtab = new LocalSymbolTableImpl(this, catalog,
@@ -372,13 +378,13 @@ public class IonSystemImpl
         }
         else if (valueIsSystemId(value))
         {
-        	symtab = value.getSymbolTable();
-        	if (symtab == null
-        	 || symtab.getMaxId() != mySystemSymbols.getMaxId()
-        	) {
-        		symtab = new LocalSymbolTableImpl( mySystemSymbols );
-        		((IonValueImpl)value).setSymbolTable(symtab);
-        	}
+            symtab = value.getSymbolTable();
+            if (symtab == null
+            || symtab.getMaxId() != mySystemSymbols.getMaxId()
+            ) {
+                symtab = new LocalSymbolTableImpl( mySystemSymbols );
+                ((IonValueImpl)value).setSymbolTable(symtab);
+            }
         }
 
         return symtab;
@@ -427,8 +433,8 @@ public class IonSystemImpl
 
     public IonBlob newNullBlob()
     {
-    	IonBlobImpl result = new IonBlobImpl();
-    	result._system = this;
+        IonBlobImpl result = new IonBlobImpl();
+        result._system = this;
         return result;
     }
 
@@ -471,7 +477,7 @@ public class IonSystemImpl
 
     public IonClob newNullClob()
     {
-    	IonClobImpl result = new IonClobImpl();
+        IonClobImpl result = new IonClobImpl();
         result._system = this;
         return result;
     }
@@ -525,7 +531,7 @@ public class IonSystemImpl
 
     public IonInt newNullInt()
     {
-    	IonIntImpl result = new IonIntImpl();
+        IonIntImpl result = new IonIntImpl();
         result._system = this;
         return result;
     }
@@ -567,14 +573,14 @@ public class IonSystemImpl
 
     public IonList newNullList()
     {
-    	IonListImpl result = new IonListImpl();
+        IonListImpl result = new IonListImpl();
         result._system = this;
         return result;
     }
 
     public IonList newEmptyList()
     {
-    	IonListImpl result = new IonListImpl(false);
+        IonListImpl result = new IonListImpl(false);
         result._system = this;
         return result;
     }
