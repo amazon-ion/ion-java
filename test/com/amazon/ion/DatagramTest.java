@@ -4,7 +4,6 @@
 
 package com.amazon.ion;
 
-import static com.amazon.ion.SystemSymbolTable.ION_1_0;
 import com.amazon.ion.impl.IonSequenceImpl;
 import com.amazon.ion.impl.IonValueImpl;
 import java.io.ByteArrayOutputStream;
@@ -263,11 +262,11 @@ public class DatagramTest
 
         IonDatagram dg = system.newDatagram(aNull);
 
-        
+
 // FIXME: should this be here or not???? checkLeadingSymbolTable(dg);
 
-        
-        
+
+
         IonDatagram dg2 = reload(dg);
         IonNull v = (IonNull) dg2.get(0);
         assertTrue(v.hasTypeAnnotation("ann"));
@@ -351,6 +350,21 @@ public class DatagramTest
         assertEquals("{a:b}", dg.toString());
     }
 
+    public void testReadOnlyDatagram()
+    {
+        IonInt one = system().newInt(1);
+        IonInt two = system().newInt(2);
+        IonDatagram dg = system().newDatagram(one);
+        dg.makeReadOnly();
+        assertSame(one, dg.get(0));
+
+        try {
+            dg.add(two);
+            fail("Expected exception for modifying read-only value");
+        }
+        catch (IonException e) { }
+        assertEquals(1, dg.size());
+    }
 
     // FIXME implement embedding
     public void XXXtestEmbedding()

@@ -41,22 +41,23 @@ public final class IonBoolImpl
     /**
      * makes a copy of this IonBool including a copy
      * of the Boolean value which is "naturally" immutable.
-     * This calls IonValueImpl to copy the annotations and the 
+     * This calls IonValueImpl to copy the annotations and the
      * field name if appropriate.  The symbol table is not
      * copied as the value is fully materialized and the symbol
      * table is unnecessary.
      */
-    public IonBoolImpl clone() throws CloneNotSupportedException
+    @Override
+    public IonBoolImpl clone()
     {
     	IonBoolImpl clone = new IonBoolImpl();
-    	
+
     	makeReady();
     	super.copyFrom(this);
         clone.setValue(this._bool_value);
-    	
+
     	return clone;
     }
-    
+
     public IonType getType()
     {
         return IonType.BOOL;
@@ -66,7 +67,6 @@ public final class IonBoolImpl
     public boolean booleanValue()
         throws NullValueException
     {
-    	checkForLock();
         makeReady();
         if (_bool_value == null) throw new NullValueException();
         return _bool_value;

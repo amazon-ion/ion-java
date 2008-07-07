@@ -65,18 +65,19 @@ public final class IonIntImpl
     /**
      * makes a copy of this IonInt including a copy
      * of the Long value which is "naturally" immutable.
-     * This calls IonValueImpl to copy the annotations and the 
+     * This calls IonValueImpl to copy the annotations and the
      * field name if appropriate.  The symbol table is not
      * copied as the value is fully materialized and the symbol
      * table is unnecessary.
      */
-    public IonIntImpl clone() throws CloneNotSupportedException
+    @Override
+    public IonIntImpl clone()
     {
     	IonIntImpl clone = new IonIntImpl();
-    	
+
     	makeReady();
     	super.copyFrom(this);
-        clone.setValue(this._int_value);
+        clone.doSetValue(this._int_value);
 
     	return clone;
     }
@@ -114,14 +115,14 @@ public final class IonIntImpl
 
     public void setValue(int value)
     {
-    	// base setValue will check for the lock
-        setValue(new Long(value));
+        checkForLock();
+        doSetValue(new Long(value));
     }
 
     public void setValue(long value)
     {
-    	// base setValue will check for the lock
-    	setValue(new Long(value));
+        checkForLock();
+    	doSetValue(new Long(value));
     }
 
     public void setValue(Number value)
@@ -146,11 +147,11 @@ public final class IonIntImpl
                     throw new IonException(message);
                 }
             }
-            setValue(value.longValue());
+            doSetValue(new Long(value.longValue()));
         }
     }
 
-    public void setValue(Long value)
+    private void doSetValue(Long value)
     {
         _int_value = value;
         _hasNativeValue = true;
@@ -275,7 +276,6 @@ public final class IonIntImpl
 
     public void accept(ValueVisitor visitor) throws Exception
     {
-        makeReady();
         visitor.visit(this);
     }
 }

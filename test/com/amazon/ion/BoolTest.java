@@ -92,4 +92,36 @@ public class BoolTest
         v.setValue(Boolean.FALSE);
         checkBool(false, v);
     }
+
+
+    /**
+     * Thanks to Mark Tomko for reporting this bug.
+     */
+    public void testReadOnlyBool()
+    {
+        IonBool v = system().newBool(true);
+        v.makeReadOnly();
+        assertTrue(v.booleanValue());
+
+        try {
+            v.setValue(false);
+            fail("Expected exception for modifying read-only value");
+        }
+        catch (IonException e) { }
+        assertTrue(v.booleanValue());
+
+        try {
+            v.setValue(Boolean.FALSE);
+            fail("Expected exception for modifying read-only value");
+        }
+        catch (IonException e) { }
+        assertTrue(v.booleanValue());
+
+        try {
+            v.setValue((Boolean) null);
+            fail("Expected exception for modifying read-only value");
+        }
+        catch (IonException e) { }
+        assertTrue(v.booleanValue());
+    }
 }
