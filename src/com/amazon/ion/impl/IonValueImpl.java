@@ -187,7 +187,7 @@ public abstract class IonValueImpl
      * IonContainerImpl, IonTextImpl and IonLobImpl.
      */
     @Override
-    public abstract IonValueImpl clone();
+    public abstract IonValue clone();
 
 
     /**

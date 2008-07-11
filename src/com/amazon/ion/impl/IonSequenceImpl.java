@@ -100,6 +100,10 @@ public abstract class IonSequenceImpl
     //=========================================================================
 
     @Override
+    public abstract IonSequenceImpl clone();
+
+
+    @Override
     public boolean isNullValue()
     {
         if (_hasNativeValue || !_isPositionLoaded) {
@@ -115,7 +119,7 @@ public abstract class IonSequenceImpl
     public void add(IonValue element)
         throws ContainedValueException, NullPointerException
     {
-    	// super.add will check for the lock
+        // super.add will check for the lock
         try {
             super.add(element);
         } catch (IOException e) {
@@ -128,7 +132,7 @@ public abstract class IonSequenceImpl
     public void add(int index, IonValue element)
         throws ContainedValueException, NullPointerException
     {
-    	// super.add will check for the lock
+        // super.add will check for the lock
         try {
             super.add(index, element);
         } catch (IOException e) {
@@ -139,7 +143,7 @@ public abstract class IonSequenceImpl
     public void addEmbedded(IonValue element)
         throws NullPointerException
     {
-    	checkForLock();
+        checkForLock();
 
         LocalSymbolTable symtab = element.getSymbolTable();
 

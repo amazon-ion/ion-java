@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -122,6 +120,9 @@ public interface IonStruct
      *   if {@code fieldName}, or any element within it, is <code>null</code>.
      */
     public boolean retainAll(String... fieldNames);
+
+
+    public IonStruct clone();
 
 
     /**

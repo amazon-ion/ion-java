@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -72,4 +70,7 @@ public interface IonFloat
      * may be <code>null</code> to make this <code>null.float</code>.
      */
     public void setValue(BigDecimal value);
+
+
+    public IonFloat clone();
 }

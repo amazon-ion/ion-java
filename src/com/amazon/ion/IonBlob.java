@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -16,7 +14,7 @@ public interface IonBlob
 {
     /**
      * Renders the content of this blob as Base64 text.
-     * 
+     *
      * @param out will receive the Base64 content.
      * @throws NullValueException if <code>this.isNullValue()</code>.
      * @throws NullPointerException if <code>out</code> is null.
@@ -24,4 +22,7 @@ public interface IonBlob
      */
     public void appendBase64(Appendable out)
         throws NullValueException, IOException;
+
+
+    public IonBlob clone();
 }

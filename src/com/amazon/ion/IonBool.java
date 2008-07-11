@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -36,4 +34,7 @@ public interface IonBool
      * may be <code>null</code> to make this <code>null.bool</code>.
      */
     public void setValue(Boolean b);
+
+
+    public IonBool clone();
 }

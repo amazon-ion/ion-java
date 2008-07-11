@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -37,4 +35,7 @@ public interface IonClob
      * or <code>null</code> if <code>this.isNullValue()</code>.
      */
     public String stringValue(Charset cs);
+
+
+    public IonClob clone();
 }

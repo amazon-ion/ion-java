@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -60,4 +58,7 @@ public interface IonSymbol
      */
     public void setValue(String value)
         throws EmptySymbolException;
+
+
+    public IonSymbol clone();
 }

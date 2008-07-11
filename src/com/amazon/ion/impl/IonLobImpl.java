@@ -27,6 +27,10 @@ public abstract class IonLobImpl
     }
 
 
+    @Override
+    public abstract IonLobImpl clone();
+
+
     /**
      * this copies the contents of the lob from the source to
      * this instance (or the "null-ness" if the sourc is null).

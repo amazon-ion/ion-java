@@ -36,6 +36,10 @@ abstract public class IonContainerImpl
     }
 
 
+    @Override
+    public abstract IonContainer clone();
+
+
     /**
      * this copies the annotations and the field name if
      * either of these exists from the passed in instance.

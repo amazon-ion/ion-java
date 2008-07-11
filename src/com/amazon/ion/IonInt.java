@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -61,4 +59,7 @@ public interface IonInt
      * may be <code>null</code> to make this <code>null.int</code>.
      */
     public void setValue(Number content);
+
+
+    public IonInt clone();
 }

@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion.impl;
 
@@ -25,6 +23,10 @@ abstract class IonTextImpl
      }
 
 
+    @Override
+    public abstract IonTextImpl clone();
+
+
     /**
      * this copies the annotations and the field name if
      * either of these exists from the passed in instance.
@@ -41,7 +43,7 @@ abstract class IonTextImpl
 
         // now we can copy the text as a string
         String s = source.getValue();
-    	_set_value(s);
+        _set_value(s);
     }
 
 
@@ -56,8 +58,8 @@ abstract class IonTextImpl
     public void setValue(String value)
     {
         checkForLock();
-    	_set_value(value);
-    	setDirty();
+        _set_value(value);
+        setDirty();
     }
 
     /** Must call {@link #makeReady()} before calling. */

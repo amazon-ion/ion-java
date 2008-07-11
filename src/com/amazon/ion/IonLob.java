@@ -46,4 +46,7 @@ public interface IonLob
      * @return the lob's size in bytes.
      */
     public int byteSize();
+
+
+    public IonLob clone();
 }

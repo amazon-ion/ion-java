@@ -42,7 +42,7 @@ public class TemporaryList
         TemporaryList c = new TemporaryList();
 
         for (int ii=0; ii<this._tmpelements.size(); ii++) {
-            IonValueImpl e = this._tmpelements.get(ii).clone();
+            IonValueImpl e = (IonValueImpl) this._tmpelements.get(ii).clone();
             c._tmpelements.add(e);
         }
 
