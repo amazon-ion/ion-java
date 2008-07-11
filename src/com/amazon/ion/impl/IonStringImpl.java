@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion.impl;
@@ -45,18 +45,19 @@ public final class IonStringImpl
     /**
      * makes a copy of this IonString. This calls up to
      * IonTextImpl to copy the string itself and that in
-     * turn calls IonValueImpl to copy 
-     * the annotations and the field name if appropriate.  
-     * The symbol table is not copied as the value is fully 
+     * turn calls IonValueImpl to copy
+     * the annotations and the field name if appropriate.
+     * The symbol table is not copied as the value is fully
      * materialized and the symbol table is unnecessary.
      */
-    public IonStringImpl clone() throws CloneNotSupportedException
+    @Override
+    public IonStringImpl clone()
     {
-    	IonStringImpl clone = new IonStringImpl();
-    	
-    	clone.copyFrom(this);
-    	
-    	return clone;
+        IonStringImpl clone = new IonStringImpl();
+
+        clone.copyFrom(this);
+
+        return clone;
     }
 
     public IonType getType()

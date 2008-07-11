@@ -608,4 +608,17 @@ public abstract class IonTestCase
             }
         }
     }
+
+
+    /**
+     * Tests that some data parses, clones, and prints back to the same text.
+     * @param input  Ion text data
+     */
+    public void testSimpleClone(String input)
+    {
+        IonValue data = system().singleValue(input);
+        IonValue clone = data.clone();
+        assertEquals(input, clone.toString());
+        assertEquals(data, clone);
+    }
 }

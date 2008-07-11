@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion.impl;
@@ -53,20 +53,21 @@ public final class IonFloatImpl
     /**
      * makes a copy of this IonFloat including a copy
      * of the double value which is "naturally" immutable.
-     * This calls IonValueImpl to copy the annotations and the 
+     * This calls IonValueImpl to copy the annotations and the
      * field name if appropriate.  The symbol table is not
      * copied as the value is fully materialized and the symbol
      * table is unnecessary.
      */
-    public IonFloatImpl clone() throws CloneNotSupportedException
+    @Override
+    public IonFloatImpl clone()
     {
-    	IonFloatImpl clone = new IonFloatImpl();
-    	
-    	makeReady();
-    	super.copyFrom(this);
+        IonFloatImpl clone = new IonFloatImpl();
+
+        makeReady();
+        clone.copyAnnotationsAndFieldNameFrom(this);
         clone.setValue(this._float_value);
 
-    	return clone;
+        return clone;
     }
 
     public IonType getType()
@@ -108,19 +109,19 @@ public final class IonFloatImpl
 
     public void setValue(float value)
     {
-    	// base set value will check for the lock
+        // base set value will check for the lock
         setValue(new Double(value));
     }
 
     public void setValue(double value)
     {
-    	// base setValue will check for the lock
+        // base setValue will check for the lock
         setValue(new Double(value));
     }
 
     public void setValue(BigDecimal value)
     {
-    	checkForLock();
+        checkForLock();
         if (value == null)
         {
             _float_value = null;
@@ -135,7 +136,7 @@ public final class IonFloatImpl
 
     public void setValue(Double d)
     {
-    	checkForLock();
+        checkForLock();
         _float_value = d;
         _hasNativeValue = true;
         setDirty();

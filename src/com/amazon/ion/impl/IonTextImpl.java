@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion.impl;
@@ -24,17 +24,7 @@ abstract class IonTextImpl
          super(typeDesc);
      }
 
-    /**
-     * throws a CloneNotSupportedException as this is a
-     * parent type that should not be directly created.
-     * Instances should constructed of either IonStringImpl
-     * or IonSymbolImpl as needed.
-     */
-    public IonTextImpl clone() throws CloneNotSupportedException
-    {
-    	throw new CloneNotSupportedException();
-    }
-    
+
     /**
      * this copies the annotations and the field name if
      * either of these exists from the passed in instance.
@@ -45,12 +35,12 @@ abstract class IonTextImpl
      */
     protected void copyFrom(IonTextImpl source)
     {
-    	// first copy the annotations and such, which
-    	// will materialize the value as needed.
-    	super.copyFrom(source);
+        // first copy the annotations and such, which
+        // will materialize the value as needed.
+        super.copyAnnotationsAndFieldNameFrom(source);
 
-    	// now we can copy the text as a string
-    	String s = source.getValue();
+        // now we can copy the text as a string
+        String s = source.getValue();
     	_set_value(s);
     }
 
@@ -65,7 +55,7 @@ abstract class IonTextImpl
 
     public void setValue(String value)
     {
-    	checkForLock();
+        checkForLock();
     	_set_value(value);
     	setDirty();
     }

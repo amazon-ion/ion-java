@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc. All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc. All rights reserved.
  */
 
 package com.amazon.ion.impl;
@@ -34,18 +34,8 @@ abstract public class IonContainerImpl
     {
         super(typeDesc);
     }
-    
-    /**
-     * throws a CloneNotSupportedException as this is a
-     * parent type that should not be directly created.
-     * Instances should constructed of either IonSexpImpl
-     * IonListImpl or IonStructImpl as needed.
-     */
-    public IonContainerImpl clone() throws CloneNotSupportedException
-    {
-    	throw new CloneNotSupportedException();
-    }
-    
+
+
     /**
      * this copies the annotations and the field name if
      * either of these exists from the passed in instance.
@@ -53,63 +43,65 @@ abstract public class IonContainerImpl
      * Since these will be the string representations it
      * is unnecessary to update the symbol table ... yet.
      * @param source instance to copy from
-     * @throws IOException 
-     * @throws IllegalArgumentException 
-     * @throws NullPointerException 
-     * @throws ContainedValueException 
+     * @throws IOException
+     * @throws IllegalArgumentException
+     * @throws NullPointerException
+     * @throws ContainedValueException
      */
-    protected void copyFrom(IonContainerImpl source) throws CloneNotSupportedException, ContainedValueException, NullPointerException, IllegalArgumentException, IOException
+    protected void copyFrom(IonContainerImpl source)
+        throws ContainedValueException, NullPointerException,
+            IllegalArgumentException, IOException
     {
-    	// first copy the annotations and such, which
-    	// will materialize the value as needed.
-    	// This will materialize the field name and
-    	// annotations if present.  And it will instanciate
-    	// the immediate children (but it is not
-    	// a deep materialization, so we'll live with
-    	// it for now).
-    	super.copyFrom(source);
+        // first copy the annotations and such, which
+        // will materialize the value as needed.
+        // This will materialize the field name and
+        // annotations if present.  And it will instanciate
+        // the immediate children (but it is not
+        // a deep materialization, so we'll live with
+        // it for now).
+        super.copyAnnotationsAndFieldNameFrom(source);
 
-    	// now we can copy the contents
-    	
-    	// first see if this value is null (and we're really
-    	// done here)
-    	if (source.isNullValue()) {
-    		makeNull();
-    	}
-    	else {
-    		// it's not null so there better be something there
-    		// at least 0 children :)
-    		assert source._contents != null;
+        // now we can copy the contents
 
-    		// and we'll need a contents array to hold at least 0
-    		// children
-    		if (this._contents == null) {
-    			int len = source._contents.size();
-    			if (len < 1) len = 10;
-    			this._contents = new ArrayList<IonValue>(len);
-    		}
-    		// we should have an empty content list at this point
-    		assert this._contents.size() == 0;
+        // first see if this value is null (and we're really
+        // done here)
+        if (source.isNullValue()) {
+            makeNull();
+        }
+        else {
+            // it's not null so there better be something there
+            // at least 0 children :)
+            assert source._contents != null;
 
-    		if (false && source._buffer != null && !source.isDirty()) {
-	    		// if this is buffer backed, and not dirty
-	    		// then we can do a binary copy
-    			
-    			// TODO: offer this optimized path, however this requires
-    			//       a variety of general purpose binary buffer handling
-    			//       and should probably be done along with the lazy
-    			//       "copy on write" reference/copy optimizations
-    			//       - which is really a project in its own right
-	    	} 
-	    	else {
-	        	// if this is not buffer backed, we just have to
-	        	// do a deep copy
-	    		for (IonValue child : source._contents) {
-	    			IonValue copy = child.clone();
-	    			this.add(copy);
-	    		}
-	    	}
-    	}
+            // and we'll need a contents array to hold at least 0
+            // children
+            if (this._contents == null) {
+                int len = source._contents.size();
+                if (len < 1) len = 10;
+                this._contents = new ArrayList<IonValue>(len);
+            }
+            // we should have an empty content list at this point
+            assert this._contents.size() == 0;
+
+            if (false && source._buffer != null && !source.isDirty()) {
+                // if this is buffer backed, and not dirty
+                // then we can do a binary copy
+
+                // TODO: offer this optimized path, however this requires
+                //       a variety of general purpose binary buffer handling
+                //       and should probably be done along with the lazy
+                //       "copy on write" reference/copy optimizations
+                //       - which is really a project in its own right
+            }
+            else {
+                // if this is not buffer backed, we just have to
+                // do a deep copy
+                for (IonValue child : source._contents) {
+                    IonValue copy = child.clone();
+                    this.add(copy);
+                }
+            }
+        }
     }
 
     public int size()
@@ -157,7 +149,7 @@ abstract public class IonContainerImpl
 
     public void clear()
     {
-    	checkForLock();
+        checkForLock();
         if (isNullValue())
         {
             _contents = new ArrayList<IonValue>();
@@ -177,21 +169,22 @@ abstract public class IonContainerImpl
             setDirty();
         }
     }
-    
+
+    @Override
     public void makeReadOnly() {
-    	if (_isLocked) return;
-    	synchronized (this) {
-    		deepMaterialize();
-    		for (IonValue child : this._contents) {
-    			child.makeReadOnly();
-    		}
-    		_isLocked = true;
-    	}
+        if (_isLocked) return;
+        synchronized (this) {
+            deepMaterialize();
+            for (IonValue child : this._contents) {
+                child.makeReadOnly();
+            }
+            _isLocked = true;
+        }
     }
 
     public void makeNull()
     {
-    	checkForLock();
+        checkForLock();
         if (!isNullValue())
         {
             if (_contents != null)
@@ -298,6 +291,8 @@ abstract public class IonContainerImpl
         }
     }
 
+    @SuppressWarnings("deprecation")
+    @Override
     public void deepMaterialize()
     {
         try
@@ -355,7 +350,7 @@ abstract public class IonContainerImpl
     @Override
     public void updateSymbolTable(LocalSymbolTable symtab)
     {
-    	// the "super" copy of this method will check the lock
+        // the "super" copy of this method will check the lock
         super.updateSymbolTable(symtab);
         if (this._contents != null) {
             for (IonValue v : this._contents) {
@@ -506,13 +501,13 @@ abstract public class IonContainerImpl
      *   if {@code child} is already part of a container.
      * @throws IllegalArgumentException
      *   if {@code child} is an {@link IonDatagram}.
-     * @throws IOException 
-     * @throws ContainedValueException 
+     * @throws IOException
+     * @throws ContainedValueException
      */
     protected void add(IonValue child)
         throws NullPointerException, IllegalArgumentException, ContainedValueException, IOException
     {
-    	checkForLock();
+        checkForLock();
 
         // We do this here to avoid materialization if element is bad.
         validateNewChild(child);
@@ -528,7 +523,7 @@ abstract public class IonContainerImpl
      *   if {@code child} is {@code null}.
      * @throws ContainedValueException
      *   if {@code child} is already part of a container.
-     * @throws IOException 
+     * @throws IOException
      * @throws IllegalArgumentException
      *   if {@code child} is an {@link IonDatagram}.
      */
@@ -536,7 +531,7 @@ abstract public class IonContainerImpl
     protected void add(int index, IonValue child)
         throws ContainedValueException, NullPointerException, IOException
     {
-    	checkForLock();
+        checkForLock();
         validateNewChild(child);
         add(index, child, true);
     }
@@ -581,7 +576,7 @@ abstract public class IonContainerImpl
      *        must not be null.
      * @throws NullPointerException
      *         if the element is <code>null</code>.
-     * @throws IOException 
+     * @throws IOException
      */
     protected void add(int index, IonValue element, boolean setDirty)
         throws ContainedValueException, NullPointerException, IOException
@@ -609,7 +604,7 @@ abstract public class IonContainerImpl
         }
         else
         {
-        	concrete.deepMaterialize();
+            concrete.deepMaterialize();
             if (!(this instanceof IonDatagramImpl)) {
                 concrete.makeReady();
                 concrete.setSymbolTable(null);
@@ -648,6 +643,7 @@ abstract public class IonContainerImpl
         }
     }
 
+    @Override
     void clear_position_and_buffer()
     {
         makeReady();
@@ -661,22 +657,22 @@ abstract public class IonContainerImpl
         }
         super.clear_position_and_buffer();
     }
-   
+
     @Override
     void clearSymbols()
     {
-    	super.clearSymbols();
-    	if (this._contents != null) {
-    		for (int ii=0; ii<this._contents.size(); ii++) {
-    			IonValueImpl v = (IonValueImpl)this._contents.get(ii);
-    			v.clearSymbols();
-    		}
-    	}
+        super.clearSymbols();
+        if (this._contents != null) {
+            for (int ii=0; ii<this._contents.size(); ii++) {
+                IonValueImpl v = (IonValueImpl)this._contents.get(ii);
+                v.clearSymbols();
+            }
+        }
     }
 
     public boolean remove(IonValue element)
     {
-    	checkForLock();
+        checkForLock();
         validateThisNotNull();
         if (element.getContainer() != this)
             return false;

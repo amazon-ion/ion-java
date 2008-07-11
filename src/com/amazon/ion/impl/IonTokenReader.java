@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion.impl;
 
@@ -135,13 +133,14 @@ public class IonTokenReader
                 this.d = null;
                 this.localOffset = null;
             }
-            
-            public timeinfo clone() throws CloneNotSupportedException
+
+            @Override
+            public timeinfo clone()
             {
-            	timeinfo clone = new timeinfo();
-            	clone.localOffset = this.localOffset;
-            	clone.d = (Date)this.d.clone();
-            	return clone;
+                timeinfo clone = new timeinfo();
+                clone.localOffset = this.localOffset;
+                clone.d = new Date(this.d.getTime());
+                return clone;
             }
 
             static final private String DATE_REGEX =
@@ -311,6 +310,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
                 return new Integer(value * sign);
             }
 
+            @Override
             public String toString() {
                 return "[timeinfo d=" + d + " localOffset=" + localOffset + "]";
             }

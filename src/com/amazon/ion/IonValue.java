@@ -262,7 +262,7 @@ public interface IonValue
      * {@link IonSystem} as this instance; if you want a copy using a different
      * system, then use {@link IonSystem#clone(IonValue)} instead.
      */
-    public IonValue clone() throws CloneNotSupportedException;
+    public IonValue clone();
 
 
     /**

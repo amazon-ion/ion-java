@@ -46,24 +46,25 @@ public final class IonDecimalImpl
         super(typeDesc);
         assert pos_getType() == IonConstants.tidDecimal;
     }
-    
+
     /**
      * makes a copy of this IonDecimal including a copy
      * of the BigDecimal value which is "naturally" immutable.
-     * This calls IonValueImpl to copy the annotations and the 
+     * This calls IonValueImpl to copy the annotations and the
      * field name if appropriate.  The symbol table is not
      * copied as the value is fully materialized and the symbol
      * table is unnecessary.
      */
-    public IonDecimalImpl clone() throws CloneNotSupportedException
+    @Override
+    public IonDecimalImpl clone()
     {
-    	IonDecimalImpl clone = new IonDecimalImpl();
-    	
-    	makeReady();
-    	super.copyFrom(this);
+        IonDecimalImpl clone = new IonDecimalImpl();
+
+        makeReady();
+        clone.copyAnnotationsAndFieldNameFrom(this);
         clone.setValue(this._decimal_value);
-    	
-    	return clone;
+
+        return clone;
     }
 
 
@@ -107,19 +108,19 @@ public final class IonDecimalImpl
 
     public void setValue(float value)
     {
-    	// base setValue will check for the lock
+        // base setValue will check for the lock
         setValue(new BigDecimal(value));
     }
 
     public void setValue(double value)
     {
-    	// base setValue will check for the lock
+        // base setValue will check for the lock
         setValue(new BigDecimal(value));
     }
 
     public void setValue(BigDecimal value)
     {
-    	checkForLock();
+        checkForLock();
         _decimal_value = value;
         _hasNativeValue = true;
         setDirty();

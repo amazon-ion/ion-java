@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion.impl;
 
@@ -55,21 +53,22 @@ public final class IonSymbolImpl
     /**
      * makes a copy of this IonString. This calls up to
      * IonTextImpl to copy the string itself and that in
-     * turn calls IonValueImpl to copy 
-     * the annotations and the field name if appropriate.  
-     * The symbol table is not copied as the value is fully 
+     * turn calls IonValueImpl to copy
+     * the annotations and the field name if appropriate.
+     * The symbol table is not copied as the value is fully
      * materialized and the symbol table is unnecessary.
      */
-    public IonSymbolImpl clone() throws CloneNotSupportedException
+    @Override
+    public IonSymbolImpl clone()
     {
-    	IonSymbolImpl clone = new IonSymbolImpl();
-    	
-    	clone.copyFrom(this);
-    	clone.mySid = 0;
+        IonSymbolImpl clone = new IonSymbolImpl();
 
-    	return clone;
+        clone.copyFrom(this);
+        clone.mySid = 0;
+
+        return clone;
     }
-    
+
     public IonType getType()
     {
         return IonType.SYMBOL;
@@ -105,7 +104,7 @@ public final class IonSymbolImpl
             assert _hasNativeValue == true && isDirty();
             LocalSymbolTable symtab = getSymbolTable();
             if (symtab == null) {
-            	symtab = materializeSymbolTable();
+                symtab = materializeSymbolTable();
             }
             if (symtab != null) {
                 mySid = symtab.addSymbol(_get_value());
@@ -118,7 +117,7 @@ public final class IonSymbolImpl
     @Override
     public void setValue(String value)
     {
-    	checkForLock();
+        checkForLock();
 
         if ("".equals(value)) {
             throw new EmptySymbolException();
@@ -139,7 +138,7 @@ public final class IonSymbolImpl
         assert _hasNativeValue == true;
 
         if (this.isIonVersionMarker()) {
-        	return IonConstants.BINARY_VERSION_MARKER_SIZE;
+            return IonConstants.BINARY_VERSION_MARKER_SIZE;
         }
 
         // We only get here if not null, and after going thru updateSymbolTable
@@ -148,18 +147,18 @@ public final class IonSymbolImpl
     }
 
     protected boolean isIonVersionMarker() {
-    	return _is_IonVersionMarker;
+        return _is_IonVersionMarker;
     }
-    protected void setIsIonVersionMarker(boolean isIVM) 
+    protected void setIsIonVersionMarker(boolean isIVM)
     {
-    	assert SystemSymbolTable.ION_1_0.equals(this._get_value());
+        assert SystemSymbolTable.ION_1_0.equals(this._get_value());
 
-    	_is_IonVersionMarker = isIVM;
-    	_isSystemValue = true;
+        _is_IonVersionMarker = isIVM;
+        _isSystemValue = true;
         _hasNativeValue = true;
         _isMaterialized = true;
 
-    	mySid = SystemSymbolTable.ION_1_0_SID;
+        mySid = SystemSymbolTable.ION_1_0_SID;
     }
 
     @Override
@@ -175,15 +174,15 @@ public final class IonSymbolImpl
 
         // the low nibble of the ion version marker is 0
         if (!isIonVersionMarker()) {
-	        if (mySid < 1) {
-	            ln = IonConstants.lnIsNullAtom;
-	        }
-	        else {
-	            ln = getNativeValueLength();
-	            if (ln > IonConstants.lnIsVarLen) {
-	                ln = IonConstants.lnIsVarLen;
-	            }
-	        }
+            if (mySid < 1) {
+                ln = IonConstants.lnIsNullAtom;
+            }
+            else {
+                ln = getNativeValueLength();
+                if (ln > IonConstants.lnIsVarLen) {
+                    ln = IonConstants.lnIsVarLen;
+                }
+            }
         }
         return ln;
     }
@@ -201,44 +200,46 @@ public final class IonSymbolImpl
             mySid = symtab.addSymbol(this._get_value());
         }
     }
-    
+
     // TODO rename to getContentLength (from IonValueImpl)
+    @Override
     protected int getNakedValueLength() throws IOException
     {
         int len;
 
         if (this._is_IonVersionMarker) {
-        	len = IonConstants.BINARY_VERSION_MARKER_SIZE;
+            len = IonConstants.BINARY_VERSION_MARKER_SIZE;
         }
         else {
-        	len = super.getNakedValueLength();
+            len = super.getNakedValueLength();
         }
         return len;
     }
-    
+
     /**
      * Length of the core header.
      * @param contentLength length of the core value.
      * @return at least one.
      */
+    @Override
     public int getTypeDescriptorAndLengthOverhead(int contentLength) {
-    	int len;
+        int len;
         if (this._is_IonVersionMarker || isNullValue()) {
-        	len = 0;
-    	}
-    	else {
-    		len = IonConstants.BB_TOKEN_LEN + IonBinary.lenLenFieldWithOptionalNibble(contentLength);
-    	}
+            len = 0;
+        }
+        else {
+            len = IonConstants.BB_TOKEN_LEN + IonBinary.lenLenFieldWithOptionalNibble(contentLength);
+        }
         return len;
     }
-    
+
     @Override
     void clearSymbols()
     {
-    	this.stringValue();
-    	this.mySid = 0;
-    	super.clearSymbols();
-    	
+        this.stringValue();
+        this.mySid = 0;
+        super.clearSymbols();
+
     }
 
 
@@ -260,36 +261,36 @@ public final class IonSymbolImpl
 
         int tdb = this.pos_getTypeDescriptorByte();
         if ((tdb & 0xff) == (IonConstants.BINARY_VERSION_MARKER_1_0[0] & 0xff)) {
-        	mySid = SystemSymbolTable.ION_1_0_SID;
-        	_set_value(SystemSymbolTable.ION_1_0);
-        	// we need to skip over the binary marker, we've read the first
-        	// byte and we checked the contents long before we got here so ...
-        	reader.skip(IonConstants.BINARY_VERSION_MARKER_SIZE - 1);
+            mySid = SystemSymbolTable.ION_1_0_SID;
+            _set_value(SystemSymbolTable.ION_1_0);
+            // we need to skip over the binary marker, we've read the first
+            // byte and we checked the contents long before we got here so ...
+            reader.skip(IonConstants.BINARY_VERSION_MARKER_SIZE - 1);
         }
         else {
-	        int type = this.pos_getType();
-	        if (type != IonConstants.tidSymbol) {
-	            throw new IonException("invalid type desc encountered for value");
-	        }
-	
-	        int ln = this.pos_getLowNibble();
-	        switch ((0xf & ln)) {
-	        case IonConstants.lnIsNullAtom:
-	            mySid = 0;
-	            _set_value(null);
-	            break;
-	        case 0:
-	            throw new IonException("invalid symbol id for value, must be > 0");
-	        case IonConstants.lnIsVarLen:
-	            ln = reader.readVarUInt7IntValue();
-	            // fall through to default:
-	        default:
-	            mySid = reader.readVarUInt8IntValue(ln);
-	            _set_value(getSymbolTable().findSymbol(mySid));
-	            break;
-	        }
+            int type = this.pos_getType();
+            if (type != IonConstants.tidSymbol) {
+                throw new IonException("invalid type desc encountered for value");
+            }
+
+            int ln = this.pos_getLowNibble();
+            switch ((0xf & ln)) {
+            case IonConstants.lnIsNullAtom:
+                mySid = 0;
+                _set_value(null);
+                break;
+            case 0:
+                throw new IonException("invalid symbol id for value, must be > 0");
+            case IonConstants.lnIsVarLen:
+                ln = reader.readVarUInt7IntValue();
+                // fall through to default:
+            default:
+                mySid = reader.readVarUInt8IntValue(ln);
+                _set_value(getSymbolTable().findSymbol(mySid));
+                break;
+            }
         }
-        
+
         _hasNativeValue = true;
     }
 
@@ -300,18 +301,18 @@ public final class IonSymbolImpl
     {
         assert valueLen == this.getNakedValueLength();
         assert valueLen > 0;
-        
+
         if (this.isIonVersionMarker()) {
-        	writer.write(IonConstants.BINARY_VERSION_MARKER_1_0);
-        	assert valueLen == IonConstants.BINARY_VERSION_MARKER_SIZE;
+            writer.write(IonConstants.BINARY_VERSION_MARKER_1_0);
+            assert valueLen == IonConstants.BINARY_VERSION_MARKER_SIZE;
         }
         else {
-	        // We've already been through updateSymbolTable().
-	        assert mySid > 0;
+            // We've already been through updateSymbolTable().
+            assert mySid > 0;
 
-	        int wlen = writer.writeVarUInt8Value(mySid, valueLen);
-	        assert wlen == valueLen;
-	    }
+            int wlen = writer.writeVarUInt8Value(mySid, valueLen);
+            assert wlen == valueLen;
+        }
     }
 
     /**
@@ -325,14 +326,14 @@ public final class IonSymbolImpl
                              int cumulativePositionDelta)
         throws IOException
     {
-    	// we look for the IonVersionMarker stamp for special
-    	// treatment (the 4 byte value) otherwise we delegate
-    	if (this._is_IonVersionMarker) {
-    		writer.write(IonConstants.BINARY_VERSION_MARKER_1_0);
-    	}
-    	else {
-    		cumulativePositionDelta = super.writeValue(writer, cumulativePositionDelta);
-    	}
+        // we look for the IonVersionMarker stamp for special
+        // treatment (the 4 byte value) otherwise we delegate
+        if (this._is_IonVersionMarker) {
+            writer.write(IonConstants.BINARY_VERSION_MARKER_1_0);
+        }
+        else {
+            cumulativePositionDelta = super.writeValue(writer, cumulativePositionDelta);
+        }
         return cumulativePositionDelta;
     }
 

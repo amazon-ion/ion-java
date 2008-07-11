@@ -186,10 +186,9 @@ public abstract class IonValueImpl
      * classes that need to support this - including IonValueImpl,
      * IonContainerImpl, IonTextImpl and IonLobImpl.
      */
-    public IonValueImpl clone() throws CloneNotSupportedException
-    {
-    	throw new CloneNotSupportedException();
-    }
+    @Override
+    public abstract IonValueImpl clone();
+
 
     /**
      * this copies the annotations and the field name if
@@ -199,20 +198,20 @@ public abstract class IonValueImpl
      * is unnecessary to update the symbol table ... yet.
      * @param source instance to copy from
      */
-    protected void copyFrom(IonValueImpl source)
+    protected void copyAnnotationsAndFieldNameFrom(IonValueImpl source)
     {
-    	// first this instance has to be ready
-    	// (although it probably is)
-    	makeReady();
+        // first this instance has to be ready
+        // (although it probably is)
+        makeReady();
 
-    	// getting the type annotations will also force the
-    	// this instance to be "ready" (i.e. it will call
-    	// MakeReady()) which we'll want.
-    	String[] a = source.getTypeAnnotations();
-    	_annotations = a; // and we don't care if it's null or not
+        // getting the type annotations will also force the
+        // this instance to be "ready" (i.e. it will call
+        // MakeReady()) which we'll want.
+        String[] a = source.getTypeAnnotations();
+        _annotations = a; // and we don't care if it's null or not
 
-    	String s = source.getFieldName();
-   		this.setFieldName(s);
+        String s = source.getFieldName();
+        this.setFieldName(s);
     }
 
     protected void init(int fieldSID
@@ -222,7 +221,7 @@ public abstract class IonValueImpl
                        ,LocalSymbolTable symboltable
                        )
     {
-// cas symtab:    	assert symboltable != null;
+// cas symtab:        assert symboltable != null;
 
         _fieldSid    = fieldSID;
         _buffer      = buffer;
@@ -423,12 +422,12 @@ public abstract class IonValueImpl
     {
         if (this._fieldSid == 0 && this._fieldName != null)
         {
-        	LocalSymbolTable symtab = getSymbolTable();
-        	if (symtab == null) {
-        		// TODO - or we could throw here
-        		symtab = materializeSymbolTable();
-        	}
-        	assert symtab != null;
+            LocalSymbolTable symtab = getSymbolTable();
+            if (symtab == null) {
+                // TODO - or we could throw here
+                symtab = materializeSymbolTable();
+            }
+            assert symtab != null;
             _fieldSid = symtab.addSymbol(this._fieldName);
         }
         return this._fieldSid;
@@ -461,20 +460,20 @@ public abstract class IonValueImpl
     }
 
     public void makeReadOnly() {
-    	if (_isLocked) return;
-    	synchronized (this) {
-    		deepMaterialize();
-    		_isLocked = true;
-    	}
+        if (_isLocked) return;
+        synchronized (this) {
+            deepMaterialize();
+            _isLocked = true;
+        }
     }
 
     public final boolean isReadOnly() {
-    	return _isLocked;
+        return _isLocked;
     }
 
     protected void checkForLock() {
-    	if (!_isLocked) return;
-    	throw new IonException("locked values cannot be modified");
+        if (!_isLocked) return;
+        throw new IonException("locked values cannot be modified");
     }
 
     /**
@@ -482,7 +481,7 @@ public abstract class IonValueImpl
      * buffer to be updated when it's next needed.
      */
     protected void setDirty() {
-    	checkForLock();
+        checkForLock();
         if (this._isDirty == false) {
             this._isDirty = true;
             if (this._container != null) {
@@ -523,22 +522,22 @@ public abstract class IonValueImpl
     }
 
     public void setSymbolTable(LocalSymbolTable symtab) {
-    	checkForLock();
-    	if (this._symboltable != symtab) {
-    		clearSymbols();
-    		this._symboltable = symtab;
-    	}
+        checkForLock();
+        if (this._symboltable != symtab) {
+            clearSymbols();
+            this._symboltable = symtab;
+        }
     }
 
     void clearSymbols()
     {
-    	if (this._fieldSid > 0) {
-    		if (this._fieldName == null) {
-    			this._fieldName = this.getSymbolTable().findKnownSymbol(this._fieldSid);
-    		}
-    		this._fieldSid = 0;
-    		this._symboltable = null;
-    	}
+        if (this._fieldSid > 0) {
+            if (this._fieldName == null) {
+                this._fieldName = this.getSymbolTable().findKnownSymbol(this._fieldSid);
+            }
+            this._fieldSid = 0;
+            this._symboltable = null;
+        }
     }
 
     public int getElementId() {
@@ -568,7 +567,7 @@ public abstract class IonValueImpl
 
     public void clearTypeAnnotations()
     {
-    	checkForLock();
+        checkForLock();
         makeReady();
         this._annotations = null;
         this.setDirty();
@@ -587,7 +586,7 @@ public abstract class IonValueImpl
 
     public void removeTypeAnnotation(String annotation)
     {
-    	checkForLock();
+        checkForLock();
         if (!this.hasTypeAnnotation(annotation)) return;
 
         String[] temp = (_annotations.length == 1) ? null : new String[_annotations.length - 1];
@@ -602,7 +601,7 @@ public abstract class IonValueImpl
     }
     public void addTypeAnnotation(String annotation)
     {
-    	checkForLock();
+        checkForLock();
         if (hasTypeAnnotation(annotation)) return;
 
         // allocate a larger array and copy if necessary
@@ -919,20 +918,20 @@ public abstract class IonValueImpl
 
     protected LocalSymbolTable materializeSymbolTable()
     {
-    	LocalSymbolTable symtab = _symboltable;
-    	if (symtab == null && _container != null) {
-    		symtab = _container.materializeSymbolTable();
-    	}
-		if (symtab == null) {
-			synchronized (this) {
-    			// TODO - should this be here or can we put this off
-    			//        even longer (until someone asks for the binary
-    			//        buffer, for example)
-    			_symboltable = _system.newLocalSymbolTable();
-    			symtab = _symboltable;
-			}
-		}
-    	return symtab;
+        LocalSymbolTable symtab = _symboltable;
+        if (symtab == null && _container != null) {
+            symtab = _container.materializeSymbolTable();
+        }
+        if (symtab == null) {
+            synchronized (this) {
+                // TODO - should this be here or can we put this off
+                //        even longer (until someone asks for the binary
+                //        buffer, for example)
+                _symboltable = _system.newLocalSymbolTable();
+                symtab = _symboltable;
+            }
+        }
+        return symtab;
     }
 
     protected synchronized void materializeAnnotations(IonBinary.Reader reader) throws IOException
@@ -962,7 +961,7 @@ public abstract class IonValueImpl
         int len = sids.length;
         this._annotations = new String[len];
         LocalSymbolTable symtab = getSymbolTable();
-       	assert symtab != null || len < 1 ;
+        assert symtab != null || len < 1 ;
         for (int ii=0; ii<len; ii++) {
             int id = sids[ii];
             this._annotations[ii] = symtab.findSymbol(id);
@@ -1104,7 +1103,7 @@ public abstract class IonValueImpl
 
         LocalSymbolTable symtab =  this.getSymbolTable();
         if (symtab == null) {
-        	symtab = this.materializeSymbolTable();
+            symtab = this.materializeSymbolTable();
 // cas symtab:            // TODO:  what should we do here?  Perhaps create a default table?
 // cas symtab:            throw new IonException("can't serialize symbols without a symbol table");
         }
@@ -1316,7 +1315,7 @@ public abstract class IonValueImpl
      */
     public void updateSymbolTable(LocalSymbolTable symtab)
     {
-    	checkForLock();
+        checkForLock();
 
         // TODO can any of this be short-circuited?
 

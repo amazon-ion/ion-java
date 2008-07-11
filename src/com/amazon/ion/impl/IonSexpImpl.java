@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion.impl;
@@ -10,7 +10,6 @@ import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.ValueVisitor;
-
 import java.io.IOException;
 import java.util.Collection;
 
@@ -77,17 +76,18 @@ public class IonSexpImpl
      * is actually done by IonContainerImpl.copyFrom() and
      * IonValueImpl.copyFrom().
      */
-    public IonSexpImpl clone() throws CloneNotSupportedException
+    @Override
+    public IonSexpImpl clone()
     {
-    	IonSexpImpl clone = new IonSexpImpl();
-    	
-    	try {
-			clone.copyFrom(this);
-    	} catch (IOException e) {
-			throw new IonException(e);
-		}
-    	
-    	return clone;
+        IonSexpImpl clone = new IonSexpImpl();
+
+        try {
+            clone.copyFrom(this);
+        } catch (IOException e) {
+            throw new IonException(e);
+        }
+
+        return clone;
     }
 
     public IonType getType()

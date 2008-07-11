@@ -1,16 +1,15 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion.impl;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonLob;
 import com.amazon.ion.NullValueException;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * The abstract parent of all Ion lob types.
@@ -19,18 +18,14 @@ public abstract class IonLobImpl
     extends IonValueImpl
     implements IonLob
 {
-    
+
     private byte[] _lob_value;
-    
+
     protected IonLobImpl(int typeDesc)
     {
         super(typeDesc);
     }
-    
-    public IonLobImpl clone() throws CloneNotSupportedException
-    {
-    	throw new CloneNotSupportedException("you must clone a specific Ion type");
-    }
+
 
     /**
      * this copies the contents of the lob from the source to
@@ -41,29 +36,28 @@ public abstract class IonLobImpl
      */
     protected void copyFrom(IonLobImpl source)
     {
-    	super.copyFrom(source);
+        super.copyAnnotationsAndFieldNameFrom(source);
 
-    	if (source.isNullValue()) {
-    		// force this value to be a null value
+        if (source.isNullValue()) {
+            // force this value to be a null value
             _lob_value = null;
-    	}
-    	else {
-    		int len = source.byteSize();
-    		if (_lob_value == null || _lob_value.length != len) {
-    			_lob_value = new byte[len];
-    		}
-    		byte[] source_bytes = source.newBytes();
-    		System.arraycopy(source_bytes, 0, _lob_value, 0, len);
-    	}
-    	_hasNativeValue = true;
-    	setDirty();
-    	return;
+        }
+        else {
+            int len = source.byteSize();
+            if (_lob_value == null || _lob_value.length != len) {
+                _lob_value = new byte[len];
+            }
+            byte[] source_bytes = source.newBytes();
+            System.arraycopy(source_bytes, 0, _lob_value, 0, len);
+        }
+        _hasNativeValue = true;
+        setDirty();
     }
 
     public InputStream newInputStream()
     {
         if (isNullValue()) return null;
-        
+
         makeReady();
         // TODO this is inefficient.  Should stream directly from binary.
         return new ByteArrayInputStream(_lob_value);
@@ -77,7 +71,7 @@ public abstract class IonLobImpl
 
     public void setBytes(byte[] bytes)
     {
-    	checkForLock();
+        checkForLock();
 
         // TODO copy data?
         _lob_value = bytes;
@@ -85,21 +79,21 @@ public abstract class IonLobImpl
         setDirty();
     }
 
-    
+
     public int byteSize()
     {
         makeReady();
         if (_lob_value == null) throw new NullValueException();
         return _lob_value.length;
     }
-    
-    
+
+
     @Override
     protected int getNativeValueLength()
     {
         assert _hasNativeValue == true;
         int len;
-    
+
         switch (this.pos_getType()) {
         case IonConstants.tidClob: // text(9)
         case IonConstants.tidBlob: // binary(10)
@@ -108,16 +102,16 @@ public abstract class IonLobImpl
         default:
             throw new IllegalStateException("this value has an illegal type descriptor id");
         }
-        
+
         return len;
     }
-    
+
 
     @Override
     protected int computeLowNibble(int valuelen)
     {
         assert _hasNativeValue == true;
-        
+
         int ln = 0;
         if (_lob_value == null) {
             ln = IonConstants.lnIsNullAtom;
@@ -131,18 +125,18 @@ public abstract class IonLobImpl
         return ln;
     }
 
-    
+
     @Override
     protected void doMaterializeValue(IonBinary.Reader reader) throws IOException
     {
         assert this._isPositionLoaded == true && this._buffer != null;
-        
+
         // a native value trumps a buffered value
         if (_hasNativeValue) return;
-        
+
         // the reader will have been positioned for us
         assert reader.position() == this.pos_getOffsetAtValueTD();
-        
+
         // we need to skip over the td to get to the good stuff
         int td = reader.read();
         assert (byte)(0xff & td) == this.pos_getTypeDescriptorByte();
@@ -171,15 +165,15 @@ public abstract class IonLobImpl
 
         _hasNativeValue = true;
     }
-    
+
     @Override
     protected void doWriteNakedValue(IonBinary.Writer writer, int valueLen) throws IOException
     {
         assert valueLen == this.getNakedValueLength();
         assert valueLen > 0;
-        
+
         writer.write(_lob_value, 0, valueLen);
-        
+
         return;
     }
 

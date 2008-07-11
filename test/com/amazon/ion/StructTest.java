@@ -583,11 +583,21 @@ public class StructTest
         assertEquals(i3, i4);
     }
 
-    public void testClone()
+    public void testFieldNameCloning()
         throws Exception
     {
-        IonValue data = system().singleValue("{v:root}");
-        IonValue clone = data.clone();
-        assertEquals(data, clone);
+        testSimpleClone("{f:{{}}}");           // blob
+        testSimpleClone("{f:true}");           // bool
+        testSimpleClone("{f:{{\"\"}}}");       // clob
+        testSimpleClone("{f:1d0}");            // decimal
+        testSimpleClone("{f:1e0}");            // float
+        testSimpleClone("{f:1}");              // int
+        testSimpleClone("{f:[]}");             // list
+        testSimpleClone("{f:null}");           // null
+        testSimpleClone("{f:()}");             // sexp
+        testSimpleClone("{f:\"s\"}");          // string
+        testSimpleClone("{f:{}}");             // struct
+        testSimpleClone("{f:sym}");            // symbol
+        testSimpleClone("{f:2008-07-11T14:49:26.000-07:00}"); // timestamp
     }
 }
