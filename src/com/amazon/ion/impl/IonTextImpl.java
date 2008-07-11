@@ -67,6 +67,7 @@ abstract class IonTextImpl
     {
     	checkForLock();
     	_set_value(value);
+    	setDirty();
     }
 
     /** Must call {@link #makeReady()} before calling. */
@@ -79,7 +80,6 @@ abstract class IonTextImpl
     {
         _text_value = value;
         _hasNativeValue = true;
-        setDirty();
     }
 
     @Override
