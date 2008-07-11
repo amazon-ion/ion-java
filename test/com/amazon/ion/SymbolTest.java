@@ -118,6 +118,7 @@ public class SymbolTest
     {
         IonValue data = system().singleValue("root");
         IonValue clone = data.clone();
+        assertEquals("root", clone.toString());
         assertEquals(data, clone);
     }
 }
