@@ -16,11 +16,8 @@ your use of those packages is not supported, so <b>don't use them!</b>
 <h1>Start at IonSystem</h1>
 
 The central interface in IonJava is {@link com.amazon.ion.IonSystem}, which is
-the main factory and facade for all Ion processing.  This release includes
-one implementation of that interface,
-{@link com.amazon.ion.system.StandardIonSystem}.
-<p>
-The intend architectural pattern is for your application to acquire a
+the main factory and facade for all Ion processing.
+The intended architectural pattern is for your application to acquire a
 single system instance from the 
 {@link com.amazon.ion.system.SystemFactory SystemFactory} and use it
 throughout the application.  The {@code IonSystem} interface provides access
