@@ -584,6 +584,7 @@ public class StructTest
     }
 
     public void testClone()
+        throws Exception
     {
         IonValue data = system().singleValue("{v:root}");
         IonValue clone = data.clone();

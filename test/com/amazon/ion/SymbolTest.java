@@ -114,6 +114,7 @@ public class SymbolTest
     }
 
     public void testClone()
+        throws Exception
     {
         IonValue data = system().singleValue("root");
         IonValue clone = data.clone();
