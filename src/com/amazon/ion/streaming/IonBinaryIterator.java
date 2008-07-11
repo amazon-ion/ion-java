@@ -645,7 +645,7 @@ public final class IonBinaryIterator
     
     void loadSymbolTableImport(UnifiedSymbolTable local) 
     {
-    	assert (this.getFieldId() == SystemSymbolTable.IMPORTS_SID);
+    	// assert (this.getFieldId() == SystemSymbolTable.IMPORTS_SID);
     	assert (this.getType().equals(IonType.STRUCT));
     	
     	String name = null;
