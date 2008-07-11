@@ -552,34 +552,41 @@ public class StructTest
         s.put("a", system().newNull());
         s.remove(s.get("b"));
     }
-    
+
     public void testBinaryStruct()
     {
-    	IonSystem ionSystem = system();
+        IonSystem ionSystem = system();
 
         IonStruct s1 = (IonStruct)ionSystem.singleValue("{a:0,b:1,j:{type:\"item\",region:\"NA\"}}");
         String    i1 = s1.toString();
         //System.out.println(i1);
- 
+
         IonStruct s2 = (IonStruct)s1.get("j");
-        IonStruct s3 = (IonStruct)ionSystem.clone(s2);
+        IonStruct s3 = ionSystem.clone(s2);
         s1.put("j", s3);
         String i2 = s1.toString();
         //System.out.println(i2);
- 
+
         // what happened to j?
         IonDatagram dg = ionSystem.newDatagram(s1);
         String i3 = dg.toString();
         //System.out.println(i3);
-        
+
         byte[] bytes = dg.toBytes();
         IonLoader loader = ionSystem.getLoader();
-        IonValue v = loader.load(bytes); 
+        IonValue v = loader.load(bytes);
         String i4 = v.toString();
         //System.out.println(i4);
-        
+
         assertEquals(i1, i2);
         assertEquals(i2, i3);
         assertEquals(i3, i4);
+    }
+
+    public void testClone()
+    {
+        IonValue data = system().singleValue("{v:root}");
+        IonValue clone = data.clone();
+        assertEquals(data, clone);
     }
 }

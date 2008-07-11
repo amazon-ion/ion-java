@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion;
@@ -14,7 +14,7 @@ public class SymbolTest
         assertSame(IonType.SYMBOL, value.getType());
         assertTrue("isNullValue() is false",   value.isNullValue());
         assertNull("stringValue() isn't null", value.stringValue());
-        
+
         try {
             value.intValue();
             fail("Expected NullValueException");
@@ -25,7 +25,7 @@ public class SymbolTest
     public void modifySymbol(IonSymbol value)
     {
         String modValue = "sweet!";
-        
+
         // Make sure the test case isn't starting in the desired state.
         assertFalse(modValue.equals(value.stringValue()));
 
@@ -46,7 +46,7 @@ public class SymbolTest
         catch (EmptySymbolException e) { }
         assertEquals(modValue1, value.stringValue());
         assertEquals(sid, value.intValue());
-        
+
         value.setValue(null);
         checkNullSymbol(value);
     }
@@ -60,7 +60,7 @@ public class SymbolTest
         IonSymbol value = system().newNullSymbol();
         checkNullSymbol(value);
         modifySymbol(value);
-        
+
         value = system().newSymbol("hello");
     }
 
@@ -98,7 +98,7 @@ public class SymbolTest
         assertTrue(value.intValue() > 0);
         modifySymbol(value);
     }
-    
+
     public void testSyntheticSymbols()
     {
         String symText = "$324";
@@ -106,10 +106,17 @@ public class SymbolTest
         checkSymbol(symText, value);
         assertEquals(324, value.intValue());
     }
-    
-    public void testQuotesOnMediumStringBoundary() 
+
+    public void testQuotesOnMediumStringBoundary()
     {
         // Double-quote falls on the boundary.
         checkSymbol("KIM 12\" X 12\"", oneValue("'KIM 12\\\" X 12\\\"'"));
+    }
+
+    public void testClone()
+    {
+        IonValue data = system().singleValue("root");
+        IonValue clone = data.clone();
+        assertEquals(data, clone);
     }
 }
