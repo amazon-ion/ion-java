@@ -51,7 +51,7 @@ abstract class IonTextImpl
 
     	// now we can copy the text as a string
     	String s = source.getValue();
-    	_text_value = s;
+    	_set_value(s);
     }
 
 
@@ -66,9 +66,8 @@ abstract class IonTextImpl
     public void setValue(String value)
     {
     	checkForLock();
-        _text_value = value;
-        _hasNativeValue = true;
-        setDirty();
+    	_set_value(value);
+    	setDirty();
     }
 
     /** Must call {@link #makeReady()} before calling. */
@@ -80,6 +79,7 @@ abstract class IonTextImpl
     protected void _set_value(String value)
     {
         _text_value = value;
+        _hasNativeValue = true;
     }
 
     @Override

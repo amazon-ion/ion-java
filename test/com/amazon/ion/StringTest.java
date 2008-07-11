@@ -4,7 +4,6 @@
 
 package com.amazon.ion;
 
-import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
@@ -15,33 +14,33 @@ import java.nio.charset.Charset;
 public class StringTest
     extends IonTestCase
 {
-	private static final boolean _debug_output = false;
+    private static final boolean _debug_output = false;
     public static void testDummy() {
-    	int u =  0x10400; // 0x10FFFE; // 0xD800 + 2;  // 'a'; //
-    	
-    	char[] c = Character.toChars(u);
-    	
-    	CharBuffer cb = CharBuffer.wrap(c);
-    	
-    	byte[] b = null;
-		try {
-			b = Charset.forName("UTF-8").newEncoder().encode(cb).array();
-		} catch (CharacterCodingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-    	
-    	for (int ii=0; ii<c.length; ii++) {
-    		if (_debug_output) {
-    			System.out.println("char "+ii+" = "+Integer.toHexString((((int)c[ii]))));
-    		}
-    	}
-    	for (int ii=0; ii<b.length; ii++) {
-    		if (_debug_output) {
-    			System.out.println("byte "+ii+" = "+Integer.toHexString((((int)b[ii]) & 0xff)));
-    		}
-    	}
-    	return;
+        int u =  0x10400; // 0x10FFFE; // 0xD800 + 2;  // 'a'; //
+
+        char[] c = Character.toChars(u);
+
+        CharBuffer cb = CharBuffer.wrap(c);
+
+        byte[] b = null;
+        try {
+            b = Charset.forName("UTF-8").newEncoder().encode(cb).array();
+        } catch (CharacterCodingException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
+        for (int ii=0; ii<c.length; ii++) {
+            if (_debug_output) {
+                System.out.println("char "+ii+" = "+Integer.toHexString(((c[ii]))));
+            }
+        }
+        for (int ii=0; ii<b.length; ii++) {
+            if (_debug_output) {
+                System.out.println("byte "+ii+" = "+Integer.toHexString(((b[ii]) & 0xff)));
+            }
+        }
+        return;
     }
     public static void checkNullString(IonString value)
     {
@@ -247,8 +246,8 @@ public class StringTest
         IonValue value = oneValue("  '''a''' '''b'''  ");
         checkString("ab", value);
     }
-    
-    public void testQuotesOnMediumStringBoundary() 
+
+    public void testQuotesOnMediumStringBoundary()
     {
         // Double-quote falls on the boundary.
         checkString("KIM 12\" X 12\"", oneValue("\"KIM 12\\\" X 12\\\"\""));
@@ -256,4 +255,13 @@ public class StringTest
         checkString("KIM 12\" X 12\"", oneValue("'''KIM 12\\\" X 12\\\"'''"));
     }
 
+
+    public void testClone()
+        throws Exception
+    {
+        IonValue data = system().singleValue("\"root\"");
+        IonValue clone = data.clone();
+        assertEquals("\"root\"", clone.toString());
+        assertEquals(data, clone);
+    }
 }
