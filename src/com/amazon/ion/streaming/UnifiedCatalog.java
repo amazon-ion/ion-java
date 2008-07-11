@@ -1,7 +1,11 @@
+/*
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
+ */
+
 package com.amazon.ion.streaming;
 
 import com.amazon.ion.IonCatalog;
-import com.amazon.ion.StaticSymbolTable;
+import com.amazon.ion.SymbolTable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -38,13 +42,13 @@ public class UnifiedCatalog
      *
      * @return a non-null, but potentially empty, iterator.
      */
-    public Iterator<StaticSymbolTable> iterator()
+    public Iterator<SymbolTable> iterator()
     {
-        ArrayList<StaticSymbolTable> tables;
+        ArrayList<SymbolTable> tables;
 
         synchronized (myTablesByName)
         {
-            tables = new ArrayList<StaticSymbolTable>(myTablesByName.size());
+            tables = new ArrayList<SymbolTable>(myTablesByName.size());
 
             // I don't think we can shorten the synchronization block
             // because HashMap.values() result is a live view (not a copy) and
@@ -138,7 +142,7 @@ public class UnifiedCatalog
         return st;
     }
 
-    public void putTable(StaticSymbolTable table)
+    public void putTable(SymbolTable table)
     {
         UnifiedSymbolTable utable;
         if (!(table instanceof UnifiedSymbolTable)) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion.impl;
@@ -65,6 +65,36 @@ public abstract class AbstractSymbolTable
 
 
 
+    public boolean isSharedTable()
+    {
+        return false;
+    }
+
+
+    public boolean isSystemTable()
+    {
+        return false;
+    }
+
+
+    public String getName()
+    {
+        return null;
+    }
+
+
+    public int getVersion()
+    {
+        return 0;
+    }
+
+
+    public String getSystemId()
+    {
+        // FIXME I'm not sure this is correct...
+        return SystemSymbolTable.ION_1_0;
+    }
+
     public synchronized int getMaxId()
     {
         return _maxId;
@@ -83,6 +113,7 @@ public abstract class AbstractSymbolTable
     }
 
 
+    @Override
     public String toString()
     {
         StringBuilder buf = new StringBuilder();

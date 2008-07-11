@@ -25,7 +25,7 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
-import com.amazon.ion.StaticSymbolTable;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.UnsupportedSystemVersionException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
@@ -51,7 +51,7 @@ import java.util.List;
 public class IonSystemImpl
     implements IonSystem
 {
-    private SystemSymbolTableImpl mySystemSymbols = new SystemSymbolTableImpl();
+    private SymbolTable mySystemSymbols = new SystemSymbolTableImpl();
     private LocalSymbolTableImpl  mySystemSymbolsAsLocal = new LocalSymbolTableImpl(mySystemSymbols);
     private IonCatalog myCatalog;
     private IonLoader  myLoader = new LoaderImpl(this);
@@ -68,16 +68,17 @@ public class IonSystemImpl
     }
 
 
-    public SystemSymbolTableImpl getSystemSymbolTable()
+    public SymbolTable getSystemSymbolTable()
     {
         return mySystemSymbols;
     }
+
     public LocalSymbolTableImpl getSystemSymbolTableAsLocal()
     {
         return mySystemSymbolsAsLocal;
     }
 
-    public SystemSymbolTable getSystemSymbolTable(String systemId)
+    public SymbolTable getSystemSymbolTable(String systemId)
         throws UnsupportedSystemVersionException
     {
         if (systemId.equals(SystemSymbolTable.ION_1_0))
@@ -108,15 +109,15 @@ public class IonSystemImpl
     }
 
 
-    public LocalSymbolTable newLocalSymbolTable(SystemSymbolTable systemSymbols)
+    public LocalSymbolTable newLocalSymbolTable(SymbolTable systemSymbols)
     {
+        if (! systemSymbols.isSystemTable())
+        {
+            String message = "systemSymbols is not a system symbol table.";
+            throw new IllegalArgumentException(message);
+        }
+
         return new LocalSymbolTableImpl(systemSymbols);
-    }
-
-
-    public StaticSymbolTable newStaticSymbolTable(IonStruct symbolTable)
-    {
-        return new StaticSymbolTableImpl(this, symbolTable);
     }
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion;
@@ -20,7 +20,7 @@ public interface IonCatalog
      * @param name identifies the desired symbol table.
      * @return <code>null</code> if not found.
      */
-    public StaticSymbolTable getTable(String name);
+    public SymbolTable getTable(String name);
 
 
     /**
@@ -29,7 +29,7 @@ public interface IonCatalog
      * @return the table with the given name and version, or <code>null</code>
      * if there's no match.
      */
-    public StaticSymbolTable getTable(String name, int version);
+    public SymbolTable getTable(String name, int version);
 
 
     /**
@@ -37,7 +37,7 @@ public interface IonCatalog
      * behavior of this method if this catalog already contains a table with
      * the same name and version.
      *
-     * @param table must have a valid name and version.
+     * @param sharedTable must have a valid name and version.
      */
-    public void putTable(StaticSymbolTable table);
+    public void putTable(SymbolTable sharedTable);
 }

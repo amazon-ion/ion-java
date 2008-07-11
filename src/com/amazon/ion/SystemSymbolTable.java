@@ -23,7 +23,7 @@ public interface SystemSymbolTable
         SystemSymbolTable.MAX_ID,
         SystemSymbolTable.ION_EMBEDDED_VALUE
     };
-    
+
     /**
      * The symbol name prefix reserved for use by Ion implementations.
      */
@@ -82,11 +82,4 @@ public interface SystemSymbolTable
      */
     public static final String ION_EMBEDDED_VALUE = "$ion_embedded_value";
     public static final int    ION_EMBEDDED_VALUE_SID = 9;
-
-
-    /**
-     * Gets the system identifier for this symbol table, a string of the form
-     * <code>"$ion_X_Y"</code>
-     */
-    public String getSystemId();
 }

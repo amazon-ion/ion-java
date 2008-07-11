@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion;
@@ -12,6 +12,45 @@ package com.amazon.ion;
  */
 public interface SymbolTable
 {
+    /**
+     * Determines whether this symbol table is shared, and therefore named,
+     * versioned, and unmodifiable.
+     */
+    public boolean isSharedTable();
+
+
+    /**
+     * Determines whether this symbol table is a system symbol table, and
+     * therefore shared, named, versioned, and unmodifiable.
+     */
+    public boolean isSystemTable();
+
+
+    /**
+     * Gets the unique name of this symbol table.
+     *
+     * @return the unique name, or {@code null} if this is not a shared table.
+     */
+    public String getName();
+
+
+    /**
+     * Gets the version of this symbol table.
+     *
+     * @return at least one, or zero if this is not a shared table.
+     */
+    public int getVersion();
+
+
+    /**
+     * Gets the identifier for the system symbol table imported by this table.
+     * The system identifier is a string of the form {@code "$ion_X_Y"}.
+     *
+     * @return the system identifier; not {@code null}.
+     */
+    public String getSystemId();
+
+
     /**
      * Gets the highest symbol id reserved by this table.
      *

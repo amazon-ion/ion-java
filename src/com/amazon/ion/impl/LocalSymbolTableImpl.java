@@ -1,4 +1,4 @@
-/* Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
  package com.amazon.ion.impl;
@@ -13,7 +13,6 @@ import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
-import com.amazon.ion.StaticSymbolTable;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 
@@ -28,32 +27,26 @@ public class LocalSymbolTableImpl
     private static class ImportedTable
     {
         /** Can be null if the imported table isn't available. */
-        StaticSymbolTable _table;
+        SymbolTable _table;
         int               _localOffset;
         int               _localMaxId;
     }
 
-    private final SystemSymbolTable _systemSymbols;
+    private final SymbolTable _systemSymbols;
     private final ImportedTable[]   _importedTables;
 
-    // This should no longer be necessary TODO remove this
-    //private static class hideMe {
-    //    private hideMe() {}
-    //}
-    //
-    //private LocalSymbolTableImpl(hideMe dummy,
-    //                             SystemSymbolTable systemSymbolTable)
-    //{
-    //    _systemSymbols = systemSymbolTable;
-    //    _importedTables = null;
-    //}
 
     /**
      * Constructs an empty symbol table.
+     *
+     * @param systemSymbolTable must be a system symbol table as per
+     *   {@link SymbolTable#isSystemTable()}.
      */
-    public LocalSymbolTableImpl(SystemSymbolTable systemSymbolTable)
+    public LocalSymbolTableImpl(SymbolTable systemSymbolTable)
     {
         assert systemSymbolTable != null;
+        assert systemSymbolTable.isSystemTable();
+
         _systemSymbols = systemSymbolTable;
         _importedTables = null;
         _maxId = systemSymbolTable.getMaxId();
@@ -77,13 +70,20 @@ public class LocalSymbolTableImpl
         this(system.getSystemSymbolTable());
     }
 
+    /**
+     * Constructs an empty symbol table from its Ion representation.
+     *
+     * @param systemSymbolTable must be a system symbol table as per
+     *   {@link SymbolTable#isSystemTable()}.
+     */
     public LocalSymbolTableImpl(IonSystem system,
                                 IonCatalog catalog,
                                 IonStruct asymboltable,
-                                SystemSymbolTable systemSymbolTable)
+                                SymbolTable systemSymbolTable)
     {
         assert system != null;
         assert systemSymbolTable != null;
+        assert systemSymbolTable.isSystemTable();
         assert asymboltable.hasTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE);  // was: ION_1_0
 
         _systemSymbols = systemSymbolTable;
@@ -107,7 +107,7 @@ public class LocalSymbolTableImpl
 
 
     // Not synchronized since member is final.
-    public SystemSymbolTable getSystemSymbolTable()
+    public SymbolTable getSystemSymbolTable()
     {
         return _systemSymbols;
     }
@@ -174,7 +174,7 @@ public class LocalSymbolTableImpl
             for (int i = 0; i < _importedTables.length; i++)
             {
                 ImportedTable imported = _importedTables[i];
-                StaticSymbolTable table = imported._table;
+                SymbolTable table = imported._table;
                 if (table != null)
                 {
                     sid = table.findSymbol(name);
@@ -249,13 +249,13 @@ public class LocalSymbolTableImpl
     }
 
 
-    public StaticSymbolTable getImportedTable(String name)
+    public SymbolTable getImportedTable(String name)
     {
         if (_importedTables == null) return null;
 
         for (int i = 0; i < _importedTables.length; i++)
         {
-            StaticSymbolTable current = _importedTables[i]._table;
+            SymbolTable current = _importedTables[i]._table;
             if (current != null && name.equals(current.getName()))
             {
                 return current;
@@ -350,7 +350,7 @@ public class LocalSymbolTableImpl
         }
         int version = ((IonInt)versionElement).intValue();
 
-        StaticSymbolTable importedTable = catalog.getTable(name, version);
+        SymbolTable importedTable = catalog.getTable(name, version);
 
 
         IonValue maxIdElement = importStruct.get(SystemSymbolTable.MAX_ID);

@@ -10,7 +10,6 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.LocalSymbolTable;
-import com.amazon.ion.StaticSymbolTable;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.impl.IonBinary;
@@ -35,8 +34,8 @@ import java.util.HashMap;
  *
  */
 public final class UnifiedSymbolTable
-    implements SymbolTable, LocalSymbolTable, StaticSymbolTable,
-    SystemSymbolTable
+    implements SymbolTable, LocalSymbolTable//,
+    //SystemSymbolTable
 {
 
     public final int UNKNOWN_SID = 0;
@@ -115,7 +114,8 @@ public final class UnifiedSymbolTable
         UnifiedSymbolTable systab = new UnifiedSymbolTable();
 
         systab.setSystemSymbolTable(systab);
-        systab.setName(SystemSymbolTable.ION_1_0);
+
+        systab.setName(SystemSymbolTable.ION);
         systab.setVersion(1);
 
         for (int ii=0; ii<SYSTEM_SYMBOLS.length; ii++) {
@@ -143,6 +143,7 @@ public final class UnifiedSymbolTable
             td_len   = IonBinary.lenLenFieldWithOptionalNibble(name_len);
             td_len  += IonConstants.BB_TOKEN_LEN;
         }
+        @Override
         public String toString() {
             return "Symbol:"+sid+(name != null ? "-"+name : "");
         }
@@ -191,20 +192,21 @@ public final class UnifiedSymbolTable
     UnifiedSymbolTable(SymbolTable symboltable) {
         this(getSystemSymbolTableInstance());
 
-        if (symboltable instanceof StaticSymbolTable)
+        String name = symboltable.getName();
+        if (name != null)
         {
-            StaticSymbolTable sst = (StaticSymbolTable) symboltable;
-            _name = sst.getName();
-            _version = sst.getVersion();
+            _name = name;
+            _version = symboltable.getVersion();
+            assert _version > 0;
         }
 
         int minid = this._system_symbols.getMaxId();
         int maxid = symboltable.getMaxId();
         for (int ii=minid + 1; ii <= maxid; ii++) {
-            String name = symboltable.findKnownSymbol(ii);
+            String symbolText = symboltable.findKnownSymbol(ii);
             // FIXME shouldn't happen, we decided to not allow removing symbols
-            if (name == null) continue;
-            this.defineSymbol(name, ii);
+            if (symbolText == null) continue;
+            this.defineSymbol(symbolText, ii);
         }
     }
 
@@ -214,8 +216,14 @@ public final class UnifiedSymbolTable
     }
 
     public void lock() {
+        if (_name == null) {
+            throw new IllegalStateException("Symbol table has no name");
+        }
+        if (_version < 1) {
+            throw new IllegalStateException("Symbol table has no version");
+        }
         _is_locked = true;
-        // TODO validate that name and version (and maxId?) are legal
+        // TODO validate that maxId is legal?
     }
     public void unlock() {
         _is_locked = false;
@@ -231,13 +239,15 @@ public final class UnifiedSymbolTable
     public boolean isLocked() {
         return _is_locked;
     }
+
+    public boolean isSharedTable() {
+        return _is_locked;
+    }
+
     public boolean isSystemTable() {
         // the is locked test is a short cut since most tables are local and
         // locked, therefore the bool gets us out of here in a hurry
-        return (_is_locked
-             && this._name != null
-             && this._name.equals(SystemSymbolTable.ION_1_0)
-             );
+        return (_is_locked && SystemSymbolTable.ION.equals(_name));
     }
 
     public int size()
@@ -258,7 +268,7 @@ public final class UnifiedSymbolTable
             throw new IllegalArgumentException("symbol id's are greater than 0, and maxId must be at least 0");
         }
         if (_is_locked) {
-            throw new IllegalStateException("can't change locked symbol table");
+            throw new IllegalStateException("can't change shared symbol table");
         }
 
     }
@@ -268,7 +278,7 @@ public final class UnifiedSymbolTable
             throw new IllegalArgumentException("versions must be integers of value 1 or higher, or 0 for 'no version'");
         }
         if (_is_locked) {
-            throw new IllegalStateException("can't change locked symbol table");
+            throw new IllegalStateException("can't change shared symbol table");
         }
         _version = version;
         return;
@@ -287,7 +297,7 @@ public final class UnifiedSymbolTable
             throw new IllegalArgumentException("name must have content (length > 0, null for 'no name')");
         }
         if (_is_locked) {
-            throw new IllegalStateException("can't change locked symbol table");
+            throw new IllegalStateException("can't change shared symbol table");
         }
         _name = name;
     }
@@ -344,7 +354,7 @@ public final class UnifiedSymbolTable
                     }
                     catch (NumberFormatException e)
                     {
-                        if (name.startsWith(ION_RESERVED_PREFIX)) {
+                        if (name.startsWith(SystemSymbolTable.ION_RESERVED_PREFIX)) {
                             throw new InvalidSystemSymbolException(name);
                         }
                         // else fall through
@@ -370,7 +380,7 @@ public final class UnifiedSymbolTable
     public int addSymbol(String name)
     {
         if (_is_locked) {
-            throw new IllegalStateException("can't change locked symbol table");
+            throw new IllegalStateException("can't change shared symbol table");
         }
         int sid = this.findSymbol(name);
         if (sid == UNKNOWN_SID) {
@@ -382,7 +392,7 @@ public final class UnifiedSymbolTable
     public void defineSymbol(String name, int id)
     {
         if (_is_locked) {
-            throw new IllegalStateException("can't change locked symbol table");
+            throw new IllegalStateException("can't change shared symbol table");
         }
         if (name == null || name.length() < 1 || id < 1) {
             throw new IllegalArgumentException("invalid symbol definition");
@@ -423,7 +433,7 @@ public final class UnifiedSymbolTable
     public void removeSymbol(String name, int id)
     {
         if (_is_locked) {
-            throw new IllegalStateException("can't change locked symbol table");
+            throw new IllegalStateException("can't change shared symbol table");
         }
         int sid = this.findSymbol(name);
         if (sid != id) {
@@ -434,7 +444,7 @@ public final class UnifiedSymbolTable
     public void removeSymbol(String name)
     {
         if (_is_locked) {
-            throw new IllegalStateException("can't change locked symbol table");
+            throw new IllegalStateException("can't change shared symbol table");
         }
         int sid = this.findSymbol(name);
         if (sid == UNKNOWN_SID) return;
@@ -497,7 +507,7 @@ public final class UnifiedSymbolTable
             throw new IllegalArgumentException("imported symbol tables must be named");
         }
         if (!newTable.isLocked()) {
-            throw new IllegalArgumentException("only locked tables can be imported");
+            throw new IllegalArgumentException("only shared tables can be imported");
         }
         if (!_system_symbols.getSystemId().equals(newTable.getSystemId())) {
             throw new IllegalArgumentException("you can only import tables based on the same system symbols");
@@ -561,7 +571,7 @@ public final class UnifiedSymbolTable
     public void setSystemSymbolTable(SymbolTable systemSymbols)
     {
         if (_is_locked) {
-            throw new IllegalStateException("can't change locked symbol table");
+            throw new IllegalStateException("can't change shared symbol table");
         }
         if (systemSymbols != null && !(systemSymbols instanceof UnifiedSymbolTable)) {
             throw new IllegalArgumentException("sorry, but even system symbol tables must be UnifiedSymbolTable's (we'll fix this type decl Real Soon Now)");
