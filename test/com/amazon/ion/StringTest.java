@@ -256,12 +256,11 @@ public class StringTest
     }
 
 
-    public void testClone()
+    public void testStringClone()
         throws Exception
     {
-        IonValue data = system().singleValue("\"root\"");
-        IonValue clone = data.clone();
-        assertEquals("\"root\"", clone.toString());
-        assertEquals(data, clone);
+        testSimpleClone("null.string");
+        testSimpleClone("\"\"");
+        testSimpleClone("\"root\"");
     }
 }

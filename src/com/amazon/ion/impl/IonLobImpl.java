@@ -40,7 +40,7 @@ public abstract class IonLobImpl
      */
     protected void copyFrom(IonLobImpl source)
     {
-        super.copyAnnotationsAndFieldNameFrom(source);
+        copyAnnotationsFrom(source);
 
         if (source.isNullValue()) {
             // force this value to be a null value

@@ -61,7 +61,7 @@ public final class IonDecimalImpl
         IonDecimalImpl clone = new IonDecimalImpl();
 
         makeReady();
-        clone.copyAnnotationsAndFieldNameFrom(this);
+        clone.copyAnnotationsFrom(this);
         clone.setValue(this._decimal_value);
 
         return clone;

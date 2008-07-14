@@ -76,7 +76,7 @@ public final class IonIntImpl
     	IonIntImpl clone = new IonIntImpl();
 
     	makeReady();
-    	clone.copyAnnotationsAndFieldNameFrom(this);
+    	clone.copyAnnotationsFrom(this);
         clone.doSetValue(this._int_value);
 
     	return clone;

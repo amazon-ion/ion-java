@@ -57,7 +57,7 @@ public final class IonTimestampImpl
     {
         IonTimestampImpl clone = new IonTimestampImpl();
 
-        clone.copyAnnotationsAndFieldNameFrom(this);  // Calls makeReady()
+        clone.copyAnnotationsFrom(this);  // Calls makeReady()
         if (this.isNullValue()) {
             clone._timestamp_value = null;
         }

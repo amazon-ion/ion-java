@@ -583,9 +583,12 @@ public class StructTest
         assertEquals(i3, i4);
     }
 
-    public void testFieldNameCloning()
+    public void testStructClone()
         throws Exception
     {
+        testSimpleClone("null.struct");
+        testSimpleClone("{}");
+
         testSimpleClone("{f:{{}}}");           // blob
         testSimpleClone("{f:true}");           // bool
         testSimpleClone("{f:{{\"\"}}}");       // clob
@@ -599,5 +602,17 @@ public class StructTest
         testSimpleClone("{f:{}}");             // struct
         testSimpleClone("{f:sym}");            // symbol
         testSimpleClone("{f:2008-07-11T14:49:26.000-07:00}"); // timestamp
+    }
+
+    public void testClonedFieldHasNoName()
+    {
+        IonStruct s = (IonStruct) oneValue("{f:12}");
+        IonValue f = s.get("f");
+        assertEquals("f", f.getFieldName());
+        assertTrue(0 < f.getFieldId());
+
+        IonValue clone = f.clone();
+        assertNull("field name shouldn't be cloned", clone.getFieldName());
+        assertTrue(clone.getFieldId() < 1);
     }
 }

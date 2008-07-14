@@ -113,12 +113,10 @@ public class SymbolTest
         checkSymbol("KIM 12\" X 12\"", oneValue("'KIM 12\\\" X 12\\\"'"));
     }
 
-    public void testClone()
+    public void testSymbolClone()
         throws Exception
     {
-        IonValue data = system().singleValue("root");
-        IonValue clone = data.clone();
-        assertEquals("root", clone.toString());
-        assertEquals(data, clone);
+        testSimpleClone("null.symbol");
+        testSimpleClone("root");
     }
 }

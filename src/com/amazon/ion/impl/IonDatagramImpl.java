@@ -252,7 +252,7 @@ public final class IonDatagramImpl
         if (element instanceof IonSymbolImpl) {
             IonSymbolImpl symbol = (IonSymbolImpl)element;
             is_system_value = (symbol.isNullValue() == false)
-                    && (SystemSymbolTable.ION_1_0.equals(symbol.getValue()));
+                    && (SystemSymbolTable.ION_1_0.equals(symbol.stringValue()));
         }
         else if (element._annotations != null) {
             if (element instanceof IonStructImpl) {

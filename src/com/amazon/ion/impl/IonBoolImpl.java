@@ -52,7 +52,7 @@ public final class IonBoolImpl
         IonBoolImpl clone = new IonBoolImpl();
 
         makeReady();
-        clone.copyAnnotationsAndFieldNameFrom(this);
+        clone.copyAnnotationsFrom(this);
         clone.setValue(this._bool_value);
 
         return clone;

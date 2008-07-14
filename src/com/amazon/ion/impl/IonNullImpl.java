@@ -57,7 +57,7 @@ public final class IonNullImpl
         IonNullImpl clone = new IonNullImpl();
 
         makeReady();
-        clone.copyAnnotationsAndFieldNameFrom(this);
+        clone.copyAnnotationsFrom(this);
 
         return clone;
     }

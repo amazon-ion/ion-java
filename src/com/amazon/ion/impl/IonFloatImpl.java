@@ -64,7 +64,7 @@ public final class IonFloatImpl
         IonFloatImpl clone = new IonFloatImpl();
 
         makeReady();
-        clone.copyAnnotationsAndFieldNameFrom(this);
+        clone.copyAnnotationsFrom(this);
         clone.setValue(this._float_value);
 
         return clone;

@@ -83,7 +83,7 @@ public final class IonSymbolImpl
         if (this._hasNativeValue) {
             return _get_value();
         }
-        return this.getSymbolTable().findSymbol(this.intValue());
+        return this.getSymbolTable().findSymbol(this.getSymbolId());
     }
 
     @Deprecated
@@ -117,13 +117,11 @@ public final class IonSymbolImpl
     @Override
     public void setValue(String value)
     {
-        checkForLock();
-
         if ("".equals(value)) {
             throw new EmptySymbolException();
         }
 
-        super.setValue(value);
+        super.setValue(value);  // Calls checkForLock
         if (value != null) {
             mySid = UNKNOWN_SYMBOL_ID;
         }

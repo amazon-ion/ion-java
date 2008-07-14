@@ -168,11 +168,7 @@ public final class IonStructImpl
         if (value != null)
         {
             IonValueImpl concrete = (IonValueImpl) value;
-            try {
-                add(size, concrete, true);
-            } catch (IOException e) {
-                throw new IonException(e);
-            }
+            add(size, concrete, true);
 
             // This is true because we've validated that its not contained.
             assert value.getFieldName() == null;
@@ -191,11 +187,7 @@ public final class IonStructImpl
 //      validateNewChild(value);          // This is done by add() below.
 
         IonValueImpl concrete = (IonValueImpl) value;
-        try {
-            add(concrete);
-        } catch (IOException e) {
-            throw new IonException(e);
-        }
+        add(concrete);
 
         // This should be true because we've validated that its not contained.
         assert value.getFieldName() == null;

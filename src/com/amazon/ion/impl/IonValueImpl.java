@@ -198,7 +198,7 @@ public abstract class IonValueImpl
      * is unnecessary to update the symbol table ... yet.
      * @param source instance to copy from
      */
-    protected void copyAnnotationsAndFieldNameFrom(IonValueImpl source)
+    protected void copyAnnotationsFrom(IonValueImpl source)
     {
         // first this instance has to be ready
         // (although it probably is)
@@ -209,9 +209,6 @@ public abstract class IonValueImpl
         // MakeReady()) which we'll want.
         String[] a = source.getTypeAnnotations();
         _annotations = a; // and we don't care if it's null or not
-
-        String s = source.getFieldName();
-        this.setFieldName(s);
     }
 
     protected void init(int fieldSID

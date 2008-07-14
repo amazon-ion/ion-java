@@ -3,7 +3,6 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonText;
-import com.amazon.ion.NullValueException;
 
 /**
  *
@@ -18,9 +17,9 @@ abstract class IonTextImpl
      * Constructs a binary-backed value.
      */
     protected IonTextImpl(int typeDesc)
-     {
-         super(typeDesc);
-     }
+    {
+        super(typeDesc);
+    }
 
 
     @Override
@@ -35,25 +34,17 @@ abstract class IonTextImpl
      * is unnecessary to update the symbol table ... yet.
      * @param source instance to copy from
      */
-    protected void copyFrom(IonTextImpl source)
+    protected final void copyFrom(IonTextImpl source)
     {
         // first copy the annotations and such, which
         // will materialize the value as needed.
-        super.copyAnnotationsAndFieldNameFrom(source);
+        copyAnnotationsFrom(source);
 
         // now we can copy the text as a string
-        String s = source.getValue();
+        String s = source._text_value;
         _set_value(s);
     }
 
-
-    public String getValue()
-        throws NullValueException
-    {
-        makeReady();
-        if (_text_value == null) throw new NullValueException();
-        return _text_value;
-    }
 
     public void setValue(String value)
     {
@@ -63,19 +54,23 @@ abstract class IonTextImpl
     }
 
     /** Must call {@link #makeReady()} before calling. */
-    protected String _get_value()
+    protected final String _get_value()
     {
         return _text_value;
     }
 
-    protected void _set_value(String value)
+    /**
+     * Must call {@link #checkForLock()} first.
+     * Also sets {@link #_hasNativeValue} true.
+     */
+    protected final void _set_value(String value)
     {
         _text_value = value;
         _hasNativeValue = true;
     }
 
     @Override
-    public synchronized boolean isNullValue()
+    public final boolean isNullValue()
     {
         if (!_hasNativeValue) return super.isNullValue();
         return (_text_value == null);

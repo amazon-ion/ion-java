@@ -8,6 +8,7 @@ import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.NullValueException;
@@ -63,7 +64,7 @@ abstract public class IonContainerImpl
         // the immediate children (but it is not
         // a deep materialization, so we'll live with
         // it for now).
-        super.copyAnnotationsAndFieldNameFrom(source);
+        copyAnnotationsFrom(source);
 
         // now we can copy the contents
 
@@ -100,13 +101,25 @@ abstract public class IonContainerImpl
             else {
                 // if this is not buffer backed, we just have to
                 // do a deep copy
-                for (IonValue child : source._contents) {
+                final boolean cloningFields = (this instanceof IonStruct);
+
+                ArrayList<IonValue> sourceContents = source._contents;
+                int size = sourceContents.size();
+
+                for (int i = 0; i < size; i++)
+                {
+                    IonValue child = sourceContents.get(i);
                     IonValue copy = child.clone();
-                    this.add(copy);
+                    if (cloningFields) {
+                        String name = child.getFieldName();
+                        ((IonValueImpl)copy).setFieldName(name);
+                    }
+                    this.add(i, copy, true);
                 }
             }
         }
     }
+
 
     public int size()
         throws NullValueException
@@ -505,11 +518,11 @@ abstract public class IonContainerImpl
      *   if {@code child} is already part of a container.
      * @throws IllegalArgumentException
      *   if {@code child} is an {@link IonDatagram}.
-     * @throws IOException
      * @throws ContainedValueException
      */
     protected void add(IonValue child)
-        throws NullPointerException, IllegalArgumentException, ContainedValueException, IOException
+        throws NullPointerException, IllegalArgumentException,
+        ContainedValueException
     {
         checkForLock();
 
@@ -527,13 +540,12 @@ abstract public class IonContainerImpl
      *   if {@code child} is {@code null}.
      * @throws ContainedValueException
      *   if {@code child} is already part of a container.
-     * @throws IOException
      * @throws IllegalArgumentException
      *   if {@code child} is an {@link IonDatagram}.
      */
 
     protected void add(int index, IonValue child)
-        throws ContainedValueException, NullPointerException, IOException
+        throws ContainedValueException, NullPointerException
     {
         checkForLock();
         validateNewChild(child);
@@ -580,10 +592,9 @@ abstract public class IonContainerImpl
      *        must not be null.
      * @throws NullPointerException
      *         if the element is <code>null</code>.
-     * @throws IOException
      */
     protected void add(int index, IonValue element, boolean setDirty)
-        throws ContainedValueException, NullPointerException, IOException
+        throws ContainedValueException, NullPointerException
     {
         final IonValueImpl concrete = ((IonValueImpl) element);
 

@@ -86,11 +86,7 @@ public abstract class IonSequenceImpl
             for (Iterator i = elements.iterator(); i.hasNext();)
             {
                 IonValue element = (IonValue) i.next();
-                try {
-                    super.add(element);
-                } catch (IOException e) {
-                    throw new IonException(e);
-                }
+                super.add(element);
             }
 
             // FIXME if add of a child fails, prior children have bad container
@@ -120,11 +116,7 @@ public abstract class IonSequenceImpl
         throws ContainedValueException, NullPointerException
     {
         // super.add will check for the lock
-        try {
-            super.add(element);
-        } catch (IOException e) {
-            throw new IonException(e);
-        }
+        super.add(element);
     }
 
     @Override
@@ -133,11 +125,7 @@ public abstract class IonSequenceImpl
         throws ContainedValueException, NullPointerException
     {
         // super.add will check for the lock
-        try {
-            super.add(index, element);
-        } catch (IOException e) {
-            throw new IonException(e);
-        }
+        super.add(index, element);
     }
 
     public void addEmbedded(IonValue element)
@@ -164,11 +152,7 @@ public abstract class IonSequenceImpl
         wrapper.add(element);
 
         assert wrapper._isSystemValue; // so we can unwrap it
-        try {
-            super.add(wrapper);
-        } catch (IOException e) {
-            throw new IonException(e);
-        }
+        super.add(wrapper);
     }
 
     @Override
