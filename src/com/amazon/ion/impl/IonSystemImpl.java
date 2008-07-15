@@ -802,6 +802,12 @@ public class IonSystemImpl
     @SuppressWarnings("unchecked")
     public <T extends IonValue> T clone(T value)
     {
+        // Use "fast clone" when the system is the same.
+        if (((IonValueImpl)value)._system == this)
+        {
+            return (T) value.clone();
+        }
+
         if (value instanceof IonDatagram)
         {
             byte[] data = ((IonDatagram)value).toBytes();
