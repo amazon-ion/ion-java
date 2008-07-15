@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -11,6 +9,25 @@ import java.util.Iterator;
 public class StructTest
     extends ContainerTestCase
 {
+
+    @Override
+    protected String wrap(String... children)
+    {
+        StringBuilder buf = new StringBuilder();
+        buf.append('{');
+        for (int i = 0; i < children.length; i++)
+        {
+            buf.append('f');
+            buf.append(i);
+            buf.append(':');
+            buf.append(children[i]);
+            buf.append(',');
+        }
+        buf.append('}');
+        return buf.toString();
+    }
+
+
     public static void checkNullStruct(IonStruct value)
     {
         checkNullStruct(value, "");

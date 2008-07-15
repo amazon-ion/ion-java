@@ -520,21 +520,30 @@ public abstract class IonValueImpl
 
     public void setSymbolTable(LocalSymbolTable symtab) {
         checkForLock();
+        // FIXME: should this use getSymbolTable instead of _symboltable
+        // since our symtab may be held by our container?
         if (this._symboltable != symtab) {
-            clearSymbols();
+            detachFromSymbolTable();
             this._symboltable = symtab;
         }
     }
 
-    void clearSymbols()
+    /**
+     * Recursively materialize all symbol text and detach from any symtab.
+     */
+    void detachFromSymbolTable()
     {
+        // Force reading of annotation text
+        getTypeAnnotations();
+
         if (this._fieldSid > 0) {
             if (this._fieldName == null) {
                 this._fieldName = this.getSymbolTable().findKnownSymbol(this._fieldSid);
             }
             this._fieldSid = 0;
-            this._symboltable = null;
         }
+
+        this._symboltable = null;
     }
 
     public int getElementId() {
@@ -1002,12 +1011,13 @@ public abstract class IonValueImpl
     protected final void detachFromContainer() throws IOException
     {
         // TODO this should really copy the buffer to avoid materialization.
-
+        // Note: that forces extraction and reconstruction of the local symtab.
         detachFromBuffer();
+        detachFromSymbolTable();
 
         _container = null;
         _fieldName = null;
-        _fieldSid  = 0;
+        assert _fieldSid == 0;
         _elementid = 0;
         setDirty();
     }

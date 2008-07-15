@@ -232,11 +232,11 @@ public final class IonSymbolImpl
     }
 
     @Override
-    void clearSymbols()
+    void detachFromSymbolTable()
     {
         this.stringValue();
         this.mySid = 0;
-        super.clearSymbols();
+        super.detachFromSymbolTable();
 
     }
 

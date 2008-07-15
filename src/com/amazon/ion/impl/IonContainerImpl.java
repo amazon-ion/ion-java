@@ -674,15 +674,16 @@ abstract public class IonContainerImpl
     }
 
     @Override
-    void clearSymbols()
+    void detachFromSymbolTable()
     {
-        super.clearSymbols();
+        assert _hasNativeValue; // else we don't know if _contents is valid
         if (this._contents != null) {
             for (int ii=0; ii<this._contents.size(); ii++) {
                 IonValueImpl v = (IonValueImpl)this._contents.get(ii);
-                v.clearSymbols();
+                v.detachFromSymbolTable();
             }
         }
+        super.detachFromSymbolTable();
     }
 
     public boolean remove(IonValue element)
