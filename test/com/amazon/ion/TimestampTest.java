@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -379,5 +377,14 @@ public class TimestampTest
             String v = value.toString();
             assertTrue(value instanceof IonTimestamp || v.equals("just some crap that can't be"));
         }
+    }
+
+
+    public void testTimestampClone()
+        throws Exception
+    {
+        testSimpleClone("null.timestamp");
+//        testSimpleClone("2008-07-11");  // FIXME Date doesn't round-trip
+        testSimpleClone("2008-07-11T14:49:26.000-07:00");
     }
 }

@@ -52,23 +52,24 @@ public final class IonStructImpl
         super(typeDesc);
         assert pos_getType() == IonConstants.tidStruct;
     }
-    
+
     /**
      * creates a copy of this IonStructImpl.  Most of the work
      * is actually done by IonContainerImpl.copyFrom() and
      * IonValueImpl.copyFrom().
      */
-    public IonStructImpl clone() throws CloneNotSupportedException
+    @Override
+    public IonStructImpl clone()
     {
-    	IonStructImpl clone = new IonStructImpl();
-    	
-    	try {
-			clone.copyFrom(this);
-		} catch (IOException e) {
-			throw new IonException(e);
-		}
-    	
-    	return clone;
+        IonStructImpl clone = new IonStructImpl();
+
+        try {
+            clone.copyFrom(this);
+        } catch (IOException e) {
+            throw new IonException(e);
+        }
+
+        return clone;
     }
 
 
@@ -127,8 +128,8 @@ public final class IonStructImpl
     public void put(String fieldName, IonValue value)
     {
         // TODO maintain _isOrdered
-    	
-    	checkForLock();
+
+        checkForLock();
 
         validateFieldName(fieldName);
         if (value != null) validateNewChild(value);
@@ -167,11 +168,7 @@ public final class IonStructImpl
         if (value != null)
         {
             IonValueImpl concrete = (IonValueImpl) value;
-            try {
-				add(size, concrete, true);
-			} catch (IOException e) {
-				throw new IonException(e);
-			}
+            add(size, concrete, true);
 
             // This is true because we've validated that its not contained.
             assert value.getFieldName() == null;
@@ -184,17 +181,13 @@ public final class IonStructImpl
     {
         // TODO maintain _isOrdered
 
-    	checkForLock();
+        checkForLock();
 
         validateFieldName(fieldName);
 //      validateNewChild(value);          // This is done by add() below.
 
         IonValueImpl concrete = (IonValueImpl) value;
-        try {
-			add(concrete);
-		} catch (IOException e) {
-			throw new IonException(e);
-		}
+        add(concrete);
 
         // This should be true because we've validated that its not contained.
         assert value.getFieldName() == null;
@@ -205,9 +198,9 @@ public final class IonStructImpl
     public boolean removeAll(String... fieldNames)
     {
         boolean removedAny = false;
-        
-    	checkForLock();
-        
+
+        checkForLock();
+
         for (Iterator<IonValue> i = iterator(); i.hasNext();)
         {
             IonValue field = i.next();
@@ -222,7 +215,7 @@ public final class IonStructImpl
 
     public boolean retainAll(String... fieldNames)
     {
-    	checkForLock();
+        checkForLock();
 
         boolean removedAny = false;
         for (Iterator<IonValue> i = iterator(); i.hasNext();)

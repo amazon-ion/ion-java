@@ -49,13 +49,13 @@ public final class IonBoolImpl
     @Override
     public IonBoolImpl clone()
     {
-    	IonBoolImpl clone = new IonBoolImpl();
+        IonBoolImpl clone = new IonBoolImpl();
 
-    	makeReady();
-    	super.copyFrom(this);
+        makeReady();
+        clone.copyAnnotationsFrom(this);
         clone.setValue(this._bool_value);
 
-    	return clone;
+        return clone;
     }
 
     public IonType getType()
@@ -74,13 +74,13 @@ public final class IonBoolImpl
 
     public void setValue(boolean b)
     {
-    	// the called setValue will check if this is locked
+        // the called setValue will check if this is locked
         setValue(Boolean.valueOf(b));
     }
 
     public void setValue(Boolean b)
     {
-    	checkForLock();
+        checkForLock();
         _bool_value = b;
         _hasNativeValue = true;
         setDirty();

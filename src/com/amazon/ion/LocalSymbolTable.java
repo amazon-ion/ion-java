@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion;
@@ -16,9 +16,9 @@ public interface LocalSymbolTable
      *
      * @return not <code>null</code>.
      */
-    public SystemSymbolTable getSystemSymbolTable();
-    
-    
+    public SymbolTable getSystemSymbolTable();
+
+
     /**
      * Indicates whether this local table has imported any static tables.
      */
@@ -30,7 +30,7 @@ public interface LocalSymbolTable
      * @return the used table, or <code>null</code> if it's not in use.
      * @throws NullPointerException if <code>name</code> is null.
      */
-    public StaticSymbolTable getImportedTable(String name);
+    public SymbolTable getImportedTable(String name);
 
 
     /**

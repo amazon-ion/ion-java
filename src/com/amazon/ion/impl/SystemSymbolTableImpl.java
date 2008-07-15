@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion.impl;
@@ -16,21 +16,6 @@ import com.amazon.ion.SystemSymbolTable;
 public class SystemSymbolTableImpl
     implements SystemSymbolTable
 {
-    private static final String[] SYSTEM_SYMBOLS =
-    {
-        ION,
-        ION_1_0,
-        ION_SYMBOL_TABLE,
-        NAME,
-        VERSION,
-        IMPORTS,
-        SYMBOLS,
-        MAX_ID,
-        ION_EMBEDDED_VALUE
-    };
-
-    public static final int ION_1_0_SID = 2;
-
     static
     {
         // REMEMBER: sids are one-based, not zero-based!
@@ -56,6 +41,29 @@ public class SystemSymbolTableImpl
 
     public SystemSymbolTableImpl()
     {
+    }
+
+
+
+    public final boolean isSharedTable()
+    {
+        return true;
+    }
+
+    public final boolean isSystemTable()
+    {
+        return true;
+    }
+
+    public final String getName()
+    {
+        return ION;
+    }
+
+
+    public int getVersion()
+    {
+        return 1;
     }
 
     public String getSystemId()

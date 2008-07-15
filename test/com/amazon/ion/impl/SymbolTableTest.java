@@ -5,6 +5,7 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbolTable.ION_1_0;
+
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonInt;
@@ -16,7 +17,6 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
-import com.amazon.ion.StaticSymbolTable;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.system.SimpleCatalog;
@@ -40,7 +40,7 @@ public class SymbolTableTest
     public final static int IMPORTED_3_MAX_ID = 5;
 
 
-    public StaticSymbolTable registerImportedV1()
+    public SymbolTable registerImportedV1()
     {
         IonSystem system = system();
         String importingText =
@@ -55,14 +55,14 @@ public class SymbolTableTest
             "null";
         oneValue(importingText);
 
-        StaticSymbolTable importedTable =
+        SymbolTable importedTable =
             system.getCatalog().getTable("imported", 1);
         assertEquals(IMPORTED_1_MAX_ID, importedTable.getMaxId());
 
         return importedTable;
     }
 
-    public StaticSymbolTable registerImportedV2()
+    public SymbolTable registerImportedV2()
     {
         IonSystem system = system();
         String importingText =
@@ -79,14 +79,14 @@ public class SymbolTableTest
             "null";
         loader().load(importingText);
 
-        StaticSymbolTable importedTable =
+        SymbolTable importedTable =
             system.getCatalog().getTable("imported", 2);
         assertEquals(IMPORTED_2_MAX_ID, importedTable.getMaxId());
 
         return importedTable;
     }
 
-    public StaticSymbolTable registerImportedV3()
+    public SymbolTable registerImportedV3()
     {
         IonSystem system = system();
         String importingText =
@@ -104,7 +104,7 @@ public class SymbolTableTest
             "null";
         oneValue(importingText);
 
-        StaticSymbolTable importedTable =
+        SymbolTable importedTable =
             system.getCatalog().getTable("imported", 3);
         assertEquals(IMPORTED_3_MAX_ID, importedTable.getMaxId());
 
@@ -508,7 +508,7 @@ public class SymbolTableTest
 
         registerImportedV1();
         registerImportedV2();
-        StaticSymbolTable i3 = registerImportedV3();
+        SymbolTable i3 = registerImportedV3();
 
         // Make sure our syms don't overlap.
         assertTrue(i3.findSymbol("fred5") != local3id);
@@ -609,8 +609,7 @@ public class SymbolTableTest
             "}\n" +
             "null";
         oneValue(text);
-        StaticSymbolTable symbolTable =
-            system().getCatalog().getTable("test");
+        SymbolTable symbolTable = system().getCatalog().getTable("test");
 
         // Version defaults to 1
         assertEquals(1, symbolTable.getVersion());

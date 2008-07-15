@@ -5,12 +5,13 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
+
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
-import com.amazon.ion.StaticSymbolTable;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import java.io.IOException;
 import java.io.Reader;
@@ -255,7 +256,7 @@ public class SystemReader
             // sync with the binary.  That's okay, though: if the bytes are
             // requested it will be updated.
 
-        	IonValueImpl localsym = (IonValueImpl)newLocalSymbtab.getIonRepresentation();
+            IonValueImpl localsym = (IonValueImpl)newLocalSymbtab.getIonRepresentation();
             assert localsym.getSymbolTable() == null || localsym.getSymbolTable().getSystemSymbolTable() == _system.getSystemSymbolTable();
             assert _system.getSystemSymbolTable() == newLocalSymbtab.getSystemSymbolTable();
             // _curr.setSymbolTable(newLocalSymbtab);  // the symbol table of a symbol table struct is itself
@@ -265,7 +266,7 @@ public class SystemReader
         // $ion_symbol_table
         else if (_system.valueIsStaticSymbolTable(_curr))
         {
-            StaticSymbolTable newTable =
+            SymbolTable newTable =
                 new StaticSymbolTableImpl(_system, (IonStruct) _curr);
             _catalog.putTable(newTable);
 

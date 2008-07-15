@@ -1,4 +1,4 @@
-/* Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
  package com.amazon.ion.impl;
@@ -9,7 +9,6 @@ import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.StaticSymbolTable;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 
@@ -21,7 +20,6 @@ import com.amazon.ion.SystemSymbolTable;
  */
 public class StaticSymbolTableImpl
     extends AbstractSymbolTable
-    implements StaticSymbolTable
 {
     private final String _name;
     private final int    _version;
@@ -83,11 +81,21 @@ public class StaticSymbolTableImpl
 
 
 
+    @Override
+    public boolean isSharedTable()
+    {
+        return true;
+    }
+
+
+    @Override
     public String getName()
     {
         return this._name;
     }
 
+
+    @Override
     public int getVersion()
     {
         return this._version;

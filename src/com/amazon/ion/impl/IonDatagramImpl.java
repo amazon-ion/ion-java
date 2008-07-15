@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion.impl;
@@ -109,20 +109,15 @@ public final class IonDatagramImpl
             ,ionText);
     }
 
-    /**
-     * throws a CloneNotSupportedException as this is a
-     * parent type that should not be directly created.
-     * Instances should constructed of either IonSexpImpl
-     * IonListImpl or IonStructImpl as needed.
-     */
+
     @Override
-    public IonDatagramImpl clone() throws CloneNotSupportedException
+    public IonDatagramImpl clone()
     {
         byte[] data = this.toBytes();
 
         IonDatagramImpl clone = new IonDatagramImpl(this._system, data);
 
-    	return clone;
+        return clone;
     }
 
     /**
@@ -135,61 +130,61 @@ public final class IonDatagramImpl
      * @throws IOException
      * @throws IllegalArgumentException
      * @throws NullPointerException
-     * @throws
      */
     @Override
-    protected void copyFrom(IonContainerImpl source) throws CloneNotSupportedException, NullPointerException, IllegalArgumentException, IOException
+    protected void copyFrom(IonContainerImpl source)
+        throws NullPointerException, IllegalArgumentException, IOException
     {
-    	// first copy the annotations and such, which
-    	// will materialize the value as needed.
-    	// This will materialize the field name and
-    	// annotations if present.  And it will instanciate
-    	// the immediate children (but it is not
-    	// a deep materialization, so we'll live with
-    	// it for now).
-    	super.copyFrom(source);
+        // first copy the annotations and such, which
+        // will materialize the value as needed.
+        // This will materialize the field name and
+        // annotations if present.  And it will instanciate
+        // the immediate children (but it is not
+        // a deep materialization, so we'll live with
+        // it for now).
+        super.copyFrom(source);
 
-    	// now we can copy the contents
+        // now we can copy the contents
 
-    	// first see if this value is null (and we're really
-    	// done here)
-    	if (source.isNullValue()) {
-    		makeNull();
-    	}
-    	else {
-    		// it's not null so there better be something there
-    		// at least 0 children :)
-    		assert source._contents != null;
+        // first see if this value is null (and we're really
+        // done here)
+        if (source.isNullValue()) {
+            makeNull();
+        }
+        else {
+            // it's not null so there better be something there
+            // at least 0 children :)
+            assert source._contents != null;
 
-    		// and we'll need a contents array to hold at least 0
-    		// children
-    		if (this._contents == null) {
-    			int len = source._contents.size();
-    			if (len < 1) len = 10;
-    			this._contents = new ArrayList<IonValue>(len);
-    		}
-    		// we should have an empty content list at this point
-    		assert this._contents.size() == 0;
+            // and we'll need a contents array to hold at least 0
+            // children
+            if (this._contents == null) {
+                int len = source._contents.size();
+                if (len < 1) len = 10;
+                this._contents = new ArrayList<IonValue>(len);
+            }
+            // we should have an empty content list at this point
+            assert this._contents.size() == 0;
 
-    		if (false && source._buffer != null && !source.isDirty()) {
-	    		// if this is buffer backed, and not dirty
-	    		// then we can do a binary copy
+            if (false && source._buffer != null && !source.isDirty()) {
+                // if this is buffer backed, and not dirty
+                // then we can do a binary copy
 
-    			// TODO: offer this optimized path, however this requires
-    			//       a variety of general purpose binary buffer handling
-    			//       and should probably be done along with the lazy
-    			//       "copy on write" reference/copy optimizations
-    			//       - which is really a project in its own right
-	    	}
-	    	else {
-	        	// if this is not buffer backed, we just have to
-	        	// do a deep copy
-	    		for (IonValue child : source._contents) {
-	    			IonValue copy = child.clone();
-	    			this.add(copy);
-	    		}
-	    	}
-    	}
+                // TODO: offer this optimized path, however this requires
+                //       a variety of general purpose binary buffer handling
+                //       and should probably be done along with the lazy
+                //       "copy on write" reference/copy optimizations
+                //       - which is really a project in its own right
+            }
+            else {
+                // if this is not buffer backed, we just have to
+                // do a deep copy
+                for (IonValue child : source._contents) {
+                    IonValue copy = child.clone();
+                    this.add(copy);
+                }
+            }
+        }
     }
 
     /**
@@ -257,7 +252,7 @@ public final class IonDatagramImpl
         if (element instanceof IonSymbolImpl) {
             IonSymbolImpl symbol = (IonSymbolImpl)element;
             is_system_value = (symbol.isNullValue() == false)
-                    && (SystemSymbolTable.ION_1_0.equals(symbol.getValue()));
+                    && (SystemSymbolTable.ION_1_0.equals(symbol.stringValue()));
         }
         else if (element._annotations != null) {
             if (element instanceof IonStructImpl) {
@@ -298,9 +293,9 @@ public final class IonDatagramImpl
         int userPos = isSystem ? -1 : this._userContents.size();
         try {
         this.add( element, systemPos, userPos );
-		} catch (IOException e) {
-			throw new IonException(e);
-		}
+        } catch (IOException e) {
+            throw new IonException(e);
+        }
     }
 
     private void add(IonValue element, int systemPos, int userPos)
@@ -430,7 +425,7 @@ public final class IonDatagramImpl
     @Override
     public boolean remove(IonValue element) throws NullValueException
     {
-    	checkForLock();
+        checkForLock();
 
         // TODO may leave dead symbol tables (and/or symbols) in the datagram
         for (Iterator<IonValue> i = _userContents.iterator(); i.hasNext();)
@@ -491,8 +486,8 @@ public final class IonDatagramImpl
     public void clearTypeAnnotations()
     {
         // No annotations, nothing to do.
-    	// Except complain about misuse of this api.
-    	checkForLock();
+        // Except complain about misuse of this api.
+        checkForLock();
     }
 
 
@@ -559,8 +554,8 @@ public final class IonDatagramImpl
     public void removeTypeAnnotation(String annotation)
     {
         // Nothing to do, no annotations here.
-    	// Except check to see is someone is trying to misuse this instance.
-    	checkForLock();
+        // Except check to see is someone is trying to misuse this instance.
+        checkForLock();
     }
 
 
@@ -585,7 +580,7 @@ public final class IonDatagramImpl
     @Override
     protected LocalSymbolTable materializeSymbolTable()
     {
-    	return null;
+        return null;
     }
 
     /**
@@ -719,7 +714,7 @@ public final class IonDatagramImpl
 
                     // FIXME: remove or restore - why would we assert this? assert symtab != null;
                     if (symtab == null) {
-                    	symtab = ichild.materializeSymbolTable();
+                        symtab = ichild.materializeSymbolTable();
                     }
                     if (symtab != null) {
                         ichild.updateSymbolTable(symtab);

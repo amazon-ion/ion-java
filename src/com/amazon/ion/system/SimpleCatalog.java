@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion.system;
 
 import com.amazon.ion.IonCatalog;
-import com.amazon.ion.StaticSymbolTable;
+import com.amazon.ion.SymbolTable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
@@ -24,13 +24,13 @@ public class SimpleCatalog
      *  - Synchonization could probably be tighter using read/write locks
      *    instead of simple monitors.
      */
-    private Map<String,TreeMap<Integer,StaticSymbolTable>> myTablesByName =
-        new HashMap<String,TreeMap<Integer,StaticSymbolTable>>();
+    private Map<String,TreeMap<Integer,SymbolTable>> myTablesByName =
+        new HashMap<String,TreeMap<Integer,SymbolTable>>();
 
 
-    public StaticSymbolTable getTable(String name)
+    public SymbolTable getTable(String name)
     {
-        TreeMap<Integer,StaticSymbolTable> versions;
+        TreeMap<Integer,SymbolTable> versions;
         synchronized (myTablesByName)
         {
             versions = myTablesByName.get(name);
@@ -48,9 +48,9 @@ public class SimpleCatalog
         return null;
     }
 
-    public StaticSymbolTable getTable(String name, int version)
+    public SymbolTable getTable(String name, int version)
     {
-        TreeMap<Integer,StaticSymbolTable> versions;
+        TreeMap<Integer,SymbolTable> versions;
         synchronized (myTablesByName)
         {
             versions = myTablesByName.get(name);
@@ -60,13 +60,13 @@ public class SimpleCatalog
         {
             synchronized (versions)
             {
-                StaticSymbolTable st = versions.get(version);
+                SymbolTable st = versions.get(version);
                 if (st == null)
                 {
                     // Scan the list for the greatest version.
                     assert !versions.isEmpty();
                     int maxVersion = 0;
-                    for (StaticSymbolTable candidate : versions.values())
+                    for (SymbolTable candidate : versions.values())
                     {
                         int candidateVersion = candidate.getVersion();
                         if (maxVersion < candidateVersion)
@@ -85,7 +85,7 @@ public class SimpleCatalog
         return null;
     }
 
-    public void putTable(StaticSymbolTable table)
+    public void putTable(SymbolTable table)
     {
         String name = table.getName();
         int version = table.getVersion();
@@ -93,11 +93,11 @@ public class SimpleCatalog
 
         synchronized (myTablesByName)
         {
-            TreeMap<Integer,StaticSymbolTable> versions =
+            TreeMap<Integer,SymbolTable> versions =
                 myTablesByName.get(name);
             if (versions == null)
             {
-                versions = new TreeMap<Integer,StaticSymbolTable>();
+                versions = new TreeMap<Integer,SymbolTable>();
                 myTablesByName.put(name, versions);
             }
             versions.put(version, table);
@@ -111,13 +111,13 @@ public class SimpleCatalog
      * @return the removed table, or <code>null</code> if this catalog has
      * no matching table.
      */
-    public StaticSymbolTable removeTable(String name, int version)
+    public SymbolTable removeTable(String name, int version)
     {
-        StaticSymbolTable removed = null;
+        SymbolTable removed = null;
 
         synchronized (myTablesByName)
         {
-            TreeMap<Integer,StaticSymbolTable> versions =
+            TreeMap<Integer,SymbolTable> versions =
                 myTablesByName.get(name);
             if (versions != null)
             {

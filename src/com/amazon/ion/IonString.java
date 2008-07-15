@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -25,4 +23,7 @@ public interface IonString
      * may be <code>null</code> to make this <code>null.string</code>.
      */
     public void setValue(String value);
+
+
+    public IonString clone();
 }

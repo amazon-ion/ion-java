@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -101,4 +99,7 @@ public interface IonSequence
      */
 //    public void addEmbedded(int index, IonValue element)
 //        throws NullPointerException;
+
+
+    public IonSequence clone();
 }

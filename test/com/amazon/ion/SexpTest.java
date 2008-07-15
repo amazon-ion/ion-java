@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -41,6 +39,20 @@ public class SexpTest
     protected String wrap(String v)
     {
         return "(" + v + ")";
+    }
+
+    @Override
+    protected String wrap(String... children)
+    {
+        StringBuilder buf = new StringBuilder();
+        buf.append('(');
+        for (String child : children)
+        {
+            buf.append(child);
+            buf.append(' ');
+        }
+        buf.append(')');
+        return buf.toString();
     }
 
     //=========================================================================

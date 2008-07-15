@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc. All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc. All rights reserved.
  */
 
 package com.amazon.ion.impl;
@@ -66,13 +66,13 @@ public abstract class IonSequenceImpl
      *
      * @throws ContainedValueException if any value in <code>elements</code>
      * has <code>{@link IonValue#getContainer()} != null</code>.
-     * @throws IOException 
-     * @throws IllegalArgumentException 
-     * @throws NullPointerException 
+     * @throws IllegalArgumentException
+     * @throws NullPointerException
      */
     protected IonSequenceImpl(int typeDesc,
                               Collection<? extends IonValue> elements)
-        throws ContainedValueException, NullPointerException, IllegalArgumentException
+        throws ContainedValueException, NullPointerException,
+            IllegalArgumentException
     {
         this(typeDesc);
         assert _contents == null;
@@ -86,11 +86,7 @@ public abstract class IonSequenceImpl
             for (Iterator i = elements.iterator(); i.hasNext();)
             {
                 IonValue element = (IonValue) i.next();
-                try {
-					super.add(element);
-    			} catch (IOException e) {
-    				throw new IonException(e);
-    			}
+                super.add(element);
             }
 
             // FIXME if add of a child fails, prior children have bad container
@@ -98,6 +94,10 @@ public abstract class IonSequenceImpl
     }
 
     //=========================================================================
+
+    @Override
+    public abstract IonSequenceImpl clone();
+
 
     @Override
     public boolean isNullValue()
@@ -115,12 +115,8 @@ public abstract class IonSequenceImpl
     public void add(IonValue element)
         throws ContainedValueException, NullPointerException
     {
-    	// super.add will check for the lock
-        try {
-			super.add(element);
-		} catch (IOException e) {
-			throw new IonException(e);
-		}
+        // super.add will check for the lock
+        super.add(element);
     }
 
     @Override
@@ -128,43 +124,35 @@ public abstract class IonSequenceImpl
     public void add(int index, IonValue element)
         throws ContainedValueException, NullPointerException
     {
-    	// super.add will check for the lock
-        try {
-			super.add(index, element);
-		} catch (IOException e) {
-			throw new IonException(e);
-		}
+        // super.add will check for the lock
+        super.add(index, element);
     }
 
     public void addEmbedded(IonValue element)
         throws NullPointerException
     {
-    	checkForLock();
+        checkForLock();
 
         LocalSymbolTable symtab = element.getSymbolTable();
 
         IonSexpImpl wrapper = new IonSexpImpl();
         wrapper.addTypeAnnotation(SystemSymbolTable.ION_EMBEDDED_VALUE);
 
-        String systemId = symtab.getSystemSymbolTable().getSystemId();
+        String systemId = symtab.getSystemId();
         // TO DO inject systemId ($ion_1_0)
         IonSymbolImpl sysid = new IonSymbolImpl();
         sysid.setValue(systemId);
         wrapper.add(sysid);
-        
+
         // TO DO inject symtab
         IonStructImpl symtabion = (IonStructImpl)symtab.getIonRepresentation();
         wrapper.add(symtabion);
-        
+
         // TO DO inject value
         wrapper.add(element);
-        
+
         assert wrapper._isSystemValue; // so we can unwrap it
-        try {
-			super.add(wrapper);
-		} catch (IOException e) {
-			throw new IonException(e);
-		}
+        super.add(wrapper);
     }
 
     @Override

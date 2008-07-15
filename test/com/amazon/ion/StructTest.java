@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -11,6 +9,25 @@ import java.util.Iterator;
 public class StructTest
     extends ContainerTestCase
 {
+
+    @Override
+    protected String wrap(String... children)
+    {
+        StringBuilder buf = new StringBuilder();
+        buf.append('{');
+        for (int i = 0; i < children.length; i++)
+        {
+            buf.append('f');
+            buf.append(i);
+            buf.append(':');
+            buf.append(children[i]);
+            buf.append(',');
+        }
+        buf.append('}');
+        return buf.toString();
+    }
+
+
     public static void checkNullStruct(IonStruct value)
     {
         checkNullStruct(value, "");
@@ -583,11 +600,36 @@ public class StructTest
         assertEquals(i3, i4);
     }
 
-    public void testClone()
+    public void testStructClone()
         throws Exception
     {
-        IonValue data = system().singleValue("{v:root}");
-        IonValue clone = data.clone();
-        assertEquals(data, clone);
+        testSimpleClone("null.struct");
+        testSimpleClone("{}");
+
+        testSimpleClone("{f:{{}}}");           // blob
+        testSimpleClone("{f:true}");           // bool
+        testSimpleClone("{f:{{\"\"}}}");       // clob
+        testSimpleClone("{f:1d0}");            // decimal
+        testSimpleClone("{f:1e0}");            // float
+        testSimpleClone("{f:1}");              // int
+        testSimpleClone("{f:[]}");             // list
+        testSimpleClone("{f:null}");           // null
+        testSimpleClone("{f:()}");             // sexp
+        testSimpleClone("{f:\"s\"}");          // string
+        testSimpleClone("{f:{}}");             // struct
+        testSimpleClone("{f:sym}");            // symbol
+        testSimpleClone("{f:2008-07-11T14:49:26.000-07:00}"); // timestamp
+    }
+
+    public void testClonedFieldHasNoName()
+    {
+        IonStruct s = (IonStruct) oneValue("{f:12}");
+        IonValue f = s.get("f");
+        assertEquals("f", f.getFieldName());
+        assertTrue(0 < f.getFieldId());
+
+        IonValue clone = f.clone();
+        assertNull("field name shouldn't be cloned", clone.getFieldName());
+        assertTrue(clone.getFieldId() < 1);
     }
 }

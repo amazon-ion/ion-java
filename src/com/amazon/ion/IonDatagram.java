@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -213,4 +211,7 @@ public interface IonDatagram
      * @throws UnsupportedOperationException at every call.
      */
     public void makeNull();
+
+
+    public IonDatagram clone();
 }

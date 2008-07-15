@@ -25,7 +25,7 @@ public interface IonSystem
     /**
      * Gets the default system symbol table.
      */
-    public SystemSymbolTable getSystemSymbolTable();
+    public SymbolTable getSystemSymbolTable();
 
 
     /**
@@ -37,7 +37,7 @@ public interface IonSystem
      * @throws UnsupportedSystemVersionException if the requested system
      * version is not supported by this implementation.
      */
-    public SystemSymbolTable getSystemSymbolTable(String systemId)
+    public SymbolTable getSystemSymbolTable(String systemId)
         throws UnsupportedSystemVersionException;
 
 
@@ -73,18 +73,7 @@ public interface IonSystem
      * @param systemSymbols must not be null.
      * @return a new symbol table.
      */
-    public LocalSymbolTable newLocalSymbolTable(SystemSymbolTable systemSymbols);
-
-
-
-    /**
-     * Creates a new static symbol table from its Ion representation.
-     *
-     * @param symbolTable must not be an Ion structure defining the static
-     * symbol table.
-     * @return a new symbol table.
-     */
-    public StaticSymbolTable newStaticSymbolTable(IonStruct symbolTable);
+    public LocalSymbolTable newLocalSymbolTable(SymbolTable systemSymbols);
 
 
     /**

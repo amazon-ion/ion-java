@@ -31,20 +31,20 @@ public class TemporaryList
        _tmpelements = new ArrayList<IonValueImpl>();
        setClean();
     }
-    
+
     /**
      * this creates an independant deep copy of this list
      * and the values it contains.  Most of the work is done
      * by calling the contained values to clone themselves.
      */
-    public TemporaryList clone() throws CloneNotSupportedException
+    public TemporaryList clone()
     {
-    	TemporaryList c = new TemporaryList();
+        TemporaryList c = new TemporaryList();
 
-    	for (int ii=0; ii<this._tmpelements.size(); ii++) {
-    		IonValueImpl e = (IonValueImpl)this._tmpelements.get(ii).clone();
-    		c._tmpelements.add(e);
-    	}
+        for (int ii=0; ii<this._tmpelements.size(); ii++) {
+            IonValueImpl e = (IonValueImpl) this._tmpelements.get(ii).clone();
+            c._tmpelements.add(e);
+        }
 
         return c;
     }
@@ -58,14 +58,14 @@ public class TemporaryList
 
     @Override
     public void add(IonValue v) {
-    	checkForLock();
+        checkForLock();
         validateNewChild(v);
         add(size(), v, false);
     }
 
     @Override
     public void add(int index, IonValue v) {
-    	checkForLock();
+        checkForLock();
         validateNewChild(v);
         add(index, v, false);
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion.system;
@@ -10,7 +10,7 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.StaticSymbolTable;
+import com.amazon.ion.SymbolTable;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -43,7 +43,7 @@ public class SimpleCatalogTest
             "}";
         loader().load(t1Text);
 
-        StaticSymbolTable t1 = cat.getTable("T", 1);
+        SymbolTable t1 = cat.getTable("T", 1);
         assertEquals("no", t1.findKnownSymbol(2));
         assertEquals(-1,   t1.findSymbol("maybe"));
         assertSame(t1, cat.getTable("T"));
@@ -61,7 +61,7 @@ public class SimpleCatalogTest
             "}";
         loader().load(t2Text);
 
-        StaticSymbolTable t2 = cat.getTable("T", 2);
+        SymbolTable t2 = cat.getTable("T", 2);
         assertEquals(3, t2.findSymbol("maybe"));
         assertSame(t2, cat.getTable("T"));
         assertSame(t1, cat.getTable("T", 1));
