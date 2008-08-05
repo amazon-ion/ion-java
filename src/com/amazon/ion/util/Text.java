@@ -97,6 +97,7 @@ public class Text
             case ',':
             case '\"': case '\'':
             case ' ':  case '\t':  case '\n':  case '\r':  // Whitespace
+            case '/': // start of comment
             {
                 return true;
             }

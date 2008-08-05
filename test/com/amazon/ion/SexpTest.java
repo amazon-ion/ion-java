@@ -269,4 +269,29 @@ public class SexpTest
         sexp2 = reload(sexp1);
         assertIonEquals(sexp1, sexp2);
     }
+    
+    public void testNumericTerminationCharacters()
+    {
+    	IonSexp value;
+    	
+    	// these should parse correctly
+    	value = (IonSexp) oneValue("(1001-12-31'symbol')");
+    	value = (IonSexp) oneValue("(1001-12-31\"string\")");
+    	value = (IonSexp) oneValue("(1001-12-31/* coomment */)");
+    	value = (IonSexp) oneValue("(1001-12-31//other comment\n)");
+    	value = (IonSexp) oneValue("(1001-12-31[data,list])");
+    	value = (IonSexp) oneValue("(1001-12-31{a:struct})");
+    	value = (IonSexp) oneValue("(1001-12-31{{ blob }} )");
+    	value = (IonSexp) oneValue("(1001-12-31{{\"clob\"}})");
+    	value = (IonSexp) oneValue("(1001-12-31)");
+    	value = (IonSexp) oneValue("(1001-12-31(sexp))");
+    	value = (IonSexp) oneValue("(1001-12-31 )");
+    	value = (IonSexp) oneValue("(1001-12-31\n)");
+    	value = (IonSexp) oneValue("(1001-12-31\r)");
+    	value = (IonSexp) oneValue("(1001-12-31\t)");
+    	
+    	IonValue value2 = reload(value);
+    	
+    	assertIonEquals(value, value2);    	
+    }
 }

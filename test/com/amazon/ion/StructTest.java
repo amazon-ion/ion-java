@@ -246,9 +246,10 @@ public class StructTest
         v.addTypeAnnotation("five");
         v.addTypeAnnotation("six");
 
-        dg = reload(dg);
-        v = (IonStruct) dg.get(0);
-        checkString("this is a string to overlap", v.get("f"));
+        IonDatagram dg2 = reload(dg);
+        IonStruct v2 = (IonStruct) dg2.get(0);
+        IonValue f = v2.get("f");
+        checkString("this is a string to overlap", f);
     }
 
 
@@ -631,5 +632,53 @@ public class StructTest
         IonValue clone = f.clone();
         assertNull("field name shouldn't be cloned", clone.getFieldName());
         assertTrue(clone.getFieldId() < 1);
+    }
+    
+    public void testSample() throws Exception
+    {
+    	String sample = 
+    		"categories::{"+
+    		"  name:'''category_map''',"+
+    		"  matching_view_id:1,"+
+    		"  "+
+    		"  default:category::{"+
+    		"    rules:{"+
+    		"      normalization:'''default_normalization''',"+
+    		"      subsetting:'''default_subsetting''',"+
+    		"      precision:'''default_precision''',"+
+    		"      creation:'''default_creation''',"+
+    		"    },"+
+    		"    electronics:category::{"+
+    		"      rules:{"+
+    		"      },"+
+    		"    },"+
+    		"    apparel:category::{"+
+    		"      rules:{"+
+    		"        categorization:'''apparel_categorization''',"+
+    		"      },"+
+    		"      shoes:category::{"+
+    		"        rules:{"+
+    		"          categorization:'''shoes_categorization''',"+
+    		"          normalization:'''shoes_normalization''',"+
+    		"          precision:'''shoes_precision''',"+
+    		"        },"+
+    		"        dictionaries:["+
+    		"          '''valid_shoe_sizes''',"+
+    		"        ],"+
+    		"        top_brand_shoes:category::{"+
+    		"          rules:{"+
+    		"            categorization:'''top_brand_shoes_categorization''',"+
+    		"            creation:'''top_brand_creation''',"+
+    		"          },"+
+    		"        },"+
+    		"      },"+
+    		"    },"+
+    		"  },"+
+    		"}";
+    	IonDatagram dg1 = system().getLoader().load(sample);
+    	IonValue dg2 = dg1.clone();
+    	
+    	System.out.println(dg2.toString());
+    	
     }
 }

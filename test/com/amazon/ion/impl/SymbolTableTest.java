@@ -6,20 +6,34 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbolTable.ION_1_0;
 
+
+import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonLoader;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTestCase;
+import com.amazon.ion.IonText;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
+import com.amazon.ion.streaming.IonIterator;
+import com.amazon.ion.streaming.IonTextWriter;
+import com.amazon.ion.streaming.UnifiedCatalog;
+import com.amazon.ion.streaming.UnifiedSymbolTable;
 import com.amazon.ion.system.SimpleCatalog;
+import com.amazon.ion.system.SystemFactory;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.Iterator;
 
 /**
@@ -763,4 +777,79 @@ public class SymbolTableTest
         IonSexp v = oneSexp(text);
         checkSymbol(ION_1_0, v.get(0));
     }
+    
+    public void testKimSymbols() throws Exception
+    {
+    	File input = new File("c:\\data\\samples\\kim.10n");
+    	File symbols = new File("c:\\data\\samples\\kim_symbols.ion");
+    	IonDatagram dg = this.mySystem.getLoader().load(symbols);
+    	SymbolTable symtab = mySystem.getCatalog().getTable("ims.item");
+    	IonStruct   str = symtab.getIonRepresentation();
+    	
+    	UnifiedSymbolTable ust = new UnifiedSymbolTable(UnifiedSymbolTable.getSystemSymbolTableInstance());
+    	
+    	IonStruct syms = (IonStruct)str.get("symbols");
+    	
+    	for (IonValue v : syms) {
+    		String name  = ((IonText)v).stringValue();
+    		int    id    = v.getFieldId();
+    		int    newid = ust.addSymbol(name);
+    		assertTrue(id == newid);
+    	}
+    	ust.setVersion(1);
+    	ust.setName("ims.item");
+    	ust.lock();    	
+    	
+    	UnifiedCatalog catalog = new UnifiedCatalog();
+    	catalog.putTable(ust);
+
+    	IonTextWriter w = new IonTextWriter();
+
+    	byte[] buf = openFileForBuffer("c:\\data\\samples\\kim.10n");
+    	IonReader   r = IonIterator.makeIterator(buf, catalog);
+
+    	w.writeIonEvents(r);
+
+    	byte[] output = w.getBytes();
+
+    	String s_output = new String(output, "UTF-8");
+    	System.out.println(s_output);
+    }
+    
+    static byte[] openFileForBuffer(Object arg) {
+        FileInputStream is = null;
+        byte[] buf = null;
+        
+        if (arg instanceof String) {
+            String filename = (String)arg;
+            File f = new File(filename);
+            if (!f.canRead()) {
+                throw new IllegalArgumentException("can't read the file " + filename);
+            }
+            try {
+                is =  new FileInputStream(f);
+                if (f.length() < 1 || f.length() > Integer.MAX_VALUE) {
+                    throw new IllegalArgumentException("file is too long to load into a buffer: " + filename + " len = "+f.length());
+                }
+                int len = (int)f.length();
+                buf = new byte[len];
+                try {
+                    if (is.read(buf) != len) {
+                        throw new IOException ("failed to read file into buffer: " + filename);
+                    }
+                }
+                catch (IOException e) {
+                    throw new IllegalArgumentException(e);
+                }
+            } 
+            catch (FileNotFoundException e){
+                throw new IllegalArgumentException("can't read the file " + filename);
+            }
+        }
+        else {
+            throw new IllegalArgumentException("string routines need a filename");
+        }
+        return buf;
+    }
+    
 }
