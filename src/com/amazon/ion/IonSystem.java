@@ -18,6 +18,9 @@ import java.util.Iterator;
  * <code>IonSystem</code> instance and use it throughout,
  * rather than constructing multiples and intermingling their use.
  * <p>
+ * To create an {@code IonSystem},
+ * see {@link com.amazon.ion.system.SystemFactory}.
+ * <p>
  * Implementations of this interface must be safe for use by multiple threads.
  */
 public interface IonSystem
