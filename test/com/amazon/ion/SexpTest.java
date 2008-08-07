@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import com.amazon.ion.streaming.IonIterator;
+
 
 
 public class SexpTest
@@ -270,28 +272,85 @@ public class SexpTest
         assertIonEquals(sexp1, sexp2);
     }
     
+    private String[] termintor_test_values = {
+				"(1001-12-31'symbol')",
+				"(1001-12-31\"string\")",
+				"(1001-12-31/* coomment */)",
+				"(1001-12-31//other comment\n)",
+				"(1001-12-31[data,list])",
+				"(1001-12-31{a:struct})",
+				"(1001-12-31{{ blob }} )",
+				"(1001-12-31{{\"clob\"}})",
+				"(1001-12-31)",
+				"(1001-12-31(sexp))",
+				"(1001-12-31 )",
+				"(1001-12-31\n)",
+				"(1001-12-31\r)",
+				"(1001-12-31\t)"
+    };
+	
     public void testNumericTerminationCharacters()
     {
-    	IonSexp value;
+    	IonSexp value = null;
+    	IonReader scanner = null;
+    	
+    	
+    	for (String image : termintor_test_values) {
+    		scanner = IonIterator.makeIterator(image);
+    		readAll(scanner); 
+    	}
     	
     	// these should parse correctly
-    	value = (IonSexp) oneValue("(1001-12-31'symbol')");
-    	value = (IonSexp) oneValue("(1001-12-31\"string\")");
-    	value = (IonSexp) oneValue("(1001-12-31/* coomment */)");
-    	value = (IonSexp) oneValue("(1001-12-31//other comment\n)");
-    	value = (IonSexp) oneValue("(1001-12-31[data,list])");
-    	value = (IonSexp) oneValue("(1001-12-31{a:struct})");
-    	value = (IonSexp) oneValue("(1001-12-31{{ blob }} )");
-    	value = (IonSexp) oneValue("(1001-12-31{{\"clob\"}})");
-    	value = (IonSexp) oneValue("(1001-12-31)");
-    	value = (IonSexp) oneValue("(1001-12-31(sexp))");
-    	value = (IonSexp) oneValue("(1001-12-31 )");
-    	value = (IonSexp) oneValue("(1001-12-31\n)");
-    	value = (IonSexp) oneValue("(1001-12-31\r)");
-    	value = (IonSexp) oneValue("(1001-12-31\t)");
-    	
+    	for (String image : termintor_test_values) {
+    		value = (IonSexp) oneValue(image);
+    	}
     	IonValue value2 = reload(value);
-    	
-    	assertIonEquals(value, value2);    	
+    	assertIonEquals(value, value2);
+    }
+    void readAll(IonReader scanner)
+    {
+    	while (scanner.hasNext()) {
+    		switch (scanner.next()) {
+    		case NULL:
+    			break;
+    		case BOOL:
+    			scanner.booleanValue();
+    			break;
+    		case INT:
+    			scanner.longValue();
+    			break;
+    		case FLOAT:
+    			scanner.doubleValue();
+    			break;
+    		case DECIMAL:
+    			scanner.bigDecimalValue();
+    			break;
+    		case TIMESTAMP:
+    			scanner.dateValue();
+    			break;
+    		case STRING:
+    			scanner.stringValue();
+    			break;
+    		case SYMBOL:
+    			scanner.stringValue();
+    			break;
+    		case BLOB:
+    			scanner.newBytes();
+    			break;
+    		case CLOB:
+    			scanner.newBytes();
+    			break;
+    		case STRUCT:
+    		case LIST:
+    		case SEXP:
+    			scanner.stepInto();
+    			readAll(scanner);
+    			scanner.stepOut();
+    			break;
+    		case DATAGRAM:
+    		default:
+    			throw new IonException("bad type returned by scanner");
+    		}
+    }
     }
 }

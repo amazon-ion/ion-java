@@ -5,6 +5,8 @@
 package com.amazon.ion.streaming;
 
 import com.amazon.ion.impl.IonConstants;
+import com.amazon.ion.util.Text;
+
 import java.io.IOException;
 
 /**
@@ -170,30 +172,24 @@ static final boolean _debug = false;
         }
         return is_hex;
     }
-	final boolean isValueTerminatingCharacter(int c) throws IOException {
-    	switch (c) {
-    	case -1:
-    	case ' ':
-    	case '\t':
-    	case '\n':
-    	case ':':
-    	case '{': case '}':
-    	case '[': case ']':
-    	case '(': case ')':
-    	case '\'':
-    	case '"':
-    	case ',':
-    		return true;
-    	case '/':  // this is terminating only if it starts a comment of some sort
+    
+	private final boolean isValueTerminatingCharacter(int c) throws IOException 
+	{
+		boolean isTerminator;
+
+    	if (c == '/') {
+    		// this is terminating only if it starts a comment of some sort
     		c = read_char();
     		unread_char(c);  // we never "keep" this character
-    		return (c == '/' || c == '*');
-		default:
-			return false;
+    		isTerminator = (c == '/' || c == '*');
     	}
+    	else {
+    		isTerminator = Text.isNumericStopChar(c);
+    	}
+
+    	return isTerminator;
 	}
 
-    
     IonTextBufferedStream _r = null;
     
     int              _token = -1; 
@@ -343,7 +339,7 @@ static final boolean _debug = false;
         _saved_symbol.setLength(0);
         _line = 1;
         _offset = 0;
-        _peek_ahead_char = -1;
+        // _peek_ahead_char = -1;
         //_saved_symbol_len = 0;
         //_start = -1; 
         //_end = -1;

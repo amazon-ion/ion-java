@@ -87,24 +87,22 @@ public class Text
         }
     }
 
-    public static boolean isNumericStopChar(int c)
+    public final static boolean isNumericStopChar(int c)
     {
-        switch (c)
-        {
-            case '{':  case '}':
-            case '[':  case ']':
-            case '(':  case ')':
-            case ',':
-            case '\"': case '\'':
-            case ' ':  case '\t':  case '\n':  case '\r':  // Whitespace
-            case '/': // start of comment
-            {
-                return true;
-            }
-            default:
-            {
-                return false;
-            }
+        switch (c) {
+        case -1:
+        case '{':  case '}':
+        case '[':  case ']':
+        case '(':  case ')':
+        case ',':
+        case '\"': case '\'':
+        case ' ':  case '\t':  case '\n':  case '\r':  // Whitespace
+        // case '/': // we check start of comment in the caller where we 
+        //              can peek ahead for the following slash or asterisk
+            return true;
+
+        default:
+            return false;
         }
     }
 

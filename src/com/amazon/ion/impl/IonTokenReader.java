@@ -1335,9 +1335,9 @@ sizedloop:
 
     private void checkAndUnreadNumericStopper(int c) throws IOException
     {
-        // Ignore EOF
+        // Ignore EOF, so we don't "unread" it - EOF is a terminator
         if (c != -1) {
-            if (! Text.isNumericStopChar(c)) {
+            if ( ! this.isValueTerminatingCharacter(c) ) {
                 final String message =
                     position() + ": Numeric value followed by illegal character "
                     + Text.getEscapeString(c, -2);
@@ -1347,6 +1347,22 @@ sizedloop:
         }
     }
 
+	private final boolean isValueTerminatingCharacter(int c) throws IOException 
+	{
+		boolean isTerminator;
+
+    	if (c == '/') {
+    		// this is terminating only if it starts a comment of some sort
+    		c = this.read();
+    		this.unread(c);  // we never "keep" this character
+    		isTerminator = (c == '/' || c == '*');
+    	}
+    	else {
+    		isTerminator = Text.isNumericStopChar(c);
+    	}
+
+    	return isTerminator;
+	}
 
     public Type readNumber(int c) throws IOException {
         // clear out our string buffer
