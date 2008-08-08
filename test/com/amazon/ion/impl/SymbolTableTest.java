@@ -6,8 +6,6 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbolTable.ION_1_0;
 
-
-import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonInt;
@@ -28,8 +26,6 @@ import com.amazon.ion.streaming.IonTextWriter;
 import com.amazon.ion.streaming.UnifiedCatalog;
 import com.amazon.ion.streaming.UnifiedSymbolTable;
 import com.amazon.ion.system.SimpleCatalog;
-import com.amazon.ion.system.SystemFactory;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -777,19 +773,19 @@ public class SymbolTableTest
         IonSexp v = oneSexp(text);
         checkSymbol(ION_1_0, v.get(0));
     }
-    
-    public void testKimSymbols() throws Exception
+
+    public void XXXtestKimSymbols() throws Exception
     {
     	File input = new File("c:\\data\\samples\\kim.10n");
     	File symbols = new File("c:\\data\\samples\\kim_symbols.ion");
     	IonDatagram dg = this.mySystem.getLoader().load(symbols);
     	SymbolTable symtab = mySystem.getCatalog().getTable("ims.item");
     	IonStruct   str = symtab.getIonRepresentation();
-    	
+
     	UnifiedSymbolTable ust = new UnifiedSymbolTable(UnifiedSymbolTable.getSystemSymbolTableInstance());
-    	
+
     	IonStruct syms = (IonStruct)str.get("symbols");
-    	
+
     	for (IonValue v : syms) {
     		String name  = ((IonText)v).stringValue();
     		int    id    = v.getFieldId();
@@ -798,8 +794,8 @@ public class SymbolTableTest
     	}
     	ust.setVersion(1);
     	ust.setName("ims.item");
-    	ust.lock();    	
-    	
+    	ust.lock();
+
     	UnifiedCatalog catalog = new UnifiedCatalog();
     	catalog.putTable(ust);
 
@@ -815,11 +811,11 @@ public class SymbolTableTest
     	String s_output = new String(output, "UTF-8");
     	System.out.println(s_output);
     }
-    
+
     static byte[] openFileForBuffer(Object arg) {
         FileInputStream is = null;
         byte[] buf = null;
-        
+
         if (arg instanceof String) {
             String filename = (String)arg;
             File f = new File(filename);
@@ -841,7 +837,7 @@ public class SymbolTableTest
                 catch (IOException e) {
                     throw new IllegalArgumentException(e);
                 }
-            } 
+            }
             catch (FileNotFoundException e){
                 throw new IllegalArgumentException("can't read the file " + filename);
             }
@@ -851,5 +847,5 @@ public class SymbolTableTest
         }
         return buf;
     }
-    
+
 }
