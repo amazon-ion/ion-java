@@ -102,7 +102,7 @@ public interface IonStruct
      * @return true if this struct changed as a result of this call.
      *
      * @throws NullPointerException
-     *   if {@code fieldName}, or any element within it, is <code>null</code>.
+     *   if {@code fieldNames}, or any element within it, is <code>null</code>.
      */
     public boolean removeAll(String... fieldNames);
 
@@ -117,7 +117,7 @@ public interface IonStruct
      * @return true if this struct changed as a result of this call.
      *
      * @throws NullPointerException
-     *   if {@code fieldName}, or any element within it, is <code>null</code>.
+     *   if {@code fieldNames}, or any element within it, is <code>null</code>.
      */
     public boolean retainAll(String... fieldNames);
 
