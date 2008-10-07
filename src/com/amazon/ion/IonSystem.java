@@ -17,6 +17,8 @@ import java.util.Iterator;
  * The intended usage pattern is for an application to construct a single
  * <code>IonSystem</code> instance and use it throughout,
  * rather than constructing multiples and intermingling their use.
+ * To create a copy of a value for use by a different system, use
+ * {@link #clone(IonValue)}.
  * <p>
  * To create an {@code IonSystem},
  * see {@link com.amazon.ion.system.SystemFactory}.

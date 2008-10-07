@@ -100,6 +100,8 @@ public interface IonSequence
 //    public void addEmbedded(int index, IonValue element)
 //        throws NullPointerException;
 
-
+    /**
+     * {@inheritDoc}
+     */
     public IonSequence clone();
 }

@@ -67,16 +67,16 @@ public interface IonContainer
      * Clears the contents of this container (if any) and set it to empty.
      * If this container is an Ion <code>null</code> value, set it to
      * empty.
-     *
-     * @see #makeNull to make this container null rather than empty.
+     * <p>
+     * Use {@link #makeNull} to make this container null rather than empty.
      */
     public void clear();
 
     /**
      * Sets the contents of this container to an Ion <code>null</code>
      * value.
-     *
-     * @see #clear to make this container empty rather than null.
+     * <p>
+     * Use {@link #clear} to make this container empty rather than null.
      */
     public void makeNull();
 

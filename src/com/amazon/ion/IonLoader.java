@@ -206,7 +206,8 @@ public interface IonLoader
 
 
     /**
-     * Loads Ion data by wrapping given data with a datagram.
+     * Loads a block of Ion data into a single datagram,
+     * detecting whether it's text or binary data.
      *
      * @param ionData may be either Ion binary data, or UTF-8 Ion text.
      * <em>This method assumes ownership of the array</em> and may modify it at
