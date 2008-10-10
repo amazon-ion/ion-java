@@ -4,6 +4,8 @@
 
 package com.amazon.ion.streaming;
 
+import com.amazon.ion.TtTimestamp;
+
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonDecimal;
@@ -19,7 +21,6 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.impl.IonConstants;
-import com.amazon.ion.impl.IonTokenReader;
 import com.amazon.ion.impl.Base64Encoder.BinaryStream;
 import com.amazon.ion.impl.IonTokenReader.Type.timeinfo;
 import java.io.IOException;
@@ -776,9 +777,8 @@ public final class IonTextIterator
             return dec;
         case IonConstants.tidTimestamp:
             IonTimestamp t = sys.newNullTimestamp();
-            IonTokenReader.Type.timeinfo ti = getTimestamp();
-            t.setMillis(ti.d.getTime());
-            t.setLocalOffset(ti.localOffset);
+            TtTimestamp ti = getTimestamp();
+            t.setValue(ti);
             return t;
         case IonConstants.tidSymbol:    return sys.newSymbol(stringValue());
         case IonConstants.tidString:    return sys.newString(stringValue());
@@ -965,21 +965,23 @@ public final class IonTextIterator
     }
 
     @Override
-    public timeinfo getTimestamp()
+    public TtTimestamp getTimestamp()
     {
         if (!_value_type.equals(IonType.TIMESTAMP)) {
             throw new IllegalStateException("current value is not a timestamp");
         }
         String image = _scanner.getValueAsString(_value_start, _value_end);
-        timeinfo ti = timeinfo.parse(image);
+        TtTimestamp ti = timeinfo.parse(image);
+
+        // FIXME broken for null.timestamp?!?
+
         return ti;
     }
 
     @Override
     public Date dateValue()
     {
-        timeinfo ti = getTimestamp();
-        return ti.d;
+        return getTimestamp().dateValue();
     }
 
     @Override

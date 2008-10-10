@@ -4,6 +4,8 @@
 
 package com.amazon.ion.streaming;
 
+import com.amazon.ion.TtTimestamp;
+
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
@@ -11,7 +13,6 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.impl.IonConstants;
-import com.amazon.ion.impl.IonTokenReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -355,7 +356,7 @@ public abstract class IonIterator
      * Returns the current value as a timeinfo.  This is only valid if 
      * there is an underlying value and the value is an Ion timestamp.
      */
-    public abstract IonTokenReader.Type.timeinfo getTimestamp();
+    public abstract TtTimestamp getTimestamp();
     
     /**
      * Returns the current value as a Java String.  This is only valid if there is

@@ -4,7 +4,8 @@
 
 package com.amazon.ion.streaming;
 
-import com.amazon.ion.impl.IonTokenReader;
+import com.amazon.ion.TtTimestamp;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 
@@ -21,7 +22,7 @@ public interface ByteReader
      * yet another definition of eof of file as -1
      */
     public static final int EOF = -1;
-    
+
     /**
      * returns the current position of the reader in the underlying
      * byte buffer
@@ -43,7 +44,7 @@ public interface ByteReader
      * @param length number of bytes to skip
      */
     public void skip(int length);
-    
+
     /**
      * reads a single byte and returns it as an unsigned value,
      * that is from 0 to 255.  This returns a ByteReader.EOF (-1)
@@ -54,7 +55,7 @@ public interface ByteReader
     public int  read() throws IOException;
     /**
      * reads a number of bytes into the callers supplied buffer (dst).
-     * This will return the number of bytes read, if any. 
+     * This will return the number of bytes read, if any.
      * @param dst callers destination byte array
      * @param start offset of the first destination array element to write into
      * @param len maximum number of bytes to copy
@@ -69,7 +70,7 @@ public interface ByteReader
      * @throws IOException
      */
     public int  readTypeDesc() throws IOException;
-    
+
     /**
      * reads the upcoming bytes as a signed long.  This uses
      * 7 bits per byte, expects the bytes in bigendian order, and
@@ -78,7 +79,7 @@ public interface ByteReader
      * byte) to be the sign of the value.  The remaining bits are
      * the absolute value of the orginal value. It
      * returns the aggregated bytes as a Java long (signed 64 bit
-     * value) correctly signed. 
+     * value) correctly signed.
      * @return long value read
      * @throws IOException
      */
@@ -90,7 +91,7 @@ public interface ByteReader
      * end of the value. It does not include a sign bit so all 7 bits
      * in the first byte are treated as positive. It
      * returns the aggregated bytes as a Java long (signed 64 bit
-     * value). 
+     * value).
      * @return long value read
      * @throws IOException
      */
@@ -99,7 +100,7 @@ public interface ByteReader
      * reads the next len bytes as a signed long.  This uses
      * 8 bits per byte and expects the bytes in bigendian order. It
      * returns the aggregated bytes as a Java long (signed 64 bit
-     * value). 
+     * value).
      * @param len number of bytes to read into the long
      * @return long value read
      * @throws IOException
@@ -114,7 +115,7 @@ public interface ByteReader
      * byte) to be the sign of the value.  The remaining bits are
      * the absolute value of the orginal value. It
      * returns the aggregated bytes as a Java long (signed 32 bit
-     * value) correctly signed. 
+     * value) correctly signed.
      * @return int value read
      * @throws IOException
      */
@@ -138,7 +139,7 @@ public interface ByteReader
      * len are 0 (which returns 0.0e1) or 8 which is treated
      * as a 64 bit binary float and returned.
      * @param len 0 or 8
-     * @return 0.0 or the double represented by the next 8 bytes 
+     * @return 0.0 or the double represented by the next 8 bytes
      * @throws IOException
      */
     public double readFloat(int len) throws IOException;
@@ -150,15 +151,19 @@ public interface ByteReader
      * @throws IOException
      */
     public BigDecimal readDecimal(int len) throws IOException;
+
     /**
-     * reads the next len bytes and returns them as an Ion timeinfo
+     * Reads the next len bytes and returns them as a {@link TtTimestamp}
      * object.  This contains an UTC date and time value and a
      * timezone offset of the original value.
+     *
      * @param len
-     * @return timeinfo initialized to the value
+     * @return a new {@link TtTimestamp} instance,
+     * or {@code null} if the encoded value is {@code null.timestamp}.
      * @throws IOException
      */
-    public IonTokenReader.Type.timeinfo readTimestamp(int len) throws IOException;
+    public TtTimestamp readTimestamp(int len) throws IOException;
+
     /** reads the next len bytes and converts them from UTF-8 into Java
      * characters and returns those characters as a String.  This may throw
      * an exception in the event it encounters byte sequences that are not

@@ -4,12 +4,13 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.TtTimestamp;
+
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl.IonTokenReader.Type.timeinfo;
 import java.io.IOException;
 import java.util.Date;
 
@@ -20,13 +21,13 @@ public final class IonTimestampImpl
     extends IonValueImpl
     implements IonTimestamp
 {
-    public final static Integer UTC_OFFSET = new Integer(0);
+    public final static Integer UTC_OFFSET = TtTimestamp.UTC_OFFSET;
 
     static final int NULL_TIMESTAMP_TYPEDESC =
         IonConstants.makeTypeDescriptor(IonConstants.tidTimestamp,
                                         IonConstants.lnIsNullAtom);
 
-    private timeinfo _timestamp_value;
+    private TtTimestamp _timestamp_value;
 
     /**
      * Constructs a <code>null.timestamp</code> value.
@@ -75,14 +76,19 @@ public final class IonTimestampImpl
     }
 
 
+    public TtTimestamp timestampValue()
+    {
+        makeReady();
+        return _timestamp_value;
+    }
+
     public Date dateValue()
     {
         makeReady();
 
         if (_timestamp_value == null) return null;
 
-        // Make a copy because the user might change it!
-        return new Date(_timestamp_value.d.getTime());
+        return new Date(_timestamp_value.getMillis());
     }
 
 
@@ -90,36 +96,47 @@ public final class IonTimestampImpl
     {
         makeReady();
         if (_timestamp_value == null) throw new NullValueException();
-        return (_timestamp_value.localOffset == null ? null : _timestamp_value.localOffset);
+        return _timestamp_value.getLocalOffset();
     }
 
 
-    public void setTime(Date value)
+    /**
+     * Returns null if this is null.timestamp.
+     */
+    private Integer getInternalLocalOffset()
+    {
+        makeReady();
+        if (_timestamp_value == null) return null;
+        return _timestamp_value.getLocalOffset();
+    }
+
+    public void setValue(TtTimestamp timestamp)
     {
         checkForLock();
+        _timestamp_value = timestamp;
+        _hasNativeValue = true;
+        setDirty();
+    }
 
-        /* I assume that if setTime is called, most of the time a change will
-         * occur, and most of the time it won't be called again.  Thus we
-         * should assume that we should be optimized for encoding.
-         */
+    public void setValue(long millis, Integer localOffset)
+    {
+        checkForLock();
+        _timestamp_value = new TtTimestamp(millis, localOffset);
+        _hasNativeValue = true;
+        setDirty();
+    }
+
+    public void setTime(Date value)
+    {
         if (value == null)
         {
-            _timestamp_value = null;
+            makeNull();
         }
         else
         {
-            Date date = (value == null ? null : new Date(value.getTime()));
-            if (_timestamp_value == null)
-            {
-                _timestamp_value = new timeinfo(date, null);
-            }
-            else
-            {
-                _timestamp_value.d = date;
-            }
+            // setMillis(long) will check for the lock
+            setMillis(value.getTime());
         }
-        _hasNativeValue = true;
-        setDirty();
     }
 
 
@@ -131,48 +148,38 @@ public final class IonTimestampImpl
             throw new NullValueException();
         }
 
-        return _timestamp_value.d.getTime();
+        return _timestamp_value.getMillis();
     }
 
 
     public void setMillis(long millis)
     {
-        // setTime(Date) will check for the lock
-        setTime(new Date(millis));
+        // setValue() calls checkForLock()
+        Integer offset = getInternalLocalOffset();
+        setValue(millis, offset);
     }
 
 
     public void setMillisUtc(long millis)
     {
-        // setTime(Date) will check for the lock
-        setTime(new Date(millis));
-        _timestamp_value.localOffset = UTC_OFFSET;
+        // setValue() calls checkForLock()
+        setValue(millis, UTC_OFFSET);
     }
 
 
     public void setCurrentTime()
     {
-        checkForLock();
-
-        Date date = new Date();
-        if (_timestamp_value == null)
-        {
-            _timestamp_value = new timeinfo(date, null);
-        }
-        else
-        {
-            _timestamp_value.d = date;
-        }
-        _hasNativeValue = true;
-        setDirty();
+        long millis = System.currentTimeMillis();
+        setMillis(millis);
     }
 
     public void setCurrentTimeUtc()
     {
-        // setCurrentTime() will check for the lock
-        setCurrentTime();
-        _timestamp_value.localOffset = UTC_OFFSET;
+        long millis = System.currentTimeMillis();
+        setMillisUtc(millis);
     }
+
+
 
     public void setLocalOffset(int minutes)
         throws NullValueException
@@ -185,14 +192,20 @@ public final class IonTimestampImpl
     public void setLocalOffset(Integer minutes)
         throws NullValueException
     {
-        checkForLock();
-
         validateThisNotNull();
         assert (_timestamp_value != null);
 
-        _timestamp_value.localOffset = minutes;
+        setValue(_timestamp_value.getMillis(), minutes);
+    }
+
+    public void makeNull()
+    {
+        checkForLock();
+        _timestamp_value = null;
+        _hasNativeValue = true;
         setDirty();
     }
+
 
     @Override
     public synchronized boolean isNullValue()
@@ -253,8 +266,7 @@ public final class IonTimestampImpl
             _timestamp_value = null;
             break;
         case 0:
-            _timestamp_value = new timeinfo();
-            _timestamp_value.d = new Date(0L);
+            _timestamp_value = new TtTimestamp(0, null);
             break;
         case IonConstants.lnIsVarLen:
             ln = reader.readVarUInt7IntValue();

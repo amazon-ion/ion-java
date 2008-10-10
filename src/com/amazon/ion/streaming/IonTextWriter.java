@@ -4,6 +4,8 @@
 
 package com.amazon.ion.streaming;
 
+import com.amazon.ion.TtTimestamp;
+
 import com.amazon.ion.IonType;
 import com.amazon.ion.impl.IonBinary;
 import com.amazon.ion.impl.IonConstants;
@@ -305,6 +307,8 @@ public final class IonTextWriter
         case SEXP:      nullimage = "null.sexp";      break;
         case LIST:      nullimage = "null.list";      break;
         case STRUCT:    nullimage = "null.struct";    break;
+
+        default: throw new IllegalStateException("unexpected type " + type);
         }
 
         _output.append(nullimage);
@@ -413,61 +417,80 @@ public final class IonTextWriter
         // TODO share this timezone instance
         TIMESTAMP_FORMATTER.setTimeZone(TimeZone.getTimeZone("GMT"));
     }
+
+
     public void writeTimestamp(Date value, Integer localOffset)
         throws IOException
     {
-         startValue();
+        if (value == null) {
+            writeNull(IonType.TIMESTAMP);
+            return;
+        }
 
-         // TODO push this into IonTimestamp
-         // Adjust UTC time back to local time
-         int  deltaMinutes = (localOffset == null) ? 0 : localOffset.intValue();
-         long deltaMillis = deltaMinutes * 60 * 1000;
-         value.setTime(value.getTime() + deltaMillis);
+        startValue();
 
-         // SimpleDateFormat is not threadsafe!
-         String dateTimeRendered;
-         synchronized(TIMESTAMP_FORMATTER) {
-             dateTimeRendered = TIMESTAMP_FORMATTER.format(value);
-         }
-         _output.append(dateTimeRendered);
+        // TODO push this into IonTimestamp
+        // Adjust UTC time back to local time
+        int  deltaMinutes = (localOffset == null) ? 0 : localOffset.intValue();
+        long deltaMillis = deltaMinutes * 60 * 1000;
+        value.setTime(value.getTime() + deltaMillis);
 
-         if (localOffset == null) {
-             _output.append("-00:00");
-         }
-         else  if (deltaMinutes == 0) {
-             _output.append('Z');
-         }
-         else {
-             if (deltaMinutes < 0) {
-                 _output.append('-');
-                 deltaMinutes = -deltaMinutes;
-             }
-             else {
-                 _output.append('+');
-             }
+        // SimpleDateFormat is not threadsafe!
+        String dateTimeRendered;
+        synchronized(TIMESTAMP_FORMATTER) {
+            dateTimeRendered = TIMESTAMP_FORMATTER.format(value);
+        }
+        _output.append(dateTimeRendered);
 
-             int hours   = deltaMinutes / 60;
-             int minutes = deltaMinutes - (hours * 60);
+        if (localOffset == null) {
+            _output.append("-00:00");
+        }
+        else  if (deltaMinutes == 0) {
+            _output.append('Z');
+        }
+        else {
+            if (deltaMinutes < 0) {
+                _output.append('-');
+                deltaMinutes = -deltaMinutes;
+            }
+            else {
+                _output.append('+');
+            }
 
-             if (hours < 10) {
-                 _output.append('0');
-             }
-             _output.append(Integer.toString(hours));
+            int hours   = deltaMinutes / 60;
+            int minutes = deltaMinutes - (hours * 60);
 
-             _output.append(':');
+            if (hours < 10) {
+                _output.append('0');
+            }
+            _output.append(Integer.toString(hours));
 
-             if (minutes < 10) {
-                 _output.append('0');
-             }
-             _output.append(Integer.toString(minutes));
-         }
-         closeValue();
+            _output.append(':');
+
+            if (minutes < 10) {
+                _output.append('0');
+            }
+            _output.append(Integer.toString(minutes));
+        }
+        closeValue();
     }
+
     public void writeTimestampUTC(Date value)
         throws IOException
     {
-        writeTimestamp(value, 0);
+        writeTimestamp(value, TtTimestamp.UTC_OFFSET);
     }
+
+    public void writeTimestamp(TtTimestamp value) throws IOException
+    {
+        if (value == null) {
+            writeNull(IonType.TIMESTAMP);
+        }
+        else {
+            writeTimestamp(value.dateValue(), value.getLocalOffset());
+        }
+    }
+
     public void writeString(String value)
         throws IOException
     {

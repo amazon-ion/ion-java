@@ -4,13 +4,14 @@
 
 package com.amazon.ion.streaming;
 
+import com.amazon.ion.TtTimestamp;
+
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.BlockedBuffer;
 import com.amazon.ion.impl.IonBinary;
 import com.amazon.ion.impl.IonConstants;
 import com.amazon.ion.impl.IonBinary.BufferManager;
-import com.amazon.ion.impl.IonTokenReader.Type.timeinfo;
 import com.amazon.ion.streaming.SimpleByteBuffer.SimpleByteWriter;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -30,8 +31,8 @@ static final boolean _verbose_debug = false;
     static final int UNKNOWN_LENGTH = -1;
 
 
-    BufferManager _manager;
-    IonBinary.Writer _writer;
+    final BufferManager _manager;
+    final IonBinary.Writer _writer;
 
     boolean     _in_struct;
     SymbolTable _system_symbols;
@@ -437,18 +438,17 @@ static final boolean _verbose_debug = false;
         patch(patch_len);
     }
 
-    public void writeTimestampUTC(Date value) throws IOException
+    public void writeTimestamp(TtTimestamp value) throws IOException
     {
         if (value == null) {
             writeNull(IonType.TIMESTAMP);
             return;
         }
-        timeinfo di = new timeinfo();
-        di.d = value;
-        di.localOffset = null; // IonTimestampImpl.UTC_OFFSET;
+        TtTimestamp di = value;
 
         int patch_len = 1;
         int len = IonBinary.lenIonTimestamp(di);
+
         int ln = len;
         if (len >= IonConstants.lnIsVarLen) {
             ln = IonConstants.lnIsVarLen;
@@ -465,33 +465,25 @@ static final boolean _verbose_debug = false;
         patch(patch_len);
     }
 
+    public void writeTimestampUTC(Date value) throws IOException
+    {
+        if (value == null) {
+            writeNull(IonType.TIMESTAMP);
+            return;
+        }
+        TtTimestamp di =
+            new TtTimestamp(value.getTime(), TtTimestamp.UTC_OFFSET);
+        writeTimestamp(di);
+    }
+
     public void writeTimestamp(Date value, Integer localOffset) throws IOException
     {
         if (value == null) {
             writeNull(IonType.TIMESTAMP);
             return;
         }
-        timeinfo di = new timeinfo();
-        di.d = value;
-        di.localOffset = localOffset;
-
-        int patch_len = 1;
-        int len = IonBinary.lenIonTimestamp(di);
-
-        int ln = len;
-        if (len >= IonConstants.lnIsVarLen) {
-            ln = IonConstants.lnIsVarLen;
-            patch_len += IonBinary.lenVarUInt7(len);
-        }
-
-        startValue(patch_len + len); // int's are always less than varlen long
-
-        _writer.write((IonConstants.tidTimestamp << 4) | ln);
-        if (len >= IonConstants.lnIsVarLen) {
-            _writer.writeVarUInt7Value(len, true);
-        }
-        patch_len += _writer.writeTimestamp(di);
-        patch(patch_len);
+        TtTimestamp di = new TtTimestamp(value.getTime(), localOffset);
+        writeTimestamp(di);
     }
 
     public void writeString(String value) throws IOException

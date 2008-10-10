@@ -4,6 +4,8 @@
 
 package com.amazon.ion.streaming;
 
+import com.amazon.ion.TtTimestamp;
+
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonDecimal;
@@ -19,7 +21,6 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.impl.IonConstants;
-import com.amazon.ion.impl.IonTokenReader;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
@@ -632,22 +633,22 @@ public final class IonBinaryIterator
     void loadSymbolTableImportList(UnifiedSymbolTable local) {
     	assert (this.getFieldId() == SystemSymbolTable.IMPORTS_SID);
     	assert (this.getType().equals(IonType.LIST));
-    	
+
     	this.stepInto();
     	while (this.hasNext()) {
     		IonType t = this.next();
     		if (IonType.STRUCT.equals(t)) {
-    			loadSymbolTableImport(local);    			
+    			loadSymbolTableImport(local);
     		}
     	}
     	this.stepOut();
     }
-    
-    void loadSymbolTableImport(UnifiedSymbolTable local) 
+
+    void loadSymbolTableImport(UnifiedSymbolTable local)
     {
     	// assert (this.getFieldId() == SystemSymbolTable.IMPORTS_SID);
     	assert (this.getType().equals(IonType.STRUCT));
-    	
+
     	String name = null;
     	int    version = -1;
     	int    maxid = -1;
@@ -841,7 +842,7 @@ public final class IonBinaryIterator
     	 || !_current_symtab._is_locked
     	 ||  _current_symtab.getMaxId() != UnifiedSymbolTable.getSystemSymbolTableInstance().getMaxId()
     	) {
-    		// we only need to "reset" the symbol table if it isn't 
+    		// we only need to "reset" the symbol table if it isn't
     		// the system symbol table already
     		_current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
     	}
@@ -1009,9 +1010,8 @@ public final class IonBinaryIterator
             return dec;
         case IonConstants.tidTimestamp:
             IonTimestamp t = sys.newTimestamp();
-            IonTokenReader.Type.timeinfo ti = getTimestamp();
-            t.setMillis(ti.d.getTime());
-            t.setLocalOffset(ti.localOffset);
+            TtTimestamp ti = getTimestamp();
+            t.setValue(ti);
             return t;
         case IonConstants.tidSymbol:    return sys.newSymbol(stringValue());
         case IonConstants.tidString:    return sys.newString(stringValue());
@@ -1206,14 +1206,13 @@ public final class IonBinaryIterator
     @Override
     public Date dateValue()
     {
-        IonTokenReader.Type.timeinfo ti = getTimestamp();
-        return ti.d;
+        return getTimestamp().dateValue();
     }
 
     @Override
-    public IonTokenReader.Type.timeinfo getTimestamp()
+    public TtTimestamp getTimestamp()
     {
-        IonTokenReader.Type.timeinfo ti;
+        TtTimestamp ti;
 
         if (_state != S_BEFORE_CONTENTS) {
             throw new IllegalStateException();

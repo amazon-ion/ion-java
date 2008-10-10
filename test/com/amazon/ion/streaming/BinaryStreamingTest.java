@@ -4,6 +4,8 @@
 
 package com.amazon.ion.streaming;
 
+import com.amazon.ion.TtTimestamp;
+
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
@@ -15,7 +17,6 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.impl.IonTokenReader;
 import com.amazon.ion.system.SystemFactory;
-
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -36,7 +37,7 @@ public class BinaryStreamingTest
     {
         super.setUp();
     }
-    
+
     static boolean bytesEqual(byte[] v1, byte[] v2) {
         if (v1 == null || v2 == null) {
             return v1 == v2;
@@ -53,13 +54,13 @@ public class BinaryStreamingTest
 
     //=========================================================================
     // Test cases
-    
+
     static class TestValue {
         String   name;
         IonType  itype;
         Object   value;
         String[] annotations;
-        
+
         TestValue(String tv_name, IonType tv_type, Object tv_value) {
             name = tv_name;
             itype = tv_type;
@@ -68,32 +69,32 @@ public class BinaryStreamingTest
         static MathContext context = MathContext.DECIMAL128;
         static BigDecimal makeBigDecimal(double d) {
             BigDecimal bd = new BigDecimal(d, context);
-            
+
             int scale = bd.scale();
             BigInteger bi = bd.unscaledValue();
-            
+
             // there are only 52 significant bits in a double value, so we're going to round
             if (bi.bitLength() > 52) {
                 if (scale != scale) throw new NumberFormatException();
             }
-            
+
             return bd;
         }
         static BigDecimal makeBigDecimal(String v) {
             BigDecimal bd = new BigDecimal(v, context);
-            
+
             int scale = bd.scale();
             BigInteger bi = bd.unscaledValue();
-            
+
             // there are only 52 significant bits in a double value, so we're going to round
             if (bi.bitLength() > 52 || scale != scale) {
                 throw new NumberFormatException();
             }
-            
+
             return bd;
         }
         void writeValue(IonWriter wr) throws IOException {
-            
+
             if (name.equals("clob_1") || name.equals("clob_2")) {
                 assertTrue( true );
             }
@@ -156,21 +157,15 @@ public class BinaryStreamingTest
                         wr.writeTimestampUTC((Date)value);
                     }
                     else if (value instanceof String) {
-                        IonTokenReader.Type.timeinfo ti = 
+                        TtTimestamp ti =
                             IonTokenReader.Type.timeinfo.parse((String)value);
-                        wr.writeTimestamp(ti.d, ti.localOffset);
+                        wr.writeTimestamp(ti);
                     }
-                    else if (value instanceof IonTokenReader.Type.timeinfo) {
-                        IonTokenReader.Type.timeinfo ti = (IonTokenReader.Type.timeinfo)value;
-                        if (ti.localOffset == null) {
-                            wr.writeTimestampUTC(ti.d);
-                        }
-                        else {
-                            wr.writeTimestamp(ti.d, ti.localOffset);
-                        }
+                    else if (value instanceof TtTimestamp) {
+                        wr.writeTimestamp((TtTimestamp)value);
                     }
                     else {
-                        throw new IllegalStateException("we only write Date (as is), a timeinfo or a String (parsed to timeinfo) to an IonTimestamp");
+                        throw new IllegalStateException("we only write Date (as is), a TtTimestamp or a String (parsed) to an IonTimestamp");
                     }
                     break;
                 case STRING:
@@ -199,7 +194,7 @@ public class BinaryStreamingTest
                     else {
                         throw new IllegalStateException("we only write byte arrays ( byte[] ) to an IonBlob");
                     }
-                    break;                  
+                    break;
                 case CLOB:
                     if (value instanceof byte[]) {
                         wr.writeClob((byte[])value);
@@ -207,22 +202,24 @@ public class BinaryStreamingTest
                     else {
                         throw new IllegalStateException("we only write byte arrays ( byte[] ) to an IonClob");
                     }
-                    break;                  
+                    break;
                 case STRUCT:
                 case LIST:
                 case SEXP:
                     throw new IllegalStateException("the value writer can't write complex types");
+                default:
+                    throw new IllegalStateException("the value writer can't write Datagram");
             }
             return;
         }
         void readAndTestValue(IonReader r) throws IOException {
-            
+
             IonType t = r.next();
             String fieldname = r.getFieldName();
             if (name.equals("bdd_d") || name.equals("bdd_c")) {
                 assertTrue( true );
             }
-            
+
             assertTrue( name.equals( fieldname ) );
             if ( itype.equals(IonType.NULL) ) {
                 // nulls are typed so we test them differently
@@ -236,7 +233,7 @@ public class BinaryStreamingTest
             else {
                 assertTrue( itype.equals( t ) );
             }
-            
+
             switch (itype) {
                 case NULL:
                     break;
@@ -270,7 +267,7 @@ public class BinaryStreamingTest
                         assertTrue( ((Double)value).equals( d ) );
                     }
                     else {
-                        throw new IllegalStateException("we only write Float or Double to an IonFloat");
+                        throw new IllegalStateException("we only test Float or Double to an IonFloat");
                     }
                     break;
                 case DECIMAL:
@@ -283,34 +280,28 @@ public class BinaryStreamingTest
                         bd1 = (BigDecimal)value;
                     }
                     else {
-                        throw new IllegalStateException("we only write Double and BigDecimal to an IonDecimal");
+                        throw new IllegalStateException("we only test Double and BigDecimal to an IonDecimal");
                     }
                     assertTrue( bd1.equals(bd2) );
                     break;
                 case TIMESTAMP:
-                    IonTokenReader.Type.timeinfo ti1 = r.getTimestamp();
+                    TtTimestamp actual = r.getTimestamp();
 
                     if (value instanceof Date) {
-                        assertTrue( ((Date)value).equals(ti1.d) );
+                        assertEquals(value, actual.dateValue());
+                        assertEquals(TtTimestamp.UTC_OFFSET, actual.getLocalOffset());
                     }
                     else if (value instanceof String) {
-                        IonTokenReader.Type.timeinfo ti2 = 
+                        TtTimestamp ti2 =
                             IonTokenReader.Type.timeinfo.parse((String)value);
-                        assertTrue( ti1.d.equals(ti2.d) );
-                        assertTrue( ti1.localOffset == ti2.localOffset );
+                        assertEquals(ti2, actual);
                     }
-                    else if (value instanceof IonTokenReader.Type.timeinfo) {
-                        IonTokenReader.Type.timeinfo ti2 = (IonTokenReader.Type.timeinfo)value;
-                        assertTrue( ti1.d.equals(ti2.d) );
-                        if (ti1.localOffset == null || ti2.localOffset == null) {
-                            assertTrue(ti1.localOffset == ti2.localOffset);
-                        }
-                        else {
-                            assertTrue( ti1.localOffset.equals(ti2.localOffset));
-                        }
+                    else if (value instanceof TtTimestamp) {
+                        TtTimestamp ti2 = (TtTimestamp)value;
+                        assertEquals(ti2, actual);
                     }
                     else {
-                        throw new IllegalStateException("we only write Date (as is), a timeinfo, or a String (parsed to timeinfo) to an IonTimestamp");
+                        throw new IllegalStateException("we only test Date (as is), a TtTimestamp, or a String (parsed) to an IonTimestamp");
                     }
                     break;
                 case STRING:
@@ -318,7 +309,7 @@ public class BinaryStreamingTest
                         assertTrue( ((String)value).equals(r.stringValue()) );
                     }
                     else {
-                        throw new IllegalStateException("we only write String to an IonString");
+                        throw new IllegalStateException("we only test String to an IonString");
                     }
                     break;
                 case SYMBOL:
@@ -329,20 +320,20 @@ public class BinaryStreamingTest
                         assertTrue( ((Integer)value).equals( r.getSymbolId()) );
                     }
                     else {
-                        throw new IllegalStateException("we only write String or Integer (a symbol id) to an IonSymbol");
+                        throw new IllegalStateException("we only test String or Integer (a symbol id) to an IonSymbol");
                     }
                     break;
                 case BLOB:
-                    
+
                     if (value instanceof byte[]) {
                         byte[] b1 = (byte[])value;
                         byte[] b2 = r.newBytes();
                         assertTrue( bytesEqual(b1, b2) );
                     }
                     else {
-                        throw new IllegalStateException("we only write byte arrays ( byte[] ) to an IonBlob");
+                        throw new IllegalStateException("we only test byte arrays ( byte[] ) to an IonBlob");
                     }
-                    break;                  
+                    break;
                 case CLOB:
                     if (value instanceof byte[]) {
                         byte[] c1 = (byte[])value;
@@ -350,34 +341,35 @@ public class BinaryStreamingTest
                         assertTrue( bytesEqual(c1, c2) );
                     }
                     else {
-                        throw new IllegalStateException("we only write byte arrays ( byte[] ) to an IonClob");
+                        throw new IllegalStateException("we only test byte arrays ( byte[] ) to an IonClob");
                     }
-                    break;                  
+                    break;
                 case STRUCT:
                 case LIST:
                 case SEXP:
-                    throw new IllegalStateException("the value writer can't write complex types");
+                    throw new IllegalStateException("the value reader can't read complex types");
+                default:
+                    throw new IllegalStateException("the value reader can't read Datagram");
             }
-            
         }
-
     }
+
     public void testAllValues()
     throws Exception
     {
         IonWriter wr = new IonBinaryWriter();
         byte[] buffer = null;
-        
+
         byte[] _testbytes1 = new byte[5];
         byte[] _testbytes2 = new byte[10000];
-        
+
         for (int ii=0; ii<5; ii++) {
             _testbytes1[ii] = (byte)('0' + ii);
         }
         for (int ii=0; ii<_testbytes2.length; ii++) {
-            _testbytes2[ii] = (byte)(ii & 0xff); 
+            _testbytes2[ii] = (byte)(ii & 0xff);
         }
-        
+
         TestValue[] testvalues = {
                // new TestValue( , , ),
 /*
@@ -393,11 +385,11 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         	   new TestValue("Null",          IonType.NULL, null),
                new TestValue("Null.null",     IonType.NULL, IonType.NULL),
                new TestValue("Null.bool",     IonType.NULL, IonType.BOOL),
-               
+
                new TestValue("Null.int",      IonType.NULL, IonType.INT),
                new TestValue("Null.float",    IonType.NULL, IonType.FLOAT),
                new TestValue("Null.decimal",  IonType.NULL, IonType.DECIMAL),
-  
+
                    new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
                new TestValue("Null.string",   IonType.NULL, IonType.STRING),
                new TestValue("Null.symbol",   IonType.NULL, IonType.SYMBOL),
@@ -407,10 +399,10 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
                new TestValue("Null.list",     IonType.NULL, IonType.LIST),
                new TestValue("Null.sexp",     IonType.NULL, IonType.SEXP),
                new TestValue("Null.struct",   IonType.NULL, IonType.STRUCT),
-            
+
                new TestValue("bool_true",     IonType.BOOL, Boolean.TRUE),
                new TestValue("bool_false",    IonType.BOOL, Boolean.FALSE),
-               
+
                new TestValue("int0",          IonType.INT, new Integer(0) ),
                new TestValue("intneg1",       IonType.INT, new Integer(-1) ),
                new TestValue("int1",          IonType.INT, new Integer(1) ),
@@ -429,7 +421,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
                new TestValue("longmin",       IonType.INT, new Long(Long.MIN_VALUE + 1) ),  // we don't reach all the way to MIN_VALUE since we have to negate it for writing (to get the positive value)
                new TestValue("longmin2",      IonType.INT, new Long(-Long.MAX_VALUE) ),
                new TestValue("longmax",       IonType.INT, Long.MAX_VALUE ),
-               
+
                new TestValue("float_0",       IonType.FLOAT, new Float(0.0) ),
                new TestValue("float_a",       IonType.FLOAT, new Float(-1.0) ),
                new TestValue("float_b",       IonType.FLOAT, new Float(1.0) ),
@@ -455,7 +447,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
                new TestValue("double_i",      IonType.FLOAT, Double.NaN ),
                new TestValue("double_j",      IonType.FLOAT, Double.NEGATIVE_INFINITY ),
                new TestValue("double_k",      IonType.FLOAT, Double.POSITIVE_INFINITY ),
-               
+
                new TestValue("bdd_0",         IonType.DECIMAL, new Double(0.0) ),
                new TestValue("bdd_a",         IonType.DECIMAL, new Double(-1.0) ),
                new TestValue("bdd_b",         IonType.DECIMAL, new Double(1.0) ),
@@ -480,7 +472,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
                new TestValue("bdbd_h",        IonType.DECIMAL, TestValue.makeBigDecimal("-0.10") ),
                new TestValue("bdbd_i",        IonType.DECIMAL, TestValue.makeBigDecimal("100") ),
                new TestValue("bdbd_j",        IonType.DECIMAL, TestValue.makeBigDecimal("-100.000") ),
-               
+
 //                   new TestValue("date_d1",       IonType.TIMESTAMP, new Date("1-23-2008") ),
 //                   new TestValue("date_d2",       IonType.TIMESTAMP, new Date("1-23-2008T12:53") ),
 //                   new TestValue("date_d3",       IonType.TIMESTAMP, new Date("1-23-2008T12:53:24") ),
@@ -493,7 +485,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
                new TestValue("date_t5",       IonType.TIMESTAMP, IonTokenReader.Type.timeinfo.parse("2008-02-15T12:59:59.100000-03:45") ),
                new TestValue("date_t6",       IonType.TIMESTAMP, IonTokenReader.Type.timeinfo.parse("0001-01-01T00:00:00.000000-00:00") ),
                new TestValue("date_t7",       IonType.TIMESTAMP, IonTokenReader.Type.timeinfo.parse("9999-12-31T23:59:59.999999+01:00") ),
-               
+
                new TestValue("string_1",       IonType.STRING, ""),
                new TestValue("string_2",       IonType.STRING, " "),
                new TestValue("string_3",       IonType.STRING, "abcde"),
@@ -511,7 +503,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
                new TestValue("symbol_6",       IonType.SYMBOL, "12345678901234"),
                new TestValue("symbol_7",       IonType.SYMBOL, "123456789012345"),
                new TestValue("symbol_8",       IonType.SYMBOL, "\0\u001f\uffff"),
-               
+
                new TestValue("symbol_9",       IonType.SYMBOL, new Integer(1) ),
 
                new TestValue("clob_1",       IonType.CLOB, _testbytes1),
@@ -525,56 +517,55 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         try {
             // we don't really need the struct, but if we use it we get to
             // label all the values
-                wr.startStruct();
+            wr.startStruct();
 
-                for (TestValue tv : testvalues) {
-                    tv.writeValue(wr);
-                }
-
-                wr.closeStruct();
-                buffer = wr.getBytes();
-            }
-            catch (IOException e) {
-                throw new Exception(e);
-            }
-            
-            IonReader r = IonIterator.makeIterator(buffer);
-            IonType t;
-            
-            t = r.next();
-            assertTrue( t.equals(IonType.STRUCT) );
-            r.stepInto();
-            r.hasNext();
-            
             for (TestValue tv : testvalues) {
-                tv.readAndTestValue(r);
+                tv.writeValue(wr);
             }
- 
+
+            wr.closeStruct();
+            buffer = wr.getBytes();
+        }
+        catch (IOException e) {
+            throw new Exception(e);
         }
 
-        public void testValue1()
-        throws Exception
-        {
-        	String s = 
-        		 "item_view::{item_id:\"B00096H8Q4\",marketplace_id:2,"
-    		+"product:{item_name:["
-    		+"{value:'''Method 24CT Leather Wipes''',lang:EN_CA},"
-    		+"{value:'''Method 24CT Chiffons de Cuir''',lang:FR_CA}],"
-    		+"list_price:{value:18.23,unit:EUR},}"
-    		+",index_suppressed:true,"
-    		+"offline_store_only:true,version:2,}";
-    	IonReader ir = IonIterator.makeIterator(s);
-    	IonWriter wr = new IonBinaryWriter();
+        IonReader r = IonIterator.makeIterator(buffer);
+        IonType t;
+
+        t = r.next();
+        assertTrue( t.equals(IonType.STRUCT) );
+        r.stepInto();
+        r.hasNext();
+
+        for (TestValue tv : testvalues) {
+            tv.readAndTestValue(r);
+        }
+    }
+
+    public void testValue1()
+    throws Exception
+    {
+        String s =
+            "item_view::{item_id:\"B00096H8Q4\",marketplace_id:2,"
+            +"product:{item_name:["
+            +"{value:'''Method 24CT Leather Wipes''',lang:EN_CA},"
+            +"{value:'''Method 24CT Chiffons de Cuir''',lang:FR_CA}],"
+            +"list_price:{value:18.23,unit:EUR},}"
+            +",index_suppressed:true,"
+            +"offline_store_only:true,version:2,}";
+        IonReader ir = IonIterator.makeIterator(s);
+        IonWriter wr = new IonBinaryWriter();
     	wr.writeIonEvents(ir);
         byte[] buffer = wr.getBytes();
         dumpBuffer(buffer, buffer.length);
-        
+
     	return;
     }
     public void testValue2()
     throws Exception
     {
-    	String s = 
+    	String s =
     		 "item_view::{item_id:\"B00096H8Q4\",marketplace_id:2,"
     		+"product:{item_name:["
     		+"{value:'''Method 24CT Leather Wipes''',lang:EN_CA},"
@@ -594,14 +585,14 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
     	u.setVersion(1);
     	u.lock();
     	IonWriter wr = new IonBinaryWriter(u);
-    	
+
     	wr.writeIonEvents(ir);
         byte[] buffer = wr.getBytes();
         dumpBuffer(buffer, buffer.length);
-        
+
     	return;
     }
-    void dumpBuffer(byte[] buffer, int len) 
+    void dumpBuffer(byte[] buffer, int len)
     {
     	if (!_debug_flag) return;
     	for (int ii=0; ii<len; ii++) {
@@ -617,7 +608,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         	System.out.print(y+" ");
         }
         System.out.println();
-        
+
     	for (int ii=0; ii<len; ii++) {
         	int b = ((int)buffer[ii]) & 0xff;
         	if ((ii & 0xf) == 0) {
@@ -632,7 +623,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         }
         System.out.println();
 
-        
+
     }
     public void testBoolValue()
         throws Exception
@@ -666,7 +657,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
             }
         }
     }
-    
+
     public void testTwoMagicCookies() {
         IonWriter wr = new IonBinaryWriter();
         byte[] buffer = null;
@@ -681,13 +672,13 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        
+
         byte[] doublebuffer = new byte[buffer.length * 2];
         System.arraycopy(buffer, 0, doublebuffer, 0, buffer.length);
         System.arraycopy(buffer, 0, doublebuffer, buffer.length, buffer.length);
-        
+
         IonReader ir = IonIterator.makeIterator(doublebuffer);
-        
+
         // first copy
         assertTrue(ir.next().equals(IonType.STRUCT));
         ir.stepInto();
@@ -701,7 +692,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         }
         assertEquals(ir.booleanValue(), true);
         ir.stepOut();
-        
+
         // second copy
         assertEquals(IonType.STRUCT, ir.next());
         ir.stepInto();
@@ -713,7 +704,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         assertEquals("boolean", annotations[0]);
         assertEquals(true, ir.booleanValue());
         ir.stepOut();
-        
+
         assertEquals(false, ir.hasNext());
     }
 
@@ -759,34 +750,34 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
 
         try {
             wr.startStruct();
-            
+
             wr.writeFieldname("hello");
             wr.writeBool(true);
-            
+
             wr.writeFieldname("Almost Done.");
             wr.writeBool(true);
-            
+
             wr.writeFieldname("This is a test String.");
             wr.writeBool(true);
-            
+
             wr.writeFieldname("12242.124598129");
             wr.writeFloat(12242.124598129);
-            
+
             wr.writeFieldname("Something");
             wr.writeNull();
-            
+
             wr.writeFieldname("false");
             wr.writeBool(false);
-            
+
             wr.writeFieldname("true");
             wr.writeBool(true);
-            
+
             wr.writeFieldname("long");
             wr.writeInt((long) 9326);
-            
+
             wr.writeFieldname("12");
             wr.writeInt(-12);
-            
+
             wr.closeStruct();
             buffer = wr.getBytes();
         } catch (IOException e) {
@@ -802,124 +793,124 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
                 assertEquals(ir.next(), IonType.BOOL);
                 assertEquals(ir.getFieldName(), "hello");
                 assertEquals(ir.booleanValue(), true);
-                
+
                 assertEquals(ir.next(), IonType.BOOL);
                 assertEquals(ir.getFieldName(), "Almost Done.");
                 assertEquals(ir.booleanValue(), true);
-                
+
                 assertEquals(ir.next(), IonType.BOOL);
                 assertEquals(ir.getFieldName(), "This is a test String.");
                 assertEquals(ir.booleanValue(), true);
-                
+
                 assertEquals(ir.next(), IonType.FLOAT);
                 assertEquals(ir.getFieldName(), "12242.124598129");
                 assertEquals(ir.doubleValue(), 12242.124598129);
-                
+
                 assertEquals(ir.next(), IonType.NULL);
                 assertEquals(ir.getFieldName(), "Something");
                 assertTrue(ir.isNullValue());
                 // not:
                 //assertEquals(ir.getValueAsString(), null);
                 assertEquals(ir.valueToString(), "null");
-                
+
                 assertEquals(ir.next(), IonType.BOOL);
                 assertEquals(ir.getFieldName(), "false");
                 assertEquals(ir.booleanValue(), false);
-                
+
                 assertEquals(ir.next(), IonType.BOOL);
                 assertEquals(ir.getFieldName(), "true");
                 assertEquals(ir.booleanValue(), true);
-                
+
                 assertEquals(ir.next(), IonType.INT);
                 assertEquals(ir.getFieldName(), "long");
                 assertEquals(ir.longValue(), 9326L);
-                
+
                 assertEquals(ir.next(), IonType.INT);
                 assertEquals(ir.getFieldName(), "12");
                 assertEquals(ir.intValue(), -12);
             }
         }
     }
-    
+
     public void testBenchmarkDirect() throws IOException {
 
         byte[] bytes ;
-        
+
         IonWriter wr = new IonBinaryWriter();
         wr.startStruct();
-        
+
         wr.writeFieldname("12");
         wr.addAnnotation(int.class.getCanonicalName());
         wr.writeInt(-12);
-        
+
         wr.writeFieldname("12242.124598129");
         wr.addAnnotation(double.class.getCanonicalName());
         wr.writeFloat(12242.124598129);
-        
+
         wr.writeFieldname("Almost Done.");
         wr.addAnnotation(boolean.class.getCanonicalName());
         wr.writeBool(true);
-        
+
         wr.writeFieldname("This is a test String.");
         wr.addAnnotation(boolean.class.getCanonicalName());
         wr.writeBool(true);
-        
+
         wr.writeFieldname("false");
         wr.addAnnotation(boolean.class.getCanonicalName());
         wr.writeBool(false);
-        
+
         wr.writeFieldname("long");
         wr.addAnnotation(long.class.getCanonicalName());
         wr.writeInt((long) 9326);
-        
+
         wr.writeFieldname("true");
         wr.addAnnotation(boolean.class.getCanonicalName());
         wr.writeBool(true);
-        
+
         wr.closeStruct();
-        
+
         bytes = wr.getBytes();
-        
+
         IonReader ir = IonIterator.makeIterator(bytes);
         assertTrue(ir.hasNext());
         ir.next();
         ir.stepInto();
-        
+
         assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.INT);
         assertEquals(ir.getFieldName(), "12");
         assertEquals(ir.intValue(), -12);
-        
+
         assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.FLOAT);
         assertEquals(ir.getFieldName(), "12242.124598129");
         assertEquals(ir.doubleValue(), 12242.124598129);
-        
+
         assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.BOOL);
         assertEquals(ir.getFieldName(), "Almost Done.");
         assertEquals(ir.booleanValue(), true);
-        
+
         assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.BOOL);
         assertEquals(ir.getFieldName(), "This is a test String.");
         assertEquals(ir.booleanValue(), true);
-        
+
         assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.BOOL);
         assertEquals(ir.getFieldName(), "false");
         assertEquals(ir.booleanValue(), false);
-        
+
         assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.INT);
         assertEquals(ir.getFieldName(), "long");
-        assertEquals(ir.longValue(), 9326L);    
-        
+        assertEquals(ir.longValue(), 9326L);
+
         assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.BOOL);
         assertEquals(ir.getFieldName(), "true");
         assertEquals(ir.booleanValue(), true);
-        
+
         assertFalse(ir.hasNext());
         ir.stepOut();
         assertFalse(ir.hasNext());

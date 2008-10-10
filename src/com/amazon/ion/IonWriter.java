@@ -10,8 +10,9 @@ import java.math.BigDecimal;
 import java.util.Date;
 
 /**
- * provides an abstract interface for write Ion values to an
- * output source.  Concrete implmentations include IonTextWriter,
+ * Writes Ion data to an output source.
+ *
+ * Concrete implmentations include IonTextWriter,
  * IonBinaryWriter and IonTreeWriter.  This interface allows
  * the user to logically write the values as they view the data
  * without being concerned about which output format is needed.
@@ -21,16 +22,16 @@ import java.util.Date;
  * common scalars to the output.  For binary this output can be
  * optimized for some performance gain, but for text and tree
  * these are simply convienience covers.
- *
+ * <p>
  * The annotations must be written before the contents of a value
  * is written.  Once the contents have been written the "pending
  * annotations" are erase, so they are must be reset if they need
  * to be applied to the next value.
- *
+ * <p>
  * Similarly the field name must be written before the value is
  * written if the value is a field in a structure.  The field name
  * is also "erased" once used, so it must be set for each field.
- *
+ * <p>
  * Once all the values have been written into the writer the
  * caller can use getBytes() or writeBytes() to get the cached output
  * as a byte array (either a new one allocated by the writer or
@@ -119,13 +120,13 @@ public interface IonWriter
     public abstract void writeIonValue(IonType t, IonReader iterator) throws IOException;
 
     /**
-     * writes the remainting contents of the passed in iterator to the
+     * Writes the remaining contents of the given reader to the
      * output. This also writes the values annotations and the values
      * field names (if it is in a structure) along with the values
      * contents. This does a deep write, which writes the contents of
      * any containers encountered.
      */
-    public abstract void writeIonEvents(IonReader iterator) throws IOException;
+    public abstract void writeIonEvents(IonReader reader) throws IOException;
 
     /**
      * write a value of type Null (null or null.null).
@@ -200,21 +201,32 @@ public interface IonWriter
      * @throws IOException
      */
     public abstract void writeDecimal(BigDecimal value) throws IOException;
+
+
+    /**
+     *
+     * @param value may be null to represent {@code null.timestamp}.
+     */
+    public abstract void writeTimestamp(TtTimestamp value) throws IOException;
+
     /**
      * writes the passed in Date (in milliseconds since the epoch) as an
      * IonTimestamp.  The Date value is treated as a UTC value with an
      * unknown timezone offset (a z value).
-     * @param value java.util Date holding the UTC timestamp
+     * @param value java.util Date holding the UTC timestamp;
+     * may be null to represent {@code null.timestamp}.
      * @throws IOException
      */
     public abstract void writeTimestampUTC(Date value) throws IOException;
+
     /**
      * writes the passed in Date (in milliseconds since the epoch) as an
      * IonTimestamp with the associated timezone offset.  The Date value
      * is treated as a UTC date and time value.  The offset is the offset
      * of the timezone where the value originated. (the date is expected
      * to have already be adjusted to UTC if necessary)
-     * @param value java.util Date holding the UTC timestamp
+     * @param value java.util Date holding the UTC timestamp;
+     * may be null to represent {@code null.timestamp}.
      * @param localOffset minutes from UTC where the value was authored
      * @throws IOException
      */

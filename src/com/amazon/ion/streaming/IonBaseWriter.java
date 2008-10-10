@@ -4,13 +4,14 @@
 
 package com.amazon.ion.streaming;
 
+import com.amazon.ion.TtTimestamp;
+
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.impl.IonTokenReader.Type.timeinfo;
 import java.io.IOException;
 
 /**
@@ -445,14 +446,11 @@ static final boolean _debug_on = false;
                 if (_debug_on) System.out.print("d");
                 break;
             case TIMESTAMP:
-                timeinfo ti = iterator.getTimestamp();
+                TtTimestamp ti = iterator.getTimestamp();
                 if (ti == null) {
                     throw new IllegalStateException("this should exist");
                 }
-                if (ti.d == null) {
-                    throw new IllegalStateException("this should exist");
-                }
-                writeTimestamp(ti.d, ti.localOffset);
+                writeTimestamp(ti);
                 if (_debug_on) System.out.print("t");
                 break;
             case STRING:

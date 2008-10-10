@@ -4,17 +4,16 @@
 
 package com.amazon.ion.streaming;
 
+import com.amazon.ion.TtTimestamp;
+
 import com.amazon.ion.IonException;
 import com.amazon.ion.impl.IonBinary;
 import com.amazon.ion.impl.IonConstants;
-import com.amazon.ion.impl.IonTokenReader;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
-import java.util.Date;
 
 /**
  * Manages a very simple byte buffer that is a single contiguous
@@ -448,7 +447,7 @@ done:       for (;;) {
             return bd;
         }
 
-        public IonTokenReader.Type.timeinfo readTimestamp(int len) throws IOException
+        public TtTimestamp readTimestamp(int len) throws IOException
         {
             if (len < 1) return null;
             int startpos = this.position();
@@ -460,12 +459,9 @@ done:       for (;;) {
             BigDecimal bd = this.readDecimal(len - (this.position() - startpos));
 
             // now we put it together
-            IonTokenReader.Type.timeinfo ti = new IonTokenReader.Type.timeinfo();
-            ti.d = new Date(bd.longValue());
-            ti.localOffset = tz;
-
-            return ti;
+            return new TtTimestamp(bd, tz);
         }
+
         public String readString(int len) throws IOException
         {
             // len is bytes, which is greater than or equal to java
@@ -945,22 +941,23 @@ done:       for (;;) {
             return returnlen;
         }
 
-        public int writeTimestamp(IonTokenReader.Type.timeinfo di)
+        public int writeTimestamp(TtTimestamp di)
         throws IOException
         {
             int  returnlen = 0;
 
             if (di != null) {
-                long l = di.d.getTime();
+                long l = di.getMillis();
                 BigDecimal bd = new BigDecimal(l);
                 bd.setScale(13); // millisecond time has 13 significant digits
 
-                int  tzoffset = (di.localOffset == null) ? 0 : di.localOffset.intValue();
+                Integer localOffset = di.getLocalOffset();
+                int  tzoffset = (localOffset == null) ? 0 : localOffset.intValue();
 
                 int  tzlen = IonBinary.lenVarInt7(tzoffset);
                 if (tzlen == 0) tzlen = 1;
 
-                if (di.localOffset == null) {
+                if (localOffset == null) {
                     // TODO don't use magic numbers!
                     this.write((byte)(0xff & (0x80 | 0x40))); // negative 0 (no timezone)
                     returnlen ++;

@@ -4,7 +4,6 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl.IonTokenReader;
 import com.amazon.ion.streaming.UnifiedSymbolTable;
 import java.math.BigDecimal;
 import java.util.Date;
@@ -193,14 +192,20 @@ public interface IonReader
     /**
      * Returns the current value as a java.util.Date.  This is only valid if
      * there is an underlying value and the value is an Ion timestamp.
+     *
+     * @return a new {@link Date} instance,
+     * or {@code null} if the current value is {@code null.timestamp}.
      */
     public Date dateValue();
 
     /**
      * Returns the current value as a timeinfo.  This is only valid if
      * there is an underlying value and the value is an Ion timestamp.
+     *
+     * @return the current value as a {@link TtTimestamp},
+     * or {@code null} if the current value is {@code null.timestamp}.
      */
-    public IonTokenReader.Type.timeinfo getTimestamp();
+    public TtTimestamp getTimestamp();
 
     /**
      * Returns the current value as a Java String.  This is only valid if there

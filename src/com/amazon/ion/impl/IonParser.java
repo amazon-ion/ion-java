@@ -17,7 +17,6 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Date;
 
 
 /**
@@ -601,11 +600,7 @@ loop:   for (;;) {
             break;
         case constTime:
             {
-                Date d = this._in.dateValue.d;
-                Integer tz = this._in.dateValue.localOffset;
-                IonTokenReader.Type.timeinfo di =
-                    new IonTokenReader.Type.timeinfo(d, tz);
-                this._out.writer().writeTimestampWithTD(di);
+                this._out.writer().writeTimestampWithTD(this._in.dateValue);
             }
             break;
         default:

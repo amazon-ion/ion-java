@@ -1,18 +1,18 @@
 package com.amazon.ion.streaming;
 
+import com.amazon.ion.TtTimestamp;
+
+import com.amazon.ion.DirectoryTestSuite;
+import com.amazon.ion.FileTestCase;
+import com.amazon.ion.IonReader;
+import com.amazon.ion.IonType;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.math.BigDecimal;
-
 import junit.framework.TestSuite;
-import com.amazon.ion.DirectoryTestSuite;
-import com.amazon.ion.FileTestCase;
-import com.amazon.ion.IonReader;
-import com.amazon.ion.IonType;
-import com.amazon.ion.impl.IonTokenReader.Type.timeinfo;
 
 public class EquivIonStreamingTests extends DirectoryTestSuite {
 
@@ -35,14 +35,14 @@ public class EquivIonStreamingTests extends DirectoryTestSuite {
 	        	assert it1.hasNext() == false && it1.getDepth() == 0;
 	        	assert it2.hasNext() == false && it2.getDepth() == 0;
 	        }
-	        
+
 	        IonReader openIterator(File f) {
 	        	IonReader it;
 	        	int len = (int)myTestFile.length();
 	        	byte[] buf = new byte[len];
-	        	
+
 	        	FileInputStream in;
-	        	BufferedInputStream bin; 
+	        	BufferedInputStream bin;
 				try {
 					in = new FileInputStream(myTestFile);
 					bin = new BufferedInputStream(in);
@@ -51,7 +51,7 @@ public class EquivIonStreamingTests extends DirectoryTestSuite {
 					throw new RuntimeException(e);
 		        } catch (IOException ioe) {
 		        	throw new RuntimeException(ioe);
-				} 
+				}
 	        	it = IonIterator.makeIterator(buf);
 	        	return it;
 		    }
@@ -96,11 +96,9 @@ public class EquivIonStreamingTests extends DirectoryTestSuite {
         			assert bd1.equals(bd2);
         			break;
         		case TIMESTAMP:
-        			timeinfo t1 = it1.getTimestamp();
-        			timeinfo t2 = it2.getTimestamp();
-        			assert t1.d.equals(t2.d);
-        			// if they're both null they're ==, otherwise the should be .equalse
-        			assert t1.localOffset == t2.localOffset || t1.localOffset.equals(t2.localOffset);
+        			TtTimestamp t1 = it1.getTimestamp();
+        			TtTimestamp t2 = it2.getTimestamp();
+        			assertEquals(t1, t2);
         			break;
         		case STRING:
         		case SYMBOL:
@@ -163,7 +161,7 @@ public class EquivIonStreamingTests extends DirectoryTestSuite {
 	        	    	it1.stepOut();
 	        	    	it2.stepOut();
 	        	    	break;
-	        	    	
+
 	        	    default:
 	        	    	throw new IllegalStateException("iterated to a type that's not expected");
 	        		}
@@ -189,6 +187,6 @@ public class EquivIonStreamingTests extends DirectoryTestSuite {
 	    {
 	        return new StreamingEquivsTest(ionFile);
 	    }
-	
-	
+
+
 }

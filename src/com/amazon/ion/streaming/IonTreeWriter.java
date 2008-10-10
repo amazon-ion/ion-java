@@ -4,9 +4,9 @@
 
 package com.amazon.ion.streaming;
 
+import com.amazon.ion.TtTimestamp;
+
 import com.amazon.ion.IonBlob;
-
-
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
@@ -33,27 +33,27 @@ public final class IonTreeWriter
     extends IonBaseWriter
 {
     IonSystem           _sys;
-    
+
     boolean             _in_struct;
     IonContainer        _current_parent;
     int                 _parent_stack_top = 0;
     IonContainer[]      _parent_stack = new IonContainer[10];
-    
+
     public IonTreeWriter(IonSystem sys) {
         _sys = sys;
     }
-    
+
     public IonTreeWriter(IonSystem sys, IonContainer rootContainer) {
         _sys = sys;
         _current_parent = rootContainer;
         _in_struct = (_current_parent instanceof IonStruct);
         setSymbolTable(rootContainer.getSymbolTable());
     }
-    
+
     void initialize_symbol_table() {
         super.setSymbolTable(_sys.newLocalSymbolTable());
     }
-    
+
     void pushParent(IonContainer newParent) {
         if (_current_parent == null) {
             if (_parent_stack_top != 0) {
@@ -71,7 +71,7 @@ public final class IonTreeWriter
         _current_parent = newParent;
         _in_struct = (_current_parent instanceof IonStruct);
     }
-    
+
     void popParent() {
         if (_parent_stack_top < 1) {
             throw new IllegalStateException();
@@ -80,11 +80,11 @@ public final class IonTreeWriter
         _current_parent = _parent_stack[_parent_stack_top];
         _in_struct = (_current_parent instanceof IonStruct);
     }
-    
+
     public boolean isInStruct() {
         return _in_struct;
     }
-    
+
     void append(IonValue value) {
         int annotation_count = this._annotation_count;
         if (annotation_count > 0) {
@@ -277,11 +277,20 @@ public final class IonTreeWriter
         append(v);
     }
 
+    public void writeTimestamp(TtTimestamp value) throws IOException
+    {
+        IonTimestamp v = _sys.newNullTimestamp();
+        if (value != null) {
+            v.setValue(value);
+        }
+        append(v);
+    }
+
     public void writeTimestamp(Date value, Integer localOffset)
         throws IOException
     {
         IonTimestamp v = _sys.newUtcTimestamp(value);
-        v.setLocalOffset(localOffset);
+        v.setLocalOffset(localOffset);        // FIXME failure if value==null
         append(v);
     }
 
@@ -305,7 +314,7 @@ public final class IonTreeWriter
         if (_symbol_table == null) {
             initialize_symbol_table();
         }
-        
+
         String name = _symbol_table.findKnownSymbol(symbolId);
         if (name == null) {
             throw new IllegalArgumentException("undefined symbol id");
@@ -355,7 +364,7 @@ public final class IonTreeWriter
         v.setBytes(bytes);
         append(v);
     }
-   
+
     public IonValue getContentAsIonValue()
         throws IOException
     {
@@ -374,14 +383,14 @@ public final class IonTreeWriter
     {
         IonValue v = getContentAsIonValue();
         if (!(v instanceof IonDatagram)) {
-            throw new IllegalStateException("bytes are only available on datagrams");            
+            throw new IllegalStateException("bytes are only available on datagrams");
         }
-        
-        IonDatagram dg = (IonDatagram)v; 
+
+        IonDatagram dg = (IonDatagram)v;
         int len = dg.byteSize();
         byte[] bytes = new byte[len];
         dg.getBytes(bytes);
-        
+
         return bytes;
     }
 
@@ -390,10 +399,10 @@ public final class IonTreeWriter
     {
         IonValue v = getContentAsIonValue();
         if (!(v instanceof IonDatagram)) {
-            throw new IllegalStateException("bytes are only available on datagrams");            
+            throw new IllegalStateException("bytes are only available on datagrams");
         }
-        
-        IonDatagram dg = (IonDatagram)v; 
+
+        IonDatagram dg = (IonDatagram)v;
         int len = dg.getBytes(bytes, offset);
         if (len > maxlen) {
             throw new IllegalStateException("byte output overflowed max len!");
@@ -407,9 +416,9 @@ public final class IonTreeWriter
     {
         IonValue v = getContentAsIonValue();
         if (!(v instanceof IonDatagram)) {
-            throw new IllegalStateException("bytes are only available on datagrams");            
+            throw new IllegalStateException("bytes are only available on datagrams");
         }
-        
+
         IonDatagram dg = (IonDatagram)v;
         int len = dg.getBytes(out);
         return len;

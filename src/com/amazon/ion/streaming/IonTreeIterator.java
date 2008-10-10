@@ -4,6 +4,8 @@
 
 package com.amazon.ion.streaming;
 
+import com.amazon.ion.TtTimestamp;
+
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
@@ -22,7 +24,6 @@ import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.impl.IonTokenReader.Type.timeinfo;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
@@ -358,13 +359,10 @@ public final class IonTreeIterator
     }
 
     @Override
-    public timeinfo getTimestamp()
+    public TtTimestamp getTimestamp()
     {
         if (_curr instanceof IonTimestamp) {
-            timeinfo ti = new timeinfo();
-            ti.d = ((IonTimestamp)_curr).dateValue();
-            ti.localOffset = ((IonTimestamp)_curr).getLocalOffset();
-            return ti;
+            return ((IonTimestamp)_curr).timestampValue();
         }
         throw new IllegalStateException("current value is not a timestamp");
     }

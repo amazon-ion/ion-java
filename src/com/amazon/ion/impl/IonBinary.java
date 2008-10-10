@@ -6,6 +6,9 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_1_0;
 import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
+
+import com.amazon.ion.TtTimestamp;
+
 import com.amazon.ion.IonException;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.UnexpectedEofException;
@@ -17,7 +20,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Stack;
 
 
@@ -88,7 +90,7 @@ public class IonBinary
                 }
                 throw new IonException(buf.toString());
             }
-            
+
             reader.setPosition(0); // cas 19 apr 2008
         }
         catch (IOException e)
@@ -136,6 +138,7 @@ public class IonBinary
             }
         }
 
+        @Override
         public BufferManager clone() throws CloneNotSupportedException
         {
         	BlockedBuffer buffer_clone = this._buf.clone();
@@ -422,15 +425,16 @@ public class IonBinary
     }
 
 
-    public static int lenIonTimestamp(IonTokenReader.Type.timeinfo di)
+    public static int lenIonTimestamp(TtTimestamp di)
     {
         if (di == null) return 0;
 
-        long l = di.d.getTime();
+        long l = di.getMillis();
         BigDecimal bd = new BigDecimal(l);
         bd.setScale(13); // millisecond time has 13 significant digits
 
-        int  tzoffset = (di.localOffset == null) ? 0 : di.localOffset.intValue();
+        Integer localOffset = di.getLocalOffset();
+        int  tzoffset = (localOffset == null) ? 0 : localOffset.intValue();
 
         int  tzlen = IonBinary.lenVarInt7(tzoffset);
         if (tzlen == 0) tzlen = 1;
@@ -579,7 +583,7 @@ public class IonBinary
         }
         return len + _ib_TOKEN_LEN;
     }
-    public static int lenIonTimestampWithTypeDesc(IonTokenReader.Type.timeinfo di) {
+    public static int lenIonTimestampWithTypeDesc(TtTimestamp di) {
         int len = 0;
         if (di != null) {
             int vlen = IonBinary.lenIonTimestamp(di);
@@ -1254,7 +1258,8 @@ done:       for (;;) {
             }
             return bd;
         }
-        public IonTokenReader.Type.timeinfo readTimestampValue(int len) throws IOException
+
+        public TtTimestamp readTimestampValue(int len) throws IOException
         {
             if (len < 1) return null;
             int startpos = this.position();
@@ -1266,11 +1271,7 @@ done:       for (;;) {
             BigDecimal bd = this.readDecimalValue(len - (this.position() - startpos));
 
             // now we put it together
-            IonTokenReader.Type.timeinfo ti = new IonTokenReader.Type.timeinfo();
-            ti.d = new Date(bd.longValue());
-            ti.localOffset = tz;
-
-            return ti;
+            return new TtTimestamp(bd.longValue(), tz);
         }
 
         public String readString(int len) throws IOException
@@ -2272,44 +2273,46 @@ done:       for (;;) {
             writeByte(hn, IonConstants.lnIsNullAtom);
             return 1;
         }
-        public int writeTimestampWithTD(IonTokenReader.Type.timeinfo di)
+
+        public int writeTimestampWithTD(TtTimestamp di)
             throws IOException
         {
             int  returnlen;
 
             if (di == null) {
                 returnlen = this.writeCommonHeader(
-                                      IonConstants.tidTimestamp
-                                     ,IonConstants.lnIsNullAtom);
+                                                   IonConstants.tidTimestamp
+                                                   ,IonConstants.lnIsNullAtom);
             }
             else {
                 int vlen = IonBinary.lenIonTimestamp(di);
 
                 returnlen = this.writeCommonHeader(
-                                          IonConstants.tidTimestamp
-                                         ,vlen);
+                                                   IonConstants.tidTimestamp
+                                                   ,vlen);
 
                 returnlen += writeTimestamp(di);
             }
             return returnlen;
         }
 
-        public int writeTimestamp(IonTokenReader.Type.timeinfo di)
+        public int writeTimestamp(TtTimestamp di)
             throws IOException
         {
             int  returnlen = 0;
 
             if (di != null) {
-                long l = di.d.getTime();
+                long l = di.getMillis();
                 BigDecimal bd = new BigDecimal(l);
                 bd.setScale(13); // millisecond time has 13 significant digits
 
-                int  tzoffset = (di.localOffset == null) ? 0 : di.localOffset.intValue();
+                Integer localOffset = di.getLocalOffset();
+                int tzoffset = (localOffset == null) ? 0 : localOffset.intValue();
 
-                int  tzlen = IonBinary.lenVarInt7(tzoffset);
+                int tzlen = IonBinary.lenVarInt7(tzoffset);
                 if (tzlen == 0) tzlen = 1;
 
-                if (di.localOffset == null) {
+                if (localOffset == null) {
                     // TODO don't use magic numbers!
                     this.write((byte)(0xff & (0x80 | 0x40))); // negative 0 (no timezone)
                     returnlen ++;

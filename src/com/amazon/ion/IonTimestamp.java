@@ -13,6 +13,16 @@ public interface IonTimestamp
     extends IonValue
 {
     /**
+     * Gets the value of this <code>timestamp</code> in a form suitable for
+     * use independent of Ion data.
+     *
+     * @return the value of this timestamp,
+     * or <code>null</code> if <code>this.isNullValue()</code>.
+     */
+    public TtTimestamp timestampValue();
+
+
+    /**
      * Gets the value of this Ion <code>timestamp</code> as a Java
      * {@link Date}, representing the time in UTC.  As a result, this method
      * will return the same result for all Ion representations of the same
@@ -39,6 +49,12 @@ public interface IonTimestamp
      */
     public long getMillis()
         throws NullValueException;
+
+
+    public void setValue(TtTimestamp timestamp);
+
+
+    public void setValue(long millis, Integer localOffset);
 
 
     /**
@@ -139,6 +155,11 @@ public interface IonTimestamp
     public void setLocalOffset(Integer minutes)
         throws NullValueException;
 
+
+    /**
+     * Sets this timestamp to Ion <code>null.timestamp</code>.
+     */
+    public void makeNull();
 
     public IonTimestamp clone();
 }
