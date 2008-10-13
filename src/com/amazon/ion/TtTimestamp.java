@@ -4,8 +4,11 @@
 
 package com.amazon.ion;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 
 
 /**
@@ -17,6 +20,17 @@ public final class TtTimestamp
 {
     public final static Integer UNKNOWN_OFFSET = null;
     public final static Integer UTC_OFFSET = new Integer(0);
+
+
+    private static final SimpleDateFormat TIMESTAMP_FORMATTER =
+        new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
+
+    static
+    {
+        TIMESTAMP_FORMATTER.setLenient(false);
+        // TODO share this timezone instance
+        TIMESTAMP_FORMATTER.setTimeZone(TimeZone.getTimeZone("GMT"));
+    }
 
 
     /**
@@ -47,6 +61,18 @@ public final class TtTimestamp
 
         // BigDecimal is immutable
         this.millis = millis;
+        this.localOffset = localOffset;
+    }
+
+
+    /**
+     *
+     * @param date must not be {@code null}.
+     * @param localOffset may be {@code null} to represent unknown local
+     * offset.
+     */
+    public TtTimestamp(Date date, Integer localOffset) {
+        this.millis = new BigDecimal(date.getTime());
         this.localOffset = localOffset;
     }
 
@@ -125,6 +151,68 @@ public final class TtTimestamp
     }
 
 
+    /**
+     * Prints this timestamp in Ion format.
+     *
+     * @param out must not be null.
+     *
+     * @throws IOException propagated when the {@link Appendable} throws it.
+     */
+    public void print(Appendable out)
+        throws IOException
+    {
+        // Adjust UTC time back to local time
+        int deltaMinutes = (localOffset == null ? 0 : localOffset.intValue());
+        long deltaMillis = deltaMinutes * 60 * 1000;
+
+        Date dateTimePart = new Date(millis.longValue() + deltaMillis);
+
+        // SimpleDateFormat is not threadsafe!
+        String dateTimeRendered;
+        synchronized (TIMESTAMP_FORMATTER)
+        {
+            dateTimeRendered = TIMESTAMP_FORMATTER.format(dateTimePart);
+        }
+        out.append(dateTimeRendered);
+
+        if (localOffset == null)
+        {
+            out.append("-00:00");
+        }
+        else if (deltaMinutes == 0)
+        {
+            out.append('Z');
+        }
+        else
+        {
+            if (deltaMinutes < 0)
+            {
+                out.append('-');
+                deltaMinutes = -deltaMinutes;
+            }
+            else
+            {
+                out.append('+');
+            }
+
+
+            int hours   = deltaMinutes / 60;
+            int minutes = deltaMinutes - (hours * 60);
+
+            if (hours < 10) {
+                out.append('0');
+            }
+            out.append(Integer.toString(hours));
+
+            out.append(':');
+
+            if (minutes < 10) {
+                out.append('0');
+            }
+            out.append(Integer.toString(minutes));
+        }
+    }
+
 
     @Override
     public boolean equals(Object obj)
@@ -167,6 +255,16 @@ public final class TtTimestamp
     @Override
     public String toString()
     {
-        return "[TtTimestamp millis=" + millis + " offset=" + localOffset + ']';
+        StringBuilder buffer = new StringBuilder(32);
+        try
+        {
+            print(buffer);
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException("Exception printing to StringBuilder",
+                                       e);
+        }
+        return buffer.toString();
     }
 }

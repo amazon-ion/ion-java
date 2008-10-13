@@ -20,13 +20,11 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.TtTimestamp;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.TimeZone;
 
 
 /**
@@ -356,18 +354,8 @@ public class Printer
     public static class PrinterVisitor
         extends AbstractValueVisitor
     {
-        private static final SimpleDateFormat TIMESTAMP_FORMATTER =
-            new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
-
-        static
-        {
-            TIMESTAMP_FORMATTER.setLenient(false);
-            // TODO share this timezone instance
-            TIMESTAMP_FORMATTER.setTimeZone(TimeZone.getTimeZone("GMT"));
-        }
-
-        protected Options    myOptions;
-        protected Appendable myOut;
+        final protected Options    myOptions;
+        final protected Appendable myOut;
 
         /**
          * Should we quote operators at the current level of the hierarchy?
@@ -802,76 +790,17 @@ public class Printer
             }
             else
             {
-                boolean asString = myOptions.timestampAsString;
-                if (asString)
+                TtTimestamp ts = value.timestampValue();
+
+                if (myOptions.timestampAsString)
                 {
                     myOut.append('"');
-                }
-
-                Date dateTimePart = value.dateValue();
-                Integer localOffset = value.getLocalOffset();
-
-                // TODO push this into IonTimestamp
-                // Adjust UTC time back to local time
-                int deltaMinutes =
-                    (localOffset == null ? 0 : localOffset.intValue());
-                long deltaMillis = deltaMinutes * 60 * 1000;
-                dateTimePart.setTime(dateTimePart.getTime() + deltaMillis);
-
-                // SimpleDateFormat is not threadsafe!
-                String dateTimeRendered;
-                synchronized (TIMESTAMP_FORMATTER)
-                {
-                    dateTimeRendered = TIMESTAMP_FORMATTER.format(dateTimePart);
-                }
-                myOut.append(dateTimeRendered);
-
-                if (localOffset == null)
-                {
-                    myOut.append("-00:00");
+                    ts.print(myOut);
+                    myOut.append('"');
                 }
                 else
                 {
-                    if (deltaMinutes == 0)
-                    {
-                        myOut.append('Z');
-                    }
-                    else
-                    {
-                        char sign;
-                        if (deltaMinutes < 0)
-                        {
-                            sign = '-';
-                            deltaMinutes = -deltaMinutes;
-                        }
-                        else
-                        {
-                            sign = '+';
-                        }
-
-                        myOut.append(sign);
-
-
-                        int hours   = deltaMinutes / 60;
-                        int minutes = deltaMinutes - (hours * 60);
-
-                        if (hours < 10) {
-                            myOut.append('0');
-                        }
-                        myOut.append(Integer.toString(hours));
-
-                        myOut.append(':');
-
-                        if (minutes < 10) {
-                            myOut.append('0');
-                        }
-                        myOut.append(Integer.toString(minutes));
-                    }
-                }
-
-                if (asString)
-                {
-                    myOut.append('"');
+                    ts.print(myOut);
                 }
             }
         } // PrinterVisitor.visit(IonTimestamp)

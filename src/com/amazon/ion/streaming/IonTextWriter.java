@@ -4,9 +4,8 @@
 
 package com.amazon.ion.streaming;
 
-import com.amazon.ion.TtTimestamp;
-
 import com.amazon.ion.IonType;
+import com.amazon.ion.TtTimestamp;
 import com.amazon.ion.impl.IonBinary;
 import com.amazon.ion.impl.IonConstants;
 import com.amazon.ion.impl.Base64Encoder.TextStream;
@@ -18,9 +17,7 @@ import java.io.PrintStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.CharBuffer;
-import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.TimeZone;
 
 /**
  * A concrete implementation of IonWriter which writes the
@@ -409,70 +406,13 @@ public final class IonTextWriter
         closeValue();
     }
 
-    private static final SimpleDateFormat TIMESTAMP_FORMATTER =
-        new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
-
-    static {
-        TIMESTAMP_FORMATTER.setLenient(false);
-        // TODO share this timezone instance
-        TIMESTAMP_FORMATTER.setTimeZone(TimeZone.getTimeZone("GMT"));
-    }
-
 
     public void writeTimestamp(Date value, Integer localOffset)
         throws IOException
     {
-        if (value == null) {
-            writeNull(IonType.TIMESTAMP);
-            return;
-        }
-
-        startValue();
-
-        // TODO push this into IonTimestamp
-        // Adjust UTC time back to local time
-        int  deltaMinutes = (localOffset == null) ? 0 : localOffset.intValue();
-        long deltaMillis = deltaMinutes * 60 * 1000;
-        value.setTime(value.getTime() + deltaMillis);
-
-        // SimpleDateFormat is not threadsafe!
-        String dateTimeRendered;
-        synchronized(TIMESTAMP_FORMATTER) {
-            dateTimeRendered = TIMESTAMP_FORMATTER.format(value);
-        }
-        _output.append(dateTimeRendered);
-
-        if (localOffset == null) {
-            _output.append("-00:00");
-        }
-        else  if (deltaMinutes == 0) {
-            _output.append('Z');
-        }
-        else {
-            if (deltaMinutes < 0) {
-                _output.append('-');
-                deltaMinutes = -deltaMinutes;
-            }
-            else {
-                _output.append('+');
-            }
-
-            int hours   = deltaMinutes / 60;
-            int minutes = deltaMinutes - (hours * 60);
-
-            if (hours < 10) {
-                _output.append('0');
-            }
-            _output.append(Integer.toString(hours));
-
-            _output.append(':');
-
-            if (minutes < 10) {
-                _output.append('0');
-            }
-            _output.append(Integer.toString(minutes));
-        }
-        closeValue();
+        TtTimestamp ts =
+            (value == null ? null : new TtTimestamp(value, localOffset));
+        writeTimestamp(ts);
     }
 
     public void writeTimestampUTC(Date value)
@@ -487,7 +427,9 @@ public final class IonTextWriter
             writeNull(IonType.TIMESTAMP);
         }
         else {
-            writeTimestamp(value.dateValue(), value.getLocalOffset());
+            startValue();
+            value.print(_output);
+            closeValue();
         }
     }
 
