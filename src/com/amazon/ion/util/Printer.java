@@ -920,7 +920,7 @@ public class Printer
             if (value.isNullValue()) {
                 myOut.append("null");
             } else {
-                myOut.append(Long.toString(value.dateValue().getTime()));
+                myOut.append(Long.toString(value.getMillis()));
             }
         }
 

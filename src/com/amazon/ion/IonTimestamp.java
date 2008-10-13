@@ -2,6 +2,7 @@
 
 package com.amazon.ion;
 
+import java.math.BigDecimal;
 import java.util.Date;
 
 // TODO document local offset viz RFC-3339
@@ -39,20 +40,36 @@ public interface IonTimestamp
 
     /**
      * Gets the value of this Ion <code>timestamp</code> as the number of
-     * milliseconds since 1970-01-01T00:00:00Z.  This method
-     * will return the same result for all Ion representations of the same
-     * instant, regardless of the local offset.
+     * milliseconds since 1970-01-01T00:00:00.000Z, truncating any fractional
+     * milliseconds.
+     * This method will return the same result for all Ion representations of
+     * the same instant, regardless of the local offset.
      *
-     * @return the number of milliseconds since 1970-01-01T00:00:00Z
+     * @return the number of milliseconds since 1970-01-01T00:00:00.000Z
      * represented by this timestamp.
      * @throws NullValueException if <code>this.isNullValue()</code>.
      */
     public long getMillis()
         throws NullValueException;
 
+    /**
+     * Gets the value of this Ion <code>timestamp</code> as the number of
+     * milliseconds since 1970-01-01T00:00:00Z, including fractional
+     * milliseconds.
+     * This method will return the same result for all Ion representations of
+     * the same instant, regardless of the local offset.
+     *
+     * @return the number of milliseconds since 1970-01-01T00:00:00Z
+     * represented by this timestamp,
+     * or <code>null</code> if <code>this.isNullValue()</code>.
+     */
+    public BigDecimal getDecimalMillis();
+
 
     public void setValue(TtTimestamp timestamp);
 
+
+    public void setValue(BigDecimal millis, Integer localOffset);
 
     public void setValue(long millis, Integer localOffset);
 
@@ -71,6 +88,8 @@ public interface IonTimestamp
      * precede 0001-01-01T00:00:00Z.
      */
     public void setMillis(long millis);
+
+    public void setDecimalMillis(BigDecimal millis);
 
 
     /**

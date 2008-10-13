@@ -19,7 +19,10 @@ public final class TtTimestamp
     public final static Integer UTC_OFFSET = new Integer(0);
 
 
-    private long millis;
+    /**
+     * Milliseconds since the UNIX epoch. Never null.
+     */
+    private BigDecimal millis;
 
     /**
      * Minutes offset from UTC; zero means UTC proper,
@@ -29,12 +32,21 @@ public final class TtTimestamp
 
 
     public TtTimestamp(long millis, Integer localOffset) {
-        this.millis = millis;
+        this.millis = new BigDecimal(millis);
         this.localOffset = localOffset;
     }
 
+    /**
+     *
+     * @param millis must not be {@code null}.
+     * @param localOffset may be {@code null} to represent unknown local
+     * offset.
+     */
     public TtTimestamp(BigDecimal millis, Integer localOffset) {
-        this.millis = millis.longValue();
+        if (millis == null) throw new NullPointerException("millis is null");
+
+        // BigDecimal is immutable
+        this.millis = millis;
         this.localOffset = localOffset;
     }
 
@@ -60,20 +72,36 @@ public final class TtTimestamp
      */
     public Date dateValue()
     {
-        return new Date(millis);
+        return new Date(millis.longValue());
     }
 
 
     /**
      * Gets the value of this Ion <code>timestamp</code> as the number of
-     * milliseconds since 1970-01-01T00:00:00Z.  This method
-     * will return the same result for all Ion representations of the same
-     * instant, regardless of the local offset.
+     * milliseconds since 1970-01-01T00:00:00.000Z, truncating any fractional
+     * milliseconds.
+     * This method will return the same result for all Ion representations of
+     * the same instant, regardless of the local offset.
+     *
+     * @return the number of milliseconds since 1970-01-01T00:00:00.000Z
+     * represented by this timestamp.
+     */
+    public long getMillis()
+    {
+        return millis.longValue();
+    }
+
+    /**
+     * Gets the value of this Ion <code>timestamp</code> as the number of
+     * milliseconds since 1970-01-01T00:00:00Z, including fractional
+     * milliseconds.
+     * This method will return the same result for all Ion representations of
+     * the same instant, regardless of the local offset.
      *
      * @return the number of milliseconds since 1970-01-01T00:00:00Z
      * represented by this timestamp.
      */
-    public long getMillis()
+    public BigDecimal getDecimalMillis()
     {
         return millis;
     }
@@ -115,7 +143,12 @@ public final class TtTimestamp
         }
         else if (!localOffset.equals(other.localOffset))
             return false;
-        if (millis != other.millis)
+        if (millis == null)
+        {
+            if (other.millis != null)
+                return false;
+        }
+        else if (!millis.equals(other.millis))
             return false;
         return true;
     }
@@ -127,7 +160,7 @@ public final class TtTimestamp
         int result = 1;
         result = prime * result
                  + ((localOffset == null) ? 0 : localOffset.hashCode());
-        result = prime * result + (int) (millis ^ (millis >>> 32));
+        result = prime * result + ((millis == null) ? 0 : millis.hashCode());
         return result;
     }
 

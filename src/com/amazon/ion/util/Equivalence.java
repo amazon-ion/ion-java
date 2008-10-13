@@ -87,7 +87,7 @@ import java.util.Map;
  */
 public final class Equivalence {
 
-	private static final boolean _debug_stop_on_false = true;
+    private static final boolean _debug_stop_on_false = true;
 
     private Equivalence() {
     }
@@ -139,11 +139,11 @@ public final class Equivalence {
     static void debugStopOnFalse() {
     	_false_count++;
     	if (_debug_stop_on_false) {
-    		// you can put a break point here to catch failures
-    		return;
+    	    // you can put a break point here to catch failures
+    	    return;
     	}
     	if (_false_count == _false_target) {
-    		return;
+    	    return;
     	}
     	return;
     }
@@ -199,7 +199,7 @@ public final class Equivalence {
             return answer;
         }
 
-		public int compareTo(StructItem other) {
+        public int compareTo(StructItem other) {
             // we can also assume strict is the same--internal usage dictates it
             int answer = 0;
 
@@ -209,19 +209,19 @@ public final class Equivalence {
                 // special case -1 means count matches always (for
                 // searching)
             	if (answer == 0) {
-            		if (count == 0 || other.count == -1) {
-            			answer = 0;
-            		}
-            		else {
-            			answer = count - other.count;
-            		}
+            	    if (count == 0 || other.count == -1) {
+            	        answer = 0;
+            	    }
+            	    else {
+            	        answer = count - other.count;
+            	    }
             	}
             }
             if (_debug_stop_on_false) {
             	if (answer != 0) debugStopOnFalse();
             }
             return answer;
-		}
+        }
     }
 
     /**
@@ -253,23 +253,23 @@ public final class Equivalence {
     	String s1, s2;
 
     	if (an1 == null || an2 == null) {
-    		if (an1 != null) result =  1;
-    		if (an2 != null) result = -1;
-    		// otherwise they're both null and, therefore, equal
+    	    if (an1 != null) result =  1;
+    	    if (an2 != null) result = -1;
+    	    // otherwise they're both null and, therefore, equal
     	}
     	else {
-    		// here they're both non-null
-    		int len = an1.length;
-    		if (len != an2.length) {
-    			result = len - an2.length;
-    		}
-    		else {
-    			for (int ii=0; (result == 0) && (ii < len); ii++) {
-    				s1 = an1[ii];
-    				s2 = an2[ii];
-    				result = s1.compareTo(s2);
-    			}
-    		}
+    	    // here they're both non-null
+    	    int len = an1.length;
+    	    if (len != an2.length) {
+    	        result = len - an2.length;
+    	    }
+    	    else {
+    	        for (int ii=0; (result == 0) && (ii < len); ii++) {
+    	            s1 = an1[ii];
+    	            s2 = an2[ii];
+    	            result = s1.compareTo(s2);
+    	        }
+    	    }
     	}
     	return result;
     }
@@ -300,14 +300,14 @@ public final class Equivalence {
 
 
         if (_debug_stop_on_false) {
-        	stop_value = null;
+            stop_value = null;
         }
 
         if (v1 == null || v2 == null) {
-        	if (v1 != null) result = 1;
-        	if (v2 != null) result = -1;
-        	// otherwise v1 == v2 == null and result == 0
-        	if (_debug_stop_on_false) debugStopOnFalse();
+            if (v1 != null) result = 1;
+            if (v2 != null) result = -1;
+            // otherwise v1 == v2 == null and result == 0
+            if (_debug_stop_on_false) debugStopOnFalse();
             return result;
         }
 
@@ -334,7 +334,7 @@ public final class Equivalence {
                     // never visited -- let it stay false
                     break;
                 case BOOL:
-                	bo1 = ((IonBool) v1).booleanValue();
+                    bo1 = ((IonBool) v1).booleanValue();
                     bo2 = ((IonBool) v2).booleanValue();
                     if (bo1) {
                     	result = bo2 ? 0 : 1;
@@ -344,47 +344,41 @@ public final class Equivalence {
                     }
                     break;
                 case INT:
-                	bi1 = ((IonInt) v1).toBigInteger();
-                	bi2 = ((IonInt) v2).toBigInteger();
+                    bi1 = ((IonInt) v1).toBigInteger();
+                    bi2 = ((IonInt) v2).toBigInteger();
                     result = bi1.compareTo(bi2);
                     break;
                 case FLOAT:
-                	do1 = ((IonFloat) v1).doubleValue();
+                    do1 = ((IonFloat) v1).doubleValue();
                     do2 = ((IonFloat) v2).doubleValue();
                     result = Double.compare(do1, do2);
                     break;
                 case DECIMAL:
-                	de1 = ((IonDecimal) v1).bigDecimalValue();
-                	de2 = ((IonDecimal) v2).bigDecimalValue();
+                    de1 = ((IonDecimal) v1).bigDecimalValue();
+                    de2 = ((IonDecimal) v2).bigDecimalValue();
                     result = de1.compareTo(de2);
                     break;
                 case TIMESTAMP:
                     t1 = (IonTimestamp) v1;
                     t2 = (IonTimestamp) v2;
-                    long diff = (t1.getMillis() - t2.getMillis());
-                    if (diff == 0) {
+                    result = t1.getDecimalMillis().compareTo(t2.getDecimalMillis());
+                    if (result == 0) {
                         offset1 = t1.getLocalOffset();
                         offset2 = t2.getLocalOffset();
                         if (offset1 == null || offset2 == null) {
-                        	if (offset1 != null) result = 1;
-                        	if (offset2 != null) result = -1;
-                        	// otherwise they're equal
+                            if (offset1 != null) result = 1;
+                            if (offset2 != null) result = -1;
+                            // otherwise they're equal
                         }
                         else {
-                        	result = offset1.intValue() - offset2.intValue();
+                            result = offset1.intValue() - offset2.intValue();
                         }
-                    }
-                    else if (diff > 0) {
-                    	result = 1;
-                    }
-                    else { // (diff < 0)
-                    	result = -1;
                     }
                     break;
                 case STRING:
                 case SYMBOL:
-                	string1 = ((IonText) v1).stringValue();
-                	string2 = ((IonText) v2).stringValue();
+                    string1 = ((IonText) v1).stringValue();
+                    string2 = ((IonText) v2).stringValue();
                     result = string1.compareTo(string2);
                     break;
                 case BLOB:
@@ -409,7 +403,7 @@ public final class Equivalence {
                                 // nope we already have an inconsistency
                                 result = -1;
                                 if (_debug_stop_on_false) {
-                                	stop_value = val;
+                                    stop_value = val;
                                 }
                                 break;
                             }
@@ -454,18 +448,18 @@ public final class Equivalence {
         if (strict && (result == 0)) {
             // check tuple equality over the annotations
             // (which are strings)
-        	an1 = v1.getTypeAnnotations();
-        	an2 = v2.getTypeAnnotations();
+            an1 = v1.getTypeAnnotations();
+            an2 = v2.getTypeAnnotations();
             result = ionCompareAnnotations(an1, an2);
         }
 
         if (_debug_stop_on_false) {
-        	if (result != 0) {
-        		// just so we read stop value
-        		if (stop_value != null || true) {
-        			debugStopOnFalse();
-        		}
-        	}
+            if (result != 0) {
+                // just so we read stop value
+                if (stop_value != null || true) {
+                    debugStopOnFalse();
+                }
+            }
         }
         return result;
     }

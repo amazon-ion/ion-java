@@ -591,8 +591,8 @@ public abstract class IonTestCase
 
                     public void visit(IonTimestamp expected) throws Exception
                     {
-                        assertEquals(expected.dateValue(),
-                                     ((IonTimestamp)found).dateValue());
+                        assertEquals(expected.getDecimalMillis(),
+                                     ((IonTimestamp)found).getDecimalMillis());
                         assertEquals(expected.getLocalOffset(),
                                      ((IonTimestamp)found).getLocalOffset());
                     }

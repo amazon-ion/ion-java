@@ -4,9 +4,8 @@
 
 package com.amazon.ion.streaming;
 
-import com.amazon.ion.TtTimestamp;
-
 import com.amazon.ion.IonException;
+import com.amazon.ion.TtTimestamp;
 import com.amazon.ion.impl.IonBinary;
 import com.amazon.ion.impl.IonConstants;
 import java.io.IOException;
@@ -947,8 +946,7 @@ done:       for (;;) {
             int  returnlen = 0;
 
             if (di != null) {
-                long l = di.getMillis();
-                BigDecimal bd = new BigDecimal(l);
+                BigDecimal bd = di.getDecimalMillis();
                 bd.setScale(13); // millisecond time has 13 significant digits
 
                 Integer localOffset = di.getLocalOffset();

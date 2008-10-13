@@ -4,14 +4,14 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.TtTimestamp;
-
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
+import com.amazon.ion.TtTimestamp;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.Date;
 
 /**
@@ -59,12 +59,7 @@ public final class IonTimestampImpl
         IonTimestampImpl clone = new IonTimestampImpl();
 
         clone.copyAnnotationsFrom(this);  // Calls makeReady()
-        if (this.isNullValue()) {
-            clone._timestamp_value = null;
-        }
-        else {
-            clone._timestamp_value = this._timestamp_value.clone();
-        }
+        clone._timestamp_value = this._timestamp_value;
         clone._hasNativeValue = true;
         return clone;
     }
@@ -85,10 +80,8 @@ public final class IonTimestampImpl
     public Date dateValue()
     {
         makeReady();
-
         if (_timestamp_value == null) return null;
-
-        return new Date(_timestamp_value.getMillis());
+        return _timestamp_value.dateValue();
     }
 
 
@@ -118,12 +111,14 @@ public final class IonTimestampImpl
         setDirty();
     }
 
+    public void setValue(BigDecimal millis, Integer localOffset)
+    {
+        setValue(new TtTimestamp(millis, localOffset));
+    }
+
     public void setValue(long millis, Integer localOffset)
     {
-        checkForLock();
-        _timestamp_value = new TtTimestamp(millis, localOffset);
-        _hasNativeValue = true;
-        setDirty();
+        setValue(new TtTimestamp(millis, localOffset));
     }
 
     public void setTime(Date value)
@@ -137,6 +132,21 @@ public final class IonTimestampImpl
             // setMillis(long) will check for the lock
             setMillis(value.getTime());
         }
+    }
+
+
+    public BigDecimal getDecimalMillis()
+    {
+        makeReady();
+        if (_timestamp_value == null) return null;
+        return _timestamp_value.getDecimalMillis();
+    }
+
+    public void setDecimalMillis(BigDecimal millis)
+    {
+        // setValue() calls checkForLock()
+        Integer offset = getInternalLocalOffset();
+        setValue(millis, offset);
     }
 
 
@@ -193,9 +203,10 @@ public final class IonTimestampImpl
         throws NullValueException
     {
         validateThisNotNull();
+        makeReady();
         assert (_timestamp_value != null);
 
-        setValue(_timestamp_value.getMillis(), minutes);
+        setValue(_timestamp_value.getDecimalMillis(), minutes);
     }
 
     public void makeNull()

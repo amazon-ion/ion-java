@@ -7,10 +7,9 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_1_0;
 import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
 
-import com.amazon.ion.TtTimestamp;
-
 import com.amazon.ion.IonException;
 import com.amazon.ion.LocalSymbolTable;
+import com.amazon.ion.TtTimestamp;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.impl.IonConstants.HighNibble;
 import java.io.IOException;
@@ -429,8 +428,7 @@ public class IonBinary
     {
         if (di == null) return 0;
 
-        long l = di.getMillis();
-        BigDecimal bd = new BigDecimal(l);
+        BigDecimal bd = di.getDecimalMillis();
         bd.setScale(13); // millisecond time has 13 significant digits
 
         Integer localOffset = di.getLocalOffset();
@@ -1271,7 +1269,7 @@ done:       for (;;) {
             BigDecimal bd = this.readDecimalValue(len - (this.position() - startpos));
 
             // now we put it together
-            return new TtTimestamp(bd.longValue(), tz);
+            return new TtTimestamp(bd, tz);
         }
 
         public String readString(int len) throws IOException
@@ -2302,8 +2300,7 @@ done:       for (;;) {
             int  returnlen = 0;
 
             if (di != null) {
-                long l = di.getMillis();
-                BigDecimal bd = new BigDecimal(l);
+                BigDecimal bd = di.getDecimalMillis();
                 bd.setScale(13); // millisecond time has 13 significant digits
 
                 Integer localOffset = di.getLocalOffset();
