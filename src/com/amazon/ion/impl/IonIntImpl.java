@@ -105,12 +105,19 @@ public final class IonIntImpl
         return _int_value.longValue();
     }
 
-    public BigInteger toBigInteger()
+    public BigInteger bigIntegerValue()
         throws NullValueException
     {
         makeReady();
         if (_int_value == null) return null;
-        return new BigInteger(_int_value.toString());
+        return BigInteger.valueOf(_int_value.longValue());
+    }
+
+    @Deprecated
+    public BigInteger toBigInteger()
+        throws NullValueException
+    {
+        return bigIntegerValue();
     }
 
     public void setValue(int value)

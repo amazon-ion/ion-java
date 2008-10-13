@@ -531,8 +531,8 @@ public abstract class IonTestCase
                     public void visit(IonInt expected) throws Exception
                     {
                         assertEquals("float value",
-                                     expected.toBigInteger(),
-                                     ((IonInt)found).toBigInteger());
+                                     expected.bigIntegerValue(),
+                                     ((IonInt)found).bigIntegerValue());
                     }
 
                     public void visit(IonList expected) throws Exception

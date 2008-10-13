@@ -34,7 +34,7 @@ public class IntTest
         }
         catch (NullValueException e) { }
 
-        assertNull("toBigInteger() isn't null", value.toBigInteger());
+        assertNull("toBigInteger() isn't null", value.bigIntegerValue());
     }
 
 
@@ -45,11 +45,11 @@ public class IntTest
         assertFalse(value.isNullValue());
         assertEquals(123, value.intValue());
         assertEquals(123L, value.longValue());
-        assertEquals(123L, value.toBigInteger().longValue());
+        assertEquals(BigInteger.valueOf(123), value.bigIntegerValue());
 
         value.setValue(A_LONG_INT);
         assertEquals(A_LONG_INT, value.longValue());
-        assertEquals(A_LONG_INT, value.toBigInteger().longValue());
+        assertEquals(BigInteger.valueOf(A_LONG_INT), value.bigIntegerValue());
 
         value.setValue(null);
         checkNullInt(value);
@@ -141,7 +141,7 @@ public class IntTest
     {
         IonInt i = system().newInt(v);
         IonInt result = (IonInt) reload(i);
-        assertEquals(v, result.toBigInteger());
+        assertEquals(v, result.bigIntegerValue());
     }
 
 

@@ -344,8 +344,8 @@ public final class Equivalence {
                     }
                     break;
                 case INT:
-                    bi1 = ((IonInt) v1).toBigInteger();
-                    bi2 = ((IonInt) v2).toBigInteger();
+                    bi1 = ((IonInt) v1).bigIntegerValue();
+                    bi2 = ((IonInt) v2).bigIntegerValue();
                     result = bi1.compareTo(bi2);
                     break;
                 case FLOAT:
