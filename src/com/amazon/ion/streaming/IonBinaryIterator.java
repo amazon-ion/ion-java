@@ -129,7 +129,7 @@ public final class IonBinaryIterator
 
     public IonBinaryIterator(byte[] buf, int start, int len)
     {
-        this(  new SimpleByteBuffer(buf, start, len)
+        this(  new SimpleByteBuffer(buf, start, len, true /*isReadOnly*/)
              , null
              , new UnifiedCatalog()
         );
@@ -140,7 +140,7 @@ public final class IonBinaryIterator
     }
     public IonBinaryIterator(byte[] buf, int start, int len, UnifiedCatalog catalog)
     {
-        this(  new SimpleByteBuffer(buf, start, len)
+        this(  new SimpleByteBuffer(buf, start, len, true /*isReadOnly*/)
              , null
              , catalog
         );

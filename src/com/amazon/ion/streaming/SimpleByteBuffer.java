@@ -27,15 +27,36 @@ public final class SimpleByteBuffer
     boolean _is_read_only;
 
 
+    /**
+     * Creates a read-write buffer.
+     *
+     * @param bytes assumed to be owned by this new instance.
+     */
     public SimpleByteBuffer(byte[] bytes) {
         this(bytes, 0, bytes.length, false);
     }
+
+    /**
+     *
+     * @param bytes assumed to be owned by this new instance.
+     */
     public SimpleByteBuffer(byte[] bytes, boolean isReadOnly) {
         this(bytes, 0, bytes.length, isReadOnly);
     }
+
+    /**
+     * Creates a read-write buffer.
+     *
+     * @param bytes assumed to be owned by this new instance.
+     */
     public SimpleByteBuffer(byte[] bytes, int start, int length) {
-        this(bytes, start, length, !(start == 0 && start + length == bytes.length));
+        this(bytes, start, length, false);
     }
+
+    /**
+     *
+     * @param bytes assumed to be owned by this new instance.
+     */
     public SimpleByteBuffer(byte[] bytes, int start, int length, boolean isReadOnly) {
         if (bytes == null || start < 0 || start > bytes.length || length < 0 || start + length > bytes.length) {
             throw new IllegalArgumentException();
@@ -52,6 +73,9 @@ public final class SimpleByteBuffer
         return length;
     }
 
+    /**
+     * Makes a copy of the internal byte array.
+     */
     public byte[] getBytes()
     {
         int length = _eob - _start;
