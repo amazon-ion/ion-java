@@ -12,13 +12,13 @@ import java.util.NoSuchElementException;
 
 
 /**
- *
+ * Provides stream-based access to Ion data.
  */
 public interface IonReader
 {
 
     /**
-     * Returns true when there is addition content that can be read in the value.
+     * Returns true when there is another value at the current iteration level.
      * The iteration takes place at the same "level" in the value it only
      * steps into a child value using stepInto().  So this returns whether
      * or not there is a sibling value that may be visited using next(). This
@@ -42,8 +42,8 @@ public interface IonReader
      * must be positioned on (but not yet stepped into) a container.
      * this operation is typically very efficient if the iterator is
      * traversing a tree, reasonably efficient (it does have to count)
-     * when traversing a binary value, and it can be fairly expensive
-     * if the undertly value is text.  As such this should only be used
+     * when traversing binary-encoded data, and it can be fairly expensive
+     * if the input source is Ion text.  As such this should only be used
      * when the benefits of knowing the number of elements is known to
      * outweight the costs of the call.  Using a flexible representation
      * in the caller is usually more efficient.
@@ -53,9 +53,10 @@ public interface IonReader
     /**
      * Positions the iterator in the contents of the current value.  The current
      * value must be a container (sexp, list, or struct).  Once stepInto() has
-     * been called hasNext() and next() will operate on the child values.  At
-     * any time stepOut() may be called to move the iterator back to the parent
-     * value.
+     * been called {@link #hasNext()} and {@link #next()} will iterate the child values.
+     * At any time {@link #stepOut()} may be called to move the cursor back to
+     * (just after) the parent value.
+     *
      * @throws IllegalStateException if the current value isn't an Ion container.
      */
     public void stepInto();
@@ -96,28 +97,28 @@ public interface IonReader
      * Return the annotations of the current value as an array of strings.  The
      * return value is null if there are no annotations on the current value.
      */
-    public String[] getAnnotations();
+    public String[] getTypeAnnotations();
 
     /**
      * Return the symbol id's of the annotations on the current value as an
      * array of ints.  The return value is null if there are no annotations
      * on the current value.
      */
-    public int[] getAnnotationIds();
+    public int[] getTypeAnnotationIds();
 
     /**
      * Return the annotations on the curent value as an iterator.  The
      * iterator is empty (hasNext() returns false on the first call) if
      * there are no annotations on the current value.
      */
-    public Iterator<String> iterateAnnotations();
+    public Iterator<String> iterateTypeAnnotations();
 
     /**
      * Return the symbol table ids of the current values annotation as
      * an iterator.  The iterator is empty (hasNext() returns false on
      * the first call) if there are no annotations on the current value.
      */
-    public Iterator<Integer> iterateAnnotationIds();
+    public Iterator<Integer> iterateTypeAnnotationIds();
 
     /**
      * Return an symbol table id of the field name of the current value. Or -1 if
@@ -157,6 +158,10 @@ public interface IonReader
      */
     public boolean isInStruct();
 
+
+    //=========================================================================
+    // Value reading
+
     /**
      * Returns the current value as an boolean.  This is only valid if there is
      * an underlying value and the value is an ion boolean value.
@@ -178,6 +183,13 @@ public interface IonReader
     public long longValue();
 
     /**
+     * Returns the current value as a BigDecimal.  This is only valid if there
+     * is an underlying value and the value is of a numeric type (int, float, or
+     * decimal).
+     */  // TODO implement bigIntegerValue
+//    public BigInteger bigIntegerValue();
+
+    /**
      * Returns the current value as a double.  This is only valid if there is
      * an underlying value and the value is either float, or decimal.
      */
@@ -190,8 +202,9 @@ public interface IonReader
     public BigDecimal bigDecimalValue();
 
     /**
-     * Returns the current value as a java.util.Date.  This is only valid if
-     * there is an underlying value and the value is an Ion timestamp.
+     * Returns the current value as a {@link java.util.Date}.
+     * This is only valid when {@link #getType()} returns
+     * {@link IonType#TIMESTAMP}.
      *
      * @return a new {@link Date} instance,
      * or {@code null} if the current value is {@code null.timestamp}.
@@ -199,13 +212,14 @@ public interface IonReader
     public Date dateValue();
 
     /**
-     * Returns the current value as a timeinfo.  This is only valid if
-     * there is an underlying value and the value is an Ion timestamp.
+     * Returns the current value as a {@link TtTimestamp}.
+     * This is only valid when {@link #getType()} returns
+     * {@link IonType#TIMESTAMP}.
      *
      * @return the current value as a {@link TtTimestamp},
      * or {@code null} if the current value is {@code null.timestamp}.
      */
-    public TtTimestamp getTimestamp();
+    public TtTimestamp timestampValue();
 
     /**
      * Returns the current value as a Java String.  This is only valid if there
@@ -231,14 +245,16 @@ public interface IonReader
     public int byteSize();
 
     /**
-     * Returns the current value as a byte array.  This is only valid if there is
-     * an underlying value and the value is either blob or clob.
+     * Returns the current value as a newly-allocated byte array.
+     * This is only valid when {@link #getType()} returns {@link IonType#BLOB}
+     * or {@link IonType#CLOB}.
      */
     public byte[] newBytes();
 
     /**
-     * Copies the current value into the passed in a byte array.  This is only
-     * valid if there is an underlying value and the value is either blob or clob.
+     * Copies the current value into the passed in a byte array.
+     * This is only valid when {@link #getType()} returns {@link IonType#BLOB}
+     * or {@link IonType#CLOB}.
      *
      * @param buffer destination to copy the value into, this must not be null.
      * @param offset the first position to copy into, this must be non null and

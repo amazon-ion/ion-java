@@ -4,8 +4,6 @@
 
 package com.amazon.ion.streaming;
 
-import com.amazon.ion.TtTimestamp;
-
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
@@ -165,6 +163,9 @@ static final boolean _debug_on = false;
 
     }
 
+    /**
+     * Does not increase _annotation_count.
+     */
     void growAnnotations(int length) {
         int oldlen = (_annotations == null) ? 0 : _annotations.length;
         if (length < oldlen) return;
@@ -188,7 +189,7 @@ static final boolean _debug_on = false;
         _annotation_sids = temp2;
     }
 
-    public void writeAnnotations(String[] annotations)
+    public void setTypeAnnotations(String[] annotations)
     {
         _annotations_type = IonType.STRING;
         if (annotations.length > _annotation_count) {
@@ -198,7 +199,7 @@ static final boolean _debug_on = false;
         _annotation_count = annotations.length;
     }
 
-    public void writeAnnotationIds(int[] annotationIds)
+    public void setTypeAnnotationIds(int[] annotationIds)
     {
         _annotations_type = IonType.INT;
         if (annotationIds.length > _annotation_count) {
@@ -208,12 +209,12 @@ static final boolean _debug_on = false;
         _annotation_count = annotationIds.length;
     }
 
-    public void addAnnotation(String annotation)
+    public void addTypeAnnotation(String annotation)
     {
         growAnnotations(_annotation_count + 1);
         if (_annotations_type == IonType.INT) {
             int sid = this.add_local_symbol(annotation);
-            this.addAnnotationId(sid);
+            this.addTypeAnnotationId(sid);
         }
         else {
             _annotations_type = IonType.STRING;
@@ -221,22 +222,20 @@ static final boolean _debug_on = false;
             //        table to address issues like $0234 -> $234 or 'xyzzx'
             _annotations[_annotation_count++] = annotation;
         }
-        return;
     }
 
-    public void addAnnotationId(int annotationId)
+    public void addTypeAnnotationId(int annotationId)
     {
         growAnnotations(_annotation_count + 1);
         if (_annotations_type == IonType.STRING) {
             SymbolTable symtab = getSymbolTable();
             String annotation = symtab.findSymbol(annotationId);
-            addAnnotation(annotation);
+            addTypeAnnotation(annotation);
         }
         else {
             _annotations_type = IonType.INT;
             _annotation_sids[_annotation_count++] = annotationId;
         }
-        return;
     }
 
     void clearFieldName() {
@@ -294,7 +293,7 @@ static final boolean _debug_on = false;
         }
         return sid;
     }
-    public void writeFieldname(String name)
+    public void setFieldName(String name)
     {
         if (!this.isInStruct()) {
             throw new IllegalStateException();
@@ -303,7 +302,7 @@ static final boolean _debug_on = false;
         _field_name = name;
     }
 
-    public void writeFieldnameId(int id)
+    public void setFieldId(int id)
     {
         if (!this.isInStruct()) {
             throw new IllegalStateException();
@@ -315,7 +314,7 @@ static final boolean _debug_on = false;
     public void writeStringList(String[] values)
         throws IOException
     {
-        startList();
+        openList();
         for (int ii=0; ii<values.length; ii++) {
             writeString(values[ii]);
         }
@@ -325,7 +324,7 @@ static final boolean _debug_on = false;
     public void writeBoolList(boolean[] values)
         throws IOException
     {
-        startList();
+        openList();
         for (int ii=0; ii<values.length; ii++) {
             writeBool(values[ii]);
         }
@@ -335,7 +334,7 @@ static final boolean _debug_on = false;
     public void writeFloatList(float[] values)
         throws IOException
     {
-        startList();
+        openList();
         for (int ii=0; ii<values.length; ii++) {
             writeFloat(values[ii]);
         }
@@ -345,7 +344,7 @@ static final boolean _debug_on = false;
     public void writeFloatList(double[] values)
         throws IOException
     {
-        startList();
+        openList();
         for (int ii=0; ii<values.length; ii++) {
             writeFloat(values[ii]);
         }
@@ -355,7 +354,7 @@ static final boolean _debug_on = false;
     public void writeIntList(byte[] values)
         throws IOException
     {
-        startList();
+        openList();
         for (int ii=0; ii<values.length; ii++) {
             writeInt(values[ii]);
         }
@@ -365,7 +364,7 @@ static final boolean _debug_on = false;
     public void writeIntList(short[] values)
         throws IOException
     {
-        startList();
+        openList();
         for (int ii=0; ii<values.length; ii++) {
             writeInt(values[ii]);
         }
@@ -375,7 +374,7 @@ static final boolean _debug_on = false;
     public void writeIntList(int[] values)
         throws IOException
     {
-        startList();
+        openList();
         for (int ii=0; ii<values.length; ii++) {
             writeInt(values[ii]);
         }
@@ -385,7 +384,7 @@ static final boolean _debug_on = false;
     public void writeIntList(long[] values)
         throws IOException
     {
-        startList();
+        openList();
         for (int ii=0; ii<values.length; ii++) {
             writeInt(values[ii]);
         }
@@ -411,12 +410,12 @@ static final boolean _debug_on = false;
     {
         if (/* iterator.isInStruct() && */ this.isInStruct()) {
             String fieldname = iterator.getFieldName();
-            writeFieldname(fieldname);
+            setFieldName(fieldname);
             if (_debug_on) System.out.print(":");
         }
-        String [] a = iterator.getAnnotations();
+        String [] a = iterator.getTypeAnnotations();
         if (a != null) {
-            writeAnnotations(a);
+            setTypeAnnotations(a);
             if (_debug_on) System.out.print(";");
         }
 
@@ -434,7 +433,7 @@ static final boolean _debug_on = false;
                 if (_debug_on) System.out.print("b");
                 break;
             case INT:
-                writeInt(iterator.longValue());
+                writeInt(iterator.longValue());  // FIXME should use bigInteger
                 if (_debug_on) System.out.print("i");
                 break;
             case FLOAT:
@@ -446,11 +445,7 @@ static final boolean _debug_on = false;
                 if (_debug_on) System.out.print("d");
                 break;
             case TIMESTAMP:
-                TtTimestamp ti = iterator.getTimestamp();
-                if (ti == null) {
-                    throw new IllegalStateException("this should exist");
-                }
-                writeTimestamp(ti);
+                writeTimestamp(iterator.timestampValue());
                 if (_debug_on) System.out.print("t");
                 break;
             case STRING:
@@ -471,7 +466,7 @@ static final boolean _debug_on = false;
                 break;
             case STRUCT:
                 if (_debug_on) System.out.print("{");
-                startStruct();
+                openStruct();
                 iterator.stepInto();
                 writeIonEvents(iterator);
                 iterator.stepOut();
@@ -480,7 +475,7 @@ static final boolean _debug_on = false;
                 break;
             case LIST:
                 if (_debug_on) System.out.print("[");
-                startList();
+                openList();
                 iterator.stepInto();
                 writeIonEvents(iterator);
                 iterator.stepOut();
@@ -489,7 +484,7 @@ static final boolean _debug_on = false;
                 break;
             case SEXP:
                 if (_debug_on) System.out.print("(");
-                startSexp();
+                openSexp();
                 iterator.stepInto();
                 writeIonEvents(iterator);
                 iterator.stepOut();

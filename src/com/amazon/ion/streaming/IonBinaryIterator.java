@@ -4,8 +4,6 @@
 
 package com.amazon.ion.streaming;
 
-import com.amazon.ion.TtTimestamp;
-
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonDecimal;
@@ -20,6 +18,7 @@ import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SystemSymbolTable;
+import com.amazon.ion.TtTimestamp;
 import com.amazon.ion.impl.IonConstants;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -868,7 +867,7 @@ public final class IonBinaryIterator
     }
 
     @Override
-    public int[] getAnnotationIds()
+    public int[] getTypeAnnotationIds()
     {
         int[] ids = null;
         if (_state != S_BEFORE_CONTENTS) {
@@ -908,9 +907,9 @@ public final class IonBinaryIterator
     }
 
     @Override
-    public String[] getAnnotations()
+    public String[] getTypeAnnotations()
     {
-        int[] ids = getAnnotationIds();
+        int[] ids = getTypeAnnotationIds();
         if (ids == null) return null;
         if (_current_symtab == null) {
             throw new IllegalStateException();
@@ -926,18 +925,18 @@ public final class IonBinaryIterator
 
     @SuppressWarnings("unchecked")
     @Override
-    public Iterator<Integer> iterateAnnotationIds()
+    public Iterator<Integer> iterateTypeAnnotationIds()
     {
-        int[] ids = getAnnotationIds();
+        int[] ids = getTypeAnnotationIds();
         if (ids == null) return (Iterator<Integer>) EMPTY_ITERATOR;
         return new IonTreeIterator.IdIterator(ids);
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public Iterator<String> iterateAnnotations()
+    public Iterator<String> iterateTypeAnnotations()
     {
-        String[] ids = getAnnotations();
+        String[] ids = getTypeAnnotations();
         if (ids == null) return (Iterator<String>) EMPTY_ITERATOR;
         return new IonTreeIterator.StringIterator(ids);
     }
@@ -1010,7 +1009,7 @@ public final class IonBinaryIterator
             return dec;
         case IonConstants.tidTimestamp:
             IonTimestamp t = sys.newTimestamp();
-            TtTimestamp ti = getTimestamp();
+            TtTimestamp ti = timestampValue();
             t.setValue(ti);
             return t;
         case IonConstants.tidSymbol:    return sys.newSymbol(stringValue());
@@ -1132,6 +1131,7 @@ public final class IonBinaryIterator
         return value;
     }
 
+
     @Override
     public double doubleValue()
     {
@@ -1206,11 +1206,11 @@ public final class IonBinaryIterator
     @Override
     public Date dateValue()
     {
-        return getTimestamp().dateValue();
+        return timestampValue().dateValue();
     }
 
     @Override
-    public TtTimestamp getTimestamp()
+    public TtTimestamp timestampValue()
     {
         TtTimestamp ti;
 

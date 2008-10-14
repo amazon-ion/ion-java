@@ -246,7 +246,7 @@ static final boolean _verbose_debug = false;
         }
     }
 
-    public void startList() throws IOException
+    public void openList() throws IOException
     {
         startValue(UNKNOWN_LENGTH);
         patch(1);
@@ -254,7 +254,7 @@ static final boolean _verbose_debug = false;
         push(IonConstants.tidList);
         _writer.writeByte((byte)(IonConstants.tidList << 4));
     }
-    public void startSexp() throws IOException
+    public void openSexp() throws IOException
     {
         startValue(UNKNOWN_LENGTH);
         patch(1);
@@ -262,7 +262,7 @@ static final boolean _verbose_debug = false;
         push(IonConstants.tidSexp);
         _writer.writeByte((byte)(IonConstants.tidSexp << 4));
     }
-    public void startStruct() throws IOException
+    public void openStruct() throws IOException
     {
         startValue(UNKNOWN_LENGTH);
         patch(1);
@@ -291,21 +291,21 @@ static final boolean _verbose_debug = false;
     }
 
     @Override
-    public void writeFieldname(String name)
+    public void setFieldName(String name)
     {
         if (!_in_struct) {
             throw new IllegalStateException();
         }
-        super.writeFieldname(name);
+        super.setFieldName(name);
     }
 
     @Override
-    public void writeFieldnameId(int id)
+    public void setFieldId(int id)
     {
         if (!_in_struct) {
             throw new IllegalStateException();
         }
-        super.writeFieldnameId(id);
+        super.setFieldId(id);
     }
 
     static private final int NULL_BYTE = (IonConstants.makeTypeDescriptor(IonConstants.tidNull, IonConstants.lnIsNull));

@@ -208,7 +208,7 @@ public final class IonTreeIterator
     }
 
     @Override
-    public String[] getAnnotations()
+    public String[] getTypeAnnotations()
     {
         if (_curr == null) {
             throw new IllegalStateException();
@@ -222,9 +222,9 @@ public final class IonTreeIterator
     }
 
     @Override
-    public int[] getAnnotationIds()
+    public int[] getTypeAnnotationIds()
     {
-        String [] annotations = getAnnotations();
+        String [] annotations = getTypeAnnotations();
         if (annotations == null)  return null;
 
         int [] ids = new int[annotations.length];
@@ -239,18 +239,18 @@ public final class IonTreeIterator
 
     @SuppressWarnings("unchecked")
     @Override
-    public Iterator<Integer> iterateAnnotationIds()
+    public Iterator<Integer> iterateTypeAnnotationIds()
     {
-        int [] ids = getAnnotationIds();
+        int [] ids = getTypeAnnotationIds();
         if (ids == null) return (Iterator<Integer>) EMPTY_ITERATOR;
         return new IdIterator(ids);
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public Iterator<String> iterateAnnotations()
+    public Iterator<String> iterateTypeAnnotations()
     {
-        String [] annotations = getAnnotations();
+        String [] annotations = getTypeAnnotations();
         if (annotations == null) return (Iterator<String>) EMPTY_ITERATOR;
         return new StringIterator(annotations);
     }
@@ -359,7 +359,7 @@ public final class IonTreeIterator
     }
 
     @Override
-    public TtTimestamp getTimestamp()
+    public TtTimestamp timestampValue()
     {
         if (_curr instanceof IonTimestamp) {
             return ((IonTimestamp)_curr).timestampValue();

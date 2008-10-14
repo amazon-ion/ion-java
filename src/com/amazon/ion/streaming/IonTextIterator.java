@@ -657,7 +657,7 @@ public final class IonTextIterator
     }
 
     @Override
-    public int[] getAnnotationIds()
+    public int[] getTypeAnnotationIds()
     {
         if (!_value_ready || _current_symtab == null) {
             throw new IllegalStateException();
@@ -673,7 +673,7 @@ public final class IonTextIterator
     }
 
     @Override
-    public String[] getAnnotations()
+    public String[] getTypeAnnotations()
     {
         if (!_value_ready) {
             throw new IllegalStateException();
@@ -699,18 +699,18 @@ public final class IonTextIterator
 
     @SuppressWarnings("unchecked")
     @Override
-    public Iterator<Integer> iterateAnnotationIds()
+    public Iterator<Integer> iterateTypeAnnotationIds()
     {
-        int[] ids = getAnnotationIds();
+        int[] ids = getTypeAnnotationIds();
         if (ids == null) return (Iterator<Integer>) EMPTY_ITERATOR;
         return new IonTreeIterator.IdIterator(ids);
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public Iterator<String> iterateAnnotations()
+    public Iterator<String> iterateTypeAnnotations()
     {
-        String[] ids = getAnnotations();
+        String[] ids = getTypeAnnotations();
         if (ids == null) return (Iterator<String>) EMPTY_ITERATOR;
         return new IonTreeIterator.StringIterator(ids);
     }
@@ -777,7 +777,7 @@ public final class IonTextIterator
             return dec;
         case IonConstants.tidTimestamp:
             IonTimestamp t = sys.newNullTimestamp();
-            TtTimestamp ti = getTimestamp();
+            TtTimestamp ti = timestampValue();
             t.setValue(ti);
             return t;
         case IonConstants.tidSymbol:    return sys.newSymbol(stringValue());
@@ -965,7 +965,7 @@ public final class IonTextIterator
     }
 
     @Override
-    public TtTimestamp getTimestamp()
+    public TtTimestamp timestampValue()
     {
         if (!_value_type.equals(IonType.TIMESTAMP)) {
             throw new IllegalStateException("current value is not a timestamp");
@@ -981,7 +981,7 @@ public final class IonTextIterator
     @Override
     public Date dateValue()
     {
-        return getTimestamp().dateValue();
+        return timestampValue().dateValue();
     }
 
     @Override

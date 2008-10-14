@@ -214,7 +214,7 @@ public final class IonTextWriter
         _pending_separator = true;
     }
 
-    public void startList()
+    public void openList()
         throws IOException
     {
         startValue();
@@ -223,7 +223,7 @@ public final class IonTextWriter
         _output.append('[');
         _pending_separator = false;
       }
-    public void startSexp()
+    public void openSexp()
         throws IOException
     {
         startValue();
@@ -232,7 +232,7 @@ public final class IonTextWriter
         _output.append('(');
         _pending_separator = false;
     }
-    public void startStruct()
+    public void openStruct()
         throws IOException
     {
         startValue();

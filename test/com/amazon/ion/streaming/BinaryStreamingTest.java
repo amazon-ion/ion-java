@@ -99,7 +99,7 @@ public class BinaryStreamingTest
                 assertTrue( true );
             }
 
-            wr.writeFieldname(name);
+            wr.setFieldName(name);
             switch (itype) {
                 case NULL:
                     if (value == null) {
@@ -285,7 +285,7 @@ public class BinaryStreamingTest
                     assertTrue( bd1.equals(bd2) );
                     break;
                 case TIMESTAMP:
-                    TtTimestamp actual = r.getTimestamp();
+                    TtTimestamp actual = r.timestampValue();
 
                     if (value instanceof Date) {
                         assertEquals(value, actual.dateValue());
@@ -517,7 +517,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         try {
             // we don't really need the struct, but if we use it we get to
             // label all the values
-            wr.startStruct();
+            wr.openStruct();
 
             for (TestValue tv : testvalues) {
                 tv.writeValue(wr);
@@ -632,8 +632,8 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         byte[] buffer = null;
 
         try {
-            wr.startStruct();
-            wr.writeFieldname("Foo");
+            wr.openStruct();
+            wr.setFieldName("Foo");
             wr.writeBool(true);
             wr.closeStruct();
             buffer = wr.getBytes();
@@ -663,9 +663,9 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         byte[] buffer = null;
 
         try {
-            wr.startStruct();
-            wr.writeFieldname("Foo");
-            wr.addAnnotation("boolean");
+            wr.openStruct();
+            wr.setFieldName("Foo");
+            wr.addTypeAnnotation("boolean");
             wr.writeBool(true);
             wr.closeStruct();
             buffer = wr.getBytes();
@@ -685,7 +685,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         assertEquals(ir.next(), IonType.BOOL);
         assertEquals(ir.getFieldName(), "Foo");
         //assertEquals(ir.getAnnotations(), new String[] { "boolean" });
-        String[] annotations = ir.getAnnotations();
+        String[] annotations = ir.getTypeAnnotations();
         assertTrue(annotations != null && annotations.length == 1);
         if (annotations != null) { // just to shut eclipse up, we already tested this above
             assertTrue("boolean".equals(annotations[0]));
@@ -698,7 +698,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         ir.stepInto();
         assertEquals(IonType.BOOL, ir.next());
         assertEquals("Foo", ir.getFieldName());
-        annotations = ir.getAnnotations();
+        annotations = ir.getTypeAnnotations();
         assertNotNull(annotations);
         assertEquals(1, annotations.length);
         assertEquals("boolean", annotations[0]);
@@ -714,9 +714,9 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         byte[] buffer = null;
 
         try {
-            wr.startStruct();
-            wr.writeFieldname("Foo");
-            wr.addAnnotation("boolean");
+            wr.openStruct();
+            wr.setFieldName("Foo");
+            wr.addTypeAnnotation("boolean");
             wr.writeBool(true);
             wr.closeStruct();
             buffer = wr.getBytes();
@@ -732,7 +732,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
                 assertEquals(ir.next(), IonType.BOOL);
                 assertEquals(ir.getFieldName(), "Foo");
                 //assertEquals(ir.getAnnotations(), new String[] { "boolean" });
-                String[] annotations = ir.getAnnotations();
+                String[] annotations = ir.getTypeAnnotations();
                 assertTrue(annotations != null && annotations.length == 1);
                 if (annotations != null) { // just to shut eclipse up, we already tested this above
                     assertTrue("boolean".equals(annotations[0]));
@@ -749,33 +749,33 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         byte[] buffer = null;
 
         try {
-            wr.startStruct();
+            wr.openStruct();
 
-            wr.writeFieldname("hello");
+            wr.setFieldName("hello");
             wr.writeBool(true);
 
-            wr.writeFieldname("Almost Done.");
+            wr.setFieldName("Almost Done.");
             wr.writeBool(true);
 
-            wr.writeFieldname("This is a test String.");
+            wr.setFieldName("This is a test String.");
             wr.writeBool(true);
 
-            wr.writeFieldname("12242.124598129");
+            wr.setFieldName("12242.124598129");
             wr.writeFloat(12242.124598129);
 
-            wr.writeFieldname("Something");
+            wr.setFieldName("Something");
             wr.writeNull();
 
-            wr.writeFieldname("false");
+            wr.setFieldName("false");
             wr.writeBool(false);
 
-            wr.writeFieldname("true");
+            wr.setFieldName("true");
             wr.writeBool(true);
 
-            wr.writeFieldname("long");
+            wr.setFieldName("long");
             wr.writeInt((long) 9326);
 
-            wr.writeFieldname("12");
+            wr.setFieldName("12");
             wr.writeInt(-12);
 
             wr.closeStruct();
@@ -837,34 +837,34 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         byte[] bytes ;
 
         IonWriter wr = new IonBinaryWriter();
-        wr.startStruct();
+        wr.openStruct();
 
-        wr.writeFieldname("12");
-        wr.addAnnotation(int.class.getCanonicalName());
+        wr.setFieldName("12");
+        wr.addTypeAnnotation(int.class.getCanonicalName());
         wr.writeInt(-12);
 
-        wr.writeFieldname("12242.124598129");
-        wr.addAnnotation(double.class.getCanonicalName());
+        wr.setFieldName("12242.124598129");
+        wr.addTypeAnnotation(double.class.getCanonicalName());
         wr.writeFloat(12242.124598129);
 
-        wr.writeFieldname("Almost Done.");
-        wr.addAnnotation(boolean.class.getCanonicalName());
+        wr.setFieldName("Almost Done.");
+        wr.addTypeAnnotation(boolean.class.getCanonicalName());
         wr.writeBool(true);
 
-        wr.writeFieldname("This is a test String.");
-        wr.addAnnotation(boolean.class.getCanonicalName());
+        wr.setFieldName("This is a test String.");
+        wr.addTypeAnnotation(boolean.class.getCanonicalName());
         wr.writeBool(true);
 
-        wr.writeFieldname("false");
-        wr.addAnnotation(boolean.class.getCanonicalName());
+        wr.setFieldName("false");
+        wr.addTypeAnnotation(boolean.class.getCanonicalName());
         wr.writeBool(false);
 
-        wr.writeFieldname("long");
-        wr.addAnnotation(long.class.getCanonicalName());
+        wr.setFieldName("long");
+        wr.addTypeAnnotation(long.class.getCanonicalName());
         wr.writeInt((long) 9326);
 
-        wr.writeFieldname("true");
-        wr.addAnnotation(boolean.class.getCanonicalName());
+        wr.setFieldName("true");
+        wr.addTypeAnnotation(boolean.class.getCanonicalName());
         wr.writeBool(true);
 
         wr.closeStruct();

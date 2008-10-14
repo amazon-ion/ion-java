@@ -236,28 +236,28 @@ public abstract class IonIterator
      * Return the annotations of the current value as an array of strings.  The
      * return value is null if there are no annotations on the current value.
      */
-    public abstract String[]   getAnnotations();
+    public abstract String[]   getTypeAnnotations();
 
     /**
      * Return the symbol id's of the annotations on the current value as an 
      * array of ints.  The return value is null if there are no annotations 
      * on the current value.
      */
-    public abstract int[]      getAnnotationIds();
+    public abstract int[]      getTypeAnnotationIds();
 
     /**
      * Return the annotations on the curent value as an iterator.  The 
      * iterator is empty (hasNext() returns false on the first call) if
      * there are no annotations on the current value.
      */
-    public abstract Iterator<String>   iterateAnnotations();
+    public abstract Iterator<String>   iterateTypeAnnotations();
     
     /**
      * Return the symbol table ids of the current values annotation as 
      * an iterator.  The iterator is empty (hasNext() returns false on 
      * the first call) if there are no annotations on the current value.
      */
-    public abstract Iterator<Integer>   iterateAnnotationIds();
+    public abstract Iterator<Integer>   iterateTypeAnnotationIds();
     
     /**
      * Return an symbol table id of the field name of the current value. Or -1 if 
@@ -356,7 +356,7 @@ public abstract class IonIterator
      * Returns the current value as a timeinfo.  This is only valid if 
      * there is an underlying value and the value is an Ion timestamp.
      */
-    public abstract TtTimestamp getTimestamp();
+    public abstract TtTimestamp timestampValue();
     
     /**
      * Returns the current value as a Java String.  This is only valid if there is

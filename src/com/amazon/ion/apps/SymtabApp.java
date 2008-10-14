@@ -208,7 +208,7 @@ public class SymtabApp
 
     private void internAnnotations(IonReader reader)
     {
-        Iterator<String> i = reader.iterateAnnotations();
+        Iterator<String> i = reader.iterateTypeAnnotations();
         assert i != null;
         while (i.hasNext())
         {

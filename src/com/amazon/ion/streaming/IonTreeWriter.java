@@ -112,7 +112,7 @@ public final class IonTreeWriter
         }
     }
 
-    public void startList()
+    public void openList()
         throws IOException
     {
         IonList list = _sys.newEmptyList();
@@ -120,7 +120,7 @@ public final class IonTreeWriter
         pushParent(list);
     }
 
-    public void startSexp()
+    public void openSexp()
         throws IOException
     {
         IonSexp list = _sys.newEmptySexp();
@@ -128,7 +128,7 @@ public final class IonTreeWriter
         pushParent(list);
     }
 
-    public void startStruct()
+    public void openStruct()
         throws IOException
     {
         IonStruct struct = _sys.newEmptyStruct();

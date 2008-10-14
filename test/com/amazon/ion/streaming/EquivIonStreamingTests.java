@@ -63,8 +63,8 @@ public class EquivIonStreamingTests extends DirectoryTestSuite {
 	        	return;
 	        }
 	        void compareAnnotations(IonReader it1, IonReader it2) {
-	        	String[] a1 = it1.getAnnotations();
-	        	String[] a2 = it2.getAnnotations();
+	        	String[] a1 = it1.getTypeAnnotations();
+	        	String[] a2 = it2.getTypeAnnotations();
 	        	if (a1 == null) {
 	        		assert a1 == null && a2 == null;
 	        	}
@@ -96,8 +96,8 @@ public class EquivIonStreamingTests extends DirectoryTestSuite {
         			assert bd1.equals(bd2);
         			break;
         		case TIMESTAMP:
-        			TtTimestamp t1 = it1.getTimestamp();
-        			TtTimestamp t2 = it2.getTimestamp();
+        			TtTimestamp t1 = it1.timestampValue();
+        			TtTimestamp t2 = it2.timestampValue();
         			assertEquals(t1, t2);
         			break;
         		case STRING:
