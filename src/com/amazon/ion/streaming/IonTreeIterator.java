@@ -4,8 +4,6 @@
 
 package com.amazon.ion.streaming;
 
-import com.amazon.ion.TtTimestamp;
-
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
@@ -24,6 +22,7 @@ import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.TtTimestamp;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
@@ -32,8 +31,8 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- * Provides a concrete implmentation of IonIterator that operates
- * over an IonValue, typically an IonDatagram.
+ * Provides a concrete implementation of {@link IonReader} that operates
+ * over an {@link IonValue}, typically an {@link IonDatagram}.
  */
 public final class IonTreeIterator
     extends IonIterator
@@ -70,7 +69,7 @@ public final class IonTreeIterator
         _root = (IonValue)_stack[_top];
     }
 
-    IonTreeIterator(IonValue value) {
+    public IonTreeIterator(IonValue value) {
         _root = value;
         _curr = null;
         _eof = false;

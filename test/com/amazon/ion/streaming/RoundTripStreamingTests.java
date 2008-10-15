@@ -376,7 +376,7 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
         }
 
         IonReader makeIterator(byte [] testBuffer) {
-            IonReader inputIterator = IonIterator.makeIterator(testBuffer);
+            IonReader inputIterator = system().newReader(testBuffer);
             inputIterator.hasNext();
             return inputIterator;
         }

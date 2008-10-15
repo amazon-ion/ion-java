@@ -4,8 +4,6 @@
 
 package com.amazon.ion.streaming;
 
-import com.amazon.ion.TtTimestamp;
-
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
@@ -15,8 +13,8 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.LocalSymbolTable;
+import com.amazon.ion.TtTimestamp;
 import com.amazon.ion.impl.IonTokenReader;
-import com.amazon.ion.system.SystemFactory;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -530,7 +528,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
             throw new Exception(e);
         }
 
-        IonReader r = IonIterator.makeIterator(buffer);
+        IonReader r = system().newReader(buffer);
         IonType t;
 
         t = r.next();
@@ -554,7 +552,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
             +"list_price:{value:18.23,unit:EUR},}"
             +",index_suppressed:true,"
             +"offline_store_only:true,version:2,}";
-        IonReader ir = IonIterator.makeIterator(s);
+        IonReader ir = system().newReader(s);
         IonWriter wr = new IonBinaryWriter();
     	wr.writeIonEvents(ir);
         byte[] buffer = wr.getBytes();
@@ -573,13 +571,13 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
     		+"list_price:{value:18.23,unit:EUR},}"
     		+",index_suppressed:true,"
     		+"offline_store_only:true,version:2,}";
-    	IonSystem sys = SystemFactory.newSystem();
+    	IonSystem sys = system();
     	IonDatagram dg = sys.getLoader().load(s);
     	IonValue v = dg.get(0);
     	IonValue v2 = ((IonStruct)v).get("offline_store_only");
     	LocalSymbolTable sym = v.getSymbolTable();
     	assert v2.getSymbolTable() == sym;
-    	IonReader ir = IonIterator.makeIterator(s);
+    	IonReader ir = system().newReader(s);
     	UnifiedSymbolTable u = new UnifiedSymbolTable(sym);
     	u.setName("items");
     	u.setVersion(1);
@@ -642,7 +640,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
             throw new Exception(e);
         }
 
-        IonReader ir = IonIterator.makeIterator(buffer);
+        IonReader ir = system().newReader(buffer);
         if (ir.hasNext()) {
             ir.next();
             ir.stepInto();
@@ -677,7 +675,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         System.arraycopy(buffer, 0, doublebuffer, 0, buffer.length);
         System.arraycopy(buffer, 0, doublebuffer, buffer.length, buffer.length);
 
-        IonReader ir = IonIterator.makeIterator(doublebuffer);
+        IonReader ir = system().newReader(doublebuffer);
 
         // first copy
         assertTrue(ir.next().equals(IonType.STRUCT));
@@ -724,7 +722,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
             throw new RuntimeException(e);
         }
 
-        IonReader ir = IonIterator.makeIterator(buffer);
+        IonReader ir = system().newReader(buffer);
         if (ir.hasNext()) {
             ir.next();
             ir.stepInto();
@@ -785,7 +783,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
             throw new RuntimeException(e);
         }
 
-        IonReader ir = IonIterator.makeIterator(buffer);
+        IonReader ir = system().newReader(buffer);
         if (ir.hasNext()) {
             ir.next();
             ir.stepInto();
@@ -871,7 +869,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
 
         bytes = wr.getBytes();
 
-        IonReader ir = IonIterator.makeIterator(bytes);
+        IonReader ir = system().newReader(bytes);
         assertTrue(ir.hasNext());
         ir.next();
         ir.stepInto();

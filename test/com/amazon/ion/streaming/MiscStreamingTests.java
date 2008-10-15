@@ -24,7 +24,7 @@ import com.amazon.ion.system.SystemFactory;
 public class MiscStreamingTests
 	extends IonTestCase
 {
-	static final boolean _debug_flag = false;
+    static final boolean _debug_flag = false;
 
     @Override
     public void setUp()
@@ -54,7 +54,7 @@ public class MiscStreamingTests
     	//				$10:str2 (6 bytes)
     	//		value1 string "str1" (1 typedesc + 4 bytes)
     	//		value2 symbol 'str2' (1 typedesc + 1 byte)
-    	IonReader ir = IonIterator.makeIterator(s);
+    	IonReader ir = system().newReader(s);
 
     	IonWriter wr = new IonBinaryWriter();
     	wr.writeIonEvents(ir);
@@ -62,8 +62,8 @@ public class MiscStreamingTests
         byte[] buffer = wr.getBytes();
         assertSame("this buffer length is known to be 23", buffer.length, 23);
 
-        IonReader sir = IonIterator.makeIterator(s);
-        IonReader bir = IonIterator.makeIterator(s);
+        IonReader sir = system().newReader(s);
+        IonReader bir = system().newReader(s);
 
         checkIteratorForQuotingTest("string", sir);
         checkIteratorForQuotingTest("binary", bir);
@@ -103,7 +103,7 @@ public class MiscStreamingTests
 
     	int tree_count = ((IonStruct)v).size();
 
-    	IonReader it = IonIterator.makeIterator(s);
+    	IonReader it = system().newReader(s);
 
     	t = it.next();
     	assertSame( "should be a struct", t, IonType.STRUCT );
@@ -112,7 +112,7 @@ public class MiscStreamingTests
     	assertSame("tree and string iterator should have the same size", string_count, tree_count );
 
     	byte[] buf = dg.toBytes();
-    	it = IonIterator.makeIterator(buf);
+    	it = system().newReader(buf);
 
     	t = it.next();
     	assertSame( "should be a struct", t, IonType.STRUCT );
@@ -148,19 +148,19 @@ public class MiscStreamingTests
 
     	// now take the string and get a text iterator and
     	// make sure it got the annotation right
-    	IonReader it = IonIterator.makeIterator(s);
+    	IonReader it = system().newReader(s);
     	t = it.next();
     	assertSame( "should be a struct", t, IonType.STRUCT );
-    	ann = it.getAnnotations();
+    	ann = it.getTypeAnnotations();
     	assertTrue(ann.length == 1 && ann[0].equals("item_view"));
 
     	// finally get the byte array from the tree, make a
     	// binary iterator and check its annotation handling
     	byte[] buf = dg.toBytes();
-    	it = IonIterator.makeIterator(buf);
+    	it = system().newReader(buf);
     	t = it.next();
     	assertSame( "should be a struct", t, IonType.STRUCT );
-    	ann = it.getAnnotations();
+    	ann = it.getTypeAnnotations();
     	assertTrue(ann.length == 1 && ann[0].equals("item_view"));
 
     	return;
@@ -169,7 +169,7 @@ public class MiscStreamingTests
 
     public void testTextNullStringValue()
     {
-        IonReader reader = IonIterator.makeIterator("null.string");
+        IonReader reader = system().newReader("null.string");
         testNullStringValue(reader);
     }
 
@@ -178,21 +178,21 @@ public class MiscStreamingTests
         // TODO load this from test file
         byte[] nullSymbolBytes = BinaryTest.hexToBytes(BinaryTest.MAGIC_COOKIE
                                                        + "8f");
-        IonReader reader = IonIterator.makeIterator(nullSymbolBytes);
+        IonReader reader = system().newReader(nullSymbolBytes);
         testNullStringValue(reader);
     }
 
     public void testTreeNullStringValue()
     {
         IonString nullString = system().newNullString();
-        IonReader reader = IonIterator.makeIterator(nullString);
+        IonReader reader = system().newReader(nullString);
         testNullStringValue(reader);
     }
 
 
     public void testTextNullSymbolValue()
     {
-        IonReader reader = IonIterator.makeIterator("null.symbol");
+        IonReader reader = system().newReader("null.symbol");
         testNullSymbolValue(reader);
     }
 
@@ -201,14 +201,14 @@ public class MiscStreamingTests
         // TODO load this from test file
         byte[] nullSymbolBytes = BinaryTest.hexToBytes(BinaryTest.MAGIC_COOKIE
                                                        + "7f");
-        IonReader reader = IonIterator.makeIterator(nullSymbolBytes);
+        IonReader reader = system().newReader(nullSymbolBytes);
         testNullSymbolValue(reader);
     }
 
     public void testTreeNullSymbolValue()
     {
         IonSymbol nullSymbol = system().newNullSymbol();
-        IonReader reader = IonIterator.makeIterator(nullSymbol);
+        IonReader reader = system().newReader(nullSymbol);
         testNullSymbolValue(reader);
     }
 

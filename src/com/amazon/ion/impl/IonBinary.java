@@ -39,13 +39,19 @@ public class IonBinary
 
     private IonBinary() { }
 
-    public static boolean startsWithBinaryVersionMarker(byte[] b)
+    public static boolean matchBinaryVersionMarker(byte[] buffer)
     {
-        if (b.length < BINARY_VERSION_MARKER_SIZE) return false;
+        return matchBinaryVersionMarker(buffer, 0, buffer.length);
+    }
+
+    public static boolean matchBinaryVersionMarker(byte[] buffer, int offset,
+                                                   int len)
+    {
+        if (len < BINARY_VERSION_MARKER_SIZE) return false;
 
         for (int i = 0; i < BINARY_VERSION_MARKER_SIZE; i++)
         {
-            if (BINARY_VERSION_MARKER_1_0[i] != b[i]) return false;
+            if (BINARY_VERSION_MARKER_1_0[i] != buffer[offset + i]) return false;
         }
         return true;
     }
@@ -77,7 +83,7 @@ public class IonBinary
 
             }
 
-            if (! startsWithBinaryVersionMarker(bvm))
+            if (! matchBinaryVersionMarker(bvm))
             {
                 StringBuilder buf = new StringBuilder();
                 buf.append("Binary data has unrecognized header");

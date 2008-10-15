@@ -6,8 +6,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import com.amazon.ion.streaming.IonIterator;
-
 
 
 public class SexpTest
@@ -271,7 +269,7 @@ public class SexpTest
         sexp2 = reload(sexp1);
         assertIonEquals(sexp1, sexp2);
     }
-    
+
     private String[] termintor_test_values = {
 				"(1001-12-31'symbol')",
 				"(1001-12-31\"string\")",
@@ -288,21 +286,20 @@ public class SexpTest
 				"(1001-12-31\r)",
 				"(1001-12-31\t)"
     };
-	
+
     public void testNumericTerminationCharacters()
     {
     	IonSexp value = null;
     	IonReader scanner = null;
-    	
-    	
+
     	for (String image : termintor_test_values) {
-    		scanner = IonIterator.makeIterator(image);
-    		readAll(scanner); 
+    	    scanner = system().newReader(image);
+    	    readAll(scanner);
     	}
-    	
+
     	// these should parse correctly
     	for (String image : termintor_test_values) {
-    		value = (IonSexp) oneValue(image);
+    	    value = (IonSexp) oneValue(image);
     	}
     	IonValue value2 = reload(value);
     	assertIonEquals(value, value2);
@@ -310,47 +307,47 @@ public class SexpTest
     void readAll(IonReader scanner)
     {
     	while (scanner.hasNext()) {
-    		switch (scanner.next()) {
-    		case NULL:
-    			break;
-    		case BOOL:
-    			scanner.booleanValue();
-    			break;
-    		case INT:
-    			scanner.longValue();
-    			break;
-    		case FLOAT:
-    			scanner.doubleValue();
-    			break;
-    		case DECIMAL:
-    			scanner.bigDecimalValue();
-    			break;
-    		case TIMESTAMP:
-    			scanner.dateValue();
-    			break;
-    		case STRING:
-    			scanner.stringValue();
-    			break;
-    		case SYMBOL:
-    			scanner.stringValue();
-    			break;
-    		case BLOB:
-    			scanner.newBytes();
-    			break;
-    		case CLOB:
-    			scanner.newBytes();
-    			break;
-    		case STRUCT:
-    		case LIST:
-    		case SEXP:
-    			scanner.stepInto();
-    			readAll(scanner);
-    			scanner.stepOut();
-    			break;
-    		case DATAGRAM:
-    		default:
-    			throw new IonException("bad type returned by scanner");
-    		}
-    }
+    	    switch (scanner.next()) {
+    	        case NULL:
+    	            break;
+    	        case BOOL:
+    	            scanner.booleanValue();
+    	            break;
+    	        case INT:
+    	            scanner.longValue();
+    	            break;
+    	        case FLOAT:
+    	            scanner.doubleValue();
+    	            break;
+    	        case DECIMAL:
+    	            scanner.bigDecimalValue();
+    	            break;
+    	        case TIMESTAMP:
+    	            scanner.dateValue();
+    	            break;
+    	        case STRING:
+    	            scanner.stringValue();
+    	            break;
+    	        case SYMBOL:
+    	            scanner.stringValue();
+    	            break;
+    	        case BLOB:
+    	            scanner.newBytes();
+    	            break;
+    	        case CLOB:
+    	            scanner.newBytes();
+    	            break;
+    	        case STRUCT:
+    	        case LIST:
+    	        case SEXP:
+    	            scanner.stepInto();
+    	            readAll(scanner);
+    	            scanner.stepOut();
+    	            break;
+    	        case DATAGRAM:
+    	        default:
+    	            throw new IonException("bad type returned by scanner");
+    	    }
+    	}
     }
 }

@@ -168,10 +168,12 @@ public class LoaderImpl
     {
         PushbackInputStream pushback = new PushbackInputStream(ionData, 8);
         if (isBinary(pushback)) {
-            return loadBinary(pushback);   // TODO inline this call
+            SystemReader systemReader = mySystem.newBinarySystemReader(pushback);
+            return new IonDatagramImpl(systemReader);
         }
 
-        return loadText(pushback); // TODO inline this call
+        Reader reader = new InputStreamReader(pushback, "UTF-8");
+        return load(reader);
     }
 
 
@@ -203,7 +205,7 @@ public class LoaderImpl
 
         int len = pushback.read(cookie);
         if (len == IonConstants.BINARY_VERSION_MARKER_SIZE) {
-            isBinary = IonBinary.startsWithBinaryVersionMarker(cookie);
+            isBinary = IonBinary.matchBinaryVersionMarker(cookie);
         }
         if (len > 0) {
             pushback.unread(cookie, 0, len);

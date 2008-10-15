@@ -202,6 +202,58 @@ public interface IonSystem
 
 
     //-------------------------------------------------------------------------
+    // IonReader creation
+
+//  public IonReader newReader(Reader ionText); // TODO add newReader(Reader)
+//  public IonReader newReader(InputStream); // TODO add newReader(InputStream)
+
+
+    /**
+     * Creates an new {@link IonReader} instance over Ion text data.
+     * <p>
+     * The text is parsed incrementally by the reader, so any syntax errors
+     * will not be detected here.
+     *
+     * @param ionText must not be null.
+     */
+    public IonReader newReader(String ionText);
+
+    /**
+     * Creates an new {@link IonReader} instance over a block of Ion data,
+     * detecting whether it's text or binary data.
+     *
+     * @param ionData may be either Ion binary data, or UTF-8 Ion text.
+     * The reader retains a reference to the array, so its data must not be
+     * modified while the reader is active.
+     */
+    public IonReader newReader(byte[] ionData);
+
+    /**
+     * Creates an new {@link IonReader} instance over a block of Ion data,
+     * detecting whether it's text or binary data.
+     *
+     * @param ionData is used only within the range of bytes starting at
+     * {@code offset} for {@code len} bytes.
+     * The data in that range may be either Ion binary data, or UTF-8 Ion text.
+     * The reader retains a reference to the array, so its data must not be
+     * modified while the reader is active.
+     * @param offset must be non-negative and less than {@code ionData.length}.
+     * @param len must be non-negative and {@code offset+len} must not exceed
+     * {@code ionData.length}.
+     */
+    public IonReader newReader(byte[] ionData, int offset, int len);
+
+    /**
+     * Creates an new {@link IonReader} instance over an {@link IonValue} data
+     * model. Typically this is used to iterate over a collection, such as an
+     * {@link IonStruct}.
+     *
+     * @param value must not be null.
+     */
+    public IonReader newReader(IonValue value);
+
+
+    //-------------------------------------------------------------------------
     // DOM creation
 
     /**

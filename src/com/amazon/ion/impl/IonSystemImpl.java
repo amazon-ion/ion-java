@@ -17,6 +17,7 @@ import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonNull;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
@@ -29,6 +30,9 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.UnsupportedSystemVersionException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
+import com.amazon.ion.streaming.IonBinaryIterator;
+import com.amazon.ion.streaming.IonTextIterator;
+import com.amazon.ion.streaming.IonTreeIterator;
 import com.amazon.ion.system.SimpleCatalog;
 import com.amazon.ion.util.Printer;
 import java.io.ByteArrayInputStream;
@@ -172,7 +176,7 @@ public class IonSystemImpl
 
 
     //=========================================================================
-    // IonReader creation
+    // Iterator creation
 
 
     public Iterator<IonValue> iterate(Reader reader)
@@ -196,6 +200,47 @@ public class IonSystemImpl
     }
 
 
+    //=========================================================================
+    // IonReader creation
+
+
+    public IonReader newReader(String ionText)
+    {
+        return new IonTextIterator(ionText);
+    }
+
+
+    public IonReader newReader(byte[] ionData)
+    {
+        return newReader(ionData, 0, ionData.length);
+    }
+
+    public IonReader newReader(byte[] ionData, int offset, int len)
+    {
+        boolean isBinary =
+            IonBinary.matchBinaryVersionMarker(ionData);
+
+        IonReader reader;
+        if (isBinary) {
+            reader = new IonBinaryIterator(ionData, offset, len);
+        }
+        else {
+            reader = new IonTextIterator(ionData, offset, len);
+        }
+        return reader;
+    }
+
+
+    public IonReader newReader(IonValue value)
+    {
+        return new IonTreeIterator(value);
+    }
+
+
+    //=========================================================================
+    // Internal SystemReader creation
+
+
     /**
      * Creates a new reader, wrapping an array of text or binary data.
      *
@@ -207,11 +252,11 @@ public class IonSystemImpl
      */
     public SystemReader newSystemReader(byte[] ionData)
     {
-        boolean isbinary =
-            IonBinary.startsWithBinaryVersionMarker(ionData);
+        boolean isBinary =
+            IonBinary.matchBinaryVersionMarker(ionData);
 
         SystemReader sysReader;
-        if (isbinary) {
+        if (isBinary) {
             sysReader = newBinarySystemReader(ionData);
         }
         else {
