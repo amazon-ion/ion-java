@@ -8,7 +8,7 @@ import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_1_0;
 import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
 
 import com.amazon.ion.IonException;
-import com.amazon.ion.LocalSymbolTable;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.TtTimestamp;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.impl.IonConstants.HighNibble;
@@ -520,7 +520,8 @@ public class IonBinary
         return len;
     }
 
-    public static int lenAnnotationListWithLen(String[] annotations, LocalSymbolTable symbolTable)
+    public static int lenAnnotationListWithLen(String[] annotations,
+                                               SymbolTable symbolTable)
     {
         int annotationLen = 0;
 
@@ -735,7 +736,7 @@ public class IonBinary
             return annotations;
         }
 
-        public String[] readAnnotations(LocalSymbolTable symbolTable) throws IOException
+        public String[] readAnnotations(SymbolTable symbolTable) throws IOException
         {
             String[] annotations = null;
 
@@ -2112,7 +2113,8 @@ done:       for (;;) {
             return 1;
         }
 
-        public int writeAnnotations(String[] annotations, LocalSymbolTable symbolTable) throws IOException
+        public int writeAnnotations(String[] annotations,
+                                    SymbolTable symbolTable) throws IOException
         {
             int startPosition = this.position();
             int[] symbols = new int[annotations.length];
@@ -2191,10 +2193,13 @@ done:       for (;;) {
          *
          */
 
-        public int writeSymbolWithTD(String s, LocalSymbolTable st)
+        /**
+         * @param symtab must be local, not shared, not null.
+         */
+        public int writeSymbolWithTD(String s, SymbolTable symtab)
             throws IOException
         {
-            int sid = st.addSymbol(s);
+            int sid = symtab.addSymbol(s);
             assert sid > 0;
 
             int vlen = lenVarUInt8(sid);

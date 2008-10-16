@@ -1,12 +1,10 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion.impl;
 
 
 import com.amazon.ion.IonException;
-import com.amazon.ion.LocalSymbolTable;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.PositionMarker;
@@ -27,7 +25,7 @@ public class IonParser
 
     private IonTokenReader      _in;
     private BufferManager       _out;
-    private LocalSymbolTable    _symboltable;
+    private SymbolTable         _symboltable;
     private IonTokenReader.Type _t;
     private ArrayList<Integer>  _annotationList;
 
@@ -85,7 +83,7 @@ public class IonParser
 
     /**
      *
-     * @param symboltable must not be null.
+     * @param symboltable must be a local symtab, not null.
      * @param startPosition
      *      The position to start writing into our buffer.
      * @param writeMagicCookie
@@ -93,12 +91,12 @@ public class IonParser
      * @param consume the preferred number of characters to consume.  More than
      * this number may be read, but we won't stop until we pass this threshold.
      */
-    public void parse(LocalSymbolTable symboltable
+    public void parse(SymbolTable symboltable
                     , int startPosition
                     , boolean writeMagicCookie
                     , int consume)
     {
-        assert symboltable != null;
+        assert symboltable.isLocalTable();
         this._symboltable = symboltable;
 
         // now start the hard work, we catch all the IOExceptions here

@@ -240,6 +240,10 @@ public final class UnifiedSymbolTable
         return _is_locked;
     }
 
+    public boolean isLocalTable() {
+        return ! _is_locked;
+    }
+
     public boolean isSharedTable() {
         return _is_locked;
     }
@@ -618,12 +622,12 @@ public final class UnifiedSymbolTable
     }
     public UnifiedSymbolTable[] getImportedTables()
     {
-        UnifiedSymbolTable[] imports = null;
-        if (this._import_count > 0) {
-            imports = new UnifiedSymbolTable[this._import_count];
-            for (int ii=0; ii<_import_count; ii++) {
-                imports[ii] = _imports[ii];
-            }
+        if (isSharedTable()) return null;
+
+        UnifiedSymbolTable[] imports =
+            new UnifiedSymbolTable[this._import_count];
+        for (int ii=0; ii<_import_count; ii++) {
+            imports[ii] = _imports[ii];
         }
         return imports;
     }

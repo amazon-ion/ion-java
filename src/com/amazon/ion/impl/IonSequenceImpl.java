@@ -6,10 +6,10 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonDatagram;
-import com.amazon.ion.IonException;
 import com.amazon.ion.IonSequence;
+import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.LocalSymbolTable;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -133,7 +133,7 @@ public abstract class IonSequenceImpl
     {
         checkForLock();
 
-        LocalSymbolTable symtab = element.getSymbolTable();
+        SymbolTable symtab = element.getSymbolTable();
 
         IonSexpImpl wrapper = new IonSexpImpl();
         wrapper.addTypeAnnotation(SystemSymbolTable.ION_EMBEDDED_VALUE);
@@ -145,7 +145,7 @@ public abstract class IonSequenceImpl
         wrapper.add(sysid);
 
         // TO DO inject symtab
-        IonStructImpl symtabion = (IonStructImpl)symtab.getIonRepresentation();
+        IonStruct symtabion = symtab.getIonRepresentation();
         wrapper.add(symtabion);
 
         // TO DO inject value

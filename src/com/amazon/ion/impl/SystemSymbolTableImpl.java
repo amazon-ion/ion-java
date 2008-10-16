@@ -45,6 +45,11 @@ public class SystemSymbolTableImpl
 
 
 
+    public final boolean isLocalTable()
+    {
+        return false;
+    }
+
     public final boolean isSharedTable()
     {
         return true;
@@ -66,9 +71,21 @@ public class SystemSymbolTableImpl
         return 1;
     }
 
+
+    public SymbolTable getSystemSymbolTable()
+    {
+        return this;
+    }
+
     public String getSystemId()
     {
         return ION_1_0;
+    }
+
+
+    public SymbolTable[] getImportedTables()
+    {
+        return null;
     }
 
 
@@ -121,6 +138,20 @@ public class SystemSymbolTableImpl
 
         return SystemSymbolTableImpl.unknownSymbolName(id);
     }
+
+
+    public int addSymbol(String name)
+    {
+        String message = "Cannot call addSymbol on system symbol table";
+        throw new UnsupportedOperationException(message);
+    }
+
+    public void defineSymbol(String name, int id)
+    {
+        String message = "Cannot call defineSymbol on system symbol table";
+        throw new UnsupportedOperationException(message);
+    }
+
 
     public int getMaxId()
     {

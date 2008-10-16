@@ -8,7 +8,6 @@ import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.SymbolTable;
 import java.io.IOException;
 
@@ -22,7 +21,7 @@ public abstract class IonBaseWriter
 static final boolean _debug_on = false;
 
     UnifiedSymbolTable  _external_symbol_table;
-    LocalSymbolTable    _symbol_table;
+    SymbolTable         _symbol_table;
     boolean             _no_local_symbols = true;
 
     IonType     _field_name_type;     // really ion type is only used for int, string or null (unknown)
@@ -45,8 +44,9 @@ static final boolean _debug_on = false;
         _symbol_table = symbols;
     }
 
-    public void setSymbolTable(LocalSymbolTable symbols)
+    public void setSymbolTable(SymbolTable symbols)
     {
+        assert symbols.isLocalTable();
         _symbol_table = symbols;
     }
 
@@ -491,6 +491,8 @@ static final boolean _debug_on = false;
                 closeSexp();
                 if (_debug_on) System.out.print(")");
                 break;
+            default:
+                throw new IllegalStateException();
             }
         }
     }

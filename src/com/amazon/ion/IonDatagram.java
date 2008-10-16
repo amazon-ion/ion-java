@@ -196,7 +196,7 @@ public interface IonDatagram
      *
      * @throws UnsupportedOperationException at every call.
      */
-    public LocalSymbolTable getSymbolTable();
+    public SymbolTable getSymbolTable();
 
     /**
      * This inherited method is not supported by datagrams.

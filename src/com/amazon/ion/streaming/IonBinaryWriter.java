@@ -4,10 +4,9 @@
 
 package com.amazon.ion.streaming;
 
-import com.amazon.ion.TtTimestamp;
-
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.TtTimestamp;
 import com.amazon.ion.impl.BlockedBuffer;
 import com.amazon.ion.impl.IonBinary;
 import com.amazon.ion.impl.IonConstants;
@@ -966,8 +965,10 @@ int tmp;
 
         int symbol_table_length = 0;
         if (!_no_local_symbols
-         || (_symbol_table != null && _symbol_table.hasImports())
-        ) {
+            || (_symbol_table != null
+                && _symbol_table.isLocalTable()
+                && _symbol_table.getImportedTables().length != 0))
+        {
             symbol_table_length = lenSymbolTable();
         }
 
@@ -1016,7 +1017,9 @@ int tmp;
         total_written += IonConstants.BINARY_VERSION_MARKER_1_0.length;
 
         if (!_no_local_symbols
-         || (_symbol_table != null && _symbol_table.hasImports())
+            || (_symbol_table != null
+                && _symbol_table.isLocalTable()
+                && _symbol_table.getImportedTables().length != 0)
         ) {
             total_written += writeSymbolTable(iout);
         }

@@ -12,7 +12,7 @@ import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.LocalSymbolTable;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.TtTimestamp;
 import com.amazon.ion.impl.IonTokenReader;
 import java.io.IOException;
@@ -575,7 +575,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
     	IonDatagram dg = sys.getLoader().load(s);
     	IonValue v = dg.get(0);
     	IonValue v2 = ((IonStruct)v).get("offline_store_only");
-    	LocalSymbolTable sym = v.getSymbolTable();
+    	SymbolTable sym = v.getSymbolTable();
     	assert v2.getSymbolTable() == sym;
     	IonReader ir = system().newReader(s);
     	UnifiedSymbolTable u = new UnifiedSymbolTable(sym);

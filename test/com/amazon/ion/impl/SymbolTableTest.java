@@ -5,6 +5,7 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbolTable.ION_1_0;
+import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
 
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
@@ -18,7 +19,6 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonText;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.streaming.IonIterator;
@@ -38,9 +38,6 @@ import java.util.Iterator;
 public class SymbolTableTest
     extends IonTestCase
 {
-    public final int ION_1_0_MAX_ID =
-        system().getSystemSymbolTable(ION_1_0).getMaxId();
-
     // cas 25 apr 2008
 	public final String SymbolTablePrefix = SystemSymbolTable.ION_SYMBOL_TABLE + "::";
 
@@ -136,7 +133,8 @@ public class SymbolTableTest
             "}\n" +
             "null";
 
-        LocalSymbolTable symbolTable = oneValue(text).getSymbolTable();
+        SymbolTable symbolTable = oneValue(text).getSymbolTable();
+        checkLocalTable(symbolTable);
 
         assertEquals(2, symbolTable.size());
         checkSymbol("foo", 100, symbolTable);
@@ -168,8 +166,9 @@ public class SymbolTableTest
         IonValue value = scanner.next();
         checkSymbol("bar", 101, value);
 
-        LocalSymbolTable table1 = //scanner.getLocalSymbolTable();
+        SymbolTable table1 = //scanner.getLocalSymbolTable();
             value.getSymbolTable();
+        checkLocalTable(table1);
 
         value = scanner.next();
         checkSymbol("foo", 100, value);
@@ -177,8 +176,9 @@ public class SymbolTableTest
         value = scanner.next();
         checkSymbol("bar", 14, value);
 
-        LocalSymbolTable table2 = //scanner.getLocalSymbolTable();
+        SymbolTable table2 = //scanner.getLocalSymbolTable();
             value.getSymbolTable();
+        checkLocalTable(table2);
         assertNotSame(table1, table2);
         assertEquals(14, table2.getMaxId());
 
@@ -230,6 +230,7 @@ public class SymbolTableTest
         checkSymbol("bar", 101, value);
 
         SymbolTable table1 = value.getSymbolTable();
+        checkLocalTable(table1);
 //        if (scanner != null) {
 //            assertSame(table1, scanner.getLocalSymbolTable());
 //        }
@@ -256,6 +257,7 @@ public class SymbolTableTest
         checkSymbol("bar", value);
 
         SymbolTable table2 = value.getSymbolTable();
+        checkLocalTable(table2);
         assertNotSame(table1, table2);
 //        assertEquals(14, table2.getMaxId());  // We don't know the new sid
 
@@ -298,6 +300,7 @@ public class SymbolTableTest
     public void testStaticTable(Iterator<IonValue> values)
     {
         SymbolTable symbolTable = values.next().getSymbolTable();
+        checkLocalTable(symbolTable);
 
         // Nothing should be added to the local table.
         assertEquals(0, symbolTable.size());
@@ -373,8 +376,8 @@ public class SymbolTableTest
         Iterator<IonValue> scanner = system().iterate(importingText);
 
         IonValue value = scanner.next();
-        LocalSymbolTable symtab = value.getSymbolTable();
-        assertEquals(ION_1_0_MAX_ID, symtab.getSystemSymbolTable().getMaxId());
+        SymbolTable symtab = value.getSymbolTable();
+        checkLocalTable(symtab);
 
         checkSymbol("outer 25", 25, value);
 
@@ -407,9 +410,12 @@ public class SymbolTableTest
             "null";
         IonDatagram dg = loader().load(text);
 
-        LocalSymbolTable symbolTable = dg.get(0).getSymbolTable();
-        SymbolTable used = symbolTable.getImportedTable("imported");
-        assertSame(importedTable, used);
+        SymbolTable symbolTable = dg.get(0).getSymbolTable();
+        checkLocalTable(symbolTable);
+
+        SymbolTable[] imported = symbolTable.getImportedTables();
+        assertEquals(1, imported.length);
+        assertSame(importedTable, imported[0]);
 
         // Check that the encoded table has max_id on import
         byte[] binary = dg.toBytes();
@@ -454,8 +460,9 @@ public class SymbolTableTest
         checkSymbol("$" + import1id, import1id, dg.get(2));
         checkSymbol("$" + import2id, import2id, dg.get(3));
 
-        LocalSymbolTable st = dg.get(3).getSymbolTable();
-        assertNull(st.getImportedTable("imported"));
+        SymbolTable st = dg.get(3).getSymbolTable();
+        checkLocalTable(st);
+        assertNull(findImportedTable(st, "imported"));
 
         assertEquals(-1, st.findSymbol("imported 2"));
         assertEquals(-1, st.findSymbol("unknown"));
@@ -811,6 +818,7 @@ public class SymbolTableTest
     	String s_output = new String(output, "UTF-8");
     	System.out.println(s_output);
     }
+
 
     static byte[] openFileForBuffer(Object arg) {
         FileInputStream is = null;

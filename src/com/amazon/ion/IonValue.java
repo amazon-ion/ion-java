@@ -125,12 +125,13 @@ public interface IonValue
 
 
     /**
-     * Gets the symbol table used to encode this value.
+     * Gets the symbol table used to encode this value.  The result is always a
+     * local (not shared) symbol table.
      *
      * @return the symbol table, or <code>null</code> if this value is not
      * currently backed by binary-encoded data.
      */
-    public LocalSymbolTable getSymbolTable();
+    public SymbolTable getSymbolTable();
 
 
     /**

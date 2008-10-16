@@ -105,6 +105,10 @@ public class LocalSymbolTableImpl
         }
     }
 
+    public final boolean isLocalTable()
+    {
+        return true;
+    }
 
     // Not synchronized since member is final.
     public SymbolTable getSystemSymbolTable()
@@ -263,6 +267,20 @@ public class LocalSymbolTableImpl
         }
         return null;
     }
+
+    public SymbolTable[] getImportedTables()
+    {
+        if (_importedTables == null) return new SymbolTable[0];
+
+        SymbolTable[] symtabs = new SymbolTable[_importedTables.length];
+
+        for (int i = 0; i < _importedTables.length; i++)
+        {
+            symtabs[i] = _importedTables[i]._table;
+        }
+        return symtabs;
+    }
+
 
     public boolean isCompatible(SymbolTable other)
     {

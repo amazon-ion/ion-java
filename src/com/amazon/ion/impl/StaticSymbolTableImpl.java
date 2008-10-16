@@ -80,6 +80,10 @@ public class StaticSymbolTableImpl
     }
 
 
+    public boolean isLocalTable()
+    {
+        return false;
+    }
 
     @Override
     public boolean isSharedTable()
@@ -100,6 +104,20 @@ public class StaticSymbolTableImpl
     {
         return this._version;
     }
+
+
+    public SymbolTable[] getImportedTables()
+    {
+        return null;
+    }
+
+
+
+    public SymbolTable getSystemSymbolTable()
+    {
+        return null;  // FIXME this is incorrect WRT docs in SymbolTable
+    }
+
 
 
     public int findSymbol(String name)
@@ -134,6 +152,20 @@ public class StaticSymbolTableImpl
             return _byId.get(idObj);
         }
     }
+
+
+    public int addSymbol(String name)
+    {
+        String message = "Cannot call addSymbol on shared symbol table";
+        throw new UnsupportedOperationException(message);
+    }
+
+    public void defineSymbol(String name, int id)
+    {
+        String message = "Cannot call defineSymbol on shared symbol table";
+        throw new UnsupportedOperationException(message);
+    }
+
 
 
     public boolean isCompatible(SymbolTable other)

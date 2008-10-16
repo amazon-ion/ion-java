@@ -451,6 +451,45 @@ public abstract class IonTestCase
     }
 
 
+    public void checkLocalTable(SymbolTable symtab)
+    {
+        assertTrue(symtab.isLocalTable());
+        assertFalse(symtab.isSharedTable());
+        assertFalse(symtab.isSystemTable());
+        assertNotNull(symtab.getImportedTables());
+
+        SymbolTable system = symtab.getSystemSymbolTable();
+        checkSystemTable(system);
+    }
+
+    public void checkSystemTable(SymbolTable symtab)
+    {
+        assertFalse(symtab.isLocalTable());
+        assertTrue(symtab.isSharedTable());
+        assertTrue(symtab.isSystemTable());
+        assertEquals(SystemSymbolTable.ION_1_0_MAX_ID, symtab.getMaxId());
+    }
+
+    public SymbolTable findImportedTable(SymbolTable localTable,
+                                         String importName)
+    {
+        SymbolTable[] imports = localTable.getImportedTables();
+        if (imports == null) return null;
+
+        for (int i = 0; i < imports.length; i++)
+        {
+            SymbolTable current = imports[i];
+            // FIXME why does this allow null?
+            if (current != null && importName.equals(current.getName()))
+            {
+                return current;
+            }
+        }
+
+        return null;
+    }
+
+
     public void assertIonEquals(IonValue expected, final IonValue found)
     {
         assertSame("element classes", expected.getClass(), found.getClass());

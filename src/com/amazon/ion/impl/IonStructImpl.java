@@ -9,7 +9,7 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.LocalSymbolTable;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonBinary.Reader;
 import java.io.IOException;
@@ -349,7 +349,7 @@ public final class IonStructImpl
     protected void doMaterializeValue(Reader reader) throws IOException
     {
         IonValueImpl            child;
-        LocalSymbolTable        symtab = this.getSymbolTable();
+        SymbolTable             symtab = this.getSymbolTable();
         IonBinary.BufferManager buffer = this._buffer;
 
         int pos = this.pos_getOffsetAtActualValue();

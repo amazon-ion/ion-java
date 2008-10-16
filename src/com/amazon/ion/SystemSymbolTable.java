@@ -24,6 +24,9 @@ public interface SystemSymbolTable
         SystemSymbolTable.ION_EMBEDDED_VALUE
     };
 
+    public static final int ION_1_0_MAX_ID = 9;
+
+
     /**
      * The symbol name prefix reserved for use by Ion implementations.
      */

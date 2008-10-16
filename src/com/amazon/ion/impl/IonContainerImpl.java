@@ -12,6 +12,7 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.NullValueException;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.IonBinary.Reader;
 import com.amazon.ion.impl.IonBinary.Writer;
 import java.io.IOException;
@@ -293,7 +294,7 @@ abstract public class IonContainerImpl
         assert this.pos_getType() != IonConstants.tidStruct;
 
         IonBinary.BufferManager buffer = this._buffer;
-        LocalSymbolTable symtab = this.getSymbolTable();
+        SymbolTable symtab = this.getSymbolTable();
         int end = this.pos_getOffsetofNextValue();
         int pos = reader.position();
 
@@ -365,7 +366,7 @@ abstract public class IonContainerImpl
 
 
     @Override
-    public void updateSymbolTable(LocalSymbolTable symtab)
+    public void updateSymbolTable(SymbolTable symtab)
     {
         // the "super" copy of this method will check the lock
         super.updateSymbolTable(symtab);

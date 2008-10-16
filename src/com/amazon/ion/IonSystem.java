@@ -69,16 +69,18 @@ public interface IonSystem
      * Creates a new local symbol table using the default system symbol table.
      * @return not <code>null</code>.
      */
-    public LocalSymbolTable newLocalSymbolTable();
+    public SymbolTable newLocalSymbolTable();
 
 
     /**
      * Creates a new local symbol table based on a specific system table.
      *
-     * @param systemSymbols must not be null.
+     * @param systemSymbols must not be null and must have
+     * {@link SymbolTable#isSystemTable()} true.
+     *
      * @return a new symbol table.
      */
-    public LocalSymbolTable newLocalSymbolTable(SymbolTable systemSymbols);
+    public SymbolTable newLocalSymbolTable(SymbolTable systemSymbols);
 
 
     /**

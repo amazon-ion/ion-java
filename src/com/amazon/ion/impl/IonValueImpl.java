@@ -10,8 +10,8 @@ import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.NullValueException;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.Reader;
@@ -150,7 +150,7 @@ public abstract class IonValueImpl
      * symbol table, if one exists for this value.  This may be
      * stored in at a parent container.
      */
-    protected LocalSymbolTable _symboltable;
+    protected SymbolTable _symboltable;
 
     /**
      * The instance maintains a reference back to the system that
@@ -211,14 +211,18 @@ public abstract class IonValueImpl
         _annotations = a; // and we don't care if it's null or not
     }
 
+    /**
+     *
+     * @param symboltable must be local, not shared, not null.
+     */
     protected void init(int fieldSID
                        ,BufferManager buffer
                        ,int offset
                        ,IonContainerImpl container
-                       ,LocalSymbolTable symboltable
+                       ,SymbolTable symboltable
                        )
     {
-// cas symtab:        assert symboltable != null;
+        assert symboltable.isLocalTable();
 
         _fieldSid    = fieldSID;
         _buffer      = buffer;
@@ -234,7 +238,6 @@ public abstract class IonValueImpl
         catch (IOException e) {
             throw new IonException(e);
         }
-
     }
 
     protected void makeReady()
@@ -253,13 +256,14 @@ public abstract class IonValueImpl
     }
 
     /**
+     * @param symboltable must be local, not shared.
      * @return not null.
      */
     public static IonValueImpl makeValueFromBuffer(
                                      int fieldSID
                                     ,int position
                                     ,BufferManager buffer
-                                    ,LocalSymbolTable symboltable
+                                    ,SymbolTable symboltable
                                     ,IonContainerImpl container
     ) {
         IonValueImpl value;
@@ -284,12 +288,14 @@ public abstract class IonValueImpl
     }
 
     /**
+     * @param symboltable must be local, not shared.
+     *
      * @return not null.
      */
     public static IonValueImpl makeValueFromReader(int fieldSID,
                                                    IonBinary.Reader reader,
                                                    BufferManager buffer,
-                                                   LocalSymbolTable symboltable,
+                                                   SymbolTable symboltable,
                                                    IonContainerImpl container)
         throws IOException
     {
@@ -419,7 +425,7 @@ public abstract class IonValueImpl
     {
         if (this._fieldSid == 0 && this._fieldName != null)
         {
-            LocalSymbolTable symtab = getSymbolTable();
+            SymbolTable symtab = getSymbolTable();
             if (symtab == null) {
                 // TODO - or we could throw here
                 symtab = materializeSymbolTable();
@@ -504,7 +510,7 @@ public abstract class IonValueImpl
     // Not really: overridden for struct, which really needs to have a
     // symbol table.  Everyone needs to have a symbol table since they
     // may have fieldnames or annotations (or this may be a symbol value)
-    public LocalSymbolTable getSymbolTable() {
+    public SymbolTable getSymbolTable() {
         if (this._symboltable != null)  return this._symboltable;
         if (this._container != null)    return this._container.getSymbolTable();
 
@@ -518,7 +524,14 @@ public abstract class IonValueImpl
         return this._symboltable;
     }
 
-    public void setSymbolTable(LocalSymbolTable symtab) {
+    /**
+     *
+     * @param symtab must be local or null.
+     */
+    public void setSymbolTable(SymbolTable symtab) {
+        if (symtab != null && symtab.isSharedTable()) {
+            throw new IllegalArgumentException("symbol table must be local");
+        }
         checkForLock();
         // FIXME: should this use getSymbolTable instead of _symboltable
         // since our symtab may be held by our container?
@@ -922,9 +935,9 @@ public abstract class IonValueImpl
         this._isMaterialized = true;
     }
 
-    protected LocalSymbolTable materializeSymbolTable()
+    protected SymbolTable materializeSymbolTable()
     {
-        LocalSymbolTable symtab = _symboltable;
+        SymbolTable symtab = _symboltable;
         if (symtab == null && _container != null) {
             symtab = _container.materializeSymbolTable();
         }
@@ -966,7 +979,7 @@ public abstract class IonValueImpl
         // and convert them to strings
         int len = sids.length;
         this._annotations = new String[len];
-        LocalSymbolTable symtab = getSymbolTable();
+        SymbolTable symtab = getSymbolTable();
         assert symtab != null || len < 1 ;
         for (int ii=0; ii<len; ii++) {
             int id = sids[ii];
@@ -1108,7 +1121,7 @@ public abstract class IonValueImpl
         int len = 0;
         assert (this._annotations != null);
 
-        LocalSymbolTable symtab =  this.getSymbolTable();
+        SymbolTable symtab =  this.getSymbolTable();
         if (symtab == null) {
             symtab = this.materializeSymbolTable();
 // cas symtab:            // TODO:  what should we do here?  Perhaps create a default table?
@@ -1320,7 +1333,7 @@ public abstract class IonValueImpl
     /**
      * Adds all of our annotations into the symbol table.
      */
-    public void updateSymbolTable(LocalSymbolTable symtab)
+    public void updateSymbolTable(SymbolTable symtab)
     {
         checkForLock();
 

@@ -25,7 +25,6 @@ import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.UnsupportedSystemVersionException;
@@ -107,13 +106,13 @@ public class IonSystemImpl
     }
 
 
-    public LocalSymbolTable newLocalSymbolTable()
+    public SymbolTable newLocalSymbolTable()
     {
         return new LocalSymbolTableImpl(mySystemSymbols);
     }
 
 
-    public LocalSymbolTable newLocalSymbolTable(SymbolTable systemSymbols)
+    public SymbolTable newLocalSymbolTable(SymbolTable systemSymbols)
     {
         if (! systemSymbols.isSystemTable())
         {
@@ -405,12 +404,12 @@ public class IonSystemImpl
         return false;
     }
 
-    public final LocalSymbolTable handleLocalSymbolTable(IonCatalog catalog,
-                                                         IonValue value)
+    public final SymbolTable handleLocalSymbolTable(IonCatalog catalog,
+                                                    IonValue value)
     {
         // This assumes that we only are handling 1_0
 
-        LocalSymbolTable symtab = null;
+        SymbolTable symtab = null;
 
         if (value instanceof IonStruct)
         {
