@@ -9,7 +9,6 @@ import com.amazon.ion.IonList;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonSystem;
-import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.impl.IonBinary;
@@ -34,8 +33,7 @@ import java.util.HashMap;
  *
  */
 public final class UnifiedSymbolTable
-    implements SymbolTable, LocalSymbolTable//,
-    //SystemSymbolTable
+    implements SymbolTable
 {
 
     public final int UNKNOWN_SID = 0;

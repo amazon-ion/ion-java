@@ -171,6 +171,7 @@ public interface IonLoader
      * The specified reader remains open after this method returns.
      *
      * @param ionText the reader from which to read Ion text.
+     * @param symbolTable must be local, not shared or null.
      *
      * @return a datagram containing all the values on the input stream.
      *
@@ -179,6 +180,28 @@ public interface IonLoader
      * @throws IOException if reading from the specified input stream results
      * in an <code>IOException</code>.
      */
+    public IonDatagram load(Reader ionText, SymbolTable symbolTable)
+        throws IonException, IOException;
+
+
+    /**
+     * Loads an entire stream of Ion text data into a single datagram,
+     * starting with a given symbolTable for encoding symbols.
+     * <p/>
+     * The specified reader remains open after this method returns.
+     *
+     * @param ionText the reader from which to read Ion text.
+     *
+     * @return a datagram containing all the values on the input stream.
+     *
+     * @throws NullPointerException if either parameter is null.
+     * @throws IonException if there's a syntax error in the Ion content.
+     * @throws IOException if reading from the specified input stream results
+     * in an <code>IOException</code>.
+     *
+     * @deprecated Use {@link #load(Reader,SymbolTable)}.
+     */
+    @Deprecated
     public IonDatagram load(Reader ionText, LocalSymbolTable symbolTable)
         throws IonException, IOException;
 
@@ -198,7 +221,7 @@ public interface IonLoader
      * @throws IOException if reading from the specified input stream results
      * in an <code>IOException</code>.
      *
-     * @deprecated Use {@link #load(Reader,LocalSymbolTable)}.
+     * @deprecated Use {@link #load(Reader,SymbolTable)}.
      */
     @Deprecated
     public IonDatagram loadText(Reader ionText, LocalSymbolTable symbolTable)

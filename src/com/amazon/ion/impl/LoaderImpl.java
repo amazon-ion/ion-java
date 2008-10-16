@@ -7,6 +7,7 @@ package com.amazon.ion.impl;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.LocalSymbolTable;
+import com.amazon.ion.SymbolTable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -126,6 +127,14 @@ public class LoaderImpl
     }
 
 
+    public IonDatagramImpl load(Reader ionText, SymbolTable symbolTable)
+        throws IonException, IOException
+    {
+        return new IonDatagramImpl(mySystem, symbolTable, ionText);
+    }
+
+
+    @Deprecated
     public IonDatagramImpl load(Reader ionText,
                                 LocalSymbolTable symbolTable)
         throws IonException, IOException
@@ -139,7 +148,7 @@ public class LoaderImpl
                                     LocalSymbolTable symbolTable)
         throws IonException, IOException
     {
-        return load(ionText, symbolTable);
+        return new IonDatagramImpl(mySystem, symbolTable, ionText);
     }
 
 

@@ -10,7 +10,6 @@ import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.IonBinary.Reader;
@@ -475,24 +474,6 @@ abstract public class IonContainerImpl
         return len;
     }
 
-    /**
-     * TODO clarify behavior on null.
-     */
-    protected IonValueImpl getFirstChild(LocalSymbolTable symtab)
-    {
-        assert !isDirty();
-
-        makeReady();
-
-        assert this._isMaterialized == true || this._hasNativeValue == true;
-
-        if (this.isNullValue() || this._contents.size() < 1) {
-            return null;
-        }
-
-        IonValueImpl first = (IonValueImpl) this._contents.get(0);
-        return first;
-    }
 
     public IonValue get(int index)
         throws NullValueException
