@@ -509,6 +509,14 @@ public class StructTest
             fail("Expected NullPointerException");
         }
         catch (NullPointerException e) { }
+
+        // TODO clarify null.struct behavior
+//        s = system().newNullStruct();
+//        try {
+//            s.removeAll((String[]) null);
+//            fail("Expected NullPointerException");
+//        }
+//        catch (NullPointerException e) { }
     }
 
     public void testRetainAll()
@@ -633,10 +641,10 @@ public class StructTest
         assertNull("field name shouldn't be cloned", clone.getFieldName());
         assertTrue(clone.getFieldId() < 1);
     }
-    
+
     public void testSample() throws Exception
     {
-    	String sample = 
+    	String sample =
     		"categories::{"+
     		"  name:'''category_map''',"+
     		"  matching_view_id:1,"+
@@ -677,8 +685,8 @@ public class StructTest
     		"}";
     	IonDatagram dg1 = system().getLoader().load(sample);
     	IonValue dg2 = dg1.clone();
-    	
+
     	System.out.println(dg2.toString());
-    	
+
     }
 }

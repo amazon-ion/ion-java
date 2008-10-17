@@ -2,9 +2,8 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.TtTimestamp;
-
 import com.amazon.ion.IonException;
+import com.amazon.ion.TtTimestamp;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.impl.IonConstants.HighNibble;
 import com.amazon.ion.util.Text;
@@ -227,6 +226,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
                     d.setTime(origTime - offsetMillis);
                 }
 
+                // FIXME we've lost fractional milliseconds!
                 return new TtTimestamp(d.getTime(), localOffset);
             }
 

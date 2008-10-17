@@ -46,7 +46,7 @@ public interface IonInt
      * @return the <code>BigInteger</code> value,
      * or <code>null</code> if this is <code>null.int</code>.
      *
-     * @deprecated Use {@link bigIntegerValue}.
+     * @deprecated Use {@link #bigIntegerValue}.
      */
     @Deprecated
     public BigInteger toBigInteger();
