@@ -578,7 +578,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
     	SymbolTable sym = v.getSymbolTable();
     	assert v2.getSymbolTable() == sym;
     	IonReader ir = system().newReader(s);
-    	UnifiedSymbolTable u = new UnifiedSymbolTable(sym);
+    	UnifiedSymbolTable u = UnifiedSymbolTable.copyFrom(sym);
     	u.setName("items");
     	u.setVersion(1);
     	u.lock();

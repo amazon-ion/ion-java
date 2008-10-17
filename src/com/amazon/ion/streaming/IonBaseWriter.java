@@ -21,6 +21,10 @@ public abstract class IonBaseWriter
 static final boolean _debug_on = false;
 
     UnifiedSymbolTable  _external_symbol_table;
+
+    /**
+     * FIXME when can this be null?  When can it be changed?
+     */
     SymbolTable         _symbol_table;
     boolean             _no_local_symbols = true;
 
@@ -53,21 +57,21 @@ static final boolean _debug_on = false;
     public void importSharedSymbolTable(UnifiedSymbolTable sharedSymbolTable) {
         if (_symbol_table == null) {
             UnifiedSymbolTable symbol_table =
-                new UnifiedSymbolTable(sharedSymbolTable.getSystemSymbolTable());
+                new UnifiedSymbolTable((UnifiedSymbolTable)sharedSymbolTable.getSystemSymbolTable());
             _symbol_table = symbol_table;
         }
         ((UnifiedSymbolTable)_symbol_table).addImportedTable(sharedSymbolTable, 0);
     }
 
     String getSymbolTableName() {
-        if (_symbol_table instanceof UnifiedSymbolTable) {
-            return ((UnifiedSymbolTable)_symbol_table).getName();
+        if (_symbol_table != null) {
+            return _symbol_table.getName();
         }
         return null;
     }
     int getSymbolTableVersion() {
-        if (_symbol_table instanceof UnifiedSymbolTable) {
-            return ((UnifiedSymbolTable)_symbol_table).getVersion();
+        if (_symbol_table != null) {
+            return _symbol_table.getVersion();
         }
         return 0;
     }
@@ -124,8 +128,8 @@ static final boolean _debug_on = false;
     }
     */
     int getSymbolTableMaxId() {
-        if (_symbol_table instanceof UnifiedSymbolTable) {
-            return ((UnifiedSymbolTable)_symbol_table).getMaxId();
+        if (_symbol_table != null) {
+            return _symbol_table.getMaxId();
         }
         return 0;
     }
@@ -268,7 +272,7 @@ static final boolean _debug_on = false;
         SymbolTable symtab = getSymbolTable();
         if (symtab == null) {
             UnifiedSymbolTable temp = new UnifiedSymbolTable(UnifiedSymbolTable.getSystemSymbolTableInstance());
-            setSymbolTable(temp);
+            setSymbolTable(temp);  // TODO why is this get-then-set needed?
             symtab = getSymbolTable();
         }
 
@@ -284,7 +288,7 @@ static final boolean _debug_on = false;
                 }
             }
             else {
-                UnifiedSymbolTable localtable = new UnifiedSymbolTable(symtab);
+                UnifiedSymbolTable localtable = UnifiedSymbolTable.copyFrom(symtab);
                 this.setSymbolTable(localtable);
                 utab = localtable;
             }

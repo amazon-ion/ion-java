@@ -59,6 +59,11 @@ public interface IonWriter
      * returns the symbol table that is currently in use by the writer.
      * At the end of writing a number of values this table will be
      * populated with any added symbols.
+     * <p>
+     * Note that the table may be replaced during processing.  For example,
+     * the stream may start out with a system table that's later replaced by a
+     * local table in order to store newly-encountered symbols.
+     *
      * @return current symbol table
      */
     public abstract SymbolTable getSymbolTable();

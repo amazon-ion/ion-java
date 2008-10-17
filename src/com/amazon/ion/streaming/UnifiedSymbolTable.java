@@ -36,7 +36,7 @@ public final class UnifiedSymbolTable
     implements SymbolTable
 {
 
-    public final int UNKNOWN_SID = 0;
+    public final int UNKNOWN_SID = -1;
     /**
      * The system symbol <tt>'$ion'</tt>, as defined by Ion 1.0.
      */
@@ -187,7 +187,7 @@ public final class UnifiedSymbolTable
     }
 
     // TODO this should be removed during integration !!
-    UnifiedSymbolTable(SymbolTable symboltable) {
+    private UnifiedSymbolTable(SymbolTable symboltable, boolean dummy) {
         this(getSystemSymbolTableInstance());
 
         String name = symboltable.getName();
@@ -206,6 +206,18 @@ public final class UnifiedSymbolTable
             if (symbolText == null) continue;
             this.defineSymbol(symbolText, ii);
         }
+    }
+
+
+    /**
+     * Avoids a scary and bug-prone overload of constructor on
+     * UnifiedSymbolTable versus SymbolTable.
+     * @deprecated TODO remove after integrating symtab implementations
+     */
+    @Deprecated
+    public static UnifiedSymbolTable copyFrom(SymbolTable symbolTable)
+    {
+        return new UnifiedSymbolTable(symbolTable, true);
     }
 
     public static UnifiedSymbolTable getSystemSymbolTableInstance()
@@ -266,6 +278,7 @@ public final class UnifiedSymbolTable
     }
     public void setMaxId(int maxId)
     {
+        // TODO when can maxId==0 ?
         if (maxId < 0) {
             throw new IllegalArgumentException("symbol id's are greater than 0, and maxId must be at least 0");
         }
@@ -335,11 +348,11 @@ public final class UnifiedSymbolTable
         if (name == null || name.length() < 1) {
             throw new IllegalArgumentException("a symbol name must have something in it");
         }
-        int sid = 0;
+        int sid = IonSymbol.UNKNOWN_SYMBOL_ID;
         if (_system_symbols != null && _system_symbols != this) {
             sid = _system_symbols.findSymbol(name);
         }
-        if (sid == 0) {
+        if (sid == IonSymbol.UNKNOWN_SYMBOL_ID) {
             Integer isid = _id_map.get(name);
             if (isid != null) {
                 sid = isid;
@@ -566,7 +579,7 @@ public final class UnifiedSymbolTable
         }
         return maxsid;
     }
-    public UnifiedSymbolTable getSystemSymbolTable()
+    public SymbolTable getSystemSymbolTable()
     {
         return _system_symbols;
     }

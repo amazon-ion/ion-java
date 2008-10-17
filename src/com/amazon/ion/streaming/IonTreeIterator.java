@@ -188,7 +188,7 @@ public final class IonTreeIterator
             utable = (UnifiedSymbolTable)symboltable;
         }
         else {
-            utable = new UnifiedSymbolTable(symboltable);
+            utable = UnifiedSymbolTable.copyFrom(symboltable);
         }
 
         return utable;

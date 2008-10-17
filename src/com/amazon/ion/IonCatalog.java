@@ -38,8 +38,7 @@ public interface IonCatalog
      * behavior of this method if this catalog already contains a table with
      * the same name and version.
      *
-     * @param sharedTable must have {@link SymbolTable#isSharedTable()}
-     * return {@code true}.
+     * @param sharedTable must be shared but not a system table.
      */
     public void putTable(SymbolTable sharedTable);
 }

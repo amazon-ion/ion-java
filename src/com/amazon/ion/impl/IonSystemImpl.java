@@ -32,6 +32,7 @@ import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.streaming.IonBinaryIterator;
 import com.amazon.ion.streaming.IonTextIterator;
 import com.amazon.ion.streaming.IonTreeIterator;
+import com.amazon.ion.streaming.UnifiedSymbolTable;
 import com.amazon.ion.system.SimpleCatalog;
 import com.amazon.ion.util.Printer;
 import java.io.ByteArrayInputStream;
@@ -54,7 +55,10 @@ import java.util.List;
 public class IonSystemImpl
     implements IonSystem
 {
-    private SymbolTable mySystemSymbols = new SystemSymbolTableImpl();
+    private final SymbolTable mySystemSymbols =
+        UnifiedSymbolTable.getSystemSymbolTableInstance();
+
+    @Deprecated
     private LocalSymbolTableImpl  mySystemSymbolsAsLocal = new LocalSymbolTableImpl(mySystemSymbols);
     private IonCatalog myCatalog;
     private IonLoader  myLoader = new LoaderImpl(this);
@@ -76,6 +80,7 @@ public class IonSystemImpl
         return mySystemSymbols;
     }
 
+    @Deprecated
     public LocalSymbolTableImpl getSystemSymbolTableAsLocal()
     {
         return mySystemSymbolsAsLocal;

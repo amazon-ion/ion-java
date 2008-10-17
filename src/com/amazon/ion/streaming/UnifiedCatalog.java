@@ -144,10 +144,17 @@ public class UnifiedCatalog
 
     public void putTable(SymbolTable table)
     {
+        if (table.isLocalTable()) {
+            throw new IllegalArgumentException("Cannot put local table into catalog");
+        }
+        if (table.isSystemTable()) {
+            throw new IllegalArgumentException("Cannot put system table into catalog");
+        }
+
         UnifiedSymbolTable utable;
         if (!(table instanceof UnifiedSymbolTable)) {
             // the hard way
-            utable = new UnifiedSymbolTable(table);
+            utable = UnifiedSymbolTable.copyFrom(table);
             utable.lock();
         }
         else {
