@@ -75,12 +75,12 @@ public class RoundTripTests
 	            myPrinter.print(value, myBuilder);
 	            myBuilder.append('\n');
 	        }
-	
+
 	        String text = myBuilder.toString();
 	        myBuilder.setLength(0);
 	        return text;
 	    }
-	
+
         private byte[] encode(IonDatagram datagram)
         {
             return datagram.toBytes();
@@ -101,9 +101,10 @@ public class RoundTripTests
 
             // Reload the first-trip text
             IonLoader loader = system().newLoader();
+            IonDatagram dgFromText;
             try
             {
-                values = loader.load(text1);
+                dgFromText = loader.load(text1);
             }
             catch (Exception e)
             {
@@ -113,17 +114,17 @@ public class RoundTripTests
                 throw new IonException(message, e);
             }
 
-            String text2FromText   = renderUserView(values);
-            byte[] binary2FromText = encode(values);
+            String text2FromText   = renderUserView(dgFromText);
+            byte[] binary2FromText = encode(dgFromText);
             checkBinaryHeader(binary2FromText);
 
 
             // Reload the first-trip binary
 
-            values = loader.load(binary1);
+            IonDatagram dgFromBinary = loader.load(binary1);
 
-            String text2FromBinary   = renderUserView(values);
-            byte[] binary2FromBinary = encode(values);
+            String text2FromBinary   = renderUserView(dgFromBinary);
+            byte[] binary2FromBinary = encode(dgFromBinary);
             checkBinaryHeader(binary2FromBinary);
             assertEquals(binary1.length, binary2FromBinary.length);
 
@@ -148,7 +149,7 @@ public class RoundTripTests
     static boolean compareRenderedTextImages(String s1, String s2) {
     	assert (s1 != null);
     	assert (s2 != null);
-    	
+
     	if (s1 == s2) return true;
     	if (s1.equals(s2)) return true;
 
