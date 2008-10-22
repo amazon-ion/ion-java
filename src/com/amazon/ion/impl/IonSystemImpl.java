@@ -55,11 +55,9 @@ import java.util.List;
 public class IonSystemImpl
     implements IonSystem
 {
-    private final SymbolTable mySystemSymbols =
+    private final UnifiedSymbolTable mySystemSymbols =
         UnifiedSymbolTable.getSystemSymbolTableInstance();
 
-    @Deprecated
-    private LocalSymbolTableImpl  mySystemSymbolsAsLocal = new LocalSymbolTableImpl(mySystemSymbols);
     private IonCatalog myCatalog;
     private IonLoader  myLoader = new LoaderImpl(this);
 
@@ -80,11 +78,6 @@ public class IonSystemImpl
         return mySystemSymbols;
     }
 
-    @Deprecated
-    public LocalSymbolTableImpl getSystemSymbolTableAsLocal()
-    {
-        return mySystemSymbolsAsLocal;
-    }
 
     public SymbolTable getSystemSymbolTable(String systemId)
         throws UnsupportedSystemVersionException
@@ -113,7 +106,9 @@ public class IonSystemImpl
 
     public SymbolTable newLocalSymbolTable()
     {
-        return new LocalSymbolTableImpl(mySystemSymbols);
+        UnifiedSymbolTable st = new UnifiedSymbolTable(mySystemSymbols);
+        st.setSystem(this);
+        return st;
     }
 
 
@@ -125,7 +120,10 @@ public class IonSystemImpl
             throw new IllegalArgumentException(message);
         }
 
-        return new LocalSymbolTableImpl(systemSymbols);
+        UnifiedSymbolTable st =
+            new UnifiedSymbolTable((UnifiedSymbolTable) systemSymbols);
+        st.setSystem(this);
+        return st;
     }
 
 
@@ -432,7 +430,9 @@ public class IonSystemImpl
             if (symtab == null
             || symtab.getMaxId() != mySystemSymbols.getMaxId()
             ) {
-                symtab = new LocalSymbolTableImpl( mySystemSymbols );
+                // TODO Should $ion_1_0 really have a local symtab?
+                String systemId = ((IonSymbol)value).stringValue();
+                symtab = newLocalSymbolTable(getSystemSymbolTable(systemId));
                 ((IonValueImpl)value).setSymbolTable(symtab);
             }
         }

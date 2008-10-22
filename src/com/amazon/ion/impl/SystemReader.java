@@ -129,7 +129,7 @@ public class SystemReader
     static SymbolTable getSystemSymbolTableAsLocal(IonSystemImpl system) {
     	SymbolTable lst;
 
-    	lst = new LocalSymbolTableImpl(system.getSystemSymbolTable());
+    	lst = system.newLocalSymbolTable();
 
     	return lst;
     }

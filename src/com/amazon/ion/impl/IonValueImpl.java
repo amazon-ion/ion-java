@@ -9,6 +9,7 @@ import static com.amazon.ion.util.Equivalence.ionEquals;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
+import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
@@ -176,6 +177,12 @@ public abstract class IonValueImpl
         _hasNativeValue     = false;
         _isDirty            = true;
         pos_setTypeDescriptorByte(typedesc);
+    }
+
+
+    public IonSystem getSystem()
+    {
+        return _system;
     }
 
     /**

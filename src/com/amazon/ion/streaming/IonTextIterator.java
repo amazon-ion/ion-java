@@ -4,8 +4,6 @@
 
 package com.amazon.ion.streaming;
 
-import com.amazon.ion.TtTimestamp;
-
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonDecimal;
@@ -19,6 +17,7 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.TtTimestamp;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.impl.IonConstants;
 import com.amazon.ion.impl.Base64Encoder.BinaryStream;
@@ -525,98 +524,13 @@ public final class IonTextIterator
     UnifiedSymbolTable loadSymbolTable() {
         UnifiedSymbolTable temp = _current_symtab;
         _current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
-        UnifiedSymbolTable table = new UnifiedSymbolTable(_current_symtab);
-
         this.stepInto();
-
-        while(this.hasNext()) {
-            next();
-            switch (this.getFieldId()) {
-            case UnifiedSymbolTable.VERSION_SID:
-                table.setVersion(this.intValue());
-                break;
-            case UnifiedSymbolTable.MAX_ID_SID:
-                table.setMaxId(this.intValue());
-                break;
-            case UnifiedSymbolTable.NAME_SID:
-                table.setName(this.stringValue());
-                break;
-            case UnifiedSymbolTable.SYMBOLS_SID:
-                switch (this.getType()) {
-                case STRUCT:
-                    loadSymbolStruct(table);
-                    break;
-                case LIST:
-                    loadSymbolList(table);
-                    break;
-                default:
-                    throw new IonException("symbols member of a symbol table must be a list or a struct, not a "+getType());
-                }
-                break;
-            case UnifiedSymbolTable.IMPORTS_SID:
-                loadImportList(table);
-                break;
-            default:
-                break;
-            }
-        }
+        UnifiedSymbolTable table =
+            new UnifiedSymbolTable(_current_symtab, this, _catalog);
         this.stepOut();
-
         _current_symtab = temp;
         return table;
     }
-    void loadSymbolStruct(UnifiedSymbolTable table) {
-        this.stepInto();
-        while (this.hasNext()) {
-            if (next() == IonType.STRING) {
-                int sid = this.getFieldId();
-                table.defineSymbol(this.stringValue(), sid);
-            }
-        }
-        this.stepOut();
-    }
-    void loadSymbolList(UnifiedSymbolTable table) {
-        this.stepInto();
-        while (this.hasNext()) {
-            if (next() == IonType.STRING) {
-                int sid = table.getMaxId() + 1;
-                table.defineSymbol(this.stringValue(), sid);
-            }
-        }
-        this.stepOut();
-    }
-    void loadImportList(UnifiedSymbolTable table) {
-        int maxid = -1;
-        int version = -1;
-        String name = null;
-
-        this.stepInto();
-        while (this.hasNext()) {
-            next();
-            switch (this.getFieldId()) {
-            case UnifiedSymbolTable.MAX_ID_SID:
-                maxid = this.intValue();
-                break;
-            case UnifiedSymbolTable.NAME_SID:
-                name = this.stringValue();
-                break;
-            case UnifiedSymbolTable.VERSION_SID:
-                version = this.intValue();
-                break;
-            default:
-                break;
-            }
-        }
-        this.stepOut();
-
-        if (name != null && version > 0) {
-            UnifiedSymbolTable imported = _catalog.getTable(name, version);
-            if (imported != null) {
-                table.addImportedTable(imported, maxid);
-            }
-        }
-    }
-
 
     @Override
     public int getTypeId()

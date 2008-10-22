@@ -523,9 +523,6 @@ public final class IonBinaryIterator
     {
         boolean is_symbol_table = false;
 
-        // FIXME logic is incorrect, its local only when there's no name field
-        boolean is_local_table = (annotationid == SystemSymbolTable.ION_SYMBOL_TABLE_SID); // cas 25 apr 2008: was ION_1-0
-
         _reader.position(contents_start);
 
         int td = _reader.read();
@@ -549,70 +546,15 @@ public final class IonBinaryIterator
             // TODO: this should get it's system symbol table somewhere else
             // like passed in from the user or deduced from the version stamp
             UnifiedSymbolTable systemSymbols = UnifiedSymbolTable.getSystemSymbolTableInstance();
-            UnifiedSymbolTable local = new UnifiedSymbolTable(systemSymbols);
-            int field_sid = -1;
-            while (hasNext()) {
-                next();
-                field_sid = getFieldId();
-                switch (field_sid) {
-                case SystemSymbolTable.MAX_ID_SID:
-                    local.setMaxId(intValue());
-                    break;
-                case SystemSymbolTable.NAME_SID:
-                    if (!is_local_table) {
-                        local.setName(stringValue());
-                    }
-                    // TODO should we throw here if it's local table is true?
-                    break;
-                case SystemSymbolTable.IMPORTS_SID:
-                	// get the import table name, version, maxid and add it to the imports
-                	loadSymbolTableImportList(local);
-                    break;
-                case SystemSymbolTable.SYMBOLS_SID:
-                    boolean manual_sid;
-                    switch (this.getType()) {
-                    case STRUCT:
-                        manual_sid = true;
-                        break;
-                    case LIST:
-                        manual_sid = false;
-                        break;
-                    default:
-                        throw new IonException("the symbols member of a symbol table must be a list or a struct value, not a "+getType());
-                    }
-                    stepInto();
-                    while (hasNext()) {
-                        if (next() != IonType.STRING) {
-                            continue; // we could error here, but open content says don't bother
-                        }
-                        int sid;
-                        if (manual_sid) {
-                            sid = getFieldId();
-                        }
-                        else {
-                            sid = local.getMaxId() + 1;
-                        }
-                        String symbol = stringValue();
-                        local.defineSymbol(symbol, sid);
-                    }
-                    stepOut();
-                    break;
-                case SystemSymbolTable.VERSION_SID:
-                    if (!is_local_table) {
-                        local.setVersion(intValue());
-                    }
-                    // TODO should we throw here if it's local table is true?
-                    break;
-                default:
-                    break;
-                }
-            }
+            UnifiedSymbolTable local =
+                new UnifiedSymbolTable(systemSymbols, this, _catalog);
+
             _eof = false; // the hasNext() on the last field in the symbol table sets this
 
             // we've read it, it must be a symbol table
             is_symbol_table = true;
 
-            if (is_local_table) {
+            if (local.isLocalTable()) {
                 this._current_symtab = local;
             }
             else {
@@ -627,73 +569,6 @@ public final class IonBinaryIterator
             }
         }
         return is_symbol_table;
-    }
-
-    void loadSymbolTableImportList(UnifiedSymbolTable local) {
-    	assert (this.getFieldId() == SystemSymbolTable.IMPORTS_SID);
-    	assert (this.getType().equals(IonType.LIST));
-
-    	this.stepInto();
-    	while (this.hasNext()) {
-    		IonType t = this.next();
-    		if (IonType.STRUCT.equals(t)) {
-    			loadSymbolTableImport(local);
-    		}
-    	}
-    	this.stepOut();
-    }
-
-    void loadSymbolTableImport(UnifiedSymbolTable local)
-    {
-    	// assert (this.getFieldId() == SystemSymbolTable.IMPORTS_SID);
-    	assert (this.getType().equals(IonType.STRUCT));
-
-    	String name = null;
-    	int    version = -1;
-    	int    maxid = -1;
-
-    	this.stepInto();
-    	while (this.hasNext()) {
-    		IonType t = this.next();
-    		switch(this.getFieldId()) {
-    		case UnifiedSymbolTable.NAME_SID:
-    			if (IonType.STRING.equals(t) || IonType.SYMBOL.equals(t)) {
-    				name = this.stringValue();
-    			}
-    			else throw new IonException("Symbol Table Import Name is not a string, it's a "+t.toString());
-    			break;
-    		case UnifiedSymbolTable.VERSION_SID:
-    			if (IonType.INT.equals(t)) {
-    				version = this.intValue();
-    			}
-    			else throw new IonException("Symbol Table Import Version is not an int, it's a "+t.toString());
-    			break;
-    		case UnifiedSymbolTable.MAX_ID_SID:
-    			if (IonType.INT.equals(t)) {
-    				maxid = this.intValue();
-    			}
-    			else throw new IonException("Symbol Table Import Max ID is not an int, it's a "+t.toString());
-    			break;
-    		default:
-    			// we just ignore anything else as "open content"
-    			break;
-    		}
-    	}
-    	UnifiedSymbolTable itab = null;
-    	if (version != -1) {
-    		itab = this._catalog.getTable(name, version);
-    	}
-    	else {
-    		itab = this._catalog.getTable(name);
-    	}
-    	if (itab == null) {
-    		throw new IonException("Import Symbol Table not found: "
-    				  + name
-    				  + ( (version == -1) ? "" : " version: "+version)
-    		);
-    	}
-    	local.addImportedTable(itab, (maxid == -1) ? itab.getMaxId() : maxid);
-    	this.stepOut();
     }
 
     @Override

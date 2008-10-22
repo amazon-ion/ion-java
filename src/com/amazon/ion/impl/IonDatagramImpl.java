@@ -313,6 +313,7 @@ public final class IonDatagramImpl
         if (symtab == null) {
             symtab = getCurrentSymbolTable(userPos, systemPos);
             if (symtab == null) {
+                // FIXME this uses an unpredictable system symtab
                 symtab = _system.newLocalSymbolTable();
                 IonStructImpl ionsymtab = (IonStructImpl)symtab.getIonRepresentation();
                 ionsymtab.setSymbolTable(symtab);
@@ -597,14 +598,14 @@ public final class IonDatagramImpl
         assert _contents !=  null && _contents.size() == 0;
         assert _userContents !=  null && _userContents.size() == 0;
 
-        SymbolTable previous = null;
+        SymbolTable previous_symtab = null;
         IonValue    previous_value = null;
 
         while (_rawStream.hasNext())
         {
             IonValueImpl     child = (IonValueImpl) _rawStream.next();
             SymbolTable child_symtab = child.getSymbolTable();
-            assert child_symtab != null;
+            assert child_symtab.isLocalTable();
 
             // as we insert the first value we need to check and make sure there
             // is an IonVersionMarker in place (which is required for a datagram
@@ -634,7 +635,7 @@ public final class IonDatagramImpl
             }
             else {
                 // for user values we have to check for symbol table fixups
-                if (child_symtab != previous
+                if (child_symtab != previous_symtab
                  && isNeededLocalSymbolTable(child_symtab)
                 ) {
                     IonStruct sym = child_symtab.getIonRepresentation();
@@ -672,7 +673,7 @@ public final class IonDatagramImpl
             previous_value = child;
 
             // this symbol table has been added to the datagram (if it needed to be)
-            previous = child_symtab;
+            previous_symtab = child_symtab;
         }
     }
     private void addToContents(IonValueImpl v) {

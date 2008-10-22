@@ -20,6 +20,7 @@ import com.amazon.ion.SystemSymbolTable;
 /**
  * TODO define thread-safety.
  */
+@Deprecated
 public class LocalSymbolTableImpl
     extends AbstractSymbolTable
     implements LocalSymbolTable
