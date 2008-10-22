@@ -218,18 +218,18 @@ public class BinaryStreamingTest
                 assertTrue( true );
             }
 
-            assertTrue( name.equals( fieldname ) );
+            assertEquals(name, fieldname);
             if ( itype.equals(IonType.NULL) ) {
                 // nulls are typed so we test them differently
                 if (value != null) {
-                    assertTrue( t.equals( value ) );
+                    assertEquals(value, t);
                 }
                 else {
-                    assertTrue( t.equals( IonType.NULL) );
+                    assertEquals(IonType.NULL, t);
                 }
             }
             else {
-                assertTrue( itype.equals( t ) );
+                assertEquals(itype, t);
             }
 
             switch (itype) {
@@ -380,7 +380,7 @@ new TestValue("Null.decimal",  IonType.NULL, IonType.DECIMAL),
 new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
 */
 
-        	   new TestValue("Null",          IonType.NULL, null),
+               new TestValue("Null",          IonType.NULL, null),
                new TestValue("Null.null",     IonType.NULL, IonType.NULL),
                new TestValue("Null.bool",     IonType.NULL, IonType.BOOL),
 
@@ -388,7 +388,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
                new TestValue("Null.float",    IonType.NULL, IonType.FLOAT),
                new TestValue("Null.decimal",  IonType.NULL, IonType.DECIMAL),
 
-                   new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
+               new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
                new TestValue("Null.string",   IonType.NULL, IonType.STRING),
                new TestValue("Null.symbol",   IonType.NULL, IonType.SYMBOL),
 

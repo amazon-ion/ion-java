@@ -128,8 +128,10 @@ public class RoundTripTests
             checkBinaryHeader(binary2FromBinary);
             assertEquals(binary1.length, binary2FromBinary.length);
 
-            assertTrue("rendering from text vs from binary,",
-            		compareRenderedTextImages(text2FromText, text2FromBinary));
+            if (!compareRenderedTextImages(text2FromText, text2FromBinary))
+            {
+                fail("different printing from text vs from binary");
+            }
 
             assertEquals("encoded size from text vs from binary",
                          binary2FromText.length,

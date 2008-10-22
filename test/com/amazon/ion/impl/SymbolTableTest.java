@@ -303,6 +303,8 @@ public class SymbolTableTest
         checkLocalTable(symbolTable);
 
         // Nothing should be added to the local table.
+        assertEquals(symbolTable.getSystemSymbolTable().getMaxId(),
+                     symbolTable.getMaxId());
         assertEquals(0, symbolTable.size());
 
         symbolTable = system().getCatalog().getTable("test table");
