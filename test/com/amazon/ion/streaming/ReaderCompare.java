@@ -120,7 +120,8 @@ public class ReaderCompare
             case FLOAT: {
                 double v1 = it1.doubleValue();
                 double v2 = it2.doubleValue();
-                assertEquals(v1, v2);
+                assertEquals(v1, v2, 0);
+                // The last param is a delta, and we want exact match.
                 break;
             }
             case DECIMAL:
