@@ -651,6 +651,8 @@ public class IonBinary
          */
         public byte[] getBytes() throws IOException {
             if (this._buf == null) return null;
+            this.sync();
+            this.setPosition(0);
             int len = _buf.size();
             byte[] buf = new byte[len];
             if (this.read(buf) != len) {
