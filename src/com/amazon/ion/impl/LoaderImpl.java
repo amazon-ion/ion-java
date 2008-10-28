@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion.impl;
 
@@ -176,7 +174,7 @@ public class LoaderImpl
         throws IonException, IOException
     {
         PushbackInputStream pushback = new PushbackInputStream(ionData, 8);
-        if (isBinary(pushback)) {
+        if (IonImplUtils.streamIsIonBinary(pushback)) {
             SystemReader systemReader = mySystem.newBinarySystemReader(pushback);
             return new IonDatagramImpl(systemReader);
         }
@@ -200,25 +198,5 @@ public class LoaderImpl
     {
         SystemReader systemReader = mySystem.newBinarySystemReader(ionBinary);
         return new IonDatagramImpl(systemReader);
-    }
-
-
-    //=========================================================================
-    // Other utilities and helpers
-
-    static boolean isBinary(PushbackInputStream pushback)
-        throws IonException, IOException
-    {
-        boolean isBinary = false;
-        byte[] cookie = new byte[IonConstants.BINARY_VERSION_MARKER_SIZE];
-
-        int len = pushback.read(cookie);
-        if (len == IonConstants.BINARY_VERSION_MARKER_SIZE) {
-            isBinary = IonBinary.matchBinaryVersionMarker(cookie);
-        }
-        if (len > 0) {
-            pushback.unread(cookie, 0, len);
-        }
-        return isBinary;
     }
 }
