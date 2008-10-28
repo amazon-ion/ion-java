@@ -73,13 +73,13 @@ public class IonSystemImpl
     }
 
 
-    public SymbolTable getSystemSymbolTable()
+    public UnifiedSymbolTable getSystemSymbolTable()
     {
         return mySystemSymbols;
     }
 
 
-    public SymbolTable getSystemSymbolTable(String systemId)
+    public UnifiedSymbolTable getSystemSymbolTable(String systemId)
         throws UnsupportedSystemVersionException
     {
         if (systemId.equals(SystemSymbolTable.ION_1_0))
@@ -104,7 +104,7 @@ public class IonSystemImpl
     }
 
 
-    public SymbolTable newLocalSymbolTable()
+    public UnifiedSymbolTable newLocalSymbolTable()
     {
         UnifiedSymbolTable st = new UnifiedSymbolTable(mySystemSymbols);
         st.setSystem(this);
@@ -112,7 +112,7 @@ public class IonSystemImpl
     }
 
 
-    public SymbolTable newLocalSymbolTable(SymbolTable systemSymbols)
+    public UnifiedSymbolTable newLocalSymbolTable(SymbolTable systemSymbols)
     {
         if (! systemSymbols.isSystemTable())
         {
@@ -219,8 +219,7 @@ public class IonSystemImpl
 
     public IonReader newReader(byte[] ionData, int offset, int len)
     {
-        boolean isBinary =
-            IonBinary.matchBinaryVersionMarker(ionData);
+        boolean isBinary = IonBinary.matchBinaryVersionMarker(ionData);
 
         IonReader reader;
         if (isBinary) {
@@ -230,6 +229,22 @@ public class IonSystemImpl
             reader = new IonTextIterator(ionData, offset, len);
         }
         return reader;
+    }
+
+
+    public IonReader newReader(InputStream ionData)
+    {
+        byte[] bytes;
+        try
+        {
+            bytes = IonImplUtils.loadStreamBytes(ionData);
+        }
+        catch (IOException e)
+        {
+            throw new IonException("Error reading from stream", e);
+        }
+
+        return newReader(bytes, 0, bytes.length);
     }
 
 
@@ -313,19 +328,7 @@ public class IonSystemImpl
     public SystemReader newBinarySystemReader(InputStream ionBinary)
         throws IOException
     {
-        BlockedBuffer bb = new BlockedBuffer();
-        BufferManager buffer = new BufferManager(bb);
-        IonBinary.Writer writer = buffer.writer();
-        try {
-            writer.write(ionBinary);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-        finally {
-            ionBinary.close();
-        }
-
+        BufferManager buffer = new BufferManager(ionBinary);
         return new SystemReader(this, buffer);
     }
 
@@ -419,9 +422,9 @@ public class IonSystemImpl
             if (AbstractSymbolTable.getSymbolTableType(value).equals(SymbolTableType.LOCAL))
             //if (value.hasTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE)) // cas 25 apr 2008 was: ION_1_0
             {
-                symtab = new LocalSymbolTableImpl(this, catalog,
-                                                  (IonStruct) value,
-                                                  mySystemSymbols);
+                symtab = new UnifiedSymbolTable(mySystemSymbols, // FIXME wrong symtab
+                                                (IonStruct) value,
+                                                catalog);
             }
         }
         else if (valueIsSystemId(value))

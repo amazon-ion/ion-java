@@ -65,8 +65,14 @@ public final class IonTreeIterator
 
         _top--;
         _iter = (Iterator<IonValue>)_stack[_top];
+        _stack[_top] = null;  // Allow iterator to be garbage collected!
+
         _top--;
         _root = (IonValue)_stack[_top];
+        _stack[_top] = null;
+
+        // We don't know if we're at the end of the container, so check again.
+        _eof = false;
     }
 
     public IonTreeIterator(IonValue value) {
@@ -340,10 +346,10 @@ public final class IonTreeIterator
     public double doubleValue()
     {
         if (_curr instanceof IonFloat)  {
-            return (int)((IonFloat)_curr).doubleValue();
+            return ((IonFloat)_curr).doubleValue();
         }
         if (_curr instanceof IonDecimal)  {
-            return (int)((IonDecimal)_curr).doubleValue();
+            return ((IonDecimal)_curr).doubleValue();
         }
         throw new IllegalStateException("current value is not an ion float or decimal");
     }
@@ -420,7 +426,7 @@ public final class IonTreeIterator
             catch (IOException e) {
                 throw new IonException(e);
             }
-            assert retlen == loblen;
+            assert (retlen == -1 ? loblen == 0 : retlen == loblen);
             return buffer;
         }
         throw new IllegalStateException("current value is not an ion blob or clob");

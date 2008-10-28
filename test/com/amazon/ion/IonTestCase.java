@@ -125,17 +125,19 @@ public abstract class IonTestCase
 
 
     /**
-     * @param textFile
-     * @throws FileNotFoundException
-     * @throws UnsupportedEncodingException
-     * @throws IOException
+     * @deprecated Use {@link #load(File)};
      */
+    @Deprecated
     protected IonDatagram readIonText(File textFile)
         throws Exception
     {
         return loader().load(textFile);
     }
 
+    /**
+     * @deprecated Use {@link #load(File)};
+     */
+    @Deprecated
     protected IonDatagram readIonBinary(File ionFile)
         throws Exception
     {
@@ -145,6 +147,7 @@ public abstract class IonTestCase
 
         return dg;
     }
+
 
     /**
      * Reads the content of an Ion file contained in the test data suite.
@@ -167,6 +170,16 @@ public abstract class IonTestCase
     {
         File text = getTestdataFile(filename);
         return loader().load(text);
+    }
+
+    public IonDatagram load(File ionFile)
+        throws IonException, IOException
+    {
+        IonDatagram dg = loader().load(ionFile);
+
+        dg.deepMaterialize(); // Flush out any encoding problems in the data.
+
+        return dg;
     }
 
 
@@ -344,7 +357,8 @@ public abstract class IonTestCase
     // TODO add to IonSystem()?
     public byte[] encode(String ionText)
     {
-        return loader().load(ionText).toBytes();
+        IonDatagram dg = loader().load(ionText);  // Keep here for breakpoint
+        return dg.toBytes();
     }
 
     public void assertEscape(char expected, char escapedChar)
@@ -446,8 +460,8 @@ public abstract class IonTestCase
 
     public void checkAnnotation(String expectedAnnot, IonValue value)
     {
-        boolean foundAnnot = value.hasTypeAnnotation(expectedAnnot);
-        assertEquals(foundAnnot, true);
+        assertTrue("missing annotation",
+                   value.hasTypeAnnotation(expectedAnnot));
     }
 
 

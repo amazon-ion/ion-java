@@ -12,6 +12,7 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.IonBinary.BufferManager;
+import com.amazon.ion.streaming.UnifiedSymbolTable;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
@@ -217,6 +218,8 @@ public class SystemReader
                                                  ,this._currentSymbolTable
                                                  ,null
             );
+            // FIXME this should be part of makeValueFromBuffer.
+            value._system = _system;
 
             // move along on the buffer
             _buffer_offset = value.pos_getOffsetofNextValue();
@@ -269,7 +272,9 @@ public class SystemReader
         else if (_system.valueIsStaticSymbolTable(_curr))
         {
             SymbolTable newTable =
-                new StaticSymbolTableImpl(_system, (IonStruct) _curr);
+                new UnifiedSymbolTable((UnifiedSymbolTable) _currentSymbolTable.getSystemSymbolTable(),
+                                       (IonStruct) _curr,
+                                       (IonCatalog) null);
             _catalog.putTable(newTable);
 
             // FIXME: really?  I don't think shared tables need to be (or

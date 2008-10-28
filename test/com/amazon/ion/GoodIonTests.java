@@ -4,7 +4,9 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.streaming.ReaderCompare;
 import java.io.File;
+import java.io.FileInputStream;
 import junit.framework.TestSuite;
 
 
@@ -26,15 +28,28 @@ public class GoodIonTests
         public void runTest()
             throws Exception
         {
-            if (myFileIsBinary)
-            {
-                readIonBinary(myTestFile);
+            IonDatagram datagram = load(myTestFile);
+
+            IonReader treeReader = system().newReader(datagram);
+
+            FileInputStream in = new FileInputStream(myTestFile);
+            try {
+                IonReader fileReader = system().newReader(in);
+
+                ReaderCompare.compare(treeReader, fileReader);
             }
-            else
-            {
-                IonDatagram datagram = readIonText(myTestFile);
-                // Flush out any problems in the encoded data.
-                datagram.deepMaterialize();
+            finally {
+                in.close();
+            }
+
+            if (! myFileIsBinary) {
+                // Check the encoding of text to binary.
+                treeReader = system().newReader(datagram);
+
+                byte[] encoded = datagram.toBytes();
+                IonReader binaryReader = system().newReader(encoded);
+
+                ReaderCompare.compare(treeReader, binaryReader);
             }
         }
     }

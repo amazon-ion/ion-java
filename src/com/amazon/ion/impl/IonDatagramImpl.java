@@ -16,6 +16,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonBinary.BufferManager;
+import com.amazon.ion.streaming.UnifiedSymbolTable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Reader;
@@ -343,14 +344,13 @@ public final class IonDatagramImpl
              && v._annotations != null
              && v.hasTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE))
             {
-                if (((IonStructImpl)v).get(SystemSymbolTable.NAME) == null) {
+                IonStruct symtabStruct = (IonStruct) v;
+                if (symtabStruct.get(SystemSymbolTable.NAME) == null) {
                     // it's a local symbol table alright
-                    symtab = new LocalSymbolTableImpl(
-                            _system,
-                            _system.getCatalog(),
-                            (IonStruct)v,
-                            _system.getSystemSymbolTable()
-                    );
+                    symtab =
+                        new UnifiedSymbolTable(_system.getSystemSymbolTable(),
+                                               symtabStruct,
+                                               _system.getCatalog());
                 }
             }
             else {

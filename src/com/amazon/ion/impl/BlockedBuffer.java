@@ -5,14 +5,13 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.streaming.ByteWriter;
-
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 
 /**
  * This implements a blocked byte buffer and both an input and output stream
@@ -45,7 +44,7 @@ final public class BlockedBuffer
 
 // BUGBUG - this is just a test, it shouldn't be in checked in code
 static final boolean test_with_no_version_checking = false;
-    
+
     void start_mutate(Object caller, int version) {
         if (test_with_no_version_checking) return;
         if (_mutation_version != 0 || _mutator != null)
@@ -138,48 +137,70 @@ static final boolean test_with_no_version_checking = false;
         _buf_limit = data.length;
         end_mutate(this);
     }
-    
+
+    /**
+     * Creates a new buffer containing all data remaining on an
+     * {@link InputStream}.  The stream is closed before returning.
+     *
+     * @param data must not be null.
+     *
+     * @throws IOException
+     */
+    public BlockedBuffer(InputStream data)
+        throws IOException
+    {
+        IonBinary.Writer writer = new IonBinary.Writer(this);
+        try {
+            writer.write(data);
+        }
+        finally {
+            data.close();
+        }
+    }
+
+
     /**
      * creates a logical copy of the buffer.  This does not preserve
      * the position state and is equivalent to constructing a new
      * buffer from the old by getting the bytes from the original
      * and writing them to a new buffer.
      */
-    public BlockedBuffer clone() throws CloneNotSupportedException
+    @Override
+    public BlockedBuffer clone()
     {
     	BlockedBuffer clone = new BlockedBuffer(this._buf_limit);
-    	
+
     	int end = this._buf_limit;
 
     	bbBlock dst_block = clone._blocks.get(0);
     	int dst_offset = 0;
     	int dst_limit = dst_block.blockCapacity();
-    	
+
     	for (int ii=0; ii<this._blocks.size(); ii++) {
-    		bbBlock src_block = this._blocks.get(ii);
-    		if (src_block._limit < 1) continue; // see if there's any interesting data in this block
-    		
-    		int src_end = src_block._limit + src_block._offset;
-    		
-			int to_copy = src_block._limit;
-			if (to_copy > dst_limit - dst_offset) {
-				to_copy = dst_limit - dst_offset;
-			}
-			
-			System.arraycopy(src_block._buffer, 0, dst_block._buffer, dst_offset, to_copy);
-			dst_offset += to_copy;
-			
-			// the cloned BlockedBuffer should be able to hold all the data
-			// in it's single block
-			assert dst_offset <= dst_limit;
-    		
-    		// see if we're done (and break out in that case)
-    		if (src_end >= end) break;
+    	    bbBlock src_block = this._blocks.get(ii);
+    	    if (src_block._limit < 1) continue; // see if there's any interesting data in this block
+
+    	    int src_end = src_block._limit + src_block._offset;
+
+    	    int to_copy = src_block._limit;
+    	    if (to_copy > dst_limit - dst_offset) {
+    	        to_copy = dst_limit - dst_offset;
+    	    }
+
+    	    System.arraycopy(src_block._buffer, 0, dst_block._buffer, dst_offset, to_copy);
+    	    dst_offset += to_copy;
+
+    	    // the cloned BlockedBuffer should be able to hold all the data
+    	    // in it's single block
+    	    assert dst_offset <= dst_limit;
+
+    	    // see if we're done (and break out in that case)
+    	    if (src_end >= end) break;
     	}
-    	
+
     	dst_block._limit = dst_offset;
     	clone._buf_limit = dst_offset;
-    	
+
     	return clone;
     }
 
@@ -1433,7 +1454,7 @@ static final boolean test_with_no_version_checking = false;
          * The current position is lost during this call.
          *
          */
-        public final void sync() throws IOException 
+        public final void sync() throws IOException
         {
             if (_buf == null) throw new IOException("stream is closed");
             _version = _buf.getVersion();
