@@ -97,7 +97,7 @@ public class Text
         case ',':
         case '\"': case '\'':
         case ' ':  case '\t':  case '\n':  case '\r':  // Whitespace
-        // case '/': // we check start of comment in the caller where we 
+        // case '/': // we check start of comment in the caller where we
         //              can peek ahead for the following slash or asterisk
             return true;
 
@@ -427,7 +427,7 @@ public class Text
      * a specified quoting context. No surrounding quotation marks are printed.
      *
      * @param out the stream to receive the data.
-     * @param text the text to render.
+     * @param text the text to print.
      * @param surroundingQuoteChar must be either {@code '\''}, {@code '\"'},
      * or {@link #ANY_SURROUNDING_QUOTES}.
      *
@@ -441,12 +441,110 @@ public class Text
     }
 
 
+    public static void printString(Appendable out, CharSequence text)
+        throws IOException
+    {
+        out.append('"');
+        printAsIon(out, text, '"');
+        out.append('"');
+    }
+
+
+    public static String printString(CharSequence text)
+    {
+        StringBuilder builder = new StringBuilder(text.length() + 2);
+        try
+        {
+            printString(builder, text);
+        }
+        catch (IOException e)
+        {
+            // Shouldn't happen
+            throw new Error(e);
+        }
+        return builder.toString();
+    }
+
+
+    /**
+     * Prints the text as an Ion symbol, including surrounding single-quotes if
+     * they are necessary.  Operator symbols such as {@code '+'} are quoted.
+     *
+     * @param out the stream to receive the data.
+     * @param text the symbol text.
+     *
+     * @throws IOException if the {@link Appendable} throws an exception.
+     */
+    public static void printSymbol(Appendable out, CharSequence text)
+        throws IOException
+    {
+        if (symbolNeedsQuoting(text, true))
+        {
+            printQuotedSymbol(out, text);
+        }
+        else
+        {
+            out.append(text);
+        }
+    }
+
+
+    public static String printSymbol(CharSequence text)
+    {
+        StringBuilder builder = new StringBuilder(text.length() + 2);
+        try
+        {
+            printSymbol(builder, text);
+        }
+        catch (IOException e)
+        {
+            // Shouldn't happen
+            throw new Error(e);
+        }
+        return builder.toString();
+    }
+
+
+    /**
+     * Prints the text as a single-quoted Ion symbol.
+     *
+     * @param out the stream to receive the data.
+     * @param text the symbol text.
+     *
+     * @throws IOException if the {@link Appendable} throws an exception.
+     */
+    public static void printQuotedSymbol(Appendable out, CharSequence text)
+        throws IOException
+    {
+        out.append('\'');
+        printAsIon(out, text, '\'');
+        out.append('\'');
+    }
+
+
+    public static String printQuotedSymbol(CharSequence text)
+    {
+        StringBuilder builder = new StringBuilder(text.length() + 2);
+        try
+        {
+            printQuotedSymbol(builder, text);
+        }
+        catch (IOException e)
+        {
+            // Shouldn't happen
+            throw new Error(e);
+        }
+        return builder.toString();
+    }
+
+
+
     /**
      * Prints characters as JSON ASCII text content.
      * No surrounding quotation marks are printed.
      *
      * @param out the stream to receive the data.
-     * @param text the text to render.
+     * @param text the text to print.
      *
      * @throws IOException if the {@link Appendable} throws an exception.
      */
