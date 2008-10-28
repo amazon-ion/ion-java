@@ -30,7 +30,6 @@ import com.amazon.ion.impl.ReaderTest;
 import com.amazon.ion.impl.SymbolTableTest;
 import com.amazon.ion.streaming.BadIonStreamingTests;
 import com.amazon.ion.streaming.BinaryStreamingTest;
-import com.amazon.ion.streaming.EquivIonStreamingTests;
 import com.amazon.ion.streaming.GoodIonStreamingTests;
 import com.amazon.ion.streaming.RoundTripStreamingTests;
 import com.amazon.ion.system.SimpleCatalogTest;
@@ -102,7 +101,6 @@ public class AllTests
         suite.addTestSuite(BinaryStreamingTest.class);
         suite.addTest(new BadIonStreamingTests());
         suite.addTest(new GoodIonStreamingTests());
-        suite.addTest(new EquivIonStreamingTests());
         suite.addTest(new RoundTripStreamingTests());
 
         //$JUnit-END$
