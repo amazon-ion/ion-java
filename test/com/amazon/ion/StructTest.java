@@ -686,7 +686,6 @@ public class StructTest
     	IonDatagram dg1 = system().getLoader().load(sample);
     	IonValue dg2 = dg1.clone();
 
-    	System.out.println(dg2.toString());
-
+//    	System.out.println(dg2.toString());
     }
 }
