@@ -31,6 +31,7 @@ import com.amazon.ion.impl.SymbolTableTest;
 import com.amazon.ion.streaming.BadIonStreamingTests;
 import com.amazon.ion.streaming.BinaryStreamingTest;
 import com.amazon.ion.streaming.GoodIonStreamingTests;
+import com.amazon.ion.streaming.MiscStreamingTests;
 import com.amazon.ion.streaming.RoundTripStreamingTests;
 import com.amazon.ion.system.SimpleCatalogTest;
 import com.amazon.ion.util.EquivalenceTest;
@@ -98,6 +99,7 @@ public class AllTests
         suite.addTest(new EquivsTests());
         suite.addTest(new RoundTripTests());
 
+        suite.addTestSuite(MiscStreamingTests.class);
         suite.addTestSuite(BinaryStreamingTest.class);
         suite.addTest(new BadIonStreamingTests());
         suite.addTest(new GoodIonStreamingTests());
