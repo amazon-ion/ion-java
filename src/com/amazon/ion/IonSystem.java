@@ -4,6 +4,7 @@
 
 package com.amazon.ion;
 
+import java.io.InputStream;
 import java.io.Reader;
 import java.util.Collection;
 import java.util.Date;
@@ -244,6 +245,19 @@ public interface IonSystem
      * {@code ionData.length}.
      */
     public IonReader newReader(byte[] ionData, int offset, int len);
+
+    /**
+     * Creates a new {@link IonReader} instance over a stream of Ion data,
+     * detecting whether it's text or binary data.
+     * <p>
+     * <b>NOTE:</b> The current implementation of this method reads the entire
+     * contents of the input stream into memory.
+     *
+     * @param ionData must not be null.
+     *
+     * @return a new reader instance.
+     */
+    public IonReader newReader(InputStream ionData);
 
     /**
      * Creates an new {@link IonReader} instance over an {@link IonValue} data
