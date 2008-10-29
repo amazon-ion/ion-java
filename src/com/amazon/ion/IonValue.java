@@ -254,6 +254,14 @@ public interface IonValue
 
 
     /**
+     * Gets the system that constructed this value.
+     *
+     * @return not null.
+     */
+    public IonSystem getSystem();
+
+
+    /**
      * Creates a copy of this value and all its children.    The clones may share
      * static symbol tables.  They will have independant local
      * symbol tables if any are needed.  The cloned value will

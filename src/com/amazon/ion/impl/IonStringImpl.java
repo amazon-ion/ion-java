@@ -27,18 +27,18 @@ public final class IonStringImpl
     /**
      * Constructs a <code>null.string</code> value.
      */
-    public IonStringImpl()
+    public IonStringImpl(IonSystemImpl system)
     {
-        super(NULL_STRING_TYPEDESC);
+        super(system, NULL_STRING_TYPEDESC);
     }
 
 
     /**
      * Constructs a binary-backed string value.
      */
-    public IonStringImpl(int typeDesc)
+    public IonStringImpl(IonSystemImpl system, int typeDesc)
     {
-        super(typeDesc);
+        super(system, typeDesc);
         assert pos_getType() == IonConstants.tidString;
     }
 
@@ -53,7 +53,7 @@ public final class IonStringImpl
     @Override
     public IonStringImpl clone()
     {
-        IonStringImpl clone = new IonStringImpl();
+        IonStringImpl clone = new IonStringImpl(_system);
 
         clone.copyFrom(this);
 

@@ -28,9 +28,9 @@ public final class IonListImpl
     /**
      * Constructs a null list value.
      */
-    public IonListImpl()
+    public IonListImpl(IonSystemImpl system)
     {
-        this(true);
+        this(system, true);
     }
 
     /**
@@ -39,9 +39,9 @@ public final class IonListImpl
      * @param makeNull indicates whether this should be <code>null.list</code>
      * (if <code>true</code>) or an empty sequence (if <code>false</code>).
      */
-    public IonListImpl(boolean makeNull)
+    public IonListImpl(IonSystemImpl system, boolean makeNull)
     {
-        super(NULL_LIST_TYPEDESC, makeNull);
+        super(system, NULL_LIST_TYPEDESC, makeNull);
         assert pos_getType() == IonConstants.tidList;
     }
 
@@ -55,10 +55,11 @@ public final class IonListImpl
      * @throws ContainedValueException if any value in <code>elements</code>
      * has <code>{@link IonValue#getContainer()} != null</code>.
      */
-    public IonListImpl(Collection<? extends IonValue> elements)
+    public IonListImpl(IonSystemImpl system,
+                       Collection<? extends IonValue> elements)
         throws ContainedValueException
     {
-        super(NULL_LIST_TYPEDESC, elements);
+        super(system, NULL_LIST_TYPEDESC, elements);
     }
 
 
@@ -67,9 +68,9 @@ public final class IonListImpl
      *
      * @param typeDesc
      */
-    public IonListImpl(int typeDesc)
+    public IonListImpl(IonSystemImpl system, int typeDesc)
     {
-        super(typeDesc);
+        super(system, typeDesc);
         assert pos_getType() == IonConstants.tidList;
     }
 
@@ -81,7 +82,7 @@ public final class IonListImpl
     @Override
     public IonListImpl clone()
     {
-        IonListImpl clone = new IonListImpl();
+        IonListImpl clone = new IonListImpl(_system);
 
         try {
             clone.copyFrom(this);

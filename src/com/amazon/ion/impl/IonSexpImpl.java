@@ -28,9 +28,9 @@ public class IonSexpImpl
     /**
      * Constructs a <code>null.sexp</code> value.
      */
-    public IonSexpImpl()
+    public IonSexpImpl(IonSystemImpl system)
     {
-        this(true);
+        this(system, true);
     }
 
     /**
@@ -39,9 +39,9 @@ public class IonSexpImpl
      * @param makeNull indicates whether this should be <code>null.sexp</code>
      * (if <code>true</code>) or an empty sequence (if <code>false</code>).
      */
-    public IonSexpImpl(boolean makeNull)
+    public IonSexpImpl(IonSystemImpl system, boolean makeNull)
     {
-        super(NULL_SEXP_TYPEDESC, makeNull);
+        super(system, NULL_SEXP_TYPEDESC, makeNull);
         assert pos_getType() == IonConstants.tidSexp;
     }
 
@@ -55,19 +55,20 @@ public class IonSexpImpl
      * @throws ContainedValueException if any value in <code>elements</code>
      * has <code>{@link IonValue#getContainer()} != null</code>.
      */
-    public IonSexpImpl(Collection<? extends IonValue> elements)
+    public IonSexpImpl(IonSystemImpl system,
+                       Collection<? extends IonValue> elements)
         throws ContainedValueException
     {
-        super(NULL_SEXP_TYPEDESC, elements);
+        super(system, NULL_SEXP_TYPEDESC, elements);
     }
 
 
     /**
      * Constructs a non-materialized sexp backed by a binary buffer.
      */
-    public IonSexpImpl(int typeDesc)
+    public IonSexpImpl(IonSystemImpl system, int typeDesc)
     {
-        super(typeDesc, true);
+        super(system, typeDesc, true);
         assert pos_getType() == IonConstants.tidSexp;
     }
 
@@ -79,7 +80,7 @@ public class IonSexpImpl
     @Override
     public IonSexpImpl clone()
     {
-        IonSexpImpl clone = new IonSexpImpl();
+        IonSexpImpl clone = new IonSexpImpl(_system);
 
         try {
             clone.copyFrom(this);

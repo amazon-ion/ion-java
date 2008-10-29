@@ -32,18 +32,18 @@ public final class IonTimestampImpl
     /**
      * Constructs a <code>null.timestamp</code> value.
      */
-    public IonTimestampImpl()
+    public IonTimestampImpl(IonSystemImpl system)
     {
-        super(NULL_TIMESTAMP_TYPEDESC);
+        super(system, NULL_TIMESTAMP_TYPEDESC);
     }
 
 
     /**
      * Constructs a binary-backed value.
      */
-    public IonTimestampImpl(int typeDesc)
+    public IonTimestampImpl(IonSystemImpl system, int typeDesc)
     {
-        super(typeDesc);
+        super(system, typeDesc);
         assert pos_getType() == IonConstants.tidTimestamp;
     }
 
@@ -56,7 +56,7 @@ public final class IonTimestampImpl
     @Override
     public IonTimestampImpl clone()
     {
-        IonTimestampImpl clone = new IonTimestampImpl();
+        IonTimestampImpl clone = new IonTimestampImpl(_system);
 
         clone.copyAnnotationsFrom(this);  // Calls makeReady()
         clone._timestamp_value = this._timestamp_value;

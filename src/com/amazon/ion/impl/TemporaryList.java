@@ -24,8 +24,9 @@ public class TemporaryList
     /**
      * Creates an empty list.
      */
-    public TemporaryList() {
-        super(IonConstants.makeTypeDescriptor(IonConstants.tidList,
+    public TemporaryList(IonSystemImpl system) {
+        super(system,
+              IonConstants.makeTypeDescriptor(IonConstants.tidList,
                                               IonConstants.lnNumericZero));
        _tmpelements = new ArrayList<IonValueImpl>();
        setClean();
@@ -39,7 +40,7 @@ public class TemporaryList
     @Override
     public TemporaryList clone()
     {
-        TemporaryList c = new TemporaryList();
+        TemporaryList c = new TemporaryList(_system);
 
         for (int ii=0; ii<this._tmpelements.size(); ii++) {
             IonValueImpl e = (IonValueImpl) this._tmpelements.get(ii).clone();

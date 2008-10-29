@@ -9,7 +9,6 @@ import static com.amazon.ion.util.Equivalence.ionEquals;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
@@ -162,15 +161,19 @@ public abstract class IonValueImpl
      * the symbol id is being requested for a fieldname, the int
      * value of an IonSymbol or an annotation.
      */
-    IonSystemImpl _system;
+    final protected IonSystemImpl _system;
 
 
     /**
      * Constructs a value with the given native value and high-nibble, and zero
      * low-nibble.
+     *
+     * @param system must not be null.
      */
-    protected IonValueImpl(int typedesc)
+    protected IonValueImpl(IonSystemImpl system, int typedesc)
     {
+        _system = system;
+
         pos_init();
         _isMaterialized     = false;
         _isPositionLoaded   = false;
@@ -180,7 +183,7 @@ public abstract class IonValueImpl
     }
 
 
-    public IonSystem getSystem()
+    public IonSystemImpl getSystem()
     {
         return _system;
     }
@@ -272,6 +275,7 @@ public abstract class IonValueImpl
                                     ,BufferManager buffer
                                     ,SymbolTable symboltable
                                     ,IonContainerImpl container
+                                    ,IonSystemImpl system
     ) {
         IonValueImpl value;
 // cas symtab:       assert symboltable != null;
@@ -285,6 +289,7 @@ public abstract class IonValueImpl
                                        ,buffer
                                        ,symboltable
                                        ,container
+                                       ,system
                     );
         }
         catch (IOException e) {
@@ -303,7 +308,8 @@ public abstract class IonValueImpl
                                                    IonBinary.Reader reader,
                                                    BufferManager buffer,
                                                    SymbolTable symboltable,
-                                                   IonContainerImpl container)
+                                                   IonContainerImpl container,
+                                                   IonSystemImpl system)
         throws IOException
     {
         IonValueImpl value;
@@ -311,7 +317,7 @@ public abstract class IonValueImpl
 
         int pos = reader.position();
         int tdb = reader.readActualTypeDesc();
-        value = makeValue(tdb);
+        value = makeValue(tdb, system);
         value.init(fieldSID
                   ,buffer
                   ,pos
@@ -322,58 +328,60 @@ public abstract class IonValueImpl
         return value;
     }
 
-    static IonValueImpl makeValue(int typedesc)
+    static IonValueImpl makeValue(int typedesc, IonSystemImpl system)
     {
+        assert system != null;
+
         IonValueImpl value = null;
         int typeId = IonConstants.getTypeCode(typedesc);
 
         switch (typeId) {
         case IonConstants.tidNull: // null(0)
-            value = new IonNullImpl(typedesc);
+            value = new IonNullImpl(system, typedesc);
             break;
         case IonConstants.tidBoolean: // boolean(1)
-            value = new IonBoolImpl(typedesc);
+            value = new IonBoolImpl(system, typedesc);
             break;
         case IonConstants.tidPosInt: // 2
         case IonConstants.tidNegInt: // 3
-            value = new IonIntImpl(typedesc);
+            value = new IonIntImpl(system, typedesc);
             break;
         case IonConstants.tidFloat: // float(4)
-            value = new IonFloatImpl(typedesc);
+            value = new IonFloatImpl(system, typedesc);
             break;
         case IonConstants.tidDecimal: // decimal(5)
-            value = new IonDecimalImpl(typedesc);
+            value = new IonDecimalImpl(system, typedesc);
             break;
         case IonConstants.tidTimestamp: // timestamp(6)
-            value = new IonTimestampImpl(typedesc);
+            value = new IonTimestampImpl(system, typedesc);
             break;
         case IonConstants.tidSymbol: // symbol(7)
-            value = new IonSymbolImpl(typedesc);
+            value = new IonSymbolImpl(system, typedesc);
             break;
         case IonConstants.tidString: // string (8)
-            value = new IonStringImpl(typedesc);
+            value = new IonStringImpl(system, typedesc);
             break;
         case IonConstants.tidClob: // clob(9)
-            value = new IonClobImpl(typedesc);
+            value = new IonClobImpl(system, typedesc);
             break;
         case IonConstants.tidBlob: // blob(10)
-            value = new IonBlobImpl(typedesc);
+            value = new IonBlobImpl(system, typedesc);
             break;
         case IonConstants.tidList: // list(11)
-            value = new IonListImpl(typedesc);
+            value = new IonListImpl(system, typedesc);
             break;
         case IonConstants.tidSexp: // 12
-            value = new IonSexpImpl(typedesc);
+            value = new IonSexpImpl(system, typedesc);
             break;
         case IonConstants.tidStruct: // 13
-            value = new IonStructImpl(typedesc);
+            value = new IonStructImpl(system, typedesc);
             break;
 
         case IonConstants.tidTypedecl: // 14
             // the only case where this is valid is if this is
             // really an IonVersionMaker
             assert IonConstants.getLowNibble(typedesc) == 0;
-            value = new IonSymbolImpl(SystemSymbolTable.ION_1_0);
+            value = new IonSymbolImpl(system, SystemSymbolTable.ION_1_0);
             ((IonSymbolImpl)value).setIsIonVersionMarker(true);
             break;
 

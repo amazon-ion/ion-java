@@ -28,13 +28,14 @@ public final class IonBoolImpl
     /**
      * Constructs a null bool value.
      */
-    public IonBoolImpl()
+    public IonBoolImpl(IonSystemImpl system)
     {
-        super(NULL_BOOL_TYPEDESC);
+        super(system, NULL_BOOL_TYPEDESC);
     }
-    public IonBoolImpl(int typeDesc)
+
+    public IonBoolImpl(IonSystemImpl system, int typeDesc)
     {
-        super( typeDesc );
+        super(system, typeDesc);
         assert pos_getType() == IonConstants.tidBoolean;
     }
 
@@ -49,7 +50,7 @@ public final class IonBoolImpl
     @Override
     public IonBoolImpl clone()
     {
-        IonBoolImpl clone = new IonBoolImpl();
+        IonBoolImpl clone = new IonBoolImpl(_system);
 
         makeReady();
         clone.copyAnnotationsFrom(this);

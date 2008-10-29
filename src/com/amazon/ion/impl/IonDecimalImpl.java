@@ -33,17 +33,17 @@ public final class IonDecimalImpl
     /**
      * Constructs a <code>null.decimal</code> element.
      */
-    public IonDecimalImpl()
+    public IonDecimalImpl(IonSystemImpl system)
     {
-        super(NULL_DECIMAL_TYPEDESC);
+        super(system, NULL_DECIMAL_TYPEDESC);
     }
 
     /**
      * Constructs a binary-backed element.
      */
-    public IonDecimalImpl(int typeDesc)
+    public IonDecimalImpl(IonSystemImpl system, int typeDesc)
     {
-        super(typeDesc);
+        super(system, typeDesc);
         assert pos_getType() == IonConstants.tidDecimal;
     }
 
@@ -58,7 +58,7 @@ public final class IonDecimalImpl
     @Override
     public IonDecimalImpl clone()
     {
-        IonDecimalImpl clone = new IonDecimalImpl();
+        IonDecimalImpl clone = new IonDecimalImpl(_system);
 
         makeReady();
         clone.copyAnnotationsFrom(this);

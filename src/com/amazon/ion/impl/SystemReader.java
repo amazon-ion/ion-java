@@ -217,9 +217,8 @@ public class SystemReader
                                                  ,buffer
                                                  ,this._currentSymbolTable
                                                  ,null
+                                                 ,_system
             );
-            // FIXME this should be part of makeValueFromBuffer.
-            value._system = _system;
 
             // move along on the buffer
             _buffer_offset = value.pos_getOffsetofNextValue();

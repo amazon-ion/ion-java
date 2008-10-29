@@ -30,23 +30,23 @@ public final class IonSymbolImpl
     /**
      * Constructs a <code>null.symbol</code> value.
      */
-    public IonSymbolImpl()
+    public IonSymbolImpl(IonSystemImpl system)
     {
-        this(NULL_SYMBOL_TYPEDESC);
+        this(system, NULL_SYMBOL_TYPEDESC);
     }
 
-    public IonSymbolImpl(String name)
+    public IonSymbolImpl(IonSystemImpl system, String name)
     {
-        this(NULL_SYMBOL_TYPEDESC);
+        this(system, NULL_SYMBOL_TYPEDESC);
         setValue(name);
     }
 
     /**
      * Constructs a binary-backed symbol value.
      */
-    public IonSymbolImpl(int typeDesc)
+    public IonSymbolImpl(IonSystemImpl system, int typeDesc)
     {
-        super(typeDesc);
+        super(system, typeDesc);
         assert pos_getType() == IonConstants.tidSymbol;
     }
 
@@ -61,7 +61,7 @@ public final class IonSymbolImpl
     @Override
     public IonSymbolImpl clone()
     {
-        IonSymbolImpl clone = new IonSymbolImpl();
+        IonSymbolImpl clone = new IonSymbolImpl(_system);
 
         clone.copyFrom(this);
         clone.mySid = 0;

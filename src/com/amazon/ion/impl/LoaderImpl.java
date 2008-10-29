@@ -163,7 +163,7 @@ public class LoaderImpl
     public IonDatagramImpl load(byte[] ionData)
     {
         SystemReader systemReader = mySystem.newSystemReader(ionData);
-        return new IonDatagramImpl(systemReader);
+        return new IonDatagramImpl(mySystem, systemReader);
     }
 
 
@@ -176,7 +176,7 @@ public class LoaderImpl
         PushbackInputStream pushback = new PushbackInputStream(ionData, 8);
         if (IonImplUtils.streamIsIonBinary(pushback)) {
             SystemReader systemReader = mySystem.newBinarySystemReader(pushback);
-            return new IonDatagramImpl(systemReader);
+            return new IonDatagramImpl(mySystem, systemReader);
         }
 
         Reader reader = new InputStreamReader(pushback, "UTF-8");
@@ -197,6 +197,6 @@ public class LoaderImpl
         throws IOException
     {
         SystemReader systemReader = mySystem.newBinarySystemReader(ionBinary);
-        return new IonDatagramImpl(systemReader);
+        return new IonDatagramImpl(mySystem, systemReader);
     }
 }

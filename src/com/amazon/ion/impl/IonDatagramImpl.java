@@ -86,7 +86,7 @@ public final class IonDatagramImpl
      */
     public IonDatagramImpl(IonSystemImpl system, byte[] ionData)
     {
-        this(system.newSystemReader(ionData));
+        this(system, system.newSystemReader(ionData));
     }
 
 
@@ -98,7 +98,7 @@ public final class IonDatagramImpl
      */
     public IonDatagramImpl(IonSystemImpl system, BufferManager buffer)
     {
-        this(new SystemReader(system, buffer));
+        this(system, new SystemReader(system, buffer));
     }
 
 
@@ -196,7 +196,8 @@ public final class IonDatagramImpl
                            SymbolTable initialSymbolTable,
                            Reader ionText)
     {
-        this(new SystemReader(system,
+        this(system,
+             new SystemReader(system,
                               system.getCatalog(),
                               initialSymbolTable, ionText));
     }
@@ -206,15 +207,18 @@ public final class IonDatagramImpl
      *
      * @throws NullPointerException if any parameter is null.
      */
-    IonDatagramImpl(SystemReader rawStream)
+    IonDatagramImpl(IonSystemImpl system,
+                    SystemReader rawStream)
     {
-        super(DATAGRAM_TYPEDESC, true);
+        super(system, DATAGRAM_TYPEDESC, true);
+
+        assert system == rawStream.getSystem();
 
         _userContents = new ArrayList<IonValue>();
 
         // This is only used during construction.
         _rawStream = rawStream;
-        _system = _rawStream.getSystem();
+//        _system = _rawStream.getSystem();
         _buffer = _rawStream.getBuffer();
 
         // Force reading of the first element, so we get the buffer bootstrapped

@@ -16,9 +16,9 @@ abstract class IonTextImpl
     /**
      * Constructs a binary-backed value.
      */
-    protected IonTextImpl(int typeDesc)
+    protected IonTextImpl(IonSystemImpl system, int typeDesc)
     {
-        super(typeDesc);
+        super(system, typeDesc);
     }
 
 

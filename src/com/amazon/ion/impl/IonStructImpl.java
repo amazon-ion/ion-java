@@ -38,18 +38,18 @@ public final class IonStructImpl
     /**
      * Constructs a <code>null.struct</code> value.
      */
-    public IonStructImpl()
+    public IonStructImpl(IonSystemImpl system)
     {
-        this(NULL_STRUCT_TYPEDESC);
+        this(system, NULL_STRUCT_TYPEDESC);
         _hasNativeValue = true;
     }
 
     /**
      * Constructs a binary-backed struct value.
      */
-    public IonStructImpl(int typeDesc)
+    public IonStructImpl(IonSystemImpl system, int typeDesc)
     {
-        super(typeDesc);
+        super(system, typeDesc);
         assert pos_getType() == IonConstants.tidStruct;
     }
 
@@ -61,7 +61,7 @@ public final class IonStructImpl
     @Override
     public IonStructImpl clone()
     {
-        IonStructImpl clone = new IonStructImpl();
+        IonStructImpl clone = new IonStructImpl(_system);
 
         try {
             clone.copyFrom(this);
@@ -360,7 +360,7 @@ public final class IonStructImpl
         while (pos < end) {
             reader.setPosition(pos);
             int sid = reader.readVarUInt7IntValue();
-            child = makeValueFromReader(sid, reader, buffer, symtab, this);
+            child = makeValueFromReader(sid, reader, buffer, symtab, this, _system);
             child._elementid = _contents.size();
             _contents.add(child);
             pos = child.pos_getOffsetofNextValue();

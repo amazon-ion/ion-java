@@ -31,9 +31,9 @@ abstract public class IonContainerImpl
      */
     protected ArrayList<IonValue> _contents;
 
-    protected IonContainerImpl(int typeDesc)
+    protected IonContainerImpl(IonSystemImpl system, int typeDesc)
     {
-        super(typeDesc);
+        super(system, typeDesc);
     }
 
 
@@ -301,7 +301,7 @@ abstract public class IonContainerImpl
         {
             IonValueImpl child;
             reader.setPosition(pos);
-            child = IonValueImpl.makeValueFromReader(0, reader, buffer, symtab, this);
+            child = IonValueImpl.makeValueFromReader(0, reader, buffer, symtab, this, _system);
             child._elementid = _contents.size();
             _contents.add(child);
             pos = child.pos_getOffsetofNextValue();

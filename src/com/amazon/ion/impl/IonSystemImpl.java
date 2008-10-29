@@ -486,9 +486,7 @@ public class IonSystemImpl
 
     public IonBlob newNullBlob()
     {
-        IonBlobImpl result = new IonBlobImpl();
-        result._system = this;
-        return result;
+        return new IonBlobImpl(this);
     }
 
 
@@ -504,16 +502,13 @@ public class IonSystemImpl
 
     public IonBool newNullBool()
     {
-        IonBoolImpl result = new IonBoolImpl();
-        result._system = this;
-        return result;
+        return new IonBoolImpl(this);
     }
 
     public IonBool newBool(boolean value)
     {
-        IonBoolImpl result = new IonBoolImpl();
+        IonBoolImpl result = new IonBoolImpl(this);
         result.setValue(value);
-        result._system = this;
         return result;
     }
 
@@ -530,9 +525,7 @@ public class IonSystemImpl
 
     public IonClob newNullClob()
     {
-        IonClobImpl result = new IonClobImpl();
-        result._system = this;
-        return result;
+        return new IonClobImpl(this);
     }
 
 
@@ -548,9 +541,7 @@ public class IonSystemImpl
 
     public IonDecimal newNullDecimal()
     {
-        IonDecimalImpl result = new IonDecimalImpl();
-        result._system = this;
-        return result;
+        return new IonDecimalImpl(this);
     }
 
 
@@ -566,9 +557,7 @@ public class IonSystemImpl
 
     public IonFloat newNullFloat()
     {
-        IonFloatImpl result = new IonFloatImpl();
-        result._system = this;
-        return result;
+        return new IonFloatImpl(this);
     }
 
 
@@ -584,32 +573,27 @@ public class IonSystemImpl
 
     public IonInt newNullInt()
     {
-        IonIntImpl result = new IonIntImpl();
-        result._system = this;
-        return result;
+        return new IonIntImpl(this);
     }
 
     public IonInt newInt(int content)
     {
-        IonIntImpl result = new IonIntImpl();
+        IonIntImpl result = new IonIntImpl(this);
         result.setValue(content);
-        result._system = this;
         return result;
     }
 
     public IonInt newInt(long content)
     {
-        IonIntImpl result = new IonIntImpl();
+        IonIntImpl result = new IonIntImpl(this);
         result.setValue(content);
-        result._system = this;
         return result;
     }
 
     public IonInt newInt(Number content)
     {
-        IonIntImpl result = new IonIntImpl();
+        IonIntImpl result = new IonIntImpl(this);
         result.setValue(content);
-        result._system = this;
         return result;
     }
 
@@ -626,33 +610,25 @@ public class IonSystemImpl
 
     public IonList newNullList()
     {
-        IonListImpl result = new IonListImpl();
-        result._system = this;
-        return result;
+        return new IonListImpl(this);
     }
 
     public IonList newEmptyList()
     {
-        IonListImpl result = new IonListImpl(false);
-        result._system = this;
-        return result;
+        return new IonListImpl(this, false);
     }
 
     public IonList newList(Collection<? extends IonValue> elements)
         throws ContainedValueException, NullPointerException
     {
-        IonListImpl result = new IonListImpl(elements);
-        result._system = this;
-        return result;
+        return new IonListImpl(this, elements);
     }
 
     public <T extends IonValue> IonList newList(T... elements)
         throws ContainedValueException, NullPointerException
     {
         List<T> e = (elements == null ? null : Arrays.asList(elements));
-        IonListImpl result = new IonListImpl(e);
-        result._system = this;
-        return result;
+        return new IonListImpl(this, e);
     }
 
     public IonList newList(int[] elements)
@@ -670,9 +646,7 @@ public class IonSystemImpl
 
     public IonNull newNull()
     {
-        IonNullImpl result = new IonNullImpl();
-        result._system = this;
-        return result;
+        return new IonNullImpl(this);
     }
 
 
@@ -688,33 +662,25 @@ public class IonSystemImpl
 
     public IonSexp newNullSexp()
     {
-        IonSexpImpl result = new IonSexpImpl();
-        result._system = this;
-        return result;
+        return new IonSexpImpl(this);
     }
 
     public IonSexp newEmptySexp()
     {
-        IonSexpImpl result = new IonSexpImpl(false);
-        result._system = this;
-        return result;
+        return new IonSexpImpl(this, false);
     }
 
     public IonSexp newSexp(Collection<? extends IonValue> elements)
         throws ContainedValueException, NullPointerException
     {
-        IonSexpImpl result = new IonSexpImpl(elements);
-        result._system = this;
-        return result;
+        return new IonSexpImpl(this, elements);
     }
 
     public <T extends IonValue> IonSexp newSexp(T... elements)
         throws ContainedValueException, NullPointerException
     {
         List<T> e = (elements == null ? null : Arrays.asList(elements));
-        IonSexpImpl result = new IonSexpImpl(e);
-        result._system = this;
-        return result;
+        return new IonSexpImpl(this, e);
     }
 
     public IonSexp newSexp(int[] elements)
@@ -742,16 +708,13 @@ public class IonSystemImpl
 
     public IonString newNullString()
     {
-        IonStringImpl result = new IonStringImpl();
-        result._system = this;
-        return result;
+        return new IonStringImpl(this);
     }
 
     public IonString newString(String content)
     {
-        IonStringImpl result = new IonStringImpl();
+        IonStringImpl result = new IonStringImpl(this);
         result.setValue(content);
-        result._system = this;
         return result;
     }
 
@@ -768,16 +731,13 @@ public class IonSystemImpl
 
     public IonStruct newNullStruct()
     {
-        IonStructImpl result = new IonStructImpl();
-        result._system = this;
-        return result;
+        return new IonStructImpl(this);
     }
 
     public IonStruct newEmptyStruct()
     {
-        IonStructImpl result = new IonStructImpl();
+        IonStructImpl result = new IonStructImpl(this);
         result.clear();
-        result._system = this;
         return result;
     }
 
@@ -794,16 +754,12 @@ public class IonSystemImpl
 
     public IonSymbol newNullSymbol()
     {
-        IonSymbolImpl result = new IonSymbolImpl();
-        result._system = this;
-        return result;
+        return new IonSymbolImpl(this);
     }
 
     public IonSymbol newSymbol(String name)
     {
-        IonSymbolImpl result = new IonSymbolImpl(name);
-        result._system = this;
-        return result;
+        return new IonSymbolImpl(this, name);
     }
 
     /**
@@ -818,35 +774,30 @@ public class IonSystemImpl
 
     public IonTimestamp newNullTimestamp()
     {
-        IonTimestampImpl result = new IonTimestampImpl();
-        result._system = this;
-        return result;
+        return new IonTimestampImpl(this);
     }
 
     public IonTimestamp newUtcTimestampFromMillis(long millis)
     {
-        IonTimestampImpl result = new IonTimestampImpl();
+        IonTimestampImpl result = new IonTimestampImpl(this);
         result.setMillisUtc(millis);
-        result._system = this;
         return result;
     }
 
     public IonTimestamp newUtcTimestamp(Date value)
     {
-        IonTimestampImpl result = new IonTimestampImpl();
+        IonTimestampImpl result = new IonTimestampImpl(this);
         if (value != null)
         {
             result.setMillisUtc(value.getTime());
         }
-        result._system = this;
         return result;
     }
 
     public IonTimestamp newCurrentUtcTimestamp()
     {
-        IonTimestampImpl result = new IonTimestampImpl();
+        IonTimestampImpl result = new IonTimestampImpl(this);
         result.setCurrentTimeUtc();
-        result._system = this;
         return result;
     }
 

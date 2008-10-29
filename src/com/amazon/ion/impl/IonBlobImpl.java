@@ -26,17 +26,17 @@ public final class IonBlobImpl
     /**
      * Constructs a <code>null.blob</code> element.
      */
-    public IonBlobImpl()
+    public IonBlobImpl(IonSystemImpl system)
     {
-        super(NULL_BLOB_TYPEDESC);
+        super(system, NULL_BLOB_TYPEDESC);
     }
 
     /**
      * Constructs a binary-backed element.
      */
-    public IonBlobImpl(int typeDesc)
+    public IonBlobImpl(IonSystemImpl system, int typeDesc)
     {
-        super(typeDesc);
+        super(system, typeDesc);
         assert pos_getType() == IonConstants.tidBlob;
     }
 
@@ -50,7 +50,7 @@ public final class IonBlobImpl
     @Override
     public IonBlobImpl clone()
     {
-        IonBlobImpl clone = new IonBlobImpl();
+        IonBlobImpl clone = new IonBlobImpl(_system);
 
         clone.copyFrom(this);
 

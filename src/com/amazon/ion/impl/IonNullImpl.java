@@ -25,17 +25,19 @@ public final class IonNullImpl
     /**
      * Constructs a <code>null.null</code> value.
      */
-    public IonNullImpl()
+    public IonNullImpl(IonSystemImpl system)
     {
-        super(NULL_NULL_TYPEDESC);
+        super(system, NULL_NULL_TYPEDESC);
     }
 
     /**
      * Constructs a binary-backed null value.
      */
-    public IonNullImpl(int typeDesc)
+    public IonNullImpl(IonSystemImpl system, int typeDesc)
     {
-        super(typeDesc);
+        super(system, typeDesc);
+
+        // This is necessary to trap badly-encoded data.
         if (typeDesc != NULL_NULL_TYPEDESC)
         {
             throw new IonException("Invalid type descriptor byte " + typeDesc);
@@ -54,7 +56,7 @@ public final class IonNullImpl
     @Override
     public IonNullImpl clone()
     {
-        IonNullImpl clone = new IonNullImpl();
+        IonNullImpl clone = new IonNullImpl(_system);
 
         makeReady();
         clone.copyAnnotationsFrom(this);

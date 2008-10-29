@@ -43,7 +43,8 @@ public class LocalSymbolTableImpl
      * @param systemSymbolTable must be a system symbol table as per
      *   {@link SymbolTable#isSystemTable()}.
      */
-    public LocalSymbolTableImpl(SymbolTable systemSymbolTable)
+    public LocalSymbolTableImpl(IonSystemImpl system,
+                                SymbolTable systemSymbolTable)
     {
         assert systemSymbolTable != null;
         assert systemSymbolTable.isSystemTable();
@@ -52,12 +53,12 @@ public class LocalSymbolTableImpl
         _importedTables = null;
         _maxId = systemSymbolTable.getMaxId();
 
-        _symtabElement = new IonStructImpl();
+        _symtabElement = new IonStructImpl(system);
 
         ((IonStructImpl)_symtabElement).setSymbolTable(this);
         _symtabElement.addTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE); // cas 25 apr 2008 was: systemSymbolTable.getSystemId());
 
-        _symbolsStruct = new IonStructImpl();
+        _symbolsStruct = new IonStructImpl(system);
         _symtabElement.put(SystemSymbolTable.SYMBOLS, _symbolsStruct);
     }
 
@@ -65,10 +66,10 @@ public class LocalSymbolTableImpl
     /**
      * Constructs an empty, anonymous symbol table.
      */
-    public LocalSymbolTableImpl(IonSystem system)
+    public LocalSymbolTableImpl(IonSystemImpl system)
     {
     	// assert system != null;
-        this(system.getSystemSymbolTable());
+        this(system, system.getSystemSymbolTable());
     }
 
     /**
