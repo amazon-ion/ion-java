@@ -7,6 +7,7 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
 
+import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonInt;
@@ -23,7 +24,6 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.streaming.IonIterator;
 import com.amazon.ion.streaming.IonTextWriter;
-import com.amazon.ion.streaming.UnifiedCatalog;
 import com.amazon.ion.streaming.UnifiedSymbolTable;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.File;
@@ -791,7 +791,7 @@ public class SymbolTableTest
     	ust.setName("ims.item");
     	ust.lock();
 
-    	UnifiedCatalog catalog = new UnifiedCatalog();
+    	IonCatalog catalog = new SimpleCatalog();
     	catalog.putTable(ust);
 
     	IonTextWriter w = new IonTextWriter();

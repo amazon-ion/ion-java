@@ -5,6 +5,7 @@
 package com.amazon.ion.streaming;
 
 import com.amazon.ion.IonBlob;
+import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonDecimal;
 import com.amazon.ion.IonException;
@@ -44,7 +45,7 @@ public final class IonTextIterator
 
 
     IonTextTokenizer    _scanner;
-    UnifiedCatalog      _catalog;
+    IonCatalog          _catalog;
     UnifiedSymbolTable  _current_symtab;
 
     boolean         _eof;
@@ -209,16 +210,16 @@ public final class IonTextIterator
     public IonTextIterator(String ionText) {
         this(new IonTextTokenizer(ionText), null);
     }
-    public IonTextIterator(byte[] buf, UnifiedCatalog catalog) {
+    public IonTextIterator(byte[] buf, IonCatalog catalog) {
         this(new IonTextTokenizer(buf), catalog);
     }
-    public IonTextIterator(byte[] buf, int start, int len, UnifiedCatalog catalog) {
+    public IonTextIterator(byte[] buf, int start, int len, IonCatalog catalog) {
         this(new IonTextTokenizer(buf, start, len), catalog);
     }
-    public IonTextIterator(String ionText, UnifiedCatalog catalog) {
+    public IonTextIterator(String ionText, IonCatalog catalog) {
         this(new IonTextTokenizer(ionText), catalog);
     }
-    IonTextIterator(IonTextTokenizer scanner, UnifiedCatalog catalog) {
+    IonTextIterator(IonTextTokenizer scanner, IonCatalog catalog) {
         this._scanner = scanner;
         this._catalog = catalog;
         this._current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();

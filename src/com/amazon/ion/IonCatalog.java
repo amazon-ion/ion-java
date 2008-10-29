@@ -19,7 +19,7 @@ public interface IonCatalog
      *
      * @param name identifies the desired symbol table.
      * @return a shared symbol table with the given name, or
-     * {@code null} if not found.
+     * {@code null} if this catalog has no table with the name.
      */
     public SymbolTable getTable(String name);
 
@@ -27,8 +27,10 @@ public interface IonCatalog
     /**
      * Gets a desired symbol table from this catalog.
      *
-     * @return the shared symbol table with the given name and version,
-     * or {@code null} if there's no match.
+     * @return the shared symbol table with the given name and version, when an
+     * exact match is possible. Otherwise, returns the highest known version of
+     * the requested table.  If the catalog has no table with the name, then
+     * this method returns {@code null}.
      */
     public SymbolTable getTable(String name, int version);
 

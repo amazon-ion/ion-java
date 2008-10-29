@@ -4,6 +4,7 @@
 
 package com.amazon.ion.streaming;
 
+import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
@@ -47,7 +48,7 @@ public abstract class IonIterator
      * @throws IonException if there's a problem reading the cookie, or if the
      * data does not start with {@link IonConstants#BINARY_VERSION_MARKER_1_0}.
      */
-    public static IonReader makeIterator(byte[] buf, UnifiedCatalog catalog) {
+    public static IonReader makeIterator(byte[] buf, IonCatalog catalog) {
         IonReader iter = makeIterator(buf, 0, buf.length, catalog);
         return iter;
     }
@@ -61,7 +62,7 @@ public abstract class IonIterator
      * @throws IonException if there's a problem reading the cookie, or if the
      * data does not start with {@link IonConstants#BINARY_VERSION_MARKER_1_0}.
      */
-    public static IonReader makeIterator(byte[] buf, int start, int len, UnifiedCatalog catalog) {
+    public static IonReader makeIterator(byte[] buf, int start, int len, IonCatalog catalog) {
         IonReader iter;
         if (IonBinary.matchBinaryVersionMarker(buf, start, len)) {
             iter = new IonBinaryIterator(buf, start, len, catalog);
@@ -80,7 +81,7 @@ public abstract class IonIterator
      * @throws IonException if there's a problem reading the cookie, or if the
      * data does not start with {@link IonConstants#BINARY_VERSION_MARKER_1_0}.
      */
-    public static IonReader makeIterator(String ionText, UnifiedCatalog catalog) {
+    public static IonReader makeIterator(String ionText, IonCatalog catalog) {
         IonReader iter;
         iter = new IonTextIterator(ionText, catalog);
         return iter;

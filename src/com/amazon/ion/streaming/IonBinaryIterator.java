@@ -5,6 +5,7 @@
 package com.amazon.ion.streaming;
 
 import com.amazon.ion.IonBlob;
+import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonDecimal;
 import com.amazon.ion.IonException;
@@ -20,6 +21,7 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.TtTimestamp;
 import com.amazon.ion.impl.IonConstants;
+import com.amazon.ion.system.SimpleCatalog;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
@@ -88,7 +90,7 @@ public final class IonBinaryIterator
 
     SimpleByteBuffer    _buffer;
     ByteReader          _reader;
-    UnifiedCatalog      _catalog;
+    IonCatalog          _catalog;
     UnifiedSymbolTable  _current_symtab;
     int                 _parent_tid;  // using -1 for eof (or bof aka undefined) and 16 for datagram
 
@@ -131,14 +133,14 @@ public final class IonBinaryIterator
     {
         this(  new SimpleByteBuffer(buf, start, len, true /*isReadOnly*/)
              , null
-             , new UnifiedCatalog()
+             , new SimpleCatalog()
         );
     }
-    public IonBinaryIterator(byte[] buf, UnifiedCatalog catalog)
+    public IonBinaryIterator(byte[] buf, IonCatalog catalog)
     {
         this ( buf, 0, buf.length, catalog );
     }
-    public IonBinaryIterator(byte[] buf, int start, int len, UnifiedCatalog catalog)
+    public IonBinaryIterator(byte[] buf, int start, int len, IonCatalog catalog)
     {
         this(  new SimpleByteBuffer(buf, start, len, true /*isReadOnly*/)
              , null
@@ -156,7 +158,7 @@ public final class IonBinaryIterator
     //        , catalog
     //    );
     //}
-    IonBinaryIterator( SimpleByteBuffer ssb, IonType parent, UnifiedCatalog catalog )
+    IonBinaryIterator(SimpleByteBuffer ssb, IonType parent, IonCatalog catalog)
     {
         _buffer = ssb;
         _reader = _buffer.getReader();

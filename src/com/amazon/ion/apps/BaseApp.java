@@ -12,8 +12,8 @@ import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.streaming.IonIterator;
-import com.amazon.ion.streaming.UnifiedCatalog;
 import com.amazon.ion.streaming.UnifiedSymbolTable;
+import com.amazon.ion.system.SimpleCatalog;
 import com.amazon.ion.system.SystemFactory;
 import java.io.File;
 import java.io.FileInputStream;
@@ -25,8 +25,8 @@ import java.io.IOException;
  */
 abstract class BaseApp
 {
-    protected UnifiedCatalog myCatalog = new UnifiedCatalog();
-    protected IonSystem      mySystem  = SystemFactory.newSystem(myCatalog);
+    protected IonCatalog myCatalog = new SimpleCatalog();
+    protected IonSystem  mySystem  = SystemFactory.newSystem(myCatalog);
 
 
     //=========================================================================
@@ -167,7 +167,7 @@ abstract class BaseApp
                                        e);
         }
 
-        UnifiedCatalog catalog = (UnifiedCatalog) mySystem.getCatalog();
+        IonCatalog catalog = mySystem.getCatalog();
         assert myCatalog == catalog;
 //        logDebug("----Catalog content:");
 //        for (Iterator<StaticSymbolTable> i = catalog.iterator(); i.hasNext(); )
