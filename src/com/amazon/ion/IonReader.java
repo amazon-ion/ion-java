@@ -12,7 +12,8 @@ import java.util.NoSuchElementException;
 
 
 /**
- * Provides stream-based access to Ion data.
+ * Provides stream-based access to Ion data independent of its underlying
+ * representation (text, binary, or {@link IonValue} tree).
  */
 public interface IonReader
 {
@@ -141,6 +142,7 @@ public interface IonReader
      * This does not have be the same as the context of the iterators value,
      * if it has one.
      */
+     // TODO Probably more appropriate to be system.newIonValue(IonReader)
 //    public IonValue getIonValue(IonSystem sys);
 
     /**
@@ -271,6 +273,10 @@ public interface IonReader
      * logically equivalent to getIonValue().toString() but may be more efficient
      * and does not require an IonSystem context to operate.
      */
-    public String valueToString();
+    // 2008-10-30 Disabled this because semantics are cloudy.
+    // In particular, does this move the cursor beyond the current value?
+    // Also, this could be problematic to use since other value-extraction
+    // methods are read-once, so one can't look at the value before calling this.
+//    public String valueToString();
 
 }

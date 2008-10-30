@@ -4,6 +4,8 @@
 
 package com.amazon.ion.streaming;
 
+import static com.amazon.ion.impl.IonImplUtils.EMPTY_ITERATOR;
+
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonClob;
@@ -11,6 +13,7 @@ import com.amazon.ion.IonDecimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonList;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonStruct;
@@ -36,7 +39,7 @@ import java.util.NoSuchElementException;
  * returns Ion values from it.
  */
 public final class IonTextIterator
-    extends IonIterator
+    implements IonReader
 {
 
 //////////////////////////////////////////////////////////////////////////debug
@@ -249,7 +252,6 @@ public final class IonTextIterator
         _annotation_count = 0;
     }
 
-    @Override
     public int getContainerSize() {
         int size = 0;
 
@@ -279,7 +281,6 @@ public final class IonTextIterator
         return size;
     }
 
-    @Override
     public void stepInto()
     {
         if (_value_type == null || _eof) {
@@ -297,7 +298,6 @@ public final class IonTextIterator
         }
     }
 
-    @Override
     public void stepOut()
     {
         if (_current_depth < 1) {
@@ -308,7 +308,6 @@ public final class IonTextIterator
         _eof = false;
     }
 
-    @Override
     public int getDepth() {
         return _current_depth;
     }
@@ -316,7 +315,6 @@ public final class IonTextIterator
     IonType _lookahead_type = null;
     int _current_depth = 0;
 
-    @Override
     public boolean hasNext()
     {
         boolean has_next = hasNextHelper();
@@ -428,7 +426,7 @@ public final class IonTextIterator
 
         return _debug_all_system ? false : skip_value;
     }
-    @Override
+
     public IonType next()
     {
         if (_lookahead_type == null) {
@@ -533,7 +531,6 @@ public final class IonTextIterator
         return table;
     }
 
-    @Override
     public int getTypeId()
     {
         switch (_value_type) {
@@ -556,13 +553,11 @@ public final class IonTextIterator
         return -1;
     }
 
-    @Override
     public IonType getType()
     {
         return _value_type;
     }
 
-    @Override
     public UnifiedSymbolTable getSymbolTable()
     {
         if (_current_symtab == null) {
@@ -571,7 +566,6 @@ public final class IonTextIterator
         return _current_symtab;
     }
 
-    @Override
     public int[] getTypeAnnotationIds()
     {
         if (!_value_ready || _current_symtab == null) {
@@ -587,7 +581,6 @@ public final class IonTextIterator
         return ids;
     }
 
-    @Override
     public String[] getTypeAnnotations()
     {
         if (!_value_ready) {
@@ -613,7 +606,6 @@ public final class IonTextIterator
     }
 
     @SuppressWarnings("unchecked")
-    @Override
     public Iterator<Integer> iterateTypeAnnotationIds()
     {
         int[] ids = getTypeAnnotationIds();
@@ -622,7 +614,6 @@ public final class IonTextIterator
     }
 
     @SuppressWarnings("unchecked")
-    @Override
     public Iterator<String> iterateTypeAnnotations()
     {
         String[] ids = getTypeAnnotations();
@@ -630,7 +621,6 @@ public final class IonTextIterator
         return new IonTreeIterator.StringIterator(ids);
     }
 
-    @Override
     public int getFieldId()
     {
         if (!_value_ready || _current_symtab == null) {
@@ -643,7 +633,6 @@ public final class IonTextIterator
         return id;
     }
 
-    @Override
     public String getFieldName()
     {
         if (!_value_ready) {
@@ -652,7 +641,6 @@ public final class IonTextIterator
         return _field_name;
     }
 
-    @Override
     public IonValue getIonValue(IonSystem sys)
     {
         int tid = getTypeId();
@@ -741,19 +729,16 @@ public final class IonTextIterator
         this.stepOut();
     }
 
-    @Override
     public boolean isInStruct()
     {
         return _in_struct;
     }
 
-    @Override
     public boolean isNullValue()
     {
         return _is_null;
     }
 
-    @Override
     public boolean booleanValue()
     {
         if (_value_type.equals(IonType.BOOL)) {
@@ -765,7 +750,6 @@ public final class IonTextIterator
 
     }
 
-    @Override
     public int intValue()
     {
         switch (_value_type) {
@@ -806,7 +790,6 @@ public final class IonTextIterator
         throw new IllegalStateException("current value is not an ion int, float, or decimal");
     }
 
-    @Override
     public long longValue()
     {
         switch (_value_type) {
@@ -847,7 +830,6 @@ public final class IonTextIterator
         throw new IllegalStateException("current value is not an ion int, float, or decimal");
     }
 
-    @Override
     public double doubleValue()
     {
         switch (_value_type) {
@@ -863,7 +845,6 @@ public final class IonTextIterator
         throw new IllegalStateException("current value is not an ion float or decimal");
     }
 
-    @Override
     public BigDecimal bigDecimalValue()
     {
         switch (_value_type) {
@@ -879,7 +860,6 @@ public final class IonTextIterator
         throw new IllegalStateException("current value is not an ion decimal");
     }
 
-    @Override
     public TtTimestamp timestampValue()
     {
         if (!_value_type.equals(IonType.TIMESTAMP)) {
@@ -893,13 +873,11 @@ public final class IonTextIterator
         return ti;
     }
 
-    @Override
     public Date dateValue()
     {
         return timestampValue().dateValue();
     }
 
-    @Override
     public String stringValue()
     {
         switch (_value_type) {
@@ -946,7 +924,6 @@ public final class IonTextIterator
         return value;
     }
 
-    @Override
     public int getSymbolId()
     {
         if (this._current_symtab == null) {
@@ -1006,7 +983,6 @@ public final class IonTextIterator
         }
     }
 
-    @Override
     public byte[] newBytes()
     {
         InputStream bytestream = this.getByteStream();
@@ -1307,7 +1283,6 @@ public final class IonTextIterator
         }
     }
 
-    @Override
     public int getBytes(byte[] buffer, int offset, int len)
     {
         InputStream bytestream = this.getByteStream();

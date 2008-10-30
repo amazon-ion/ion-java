@@ -22,7 +22,6 @@ import com.amazon.ion.IonText;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
-import com.amazon.ion.streaming.IonIterator;
 import com.amazon.ion.streaming.IonTextWriter;
 import com.amazon.ion.streaming.UnifiedSymbolTable;
 import com.amazon.ion.system.SimpleCatalog;
@@ -791,13 +790,13 @@ public class SymbolTableTest
     	ust.setName("ims.item");
     	ust.lock();
 
-    	IonCatalog catalog = new SimpleCatalog();
+    	IonCatalog catalog = mySystem.getCatalog();
     	catalog.putTable(ust);
 
     	IonTextWriter w = new IonTextWriter();
 
     	byte[] buf = openFileForBuffer("c:\\data\\samples\\kim.10n");
-    	IonReader   r = IonIterator.makeIterator(buf, catalog);
+    	IonReader r = mySystem.newReader(buf);
 
     	w.writeIonEvents(r);
 

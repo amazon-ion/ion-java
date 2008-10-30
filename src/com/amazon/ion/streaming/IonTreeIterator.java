@@ -4,6 +4,8 @@
 
 package com.amazon.ion.streaming;
 
+import static com.amazon.ion.impl.IonImplUtils.EMPTY_ITERATOR;
+
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
@@ -35,7 +37,7 @@ import java.util.NoSuchElementException;
  * over an {@link IonValue}, typically an {@link IonDatagram}.
  */
 public final class IonTreeIterator
-    extends IonIterator
+    implements IonReader
 {
     Iterator<IonValue> _iter;
     IonValue _root;
@@ -91,7 +93,6 @@ public final class IonTreeIterator
     }
 
 
-    @Override
     public boolean hasNext()
     {
         if (this._eof) return false;
@@ -107,7 +108,6 @@ public final class IonTreeIterator
         return !this._eof;
     }
 
-    @Override
     public IonType next()
     {
         if (this._next == null && !this.hasNext()) {
@@ -119,7 +119,6 @@ public final class IonTreeIterator
         return this._curr.getType();
     }
 
-    @Override
     public int getContainerSize() {
         if (!(this._curr instanceof IonContainer)) {
             throw new IllegalStateException("current iterator value must be a container");
@@ -127,7 +126,6 @@ public final class IonTreeIterator
         return ((IonContainer)_curr).size();
     }
 
-    @Override
     public void stepInto()
     {
         if (!(this._curr instanceof IonContainer)) {
@@ -139,7 +137,6 @@ public final class IonTreeIterator
         _curr = null;
     }
 
-    @Override
     public void stepOut()
     {
         if (this._top < 1) {
@@ -148,12 +145,10 @@ public final class IonTreeIterator
         pop();
     }
 
-    @Override
     public int getDepth() {
         return _top/2;
     }
 
-    @Deprecated
     public void position(IonReader other)
     {
         if (!(other instanceof IonTreeIterator)) {
@@ -178,7 +173,6 @@ public final class IonTreeIterator
         }
     }
 
-    @Override
     public UnifiedSymbolTable getSymbolTable()
     {
         UnifiedSymbolTable utable = null;
@@ -200,19 +194,16 @@ public final class IonTreeIterator
         return utable;
     }
 
-    @Override
     public IonType getType()
     {
         return (_curr == null) ? null : _curr.getType();
     }
 
-    @Override
     public int getTypeId()
     {
         return (_curr == null) ? -1 : _curr.getType().ordinal();
     }
 
-    @Override
     public String[] getTypeAnnotations()
     {
         if (_curr == null) {
@@ -226,7 +217,6 @@ public final class IonTreeIterator
         return annotations;
     }
 
-    @Override
     public int[] getTypeAnnotationIds()
     {
         String [] annotations = getTypeAnnotations();
@@ -243,7 +233,6 @@ public final class IonTreeIterator
     }
 
     @SuppressWarnings("unchecked")
-    @Override
     public Iterator<Integer> iterateTypeAnnotationIds()
     {
         int [] ids = getTypeAnnotationIds();
@@ -252,7 +241,6 @@ public final class IonTreeIterator
     }
 
     @SuppressWarnings("unchecked")
-    @Override
     public Iterator<String> iterateTypeAnnotations()
     {
         String [] annotations = getTypeAnnotations();
@@ -261,7 +249,6 @@ public final class IonTreeIterator
     }
 
 
-    @Override
     public boolean isInStruct()
     {
         Object r = _root;
@@ -271,7 +258,6 @@ public final class IonTreeIterator
         return (r instanceof IonStruct);
     }
 
-    @Override
     public boolean isNullValue()
     {
         if (_curr instanceof IonNull) return true;
@@ -282,7 +268,6 @@ public final class IonTreeIterator
         return _curr.isNullValue();
     }
 
-    @Override
     public int getFieldId()
     {
         // FIXME why does this return null? What does that even mean for int?
@@ -290,19 +275,16 @@ public final class IonTreeIterator
         return (_curr == null) ? null : _curr.getFieldId();
     }
 
-    @Override
     public String getFieldName()
     {
         return (_curr == null) ? null : _curr.getFieldName();
     }
 
-    @Override
     public IonValue getIonValue(IonSystem sys)
     {
         return _curr;
     }
 
-    @Override
     public boolean booleanValue()
     {
         if (_curr instanceof IonBool) {
@@ -312,7 +294,6 @@ public final class IonTreeIterator
 
     }
 
-    @Override
     public int intValue()
     {
         if (_curr instanceof IonInt)  {
@@ -327,7 +308,6 @@ public final class IonTreeIterator
         throw new IllegalStateException("current value is not an ion int, float, or decimal");
     }
 
-    @Override
     public long longValue()
     {
         if (_curr instanceof IonInt)  {
@@ -342,7 +322,6 @@ public final class IonTreeIterator
         throw new IllegalStateException("current value is not an ion int, float, or decimal");
     }
 
-    @Override
     public double doubleValue()
     {
         if (_curr instanceof IonFloat)  {
@@ -354,7 +333,6 @@ public final class IonTreeIterator
         throw new IllegalStateException("current value is not an ion float or decimal");
     }
 
-    @Override
     public BigDecimal bigDecimalValue()
     {
         if (_curr instanceof IonDecimal)  {
@@ -363,7 +341,6 @@ public final class IonTreeIterator
         throw new IllegalStateException("current value is not an ion decimal");
     }
 
-    @Override
     public TtTimestamp timestampValue()
     {
         if (_curr instanceof IonTimestamp) {
@@ -372,7 +349,6 @@ public final class IonTreeIterator
         throw new IllegalStateException("current value is not a timestamp");
     }
 
-    @Override
     public Date dateValue()
     {
         if (_curr instanceof IonTimestamp)  {
@@ -381,7 +357,6 @@ public final class IonTreeIterator
         throw new IllegalStateException("current value is not an ion timestamp");
     }
 
-    @Override
     public String stringValue()
     {
         if (_curr == null) return null;
@@ -391,7 +366,6 @@ public final class IonTreeIterator
         throw new IllegalStateException("current value is not a symbol or string");
     }
 
-    @Override
     public int getSymbolId()
     {
         if (_curr == null) return -1;
@@ -410,7 +384,6 @@ public final class IonTreeIterator
         throw new IllegalStateException("current value is not an ion blob or clob");
     }
 
-    @Override
     public byte[] newBytes()
     {
         if (_curr instanceof IonLob) {
@@ -432,7 +405,6 @@ public final class IonTreeIterator
         throw new IllegalStateException("current value is not an ion blob or clob");
     }
 
-    @Override
     public int getBytes(byte[] buffer, int offset, int len)
     {
         if (_curr instanceof IonLob) {
@@ -456,7 +428,7 @@ public final class IonTreeIterator
         throw new IllegalStateException("current value is not an ion blob or clob");
     }
 
-    @Override
+
     public String valueToString()
     {
         return (_curr == null) ? null : _curr.toString();

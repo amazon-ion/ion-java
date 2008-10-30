@@ -4,6 +4,8 @@
 
 package com.amazon.ion.streaming;
 
+import static com.amazon.ion.impl.IonImplUtils.EMPTY_ITERATOR;
+
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonClob;
@@ -11,6 +13,7 @@ import com.amazon.ion.IonDecimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonList;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonStruct;
@@ -33,7 +36,7 @@ import java.util.NoSuchElementException;
  * implements an Ion iterator over a Ion binary buffer.
  */
 public final class IonBinaryIterator
-    extends IonIterator
+    implements IonReader
 {
     static final boolean _debug_return_system_values = false;
 
@@ -182,7 +185,6 @@ public final class IonBinaryIterator
         return is_struct;
     }
 
-    @Override
     public boolean hasNext()
     {
         if (_eof) return false;
@@ -244,7 +246,7 @@ public final class IonBinaryIterator
         _state = IonBinaryIterator.S_AFTER_TID;
         return true;
     }
-    @Override
+
     public IonType next()
     {
         // get actual type id, this also handle the hasNext & eof logic as necessary
@@ -573,12 +575,10 @@ public final class IonBinaryIterator
         return is_symbol_table;
     }
 
-    @Override
     public int getDepth() {
         return _top;
     }
 
-    @Override
     public int getContainerSize()
     {
         int size = 0;
@@ -625,7 +625,6 @@ public final class IonBinaryIterator
     }
 
 
-    @Override
     public void stepInto()
     {
         if (_state != S_BEFORE_CONTENTS) {
@@ -684,7 +683,6 @@ public final class IonBinaryIterator
         _symbol_stack = temp4;
     }
 
-    @Override
     public void stepOut()
     {
         if (_top < 1) {
@@ -707,7 +705,6 @@ public final class IonBinaryIterator
         _eof = false;
     }
 
-    @Override
     public UnifiedSymbolTable getSymbolTable() {
         return _current_symtab;
     }
@@ -725,7 +722,6 @@ public final class IonBinaryIterator
     }
 
 
-    @Override
     public IonType getType()
     {
         if (_eof || _state == IonBinaryIterator.S_BEFORE_TID) {
@@ -734,7 +730,6 @@ public final class IonBinaryIterator
         return _value_type;
     }
 
-    @Override
     public int getTypeId()
     {
         if (_eof || _state == IonBinaryIterator.S_BEFORE_TID) {
@@ -743,7 +738,6 @@ public final class IonBinaryIterator
         return ((_value_tid >>> 4) & 0xf);
     }
 
-    @Override
     public int[] getTypeAnnotationIds()
     {
         int[] ids = null;
@@ -783,7 +777,6 @@ public final class IonBinaryIterator
         return ids;
     }
 
-    @Override
     public String[] getTypeAnnotations()
     {
         int[] ids = getTypeAnnotationIds();
@@ -801,7 +794,6 @@ public final class IonBinaryIterator
     }
 
     @SuppressWarnings("unchecked")
-    @Override
     public Iterator<Integer> iterateTypeAnnotationIds()
     {
         int[] ids = getTypeAnnotationIds();
@@ -810,7 +802,6 @@ public final class IonBinaryIterator
     }
 
     @SuppressWarnings("unchecked")
-    @Override
     public Iterator<String> iterateTypeAnnotations()
     {
         String[] ids = getTypeAnnotations();
@@ -818,12 +809,10 @@ public final class IonBinaryIterator
         return new IonTreeIterator.StringIterator(ids);
     }
 
-    @Override
     public boolean isInStruct() {
         return is_in_struct();
     }
 
-    @Override
     public int getFieldId()
     {
         if (_value_field_id == -1) {
@@ -832,7 +821,6 @@ public final class IonBinaryIterator
         return _value_field_id;
     }
 
-    @Override
     public String getFieldName()
     {
         if (_value_field_id == -1 || _current_symtab == null) {
@@ -842,7 +830,6 @@ public final class IonBinaryIterator
     }
 
     @SuppressWarnings("deprecation")
-    @Override
     public IonValue getIonValue(IonSystem sys)
     {
         if (_state != S_BEFORE_CONTENTS) {
@@ -939,7 +926,6 @@ public final class IonBinaryIterator
         stepOut();
     }
 
-    @Override
     public boolean isNullValue()
     {
         if (_state != S_BEFORE_CONTENTS) {
@@ -952,7 +938,6 @@ public final class IonBinaryIterator
         return ((_value_tid & 0xf) == IonConstants.lnIsNullAtom);
     }
 
-    @Override
     public boolean booleanValue()
     {
         if (_state != S_BEFORE_CONTENTS) {
@@ -976,13 +961,11 @@ public final class IonBinaryIterator
         }
     }
 
-    @Override
     public int intValue()
     {
         return (int)longValue();
     }
 
-    @Override
     public long longValue()
     {
         long value;
@@ -1008,8 +991,6 @@ public final class IonBinaryIterator
         return value;
     }
 
-
-    @Override
     public double doubleValue()
     {
         double value;
@@ -1032,7 +1013,6 @@ public final class IonBinaryIterator
         return value;
     }
 
-    @Override
     public BigDecimal bigDecimalValue()
     {
         if (_state != S_BEFORE_CONTENTS) {
@@ -1057,7 +1037,6 @@ public final class IonBinaryIterator
         return value;
     }
 
-    @Override
     public int getSymbolId()
     {
         long value;
@@ -1080,13 +1059,11 @@ public final class IonBinaryIterator
         return (int)value;
     }
 
-    @Override
     public Date dateValue()
     {
         return timestampValue().dateValue();
     }
 
-    @Override
     public TtTimestamp timestampValue()
     {
         TtTimestamp ti;
@@ -1109,7 +1086,6 @@ public final class IonBinaryIterator
         return ti;
     }
 
-    @Override
     public String stringValue()
     {
         String string_value;
@@ -1158,7 +1134,6 @@ public final class IonBinaryIterator
         return _value_len;
     }
 
-    @Override
     public byte[] newBytes()
     {
         if (_state != S_BEFORE_CONTENTS) {
@@ -1181,7 +1156,6 @@ public final class IonBinaryIterator
         return value;
     }
 
-    @Override
     public int getBytes(byte[] buffer, int offset, int len)
     {
         int readlen = -1;

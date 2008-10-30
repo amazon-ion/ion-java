@@ -11,7 +11,6 @@ import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.streaming.IonIterator;
 import com.amazon.ion.streaming.UnifiedSymbolTable;
 import com.amazon.ion.system.SimpleCatalog;
 import com.amazon.ion.system.SystemFactory;
@@ -128,7 +127,7 @@ abstract class BaseApp
     {
         byte[] buffer = loadAsByteArray(file);
 
-        IonReader reader = IonIterator.makeIterator(buffer, myCatalog);
+        IonReader reader = mySystem.newReader(buffer);
 
         process(file, reader);
     }
