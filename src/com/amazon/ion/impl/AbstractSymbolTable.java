@@ -159,8 +159,7 @@ public abstract class AbstractSymbolTable
 
         if (_symbolsStruct != null)  // null while constructing
         {
-            IonString textElement = new IonStringImpl();
-            textElement.setValue(name);
+            IonString textElement = _symbolsStruct.getSystem().newString(name);
             String fieldName = SystemSymbolTableImpl.unknownSymbolName(id);
             _symbolsStruct.put(fieldName, textElement);
         }
@@ -283,7 +282,7 @@ public abstract class AbstractSymbolTable
 					throw new IonException("invalid symbol table, the name field must be a string value and version must be an int");
 				}
 				String name = ((IonText)ionname).stringValue();
-				if (name.equals(SystemSymbolTable.ION_1_0)) {
+				if (name.equals(SystemSymbolTable.ION_1_0)) { // FIXME wrong name
 					type = SymbolTableType.SYSTEM;
 				}
 				else {
