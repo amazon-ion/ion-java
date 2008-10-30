@@ -4,7 +4,6 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.streaming.UnifiedSymbolTable;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
@@ -53,7 +52,7 @@ public interface IonWriter
      * in symbol table.
      * @param symbols base symbol table for encoding
      */
-    public abstract void setSymbolTable(UnifiedSymbolTable symbols);
+    public abstract void setSymbolTable(SymbolTable symbols);
 
     /**
      * returns the symbol table that is currently in use by the writer.

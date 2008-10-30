@@ -8,7 +8,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
-import com.amazon.ion.streaming.UnifiedSymbolTable;
+import com.amazon.ion.impl.UnifiedSymbolTable;
 import com.amazon.ion.util.Printer;
 import java.io.IOException;
 import java.util.Iterator;

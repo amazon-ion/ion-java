@@ -16,6 +16,7 @@ import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.impl.IonBinaryWriter;
 import com.amazon.ion.system.SystemFactory;
 
 /**

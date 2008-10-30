@@ -2,7 +2,7 @@
  * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
  */
 
-package com.amazon.ion.streaming;
+package com.amazon.ion.impl;
 
 import com.amazon.ion.InvalidSystemSymbolException;
 import com.amazon.ion.IonCatalog;
@@ -16,9 +16,6 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
-import com.amazon.ion.impl.IonBinary;
-import com.amazon.ion.impl.IonConstants;
-import com.amazon.ion.impl.IonStructImpl;
 import com.amazon.ion.util.Text;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -210,7 +207,7 @@ public final class UnifiedSymbolTable
     {
         this(systemSymbols);
 
-        IonReader reader = new IonTreeIterator(ionRep);
+        IonReader reader = new IonTreeReader(ionRep);
 //        reader.next();
 //        reader.stepInto();
         readIonRep(reader, catalog);

@@ -16,7 +16,6 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonBinary.BufferManager;
-import com.amazon.ion.streaming.UnifiedSymbolTable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Reader;

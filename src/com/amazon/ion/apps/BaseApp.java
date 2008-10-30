@@ -11,7 +11,7 @@ import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.streaming.UnifiedSymbolTable;
+import com.amazon.ion.impl.UnifiedSymbolTable;
 import com.amazon.ion.system.SimpleCatalog;
 import com.amazon.ion.system.SystemFactory;
 import java.io.File;

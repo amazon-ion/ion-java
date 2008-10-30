@@ -2,7 +2,7 @@
  * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
  */
 
-package com.amazon.ion.streaming;
+package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_ITERATOR;
 
@@ -23,7 +23,6 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.TtTimestamp;
-import com.amazon.ion.impl.IonConstants;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -35,7 +34,7 @@ import java.util.NoSuchElementException;
 /**
  * implements an Ion iterator over a Ion binary buffer.
  */
-public final class IonBinaryIterator
+public final class IonBinaryReader
     implements IonReader
 {
     static final boolean _debug_return_system_values = false;
@@ -122,28 +121,28 @@ public final class IonBinaryIterator
     int[]       _local_end_stack;
     UnifiedSymbolTable[] _symbol_stack;
 
-    IonBinaryIterator() {}
+    IonBinaryReader() {}
 
     // public to allow someone to DECLARE this buf to be binary
     // irrespective of the presense or absense of an Ion Version
     // Marker (aka magic cookie)
-    public IonBinaryIterator(byte[] buf)
+    public IonBinaryReader(byte[] buf)
     {
         this ( buf, 0, buf.length );
     }
 
-    public IonBinaryIterator(byte[] buf, int start, int len)
+    public IonBinaryReader(byte[] buf, int start, int len)
     {
         this(  new SimpleByteBuffer(buf, start, len, true /*isReadOnly*/)
              , null
              , new SimpleCatalog()
         );
     }
-    public IonBinaryIterator(byte[] buf, IonCatalog catalog)
+    public IonBinaryReader(byte[] buf, IonCatalog catalog)
     {
         this ( buf, 0, buf.length, catalog );
     }
-    public IonBinaryIterator(byte[] buf, int start, int len, IonCatalog catalog)
+    public IonBinaryReader(byte[] buf, int start, int len, IonCatalog catalog)
     {
         this(  new SimpleByteBuffer(buf, start, len, true /*isReadOnly*/)
              , null
@@ -161,7 +160,7 @@ public final class IonBinaryIterator
     //        , catalog
     //    );
     //}
-    IonBinaryIterator(SimpleByteBuffer ssb, IonType parent, IonCatalog catalog)
+    IonBinaryReader(SimpleByteBuffer ssb, IonType parent, IonCatalog catalog)
     {
         _buffer = ssb;
         _reader = _buffer.getReader();
@@ -243,7 +242,7 @@ public final class IonBinaryIterator
 
         // mark where we are
         _value_tid = td;
-        _state = IonBinaryIterator.S_AFTER_TID;
+        _state = IonBinaryReader.S_AFTER_TID;
         return true;
     }
 
@@ -259,7 +258,7 @@ public final class IonBinaryIterator
     }
     int nextTid()
     {
-        if (_state != IonBinaryIterator.S_AFTER_TID && !this.hasNext()) {
+        if (_state != IonBinaryReader.S_AFTER_TID && !this.hasNext()) {
                 throw new NoSuchElementException();
         }
 
@@ -298,7 +297,7 @@ public final class IonBinaryIterator
         }
 
         // set the state forward
-        _state = IonBinaryIterator.S_BEFORE_CONTENTS;
+        _state = IonBinaryReader.S_BEFORE_CONTENTS;
         return ion_type;
     }
     final int get_tid_from_ion_type(IonType t) {
@@ -463,7 +462,7 @@ public final class IonBinaryIterator
                     // there's magic here!  start over with
                     // a fresh new symbol table!
                     this.resetSymbolTable();
-                    _state = IonBinaryIterator.S_BEFORE_TID;
+                    _state = IonBinaryReader.S_BEFORE_TID;
                     td = -1; // this says we used up the value and the caller can skip it
                 }
                 else {
@@ -544,7 +543,7 @@ public final class IonBinaryIterator
             this._local_end = this._reader.position() + len;
 
             if (this._local_end >= prev_end) {
-                _state = IonBinaryIterator.S_INVALID;
+                _state = IonBinaryReader.S_INVALID;
                 throw new IonException("invalid binary format");
             }
             // TODO: this should get it's system symbol table somewhere else
@@ -711,8 +710,9 @@ public final class IonBinaryIterator
 
     public void resetSymbolTable()
     {
+        // TODO can this just use isSystemTable() ?
     	if ( _current_symtab == null
-    	 || !_current_symtab._is_locked
+    	 || !_current_symtab.isLocked()
     	 ||  _current_symtab.getMaxId() != UnifiedSymbolTable.getSystemSymbolTableInstance().getMaxId()
     	) {
     		// we only need to "reset" the symbol table if it isn't
@@ -724,7 +724,7 @@ public final class IonBinaryIterator
 
     public IonType getType()
     {
-        if (_eof || _state == IonBinaryIterator.S_BEFORE_TID) {
+        if (_eof || _state == IonBinaryReader.S_BEFORE_TID) {
             throw new IllegalStateException();
         }
         return _value_type;
@@ -732,7 +732,7 @@ public final class IonBinaryIterator
 
     public int getTypeId()
     {
-        if (_eof || _state == IonBinaryIterator.S_BEFORE_TID) {
+        if (_eof || _state == IonBinaryReader.S_BEFORE_TID) {
             throw new IllegalStateException();
         }
         return ((_value_tid >>> 4) & 0xf);
@@ -798,7 +798,7 @@ public final class IonBinaryIterator
     {
         int[] ids = getTypeAnnotationIds();
         if (ids == null) return (Iterator<Integer>) EMPTY_ITERATOR;
-        return new IonTreeIterator.IdIterator(ids);
+        return new IonTreeReader.IdIterator(ids);
     }
 
     @SuppressWarnings("unchecked")
@@ -806,7 +806,7 @@ public final class IonBinaryIterator
     {
         String[] ids = getTypeAnnotations();
         if (ids == null) return (Iterator<String>) EMPTY_ITERATOR;
-        return new IonTreeIterator.StringIterator(ids);
+        return new IonTreeReader.StringIterator(ids);
     }
 
     public boolean isInStruct() {

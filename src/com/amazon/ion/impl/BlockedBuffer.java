@@ -4,7 +4,6 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.streaming.ByteWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;

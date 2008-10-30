@@ -29,10 +29,6 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.UnsupportedSystemVersionException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
-import com.amazon.ion.streaming.IonBinaryIterator;
-import com.amazon.ion.streaming.IonTextIterator;
-import com.amazon.ion.streaming.IonTreeIterator;
-import com.amazon.ion.streaming.UnifiedSymbolTable;
 import com.amazon.ion.system.SimpleCatalog;
 import com.amazon.ion.util.Printer;
 import java.io.ByteArrayInputStream;
@@ -208,7 +204,7 @@ public class IonSystemImpl
 
     public IonReader newReader(String ionText)
     {
-        return new IonTextIterator(ionText);
+        return new IonTextReader(ionText);
     }
 
 
@@ -223,10 +219,10 @@ public class IonSystemImpl
 
         IonReader reader;
         if (isBinary) {
-            reader = new IonBinaryIterator(ionData, offset, len);
+            reader = new IonBinaryReader(ionData, offset, len);
         }
         else {
-            reader = new IonTextIterator(ionData, offset, len);
+            reader = new IonTextReader(ionData, offset, len);
         }
         return reader;
     }
@@ -250,7 +246,7 @@ public class IonSystemImpl
 
     public IonReader newReader(IonValue value)
     {
-        return new IonTreeIterator(value);
+        return new IonTreeReader(value);
     }
 
 

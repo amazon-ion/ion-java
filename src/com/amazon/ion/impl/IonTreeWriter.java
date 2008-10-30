@@ -2,9 +2,9 @@
  * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
  */
 
-package com.amazon.ion.streaming;
+package com.amazon.ion.impl;
 
-import com.amazon.ion.TtTimestamp;
+
 
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonClob;
@@ -20,6 +20,7 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.TtTimestamp;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;

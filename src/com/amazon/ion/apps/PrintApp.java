@@ -7,7 +7,7 @@ package com.amazon.ion.apps;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.streaming.IonTextWriter;
+import com.amazon.ion.impl.IonTextWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;

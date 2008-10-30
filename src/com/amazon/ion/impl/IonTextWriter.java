@@ -2,12 +2,10 @@
  * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
  */
 
-package com.amazon.ion.streaming;
+package com.amazon.ion.impl;
 
 import com.amazon.ion.IonType;
 import com.amazon.ion.TtTimestamp;
-import com.amazon.ion.impl.IonBinary;
-import com.amazon.ion.impl.IonConstants;
 import com.amazon.ion.impl.Base64Encoder.TextStream;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import java.io.ByteArrayInputStream;

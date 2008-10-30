@@ -2,7 +2,7 @@
  * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
  */
 
-package com.amazon.ion.streaming;
+package com.amazon.ion.impl;
 
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
@@ -20,32 +20,27 @@ public abstract class IonBaseWriter
 {
 static final boolean _debug_on = false;
 
-    UnifiedSymbolTable  _external_symbol_table;
+    protected UnifiedSymbolTable  _external_symbol_table;
 
     /**
      * FIXME when can this be null?  When can it be changed?
      */
-    SymbolTable         _symbol_table;
-    boolean             _no_local_symbols = true;
+    protected SymbolTable         _symbol_table;
+    protected boolean             _no_local_symbols = true;
 
-    IonType     _field_name_type;     // really ion type is only used for int, string or null (unknown)
-    String      _field_name;
-    int         _field_name_sid;
+    protected IonType     _field_name_type;     // really ion type is only used for int, string or null (unknown)
+    protected String      _field_name;
+    protected int         _field_name_sid;
 
-    IonType     _annotations_type;     // really ion type is only used for int, string or null (unknown)
-    int         _annotation_count;
-    String[]    _annotations;
-    int[]       _annotation_sids = new int[10];
+    protected IonType     _annotations_type;     // really ion type is only used for int, string or null (unknown)
+    protected int         _annotation_count;
+    protected String[]    _annotations;
+    protected int[]       _annotation_sids = new int[10];
 
 
     public SymbolTable getSymbolTable()
     {
         return _symbol_table;
-    }
-
-    public void setSymbolTable(UnifiedSymbolTable symbols)
-    {
-        _symbol_table = symbols;
     }
 
     public void setSymbolTable(SymbolTable symbols)
@@ -63,25 +58,25 @@ static final boolean _debug_on = false;
         ((UnifiedSymbolTable)_symbol_table).addImportedTable(sharedSymbolTable, 0);
     }
 
-    String getSymbolTableName() {
+    protected String getSymbolTableName() {
         if (_symbol_table != null) {
             return _symbol_table.getName();
         }
         return null;
     }
-    int getSymbolTableVersion() {
+    protected int getSymbolTableVersion() {
         if (_symbol_table != null) {
             return _symbol_table.getVersion();
         }
         return 0;
     }
-    UnifiedSymbolTable[] getSymbolTableImportedTables() {
+    protected UnifiedSymbolTable[] getSymbolTableImportedTables() {
         if (_symbol_table instanceof UnifiedSymbolTable) {
             return ((UnifiedSymbolTable)_symbol_table).getImportedTables();
         }
         return null;
     }
-    UnifiedSymbolTable.Symbol[] getSymbolArray() {
+    protected UnifiedSymbolTable.Symbol[] getSymbolArray() {
         if (_symbol_table instanceof UnifiedSymbolTable) {
             return ((UnifiedSymbolTable)_symbol_table)._symbols;
         }
@@ -127,7 +122,7 @@ static final boolean _debug_on = false;
         return null;
     }
     */
-    int getSymbolTableMaxId() {
+    protected int getSymbolTableMaxId() {
         if (_symbol_table != null) {
             return _symbol_table.getMaxId();
         }
@@ -140,7 +135,7 @@ static final boolean _debug_on = false;
         _annotations_type = IonType.NULL;
     }
 
-    String[] get_annotations_as_strings() {
+    protected String[] get_annotations_as_strings() {
         if (_annotations_type == IonType.INT) {
             SymbolTable symtab = getSymbolTable();
             if (symtab == null) {
@@ -156,7 +151,7 @@ static final boolean _debug_on = false;
         return _annotations;
     }
 
-    int[] get_annotations_as_ints() {
+    protected int[] get_annotations_as_ints() {
         if (_annotations_type == IonType.STRING) {
             for (int ii=0; ii<_annotation_count; ii++) {
                 String name = _annotations[ii];
@@ -170,7 +165,7 @@ static final boolean _debug_on = false;
     /**
      * Does not increase _annotation_count.
      */
-    void growAnnotations(int length) {
+    protected void growAnnotations(int length) {
         int oldlen = (_annotations == null) ? 0 : _annotations.length;
         if (length < oldlen) return;
         int newlen = (_annotations == null) ? 10 : (_annotations.length * 2);
@@ -242,12 +237,12 @@ static final boolean _debug_on = false;
         }
     }
 
-    void clearFieldName() {
+    protected void clearFieldName() {
         _field_name_type = IonType.NULL;
         _field_name = null;
         _field_name_sid = 0;
     }
-    String get_field_name_as_string() {
+    protected String get_field_name_as_string() {
         if (_field_name_type == IonType.INT) {
             SymbolTable symtab = getSymbolTable();
             if (symtab == null) {
@@ -261,13 +256,13 @@ static final boolean _debug_on = false;
         return _field_name;
     }
 
-    int get_field_name_as_int() {
+    protected int get_field_name_as_int() {
         if (_field_name_type == IonType.STRING) {
             _field_name_sid = add_local_symbol(_field_name);
         }
         return _field_name_sid;
     }
-    int add_local_symbol(String name)
+    protected int add_local_symbol(String name)
     {
         SymbolTable symtab = getSymbolTable();
         if (symtab == null) {
@@ -397,7 +392,7 @@ static final boolean _debug_on = false;
 
     public void writeIonValue(IonValue value) throws IOException
     {
-        IonReader value_iterator = new IonTreeIterator(value);
+        IonReader value_iterator = new IonTreeReader(value);
         writeIonEvents(value_iterator);
     }
 

@@ -2,16 +2,13 @@
  * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
  */
 
-package com.amazon.ion.streaming;
+package com.amazon.ion.impl;
 
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.TtTimestamp;
-import com.amazon.ion.impl.BlockedBuffer;
-import com.amazon.ion.impl.IonBinary;
-import com.amazon.ion.impl.IonConstants;
 import com.amazon.ion.impl.IonBinary.BufferManager;
-import com.amazon.ion.streaming.SimpleByteBuffer.SimpleByteWriter;
+import com.amazon.ion.impl.SimpleByteBuffer.SimpleByteWriter;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;

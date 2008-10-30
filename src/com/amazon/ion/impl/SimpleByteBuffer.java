@@ -2,12 +2,10 @@
  * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
  */
 
-package com.amazon.ion.streaming;
+package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.TtTimestamp;
-import com.amazon.ion.impl.IonBinary;
-import com.amazon.ion.impl.IonConstants;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;

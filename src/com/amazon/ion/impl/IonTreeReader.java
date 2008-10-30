@@ -2,7 +2,7 @@
  * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
  */
 
-package com.amazon.ion.streaming;
+package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_ITERATOR;
 
@@ -36,7 +36,7 @@ import java.util.NoSuchElementException;
  * Provides a concrete implementation of {@link IonReader} that operates
  * over an {@link IonValue}, typically an {@link IonDatagram}.
  */
-public final class IonTreeIterator
+public final class IonTreeReader
     implements IonReader
 {
     Iterator<IonValue> _iter;
@@ -77,7 +77,7 @@ public final class IonTreeIterator
         _eof = false;
     }
 
-    public IonTreeIterator(IonValue value) {
+    public IonTreeReader(IonValue value) {
         _root = value;
         _curr = null;
         _eof = false;
@@ -151,10 +151,10 @@ public final class IonTreeIterator
 
     public void position(IonReader other)
     {
-        if (!(other instanceof IonTreeIterator)) {
+        if (!(other instanceof IonTreeReader)) {
             throw new IllegalArgumentException("invalid iterator type, classes must match");
         }
-        IonTreeIterator iother = (IonTreeIterator)other;
+        IonTreeReader iother = (IonTreeReader)other;
 
         this._eof = iother._eof;
         this._curr = iother._curr;

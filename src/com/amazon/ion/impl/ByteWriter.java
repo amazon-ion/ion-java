@@ -2,7 +2,7 @@
  * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
  */
 
-package com.amazon.ion.streaming;
+package com.amazon.ion.impl;
 
 import java.io.IOException;
 import java.math.BigDecimal;

@@ -22,8 +22,6 @@ import com.amazon.ion.IonText;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
-import com.amazon.ion.streaming.IonTextWriter;
-import com.amazon.ion.streaming.UnifiedSymbolTable;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.File;
 import java.io.FileInputStream;

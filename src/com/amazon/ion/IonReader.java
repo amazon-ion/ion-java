@@ -4,7 +4,6 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.streaming.UnifiedSymbolTable;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.Iterator;
@@ -79,7 +78,7 @@ public interface IonReader
     /**
      * Returns the current symbol table.
      */
-    public UnifiedSymbolTable getSymbolTable();
+    public SymbolTable getSymbolTable();
 
     /**
      * Returns IonType of the current value, or null if there is no valid
