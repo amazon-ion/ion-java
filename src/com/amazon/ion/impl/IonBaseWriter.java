@@ -466,7 +466,7 @@ static final boolean _debug_on = false;
             case STRUCT:
                 if (_debug_on) System.out.print("{");
                 openStruct();
-                iterator.stepInto();
+                iterator.stepIn();
                 writeIonEvents(iterator);
                 iterator.stepOut();
                 closeStruct();
@@ -475,7 +475,7 @@ static final boolean _debug_on = false;
             case LIST:
                 if (_debug_on) System.out.print("[");
                 openList();
-                iterator.stepInto();
+                iterator.stepIn();
                 writeIonEvents(iterator);
                 iterator.stepOut();
                 closeList();
@@ -484,7 +484,7 @@ static final boolean _debug_on = false;
             case SEXP:
                 if (_debug_on) System.out.print("(");
                 openSexp();
-                iterator.stepInto();
+                iterator.stepIn();
                 writeIonEvents(iterator);
                 iterator.stepOut();
                 closeSexp();

@@ -806,7 +806,7 @@ public final class UnifiedSymbolTable
                 default:
                     throw new IonException("the symbols field of a symbol table must be a list or a struct value, not a "+reader.getType());
                 }
-                reader.stepInto();
+                reader.stepIn();
                 while (reader.hasNext()) {
                     if (reader.next() != IonType.STRING) {
                         continue; // we could error here, but open content says don't bother
@@ -876,7 +876,7 @@ public final class UnifiedSymbolTable
         assert (reader.getFieldId() == SystemSymbolTable.IMPORTS_SID);
         assert (reader.getType().equals(IonType.LIST));
 
-        reader.stepInto();
+        reader.stepIn();
         while (reader.hasNext()) {
             IonType t = reader.next();
             if (IonType.STRUCT.equals(t)) {
@@ -895,7 +895,7 @@ public final class UnifiedSymbolTable
         int    version = -1;
         int    maxid = -1;
 
-        ionRep.stepInto();
+        ionRep.stepIn();
         while (ionRep.hasNext()) {
             IonType t = ionRep.next();
             switch(ionRep.getFieldId()) {

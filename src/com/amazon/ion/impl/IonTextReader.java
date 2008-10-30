@@ -269,7 +269,7 @@ public final class IonTextReader
 
         save_state();
 
-        stepInto();
+        stepIn();
         while (hasNext()) {
             next();
             size++;
@@ -280,7 +280,7 @@ public final class IonTextReader
         return size;
     }
 
-    public void stepInto()
+    public void stepIn()
     {
         if (_value_type == null || _eof) {
             throw new IllegalStateException();
@@ -522,7 +522,7 @@ public final class IonTextReader
     UnifiedSymbolTable loadSymbolTable() {
         UnifiedSymbolTable temp = _current_symtab;
         _current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
-        this.stepInto();
+        this.stepIn();
         UnifiedSymbolTable table =
             new UnifiedSymbolTable(_current_symtab, this, _catalog);
         this.stepOut();
@@ -709,7 +709,7 @@ public final class IonTextReader
         }
     }
     void fillContainerList(IonSystem sys, IonSequence list) {
-        this.stepInto();
+        this.stepIn();
         while (this.hasNext()) {
             this.next();
             IonValue v = this.getIonValue(sys);
@@ -718,7 +718,7 @@ public final class IonTextReader
         this.stepOut();
     }
     void fillContainerStruct(IonSystem sys, IonStruct struct) {
-        this.stepInto();
+        this.stepIn();
         while (this.hasNext()) {
             this.next();
             String name = this.getFieldName();

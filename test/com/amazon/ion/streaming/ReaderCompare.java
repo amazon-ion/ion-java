@@ -50,8 +50,8 @@ public class ReaderCompare
                 case STRUCT:
                 case LIST:
                 case SEXP:
-                    it1.stepInto();
-                    it2.stepInto();
+                    it1.stepIn();
+                    it2.stepIn();
                     compare(it1, it2);
                     it1.stepOut();
                     it2.stepOut();

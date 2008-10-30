@@ -86,7 +86,7 @@ public class BadIonStreamingTests extends DirectoryTestSuite {
                     case STRUCT:
                     case LIST:
                     case SEXP:
-                        it.stepInto();
+                        it.stepIn();
                         readEverything(it);
                         it.stepOut();
                         break;

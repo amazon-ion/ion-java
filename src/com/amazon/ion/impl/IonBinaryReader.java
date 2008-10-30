@@ -624,7 +624,7 @@ public final class IonBinaryReader
     }
 
 
-    public void stepInto()
+    public void stepIn()
     {
         if (_state != S_BEFORE_CONTENTS) {
             throw new IllegalStateException();
@@ -908,7 +908,7 @@ public final class IonBinaryReader
      */
     private void fillContainer(IonSystem sys, IonSequence list)
     {
-        stepInto();
+        stepIn();
         while(hasNext()) {
             next();
             list.add(getIonValue(sys));
@@ -917,7 +917,7 @@ public final class IonBinaryReader
     }
     private void fillContainer(IonSystem sys, IonStruct struct)
     {
-        stepInto();
+        stepIn();
         while(hasNext()) {
             next();
             String fieldname = getFieldName();

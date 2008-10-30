@@ -126,7 +126,7 @@ public final class IonTreeReader
         return ((IonContainer)_curr).size();
     }
 
-    public void stepInto()
+    public void stepIn()
     {
         if (!(this._curr instanceof IonContainer)) {
             throw new IllegalStateException("current iterator value must be a container");

@@ -52,14 +52,14 @@ public interface IonReader
 
     /**
      * Positions the iterator in the contents of the current value.  The current
-     * value must be a container (sexp, list, or struct).  Once stepInto() has
+     * value must be a container (sexp, list, or struct).  Once this method has
      * been called {@link #hasNext()} and {@link #next()} will iterate the child values.
      * At any time {@link #stepOut()} may be called to move the cursor back to
      * (just after) the parent value.
      *
      * @throws IllegalStateException if the current value isn't an Ion container.
      */
-    public void stepInto();
+    public void stepIn();
 
     /**
      * Positions the iterator after the current parents value.  Once stepOut()

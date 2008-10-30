@@ -536,7 +536,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
 
         t = r.next();
         assertTrue( t.equals(IonType.STRUCT) );
-        r.stepInto();
+        r.stepIn();
         r.hasNext();
 
         for (TestValue tv : testvalues) {
@@ -646,7 +646,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         IonReader ir = system().newReader(buffer);
         if (ir.hasNext()) {
             ir.next();
-            ir.stepInto();
+            ir.stepIn();
             while (ir.hasNext()) {
                 IonType t = ir.next();
                 String name = ir.getFieldName();
@@ -682,7 +682,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
 
         // first copy
         assertTrue(ir.next().equals(IonType.STRUCT));
-        ir.stepInto();
+        ir.stepIn();
         assertEquals(ir.next(), IonType.BOOL);
         assertEquals(ir.getFieldName(), "Foo");
         //assertEquals(ir.getAnnotations(), new String[] { "boolean" });
@@ -696,7 +696,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
 
         // second copy
         assertEquals(IonType.STRUCT, ir.next());
-        ir.stepInto();
+        ir.stepIn();
         assertEquals(IonType.BOOL, ir.next());
         assertEquals("Foo", ir.getFieldName());
         annotations = ir.getTypeAnnotations();
@@ -728,7 +728,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         IonReader ir = system().newReader(buffer);
         if (ir.hasNext()) {
             ir.next();
-            ir.stepInto();
+            ir.stepIn();
             while (ir.hasNext()) {
                 assertEquals(ir.next(), IonType.BOOL);
                 assertEquals(ir.getFieldName(), "Foo");
@@ -789,7 +789,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         IonReader ir = system().newReader(buffer);
         if (ir.hasNext()) {
             ir.next();
-            ir.stepInto();
+            ir.stepIn();
             while (ir.hasNext()) {
                 assertEquals(ir.next(), IonType.BOOL);
                 assertEquals(ir.getFieldName(), "hello");
@@ -875,7 +875,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         IonReader ir = system().newReader(bytes);
         assertTrue(ir.hasNext());
         ir.next();
-        ir.stepInto();
+        ir.stepIn();
 
         assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.INT);

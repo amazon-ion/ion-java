@@ -188,7 +188,7 @@ public class SymtabApp
                 case STRUCT:
                 {
 //                    System.err.println("stepping in");
-                    reader.stepInto();
+                    reader.stepIn();
                     break;
                 }
                 default:

@@ -340,7 +340,7 @@ public class SexpTest
     	        case STRUCT:
     	        case LIST:
     	        case SEXP:
-    	            scanner.stepInto();
+    	            scanner.stepIn();
     	            readAll(scanner);
     	            scanner.stepOut();
     	            break;
