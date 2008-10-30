@@ -4,6 +4,7 @@
 
 package com.amazon.ion.streaming;
 
+import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
@@ -14,7 +15,7 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.TtTimestamp;
-import com.amazon.ion.impl.IonBinaryWriter;
+import com.amazon.ion.impl.IonBinaryWriterImpl;
 import com.amazon.ion.impl.IonTokenReader;
 import com.amazon.ion.impl.UnifiedSymbolTable;
 import java.io.IOException;
@@ -357,7 +358,7 @@ public class BinaryStreamingTest
     public void testAllValues()
     throws Exception
     {
-        IonWriter wr = new IonBinaryWriter();
+        IonBinaryWriter wr = system().newBinaryWriter();
         byte[] buffer = null;
 
         byte[] _testbytes1 = new byte[5];
@@ -555,7 +556,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
             +",index_suppressed:true,"
             +"offline_store_only:true,version:2,}";
         IonReader ir = system().newReader(s);
-        IonWriter wr = new IonBinaryWriter();
+        IonBinaryWriter wr = system().newBinaryWriter();
     	wr.writeIonEvents(ir);
         byte[] buffer = wr.getBytes();
         dumpBuffer(buffer, buffer.length);
@@ -584,7 +585,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
     	u.setName("items");
     	u.setVersion(1);
     	u.lock();
-    	IonWriter wr = new IonBinaryWriter(u);
+    	IonBinaryWriter wr = new IonBinaryWriterImpl(u);
 
     	wr.writeIonEvents(ir);
         byte[] buffer = wr.getBytes();
@@ -628,7 +629,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
     public void testBoolValue()
         throws Exception
     {
-        IonWriter wr = new IonBinaryWriter();
+        IonBinaryWriter wr = system().newBinaryWriter();
         byte[] buffer = null;
 
         try {
@@ -659,7 +660,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
     }
 
     public void testTwoMagicCookies() {
-        IonWriter wr = new IonBinaryWriter();
+        IonBinaryWriter wr = system().newBinaryWriter();
         byte[] buffer = null;
 
         try {
@@ -710,7 +711,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
 
 
     public void testBoolean() {
-        IonWriter wr = new IonBinaryWriter();
+        IonBinaryWriter wr = system().newBinaryWriter();
         byte[] buffer = null;
 
         try {
@@ -745,7 +746,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
     //Test Sample map.
     //{hello=true, Almost Done.=true, This is a test String.=true, 12242.124598129=12242.124598129, Something=null, false=false, true=true, long=9326, 12=-12}
     public void testSampleMap() {
-        IonWriter wr = new IonBinaryWriter();
+        IonBinaryWriter wr = system().newBinaryWriter();
         byte[] buffer = null;
 
         try {
@@ -836,7 +837,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
 
         byte[] bytes ;
 
-        IonWriter wr = new IonBinaryWriter();
+        IonBinaryWriter wr = system().newBinaryWriter();
         wr.openStruct();
 
         wr.setFieldName("12");

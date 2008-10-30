@@ -511,46 +511,4 @@ public interface IonWriter
      * @throws IOException
      */
     public abstract void writeStringList(String[] values) throws IOException;
-
-
-    /**
-     * returns the current contents of the write as a new byte
-     * array.  This allocates an array of the size needed to exactly
-     * hold the output and copies the entire value to it.  In the
-     * case of the text writer this value has UTF-8 text in it. The
-     * binary write fills it with the binary encoding of the values
-     * and a local symbol table as well as a magic cookie.  The tree
-     * writer defers to the tree to build this array.
-     * @return the byte array with the writers output
-     * @throws IOException
-     */
-    public abstract byte[] getBytes() throws IOException;
-
-    /**
-     * copies the current contents of the writer to the users byte
-     * array.  This starts writing to the array at offset and writes
-     * up to maxlen bytes.  In the
-     * case of the text writer this value has UTF-8 text in it. The
-     * binary write fills it with the binary encoding of the values
-     * and a local symbol table as well as a magic cookie.  The tree
-     * writer defers to the tree to build this array.  If the
-     * underlying writer is not able to stop in the middle of its
-     * work this may overwrite the array and later throw and exception.
-     * @param bytes users byte array to write into
-     * @param offset initial offset in the array to write into
-     * @param maxlen maximum number of bytes to write
-     * @return number of bytes written
-     * @throws IOException
-     */
-    public abstract int    getBytes(byte[] bytes, int offset, int maxlen)
-        throws IOException;
-
-    /**
-     * writes the contents of the writer into this output stream.
-     * @param out OutputStream to write into
-     * @return number of bytes written to the stream
-     * @throws IOException
-     */
-//    public abstract int    writeBytes(SimpleByteBuffer.SimpleByteWriter out)
-//        throws IOException;
 }

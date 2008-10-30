@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
  */
@@ -6,6 +5,7 @@
 package com.amazon.ion.streaming;
 
 import com.amazon.ion.BinaryTest;
+import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonString;
@@ -15,24 +15,15 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.IonWriter;
-import com.amazon.ion.impl.IonBinaryWriter;
 import com.amazon.ion.system.SystemFactory;
 
 /**
  *
  */
 public class MiscStreamingTests
-	extends IonTestCase
+    extends IonTestCase
 {
     static final boolean _debug_flag = false;
-
-    @Override
-    public void setUp()
-        throws Exception
-    {
-        super.setUp();
-    }
 
 
     //=========================================================================
@@ -57,7 +48,7 @@ public class MiscStreamingTests
     	//		value2 symbol 'str2' (1 typedesc + 1 byte)
     	IonReader ir = system().newReader(s);
 
-    	IonWriter wr = new IonBinaryWriter();
+    	IonBinaryWriter wr = system().newBinaryWriter();
     	wr.writeIonEvents(ir);
 
         byte[] buffer = wr.getBytes();

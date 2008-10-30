@@ -4,6 +4,7 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.TtTimestamp;
@@ -19,10 +20,11 @@ import java.util.Date;
  * Ion binary formatted bytes.  This will include a local
  * symbol table in the output if a symbol table is necessary.
  */
-public final class IonBinaryWriter
+public final class IonBinaryWriterImpl
     extends IonBaseWriter
+    implements IonBinaryWriter
 {
-static final boolean _verbose_debug = false;
+    private static final boolean _verbose_debug = false;
 
     static final int UNKNOWN_LENGTH = -1;
 
@@ -42,12 +44,12 @@ static final boolean _verbose_debug = false;
     int    _top;
     int [] _patch_stack = new int[10];
 
-    public IonBinaryWriter() {
+    public IonBinaryWriterImpl() {
         _manager = new BufferManager();
         _writer = _manager.openWriter();
     }
 
-    public IonBinaryWriter(UnifiedSymbolTable imported) {
+    public IonBinaryWriterImpl(UnifiedSymbolTable imported) {
         this();
         if (imported != null) {
             this._system_symbols = imported.getSystemSymbolTable();
@@ -60,7 +62,7 @@ static final boolean _verbose_debug = false;
      * @param sharedSymbolTables
      *   the inital imports for the local symbol table.
      */
-    public IonBinaryWriter(UnifiedSymbolTable... sharedSymbolTables) {
+    public IonBinaryWriterImpl(UnifiedSymbolTable... sharedSymbolTables) {
         this();
         if (sharedSymbolTables != null && sharedSymbolTables.length > 0) {
             this._system_symbols = sharedSymbolTables[0].getSystemSymbolTable();
@@ -946,7 +948,7 @@ int tmp;
         patch(patch_len);
     }
 
-    public int getOutputLen()  throws IOException
+    public int byteSize()
     {
         int buffer_length = _manager.buffer().size();
         int patch_amount = 0;
@@ -979,7 +981,7 @@ int tmp;
 
     public byte[] getBytes() throws IOException
     {
-        int total_length = getOutputLen();
+        int total_length = byteSize();
         byte[] bytes = null;
 
         bytes = new byte[total_length];
@@ -1076,9 +1078,17 @@ int tmp;
         return total_written;
     }
 
-    int lenSymbolTable() throws IOException
+    int lenSymbolTable()
     {
-        return writeSymbolTable(null);
+        try
+        {
+            return writeSymbolTable(null);
+        }
+        catch (IOException e)
+        {
+            // we don't actually write anything in the call above.
+            throw new RuntimeException("This shouldn't happen", e);
+        }
     }
     int writeSymbolTable(SimpleByteBuffer.SimpleByteWriter out) throws IOException
     {

@@ -6,7 +6,7 @@ import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.impl.IonBinaryWriter;
+import com.amazon.ion.impl.IonBinaryWriterImpl;
 import com.amazon.ion.impl.IonTextWriter;
 import com.amazon.ion.impl.IonTreeWriter;
 import com.amazon.ion.util.Equivalence;
@@ -138,7 +138,7 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
         throws IOException
         {
             IonReader in = makeIterator(buffer);
-            IonBinaryWriter bw = new IonBinaryWriter();
+            IonBinaryWriterImpl bw = system().newBinaryWriter();
 
             bw.writeIonEvents(in);
             byte[] buf = bw.getBytes(); // this is binary

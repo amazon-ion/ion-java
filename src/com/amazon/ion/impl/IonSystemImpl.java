@@ -9,6 +9,7 @@ import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonClob;
+import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonDecimal;
 import com.amazon.ion.IonException;
@@ -25,6 +26,7 @@ import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.UnsupportedSystemVersionException;
@@ -35,6 +37,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
@@ -247,6 +250,32 @@ public class IonSystemImpl
     public IonReader newReader(IonValue value)
     {
         return new IonTreeReader(value);
+    }
+
+
+    //=========================================================================
+    // IonWriter creation
+
+
+    public IonWriter newWriter(IonContainer container)
+    {
+        return new IonTreeWriter(this, container);
+    }
+
+    public IonWriter newTextWriter(OutputStream out)
+    {
+        return new IonTextWriter(out);
+    }
+
+    // TODO also Utf8AsAscii flag
+    public IonWriter newTextWriter(OutputStream out, boolean pretty)
+    {
+        return new IonTextWriter(out, pretty);
+    }
+
+    public IonBinaryWriterImpl newBinaryWriter()
+    {
+        return new com.amazon.ion.impl.IonBinaryWriterImpl();
     }
 
 
