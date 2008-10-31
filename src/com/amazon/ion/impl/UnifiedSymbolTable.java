@@ -190,18 +190,25 @@ public final class UnifiedSymbolTable
         _id_map = new HashMap<String, Integer>(10);
     }
 
-    public UnifiedSymbolTable(UnifiedSymbolTable systemSymbols) {
+    /**
+     *
+     * @param systemSymbols must be a system symbol table.
+     */
+    public UnifiedSymbolTable(SymbolTable systemSymbols) {
         this();
         if (!systemSymbols.isSystemTable()) {
             throw new IllegalArgumentException();
         }
-        _system_symbols = systemSymbols;
-        importSymbols(systemSymbols, 0, 0);
+        if (! (systemSymbols instanceof UnifiedSymbolTable)) {
+            throw new IllegalArgumentException();
+        }
+        _system_symbols = (UnifiedSymbolTable) systemSymbols;
+        importSymbols(_system_symbols, 0, 0);
         assert _max_id == systemSymbols.getMaxId();
     }
 
 
-    public UnifiedSymbolTable(UnifiedSymbolTable systemSymbols,
+    public UnifiedSymbolTable(SymbolTable systemSymbols,
                               IonStruct ionRep,
                               IonCatalog catalog)
     {
@@ -219,7 +226,7 @@ public final class UnifiedSymbolTable
     /**
      * @param reader must be positioned on the first field of the struct.
      */
-    public UnifiedSymbolTable(UnifiedSymbolTable systemSymbols,
+    public UnifiedSymbolTable(SymbolTable systemSymbols,
                               IonReader reader,
                               IonCatalog catalog)
     {

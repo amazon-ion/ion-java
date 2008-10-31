@@ -18,15 +18,13 @@ import java.io.IOException;
 public abstract class IonBaseWriter
     implements IonWriter
 {
-static final boolean _debug_on = false;
-
-    protected UnifiedSymbolTable  _external_symbol_table;
+    private static final boolean _debug_on = false;
 
     /**
      * FIXME when can this be null?  When can it be changed?
      */
-    protected SymbolTable         _symbol_table;
-    protected boolean             _no_local_symbols = true;
+    protected SymbolTable _symbol_table;
+    protected boolean     _no_local_symbols = true;
 
     protected IonType     _field_name_type;     // really ion type is only used for int, string or null (unknown)
     protected String      _field_name;
@@ -52,7 +50,7 @@ static final boolean _debug_on = false;
     public void importSharedSymbolTable(UnifiedSymbolTable sharedSymbolTable) {
         if (_symbol_table == null) {
             UnifiedSymbolTable symbol_table =
-                new UnifiedSymbolTable((UnifiedSymbolTable)sharedSymbolTable.getSystemSymbolTable());
+                new UnifiedSymbolTable(sharedSymbolTable.getSystemSymbolTable());
             _symbol_table = symbol_table;
         }
         ((UnifiedSymbolTable)_symbol_table).addImportedTable(sharedSymbolTable, 0);

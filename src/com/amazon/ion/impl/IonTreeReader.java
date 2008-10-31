@@ -173,9 +173,8 @@ public final class IonTreeReader
         }
     }
 
-    public UnifiedSymbolTable getSymbolTable()
+    public SymbolTable getSymbolTable()
     {
-        UnifiedSymbolTable utable = null;
         SymbolTable symboltable = null;
 
         if (_curr != null) {
@@ -184,14 +183,8 @@ public final class IonTreeReader
         else if (_root != null) {
             symboltable = _root.getSymbolTable();
         }
-        if (symboltable instanceof UnifiedSymbolTable) {
-            utable = (UnifiedSymbolTable)symboltable;
-        }
-        else {
-            utable = UnifiedSymbolTable.copyFrom(symboltable);
-        }
 
-        return utable;
+        return symboltable;
     }
 
     public IonType getType()

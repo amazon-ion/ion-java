@@ -1276,7 +1276,7 @@ int tmp;
     }
 
     int writeSymbolTableReference(SimpleByteBuffer.SimpleByteWriter out
-                                  , UnifiedSymbolTable table
+                                  , SymbolTable table
                                   , int content_len)
         throws IOException
     {
@@ -1323,7 +1323,7 @@ int tmp;
         return content_len_written + header_len;
     }
 
-    int lenSymbolTableReferenceContent(UnifiedSymbolTable table)
+    int lenSymbolTableReferenceContent(SymbolTable table)
     {
         // $ion_imports:{name:"symbol table name", ver:1, max_is:3}
         int value_len;

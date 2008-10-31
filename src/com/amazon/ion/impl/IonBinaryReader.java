@@ -21,6 +21,7 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.TtTimestamp;
 import com.amazon.ion.system.SimpleCatalog;
@@ -93,7 +94,7 @@ public final class IonBinaryReader
     SimpleByteBuffer    _buffer;
     ByteReader          _reader;
     IonCatalog          _catalog;
-    UnifiedSymbolTable  _current_symtab;
+    SymbolTable         _current_symtab;
     int                 _parent_tid;  // using -1 for eof (or bof aka undefined) and 16 for datagram
 
     boolean _eof;
@@ -119,7 +120,7 @@ public final class IonBinaryReader
     int[]       _next_position_stack;
     int[]       _parent_tid_stack;
     int[]       _local_end_stack;
-    UnifiedSymbolTable[] _symbol_stack;
+    SymbolTable[] _symbol_stack;
 
     IonBinaryReader() {}
 
@@ -548,7 +549,7 @@ public final class IonBinaryReader
             }
             // TODO: this should get it's system symbol table somewhere else
             // like passed in from the user or deduced from the version stamp
-            UnifiedSymbolTable systemSymbols = UnifiedSymbolTable.getSystemSymbolTableInstance();
+            SymbolTable systemSymbols = UnifiedSymbolTable.getSystemSymbolTableInstance();
             UnifiedSymbolTable local =
                 new UnifiedSymbolTable(systemSymbols, this, _catalog);
 
@@ -667,7 +668,7 @@ public final class IonBinaryReader
         int [] temp1 = new int[newlen];
         int [] temp2 = new int[newlen];
         int [] temp3 = new int[newlen];
-        UnifiedSymbolTable [] temp4 = new UnifiedSymbolTable[newlen];
+        SymbolTable [] temp4 = new SymbolTable[newlen];
         if (_top > 1) {
             System.arraycopy(_next_position_stack, 0, temp1, 0, _top);
             System.arraycopy(_parent_tid_stack, 0, temp2, 0, _top);
@@ -704,7 +705,7 @@ public final class IonBinaryReader
         _eof = false;
     }
 
-    public UnifiedSymbolTable getSymbolTable() {
+    public SymbolTable getSymbolTable() {
         return _current_symtab;
     }
 
@@ -712,7 +713,7 @@ public final class IonBinaryReader
     {
         // TODO can this just use isSystemTable() ?
     	if ( _current_symtab == null
-    	 || !_current_symtab.isLocked()
+    	 || !_current_symtab.isSharedTable()
     	 ||  _current_symtab.getMaxId() != UnifiedSymbolTable.getSystemSymbolTableInstance().getMaxId()
     	) {
     		// we only need to "reset" the symbol table if it isn't

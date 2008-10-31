@@ -21,6 +21,7 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.TtTimestamp;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.impl.Base64Encoder.BinaryStream;
@@ -48,7 +49,7 @@ public final class IonTextReader
 
     IonTextTokenizer    _scanner;
     IonCatalog          _catalog;
-    UnifiedSymbolTable  _current_symtab;
+    SymbolTable  _current_symtab;
 
     boolean         _eof;
     State           _state;
@@ -375,22 +376,22 @@ public final class IonTextReader
 
                         if (_debug_all_system) this.save_state();
 
-                         UnifiedSymbolTable local = loadSymbolTable();
-                         if (local != null) {
-                             _current_symtab = local;
-                             skip_value = true;
-                         }
+                        SymbolTable local = loadSymbolTable();
+                        if (local != null) {
+                            _current_symtab = local;
+                            skip_value = true;
+                        }
 
-                         if (_debug_all_system) this.restore_state();
+                        if (_debug_all_system) this.restore_state();
 
                     }
                     else if (_catalog != null && hasAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE)) {
-                        UnifiedSymbolTable shared = loadSymbolTable();
-                         if (shared != null) {
-                             _catalog.putTable(shared);
-                             // TODO: don't we want to return shared symbol tables?
-                             skip_value = true;
-                         }
+                        SymbolTable shared = loadSymbolTable();
+                        if (shared != null) {
+                            _catalog.putTable(shared);
+                            // TODO: don't we want to return shared symbol tables?
+                            skip_value = true;
+                        }
                     }
                 }
                 break;
@@ -519,8 +520,8 @@ public final class IonTextReader
         throw new IonParsingException("syntax error. parser in state " + _state.toString()+ _scanner.input_position());
     }
 
-    UnifiedSymbolTable loadSymbolTable() {
-        UnifiedSymbolTable temp = _current_symtab;
+    protected SymbolTable loadSymbolTable() {
+        SymbolTable temp = _current_symtab;
         _current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
         this.stepIn();
         UnifiedSymbolTable table =
@@ -557,11 +558,12 @@ public final class IonTextReader
         return _value_type;
     }
 
-    public UnifiedSymbolTable getSymbolTable()
+    public SymbolTable getSymbolTable()
     {
         if (_current_symtab == null) {
             _current_symtab = new UnifiedSymbolTable(UnifiedSymbolTable.getSystemSymbolTableInstance());
         }
+        assert _current_symtab.isLocalTable() || _current_symtab.isSystemTable();
         return _current_symtab;
     }
 
@@ -909,13 +911,14 @@ public final class IonTextReader
 
             // we have to "wash" the value through a symbol table to address
             // cases like $007
-            UnifiedSymbolTable syms = this.getSymbolTable();
+            SymbolTable syms = this.getSymbolTable();
             int sid = syms.findSymbol(value);
             if (sid <= 0) {
-                if (syms.isLocked()) {
+                if (syms.isSystemTable()) {
                     _current_symtab = new UnifiedSymbolTable(syms);
                     syms = _current_symtab;
                 }
+                assert syms.isLocalTable();
                 sid = syms.addSymbol(value);
             }
             value = syms.findSymbol(sid);

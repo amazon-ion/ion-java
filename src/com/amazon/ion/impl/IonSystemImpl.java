@@ -119,8 +119,7 @@ public class IonSystemImpl
             throw new IllegalArgumentException(message);
         }
 
-        UnifiedSymbolTable st =
-            new UnifiedSymbolTable((UnifiedSymbolTable) systemSymbols);
+        UnifiedSymbolTable st = new UnifiedSymbolTable(systemSymbols);
         st.setSystem(this);
         return st;
     }
