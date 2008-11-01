@@ -518,13 +518,13 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         try {
             // we don't really need the struct, but if we use it we get to
             // label all the values
-            wr.openStruct();
+            wr.stepIn(IonType.STRUCT);
 
             for (TestValue tv : testvalues) {
                 tv.writeValue(wr);
             }
 
-            wr.closeStruct();
+            wr.stepOut();
             buffer = wr.getBytes();
         }
         catch (IOException e) {
@@ -633,10 +633,10 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         byte[] buffer = null;
 
         try {
-            wr.openStruct();
+            wr.stepIn(IonType.STRUCT);
             wr.setFieldName("Foo");
             wr.writeBool(true);
-            wr.closeStruct();
+            wr.stepOut();
             buffer = wr.getBytes();
         }
         catch (IOException e) {
@@ -664,11 +664,11 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         byte[] buffer = null;
 
         try {
-            wr.openStruct();
+            wr.stepIn(IonType.STRUCT);
             wr.setFieldName("Foo");
             wr.addTypeAnnotation("boolean");
             wr.writeBool(true);
-            wr.closeStruct();
+            wr.stepOut();
             buffer = wr.getBytes();
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -715,11 +715,11 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         byte[] buffer = null;
 
         try {
-            wr.openStruct();
+            wr.stepIn(IonType.STRUCT);
             wr.setFieldName("Foo");
             wr.addTypeAnnotation("boolean");
             wr.writeBool(true);
-            wr.closeStruct();
+            wr.stepOut();
             buffer = wr.getBytes();
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -750,7 +750,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         byte[] buffer = null;
 
         try {
-            wr.openStruct();
+            wr.stepIn(IonType.STRUCT);
 
             wr.setFieldName("hello");
             wr.writeBool(true);
@@ -779,7 +779,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
             wr.setFieldName("12");
             wr.writeInt(-12);
 
-            wr.closeStruct();
+            wr.stepOut();
             buffer = wr.getBytes();
         } catch (IOException e) {
 
@@ -838,7 +838,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         byte[] bytes ;
 
         IonBinaryWriter wr = system().newBinaryWriter();
-        wr.openStruct();
+        wr.stepIn(IonType.STRUCT);
 
         wr.setFieldName("12");
         wr.addTypeAnnotation(int.class.getCanonicalName());
@@ -868,7 +868,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         wr.addTypeAnnotation(boolean.class.getCanonicalName());
         wr.writeBool(true);
 
-        wr.closeStruct();
+        wr.stepOut();
 
         bytes = wr.getBytes();
 

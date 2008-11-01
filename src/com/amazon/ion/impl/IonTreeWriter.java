@@ -12,9 +12,7 @@ import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonDecimal;
 import com.amazon.ion.IonFloat;
-import com.amazon.ion.IonList;
 import com.amazon.ion.IonSequence;
-import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTimestamp;
@@ -113,56 +111,30 @@ public final class IonTreeWriter
         }
     }
 
-    public void openList()
-        throws IOException
-    {
-        IonList list = _sys.newEmptyList();
-        append(list);
-        pushParent(list);
-    }
 
-    public void openSexp()
-        throws IOException
-    {
-        IonSexp list = _sys.newEmptySexp();
-        append(list);
-        pushParent(list);
-    }
 
-    public void openStruct()
-        throws IOException
+    public void stepIn(IonType containerType) throws IOException
     {
-        IonStruct struct = _sys.newEmptyStruct();
-        append(struct);
-        pushParent(struct);
-    }
-
-    public void closeList()
-        throws IOException
-    {
-        if (!(_current_parent instanceof IonList)) {
-            throw new IllegalStateException();
+        IonContainer v;
+        switch (containerType)
+        {
+            case LIST:   v = _sys.newEmptyList();   break;
+            case SEXP:   v = _sys.newEmptySexp();   break;
+            case STRUCT: v = _sys.newEmptyStruct(); break;
+            default:
+                throw new IllegalArgumentException();
         }
+
+        append(v);
+        pushParent(v);
+    }
+
+
+    public void stepOut() throws IOException
+    {
         popParent();
     }
 
-    public void closeSexp()
-        throws IOException
-    {
-        if (!(_current_parent instanceof IonSexp)) {
-            throw new IllegalStateException();
-        }
-        popParent();
-    }
-
-    public void closeStruct()
-        throws IOException
-    {
-        if (!(_current_parent instanceof IonStruct)) {
-            throw new IllegalStateException();
-        }
-        popParent();
-    }
 
     public void writeNull()
         throws IOException

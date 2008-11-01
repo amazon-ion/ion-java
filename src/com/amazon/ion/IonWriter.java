@@ -28,10 +28,11 @@ import java.util.Date;
  * written (assuming the value is a field in a structure).  The field name
  * is also "erased" once used, so it must be set for each field.
  * <p>
- * To write a container, first call the appropriate {@code open*()} method,
- * for example, {@link #openList()}. This write each child value in order.
- * Finally, call the matching {@code close*()} method, for example,
- * {@link #closeList()}).
+ * To write a container, first write any annotations and/or field name
+ * applicable to the container itself.
+ * Then call {@link #stepIn(IonType)} with the desired container type.
+ * Then write each child value in order.
+ * Finally, call {@link #stepOut()} to close the container.
  * <p>
  * Several {@code write*List()}
  * helper routines are included to simplify writing arrays of
@@ -147,6 +148,42 @@ public interface IonWriter
 
 
     //=========================================================================
+    // Container navagation
+
+    /**
+     * Writes the beginning of a non-null container (list, sexp, or struct).
+     * This must be matched by a call to {@link #stepOut()} after the last
+     * child value.
+     * <p>
+     * This method is <em>not</em> used to write {@code null.list} et al.
+     * To write null values use {@link #writeNull(IonType)}.
+     *
+     * @param containerType must be one of
+     * {@link IonType#LIST}, {@link IonType#SEXP}, or {@link IonType#STRUCT}.
+     */
+    public void stepIn(IonType containerType) throws IOException;
+
+
+    /**
+     * Writes the end of the current container, returning this writer to the
+     * context of parent container.
+     * Invocation of this method must match a preceding call to
+     * {@link #stepIn(IonType)}.
+     */
+    public void stepOut() throws IOException;
+
+
+    /**
+     * Determines whether values are being written as fields of a struct.
+     * This is especially useful when it is not clear whether field names need
+     * to be written or not.
+     *
+     * @return true when the parent is a struct.
+     */
+    public abstract boolean isInStruct();
+
+
+    //=========================================================================
     // Value writing
 
     /**
@@ -180,15 +217,14 @@ public interface IonWriter
 
 
     /**
-     * Writes a value of Ion's null type ({@code null} or {@code null.null}).
-     * @throws IOException
+     * Writes a value of Ion's null type ({@code null} aka {@code null.null}).
      */
     public abstract void writeNull() throws IOException;
 
     /**
-     * writes a null value of the passed in type.
+     * Writes a null value of a specified Ion type.
+     *
      * @param type type of the null to be written
-     * @throws IOException
      */
     public abstract void writeNull(IonType type) throws IOException;
 
@@ -197,7 +233,6 @@ public interface IonWriter
      * writes a non-null boolean value (true or false) as an IonBool
      * to output.
      * @param value true or false as desired
-     * @throws IOException
      */
     public abstract void writeBool(boolean value) throws IOException;
 
@@ -205,28 +240,24 @@ public interface IonWriter
     /**
      * writes a signed 8 bit value, a Java byte, as an IonInt.
      * @param value signed int to write
-     * @throws IOException
      */
     public abstract void writeInt(byte value) throws IOException;
 
     /**
      * writes a signed 16 bit value, a Java short, as an IonInt.
      * @param value signed int to write
-     * @throws IOException
      */
     public abstract void writeInt(short value) throws IOException;
 
     /**
      * writes a signed 32 bit value, a Java int, as an IonInt.
      * @param value signed int to write
-     * @throws IOException
      */
     public abstract void writeInt(int value) throws IOException;
 
     /**
      * writes a signed 64 bit value, a Java byte, as an IonInt.
      * @param value signed int to write
-     * @throws IOException
      */
     public abstract void writeInt(long value) throws IOException;
 
@@ -240,7 +271,6 @@ public interface IonWriter
      * is simply a convienience method which casts the float
      * up to a double on output.
      * @param value float to write
-     * @throws IOException
      */
     public abstract void writeFloat(float value) throws IOException;
 
@@ -252,7 +282,6 @@ public interface IonWriter
      * It does not gaurantee preservation of -Nan or other less
      * less "common" values.
      * @param value double to write
-     * @throws IOException
      */
     public abstract void writeFloat(double value) throws IOException;
 
@@ -264,7 +293,6 @@ public interface IonWriter
      * all of the BigDecimal digits, the number of
      * significant digits and -0.0.
      * @param value BigDecimal to write
-     * @throws IOException
      */
     public abstract void writeDecimal(BigDecimal value) throws IOException;
 
@@ -281,7 +309,6 @@ public interface IonWriter
      * unknown timezone offset (a z value).
      * @param value java.util Date holding the UTC timestamp;
      * may be null to represent {@code null.timestamp}.
-     * @throws IOException
      */
     public abstract void writeTimestampUTC(Date value) throws IOException;
 
@@ -294,7 +321,6 @@ public interface IonWriter
      * @param value java.util Date holding the UTC timestamp;
      * may be null to represent {@code null.timestamp}.
      * @param localOffset minutes from UTC where the value was authored
-     * @throws IOException
      */
     public abstract void writeTimestamp(Date value, Integer localOffset)
         throws IOException;
@@ -304,7 +330,6 @@ public interface IonWriter
      * have to be valid in the symbol table, unless the output is
      * text, in which case it does.
      * @param symbolId symbol table id to write
-     * @throws IOException
      */
     public abstract void writeSymbol(int symbolId) throws IOException;
 
@@ -312,7 +337,6 @@ public interface IonWriter
      * write value out as an IonSymbol value.  If the value is not
      * present in the symbol table it will be added to the symbol table.
      * @param value string symbol write
-     * @throws IOException
      */
     public abstract void writeSymbol(String value) throws IOException;
 
@@ -324,7 +348,6 @@ public interface IonWriter
      * charaters necesssary to define the Unicode code point to be
      * output, an exception will be raised if this case is encountered.
      * @param value Java String to be written
-     * @throws IOException
      */
     public abstract void writeString(String value) throws IOException;
 
@@ -332,7 +355,6 @@ public interface IonWriter
      * write the byte array out as an IonClob value.  This copies
      * the byte array.
      * @param value bytes to be written
-     * @throws IOException
      */
     public abstract void writeClob(byte[] value) throws IOException;
 
@@ -342,7 +364,6 @@ public interface IonWriter
      * @param value bytes to be written
      * @param start offset of the first byte in value to write
      * @param len number of bytes to write from value
-     * @throws IOException
      */
     public abstract void writeClob(byte[] value, int start, int len)
         throws IOException;
@@ -351,7 +372,6 @@ public interface IonWriter
      * write the byte array out as an IonBlob value.  This copies
      * the byte array.
      * @param value bytes to be written
-     * @throws IOException
      */
     public abstract void writeBlob(byte[] value) throws IOException;
 
@@ -361,65 +381,10 @@ public interface IonWriter
      * @param value bytes to be written
      * @param start offset of the first byte in value to write
      * @param len number of bytes to write from value
-     * @throws IOException
      */
     public abstract void writeBlob(byte[] value, int start, int len)
         throws IOException;
 
-    /**
-     * writes a struct header for and IonStruct and prepares to write
-     * the structures fields.  This must be matched by a closeStruct()
-     * at the end of the field list.
-     * @throws IOException
-     */
-    public abstract void openStruct() throws IOException;
-
-    /**
-     * writes a list header for an IonList and prepares to write the
-     * lists members.  This must be matched by a closeList() at the end
-     * of the members.
-     * @throws IOException
-     */
-    public abstract void openList() throws IOException;
-
-    /**
-     * writes a list header for an IonSexp and prepares to write the
-     * lists members.  This must be matched by a closeList() at the end
-     * of the members.
-     * @throws IOException
-     */
-    public abstract void openSexp() throws IOException;
-
-    /**
-     * closes an IonStruct. This returns the writer to the
-     * context of this structures parent container.
-     * @throws IOException
-     */
-    public abstract void closeStruct() throws IOException;
-
-    /**
-     * closes an IonList. This returns the writer to the
-     * context of this structures parent container.
-     * @throws IOException
-     */
-    public abstract void closeList() throws IOException;
-
-    /**
-     * closes an IonSexp. This returns the writer to the
-     * context of this structures parent container.
-     * @throws IOException
-     */
-    public abstract void closeSexp() throws IOException;
-
-    /**
-     * helper function that can tell the caller whether
-     * the writer is currently writing the contents of
-     * an IonStruct.  This is especially useful when it
-     * is not clear whether field names need to be
-     * written or not.
-     * @return boolean
-     */
-    public abstract boolean isInStruct();
 
 
     /**
@@ -429,7 +394,6 @@ public interface IonWriter
      * just a convienience, but for the binary writer it can be
      * optimized internally.
      * @param values boolean values to populate the list with
-     * @throws IOException
      */
     public abstract void writeBoolList(boolean[] values) throws IOException;
 
@@ -440,7 +404,6 @@ public interface IonWriter
      * just a convienience, but for the binary writer it can be
      * optimized internally.
      * @param values signed byte values to populate the lists int's with
-     * @throws IOException
      */
     public abstract void writeIntList(byte[] values) throws IOException;
 
@@ -451,7 +414,6 @@ public interface IonWriter
      * just a convienience, but for the binary writer it can be
      * optimized internally.
      * @param values signed short values to populate the lists int's with
-     * @throws IOException
      */
     public abstract void writeIntList(short[] values) throws IOException;
 
@@ -462,7 +424,6 @@ public interface IonWriter
      * just a convienience, but for the binary writer it can be
      * optimized internally.
      * @param values signed int values to populate the lists int's with
-     * @throws IOException
      */
     public abstract void writeIntList(int[] values) throws IOException;
 
@@ -473,7 +434,6 @@ public interface IonWriter
      * just a convienience, but for the binary writer it can be
      * optimized internally.
      * @param values signed long values to populate the lists int's with
-     * @throws IOException
      */
     public abstract void writeIntList(long[] values) throws IOException;
 
@@ -486,7 +446,6 @@ public interface IonWriter
      * is a 64 bit float this is a helper that simply casts
      * the passed in floats to double before writing them.
      * @param values 32 bit float values to populate the lists IonFloat's with
-     * @throws IOException
      */
     public abstract void writeFloatList(float[] values) throws IOException;
 
@@ -497,7 +456,6 @@ public interface IonWriter
      * just a convienience, but for the binary writer it can be
      * optimized internally.
      * @param values 64 bit float values to populate the lists IonFloat's with
-     * @throws IOException
      */
     public abstract void writeFloatList(double[] values) throws IOException;
 
@@ -508,7 +466,6 @@ public interface IonWriter
      * just a convienience, but for the binary writer it can be
      * optimized internally.
      * @param values Java String to populate the lists IonString's from
-     * @throws IOException
      */
     public abstract void writeStringList(String[] values) throws IOException;
 }

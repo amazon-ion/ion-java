@@ -4,6 +4,10 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.IonConstants.tidList;
+import static com.amazon.ion.impl.IonConstants.tidSexp;
+import static com.amazon.ion.impl.IonConstants.tidStruct;
+
 import com.amazon.ion.IonType;
 import com.amazon.ion.TtTimestamp;
 import com.amazon.ion.impl.Base64Encoder.TextStream;
@@ -212,68 +216,50 @@ public final class IonTextWriter
         _pending_separator = true;
     }
 
-    public void openList()
-        throws IOException
+
+
+    public void stepIn(IonType containerType) throws IOException
     {
         startValue();
-        _in_struct = false;
-        push(IonConstants.tidList);
-        _output.append('[');
-        _pending_separator = false;
-      }
-    public void openSexp()
-        throws IOException
-    {
-        startValue();
-        _in_struct = false;
-        push(IonConstants.tidSexp);
-        _output.append('(');
-        _pending_separator = false;
-    }
-    public void openStruct()
-        throws IOException
-    {
-        startValue();
-        _in_struct = true;
-        push(IonConstants.tidStruct);
-        _output.append('{');
-        _pending_separator = false;
-    }
-    public void closeList()
-        throws IOException
-    {
-        _pending_separator = topPendingComma();
-        if (pop() != IonConstants.tidList) {
-            throw new IllegalStateException("mismatched close");
+
+        int tid;
+        char opener;
+        switch (containerType)
+        {
+            case LIST:   tid = tidList;   _in_struct = false; opener = '['; break;
+            case SEXP:   tid = tidSexp;   _in_struct = false; opener = '('; break;
+            case STRUCT: tid = tidStruct; _in_struct = true;  opener = '{'; break;
+            default:
+                throw new IllegalArgumentException();
         }
-        closeCollection(']');
-        closeValue();
-        _in_struct = topInStruct();
+
+        push(tid);
+        _output.append(opener);
+        _pending_separator = false;
     }
 
-    public void closeSexp()
-        throws IOException
+
+    public void stepOut() throws IOException
     {
         _pending_separator = topPendingComma();
-        if (pop() != IonConstants.tidSexp) {
-            throw new IllegalStateException("mismatched close");
+        int tid = pop();
+
+        char closer;
+        switch (tid)
+        {
+            case tidList:   closer = ']'; break;
+            case tidSexp:   closer = ')'; break;
+            case tidStruct: closer = '}'; break;
+            default:
+                throw new IllegalStateException();
         }
-        closeCollection(')');
+        closeCollection(closer);
         closeValue();
         _in_struct = topInStruct();
+
     }
 
-    public void closeStruct()
-        throws IOException
-    {
-        _pending_separator = topPendingComma();
-        if (pop() != IonConstants.tidStruct) {
-            throw new IllegalStateException("mismatched close");
-        }
-        closeCollection('}');
-        closeValue();
-        _in_struct = topInStruct();
-    }
+
 
     public void writeNull()
         throws IOException

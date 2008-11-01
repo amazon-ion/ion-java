@@ -235,6 +235,7 @@ public abstract class IonBaseWriter
         }
     }
 
+
     protected void clearFieldName() {
         _field_name_type = IonType.NULL;
         _field_name = null;
@@ -311,81 +312,81 @@ public abstract class IonBaseWriter
     public void writeStringList(String[] values)
         throws IOException
     {
-        openList();
+        stepIn(IonType.LIST);
         for (int ii=0; ii<values.length; ii++) {
             writeString(values[ii]);
         }
-        closeList();
+        stepOut();
     }
 
     public void writeBoolList(boolean[] values)
         throws IOException
     {
-        openList();
+        stepIn(IonType.LIST);
         for (int ii=0; ii<values.length; ii++) {
             writeBool(values[ii]);
         }
-        closeList();
+        stepOut();
     }
 
     public void writeFloatList(float[] values)
         throws IOException
     {
-        openList();
+        stepIn(IonType.LIST);
         for (int ii=0; ii<values.length; ii++) {
             writeFloat(values[ii]);
         }
-        closeList();
+        stepOut();
     }
 
     public void writeFloatList(double[] values)
         throws IOException
     {
-        openList();
+        stepIn(IonType.LIST);
         for (int ii=0; ii<values.length; ii++) {
             writeFloat(values[ii]);
         }
-        closeList();
+        stepOut();
     }
 
     public void writeIntList(byte[] values)
         throws IOException
     {
-        openList();
+        stepIn(IonType.LIST);
         for (int ii=0; ii<values.length; ii++) {
             writeInt(values[ii]);
         }
-        closeList();
+        stepOut();
     }
 
     public void writeIntList(short[] values)
         throws IOException
     {
-        openList();
+        stepIn(IonType.LIST);
         for (int ii=0; ii<values.length; ii++) {
             writeInt(values[ii]);
         }
-        closeList();
+        stepOut();
     }
 
     public void writeIntList(int[] values)
         throws IOException
     {
-        openList();
+        stepIn(IonType.LIST);
         for (int ii=0; ii<values.length; ii++) {
             writeInt(values[ii]);
         }
-        closeList();
+        stepOut();
     }
 
     public void writeIntList(long[] values)
         throws IOException
     {
-        openList();
+        stepIn(IonType.LIST);
         for (int ii=0; ii<values.length; ii++) {
             writeInt(values[ii]);
         }
-        closeList();
+        stepOut();
     }
 
     public void writeIonValue(IonValue value) throws IOException
@@ -463,29 +464,29 @@ public abstract class IonBaseWriter
                 break;
             case STRUCT:
                 if (_debug_on) System.out.print("{");
-                openStruct();
+                stepIn(IonType.STRUCT);
                 iterator.stepIn();
                 writeIonEvents(iterator);
                 iterator.stepOut();
-                closeStruct();
+                stepOut();
                 if (_debug_on) System.out.print("}");
                 break;
             case LIST:
                 if (_debug_on) System.out.print("[");
-                openList();
+                stepIn(IonType.LIST);
                 iterator.stepIn();
                 writeIonEvents(iterator);
                 iterator.stepOut();
-                closeList();
+                stepOut();
                 if (_debug_on) System.out.print("]");
                 break;
             case SEXP:
                 if (_debug_on) System.out.print("(");
-                openSexp();
+                stepIn(IonType.SEXP);
                 iterator.stepIn();
                 writeIonEvents(iterator);
                 iterator.stepOut();
-                closeSexp();
+                stepOut();
                 if (_debug_on) System.out.print(")");
                 break;
             default:

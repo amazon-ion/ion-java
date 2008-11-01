@@ -4,6 +4,10 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.IonConstants.tidList;
+import static com.amazon.ion.impl.IonConstants.tidSexp;
+import static com.amazon.ion.impl.IonConstants.tidStruct;
+
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
@@ -244,49 +248,32 @@ public final class IonBinaryWriterImpl
         }
     }
 
-    public void openList() throws IOException
+    public void stepIn(IonType containerType) throws IOException
     {
         startValue(UNKNOWN_LENGTH);
         patch(1);
-        _in_struct = false;
-        push(IonConstants.tidList);
-        _writer.writeByte((byte)(IonConstants.tidList << 4));
-    }
-    public void openSexp() throws IOException
-    {
-        startValue(UNKNOWN_LENGTH);
-        patch(1);
-        _in_struct = false;
-        push(IonConstants.tidSexp);
-        _writer.writeByte((byte)(IonConstants.tidSexp << 4));
-    }
-    public void openStruct() throws IOException
-    {
-        startValue(UNKNOWN_LENGTH);
-        patch(1);
-        _in_struct = true;
-        push(IonConstants.tidStruct);
-        _writer.writeByte((byte)(IonConstants.tidStruct << 4));
+
+        int tid;
+        switch (containerType)
+        {
+            case LIST:   tid = tidList;   _in_struct = false; break;
+            case SEXP:   tid = tidSexp;   _in_struct = false; break;
+            case STRUCT: tid = tidStruct; _in_struct = true;  break;
+            default:
+                throw new IllegalArgumentException();
+        }
+
+        push(tid);
+        _writer.writeByte((byte)(tid << 4));
     }
 
-    public void closeList()
+    public void stepOut() throws IOException
     {
         pop();
         closeValue();
         _in_struct = this.topInStruct();
     }
-    public void closeSexp()
-    {
-        pop();
-        closeValue();
-        _in_struct = this.topInStruct();
-    }
-    public void closeStruct()
-    {
-        pop();
-        closeValue();
-        _in_struct = this.topInStruct();
-    }
+
 
     @Override
     public void setFieldName(String name)
