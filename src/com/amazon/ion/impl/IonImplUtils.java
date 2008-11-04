@@ -6,7 +6,6 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
-import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.Reader;
@@ -95,12 +94,11 @@ public final class IonImplUtils
      */
     public String valueToString(IonReader reader)
     {
-        IonType t = reader.getType();
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonWriter writer = new IonTextWriter(out);
         try
         {
-            writer.writeIonValue(t, reader);
+            writer.writeValue(reader);
         }
         catch (IOException e)
         {

@@ -796,7 +796,7 @@ public class SymbolTableTest
     	byte[] buf = openFileForBuffer("c:\\data\\samples\\kim.10n");
     	IonReader r = mySystem.newReader(buf);
 
-    	w.writeIonEvents(r);
+    	w.writeValues(r);
 
     	byte[] output = w.getBytes();
 

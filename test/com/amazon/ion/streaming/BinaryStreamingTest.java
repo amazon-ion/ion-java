@@ -557,7 +557,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
             +"offline_store_only:true,version:2,}";
         IonReader ir = system().newReader(s);
         IonBinaryWriter wr = system().newBinaryWriter();
-    	wr.writeIonEvents(ir);
+    	wr.writeValues(ir);
         byte[] buffer = wr.getBytes();
         dumpBuffer(buffer, buffer.length);
 
@@ -587,7 +587,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
     	u.lock();
     	IonBinaryWriter wr = new IonBinaryWriterImpl(u);
 
-    	wr.writeIonEvents(ir);
+    	wr.writeValues(ir);
         byte[] buffer = wr.getBytes();
         dumpBuffer(buffer, buffer.length);
 

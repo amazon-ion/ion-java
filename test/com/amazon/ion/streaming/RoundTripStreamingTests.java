@@ -118,7 +118,7 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
             IonReader in = makeIterator(buffer);
             IonTextWriter tw = new IonTextWriter(prettyPrint);
 
-            tw.writeIonEvents(in);
+            tw.writeValues(in);
             byte[] buf = tw.getBytes(); // this is utf-8
 
             return buf;
@@ -140,7 +140,7 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
             IonReader in = makeIterator(buffer);
             IonBinaryWriterImpl bw = system().newBinaryWriter();
 
-            bw.writeIonEvents(in);
+            bw.writeValues(in);
             byte[] buf = bw.getBytes(); // this is binary
 
             return buf;
@@ -157,7 +157,7 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
             IonReader in = makeIterator(buffer);
             IonTreeWriter tw = new IonTreeWriter(mySystem);
 
-            tw.writeIonEvents(in);
+            tw.writeValues(in);
             IonValue v = tw.getContentAsIonValue();
 
             return (IonDatagram)v;

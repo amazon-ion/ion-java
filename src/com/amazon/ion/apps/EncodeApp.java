@@ -114,7 +114,7 @@ public class EncodeApp
         throws IOException, IonException
     {
         IonBinaryWriter writer = new IonBinaryWriterImpl(myImports);
-        writer.writeIonEvents(reader);
+        writer.writeValues(reader);
 
         byte[] binaryBytes = writer.getBytes();
 

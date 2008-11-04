@@ -114,7 +114,7 @@ public class PrintApp
         throws IOException, IonException
     {
         IonWriter writer = new IonTextWriter(out, true);
-        writer.writeIonEvents(reader);
+        writer.writeValues(reader);
 
         // Ensure there's a newline at the end and flush the buffer.
         out.write('\n');

@@ -49,7 +49,7 @@ public class MiscStreamingTests
     	IonReader ir = system().newReader(s);
 
     	IonBinaryWriter wr = system().newBinaryWriter();
-    	wr.writeIonEvents(ir);
+    	wr.writeValues(ir);
 
         byte[] buffer = wr.getBytes();
         assertSame("this buffer length is known to be 23", buffer.length, 23);

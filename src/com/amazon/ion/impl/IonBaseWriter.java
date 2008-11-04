@@ -389,103 +389,103 @@ public abstract class IonBaseWriter
         stepOut();
     }
 
-    public void writeIonValue(IonValue value) throws IOException
+    public void writeValue(IonValue value) throws IOException
     {
-        IonReader value_iterator = new IonTreeReader(value);
-        writeIonEvents(value_iterator);
+        IonReader valueReader = new IonTreeReader(value);
+        writeValues(valueReader);
     }
 
-    public void writeIonEvents(IonReader iterator) throws IOException
+    public void writeValues(IonReader reader) throws IOException
     {
-        while (iterator.hasNext()) {
-            IonType t = iterator.next();
-            writeIonValue(t, iterator);
+        while (reader.hasNext()) {
+            reader.next();
+            writeValue(reader);
         }
         return;
     }
 
-    public void writeIonValue(IonType t, IonReader iterator) throws IOException
+    public void writeValue(IonReader reader) throws IOException
     {
-        if (/* iterator.isInStruct() && */ this.isInStruct()) {
-            String fieldname = iterator.getFieldName();
+        if (/* reader.isInStruct() && */ this.isInStruct()) {
+            String fieldname = reader.getFieldName();
             setFieldName(fieldname);
             if (_debug_on) System.out.print(":");
         }
-        String [] a = iterator.getTypeAnnotations();
+        String [] a = reader.getTypeAnnotations();
         if (a != null) {
             setTypeAnnotations(a);
             if (_debug_on) System.out.print(";");
         }
 
-        if (iterator.isNullValue()) {
-            this.writeNull(iterator.getType());
+        if (reader.isNullValue()) {
+            this.writeNull(reader.getType());
         }
         else {
-            switch (t) {
+            switch (reader.getType()) {
             case NULL:
                 writeNull();
                 if (_debug_on) System.out.print("-");
                 break;
             case BOOL:
-                writeBool(iterator.booleanValue());
+                writeBool(reader.booleanValue());
                 if (_debug_on) System.out.print("b");
                 break;
             case INT:
-                writeInt(iterator.longValue());  // FIXME should use bigInteger
+                writeInt(reader.longValue());  // FIXME should use bigInteger
                 if (_debug_on) System.out.print("i");
                 break;
             case FLOAT:
-                writeFloat(iterator.doubleValue());
+                writeFloat(reader.doubleValue());
                 if (_debug_on) System.out.print("f");
                 break;
             case DECIMAL:
-                writeDecimal(iterator.bigDecimalValue());
+                writeDecimal(reader.bigDecimalValue());
                 if (_debug_on) System.out.print("d");
                 break;
             case TIMESTAMP:
-                writeTimestamp(iterator.timestampValue());
+                writeTimestamp(reader.timestampValue());
                 if (_debug_on) System.out.print("t");
                 break;
             case STRING:
-                writeString(iterator.stringValue());
+                writeString(reader.stringValue());
                 if (_debug_on) System.out.print("$");
                 break;
             case SYMBOL:
-                writeSymbol(iterator.stringValue());
+                writeSymbol(reader.stringValue());
                 if (_debug_on) System.out.print("y");
                 break;
             case BLOB:
-                writeBlob(iterator.newBytes());
+                writeBlob(reader.newBytes());
                 if (_debug_on) System.out.print("B");
                 break;
             case CLOB:
-                writeClob(iterator.newBytes());
+                writeClob(reader.newBytes());
                 if (_debug_on) System.out.print("L");
                 break;
             case STRUCT:
                 if (_debug_on) System.out.print("{");
                 stepIn(IonType.STRUCT);
-                iterator.stepIn();
-                writeIonEvents(iterator);
-                iterator.stepOut();
+                reader.stepIn();
+                writeValues(reader);
+                reader.stepOut();
                 stepOut();
                 if (_debug_on) System.out.print("}");
                 break;
             case LIST:
                 if (_debug_on) System.out.print("[");
                 stepIn(IonType.LIST);
-                iterator.stepIn();
-                writeIonEvents(iterator);
-                iterator.stepOut();
+                reader.stepIn();
+                writeValues(reader);
+                reader.stepOut();
                 stepOut();
                 if (_debug_on) System.out.print("]");
                 break;
             case SEXP:
                 if (_debug_on) System.out.print("(");
                 stepIn(IonType.SEXP);
-                iterator.stepIn();
-                writeIonEvents(iterator);
-                iterator.stepOut();
+                reader.stepIn();
+                writeValues(reader);
+                reader.stepOut();
                 stepOut();
                 if (_debug_on) System.out.print(")");
                 break;
