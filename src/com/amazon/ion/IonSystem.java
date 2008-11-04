@@ -5,6 +5,7 @@
 package com.amazon.ion;
 
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.Reader;
 import java.util.Collection;
 import java.util.Date;
@@ -85,21 +86,29 @@ public interface IonSystem
 
 
     /**
+     * Creates a new empty datagram.
+     *
+     * @return a new datagram with no user values.
+     */
+    public IonDatagram newDatagram();
+
+
+    /**
      * Creates a new datagram containing one value.  If the given value is
      * contained elsewhere, it is cloned before insertion.
      *
      * @param initialChild becomes the first and only (user) value in the
-     * datagram.
+     * datagram.  The child's {@link IonValue#getSystem() system}
+     * must be <em>this</em> system.
+     * If {@code null}, then the returned datagram will have no
+     * user values.
      *
      * @return a new datagram.
      *
-     * @throws NullPointerException
-     *   if {@code initialChild} is null.
      * @throws IllegalArgumentException
      *   if {@code initialChild} is an {@link IonDatagram}.
      */
-    public IonDatagram newDatagram(IonValue initialChild)
-        throws ContainedValueException;
+    public IonDatagram newDatagram(IonValue initialChild);
 
 
     /**
@@ -267,6 +276,40 @@ public interface IonSystem
      * @param value must not be null.
      */
     public IonReader newReader(IonValue value);
+
+
+    //-------------------------------------------------------------------------
+    // IonWriter creation
+
+    /**
+     * Creates a new writer that will add {@link IonValue}s to the given
+     * container.
+     *
+     * @param container a container that will receive new children from the
+     * the returned writer.
+     * Must not be null.
+     *
+     * @return a new {@link IonWriter} instance; not {@code null}.
+     */
+    public IonWriter newWriter(IonContainer container);
+
+    /**
+     * Creates a new writer that will write UTF-8 text to the given output
+     * stream.
+     *
+     * @param out the stream that will receive UTF-8 Ion text data.
+     * Must not be null.
+     *
+     * @return a new {@link IonWriter} instance; not {@code null}.
+     */
+    public IonWriter newTextWriter(OutputStream out);
+
+    /**
+     * Creates a new writer that will encode binary Ion data.
+     *
+     * @return a new {@link IonBinaryWriter} instance; not {@code null}.
+     */
+    public IonBinaryWriter newBinaryWriter();
 
 
     //-------------------------------------------------------------------------

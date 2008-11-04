@@ -125,11 +125,15 @@ public class IonSystemImpl
     }
 
 
+    public IonDatagram newDatagram()
+    {
+        return new IonDatagramImpl(this);
+    }
+
     public IonDatagram newDatagram(IonValue initialChild)
-        throws ContainedValueException
     {
         if (initialChild != null) {
-            if (!(initialChild instanceof IonValueImpl)) {
+            if (initialChild.getSystem() != this) {
                 throw new IonException("this Ion system can't mix with instances from other system impl's");
             }
             if (initialChild.getContainer() != null) {
