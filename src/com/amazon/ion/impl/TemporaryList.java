@@ -8,7 +8,6 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonBinary.Reader;
 import com.amazon.ion.impl.IonBinary.Writer;
@@ -25,8 +24,9 @@ public class TemporaryList
     /**
      * Creates an empty list.
      */
-    public TemporaryList() {
-        super(IonConstants.makeTypeDescriptor(IonConstants.tidList,
+    public TemporaryList(IonSystemImpl system) {
+        super(system,
+              IonConstants.makeTypeDescriptor(IonConstants.tidList,
                                               IonConstants.lnNumericZero));
        _tmpelements = new ArrayList<IonValueImpl>();
        setClean();
@@ -37,9 +37,10 @@ public class TemporaryList
      * and the values it contains.  Most of the work is done
      * by calling the contained values to clone themselves.
      */
+    @Override
     public TemporaryList clone()
     {
-        TemporaryList c = new TemporaryList();
+        TemporaryList c = new TemporaryList(_system);
 
         for (int ii=0; ii<this._tmpelements.size(); ii++) {
             IonValueImpl e = (IonValueImpl) this._tmpelements.get(ii).clone();
@@ -77,20 +78,12 @@ public class TemporaryList
 
 
     @Override
-    public IonValueImpl getFirstChild(LocalSymbolTable ignored)  {
-        IonValueImpl value = null;
-        if (this._tmpelements.size() > 0) {
-            value = get(0);
-        }
-        return value;
-    }
-
-    @Override
     public IonValueImpl get(int ordinal) {
         IonValueImpl value = this._tmpelements.get(ordinal);
         return value;
     }
 
+    @Override
     public String toString() {
         StringBuffer sb = new StringBuffer();
 
@@ -106,6 +99,7 @@ public class TemporaryList
         visitor.visit(this);
     }
 
+    @Override
     public String[] getTypeAnnotations()
     {
         return null;

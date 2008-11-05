@@ -3,6 +3,7 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
+import com.amazon.ion.TtTimestamp;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.impl.IonConstants.HighNibble;
 import com.amazon.ion.util.Text;
@@ -107,40 +108,13 @@ public class IonTokenReader
          * matches against a regex, so we should be able to pull the data
          * straight from the string to compute the value.
          */
-        public static class timeinfo {
+        public static class timeinfo {  // TODO remove vestigial class timeinfo
 
             private static SimpleDateFormat newFormat(String pattern) {
                 SimpleDateFormat f = new SimpleDateFormat(pattern);
                 f.setLenient(false);
                 f.setTimeZone(TimeZone.getTimeZone("GMT"));
                 return f;
-            }
-
-            public Date    d;
-
-            /**
-             * Minutes offset from UTC; zero means UTC proper,
-             * <code>null</code> means that the offset is unknown.
-             */
-            public Integer localOffset;
-
-
-            public timeinfo(Date date, Integer tz) {
-                this.d = date;
-                this.localOffset = tz;
-            }
-            public timeinfo() {
-                this.d = null;
-                this.localOffset = null;
-            }
-
-            @Override
-            public timeinfo clone()
-            {
-                timeinfo clone = new timeinfo();
-                clone.localOffset = this.localOffset;
-                clone.d = new Date(this.d.getTime());
-                return clone;
             }
 
             static final private String DATE_REGEX =
@@ -160,22 +134,23 @@ public class IonTokenReader
             static final public Pattern TIMESTAMP_PATTERN =
                 Pattern.compile(TIMESTAMP_REGEX);
 
-            static public timeinfo parse(String s) {
+            static public TtTimestamp parse(String s) {
                 s = s.trim(); // TODO why is this necessary?
 
                 if (! TIMESTAMP_PATTERN.matcher(s).matches()) {
                     throw new IonException("invalid timestamp: " + s);
                 }
 
-                timeinfo ti = new timeinfo();
+                Date d;
+                Integer localOffset;
 
                 try {
                     int len = s.length();
                     if (len == 10) {
                         // "yyyy-MM-dd");
  SimpleDateFormat DATE_PARSER = newFormat("yyyy-MM-dd");
-                        ti.d = DATE_PARSER.parse(s);
-                        ti.localOffset = null;
+                        d = DATE_PARSER.parse(s);
+                        localOffset = null;
                     }
                     else if (len > 16 && s.charAt(16) == ':'){
                         // yyyy-MM-dd'T'HH:mm:ss.SSSZ
@@ -184,7 +159,7 @@ public class IonTokenReader
                             throw new IonException("invalid timestamp: " + s);
                         }
 SimpleDateFormat DATE_TIME_SECS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm:ss");
-                        ti.d = DATE_TIME_SECS_PARSER.parse(s.substring(0, 19));
+                        d = DATE_TIME_SECS_PARSER.parse(s.substring(0, 19));
 
                         int tzdOffset = 19;
 
@@ -214,22 +189,24 @@ SimpleDateFormat DATE_TIME_SECS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm:ss");
                                 fraclen--;
                             }
                             // add in the fractional seconds as milliseconds
-                            ti.d = new Date(ti.d.getTime() + fraction);
+                            d = new Date(d.getTime() + fraction);
                         }
 
-                        ti.localOffset =
+                        localOffset =
                             parseLocalOffset(s.substring(tzdOffset));
                     }
                     else if (len > 16) {
                         // yyyy-MM-dd'T'HH:mmZ
 SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
-                        ti.d = DATE_TIME_MINS_PARSER.parse(s.substring(0, 16));
-                        ti.localOffset = parseLocalOffset(s.substring(16));
+                        d = DATE_TIME_MINS_PARSER.parse(s.substring(0, 16));
+                        localOffset = parseLocalOffset(s.substring(16));
                     }
                     else {
                         if (s.equals("null") || s.equals(kwNullTimestamp.getImage())) {
-                            ti.d= null;
-                            ti.localOffset = null;
+                            // I don't think this is reachable due to the regex
+                            // match at the start of this method.
+                            d= null;
+                            localOffset = null;
                         }
                         else {
                             throw new IonException("invalid timestamp: " + s);
@@ -243,12 +220,14 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
                 }
 
                 // Adjust the Java Date instance into UTC
-                if (ti.localOffset != null) {
-                    long offsetMillis = ti.localOffset.longValue() * 60 * 1000;
-                    long origTime = ti.d.getTime();
-                    ti.d.setTime(origTime - offsetMillis);
+                if (localOffset != null) {
+                    long offsetMillis = localOffset.longValue() * 60 * 1000;
+                    long origTime = d.getTime();
+                    d.setTime(origTime - offsetMillis);
                 }
-                return ti;
+
+                // FIXME we've lost fractional milliseconds!
+                return new TtTimestamp(d.getTime(), localOffset);
             }
 
             /**
@@ -302,17 +281,12 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
                 }
                 if (value == 0) {
                     if (sign == -1) {
-                        return null;           // unknown offset
+                        return TtTimestamp.UNKNOWN_OFFSET;
                     }
-                    return IonTimestampImpl.UTC_OFFSET;
+                    return TtTimestamp.UTC_OFFSET;
                 }
 
                 return new Integer(value * sign);
-            }
-
-            @Override
-            public String toString() {
-                return "[timeinfo d=" + d + " localOffset=" + localOffset + "]";
             }
         }
 
@@ -497,7 +471,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
     public Double           doubleValue;
     public Long             intValue;
 
-    public Type.timeinfo    dateValue;
+    public TtTimestamp      dateValue;
     public BigDecimal       decimalValue;
 
     public int              numberType;
@@ -1335,9 +1309,9 @@ sizedloop:
 
     private void checkAndUnreadNumericStopper(int c) throws IOException
     {
-        // Ignore EOF
+        // Ignore EOF, so we don't "unread" it - EOF is a terminator
         if (c != -1) {
-            if (! Text.isNumericStopChar(c)) {
+            if ( ! this.isValueTerminatingCharacter(c) ) {
                 final String message =
                     position() + ": Numeric value followed by illegal character "
                     + Text.getEscapeString(c, -2);
@@ -1347,6 +1321,22 @@ sizedloop:
         }
     }
 
+	private final boolean isValueTerminatingCharacter(int c) throws IOException
+	{
+		boolean isTerminator;
+
+    	if (c == '/') {
+    		// this is terminating only if it starts a comment of some sort
+    		c = this.read();
+    		this.unread(c);  // we never "keep" this character
+    		isTerminator = (c == '/' || c == '*');
+    	}
+    	else {
+    		isTerminator = Text.isNumericStopChar(c);
+    	}
+
+    	return isTerminator;
+	}
 
     public Type readNumber(int c) throws IOException {
         // clear out our string buffer

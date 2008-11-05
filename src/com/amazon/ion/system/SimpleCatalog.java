@@ -6,7 +6,10 @@ package com.amazon.ion.system;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.SymbolTable;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -15,7 +18,7 @@ import java.util.TreeMap;
  * automatic removal of entries.
  */
 public class SimpleCatalog
-    implements IonCatalog
+    implements IonCatalog, Iterable<SymbolTable>
 {
     /*  CAVEATS AND LIMITATIONS
      *
@@ -30,63 +33,86 @@ public class SimpleCatalog
 
     public SymbolTable getTable(String name)
     {
+        if (name == null)
+        {
+            throw new IllegalArgumentException("name is null");
+        }
+        if (name.length() == 0)
+        {
+            throw new IllegalArgumentException("name is empty");
+        }
+
         TreeMap<Integer,SymbolTable> versions;
         synchronized (myTablesByName)
         {
             versions = myTablesByName.get(name);
         }
 
-        if (versions != null)
-        {
-            synchronized (versions)
-            {
-                Integer highestVersion = versions.lastKey();
-                return versions.get(highestVersion);
-            }
-        }
+        if (versions == null) return null;
 
-        return null;
+        synchronized (versions)
+        {
+            Integer highestVersion = versions.lastKey();
+            return versions.get(highestVersion);
+        }
     }
 
     public SymbolTable getTable(String name, int version)
     {
+        if (name == null)
+        {
+            throw new IllegalArgumentException("name is null");
+        }
+        if (name.length() == 0)
+        {
+            throw new IllegalArgumentException("name is empty");
+        }
+        if (version < 1)
+        {
+            throw new IllegalArgumentException("version is < 1");
+        }
+
         TreeMap<Integer,SymbolTable> versions;
         synchronized (myTablesByName)
         {
             versions = myTablesByName.get(name);
         }
 
-        if (versions != null)
+        if (versions == null) return null;
+
+        synchronized (versions)
         {
-            synchronized (versions)
+            SymbolTable st = versions.get(version);
+            if (st == null)
             {
-                SymbolTable st = versions.get(version);
-                if (st == null)
-                {
-                    // Scan the list for the greatest version.
-                    assert !versions.isEmpty();
-                    int maxVersion = 0;
-                    for (SymbolTable candidate : versions.values())
-                    {
-                        int candidateVersion = candidate.getVersion();
-                        if (maxVersion < candidateVersion)
-                        {
-                            maxVersion = candidateVersion;
-                            st = candidate;
-                        }
-                    }
-                    assert st != null;
-                }
+                // if we don't have the one you want, we'll give you the
+                // "best" one we have, even if it's newer than what you
+                // asked for (see CAVEAT above)
+                assert !versions.isEmpty();
 
-                return st;
+                // In Java 5 this works:
+                st = versions.get(versions.lastKey());
+
+                // TODO in Java 6 this is probably faster:
+                //Map.Entry<Integer, UnifiedSymbolTable> entry;
+                //entry = versions.lastEntry();
+                //assert entry != null;
+                //st = entry.getValue();
+
+                assert st != null;
             }
-        }
 
-        return null;
+            return st;
+        }
     }
 
     public void putTable(SymbolTable table)
     {
+        if (table.isLocalTable() || table.isSystemTable())
+        {
+            throw new IllegalArgumentException("table cannot be local or system table");
+        }
+
         String name = table.getName();
         int version = table.getVersion();
         assert version >= 0;
@@ -100,7 +126,10 @@ public class SimpleCatalog
                 versions = new TreeMap<Integer,SymbolTable>();
                 myTablesByName.put(name, versions);
             }
-            versions.put(version, table);
+            synchronized (versions)
+            {
+                versions.put(version, table);
+            }
         }
     }
 
@@ -121,16 +150,53 @@ public class SimpleCatalog
                 myTablesByName.get(name);
             if (versions != null)
             {
-                removed = versions.remove(version);
-
-                // Remove empty helper tables
-                if (versions.isEmpty())
+                synchronized (versions)
                 {
-                    myTablesByName.remove(name);
+                    removed = versions.remove(version);
+
+                    // Remove empty intermediate table
+                    if (versions.isEmpty())
+                    {
+                        myTablesByName.remove(name);
+                    }
                 }
             }
         }
 
         return removed;
     }
+
+
+    /**
+     * Constructs an iterator that enumerates all of the shared symbol tables
+     * in this catalog, at the time of method invocation. The result represents
+     * a snapshot of the state of this catalog.
+     *
+     * @return a non-null, but potentially empty, iterator.
+     */
+    public Iterator<SymbolTable> iterator()
+    {
+        ArrayList<SymbolTable> tables;
+
+        synchronized (myTablesByName)
+        {
+            tables = new ArrayList<SymbolTable>(myTablesByName.size());
+
+            // I don't think we can shorten the synchronization block
+            // because HashMap.values() result is a live view (not a copy) and
+            // thus needs to be synched too.
+            Collection<TreeMap<Integer, SymbolTable>> symtabNames =
+                myTablesByName.values();
+            for (TreeMap<Integer,SymbolTable> versions : symtabNames)
+            {
+                synchronized (versions)
+                {
+                    tables.addAll(versions.values());
+                }
+            }
+        }
+
+        return tables.iterator();
+    }
+
 }

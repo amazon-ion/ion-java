@@ -1,12 +1,11 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.LocalSymbolTable;
+import com.amazon.ion.SymbolTable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -126,6 +125,14 @@ public class LoaderImpl
     }
 
 
+    public IonDatagramImpl load(Reader ionText, SymbolTable symbolTable)
+        throws IonException, IOException
+    {
+        return new IonDatagramImpl(mySystem, symbolTable, ionText);
+    }
+
+
+    @Deprecated
     public IonDatagramImpl load(Reader ionText,
                                 LocalSymbolTable symbolTable)
         throws IonException, IOException
@@ -139,7 +146,7 @@ public class LoaderImpl
                                     LocalSymbolTable symbolTable)
         throws IonException, IOException
     {
-        return load(ionText, symbolTable);
+        return new IonDatagramImpl(mySystem, symbolTable, ionText);
     }
 
 
@@ -156,7 +163,7 @@ public class LoaderImpl
     public IonDatagramImpl load(byte[] ionData)
     {
         SystemReader systemReader = mySystem.newSystemReader(ionData);
-        return new IonDatagramImpl(systemReader);
+        return new IonDatagramImpl(mySystem, systemReader);
     }
 
 
@@ -167,11 +174,13 @@ public class LoaderImpl
         throws IonException, IOException
     {
         PushbackInputStream pushback = new PushbackInputStream(ionData, 8);
-        if (isBinary(pushback)) {
-            return loadBinary(pushback);   // TODO inline this call
+        if (IonImplUtils.streamIsIonBinary(pushback)) {
+            SystemReader systemReader = mySystem.newBinarySystemReader(pushback);
+            return new IonDatagramImpl(mySystem, systemReader);
         }
 
-        return loadText(pushback); // TODO inline this call
+        Reader reader = new InputStreamReader(pushback, "UTF-8");
+        return load(reader);
     }
 
 
@@ -188,26 +197,6 @@ public class LoaderImpl
         throws IOException
     {
         SystemReader systemReader = mySystem.newBinarySystemReader(ionBinary);
-        return new IonDatagramImpl(systemReader);
-    }
-
-
-    //=========================================================================
-    // Other utilities and helpers
-
-    static boolean isBinary(PushbackInputStream pushback)
-        throws IonException, IOException
-    {
-        boolean isBinary = false;
-        byte[] cookie = new byte[IonConstants.BINARY_VERSION_MARKER_SIZE];
-
-        int len = pushback.read(cookie);
-        if (len == IonConstants.BINARY_VERSION_MARKER_SIZE) {
-            isBinary = IonBinary.startsWithBinaryVersionMarker(cookie);
-        }
-        if (len > 0) {
-            pushback.unread(cookie, 0, len);
-        }
-        return isBinary;
+        return new IonDatagramImpl(mySystem, systemReader);
     }
 }

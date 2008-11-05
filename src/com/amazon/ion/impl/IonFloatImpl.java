@@ -34,17 +34,17 @@ public final class IonFloatImpl
     /**
      * Constructs a <code>null.float</code> element.
      */
-    public IonFloatImpl()
+    public IonFloatImpl(IonSystemImpl system)
     {
-        super(NULL_FLOAT_TYPEDESC);
+        super(system, NULL_FLOAT_TYPEDESC);
     }
 
     /**
      * Constructs a binary-backed element.
      */
-    public IonFloatImpl(int typeDesc)
+    public IonFloatImpl(IonSystemImpl system, int typeDesc)
     {
-        super(typeDesc);
+        super(system, typeDesc);
         assert pos_getType() == IonConstants.tidFloat;
 //        assert pos_getLowNibble() == IonConstants.lnIsNullAtom
 //            || pos_getLowNibble() == SIZE_OF_IEEE_754_64_BITS;
@@ -61,7 +61,7 @@ public final class IonFloatImpl
     @Override
     public IonFloatImpl clone()
     {
-        IonFloatImpl clone = new IonFloatImpl();
+        IonFloatImpl clone = new IonFloatImpl(_system);
 
         makeReady();
         clone.copyAnnotationsFrom(this);

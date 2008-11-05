@@ -13,8 +13,20 @@ package com.amazon.ion;
 public interface SymbolTable
 {
     /**
+     * Determines whether this symbol table is local, and therefore unnamed,
+     * unversioned, and modifiable.
+     * <p>
+     * If this method returns {@code true}, then both {@link #isSharedTable()}
+     * and {@link #isSystemTable()} will return {@code false}.
+     */
+    public boolean isLocalTable();
+
+    /**
      * Determines whether this symbol table is shared, and therefore named,
      * versioned, and unmodifiable.
+     * <p>
+     * If this method returns {@code true}, then {@link #isLocalTable()}
+     * will return {@code false}.
      */
     public boolean isSharedTable();
 
@@ -22,6 +34,10 @@ public interface SymbolTable
     /**
      * Determines whether this symbol table is a system symbol table, and
      * therefore shared, named, versioned, and unmodifiable.
+     * <p>
+     * If this method returns {@code true}, then {@link #isLocalTable()}
+     * will return {@code false} and {@link #isSharedTable()} will return
+     * {@code true}.
      */
     public boolean isSystemTable();
 
@@ -43,12 +59,34 @@ public interface SymbolTable
 
 
     /**
+     * Gets the system symbol table being used by this local table.
+     * <p>
+     * If {@link #isSystemTable()} then this method returns {@code this}.
+     *
+     * @return not <code>null</code>.
+     */
+    public SymbolTable getSystemSymbolTable();
+    // FIXME should this return null for shared symtabs?
+
+
+    /**
      * Gets the identifier for the system symbol table imported by this table.
      * The system identifier is a string of the form {@code "$ion_X_Y"}.
      *
      * @return the system identifier; not {@code null}.
      */
     public String getSystemId();
+
+
+    /**
+     * Gets the sequence of shared symbol tables imported by this (local)
+     * symbol table. The result does not include a system table.
+     *
+     * @return {@code null} if this is a shared or system table, otherwise a
+     * non-null but potentially zero-length array of shared tables (but no
+     * system table).
+     */
+    public SymbolTable[] getImportedTables();
 
 
     /**
@@ -64,7 +102,7 @@ public interface SymbolTable
 
     /**
      * Returns the number of symbols in this table, not counting imported
-     * symbols (in the case of a {@link LocalSymbolTable}).
+     * symbols (when {@link #isLocalTable()} is {@code true}).
      * If it contains more than <code>Integer.MAX_VALUE</code> elements,
      * returns <code>Integer.MAX_VALUE</code>.
      *
@@ -100,6 +138,29 @@ public interface SymbolTable
      * the name is not known.
      */
     public String findKnownSymbol(int id);
+
+
+    /**
+     * Adds a new symbol to this table, or finds an existing id for it.
+     *
+     * @param name must be non-empty.
+     * @return a value greater than zero.
+     *
+     * @throws UnsupportedOperationException if {@link #isSharedTable()}.
+     */
+    public int addSymbol(String name);
+
+
+    /**
+     * Adds a new symbol to this table using a specific id.  An exception is
+     * thrown if the given name is already defined with a different id.
+     *
+     * @param name must be non-empty.
+     * @param id must be greater than zero.
+     *
+     * @throws UnsupportedOperationException if {@link #isSharedTable()}.
+     */
+    public void defineSymbol(String name, int id);
 
 
     /**

@@ -6,8 +6,8 @@ import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
-import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.NullValueException;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
@@ -30,23 +30,23 @@ public final class IonSymbolImpl
     /**
      * Constructs a <code>null.symbol</code> value.
      */
-    public IonSymbolImpl()
+    public IonSymbolImpl(IonSystemImpl system)
     {
-        this(NULL_SYMBOL_TYPEDESC);
+        this(system, NULL_SYMBOL_TYPEDESC);
     }
 
-    public IonSymbolImpl(String name)
+    public IonSymbolImpl(IonSystemImpl system, String name)
     {
-        this(NULL_SYMBOL_TYPEDESC);
+        this(system, NULL_SYMBOL_TYPEDESC);
         setValue(name);
     }
 
     /**
      * Constructs a binary-backed symbol value.
      */
-    public IonSymbolImpl(int typeDesc)
+    public IonSymbolImpl(IonSystemImpl system, int typeDesc)
     {
-        super(typeDesc);
+        super(system, typeDesc);
         assert pos_getType() == IonConstants.tidSymbol;
     }
 
@@ -61,7 +61,7 @@ public final class IonSymbolImpl
     @Override
     public IonSymbolImpl clone()
     {
-        IonSymbolImpl clone = new IonSymbolImpl();
+        IonSymbolImpl clone = new IonSymbolImpl(_system);
 
         clone.copyFrom(this);
         clone.mySid = 0;
@@ -100,9 +100,10 @@ public final class IonSymbolImpl
 
         makeReady();
 
+        // TODO this can be streamlined
         if (mySid == UNKNOWN_SYMBOL_ID) {
             assert _hasNativeValue == true && isDirty();
-            LocalSymbolTable symtab = getSymbolTable();
+            SymbolTable symtab = getSymbolTable();
             if (symtab == null) {
                 symtab = materializeSymbolTable();
             }
@@ -186,7 +187,7 @@ public final class IonSymbolImpl
     }
 
     @Override
-    public void updateSymbolTable(LocalSymbolTable symtab)
+    public void updateSymbolTable(SymbolTable symtab)
     {
         // TODO do we really need to materialize?
         makeReady();
@@ -320,6 +321,7 @@ public final class IonSymbolImpl
      * @return the cumulative position delta at the end of this value.
      * @throws IOException
      */
+    @Override
     protected int writeValue(IonBinary.Writer writer,
                              int cumulativePositionDelta)
         throws IOException

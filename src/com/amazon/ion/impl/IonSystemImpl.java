@@ -9,6 +9,7 @@ import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonClob;
+import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonDecimal;
 import com.amazon.ion.IonException;
@@ -17,6 +18,7 @@ import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonNull;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
@@ -24,7 +26,7 @@ import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.LocalSymbolTable;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.UnsupportedSystemVersionException;
@@ -35,6 +37,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
@@ -51,8 +54,9 @@ import java.util.List;
 public class IonSystemImpl
     implements IonSystem
 {
-    private SymbolTable mySystemSymbols = new SystemSymbolTableImpl();
-    private LocalSymbolTableImpl  mySystemSymbolsAsLocal = new LocalSymbolTableImpl(mySystemSymbols);
+    private final UnifiedSymbolTable mySystemSymbols =
+        UnifiedSymbolTable.getSystemSymbolTableInstance();
+
     private IonCatalog myCatalog;
     private IonLoader  myLoader = new LoaderImpl(this);
 
@@ -68,17 +72,13 @@ public class IonSystemImpl
     }
 
 
-    public SymbolTable getSystemSymbolTable()
+    public UnifiedSymbolTable getSystemSymbolTable()
     {
         return mySystemSymbols;
     }
 
-    public LocalSymbolTableImpl getSystemSymbolTableAsLocal()
-    {
-        return mySystemSymbolsAsLocal;
-    }
 
-    public SymbolTable getSystemSymbolTable(String systemId)
+    public UnifiedSymbolTable getSystemSymbolTable(String systemId)
         throws UnsupportedSystemVersionException
     {
         if (systemId.equals(SystemSymbolTable.ION_1_0))
@@ -103,13 +103,15 @@ public class IonSystemImpl
     }
 
 
-    public LocalSymbolTable newLocalSymbolTable()
+    public UnifiedSymbolTable newLocalSymbolTable()
     {
-        return new LocalSymbolTableImpl(mySystemSymbols);
+        UnifiedSymbolTable st = new UnifiedSymbolTable(mySystemSymbols);
+        st.setSystem(this);
+        return st;
     }
 
 
-    public LocalSymbolTable newLocalSymbolTable(SymbolTable systemSymbols)
+    public UnifiedSymbolTable newLocalSymbolTable(SymbolTable systemSymbols)
     {
         if (! systemSymbols.isSystemTable())
         {
@@ -117,15 +119,21 @@ public class IonSystemImpl
             throw new IllegalArgumentException(message);
         }
 
-        return new LocalSymbolTableImpl(systemSymbols);
+        UnifiedSymbolTable st = new UnifiedSymbolTable(systemSymbols);
+        st.setSystem(this);
+        return st;
     }
 
 
+    public IonDatagram newDatagram()
+    {
+        return new IonDatagramImpl(this);
+    }
+
     public IonDatagram newDatagram(IonValue initialChild)
-        throws ContainedValueException
     {
         if (initialChild != null) {
-            if (!(initialChild instanceof IonValueImpl)) {
+            if (initialChild.getSystem() != this) {
                 throw new IonException("this Ion system can't mix with instances from other system impl's");
             }
             if (initialChild.getContainer() != null) {
@@ -172,7 +180,7 @@ public class IonSystemImpl
 
 
     //=========================================================================
-    // IonReader creation
+    // Iterator creation
 
 
     public Iterator<IonValue> iterate(Reader reader)
@@ -196,6 +204,88 @@ public class IonSystemImpl
     }
 
 
+    //=========================================================================
+    // IonReader creation
+
+
+    public IonReader newReader(String ionText)
+    {
+        return new IonTextReader(ionText);
+    }
+
+
+    public IonReader newReader(byte[] ionData)
+    {
+        return newReader(ionData, 0, ionData.length);
+    }
+
+    public IonReader newReader(byte[] ionData, int offset, int len)
+    {
+        boolean isBinary = IonBinary.matchBinaryVersionMarker(ionData);
+
+        IonReader reader;
+        if (isBinary) {
+            reader = new IonBinaryReader(ionData, offset, len);
+        }
+        else {
+            reader = new IonTextReader(ionData, offset, len);
+        }
+        return reader;
+    }
+
+
+    public IonReader newReader(InputStream ionData)
+    {
+        byte[] bytes;
+        try
+        {
+            bytes = IonImplUtils.loadStreamBytes(ionData);
+        }
+        catch (IOException e)
+        {
+            throw new IonException("Error reading from stream", e);
+        }
+
+        return newReader(bytes, 0, bytes.length);
+    }
+
+
+    public IonReader newReader(IonValue value)
+    {
+        return new IonTreeReader(value);
+    }
+
+
+    //=========================================================================
+    // IonWriter creation
+
+
+    public IonWriter newWriter(IonContainer container)
+    {
+        return new IonTreeWriter(this, container);
+    }
+
+    public IonWriter newTextWriter(OutputStream out)
+    {
+        return new IonTextWriter(out);
+    }
+
+    // TODO also Utf8AsAscii flag
+    public IonWriter newTextWriter(OutputStream out, boolean pretty)
+    {
+        return new IonTextWriter(out, pretty);
+    }
+
+    public IonBinaryWriterImpl newBinaryWriter()
+    {
+        return new com.amazon.ion.impl.IonBinaryWriterImpl();
+    }
+
+
+    //=========================================================================
+    // Internal SystemReader creation
+
+
     /**
      * Creates a new reader, wrapping an array of text or binary data.
      *
@@ -207,11 +297,11 @@ public class IonSystemImpl
      */
     public SystemReader newSystemReader(byte[] ionData)
     {
-        boolean isbinary =
-            IonBinary.startsWithBinaryVersionMarker(ionData);
+        boolean isBinary =
+            IonBinary.matchBinaryVersionMarker(ionData);
 
         SystemReader sysReader;
-        if (isbinary) {
+        if (isBinary) {
             sysReader = newBinarySystemReader(ionData);
         }
         else {
@@ -266,19 +356,7 @@ public class IonSystemImpl
     public SystemReader newBinarySystemReader(InputStream ionBinary)
         throws IOException
     {
-        BlockedBuffer bb = new BlockedBuffer();
-        BufferManager buffer = new BufferManager(bb);
-        IonBinary.Writer writer = buffer.writer();
-        try {
-            writer.write(ionBinary);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-        finally {
-            ionBinary.close();
-        }
-
+        BufferManager buffer = new BufferManager(ionBinary);
         return new SystemReader(this, buffer);
     }
 
@@ -360,21 +438,21 @@ public class IonSystemImpl
         return false;
     }
 
-    public final LocalSymbolTable handleLocalSymbolTable(IonCatalog catalog,
-                                                         IonValue value)
+    public final SymbolTable handleLocalSymbolTable(IonCatalog catalog,
+                                                    IonValue value)
     {
         // This assumes that we only are handling 1_0
 
-        LocalSymbolTable symtab = null;
+        SymbolTable symtab = null;
 
         if (value instanceof IonStruct)
         {
             if (AbstractSymbolTable.getSymbolTableType(value).equals(SymbolTableType.LOCAL))
             //if (value.hasTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE)) // cas 25 apr 2008 was: ION_1_0
             {
-                symtab = new LocalSymbolTableImpl(this, catalog,
-                                                  (IonStruct) value,
-                                                  mySystemSymbols);
+                symtab = new UnifiedSymbolTable(mySystemSymbols, // FIXME wrong symtab
+                                                (IonStruct) value,
+                                                catalog);
             }
         }
         else if (valueIsSystemId(value))
@@ -383,7 +461,9 @@ public class IonSystemImpl
             if (symtab == null
             || symtab.getMaxId() != mySystemSymbols.getMaxId()
             ) {
-                symtab = new LocalSymbolTableImpl( mySystemSymbols );
+                // TODO Should $ion_1_0 really have a local symtab?
+                String systemId = ((IonSymbol)value).stringValue();
+                symtab = newLocalSymbolTable(getSystemSymbolTable(systemId));
                 ((IonValueImpl)value).setSymbolTable(symtab);
             }
         }
@@ -434,9 +514,7 @@ public class IonSystemImpl
 
     public IonBlob newNullBlob()
     {
-        IonBlobImpl result = new IonBlobImpl();
-        result._system = this;
-        return result;
+        return new IonBlobImpl(this);
     }
 
 
@@ -452,16 +530,13 @@ public class IonSystemImpl
 
     public IonBool newNullBool()
     {
-        IonBoolImpl result = new IonBoolImpl();
-        result._system = this;
-        return result;
+        return new IonBoolImpl(this);
     }
 
     public IonBool newBool(boolean value)
     {
-        IonBoolImpl result = new IonBoolImpl();
+        IonBoolImpl result = new IonBoolImpl(this);
         result.setValue(value);
-        result._system = this;
         return result;
     }
 
@@ -478,9 +553,7 @@ public class IonSystemImpl
 
     public IonClob newNullClob()
     {
-        IonClobImpl result = new IonClobImpl();
-        result._system = this;
-        return result;
+        return new IonClobImpl(this);
     }
 
 
@@ -496,9 +569,7 @@ public class IonSystemImpl
 
     public IonDecimal newNullDecimal()
     {
-        IonDecimalImpl result = new IonDecimalImpl();
-        result._system = this;
-        return result;
+        return new IonDecimalImpl(this);
     }
 
 
@@ -514,9 +585,7 @@ public class IonSystemImpl
 
     public IonFloat newNullFloat()
     {
-        IonFloatImpl result = new IonFloatImpl();
-        result._system = this;
-        return result;
+        return new IonFloatImpl(this);
     }
 
 
@@ -532,32 +601,27 @@ public class IonSystemImpl
 
     public IonInt newNullInt()
     {
-        IonIntImpl result = new IonIntImpl();
-        result._system = this;
-        return result;
+        return new IonIntImpl(this);
     }
 
     public IonInt newInt(int content)
     {
-        IonIntImpl result = new IonIntImpl();
+        IonIntImpl result = new IonIntImpl(this);
         result.setValue(content);
-        result._system = this;
         return result;
     }
 
     public IonInt newInt(long content)
     {
-        IonIntImpl result = new IonIntImpl();
+        IonIntImpl result = new IonIntImpl(this);
         result.setValue(content);
-        result._system = this;
         return result;
     }
 
     public IonInt newInt(Number content)
     {
-        IonIntImpl result = new IonIntImpl();
+        IonIntImpl result = new IonIntImpl(this);
         result.setValue(content);
-        result._system = this;
         return result;
     }
 
@@ -574,33 +638,25 @@ public class IonSystemImpl
 
     public IonList newNullList()
     {
-        IonListImpl result = new IonListImpl();
-        result._system = this;
-        return result;
+        return new IonListImpl(this);
     }
 
     public IonList newEmptyList()
     {
-        IonListImpl result = new IonListImpl(false);
-        result._system = this;
-        return result;
+        return new IonListImpl(this, false);
     }
 
     public IonList newList(Collection<? extends IonValue> elements)
         throws ContainedValueException, NullPointerException
     {
-        IonListImpl result = new IonListImpl(elements);
-        result._system = this;
-        return result;
+        return new IonListImpl(this, elements);
     }
 
     public <T extends IonValue> IonList newList(T... elements)
         throws ContainedValueException, NullPointerException
     {
         List<T> e = (elements == null ? null : Arrays.asList(elements));
-        IonListImpl result = new IonListImpl(e);
-        result._system = this;
-        return result;
+        return new IonListImpl(this, e);
     }
 
     public IonList newList(int[] elements)
@@ -618,9 +674,7 @@ public class IonSystemImpl
 
     public IonNull newNull()
     {
-        IonNullImpl result = new IonNullImpl();
-        result._system = this;
-        return result;
+        return new IonNullImpl(this);
     }
 
 
@@ -636,33 +690,25 @@ public class IonSystemImpl
 
     public IonSexp newNullSexp()
     {
-        IonSexpImpl result = new IonSexpImpl();
-        result._system = this;
-        return result;
+        return new IonSexpImpl(this);
     }
 
     public IonSexp newEmptySexp()
     {
-        IonSexpImpl result = new IonSexpImpl(false);
-        result._system = this;
-        return result;
+        return new IonSexpImpl(this, false);
     }
 
     public IonSexp newSexp(Collection<? extends IonValue> elements)
         throws ContainedValueException, NullPointerException
     {
-        IonSexpImpl result = new IonSexpImpl(elements);
-        result._system = this;
-        return result;
+        return new IonSexpImpl(this, elements);
     }
 
     public <T extends IonValue> IonSexp newSexp(T... elements)
         throws ContainedValueException, NullPointerException
     {
         List<T> e = (elements == null ? null : Arrays.asList(elements));
-        IonSexpImpl result = new IonSexpImpl(e);
-        result._system = this;
-        return result;
+        return new IonSexpImpl(this, e);
     }
 
     public IonSexp newSexp(int[] elements)
@@ -690,16 +736,13 @@ public class IonSystemImpl
 
     public IonString newNullString()
     {
-        IonStringImpl result = new IonStringImpl();
-        result._system = this;
-        return result;
+        return new IonStringImpl(this);
     }
 
     public IonString newString(String content)
     {
-        IonStringImpl result = new IonStringImpl();
+        IonStringImpl result = new IonStringImpl(this);
         result.setValue(content);
-        result._system = this;
         return result;
     }
 
@@ -716,16 +759,13 @@ public class IonSystemImpl
 
     public IonStruct newNullStruct()
     {
-        IonStructImpl result = new IonStructImpl();
-        result._system = this;
-        return result;
+        return new IonStructImpl(this);
     }
 
     public IonStruct newEmptyStruct()
     {
-        IonStructImpl result = new IonStructImpl();
+        IonStructImpl result = new IonStructImpl(this);
         result.clear();
-        result._system = this;
         return result;
     }
 
@@ -742,16 +782,12 @@ public class IonSystemImpl
 
     public IonSymbol newNullSymbol()
     {
-        IonSymbolImpl result = new IonSymbolImpl();
-        result._system = this;
-        return result;
+        return new IonSymbolImpl(this);
     }
 
     public IonSymbol newSymbol(String name)
     {
-        IonSymbolImpl result = new IonSymbolImpl(name);
-        result._system = this;
-        return result;
+        return new IonSymbolImpl(this, name);
     }
 
     /**
@@ -766,35 +802,30 @@ public class IonSystemImpl
 
     public IonTimestamp newNullTimestamp()
     {
-        IonTimestampImpl result = new IonTimestampImpl();
-        result._system = this;
-        return result;
+        return new IonTimestampImpl(this);
     }
 
     public IonTimestamp newUtcTimestampFromMillis(long millis)
     {
-        IonTimestampImpl result = new IonTimestampImpl();
+        IonTimestampImpl result = new IonTimestampImpl(this);
         result.setMillisUtc(millis);
-        result._system = this;
         return result;
     }
 
     public IonTimestamp newUtcTimestamp(Date value)
     {
-        IonTimestampImpl result = new IonTimestampImpl();
+        IonTimestampImpl result = new IonTimestampImpl(this);
         if (value != null)
         {
             result.setMillisUtc(value.getTime());
         }
-        result._system = this;
         return result;
     }
 
     public IonTimestamp newCurrentUtcTimestamp()
     {
-        IonTimestampImpl result = new IonTimestampImpl();
+        IonTimestampImpl result = new IonTimestampImpl(this);
         result.setCurrentTimeUtc();
-        result._system = this;
         return result;
     }
 

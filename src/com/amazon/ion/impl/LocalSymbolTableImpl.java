@@ -20,6 +20,7 @@ import com.amazon.ion.SystemSymbolTable;
 /**
  * TODO define thread-safety.
  */
+@Deprecated
 public class LocalSymbolTableImpl
     extends AbstractSymbolTable
     implements LocalSymbolTable
@@ -42,7 +43,8 @@ public class LocalSymbolTableImpl
      * @param systemSymbolTable must be a system symbol table as per
      *   {@link SymbolTable#isSystemTable()}.
      */
-    public LocalSymbolTableImpl(SymbolTable systemSymbolTable)
+    public LocalSymbolTableImpl(IonSystemImpl system,
+                                SymbolTable systemSymbolTable)
     {
         assert systemSymbolTable != null;
         assert systemSymbolTable.isSystemTable();
@@ -51,12 +53,12 @@ public class LocalSymbolTableImpl
         _importedTables = null;
         _maxId = systemSymbolTable.getMaxId();
 
-        _symtabElement = new IonStructImpl();
+        _symtabElement = new IonStructImpl(system);
 
         ((IonStructImpl)_symtabElement).setSymbolTable(this);
         _symtabElement.addTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE); // cas 25 apr 2008 was: systemSymbolTable.getSystemId());
 
-        _symbolsStruct = new IonStructImpl();
+        _symbolsStruct = new IonStructImpl(system);
         _symtabElement.put(SystemSymbolTable.SYMBOLS, _symbolsStruct);
     }
 
@@ -64,10 +66,10 @@ public class LocalSymbolTableImpl
     /**
      * Constructs an empty, anonymous symbol table.
      */
-    public LocalSymbolTableImpl(IonSystem system)
+    public LocalSymbolTableImpl(IonSystemImpl system)
     {
     	// assert system != null;
-        this(system.getSystemSymbolTable());
+        this(system, system.getSystemSymbolTable());
     }
 
     /**
@@ -105,6 +107,10 @@ public class LocalSymbolTableImpl
         }
     }
 
+    public final boolean isLocalTable()
+    {
+        return true;
+    }
 
     // Not synchronized since member is final.
     public SymbolTable getSystemSymbolTable()
@@ -263,6 +269,20 @@ public class LocalSymbolTableImpl
         }
         return null;
     }
+
+    public SymbolTable[] getImportedTables()
+    {
+        if (_importedTables == null) return new SymbolTable[0];
+
+        SymbolTable[] symtabs = new SymbolTable[_importedTables.length];
+
+        for (int i = 0; i < _importedTables.length; i++)
+        {
+            symtabs[i] = _importedTables[i]._table;
+        }
+        return symtabs;
+    }
+
 
     public boolean isCompatible(SymbolTable other)
     {

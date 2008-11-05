@@ -46,17 +46,17 @@ public final class IonIntImpl
     /**
      * Constructs a <code>null.int</code> element.
      */
-    public IonIntImpl()
+    public IonIntImpl(IonSystemImpl system)
     {
-        super(NULL_INT_TYPEDESC);
+        super(system, NULL_INT_TYPEDESC);
     }
 
     /**
      * Constructs a binary-backed element.
      */
-    public IonIntImpl(int typeDesc)
+    public IonIntImpl(IonSystemImpl system, int typeDesc)
     {
-        super(typeDesc);
+        super(system, typeDesc);
         assert pos_getType() == IonConstants.tidPosInt
             || pos_getType() == IonConstants.tidNegInt
         ;
@@ -73,7 +73,7 @@ public final class IonIntImpl
     @Override
     public IonIntImpl clone()
     {
-    	IonIntImpl clone = new IonIntImpl();
+    	IonIntImpl clone = new IonIntImpl(_system);
 
     	makeReady();
     	clone.copyAnnotationsFrom(this);
@@ -105,12 +105,19 @@ public final class IonIntImpl
         return _int_value.longValue();
     }
 
-    public BigInteger toBigInteger()
+    public BigInteger bigIntegerValue()
         throws NullValueException
     {
         makeReady();
         if (_int_value == null) return null;
-        return new BigInteger(_int_value.toString());
+        return BigInteger.valueOf(_int_value.longValue());
+    }
+
+    @Deprecated
+    public BigInteger toBigInteger()
+        throws NullValueException
+    {
+        return bigIntegerValue();
     }
 
     public void setValue(int value)

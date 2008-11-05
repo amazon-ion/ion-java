@@ -114,9 +114,16 @@ public class SymbolTest
     }
 
     public void testSymbolClone()
-        throws Exception
+    	throws Exception
+	{
+	    testSimpleClone("null.symbol");
+	    testSimpleClone("root");
+	}
+    
+    public void testClone()
     {
-        testSimpleClone("null.symbol");
-        testSimpleClone("root");
+        IonValue data = system().singleValue("root");
+        IonValue clone = data.clone();
+        assertEquals(data, clone);
     }
 }

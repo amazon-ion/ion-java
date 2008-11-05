@@ -11,7 +11,6 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
@@ -86,7 +85,7 @@ public final class IonDatagramImpl
      */
     public IonDatagramImpl(IonSystemImpl system, byte[] ionData)
     {
-        this(system.newSystemReader(ionData));
+        this(system, system.newSystemReader(ionData));
     }
 
 
@@ -98,7 +97,7 @@ public final class IonDatagramImpl
      */
     public IonDatagramImpl(IonSystemImpl system, BufferManager buffer)
     {
-        this(new SystemReader(system, buffer));
+        this(system, new SystemReader(system, buffer));
     }
 
 
@@ -188,13 +187,16 @@ public final class IonDatagramImpl
     }
 
     /**
+     * @param initialSymbolTable must be local, not shared.
+     *
      * @throws NullPointerException if any parameter is null.
      */
     public IonDatagramImpl(IonSystemImpl system,
-                           LocalSymbolTable initialSymbolTable,
+                           SymbolTable initialSymbolTable,
                            Reader ionText)
     {
-        this(new SystemReader(system,
+        this(system,
+             new SystemReader(system,
                               system.getCatalog(),
                               initialSymbolTable, ionText));
     }
@@ -204,15 +206,18 @@ public final class IonDatagramImpl
      *
      * @throws NullPointerException if any parameter is null.
      */
-    IonDatagramImpl(SystemReader rawStream)
+    IonDatagramImpl(IonSystemImpl system,
+                    SystemReader rawStream)
     {
-        super(DATAGRAM_TYPEDESC, true);
+        super(system, DATAGRAM_TYPEDESC, true);
+
+        assert system == rawStream.getSystem();
 
         _userContents = new ArrayList<IonValue>();
 
         // This is only used during construction.
         _rawStream = rawStream;
-        _system = _rawStream.getSystem();
+//        _system = _rawStream.getSystem();
         _buffer = _rawStream.getBuffer();
 
         // Force reading of the first element, so we get the buffer bootstrapped
@@ -307,11 +312,12 @@ public final class IonDatagramImpl
         // here we are going to FORCE this member to have a symbol
         // table, whether it likes it or not.
 
-        LocalSymbolTable symtab = element.getSymbolTable();
+        SymbolTable symtab = element.getSymbolTable();
 
         if (symtab == null) {
             symtab = getCurrentSymbolTable(userPos, systemPos);
             if (symtab == null) {
+                // FIXME this uses an unpredictable system symtab
                 symtab = _system.newLocalSymbolTable();
                 IonStructImpl ionsymtab = (IonStructImpl)symtab.getIonRepresentation();
                 ionsymtab.setSymbolTable(symtab);
@@ -328,9 +334,10 @@ public final class IonDatagramImpl
             _userContents.add(userPos, element);
         }
     }
-    LocalSymbolTable getCurrentSymbolTable(int userPos, int systemPos)
+
+    SymbolTable getCurrentSymbolTable(int userPos, int systemPos)
     {
-        LocalSymbolTable symtab = null;
+        SymbolTable symtab = null;
 
         // if the systemPos is 0 (or less) then there's no room
         // for a local symbol table, so there's no need to look
@@ -340,14 +347,13 @@ public final class IonDatagramImpl
              && v._annotations != null
              && v.hasTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE))
             {
-                if (((IonStructImpl)v).get(SystemSymbolTable.NAME) == null) {
+                IonStruct symtabStruct = (IonStruct) v;
+                if (symtabStruct.get(SystemSymbolTable.NAME) == null) {
                     // it's a local symbol table alright
-                    symtab = new LocalSymbolTableImpl(
-                            _system,
-                            _system.getCatalog(),
-                            (IonStruct)v,
-                            _system.getSystemSymbolTable()
-                    );
+                    symtab =
+                        new UnifiedSymbolTable(_system.getSystemSymbolTable(),
+                                               symtabStruct,
+                                               _system.getCatalog());
                 }
             }
             else {
@@ -462,8 +468,9 @@ public final class IonDatagramImpl
 
 
     @Override
-    public LocalSymbolTable getSymbolTable()
+    public SymbolTable getSymbolTable()
     {
+        // FIXME this is incompatible with the documentation in IonDatagram
         return null;
     }
 
@@ -578,7 +585,7 @@ public final class IonDatagramImpl
      * create a symbol table instead.
      */
     @Override
-    protected LocalSymbolTable materializeSymbolTable()
+    protected SymbolTable materializeSymbolTable()
     {
         return null;
     }
@@ -594,14 +601,14 @@ public final class IonDatagramImpl
         assert _contents !=  null && _contents.size() == 0;
         assert _userContents !=  null && _userContents.size() == 0;
 
-        SymbolTable previous = null;
+        SymbolTable previous_symtab = null;
         IonValue    previous_value = null;
 
         while (_rawStream.hasNext())
         {
             IonValueImpl     child = (IonValueImpl) _rawStream.next();
-            LocalSymbolTable child_symtab = child.getSymbolTable();
-            assert child_symtab != null;
+            SymbolTable child_symtab = child.getSymbolTable();
+            assert child_symtab.isLocalTable();
 
             // as we insert the first value we need to check and make sure there
             // is an IonVersionMarker in place (which is required for a datagram
@@ -631,7 +638,7 @@ public final class IonDatagramImpl
             }
             else {
                 // for user values we have to check for symbol table fixups
-                if (child_symtab != previous
+                if (child_symtab != previous_symtab
                  && isNeededLocalSymbolTable(child_symtab)
                 ) {
                     IonStruct sym = child_symtab.getIonRepresentation();
@@ -669,7 +676,7 @@ public final class IonDatagramImpl
             previous_value = child;
 
             // this symbol table has been added to the datagram (if it needed to be)
-            previous = child_symtab;
+            previous_symtab = child_symtab;
         }
     }
     private void addToContents(IonValueImpl v) {
@@ -710,7 +717,7 @@ public final class IonDatagramImpl
                 for (int ii=0; ii<_userContents.size(); ii++)
                 {
                     IonValueImpl ichild = (IonValueImpl)_userContents.get(ii);
-                    LocalSymbolTable symtab = ichild.getSymbolTable();
+                    SymbolTable symtab = ichild.getSymbolTable();
 
                     // FIXME: remove or restore - why would we assert this? assert symtab != null;
                     if (symtab == null) {
@@ -774,10 +781,9 @@ public final class IonDatagramImpl
         return SystemSymbolTable.ION_1_0.equals(s);
     }
     boolean isNeededLocalSymbolTable(SymbolTable symtab) {
-        if (symtab instanceof LocalSymbolTable) {
-            LocalSymbolTable local = (LocalSymbolTable)symtab;
-            if (local.hasImports()) return true;
-            if (local.getMaxId() > local.getSystemSymbolTable().getMaxId()) return true;
+        if (symtab.isLocalTable()) {
+            if (symtab.getImportedTables().length > 0) return true;
+            if (symtab.getMaxId() > symtab.getSystemSymbolTable().getMaxId()) return true;
         }
         return false;
     }

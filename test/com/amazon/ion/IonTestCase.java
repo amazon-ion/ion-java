@@ -125,17 +125,19 @@ public abstract class IonTestCase
 
 
     /**
-     * @param textFile
-     * @throws FileNotFoundException
-     * @throws UnsupportedEncodingException
-     * @throws IOException
+     * @deprecated Use {@link #load(File)};
      */
+    @Deprecated
     protected IonDatagram readIonText(File textFile)
         throws Exception
     {
         return loader().load(textFile);
     }
 
+    /**
+     * @deprecated Use {@link #load(File)};
+     */
+    @Deprecated
     protected IonDatagram readIonBinary(File ionFile)
         throws Exception
     {
@@ -145,6 +147,7 @@ public abstract class IonTestCase
 
         return dg;
     }
+
 
     /**
      * Reads the content of an Ion file contained in the test data suite.
@@ -167,6 +170,16 @@ public abstract class IonTestCase
     {
         File text = getTestdataFile(filename);
         return loader().load(text);
+    }
+
+    public IonDatagram load(File ionFile)
+        throws IonException, IOException
+    {
+        IonDatagram dg = loader().load(ionFile);
+
+        dg.deepMaterialize(); // Flush out any encoding problems in the data.
+
+        return dg;
     }
 
 
@@ -344,7 +357,8 @@ public abstract class IonTestCase
     // TODO add to IonSystem()?
     public byte[] encode(String ionText)
     {
-        return loader().load(ionText).toBytes();
+        IonDatagram dg = loader().load(ionText);  // Keep here for breakpoint
+        return dg.toBytes();
     }
 
     public void assertEscape(char expected, char escapedChar)
@@ -446,8 +460,47 @@ public abstract class IonTestCase
 
     public void checkAnnotation(String expectedAnnot, IonValue value)
     {
-        boolean foundAnnot = value.hasTypeAnnotation(expectedAnnot);
-        assertEquals(foundAnnot, true);
+        assertTrue("missing annotation",
+                   value.hasTypeAnnotation(expectedAnnot));
+    }
+
+
+    public void checkLocalTable(SymbolTable symtab)
+    {
+        assertTrue(symtab.isLocalTable());
+        assertFalse(symtab.isSharedTable());
+        assertFalse(symtab.isSystemTable());
+        assertNotNull(symtab.getImportedTables());
+
+        SymbolTable system = symtab.getSystemSymbolTable();
+        checkSystemTable(system);
+    }
+
+    public void checkSystemTable(SymbolTable symtab)
+    {
+        assertFalse(symtab.isLocalTable());
+        assertTrue(symtab.isSharedTable());
+        assertTrue(symtab.isSystemTable());
+        assertEquals(SystemSymbolTable.ION_1_0_MAX_ID, symtab.getMaxId());
+    }
+
+    public SymbolTable findImportedTable(SymbolTable localTable,
+                                         String importName)
+    {
+        SymbolTable[] imports = localTable.getImportedTables();
+        if (imports == null) return null;
+
+        for (int i = 0; i < imports.length; i++)
+        {
+            SymbolTable current = imports[i];
+            // FIXME why does this allow null?
+            if (current != null && importName.equals(current.getName()))
+            {
+                return current;
+            }
+        }
+
+        return null;
     }
 
 
@@ -531,8 +584,8 @@ public abstract class IonTestCase
                     public void visit(IonInt expected) throws Exception
                     {
                         assertEquals("float value",
-                                     expected.toBigInteger(),
-                                     ((IonInt)found).toBigInteger());
+                                     expected.bigIntegerValue(),
+                                     ((IonInt)found).bigIntegerValue());
                     }
 
                     public void visit(IonList expected) throws Exception
@@ -591,8 +644,8 @@ public abstract class IonTestCase
 
                     public void visit(IonTimestamp expected) throws Exception
                     {
-                        assertEquals(expected.dateValue(),
-                                     ((IonTimestamp)found).dateValue());
+                        assertEquals(expected.getDecimalMillis(),
+                                     ((IonTimestamp)found).getDecimalMillis());
                         assertEquals(expected.getLocalOffset(),
                                      ((IonTimestamp)found).getLocalOffset());
                     }

@@ -6,7 +6,7 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.LocalSymbolTable;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import java.io.IOException;
 import java.io.Reader;
@@ -24,17 +24,18 @@ public class UserReader
      * symtab reference so we maintain the precondition that it doesn't
      * change until after calling our next.
      */
-    private LocalSymbolTable    _localSymbolTable;
+    private SymbolTable    _localSymbolTable;
 
     private boolean             _at_eof;
     private IonValue            _next;
 
 
     /**
+     * @param initialSymbolTable must be local, not shared.
      * @throws NullPointerException if input is null.
      */
     public UserReader(IonSystemImpl system,
-                      LocalSymbolTable initialSymbolTable,
+                      SymbolTable initialSymbolTable,
                       Reader input)
     {
         this(new SystemReader(system,
@@ -120,16 +121,16 @@ public class UserReader
         return this._systemReader.getBuffer();
     }
 
-    public LocalSymbolTable getLocalSymbolTable()
+    public SymbolTable getLocalSymbolTable()
     {
         return _localSymbolTable;
     }
 
     /**
      * This cannot be called between {@link #hasNext()} and {@link #next()}.
-     * @param symbols
+     * @param symbols must be local, not shared.
      */
-    public void setLocalSymbolTable(LocalSymbolTable symbols)
+    public void setLocalSymbolTable(SymbolTable symbols)
     {
         if (_next != null) {
             throw new IllegalStateException();

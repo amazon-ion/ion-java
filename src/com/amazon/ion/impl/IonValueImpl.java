@@ -10,8 +10,8 @@ import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.NullValueException;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.Reader;
@@ -150,7 +150,7 @@ public abstract class IonValueImpl
      * symbol table, if one exists for this value.  This may be
      * stored in at a parent container.
      */
-    protected LocalSymbolTable _symboltable;
+    protected SymbolTable _symboltable;
 
     /**
      * The instance maintains a reference back to the system that
@@ -161,21 +161,31 @@ public abstract class IonValueImpl
      * the symbol id is being requested for a fieldname, the int
      * value of an IonSymbol or an annotation.
      */
-    IonSystemImpl _system;
+    final protected IonSystemImpl _system;
 
 
     /**
      * Constructs a value with the given native value and high-nibble, and zero
      * low-nibble.
+     *
+     * @param system must not be null.
      */
-    protected IonValueImpl(int typedesc)
+    protected IonValueImpl(IonSystemImpl system, int typedesc)
     {
+        _system = system;
+
         pos_init();
         _isMaterialized     = false;
         _isPositionLoaded   = false;
         _hasNativeValue     = false;
         _isDirty            = true;
         pos_setTypeDescriptorByte(typedesc);
+    }
+
+
+    public IonSystemImpl getSystem()
+    {
+        return _system;
     }
 
     /**
@@ -211,14 +221,18 @@ public abstract class IonValueImpl
         _annotations = a; // and we don't care if it's null or not
     }
 
+    /**
+     *
+     * @param symboltable must be local, not shared, not null.
+     */
     protected void init(int fieldSID
                        ,BufferManager buffer
                        ,int offset
                        ,IonContainerImpl container
-                       ,LocalSymbolTable symboltable
+                       ,SymbolTable symboltable
                        )
     {
-// cas symtab:        assert symboltable != null;
+        assert symboltable.isLocalTable();
 
         _fieldSid    = fieldSID;
         _buffer      = buffer;
@@ -234,7 +248,6 @@ public abstract class IonValueImpl
         catch (IOException e) {
             throw new IonException(e);
         }
-
     }
 
     protected void makeReady()
@@ -253,14 +266,16 @@ public abstract class IonValueImpl
     }
 
     /**
+     * @param symboltable must be local, not shared.
      * @return not null.
      */
     public static IonValueImpl makeValueFromBuffer(
                                      int fieldSID
                                     ,int position
                                     ,BufferManager buffer
-                                    ,LocalSymbolTable symboltable
+                                    ,SymbolTable symboltable
                                     ,IonContainerImpl container
+                                    ,IonSystemImpl system
     ) {
         IonValueImpl value;
 // cas symtab:       assert symboltable != null;
@@ -274,6 +289,7 @@ public abstract class IonValueImpl
                                        ,buffer
                                        ,symboltable
                                        ,container
+                                       ,system
                     );
         }
         catch (IOException e) {
@@ -284,13 +300,16 @@ public abstract class IonValueImpl
     }
 
     /**
+     * @param symboltable must be local, not shared.
+     *
      * @return not null.
      */
     public static IonValueImpl makeValueFromReader(int fieldSID,
                                                    IonBinary.Reader reader,
                                                    BufferManager buffer,
-                                                   LocalSymbolTable symboltable,
-                                                   IonContainerImpl container)
+                                                   SymbolTable symboltable,
+                                                   IonContainerImpl container,
+                                                   IonSystemImpl system)
         throws IOException
     {
         IonValueImpl value;
@@ -298,7 +317,7 @@ public abstract class IonValueImpl
 
         int pos = reader.position();
         int tdb = reader.readActualTypeDesc();
-        value = makeValue(tdb);
+        value = makeValue(tdb, system);
         value.init(fieldSID
                   ,buffer
                   ,pos
@@ -309,58 +328,60 @@ public abstract class IonValueImpl
         return value;
     }
 
-    static IonValueImpl makeValue(int typedesc)
+    static IonValueImpl makeValue(int typedesc, IonSystemImpl system)
     {
+        assert system != null;
+
         IonValueImpl value = null;
         int typeId = IonConstants.getTypeCode(typedesc);
 
         switch (typeId) {
         case IonConstants.tidNull: // null(0)
-            value = new IonNullImpl(typedesc);
+            value = new IonNullImpl(system, typedesc);
             break;
         case IonConstants.tidBoolean: // boolean(1)
-            value = new IonBoolImpl(typedesc);
+            value = new IonBoolImpl(system, typedesc);
             break;
         case IonConstants.tidPosInt: // 2
         case IonConstants.tidNegInt: // 3
-            value = new IonIntImpl(typedesc);
+            value = new IonIntImpl(system, typedesc);
             break;
         case IonConstants.tidFloat: // float(4)
-            value = new IonFloatImpl(typedesc);
+            value = new IonFloatImpl(system, typedesc);
             break;
         case IonConstants.tidDecimal: // decimal(5)
-            value = new IonDecimalImpl(typedesc);
+            value = new IonDecimalImpl(system, typedesc);
             break;
         case IonConstants.tidTimestamp: // timestamp(6)
-            value = new IonTimestampImpl(typedesc);
+            value = new IonTimestampImpl(system, typedesc);
             break;
         case IonConstants.tidSymbol: // symbol(7)
-            value = new IonSymbolImpl(typedesc);
+            value = new IonSymbolImpl(system, typedesc);
             break;
         case IonConstants.tidString: // string (8)
-            value = new IonStringImpl(typedesc);
+            value = new IonStringImpl(system, typedesc);
             break;
         case IonConstants.tidClob: // clob(9)
-            value = new IonClobImpl(typedesc);
+            value = new IonClobImpl(system, typedesc);
             break;
         case IonConstants.tidBlob: // blob(10)
-            value = new IonBlobImpl(typedesc);
+            value = new IonBlobImpl(system, typedesc);
             break;
         case IonConstants.tidList: // list(11)
-            value = new IonListImpl(typedesc);
+            value = new IonListImpl(system, typedesc);
             break;
         case IonConstants.tidSexp: // 12
-            value = new IonSexpImpl(typedesc);
+            value = new IonSexpImpl(system, typedesc);
             break;
         case IonConstants.tidStruct: // 13
-            value = new IonStructImpl(typedesc);
+            value = new IonStructImpl(system, typedesc);
             break;
 
         case IonConstants.tidTypedecl: // 14
             // the only case where this is valid is if this is
             // really an IonVersionMaker
             assert IonConstants.getLowNibble(typedesc) == 0;
-            value = new IonSymbolImpl(SystemSymbolTable.ION_1_0);
+            value = new IonSymbolImpl(system, SystemSymbolTable.ION_1_0);
             ((IonSymbolImpl)value).setIsIonVersionMarker(true);
             break;
 
@@ -419,7 +440,7 @@ public abstract class IonValueImpl
     {
         if (this._fieldSid == 0 && this._fieldName != null)
         {
-            LocalSymbolTable symtab = getSymbolTable();
+            SymbolTable symtab = getSymbolTable();
             if (symtab == null) {
                 // TODO - or we could throw here
                 symtab = materializeSymbolTable();
@@ -504,7 +525,7 @@ public abstract class IonValueImpl
     // Not really: overridden for struct, which really needs to have a
     // symbol table.  Everyone needs to have a symbol table since they
     // may have fieldnames or annotations (or this may be a symbol value)
-    public LocalSymbolTable getSymbolTable() {
+    public SymbolTable getSymbolTable() {
         if (this._symboltable != null)  return this._symboltable;
         if (this._container != null)    return this._container.getSymbolTable();
 
@@ -518,7 +539,14 @@ public abstract class IonValueImpl
         return this._symboltable;
     }
 
-    public void setSymbolTable(LocalSymbolTable symtab) {
+    /**
+     *
+     * @param symtab must be local or null.
+     */
+    public void setSymbolTable(SymbolTable symtab) {
+        if (symtab != null && symtab.isSharedTable()) {
+            throw new IllegalArgumentException("symbol table must be local");
+        }
         checkForLock();
         // FIXME: should this use getSymbolTable instead of _symboltable
         // since our symtab may be held by our container?
@@ -922,9 +950,9 @@ public abstract class IonValueImpl
         this._isMaterialized = true;
     }
 
-    protected LocalSymbolTable materializeSymbolTable()
+    protected SymbolTable materializeSymbolTable()
     {
-        LocalSymbolTable symtab = _symboltable;
+        SymbolTable symtab = _symboltable;
         if (symtab == null && _container != null) {
             symtab = _container.materializeSymbolTable();
         }
@@ -966,7 +994,7 @@ public abstract class IonValueImpl
         // and convert them to strings
         int len = sids.length;
         this._annotations = new String[len];
-        LocalSymbolTable symtab = getSymbolTable();
+        SymbolTable symtab = getSymbolTable();
         assert symtab != null || len < 1 ;
         for (int ii=0; ii<len; ii++) {
             int id = sids[ii];
@@ -1108,7 +1136,7 @@ public abstract class IonValueImpl
         int len = 0;
         assert (this._annotations != null);
 
-        LocalSymbolTable symtab =  this.getSymbolTable();
+        SymbolTable symtab =  this.getSymbolTable();
         if (symtab == null) {
             symtab = this.materializeSymbolTable();
 // cas symtab:            // TODO:  what should we do here?  Perhaps create a default table?
@@ -1320,7 +1348,7 @@ public abstract class IonValueImpl
     /**
      * Adds all of our annotations into the symbol table.
      */
-    public void updateSymbolTable(LocalSymbolTable symtab)
+    public void updateSymbolTable(SymbolTable symtab)
     {
         checkForLock();
 

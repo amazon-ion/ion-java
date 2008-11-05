@@ -6,8 +6,10 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_1_0;
 import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
+
 import com.amazon.ion.IonException;
-import com.amazon.ion.LocalSymbolTable;
+import com.amazon.ion.SymbolTable;
+import com.amazon.ion.TtTimestamp;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.impl.IonConstants.HighNibble;
 import java.io.IOException;
@@ -17,7 +19,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Stack;
 
 
@@ -38,13 +39,19 @@ public class IonBinary
 
     private IonBinary() { }
 
-    public static boolean startsWithBinaryVersionMarker(byte[] b)
+    public static boolean matchBinaryVersionMarker(byte[] buffer)
     {
-        if (b.length < BINARY_VERSION_MARKER_SIZE) return false;
+        return matchBinaryVersionMarker(buffer, 0, buffer.length);
+    }
+
+    public static boolean matchBinaryVersionMarker(byte[] buffer, int offset,
+                                                   int len)
+    {
+        if (len < BINARY_VERSION_MARKER_SIZE) return false;
 
         for (int i = 0; i < BINARY_VERSION_MARKER_SIZE; i++)
         {
-            if (BINARY_VERSION_MARKER_1_0[i] != b[i]) return false;
+            if (BINARY_VERSION_MARKER_1_0[i] != buffer[offset + i]) return false;
         }
         return true;
     }
@@ -76,7 +83,7 @@ public class IonBinary
 
             }
 
-            if (! startsWithBinaryVersionMarker(bvm))
+            if (! matchBinaryVersionMarker(bvm))
             {
                 StringBuilder buf = new StringBuilder();
                 buf.append("Binary data has unrecognized header");
@@ -88,7 +95,7 @@ public class IonBinary
                 }
                 throw new IonException(buf.toString());
             }
-            
+
             reader.setPosition(0); // cas 19 apr 2008
         }
         catch (IOException e)
@@ -136,6 +143,7 @@ public class IonBinary
             }
         }
 
+        @Override
         public BufferManager clone() throws CloneNotSupportedException
         {
         	BlockedBuffer buffer_clone = this._buf.clone();
@@ -422,15 +430,15 @@ public class IonBinary
     }
 
 
-    public static int lenIonTimestamp(IonTokenReader.Type.timeinfo di)
+    public static int lenIonTimestamp(TtTimestamp di)
     {
         if (di == null) return 0;
 
-        long l = di.d.getTime();
-        BigDecimal bd = new BigDecimal(l);
+        BigDecimal bd = di.getDecimalMillis();
         bd.setScale(13); // millisecond time has 13 significant digits
 
-        int  tzoffset = (di.localOffset == null) ? 0 : di.localOffset.intValue();
+        Integer localOffset = di.getLocalOffset();
+        int  tzoffset = (localOffset == null) ? 0 : localOffset.intValue();
 
         int  tzlen = IonBinary.lenVarInt7(tzoffset);
         if (tzlen == 0) tzlen = 1;
@@ -512,7 +520,8 @@ public class IonBinary
         return len;
     }
 
-    public static int lenAnnotationListWithLen(String[] annotations, LocalSymbolTable symbolTable)
+    public static int lenAnnotationListWithLen(String[] annotations,
+                                               SymbolTable symbolTable)
     {
         int annotationLen = 0;
 
@@ -579,7 +588,7 @@ public class IonBinary
         }
         return len + _ib_TOKEN_LEN;
     }
-    public static int lenIonTimestampWithTypeDesc(IonTokenReader.Type.timeinfo di) {
+    public static int lenIonTimestampWithTypeDesc(TtTimestamp di) {
         int len = 0;
         if (di != null) {
             int vlen = IonBinary.lenIonTimestamp(di);
@@ -642,6 +651,8 @@ public class IonBinary
          */
         public byte[] getBytes() throws IOException {
             if (this._buf == null) return null;
+            this.sync();
+            this.setPosition(0);
             int len = _buf.size();
             byte[] buf = new byte[len];
             if (this.read(buf) != len) {
@@ -727,7 +738,7 @@ public class IonBinary
             return annotations;
         }
 
-        public String[] readAnnotations(LocalSymbolTable symbolTable) throws IOException
+        public String[] readAnnotations(SymbolTable symbolTable) throws IOException
         {
             String[] annotations = null;
 
@@ -1254,7 +1265,8 @@ done:       for (;;) {
             }
             return bd;
         }
-        public IonTokenReader.Type.timeinfo readTimestampValue(int len) throws IOException
+
+        public TtTimestamp readTimestampValue(int len) throws IOException
         {
             if (len < 1) return null;
             int startpos = this.position();
@@ -1266,11 +1278,7 @@ done:       for (;;) {
             BigDecimal bd = this.readDecimalValue(len - (this.position() - startpos));
 
             // now we put it together
-            IonTokenReader.Type.timeinfo ti = new IonTokenReader.Type.timeinfo();
-            ti.d = new Date(bd.longValue());
-            ti.localOffset = tz;
-
-            return ti;
+            return new TtTimestamp(bd, tz);
         }
 
         public String readString(int len) throws IOException
@@ -2107,7 +2115,8 @@ done:       for (;;) {
             return 1;
         }
 
-        public int writeAnnotations(String[] annotations, LocalSymbolTable symbolTable) throws IOException
+        public int writeAnnotations(String[] annotations,
+                                    SymbolTable symbolTable) throws IOException
         {
             int startPosition = this.position();
             int[] symbols = new int[annotations.length];
@@ -2186,10 +2195,13 @@ done:       for (;;) {
          *
          */
 
-        public int writeSymbolWithTD(String s, LocalSymbolTable st)
+        /**
+         * @param symtab must be local, not shared, not null.
+         */
+        public int writeSymbolWithTD(String s, SymbolTable symtab)
             throws IOException
         {
-            int sid = st.addSymbol(s);
+            int sid = symtab.addSymbol(s);
             assert sid > 0;
 
             int vlen = lenVarUInt8(sid);
@@ -2272,44 +2284,45 @@ done:       for (;;) {
             writeByte(hn, IonConstants.lnIsNullAtom);
             return 1;
         }
-        public int writeTimestampWithTD(IonTokenReader.Type.timeinfo di)
+
+        public int writeTimestampWithTD(TtTimestamp di)
             throws IOException
         {
             int  returnlen;
 
             if (di == null) {
                 returnlen = this.writeCommonHeader(
-                                      IonConstants.tidTimestamp
-                                     ,IonConstants.lnIsNullAtom);
+                                                   IonConstants.tidTimestamp
+                                                   ,IonConstants.lnIsNullAtom);
             }
             else {
                 int vlen = IonBinary.lenIonTimestamp(di);
 
                 returnlen = this.writeCommonHeader(
-                                          IonConstants.tidTimestamp
-                                         ,vlen);
+                                                   IonConstants.tidTimestamp
+                                                   ,vlen);
 
                 returnlen += writeTimestamp(di);
             }
             return returnlen;
         }
 
-        public int writeTimestamp(IonTokenReader.Type.timeinfo di)
+        public int writeTimestamp(TtTimestamp di)
             throws IOException
         {
             int  returnlen = 0;
 
             if (di != null) {
-                long l = di.d.getTime();
-                BigDecimal bd = new BigDecimal(l);
+                BigDecimal bd = di.getDecimalMillis();
                 bd.setScale(13); // millisecond time has 13 significant digits
 
-                int  tzoffset = (di.localOffset == null) ? 0 : di.localOffset.intValue();
+                Integer localOffset = di.getLocalOffset();
+                int tzoffset = (localOffset == null) ? 0 : localOffset.intValue();
 
-                int  tzlen = IonBinary.lenVarInt7(tzoffset);
+                int tzlen = IonBinary.lenVarInt7(tzoffset);
                 if (tzlen == 0) tzlen = 1;
 
-                if (di.localOffset == null) {
+                if (localOffset == null) {
                     // TODO don't use magic numbers!
                     this.write((byte)(0xff & (0x80 | 0x40))); // negative 0 (no timezone)
                     returnlen ++;

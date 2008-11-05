@@ -4,6 +4,8 @@
 
 package com.amazon.ion;
 
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.Reader;
 import java.util.Collection;
 import java.util.Date;
@@ -17,6 +19,11 @@ import java.util.Iterator;
  * The intended usage pattern is for an application to construct a single
  * <code>IonSystem</code> instance and use it throughout,
  * rather than constructing multiples and intermingling their use.
+ * To create a copy of a value for use by a different system, use
+ * {@link #clone(IonValue)}.
+ * <p>
+ * To create an {@code IonSystem},
+ * see {@link com.amazon.ion.system.SystemFactory}.
  * <p>
  * Implementations of this interface must be safe for use by multiple threads.
  */
@@ -64,16 +71,26 @@ public interface IonSystem
      * Creates a new local symbol table using the default system symbol table.
      * @return not <code>null</code>.
      */
-    public LocalSymbolTable newLocalSymbolTable();
+    public SymbolTable newLocalSymbolTable();
 
 
     /**
      * Creates a new local symbol table based on a specific system table.
      *
-     * @param systemSymbols must not be null.
+     * @param systemSymbols must not be null and must have
+     * {@link SymbolTable#isSystemTable()} true.
+     *
      * @return a new symbol table.
      */
-    public LocalSymbolTable newLocalSymbolTable(SymbolTable systemSymbols);
+    public SymbolTable newLocalSymbolTable(SymbolTable systemSymbols);
+
+
+    /**
+     * Creates a new empty datagram.
+     *
+     * @return a new datagram with no user values.
+     */
+    public IonDatagram newDatagram();
 
 
     /**
@@ -81,17 +98,17 @@ public interface IonSystem
      * contained elsewhere, it is cloned before insertion.
      *
      * @param initialChild becomes the first and only (user) value in the
-     * datagram.
+     * datagram.  The child's {@link IonValue#getSystem() system}
+     * must be <em>this</em> system.
+     * If {@code null}, then the returned datagram will have no
+     * user values.
      *
      * @return a new datagram.
      *
-     * @throws NullPointerException
-     *   if {@code initialChild} is null.
      * @throws IllegalArgumentException
      *   if {@code initialChild} is an {@link IonDatagram}.
      */
-    public IonDatagram newDatagram(IonValue initialChild)
-        throws ContainedValueException;
+    public IonDatagram newDatagram(IonValue initialChild);
 
 
     /**
@@ -194,6 +211,105 @@ public interface IonSystem
      * value.
      */
     public IonValue singleValue(byte[] ionData);
+
+
+    //-------------------------------------------------------------------------
+    // IonReader creation
+
+//  public IonReader newReader(Reader ionText); // TODO add newReader(Reader)
+//  public IonReader newReader(InputStream); // TODO add newReader(InputStream)
+
+
+    /**
+     * Creates an new {@link IonReader} instance over Ion text data.
+     * <p>
+     * The text is parsed incrementally by the reader, so any syntax errors
+     * will not be detected here.
+     *
+     * @param ionText must not be null.
+     */
+    public IonReader newReader(String ionText);
+
+    /**
+     * Creates an new {@link IonReader} instance over a block of Ion data,
+     * detecting whether it's text or binary data.
+     *
+     * @param ionData may be either Ion binary data, or UTF-8 Ion text.
+     * The reader retains a reference to the array, so its data must not be
+     * modified while the reader is active.
+     */
+    public IonReader newReader(byte[] ionData);
+
+    /**
+     * Creates an new {@link IonReader} instance over a block of Ion data,
+     * detecting whether it's text or binary data.
+     *
+     * @param ionData is used only within the range of bytes starting at
+     * {@code offset} for {@code len} bytes.
+     * The data in that range may be either Ion binary data, or UTF-8 Ion text.
+     * The reader retains a reference to the array, so its data must not be
+     * modified while the reader is active.
+     * @param offset must be non-negative and less than {@code ionData.length}.
+     * @param len must be non-negative and {@code offset+len} must not exceed
+     * {@code ionData.length}.
+     */
+    public IonReader newReader(byte[] ionData, int offset, int len);
+
+    /**
+     * Creates a new {@link IonReader} instance over a stream of Ion data,
+     * detecting whether it's text or binary data.
+     * <p>
+     * <b>NOTE:</b> The current implementation of this method reads the entire
+     * contents of the input stream into memory.
+     *
+     * @param ionData must not be null.
+     *
+     * @return a new reader instance.
+     */
+    public IonReader newReader(InputStream ionData);
+
+    /**
+     * Creates an new {@link IonReader} instance over an {@link IonValue} data
+     * model. Typically this is used to iterate over a collection, such as an
+     * {@link IonStruct}.
+     *
+     * @param value must not be null.
+     */
+    public IonReader newReader(IonValue value);
+
+
+    //-------------------------------------------------------------------------
+    // IonWriter creation
+
+    /**
+     * Creates a new writer that will add {@link IonValue}s to the given
+     * container.
+     *
+     * @param container a container that will receive new children from the
+     * the returned writer.
+     * Must not be null.
+     *
+     * @return a new {@link IonWriter} instance; not {@code null}.
+     */
+    public IonWriter newWriter(IonContainer container);
+
+    /**
+     * Creates a new writer that will write UTF-8 text to the given output
+     * stream.
+     *
+     * @param out the stream that will receive UTF-8 Ion text data.
+     * Must not be null.
+     *
+     * @return a new {@link IonWriter} instance; not {@code null}.
+     */
+    public IonWriter newTextWriter(OutputStream out);
+
+    /**
+     * Creates a new writer that will encode binary Ion data.
+     *
+     * @return a new {@link IonBinaryWriter} instance; not {@code null}.
+     */
+    public IonBinaryWriter newBinaryWriter();
 
 
     //-------------------------------------------------------------------------

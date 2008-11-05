@@ -21,9 +21,9 @@ public abstract class IonLobImpl
 
     private byte[] _lob_value;
 
-    protected IonLobImpl(int typeDesc)
+    protected IonLobImpl(IonSystemImpl system, int typeDesc)
     {
-        super(typeDesc);
+        super(system, typeDesc);
     }
 
 

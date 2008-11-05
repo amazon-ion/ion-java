@@ -316,8 +316,8 @@ public class Base64Encoder
 
     }
 
-    final static int BUFSIZE_TEXT = 3*BUFSIZE/8; // 1024 -> 384
-    final static int BUFSIZE_BIN = (BUFSIZE/2);  // 1024/2 -> 512 .. (384/3)*4 = 512
+    final static int BUFSIZE_BIN = 3*BUFSIZE/8; // 1024 -> 384
+    final static int BUFSIZE_TEXT = (BUFSIZE/2);  // 1024/2 -> 512 .. (384/3)*4 = 512
 
     /*******************************************************************'
      *

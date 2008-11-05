@@ -44,6 +44,7 @@ public class SimpleCatalogTest
         loader().load(t1Text);
 
         SymbolTable t1 = cat.getTable("T", 1);
+        assertEquals(1, t1.getVersion());
         assertEquals("no", t1.findKnownSymbol(2));
         assertEquals(-1,   t1.findSymbol("maybe"));
         assertSame(t1, cat.getTable("T"));
@@ -62,6 +63,7 @@ public class SimpleCatalogTest
         loader().load(t2Text);
 
         SymbolTable t2 = cat.getTable("T", 2);
+        assertEquals(2, t2.getVersion());
         assertEquals(3, t2.findSymbol("maybe"));
         assertSame(t2, cat.getTable("T"));
         assertSame(t1, cat.getTable("T", 1));

@@ -10,7 +10,6 @@ import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import java.io.IOException;
@@ -31,7 +30,7 @@ public class SystemReader
     private BufferManager    _buffer;
     private int              _buffer_offset;
 
-    private LocalSymbolTable _currentSymbolTable;
+    private SymbolTable _currentSymbolTable;
 
     private boolean      _at_eof;
     private boolean      _currentIsHidden;
@@ -57,17 +56,19 @@ public class SystemReader
     }
 
     /**
+     * @param initialSymboltable must be local, not shared.
      * @throws NullPointerException if any parameter is null.
      */
     public SystemReader(IonSystemImpl system,
                         IonCatalog catalog,
-                        LocalSymbolTable initialSymboltable,
+                        SymbolTable initialSymboltable,
                         Reader input)
     {
-        if (system == null || catalog == null || initialSymboltable == null)
+        if (system == null || catalog == null)
         {
             throw new NullPointerException();
         }
+        assert initialSymboltable.isLocalTable();
 
         _system = system;
         _catalog = catalog;
@@ -125,10 +126,10 @@ public class SystemReader
     //       table anyone could edit, and we should have a way to
     // 		 tell that it's a system symbol table and not just an
     //		 empty local symbol table.
-    static LocalSymbolTable getSystemSymbolTableAsLocal(IonSystemImpl system) {
-    	LocalSymbolTable lst;
+    static SymbolTable getSystemSymbolTableAsLocal(IonSystemImpl system) {
+    	SymbolTable lst;
 
-    	lst = new LocalSymbolTableImpl(system.getSystemSymbolTable());
+    	lst = system.newLocalSymbolTable();
 
     	return lst;
     }
@@ -137,7 +138,7 @@ public class SystemReader
         return _system;
     }
 
-    public LocalSymbolTable getLocalSymbolTable() {
+    public SymbolTable getLocalSymbolTable() {
         return _currentSymbolTable;
     }
 
@@ -150,15 +151,16 @@ public class SystemReader
 
     /**
      * Cannot be called between {@link #hasNext()} and {@link #next()}.
-     * @param symbolTable
+     * @param symbolTable must be local, not shared.
      */
-    public void setLocalSymbolTable(LocalSymbolTable symbolTable) {
+    public void setLocalSymbolTable(SymbolTable symbolTable) {
         if (_parser == null) {
             throw new UnsupportedOperationException();
         }
         if (_next != null) {
             throw new IllegalStateException();
         }
+        assert symbolTable.isLocalTable();
         _currentSymbolTable = symbolTable;
     }
 
@@ -214,6 +216,7 @@ public class SystemReader
                                                  ,buffer
                                                  ,this._currentSymbolTable
                                                  ,null
+                                                 ,_system
             );
 
             // move along on the buffer
@@ -246,7 +249,7 @@ public class SystemReader
 
     private void checkCurrentForHiddens()
     {
-        LocalSymbolTable newLocalSymbtab =
+        SymbolTable newLocalSymbtab =
             _system.handleLocalSymbolTable(_catalog, _curr);
 
         if (newLocalSymbtab != null)
@@ -267,7 +270,9 @@ public class SystemReader
         else if (_system.valueIsStaticSymbolTable(_curr))
         {
             SymbolTable newTable =
-                new StaticSymbolTableImpl(_system, (IonStruct) _curr);
+                new UnifiedSymbolTable((UnifiedSymbolTable) _currentSymbolTable.getSystemSymbolTable(),
+                                       (IonStruct) _curr,
+                                       (IonCatalog) null);
             _catalog.putTable(newTable);
 
             // FIXME: really?  I don't think shared tables need to be (or

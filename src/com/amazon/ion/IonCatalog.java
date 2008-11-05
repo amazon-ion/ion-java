@@ -7,7 +7,7 @@ package com.amazon.ion;
 
 
 /**
- * Collects static symbol tables for use by an {@link IonSystem}.
+ * Collects shared symbol tables for use by an {@link IonSystem}.
  * It is expected that
  * applications may implement this interface to customize caching behavior.
  */
@@ -18,7 +18,8 @@ public interface IonCatalog
      * possible.
      *
      * @param name identifies the desired symbol table.
-     * @return <code>null</code> if not found.
+     * @return a shared symbol table with the given name, or
+     * {@code null} if this catalog has no table with the name.
      */
     public SymbolTable getTable(String name);
 
@@ -26,8 +27,10 @@ public interface IonCatalog
     /**
      * Gets a desired symbol table from this catalog.
      *
-     * @return the table with the given name and version, or <code>null</code>
-     * if there's no match.
+     * @return the shared symbol table with the given name and version, when an
+     * exact match is possible. Otherwise, returns the highest known version of
+     * the requested table.  If the catalog has no table with the name, then
+     * this method returns {@code null}.
      */
     public SymbolTable getTable(String name, int version);
 
@@ -37,7 +40,7 @@ public interface IonCatalog
      * behavior of this method if this catalog already contains a table with
      * the same name and version.
      *
-     * @param sharedTable must have a valid name and version.
+     * @param sharedTable must be shared but not a system table.
      */
     public void putTable(SymbolTable sharedTable);
 }

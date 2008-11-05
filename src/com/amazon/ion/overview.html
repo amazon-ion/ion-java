@@ -36,6 +36,10 @@ guaranteed to work</b>:
     parent.add(child);
 </pre>
 
+Given any {@code IonValue} instance it is possible to retrieve the relevant
+system via {@link IonValue#getSystem()}. This is generally the best way ensure
+that you're using the correct system while modifying existing trees.
+
 
 <h1>Getting Data In</h1>
 
@@ -50,9 +54,11 @@ This release defines two mechanisms for accepting Ion data:
     iterating over its top-level elements.  This "one at a time" input
     mechanism is intended for stream-oriented applications.
   </li>
+  <li>{@link com.amazon.ion.IonReader IonReader} scans an input stream using a 
+    "pull parsing" paradigm. 
 </ul>
 
-Each mechanism accepts either text or binary Ion data, and applications should
+All mechanisms accept either text or binary Ion data, and applications should
 rarely care about the input format.
 <p>
 To construct an {@code IonLoader}, call
@@ -66,8 +72,9 @@ In contrast, iterators are not reusable: they are extensions of
 Use the various {@code iterate()} factory methods on {@code IonSystem} to
 create iterators.
 <p>
-<b>Note:</b> There is currently no SAX- or StAX-like mechanism for fine-grained
-streaming.
-
+To construct an {@code IonReader}, call one of the {@code newReader} methods
+on {@code IonSystem}; for example 
+{@link com.amazon.ion.IonSystem#newReader(String)}. 
+You can then pull data from the input source.
 </body>
 </html>

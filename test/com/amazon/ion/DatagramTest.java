@@ -74,7 +74,7 @@ public class DatagramTest
         assertSame(symbol, datagram1.get(0));
 
         SymbolTable symtab = symbol.getSymbolTable();
-        assertEquals(symbol.intValue(), symtab.getMaxId());
+        assertEquals(symbol.getSymbolId(), symtab.getMaxId());
 
         // TODO if we keep max_id in the struct, should validate it here.
     }
@@ -114,7 +114,7 @@ public class DatagramTest
         IonInt i = system.newNullInt();
         i.setValue(65);
         IonStruct struct = system.newNullStruct();
-        LocalSymbolTable sym = struct.getSymbolTable();
+        SymbolTable sym = struct.getSymbolTable();
         if (sym == null) {
             sym = system.newLocalSymbolTable();
             ((IonValueImpl)struct).setSymbolTable(sym);
@@ -374,12 +374,12 @@ public class DatagramTest
 
         IonSymbol sourceBean = (IonSymbol) sourceDatagram.get(0);
         assertEquals("bean", sourceBean.stringValue());
-        int beanSid = sourceBean.intValue();
+        int beanSid = sourceBean.getSymbolId();
         assertTrue(beanSid > 0);
 
         IonList destList = (IonList) destDatagram.get(0);
         IonSymbol javaSym = (IonSymbol) destList.get(0);
-        assertEquals(beanSid, javaSym.intValue());
+        assertEquals(beanSid, javaSym.getSymbolId());
 
         // TODO remove cast
         ((IonSequenceImpl)destList).addEmbedded(sourceBean);

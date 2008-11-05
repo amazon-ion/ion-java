@@ -167,6 +167,7 @@
         docencoding="UTF-8">
       <fileset dir="${dir.src}">
         <include name="**/*.java"/>
+        <exclude name="com/amazon/ion/apps/**" />
         <exclude name="com/amazon/ion/impl/**" />
       </fileset>
       <classpath>

@@ -6,7 +6,7 @@ package com.amazon.ion;
 
 import java.io.IOException;
 import java.io.InputStream;
-
+import java.io.UnsupportedEncodingException;
 
 
 public class BlobTest
@@ -194,6 +194,18 @@ public class BlobTest
         public String base64;
     }
 
+    private static byte[] EncodeAscii(String ascii)
+    {
+        try
+        {
+            return ascii.getBytes("US-ASCII");
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            return null;
+        }
+    }
+
 
     /**
      * Test cases, mostly from RFC 4648.
@@ -233,6 +245,26 @@ public class BlobTest
                      "FPucA9k="),
         new TestData(new int[]{ 0x14, 0xfb, 0x9c, 0x03 },
                      "FPucAw=="),
+        // Test a blob size that exceeds a single base 64 encoding buffer
+        new TestData(EncodeAscii(
+                     "We the People of the United States, in Order to form a more perfect Union, " +
+                     "establish Justice, insure domestic Tranquility, provide for the common defence, " +
+                     "promote the general Welfare, and secure the Blessings of Liberty to ourselves " +
+                     "and our Posterity, do ordain and establish this Constitution for the United " +
+                     "States of America.\nArticle I\n\nSection 1. All legislative Powers herein " +
+                     "granted shall be vested in a Congress of the United States, which shall consist " +
+                     "of a Senate and House of Representatives.\n"),
+                     "V2UgdGhlIFBlb3BsZSBvZiB0aGUgVW5pdGVkIFN0YXRlcywgaW4gT3JkZXIgdG8g" +
+                     "Zm9ybSBhIG1vcmUgcGVyZmVjdCBVbmlvbiwgZXN0YWJsaXNoIEp1c3RpY2UsIGlu" +
+                     "c3VyZSBkb21lc3RpYyBUcmFucXVpbGl0eSwgcHJvdmlkZSBmb3IgdGhlIGNvbW1v" +
+                     "biBkZWZlbmNlLCBwcm9tb3RlIHRoZSBnZW5lcmFsIFdlbGZhcmUsIGFuZCBzZWN1" +
+                     "cmUgdGhlIEJsZXNzaW5ncyBvZiBMaWJlcnR5IHRvIG91cnNlbHZlcyBhbmQgb3Vy" +
+                     "IFBvc3Rlcml0eSwgZG8gb3JkYWluIGFuZCBlc3RhYmxpc2ggdGhpcyBDb25zdGl0" +
+                     "dXRpb24gZm9yIHRoZSBVbml0ZWQgU3RhdGVzIG9mIEFtZXJpY2EuCkFydGljbGUg" +
+                     "SQoKU2VjdGlvbiAxLiBBbGwgbGVnaXNsYXRpdmUgUG93ZXJzIGhlcmVpbiBncmFu" +
+                     "dGVkIHNoYWxsIGJlIHZlc3RlZCBpbiBhIENvbmdyZXNzIG9mIHRoZSBVbml0ZWQg" +
+                     "U3RhdGVzLCB3aGljaCBzaGFsbCBjb25zaXN0IG9mIGEgU2VuYXRlIGFuZCBIb3Vz" +
+                     "ZSBvZiBSZXByZXNlbnRhdGl2ZXMuCg==")
     };
 
 

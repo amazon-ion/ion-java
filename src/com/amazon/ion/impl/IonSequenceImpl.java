@@ -6,10 +6,10 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonDatagram;
-import com.amazon.ion.IonException;
 import com.amazon.ion.IonSequence;
+import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.LocalSymbolTable;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,9 +30,9 @@ public abstract class IonSequenceImpl
      *
      * @param typeDesc
      */
-    protected IonSequenceImpl(int typeDesc)
+    protected IonSequenceImpl(IonSystemImpl system, int typeDesc)
     {
-        super(typeDesc);
+        super(system, typeDesc);
         assert !_hasNativeValue;
     }
 
@@ -42,9 +42,9 @@ public abstract class IonSequenceImpl
      * @param typeDesc
      * @param makeNull
      */
-    protected IonSequenceImpl(int typeDesc, boolean makeNull)
+    protected IonSequenceImpl(IonSystemImpl system, int typeDesc, boolean makeNull)
     {
-        this(typeDesc);
+        this(system, typeDesc);
         assert _contents == null;
         assert isDirty();
 
@@ -69,12 +69,13 @@ public abstract class IonSequenceImpl
      * @throws IllegalArgumentException
      * @throws NullPointerException
      */
-    protected IonSequenceImpl(int typeDesc,
+    protected IonSequenceImpl(IonSystemImpl system,
+                              int typeDesc,
                               Collection<? extends IonValue> elements)
         throws ContainedValueException, NullPointerException,
             IllegalArgumentException
     {
-        this(typeDesc);
+        this(system, typeDesc);
         assert _contents == null;
         assert isDirty();
 
@@ -133,19 +134,18 @@ public abstract class IonSequenceImpl
     {
         checkForLock();
 
-        LocalSymbolTable symtab = element.getSymbolTable();
+        SymbolTable symtab = element.getSymbolTable();
 
-        IonSexpImpl wrapper = new IonSexpImpl();
+        IonSexpImpl wrapper = new IonSexpImpl(_system);
         wrapper.addTypeAnnotation(SystemSymbolTable.ION_EMBEDDED_VALUE);
 
         String systemId = symtab.getSystemId();
         // TO DO inject systemId ($ion_1_0)
-        IonSymbolImpl sysid = new IonSymbolImpl();
-        sysid.setValue(systemId);
+        IonSymbolImpl sysid = new IonSymbolImpl(_system, systemId);
         wrapper.add(sysid);
 
         // TO DO inject symtab
-        IonStructImpl symtabion = (IonStructImpl)symtab.getIonRepresentation();
+        IonStruct symtabion = symtab.getIonRepresentation();
         wrapper.add(symtabion);
 
         // TO DO inject value
