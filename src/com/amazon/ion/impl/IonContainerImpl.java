@@ -671,7 +671,6 @@ abstract public class IonContainerImpl
     public boolean remove(IonValue element)
     {
         checkForLock();
-        validateThisNotNull();
         if (element.getContainer() != this)
             return false;
 
@@ -701,11 +700,16 @@ abstract public class IonContainerImpl
         throw new AssertionError("element's index is not correct");
     }
 
+    @SuppressWarnings("unchecked")
     public Iterator<IonValue> iterator()
     {
-        validateThisNotNull();
+        if (isNullValue())
+        {
+            return (Iterator<IonValue>) IonImplUtils.EMPTY_ITERATOR;
+        }
+
         makeReady();
-        return new IonContainerIterator(_contents.iterator(), true);
+        return new IonContainerIterator(_contents.iterator(), !isReadOnly());
     }
 
     /** Encapsulates an iterator and implements a custom remove method */

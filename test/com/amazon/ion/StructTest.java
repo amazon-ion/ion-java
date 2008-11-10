@@ -27,51 +27,35 @@ public class StructTest
         return buf.toString();
     }
 
+    @Override
+    protected IonStruct wrap(IonValue... children)
+    {
+        IonStruct value = system().newNullStruct();
+        for (IonValue child : children)
+        {
+            value.add("f", child);
+        }
+        return value;
+    }
 
-    public static void checkNullStruct(IonStruct value)
+    public void checkNullStruct(IonStruct value)
     {
         checkNullStruct(value, "");
     }
 
-    public static void checkNullStruct(IonStruct value, String annotationText)
+    public void checkNullStruct(IonStruct value, String annotationText)
     {
         assertSame(IonType.STRUCT, value.getType());
-        assertTrue(value.isNullValue());
 
+        checkNullContainer(value);
+
+        assertNull(value.get("f"));
         try
         {
-            value.size();
-            fail("Expected NullValueException");
+            value.get(null);
+            fail("Expected NullPointerException");
         }
-        catch (NullValueException e) { }
-
-        try
-        {
-            value.get("f");
-            fail("Expected NullValueException");
-        }
-        catch (NullValueException e) { }
-
-        try
-        {
-            value.iterator();
-            fail("Expected NullValueException");
-        }
-        catch (NullValueException e) { }
-
-        try
-        {
-            value.remove(null);
-            fail("Expected NullValueException");
-        }
-        catch (NullValueException e) { }
-
-        try
-        {
-            value.isEmpty();
-            fail("Expected NullValueException");
-        }
-        catch (NullValueException e) { }
+        catch (NullPointerException e) { }
 
         assertEquals(annotationText + "null.struct", value.toString());
     }
@@ -366,6 +350,20 @@ public class StructTest
             fail("Expected IllegalArgumentException");
         }
         catch (IllegalArgumentException e) { }
+    }
+
+    public void testGetFromNull()
+    {
+        IonValue n = system().newNull();
+        IonStruct s = system().newEmptyStruct();
+        s.put("f", n);
+
+        assertSame(n, s.get("f"));
+        assertNull(s.get("g"));
+
+        s.makeNull();
+        assertNull(s.get("f"));
+        assertNull(s.get("g"));
     }
 
     public void testPutNull()

@@ -31,39 +31,13 @@ public abstract class SequenceTestCase
      */
     protected abstract String wrap(String v);
 
-    public static void checkNullSequence(IonSequence value)
+    public void checkNullSequence(IonSequence value)
     {
-        try
-        {
-            value.size();
-            fail("Expected NullValueException");
-        }
-        catch (NullValueException e) { }
-
-        try
-        {
-            value.iterator();
-            fail("Expected NullValueException");
-        }
-        catch (NullValueException e) { }
+        checkNullContainer(value);
 
         try
         {
             value.get(0);
-            fail("Expected NullValueException");
-        }
-        catch (NullValueException e) { }
-
-        try
-        {
-            value.remove(null);
-            fail("Expected NullValueException");
-        }
-        catch (NullValueException e) { }
-
-        try
-        {
-            value.isEmpty();
             fail("Expected NullValueException");
         }
         catch (NullValueException e) { }

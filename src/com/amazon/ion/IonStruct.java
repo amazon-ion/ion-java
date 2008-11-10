@@ -35,14 +35,12 @@ public interface IonStruct
      *
      * @param fieldName the desired field.
      * @return the value of the field, or <code>null</code> if it doesn't
-     * exist in this struct.
-     * @throws NullValueException if <code>this.isNullValue()</code>.
+     * exist in this struct, or if this is {@code null.struct}.
      * @throws IllegalArgumentException if <code>fieldName</code> is empty.
      * @throws NullPointerException if the <code>fieldName</code>
      * is <code>null</code>.
      */
-    public IonValue get(String fieldName)
-        throws NullValueException;
+    public IonValue get(String fieldName);
 
 
     /**

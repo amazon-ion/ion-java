@@ -55,6 +55,12 @@ public class SexpTest
         return buf.toString();
     }
 
+    @Override
+    protected IonSexp wrap(IonValue... children)
+    {
+        return system().newSexp(children);
+    }
+
     //=========================================================================
     // Test cases
 

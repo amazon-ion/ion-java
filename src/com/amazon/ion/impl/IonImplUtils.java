@@ -22,13 +22,13 @@ import java.util.NoSuchElementException;
 /**
  * For internal use only!
  */
-public final class IonImplUtils
+final class IonImplUtils
 {
 
     public static final Iterator<?> EMPTY_ITERATOR = new Iterator() {
         public boolean hasNext() { return false; }
         public Object  next()    { throw new NoSuchElementException(); }
-        public void    remove()  { throw new UnsupportedOperationException(); }
+        public void    remove()  { throw new IllegalStateException(); }
     };
 
     public static byte[] loadFileBytes(File file)

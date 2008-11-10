@@ -55,6 +55,12 @@ public class ListTest
         return buf.toString();
     }
 
+    @Override
+    protected IonList wrap(IonValue... children)
+    {
+        return system().newList(children);
+    }
+
     //=========================================================================
     // Test cases
 

@@ -14,6 +14,42 @@ public abstract class ContainerTestCase
      */
     protected abstract String wrap(String... children);
 
+    /**
+     * Creates a container holding given values.
+     */
+    protected abstract IonContainer wrap(IonValue... children);
+
+
+    public void checkNullContainer(IonContainer value)
+    {
+        assertTrue(value.isNullValue());
+        assertFalse(value.iterator().hasNext());
+
+        try
+        {
+            value.size();
+            fail("Expected NullValueException");
+        }
+        catch (NullValueException e) { }
+
+        try
+        {
+            value.remove(null);
+            fail("Expected NullPointerException");
+        }
+        catch (NullPointerException e) { }
+
+        // Remove from null container is no-op.
+        assertFalse(value.remove(system().newNull()));
+
+        try
+        {
+            value.isEmpty();
+            fail("Expected NullValueException");
+        }
+        catch (NullValueException e) { }
+    }
+
 
     /**
      * Clears a container and verifies that it is not a <code>null</code>
@@ -56,9 +92,25 @@ public abstract class ContainerTestCase
             assertNotSame(removedValue, value);
         }
 
+        // Another call to remove should be no-op
+        assertFalse(container.remove(removedValue));
+
         // TODO concurrency tests.  it.remove should throw after (eg) container.makeNull().
         // TODO test proper behavior of remove() when next() not called, or when remove() called twice.
         // (should throw IllegalStateException)
+    }
+
+    public void testRemoveFromNull()
+    {
+        IonValue n = system().newNull();
+
+        IonContainer c = wrap(n);
+        assertTrue(c.remove(n));
+        assertFalse(c.remove(n));
+        assertTrue(c.isEmpty());
+
+        c.makeNull();
+        assertFalse(c.remove(n));
     }
 
 
