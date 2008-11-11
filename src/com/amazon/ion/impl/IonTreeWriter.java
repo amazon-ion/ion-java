@@ -187,6 +187,8 @@ public final class IonTreeWriter
             case SEXP:
                 v = _sys.newNullSexp();
                 break;
+            default:
+                throw new IllegalArgumentException();
         }
         append(v);
     }
@@ -305,36 +307,28 @@ public final class IonTreeWriter
     public void writeClob(byte[] value)
         throws IOException
     {
-        IonClob v = _sys.newNullClob();
-        v.setBytes(value);
+        IonClob v = _sys.newClob(value);
         append(v);
     }
 
     public void writeClob(byte[] value, int start, int len)
         throws IOException
     {
-        IonClob v = _sys.newNullClob();
-        byte[] bytes = new byte[len];
-        System.arraycopy(value, start, bytes, 0, len);
-        v.setBytes(bytes);
+        IonClob v = _sys.newClob(value, start, len);
         append(v);
      }
 
     public void writeBlob(byte[] value)
         throws IOException
     {
-        IonBlob v = _sys.newNullBlob();
-        v.setBytes(value);
+        IonBlob v = _sys.newBlob(value);
         append(v);
     }
 
     public void writeBlob(byte[] value, int start, int len)
         throws IOException
     {
-        IonBlob v = _sys.newNullBlob();
-        byte[] bytes = new byte[len];
-        System.arraycopy(value, start, bytes, 0, len);
-        v.setBytes(bytes);
+        IonBlob v = _sys.newBlob(value, start, len);
         append(v);
     }
 

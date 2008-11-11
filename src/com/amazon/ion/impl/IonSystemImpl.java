@@ -41,6 +41,8 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -517,6 +519,20 @@ public class IonSystemImpl
         return new IonBlobImpl(this);
     }
 
+    public IonBlob newBlob(byte[] value)
+    {
+        IonBlob result = new IonBlobImpl(this);
+        result.setBytes(value);
+        return result;
+    }
+
+    public IonBlob newBlob(byte[] value, int offset, int length)
+    {
+        IonBlob result = new IonBlobImpl(this);
+        result.setBytes(value, offset, length);
+        return result;
+    }
+
 
     /**
      * @deprecated Use {@link #newNullBool()} instead
@@ -540,6 +556,13 @@ public class IonSystemImpl
         return result;
     }
 
+    public IonBool newBool(Boolean value)
+    {
+        IonBoolImpl result = new IonBoolImpl(this);
+        result.setValue(value);
+        return result;
+    }
+
 
     /**
      * @deprecated Use {@link #newNullClob()} instead
@@ -554,6 +577,20 @@ public class IonSystemImpl
     public IonClob newNullClob()
     {
         return new IonClobImpl(this);
+    }
+
+    public IonClob newClob(byte[] value)
+    {
+        IonClob result = new IonClobImpl(this);
+        result.setBytes(value);
+        return result;
+    }
+
+    public IonClob newClob(byte[] value, int offset, int length)
+    {
+        IonClob result = new IonClobImpl(this);
+        result.setBytes(value, offset, length);
+        return result;
     }
 
 
@@ -572,6 +609,26 @@ public class IonSystemImpl
         return new IonDecimalImpl(this);
     }
 
+    public IonDecimal newDecimal(long value)
+    {
+        return new IonDecimalImpl(this, new BigDecimal(value));
+    }
+
+    public IonDecimal newDecimal(double value)
+    {
+        return new IonDecimalImpl(this, new BigDecimal(value));
+    }
+
+    public IonDecimal newDecimal(BigInteger value)
+    {
+        return new IonDecimalImpl(this, new BigDecimal(value));
+    }
+
+    public IonDecimal newDecimal(BigDecimal value)
+    {
+        return new IonDecimalImpl(this, value);
+    }
+
 
     /**
      * @deprecated Use {@link #newNullFloat()} instead
@@ -586,6 +643,16 @@ public class IonSystemImpl
     public IonFloat newNullFloat()
     {
         return new IonFloatImpl(this);
+    }
+
+    public IonFloat newFloat(long value)
+    {
+        return new IonFloatImpl(this, new Double(value));
+    }
+
+    public IonFloat newFloat(double value)
+    {
+        return new IonFloatImpl(this, new Double(value));
     }
 
 
@@ -834,7 +901,7 @@ public class IonSystemImpl
     public <T extends IonValue> T clone(T value)
     {
         // Use "fast clone" when the system is the same.
-        if (((IonValueImpl)value)._system == this)
+        if (value.getSystem() == this)
         {
             return (T) value.clone();
         }

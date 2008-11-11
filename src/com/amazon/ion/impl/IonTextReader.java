@@ -9,9 +9,7 @@ import static com.amazon.ion.impl.IonImplUtils.EMPTY_ITERATOR;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonClob;
-import com.amazon.ion.IonDecimal;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSequence;
@@ -671,14 +669,8 @@ public final class IonTextReader
         case IonConstants.tidBoolean:   return sys.newBool(booleanValue());
         case IonConstants.tidPosInt:
         case IonConstants.tidNegInt:    return sys.newInt(longValue());
-        case IonConstants.tidFloat:
-            IonFloat f = sys.newNullFloat();
-            f.setValue(doubleValue());
-            return f;
-        case IonConstants.tidDecimal:
-            IonDecimal dec = sys.newNullDecimal();
-            dec.setValue(bigDecimalValue());
-            return dec;
+        case IonConstants.tidFloat:     return sys.newFloat(doubleValue());
+        case IonConstants.tidDecimal:   return sys.newDecimal(bigDecimalValue());
         case IonConstants.tidTimestamp:
             IonTimestamp t = sys.newNullTimestamp();
             TtTimestamp ti = timestampValue();
@@ -688,10 +680,12 @@ public final class IonTextReader
         case IonConstants.tidString:    return sys.newString(stringValue());
         case IonConstants.tidClob:
             IonClob clob = sys.newNullClob();
+            // FIXME inefficient: both newBytes and setBytes copy the data
             clob.setBytes(newBytes());
             return clob;
         case IonConstants.tidBlob:
             IonBlob blob = sys.newNullBlob();
+            // FIXME inefficient: both newBytes and setBytes copy the data
             blob.setBytes(newBytes());
             return blob;
         case IonConstants.tidList:

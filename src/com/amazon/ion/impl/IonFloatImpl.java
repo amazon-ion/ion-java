@@ -39,6 +39,14 @@ public final class IonFloatImpl
         super(system, NULL_FLOAT_TYPEDESC);
     }
 
+    public IonFloatImpl(IonSystemImpl system, Double value)
+    {
+        super(system, NULL_FLOAT_TYPEDESC);
+        _float_value = value;
+        _hasNativeValue = true;
+        assert isDirty();
+    }
+
     /**
      * Constructs a binary-backed element.
      */

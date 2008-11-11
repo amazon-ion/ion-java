@@ -47,6 +47,7 @@ public class BlobTest
         assertSame(IonType.BLOB, value.getType());
 
         byte[] bytes = value.newBytes();
+        assertNotSame(expectedBytes, bytes);
         assertEquals(expectedBytes.length, bytes.length);
 
         InputStream in = value.newInputStream();
@@ -106,7 +107,7 @@ public class BlobTest
         byte[] bytes = new byte[]{ 1, 2, 3, 4, 5 };
         value.setBytes(bytes);
         assertFalse(value.isNullValue());
-        checkBlob(new int[]{ 1, 2, 3, 4, 5 }, value);
+        checkBlob(bytes, value);
 
         value.setBytes(null);
         checkNullBlob(value);

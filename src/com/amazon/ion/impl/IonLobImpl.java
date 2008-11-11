@@ -33,32 +33,42 @@ public abstract class IonLobImpl
 
     /**
      * this copies the contents of the lob from the source to
-     * this instance (or the "null-ness" if the sourc is null).
+     * this instance (or the "null-ness" if the source is null).
      * It delegates up to IonValueImpl to copy the annotations
      * and field name as necessary.
-     * @param source instance to copy from
+     *
+     * @param source instance to copy from; must not be null.
+     * Will be materialized as a side-effect.
      */
-    protected void copyFrom(IonLobImpl source)
+    protected final void copyFrom(IonLobImpl source)
     {
-        copyAnnotationsFrom(source);
+        copyAnnotationsFrom(source); // materializes this and the source
+        setBytes(source._lob_value);
+    }
 
-        if (source.isNullValue()) {
-            // force this value to be a null value
+    /**
+     * @param source may be null to make this an Ion null value.
+     */
+    protected final void copyBytesFrom(byte[] source, int offset, int length)
+    {
+        if (source == null)
+        {
             _lob_value = null;
         }
-        else {
-            int len = source.byteSize();
-            if (_lob_value == null || _lob_value.length != len) {
-                _lob_value = new byte[len];
+        else
+        {
+            // Avoid allocation if we happen to have the right length.
+            if (_lob_value == null || _lob_value.length != length) {
+                _lob_value = new byte[length];
             }
-            byte[] source_bytes = source.newBytes();
-            System.arraycopy(source_bytes, 0, _lob_value, 0, len);
+            System.arraycopy(source, offset, _lob_value, 0, length);
         }
         _hasNativeValue = true;
         setDirty();
     }
 
-    public InputStream newInputStream()
+
+    public final InputStream newInputStream()
     {
         if (isNullValue()) return null;
 
@@ -67,24 +77,25 @@ public abstract class IonLobImpl
         return new ByteArrayInputStream(_lob_value);
     }
 
-    public byte[] newBytes()
+    public final byte[] newBytes()
     {
         makeReady();
-        return _lob_value;
+        return (_lob_value == null ? null : _lob_value.clone());
     }
 
-    public void setBytes(byte[] bytes)
+    public final void setBytes(byte[] bytes)
+    {
+        setBytes(bytes, 0, bytes == null ? 0 : bytes.length);
+    }
+
+    public final void setBytes(byte[] bytes, int offset, int length)
     {
         checkForLock();
-
-        // TODO copy data?
-        _lob_value = bytes;
-        _hasNativeValue = true;
-        setDirty();
+        copyBytesFrom(bytes, offset, length);
     }
 
 
-    public int byteSize()
+    public final int byteSize()
     {
         makeReady();
         if (_lob_value == null) throw new NullValueException();
@@ -93,7 +104,7 @@ public abstract class IonLobImpl
 
 
     @Override
-    protected int getNativeValueLength()
+    protected final int getNativeValueLength()
     {
         assert _hasNativeValue == true;
         int len;
@@ -112,7 +123,7 @@ public abstract class IonLobImpl
 
 
     @Override
-    protected int computeLowNibble(int valuelen)
+    protected final int computeLowNibble(int valuelen)
     {
         assert _hasNativeValue == true;
 
@@ -131,7 +142,8 @@ public abstract class IonLobImpl
 
 
     @Override
-    protected void doMaterializeValue(IonBinary.Reader reader) throws IOException
+    protected final void doMaterializeValue(IonBinary.Reader reader)
+        throws IOException
     {
         assert this._isPositionLoaded == true && this._buffer != null;
 
@@ -171,7 +183,9 @@ public abstract class IonLobImpl
     }
 
     @Override
-    protected void doWriteNakedValue(IonBinary.Writer writer, int valueLen) throws IOException
+    protected final void doWriteNakedValue(IonBinary.Writer writer,
+                                           int valueLen)
+        throws IOException
     {
         assert valueLen == this.getNakedValueLength();
         assert valueLen > 0;
@@ -182,7 +196,7 @@ public abstract class IonLobImpl
     }
 
     @Override
-    public synchronized boolean isNullValue()
+    public final synchronized boolean isNullValue()
     {
         if (!_hasNativeValue) return super.isNullValue();
         return (_lob_value == null);

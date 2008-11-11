@@ -65,6 +65,9 @@ public interface IonFloat
 
     /**
      * Sets the value of this element.
+     * Since Ion {@code float}s are essentially Java {@code double}s,
+     * this performs a narrowing conversion as described by
+     * {@link BigDecimal#doubleValue()}.
      *
      * @param value the new value of this float;
      * may be <code>null</code> to make this <code>null.float</code>.

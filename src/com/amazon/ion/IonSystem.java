@@ -7,6 +7,8 @@ package com.amazon.ion;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
@@ -328,6 +330,35 @@ public interface IonSystem
      */
     public IonBlob newNullBlob();
 
+    /**
+     * Constructs a new Ion {@code blob} instance, copying bytes from an array.
+     *
+     * @param value the data for the new blob, to be <em>copied</em> from the
+     * given array into the new instance.
+     * May be {@code null} to create a {@code null.blob} value.
+     */
+    public IonBlob newBlob(byte[] value);
+
+    /**
+     * Constructs a new Ion {@code blob}, copying bytes from part of an array.
+     * <p>
+     * This method copies {@code length} bytes from the given array into the
+     * new value, starting at the given offset in the array.
+     *
+     * @param value the data for the new blob, to be <em>copied</em> from the
+     * given array into the new instance.
+     * May be {@code null} to create a {@code null.blob} value.
+     * @param offset the offset within the array of the first byte to copy;
+     * must be non-negative an no larger than {@code bytes.length}.
+     * @param length the number of bytes to be copied from the given array;
+     * must be non-negative an no larger than {@code bytes.length - offset}.
+     *
+     * @throws IndexOutOfBoundsException
+     * if the preconditions on the {@code offset} and {@code length} parameters
+     * are not met.
+     */
+    public IonBlob newBlob(byte[] value, int offset, int length);
+
 
     /**
      * Constructs a new <code>null.bool</code> instance.
@@ -346,12 +377,20 @@ public interface IonSystem
     /**
      * Constructs a new <code>bool</code> instance with the given content.
      *
-     * @param content the initial content of the value.
+     * @param value the initial content of the value.
      *
      * @return a bool with
      * <code>{@link IonBool#booleanValue()} == content</code>.
      */
-    public IonBool newBool(boolean content);
+    public IonBool newBool(boolean value);
+
+    /**
+     * Constructs a new <code>bool</code> instance with the given content.
+     *
+     * @param value the initial value of the instance;
+     * may be {@code null} to make {@code null.bool}.
+     */
+    public IonBool newBool(Boolean value);
 
 
     /**
@@ -366,6 +405,35 @@ public interface IonSystem
      * Constructs a new <code>null.clob</code> instance.
      */
     public IonClob newNullClob();
+
+    /**
+     * Constructs a new Ion {@code clob} instance from a byte array.
+     *
+     * @param value the data for the new clob, to be <em>copied</em> from the
+     * given array into the new instance.
+     * May be {@code null} to create a {@code null.clob} value.
+     */
+    public IonClob newClob(byte[] value);
+
+    /**
+     * Constructs a new Ion {@code clob}, copying bytes from part of an array.
+     * <p>
+     * This method copies {@code length} bytes from the given array into the
+     * new value, starting at the given offset in the array.
+     *
+     * @param value the data for the new blob, to be <em>copied</em> from the
+     * given array into the new instance.
+     * May be {@code null} to create a {@code null.clob} value.
+     * @param offset the offset within the array of the first byte to copy;
+     * must be non-negative an no larger than {@code bytes.length}.
+     * @param length the number of bytes to be copied from the given array;
+     * must be non-negative an no larger than {@code bytes.length - offset}.
+     *
+     * @throws IndexOutOfBoundsException
+     * if the preconditions on the {@code offset} and {@code length} parameters
+     * are not met.
+     */
+    public IonClob newClob(byte[] value, int offset, int length);
 
 
     /**
@@ -383,6 +451,31 @@ public interface IonSystem
 
 
     /**
+     * Constructs a new Ion {@code decimal} instance from a Java
+     * {@code long}.
+     */
+    public IonDecimal newDecimal(long value);
+
+    /**
+     * Constructs a new Ion {@code decimal} instance from a Java
+     * {@code double}.
+     */
+    public IonDecimal newDecimal(double value);
+
+    /**
+     * Constructs a new Ion {@code decimal} instance from a Java
+     * {@link BigInteger}.
+     */
+    public IonDecimal newDecimal(BigInteger value);
+
+    /**
+     * Constructs a new Ion {@code decimal} instance from a Java
+     * {@link BigDecimal}.
+     */
+    public IonDecimal newDecimal(BigDecimal value);
+
+
+    /**
      * Constructs a new <code>null.float</code> instance.
      * @deprecated Use {@link #newNullFloat()} instead
      */
@@ -394,6 +487,18 @@ public interface IonSystem
      * Constructs a new <code>null.float</code> instance.
      */
     public IonFloat newNullFloat();
+
+    /**
+     * Constructs a new Ion {@code float} instance from a Java
+     * {@code long}.
+     */
+    public IonFloat newFloat(long value);
+
+    /**
+     * Constructs a new Ion {@code float} instance from a Java
+     * {@code double}.
+     */
+    public IonFloat newFloat(double value);
 
 
     /**

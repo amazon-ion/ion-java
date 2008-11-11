@@ -166,7 +166,7 @@ public abstract class IonValueImpl
 
     /**
      * Constructs a value with the given native value and high-nibble, and zero
-     * low-nibble.
+     * low-nibble. This instance is dirty by default.
      *
      * @param system must not be null.
      */
@@ -206,6 +206,9 @@ public abstract class IonValueImpl
      * It overwrites these values on the current instance.
      * Since these will be the string representations it
      * is unnecessary to update the symbol table ... yet.
+     * <p>
+     * This method will materialize this instance and the source.
+     *
      * @param source instance to copy from
      */
     protected void copyAnnotationsFrom(IonValueImpl source)

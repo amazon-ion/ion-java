@@ -38,6 +38,14 @@ public final class IonDecimalImpl
         super(system, NULL_DECIMAL_TYPEDESC);
     }
 
+    public IonDecimalImpl(IonSystemImpl system, BigDecimal value)
+    {
+        super(system, NULL_DECIMAL_TYPEDESC);
+        _decimal_value = value;
+        _hasNativeValue = true;
+        assert isDirty();
+    }
+
     /**
      * Constructs a binary-backed element.
      */
