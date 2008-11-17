@@ -768,9 +768,9 @@ public class SymbolTableTest
 
     public void XXXtestKimSymbols() throws Exception
     {
-    	File input = new File("c:\\data\\samples\\kim.10n");
-    	File symbols = new File("c:\\data\\samples\\kim_symbols.ion");
-    	IonDatagram dg = this.mySystem.getLoader().load(symbols);
+//    	File input = new File("c:\\data\\samples\\kim.10n");
+//    	File symbols = new File("c:\\data\\samples\\kim_symbols.ion");
+//    	IonDatagram dg = this.mySystem.getLoader().load(symbols);
     	SymbolTable symtab = mySystem.getCatalog().getTable("ims.item");
     	IonStruct   str = symtab.getIonRepresentation();
 
@@ -784,9 +784,7 @@ public class SymbolTableTest
     		int    newid = ust.addSymbol(name);
     		assertTrue(id == newid);
     	}
-    	ust.setVersion(1);
-    	ust.setName("ims.item");
-    	ust.lock();
+    	ust.share("ims.item", 1);
 
     	IonCatalog catalog = mySystem.getCatalog();
     	catalog.putTable(ust);

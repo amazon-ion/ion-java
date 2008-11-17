@@ -120,8 +120,8 @@ public final class UnifiedSymbolTable
 
         systab._system_symbols = systab;
 
-        systab.setName(SystemSymbolTable.ION);
-        systab.setVersion(1);
+//        systab.setName(SystemSymbolTable.ION);
+//        systab.setVersion(1);
 
         for (int ii=0; ii<SYSTEM_SYMBOLS.length; ii++) {
             systab.defineSymbol(new Symbol(SYSTEM_SYMBOLS[ii], ii+1, systab));
@@ -129,7 +129,8 @@ public final class UnifiedSymbolTable
 
         // we lock it because no one should be adding symbols to
         // the system symbol table.
-        systab.lock();
+//        systab.lock();
+        systab.share(SystemSymbolTable.ION, 1);
         _system_1_0_symbols = systab;
     }
 
@@ -273,30 +274,24 @@ public final class UnifiedSymbolTable
         return _system_1_0_symbols;
     }
 
-    public void lock() {
-        if (_name == null) {
-            throw new IllegalStateException("Symbol table has no name");
+    public void share(String name, int version)
+    {
+        if (name == null || name.length() == 0) {
+            throw new IllegalArgumentException("name must be non-empty");
         }
-        if (_version < 1) {
-            throw new IllegalStateException("Symbol table has no version");
+        if (version < 1) {
+            throw new IllegalArgumentException("version must be at least 1");
         }
+        if (_is_locked) {
+            throw new IllegalStateException("already shared");
+        }
+
+        _name = name;
+        _version = version;
         _is_locked = true;
         // TODO validate that maxId is legal?
     }
-    public void unlock() {
-        _is_locked = false;
-    }
-    public void setIsLocked(boolean isLocked) {
-        if (isLocked) {
-            lock();
-        }
-        else {
-            unlock();
-        }
-    }
-    public boolean isLocked() {
-        return _is_locked;
-    }
+
 
     public boolean isLocalTable() {
         return ! _is_locked;
@@ -344,17 +339,8 @@ public final class UnifiedSymbolTable
         }
 
     }
-    public void setVersion(int version)
-    {
-        if (version < 0) {
-            throw new IllegalArgumentException("versions must be integers of value 1 or higher, or 0 for 'no version'");
-        }
-        if (_is_locked) {
-            throw new IllegalStateException("can't change shared symbol table");
-        }
-        _version = version;
-        return;
-    }
+
+
     public int getVersion()
     {
         return _version;
@@ -363,16 +349,8 @@ public final class UnifiedSymbolTable
     {
         return _name;
     }
-    public void setName(String name)
-    {
-        if (name != null && name.length() < 1) {
-            throw new IllegalArgumentException("name must have content (length > 0, null for 'no name')");
-        }
-        if (_is_locked) {
-            throw new IllegalStateException("can't change shared symbol table");
-        }
-        _name = name;
-    }
+
+
     public String getSystemId()
     {
         if (this._system_symbols != null && this._system_symbols != this) {
@@ -720,7 +698,7 @@ public final class UnifiedSymbolTable
 
         _ion_rep.addTypeAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE);
         if (this.isSharedTable()) {
-            if (this.getVersion() < 1) this.setVersion(1);
+            assert getVersion() > 0;
             _ion_rep.add(UnifiedSymbolTable.NAME, sys.newString(this.getName()));
             _ion_rep.add(UnifiedSymbolTable.VERSION, sys.newInt(this.getVersion()));
             _ion_rep.add(UnifiedSymbolTable.MAX_ID, sys.newInt(this.getMaxId()));
@@ -865,9 +843,7 @@ public final class UnifiedSymbolTable
                 throw new IonException(message);
             }
 
-            setName(name);
-            setVersion(version);
-            lock();
+            share(name, version);
         }
         else {
             // This is a local table, no need to offset sids

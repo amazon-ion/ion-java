@@ -582,9 +582,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
     	assert v2.getSymbolTable() == sym;
     	IonReader ir = system().newReader(s);
     	UnifiedSymbolTable u = UnifiedSymbolTable.copyFrom(sym);
-    	u.setName("items");
-    	u.setVersion(1);
-    	u.lock();
+    	u.share("items", 1);
     	IonBinaryWriter wr = new IonBinaryWriterImpl(u);
 
     	wr.writeValues(ir);

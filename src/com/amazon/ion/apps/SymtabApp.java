@@ -23,6 +23,9 @@ public class SymtabApp
     private SymbolTable mySystemSymtab;
     private UnifiedSymbolTable mySymtab;
 
+    private String mySymtabName;
+    private int    mySymtabVersion;
+
 
     //=========================================================================
     // Static methods
@@ -57,15 +60,15 @@ public class SymtabApp
     {
         int firstFileIndex = processOptions(args);
 
-        if (mySymtab.getName() == null)
+        if (mySymtabName == null)
         {
             throw new RuntimeException("Must provide --name");
         }
         // TODO verify that we don't import the same name.
 
-        if (mySymtab.getVersion() == 0)
+        if (mySymtabVersion == 0)
         {
-            mySymtab.setVersion(1);
+            mySymtabVersion = 1;
         }
 
 
@@ -80,7 +83,7 @@ public class SymtabApp
 
         // TODO mySymtab should have new symbols relative to last version
 
-        mySymtab.lock();
+        mySymtab.share(mySymtabName, mySymtabVersion);
 
         IonStruct symtabIon = mySymtab.getIonRepresentation(mySystem);
         Printer p = new Printer();
@@ -115,16 +118,19 @@ public class SymtabApp
             }
             else if ("--name".equals(arg))
             {
-                if (mySymtab.getName() != null)
+                if (mySymtabName != null)
                 {
                     throw new RuntimeException("Multiple names");
                 }
-                String name = args[++i];
-                mySymtab.setName(name);
+                mySymtabName = args[++i];
+                if (mySymtabName.length() == 0)
+                {
+                    throw new RuntimeException("Name must not be empty");
+                }
             }
             else if ("--version".equals(arg))
             {
-                if (mySymtab.getVersion() != 0)
+                if (mySymtabVersion != 0)
                 {
                     throw new RuntimeException("Multiple versions");
                 }
@@ -138,7 +144,7 @@ public class SymtabApp
                     String message = "Symtab extension not implemented";
                     throw new UnsupportedOperationException(message);
                 }
-                mySymtab.setVersion(version);
+                mySymtabVersion = version;
             }
             else
             {
