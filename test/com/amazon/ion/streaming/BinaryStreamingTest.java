@@ -560,8 +560,6 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
     	wr.writeValues(ir);
         byte[] buffer = wr.getBytes();
         dumpBuffer(buffer, buffer.length);
-
-    	return;
     }
     public void testValue2()
     throws Exception
@@ -581,15 +579,12 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
     	SymbolTable sym = v.getSymbolTable();
     	assert v2.getSymbolTable() == sym;
     	IonReader ir = system().newReader(s);
-    	UnifiedSymbolTable u = UnifiedSymbolTable.copyFrom(sym);
-    	u.share("items", 1);
+    	UnifiedSymbolTable u = system().newSharedSymbolTable(sym, "items", 1);
     	IonBinaryWriter wr = new IonBinaryWriterImpl(u);
 
     	wr.writeValues(ir);
         byte[] buffer = wr.getBytes();
         dumpBuffer(buffer, buffer.length);
-
-    	return;
     }
     void dumpBuffer(byte[] buffer, int len)
     {

@@ -127,6 +127,17 @@ public class IonSystemImpl
     }
 
 
+    public UnifiedSymbolTable newSharedSymbolTable(SymbolTable symbols,
+                                                   String name,
+                                                   int version)
+    {
+        // TODO prior version should be in Catalog to verify supersetting
+        UnifiedSymbolTable st = new UnifiedSymbolTable(symbols, name, version);
+        st.setSystem(this);
+        return st;
+    }
+
+
     public IonDatagram newDatagram()
     {
         return new IonDatagramImpl(this);

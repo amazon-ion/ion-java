@@ -235,38 +235,26 @@ public final class UnifiedSymbolTable
         readIonRep(reader, catalog);
     }
 
-    // TODO this should be removed during integration !!
-    private UnifiedSymbolTable(SymbolTable symboltable, boolean dummy) {
-        this(getSystemSymbolTableInstance());
-
-        String name = symboltable.getName();
-        if (name != null)
-        {
-            _name = name;
-            _version = symboltable.getVersion();
-            assert _version > 0;
-        }
+    /**
+     * Converts a local symbol table into a shared table.
+     * @param localSymbolTable
+     * @param name
+     * @param version
+     */
+    UnifiedSymbolTable(SymbolTable localSymbolTable, String name, int version)
+    {
+        this(localSymbolTable.getSystemSymbolTable());
 
         int minid = this._system_symbols.getMaxId();
-        int maxid = symboltable.getMaxId();
+        int maxid = localSymbolTable.getMaxId();
         for (int ii=minid + 1; ii <= maxid; ii++) {
-            String symbolText = symboltable.findKnownSymbol(ii);
+            String symbolText = localSymbolTable.findKnownSymbol(ii);
             // FIXME shouldn't happen, we decided to not allow removing symbols
             if (symbolText == null) continue;
             this.defineSymbol(symbolText, ii);
         }
-    }
 
-
-    /**
-     * Avoids a scary and bug-prone overload of constructor on
-     * UnifiedSymbolTable versus SymbolTable.
-     * @deprecated TODO remove after integrating symtab implementations
-     */
-    @Deprecated
-    public static UnifiedSymbolTable copyFrom(SymbolTable symbolTable)
-    {
-        return new UnifiedSymbolTable(symbolTable, true);
+        share(name, version);
     }
 
     public static UnifiedSymbolTable getSystemSymbolTableInstance()

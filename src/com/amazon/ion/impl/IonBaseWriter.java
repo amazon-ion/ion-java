@@ -264,29 +264,28 @@ public abstract class IonBaseWriter
     protected int add_local_symbol(String name)
     {
         SymbolTable symtab = getSymbolTable();
+
+        // FIXME I think the current symtab should *never* be null.
+        // That's because any Ion data must be written in the context of a
+        // specific system version (eg $ion_1_0) and therefore we should always
+        // know a specific system symtab at any point of the data.
+
         if (symtab == null) {
             UnifiedSymbolTable temp = new UnifiedSymbolTable(UnifiedSymbolTable.getSystemSymbolTableInstance());
-            setSymbolTable(temp);  // TODO why is this get-then-set needed?
-            symtab = getSymbolTable();
+            setSymbolTable(temp);
+            symtab = temp;
         }
 
         int sid = symtab.findSymbol(name);
         if (sid < 1) {
-            UnifiedSymbolTable utab = null;
-            if (symtab instanceof UnifiedSymbolTable) {
-                utab = ((UnifiedSymbolTable)symtab);
-                if (utab.isSystemTable()) {
-                    UnifiedSymbolTable localtable = new UnifiedSymbolTable(utab);
-                    this.setSymbolTable(localtable);
-                    utab = localtable;
-                }
-            }
-            else {
-                UnifiedSymbolTable localtable = UnifiedSymbolTable.copyFrom(symtab);
+            if (symtab.isSystemTable()) {
+                UnifiedSymbolTable localtable = new UnifiedSymbolTable(symtab);
                 this.setSymbolTable(localtable);
-                utab = localtable;
+                symtab = localtable;
             }
-            sid = utab.addSymbol(name);
+            assert symtab.isLocalTable();
+
+            sid = symtab.addSymbol(name);
             _no_local_symbols = false;
         }
         return sid;
