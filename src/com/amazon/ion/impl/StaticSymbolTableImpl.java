@@ -18,6 +18,7 @@ import com.amazon.ion.SystemSymbolTable;
  * <p>
  * Instances of this class are safe for use from multiple threads.
  */
+@Deprecated
 public class StaticSymbolTableImpl
     extends AbstractSymbolTable
 {

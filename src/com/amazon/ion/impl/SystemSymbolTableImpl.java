@@ -13,6 +13,7 @@ import com.amazon.ion.SystemSymbolTable;
 /**
  *
  */
+@Deprecated
 public class SystemSymbolTableImpl
     implements SystemSymbolTable
 {
