@@ -580,7 +580,8 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
     	assert v2.getSymbolTable() == sym;
     	IonReader ir = system().newReader(s);
     	UnifiedSymbolTable u = system().newSharedSymbolTable(sym, "items", 1);
-    	IonBinaryWriter wr = new IonBinaryWriterImpl(u);
+    	IonBinaryWriter wr =
+    	    new IonBinaryWriterImpl(system().getSystemSymbolTable(), u);
 
     	wr.writeValues(ir);
         byte[] buffer = wr.getBytes();

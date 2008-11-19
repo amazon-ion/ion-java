@@ -291,7 +291,8 @@ public class IonSystemImpl
 
     public IonBinaryWriterImpl newBinaryWriter()
     {
-        return new com.amazon.ion.impl.IonBinaryWriterImpl();
+        SymbolTable systemSymbolTable = getSystemSymbolTable();
+        return new com.amazon.ion.impl.IonBinaryWriterImpl(systemSymbolTable);
     }
 
 

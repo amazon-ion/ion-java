@@ -21,10 +21,10 @@ public abstract class IonBaseWriter
     private static final boolean _debug_on = false;
 
     /**
+     * Must be either local or system table.
      * FIXME when can this be null?  When can it be changed?
      */
     protected SymbolTable _symbol_table;
-    protected boolean     _no_local_symbols = true;
 
     protected IonType     _field_name_type;     // really ion type is only used for int, string or null (unknown)
     protected String      _field_name;
@@ -43,17 +43,17 @@ public abstract class IonBaseWriter
 
     public void setSymbolTable(SymbolTable symbols)
     {
-        assert symbols.isLocalTable();
+        if (! symbols.isLocalTable() && ! symbols.isSystemTable()) {
+            throw new IllegalArgumentException("table must be local or system");
+        }
         _symbol_table = symbols;
     }
 
-    public void importSharedSymbolTable(UnifiedSymbolTable sharedSymbolTable) {
-        if (_symbol_table == null) {
-            UnifiedSymbolTable symbol_table =
-                new UnifiedSymbolTable(sharedSymbolTable.getSystemSymbolTable());
-            _symbol_table = symbol_table;
-        }
-        ((UnifiedSymbolTable)_symbol_table).addImportedTable(sharedSymbolTable, 0);
+    protected boolean symtabIsNonTrivial()
+    {
+        return (_symbol_table.isLocalTable()
+                && (_symbol_table.getImportedTables().length != 0
+                    || _symbol_table.size() != 0));
     }
 
     protected String getSymbolTableName() {
@@ -153,7 +153,7 @@ public abstract class IonBaseWriter
         if (_annotations_type == IonType.STRING) {
             for (int ii=0; ii<_annotation_count; ii++) {
                 String name = _annotations[ii];
-                _annotation_sids[ii] = add_local_symbol(name);
+                _annotation_sids[ii] = add_symbol(name);
             }
         }
         return _annotation_sids;
@@ -210,7 +210,7 @@ public abstract class IonBaseWriter
     {
         growAnnotations(_annotation_count + 1);
         if (_annotations_type == IonType.INT) {
-            int sid = this.add_local_symbol(annotation);
+            int sid = this.add_symbol(annotation);
             this.addTypeAnnotationId(sid);
         }
         else {
@@ -257,39 +257,34 @@ public abstract class IonBaseWriter
 
     protected int get_field_name_as_int() {
         if (_field_name_type == IonType.STRING) {
-            _field_name_sid = add_local_symbol(_field_name);
+            _field_name_sid = add_symbol(_field_name);
         }
         return _field_name_sid;
     }
-    protected int add_local_symbol(String name)
-    {
-        SymbolTable symtab = getSymbolTable();
 
+    protected int add_symbol(String name)
+    {
         // FIXME I think the current symtab should *never* be null.
         // That's because any Ion data must be written in the context of a
         // specific system version (eg $ion_1_0) and therefore we should always
         // know a specific system symtab at any point of the data.
 
-        if (symtab == null) {
-            UnifiedSymbolTable temp = new UnifiedSymbolTable(UnifiedSymbolTable.getSystemSymbolTableInstance());
-            setSymbolTable(temp);
-            symtab = temp;
+        if (_symbol_table == null) {
+            _symbol_table = new UnifiedSymbolTable(UnifiedSymbolTable.getSystemSymbolTableInstance());
         }
 
-        int sid = symtab.findSymbol(name);
-        if (sid < 1) {
-            if (symtab.isSystemTable()) {
-                UnifiedSymbolTable localtable = new UnifiedSymbolTable(symtab);
-                this.setSymbolTable(localtable);
-                symtab = localtable;
-            }
-            assert symtab.isLocalTable();
+        int sid = _symbol_table.findSymbol(name);
+        if (sid > 0) return sid;
 
-            sid = symtab.addSymbol(name);
-            _no_local_symbols = false;
+        if (_symbol_table.isSystemTable()) {
+            _symbol_table = new UnifiedSymbolTable(_symbol_table);
         }
+        assert _symbol_table.isLocalTable();
+
+        sid = _symbol_table.addSymbol(name);
         return sid;
     }
+
     public void setFieldName(String name)
     {
         if (!this.isInStruct()) {

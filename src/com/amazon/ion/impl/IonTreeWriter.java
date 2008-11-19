@@ -40,6 +40,7 @@ public final class IonTreeWriter
 
     public IonTreeWriter(IonSystem sys) {
         _sys = sys;
+        setSymbolTable(sys.getSystemSymbolTable());
     }
 
     public IonTreeWriter(IonSystem sys, IonContainer rootContainer) {

@@ -7,6 +7,7 @@ package com.amazon.ion.apps;
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.IonBinaryWriterImpl;
 import com.amazon.ion.impl.UnifiedSymbolTable;
 import java.io.File;
@@ -113,7 +114,9 @@ public class EncodeApp
     protected void process(File inputFile, IonReader reader)
         throws IOException, IonException
     {
-        IonBinaryWriter writer = new IonBinaryWriterImpl(myImports);
+        SymbolTable systemSymbolTable = mySystem.getSystemSymbolTable();
+        IonBinaryWriter writer = new IonBinaryWriterImpl(systemSymbolTable,
+                                                         myImports);
         writer.writeValues(reader);
 
         byte[] binaryBytes = writer.getBytes();

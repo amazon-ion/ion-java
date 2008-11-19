@@ -23,12 +23,15 @@ import java.util.Date;
  * implementation of the IonWrite where the output is
  * Ion binary formatted bytes.  This will include a local
  * symbol table in the output if a symbol table is necessary.
+ * <p>
+ * One invariant of this class is that the (inherited) member _symbol_table
+ * is never null. It may be either a system or local symbol table.
  */
 public final class IonBinaryWriterImpl
     extends IonBaseWriter
     implements IonBinaryWriter
 {
-    private static final boolean _verbose_debug = false;
+//    private static final boolean _verbose_debug = false;
 
     static final int UNKNOWN_LENGTH = -1;
 
@@ -48,35 +51,35 @@ public final class IonBinaryWriterImpl
     int    _top;
     int [] _patch_stack = new int[10];
 
-    public IonBinaryWriterImpl() {
+    /**
+     * This method requires a system symbol table because all binary data must
+     * start with a system ID.
+     *
+     * @param imports
+     *   the initial imports for the local symbol table.
+     */
+    public IonBinaryWriterImpl(SymbolTable systemSymbols,
+                               UnifiedSymbolTable... imports) {
+        if (! systemSymbols.isSystemTable()) {
+            throw new IllegalArgumentException("Not a system table");
+        }
+
         _manager = new BufferManager();
         _writer = _manager.openWriter();
-    }
-
-    public IonBinaryWriterImpl(UnifiedSymbolTable imported) {
-        this();
-        if (imported != null) {
-            this._system_symbols = imported.getSystemSymbolTable();
-            importSharedSymbolTable(imported);
-        }
-    }
-
-    /**
-     *
-     * @param sharedSymbolTables
-     *   the inital imports for the local symbol table.
-     */
-    public IonBinaryWriterImpl(UnifiedSymbolTable... sharedSymbolTables) {
-        this();
-        if (sharedSymbolTables != null && sharedSymbolTables.length > 0) {
-            this._system_symbols = sharedSymbolTables[0].getSystemSymbolTable();
-            for (UnifiedSymbolTable imported : sharedSymbolTables)
+        _system_symbols = systemSymbols;
+        if (imports != null && imports.length > 0) {
+            UnifiedSymbolTable local = new UnifiedSymbolTable(systemSymbols);
+            for (UnifiedSymbolTable imported : imports)
             {
-
-                importSharedSymbolTable(imported);
+                local.addImportedTable(imported, 0);
             }
+            _symbol_table = local;
+        }
+        else {
+            _symbol_table = systemSymbols;
         }
     }
+
     public boolean isInStruct() {
         return this._in_struct;
     }
@@ -156,12 +159,7 @@ public final class IonBinaryWriterImpl
     {
         int patch_len = 0;
 
-        // start a local symbol table if necessary
-        if (_symbol_table == null) {
-            _symbol_table = UnifiedSymbolTable.getSystemSymbolTableInstance();
-            _system_symbols = _symbol_table;
-            _no_local_symbols = true;
-        }
+        assert _symbol_table != null;
 
         // write field name
         if (_in_struct) {
@@ -522,31 +520,8 @@ public final class IonBinaryWriterImpl
 
     public void writeSymbol(String value) throws IOException
     {
-        int symbolId = makeSymbol(value);
+        int symbolId = add_symbol(value);
         writeSymbol(symbolId);
-    }
-    int makeSymbol(String name) {
-        int sid;
-
-        if (_symbol_table != null) {
-            sid = _symbol_table.findSymbol(name);
-            if (sid > 0) return sid;
-        }
-
-        if (_no_local_symbols) {
-            UnifiedSymbolTable syssyms;
-            if (_system_symbols instanceof UnifiedSymbolTable) {
-                syssyms = (UnifiedSymbolTable)_system_symbols;
-            }
-            else {
-                syssyms = UnifiedSymbolTable.getSystemSymbolTableInstance();
-            }
-            _symbol_table = new UnifiedSymbolTable(syssyms);
-            _no_local_symbols = false;
-        }
-
-        sid = _symbol_table.addSymbol(name);
-        return sid;
     }
 
     public void writeClob(byte[] value) throws IOException
@@ -950,11 +925,7 @@ int tmp;
         }
 
         int symbol_table_length = 0;
-        if (!_no_local_symbols
-            || (_symbol_table != null
-                && _symbol_table.isLocalTable()
-                && _symbol_table.getImportedTables().length != 0))
-        {
+        if (symtabIsNonTrivial()) {
             symbol_table_length = lenSymbolTable();
         }
 
@@ -969,9 +940,7 @@ int tmp;
     public byte[] getBytes() throws IOException
     {
         int total_length = byteSize();
-        byte[] bytes = null;
-
-        bytes = new byte[total_length];
+        byte[] bytes = new byte[total_length];
         SimpleByteBuffer outbuf = new SimpleByteBuffer(bytes);
         SimpleByteWriter writer = (SimpleByteWriter) outbuf.getWriter();
         int written_len = writeBytes(writer);
@@ -1002,11 +971,7 @@ int tmp;
         iout.write(IonConstants.BINARY_VERSION_MARKER_1_0, 0, IonConstants.BINARY_VERSION_MARKER_1_0.length);
         total_written += IonConstants.BINARY_VERSION_MARKER_1_0.length;
 
-        if (!_no_local_symbols
-            || (_symbol_table != null
-                && _symbol_table.isLocalTable()
-                && _symbol_table.getImportedTables().length != 0)
-        ) {
+        if (symtabIsNonTrivial()) {
             total_written += writeSymbolTable(iout);
         }
 
