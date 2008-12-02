@@ -16,8 +16,10 @@ public abstract class SequenceTestCase
     /**
      * @return a new null sequence.
      */
+    @Override
     protected abstract IonSequence makeNull();
 
+    @Override
     protected abstract IonSequence makeEmpty();
 
     protected abstract
@@ -25,6 +27,14 @@ public abstract class SequenceTestCase
 
     protected abstract
     <T extends IonValue> IonSequence newSequence(T... elements);
+
+
+    @Override
+    protected void add(IonContainer container, IonValue child)
+    {
+        ((IonSequence) container).add(child);
+    }
+
 
     /**
      * Wrap a single value with a sequence of the class under test.

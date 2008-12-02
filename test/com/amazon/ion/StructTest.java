@@ -11,6 +11,24 @@ public class StructTest
 {
 
     @Override
+    protected IonStruct makeNull()
+    {
+        return system().newNullStruct();
+    }
+
+    @Override
+    protected IonStruct makeEmpty()
+    {
+        return system().newEmptyStruct();
+    }
+
+    @Override
+    protected void add(IonContainer container, IonValue child)
+    {
+        ((IonStruct) container).add("f", child);
+    }
+
+    @Override
     protected String wrap(String... children)
     {
         StringBuilder buf = new StringBuilder();
