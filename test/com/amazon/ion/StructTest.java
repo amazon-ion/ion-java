@@ -11,6 +11,24 @@ public class StructTest
 {
 
     @Override
+    protected IonStruct makeNull()
+    {
+        return system().newNullStruct();
+    }
+
+    @Override
+    protected IonStruct makeEmpty()
+    {
+        return system().newEmptyStruct();
+    }
+
+    @Override
+    protected void add(IonContainer container, IonValue child)
+    {
+        ((IonStruct) container).add("f", child);
+    }
+
+    @Override
     protected String wrap(String... children)
     {
         StringBuilder buf = new StringBuilder();
@@ -27,6 +45,16 @@ public class StructTest
         return buf.toString();
     }
 
+    @Override
+    protected IonStruct wrap(IonValue... children)
+    {
+        IonStruct value = system().newNullStruct();
+        for (IonValue child : children)
+        {
+            value.add("f", child);
+        }
+        return value;
+    }
 
     public static void checkNullStruct(IonStruct value)
     {
@@ -644,48 +672,48 @@ public class StructTest
 
     public void testSample() throws Exception
     {
-    	String sample =
-    		"categories::{"+
-    		"  name:'''category_map''',"+
-    		"  matching_view_id:1,"+
-    		"  "+
-    		"  default:category::{"+
-    		"    rules:{"+
-    		"      normalization:'''default_normalization''',"+
-    		"      subsetting:'''default_subsetting''',"+
-    		"      precision:'''default_precision''',"+
-    		"      creation:'''default_creation''',"+
-    		"    },"+
-    		"    electronics:category::{"+
-    		"      rules:{"+
-    		"      },"+
-    		"    },"+
-    		"    apparel:category::{"+
-    		"      rules:{"+
-    		"        categorization:'''apparel_categorization''',"+
-    		"      },"+
-    		"      shoes:category::{"+
-    		"        rules:{"+
-    		"          categorization:'''shoes_categorization''',"+
-    		"          normalization:'''shoes_normalization''',"+
-    		"          precision:'''shoes_precision''',"+
-    		"        },"+
-    		"        dictionaries:["+
-    		"          '''valid_shoe_sizes''',"+
-    		"        ],"+
-    		"        top_brand_shoes:category::{"+
-    		"          rules:{"+
-    		"            categorization:'''top_brand_shoes_categorization''',"+
-    		"            creation:'''top_brand_creation''',"+
-    		"          },"+
-    		"        },"+
-    		"      },"+
-    		"    },"+
-    		"  },"+
-    		"}";
-    	IonDatagram dg1 = system().getLoader().load(sample);
-    	IonValue dg2 = dg1.clone();
+        String sample =
+            "categories::{"+
+            "  name:'''category_map''',"+
+            "  matching_view_id:1,"+
+            "  "+
+            "  default:category::{"+
+            "    rules:{"+
+            "      normalization:'''default_normalization''',"+
+            "      subsetting:'''default_subsetting''',"+
+            "      precision:'''default_precision''',"+
+            "      creation:'''default_creation''',"+
+            "    },"+
+            "    electronics:category::{"+
+            "      rules:{"+
+            "      },"+
+            "    },"+
+            "    apparel:category::{"+
+            "      rules:{"+
+            "        categorization:'''apparel_categorization''',"+
+            "      },"+
+            "      shoes:category::{"+
+            "        rules:{"+
+            "          categorization:'''shoes_categorization''',"+
+            "          normalization:'''shoes_normalization''',"+
+            "          precision:'''shoes_precision''',"+
+            "        },"+
+            "        dictionaries:["+
+            "          '''valid_shoe_sizes''',"+
+            "        ],"+
+            "        top_brand_shoes:category::{"+
+            "          rules:{"+
+            "            categorization:'''top_brand_shoes_categorization''',"+
+            "            creation:'''top_brand_creation''',"+
+            "          },"+
+            "        },"+
+            "      },"+
+            "    },"+
+            "  },"+
+            "}";
+        IonDatagram dg1 = system().getLoader().load(sample);
+        IonValue dg2 = dg1.clone();
 
-//    	System.out.println(dg2.toString());
+//      System.out.println(dg2.toString());
     }
 }

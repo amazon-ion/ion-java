@@ -190,10 +190,12 @@ abstract public class IonContainerImpl
     @Override
     public void makeReadOnly() {
         if (_isLocked) return;
-        synchronized (this) {
+        synchronized (this) { // TODO why is this needed?
             deepMaterialize();
-            for (IonValue child : this._contents) {
-                child.makeReadOnly();
+            if (_contents != null) {
+                for (IonValue child : this._contents) {
+                    child.makeReadOnly();
+                }
             }
             _isLocked = true;
         }

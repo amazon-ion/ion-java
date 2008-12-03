@@ -10,10 +10,23 @@ public abstract class ContainerTestCase
     extends IonTestCase
 {
     /**
+     * Creates the null container relevant to subclass.
+     */
+    protected abstract IonContainer makeNull();
+
+    protected abstract IonContainer makeEmpty();
+
+    protected abstract void add(IonContainer container, IonValue child);
+
+    /**
      * Creates Ion text of a container, using given fragments of Ion text.
      */
     protected abstract String wrap(String... children);
 
+    /**
+     * Creates a container holding given values.
+     */
+    protected abstract IonContainer wrap(IonValue... children);
 
     /**
      * Clears a container and verifies that it is not a <code>null</code>
@@ -59,6 +72,77 @@ public abstract class ContainerTestCase
         // TODO concurrency tests.  it.remove should throw after (eg) container.makeNull().
         // TODO test proper behavior of remove() when next() not called, or when remove() called twice.
         // (should throw IllegalStateException)
+    }
+
+    public void testNullMakeReadOnly()
+    {
+        IonContainer c = makeNull();
+        c.makeReadOnly();
+        assertTrue(c.isNullValue());
+        assertTrue(c.isReadOnly());
+
+        try
+        {
+            add(c, system().newNull());
+            fail("expected exception");
+        }
+        catch (IonException e) { } // TODO more specific exception
+
+        assertTrue(c.isNullValue());
+        assertTrue(c.isReadOnly());
+    }
+
+    public void testEmptyMakeReadOnly()
+    {
+        IonContainer c = makeEmpty();
+        c.makeReadOnly();
+        assertTrue(c.isEmpty());
+        assertTrue(c.isReadOnly());
+
+        try
+        {
+            add(c, system().newNull());
+            fail("expected exception");
+        }
+        catch (IonException e) { } // TODO more specific exception
+
+        assertTrue(c.isEmpty());
+        assertTrue(c.isReadOnly());
+    }
+
+    public void testNonEmptyMakeReadOnly()
+    {
+        IonSystem s = system();
+        IonContainer c = wrap(s.newString("one"), s.newInt(2), s.newInt(3));
+        c.makeReadOnly();
+        assertEquals(3, c.size());
+        assertTrue(c.isReadOnly());
+        IonValue first = c.iterator().next();
+        assertTrue(first.isReadOnly());
+
+        try
+        {
+            add(c, system().newNull());
+            fail("expected exception");
+        }
+        catch (IonException e) { } // TODO more specific exception
+
+        try
+        {
+            c.remove(first);
+            fail("expected exception");
+        }
+        catch (IonException e) { } // TODO more specific exception
+
+        try
+        {
+            ((IonString)first).setValue("changed");
+            fail("expected exception");
+        }
+        catch (IonException e) { } // TODO more specific exception
+
+        assertEquals(3, c.size());
+        assertTrue(c.isReadOnly());
     }
 
 
