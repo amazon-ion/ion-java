@@ -254,6 +254,20 @@ public class Printer
 
     /**
      * Configures this printer's options to render legal JSON text.
+     * The following options are modified so that:
+     * <ul>
+     *   <li>{@link Options#blobAsString}</li> is {@code true}
+     *   <li>{@link Options#clobAsString}</li> is {@code true}
+     *   <li>{@link Options#decimalAsFloat}</li> is {@code true}
+     *   <li>{@link Options#skipAnnotations}</li> is {@code true}
+     *   <li>{@link Options#sexpAsList}</li> is {@code true}
+     *   <li>{@link Options#stringAsJson}</li> is {@code true}
+     *   <li>{@link Options#symbolAsString}</li> is {@code true}
+     *   <li>{@link Options#timestampAsString}</li> is {@code false}
+     *   <li>{@link Options#timestampAsMillis}</li> is {@code true}
+     *   <li>{@link Options#untypedNulls}</li> is {@code true}
+     * </ul>
+     * All other options are left as is.
      */
     public synchronized void setJsonMode()
     {
