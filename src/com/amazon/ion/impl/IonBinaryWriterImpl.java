@@ -71,7 +71,7 @@ public final class IonBinaryWriterImpl
             UnifiedSymbolTable local = new UnifiedSymbolTable(systemSymbols);
             for (UnifiedSymbolTable imported : imports)
             {
-                local.addImportedTable(imported, 0);
+                local.addImportedTable(imported, -1);
             }
             _symbol_table = local;
         }

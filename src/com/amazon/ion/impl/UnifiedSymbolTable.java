@@ -95,8 +95,16 @@ public final class UnifiedSymbolTable
     /**
      * The system symbol <tt>'$ion_embedded_value'</tt>, as defined by Ion 1.0.
      */
+    @Deprecated
     public static final String ION_EMBEDDED_VALUE = "$ion_embedded_value";
+    @Deprecated
     public static final int    ION_EMBEDDED_VALUE_SID = 9;
+
+    /**
+     * The system symbol <tt>'$ion_shared_symbol_table'</tt>, as defined by Ion 1.0.
+     */
+    public static final String ION_SHARED_SYMBOL_TABLE = "$ion_shared_symbol_table";
+    public static final int    ION_SHARED_SYMBOL_TABLE_SID = 9;
 
     /**
      * The set of system symbols as defined by Ion 1.0.
@@ -111,7 +119,7 @@ public final class UnifiedSymbolTable
         UnifiedSymbolTable.IMPORTS,
         UnifiedSymbolTable.SYMBOLS,
         UnifiedSymbolTable.MAX_ID,
-        UnifiedSymbolTable.ION_EMBEDDED_VALUE
+        UnifiedSymbolTable.ION_SHARED_SYMBOL_TABLE
     };
 
     private final static UnifiedSymbolTable _system_1_0_symbols;
@@ -120,16 +128,10 @@ public final class UnifiedSymbolTable
 
         systab._system_symbols = systab;
 
-//        systab.setName(SystemSymbolTable.ION);
-//        systab.setVersion(1);
-
         for (int ii=0; ii<SYSTEM_SYMBOLS.length; ii++) {
             systab.defineSymbol(new Symbol(SYSTEM_SYMBOLS[ii], ii+1, systab));
         }
 
-        // we lock it because no one should be adding symbols to
-        // the system symbol table.
-//        systab.lock();
         systab.share(SystemSymbolTable.ION, 1);
         _system_1_0_symbols = systab;
     }
@@ -204,11 +206,12 @@ public final class UnifiedSymbolTable
             throw new IllegalArgumentException();
         }
         _system_symbols = (UnifiedSymbolTable) systemSymbols;
-        importSymbols(_system_symbols, 0, 0);
+        importSymbols(_system_symbols, 0, -1);
         assert _max_id == systemSymbols.getMaxId();
     }
 
 
+    // FIXME this should be *either* local or shared.
     public UnifiedSymbolTable(SymbolTable systemSymbols,
                               IonStruct ionRep,
                               IonCatalog catalog)
@@ -219,6 +222,27 @@ public final class UnifiedSymbolTable
 //        reader.next();
 //        reader.stepInto();
         readIonRep(reader, catalog);
+
+        _ion_rep = (IonStructImpl) ionRep;
+    }
+
+    /**
+     * Constructs a shared symbol table.
+     * @param ionRep
+     */
+    public UnifiedSymbolTable(IonStruct ionRep)
+    {
+        this();
+
+        IonReader reader = new IonTreeReader(ionRep);
+//        reader.next();
+//        reader.stepInto();
+        readIonRep(reader, null);
+
+        if (! _is_locked) {
+            // No name!
+            throw new IonException("Shared symbol table has no 'name' field.");
+        }
 
         _ion_rep = (IonStructImpl) ionRep;
     }
@@ -276,6 +300,7 @@ public final class UnifiedSymbolTable
 
         _name = name;
         _version = version;
+//      _system_symbols = null;
         _is_locked = true;
         // TODO validate that maxId is legal?
     }
@@ -301,7 +326,9 @@ public final class UnifiedSymbolTable
         //       number of locally defined symbols? maximum symbol
         //       id (which counts "null symbols")?  We'll start
         //       with max id, which is the largest and think about it.
-        int lowBound = _system_symbols.getMaxId();
+        int lowBound =
+            (_system_symbols == null ? 0 :_system_symbols.getMaxId());
+
         for (int i = 0; i < _import_count; i++)
         {
             UnifiedSymbolTable table = _imports[i];
@@ -481,6 +508,49 @@ public final class UnifiedSymbolTable
         }
     }
 
+    private void defineLocalSymbol(Symbol sym, int firstLocalSid)
+    {
+        assert !_is_locked;
+
+        final int sid = sym.sid;
+
+        if (sid < firstLocalSid) {
+            // Attempted override of imported symbol
+            return;
+        }
+
+        if (sid >= _symbols.length) {
+            int newlen = _max_id > 0 ? _max_id * 2 : 10;
+            while (newlen < sid) {
+                newlen *= 2;
+            }
+            Symbol[] temp = new Symbol[newlen];
+            if (_max_id > 0) {
+                int length = Math.min(_max_id + 1, _symbols.length);
+                System.arraycopy(_symbols, 0, temp, 0, length);
+            }
+            _symbols = temp;
+        }
+
+        if (_symbols[sid] != null) {
+            String message =
+                "Cannot redefine $" + sid + " from "
+                + Text.printQuotedSymbol(_symbols[sid].name)
+                + " to " + Text.printQuotedSymbol(sym.name);
+            throw new IonException(message);
+        }
+        _symbols[sid] = sym;
+        _id_map.put(sym.name, sid);
+
+        if (sid > _max_id) _max_id = sid;
+        if (sym.source == this) {
+            _has_user_symbols = true;
+            if (_ion_rep != null) {
+                recordLocalSymbolInIonRep(sym);
+            }
+        }
+    }
+
     public void removeSymbol(String name, int id)
     {
         if (_is_locked) {
@@ -544,7 +614,7 @@ public final class UnifiedSymbolTable
      *
      * @param newTable
      * @param declaredMaxId
-     *   the largest symbol ID to import; if zero, import all symbols.
+     *   the largest symbol ID to import; if less than zero, import all symbols.
      */
     public void addImportedTable(UnifiedSymbolTable newTable, int declaredMaxId)
     {
@@ -596,20 +666,19 @@ public final class UnifiedSymbolTable
      * @param sidOffset
      *   will be added to each sid in newTable to derive the sid in this table.
      * @param declaredMaxId
-     *   the largest symbol ID to import; if zero, import all symbols.
+     *   the largest symbol ID to import; if less than zero, import all symbols.
      *   This is the declared max_id on the import declaration.
      */
-    void importSymbols(UnifiedSymbolTable newTable, int sidOffset,
-                       int declaredMaxId)
+    private void importSymbols(UnifiedSymbolTable newTable, int sidOffset,
+                               int declaredMaxId)
     {
         // Always use the declaredMaxId so sid computations are the same even
         // when the imported table cannot be found or when we only have an
         // older version that's missing some symbols.
 
-        // TODO this must change to support missing imports.
-        if (declaredMaxId < 1) {
+        if (declaredMaxId < 0) {
             declaredMaxId = newTable.getMaxId();
-            assert declaredMaxId > 0;
+            assert declaredMaxId >= 0;
         }
 
         int priorMaxId = _max_id;
@@ -626,7 +695,9 @@ public final class UnifiedSymbolTable
             defineSymbol(new Symbol(sym.name, sid, newTable));
         }
 
-        assert _max_id == priorMaxId + declaredMaxId;
+        int newMaxId = priorMaxId + declaredMaxId;
+        assert _max_id <= newMaxId;
+        _max_id = newMaxId;
     }
 
     public SymbolTable getSystemSymbolTable()
@@ -752,47 +823,60 @@ public final class UnifiedSymbolTable
         int maxId = 0;
 
         ArrayList<Symbol> symbolsList = new ArrayList<Symbol>();
-        ArrayList<IonStruct> importsList;
 
         while(reader.hasNext()) {
-            reader.next();
+            IonType fieldType = reader.next();
+
+            if (reader.isNullValue()) continue;
+
+            symtabFields:
             switch (reader.getFieldId()) {
             case UnifiedSymbolTable.VERSION_SID:
-                version = reader.intValue();
+                if (fieldType == IonType.INT) {
+                    version = reader.intValue();
+                }
                 break;
-            case UnifiedSymbolTable.MAX_ID_SID:
+            case UnifiedSymbolTable.MAX_ID_SID:  // FIXME check type
                 maxId = reader.intValue();
                 setMaxId(maxId);  // FIXME this does nothing
                 break;
             case UnifiedSymbolTable.NAME_SID:
-                name = reader.stringValue();
+                if (fieldType == IonType.STRING) {
+                    name = reader.stringValue();
+                }
                 break;
             case UnifiedSymbolTable.SYMBOLS_SID:
-                boolean manual_sid;
-                switch (reader.getType()) {
+                boolean struct_format;
+                switch (fieldType) {
                 case STRUCT:
-                    manual_sid = true;
+                    struct_format = true;
                     break;
                 case LIST:
-                    manual_sid = false;
+                    struct_format = false;
                     break;
                 default:
-                    throw new IonException("the symbols field of a symbol table must be a list or a struct value, not a "+reader.getType());
+                    // Other types treated as empty-list
+                    break symtabFields;
                 }
+                int sid = getMaxId();
                 reader.stepIn();
                 while (reader.hasNext()) {
-                    if (reader.next() != IonType.STRING) {
-                        continue; // we could error here, but open content says don't bother
-                    }
-                    int sid;
-                    if (manual_sid) {
+                    IonType type = reader.next();
+                    // Allocate a sid even when the symbols's text is malformed
+                    if (struct_format) {
                         sid = reader.getFieldId();
                     }
                     else {
-                        sid = getMaxId() + 1;
+                        sid++;// = getMaxId() + 1;
                     }
-                    String symbol = reader.stringValue();
-                    symbolsList.add(new Symbol(symbol, sid, this));
+
+                    String text = null;
+                    if (type == IonType.STRING && !reader.isNullValue()) {
+                        text = reader.stringValue();
+                        if (text.length() == 0) text = null;
+                    }
+
+                    symbolsList.add(new Symbol(text, sid, this));
                 }
                 reader.stepOut();
                 break;
@@ -817,12 +901,12 @@ public final class UnifiedSymbolTable
                 defineSymbol(sym);
             }
 
-            String errors = "";
+            String errors = ""; // TODO cleanup, this is simpler than before.
             if (name.length() == 0) {
                 errors = " Field 'name' must be a non-empty string.";
             }
             if (version < 1) {
-                errors += " Field 'version' must be a positive int.";
+                version = 1;
             }
             if (errors.length() != 0) {
                 String message =
@@ -835,8 +919,9 @@ public final class UnifiedSymbolTable
         }
         else {
             // This is a local table, no need to offset sids
+            final int firstLocalSid = _max_id + 1;
             for (Symbol sym : symbolsList) {
-                defineSymbol(sym);
+                defineLocalSymbol(sym, firstLocalSid);
             }
         }
     }
@@ -869,24 +954,26 @@ public final class UnifiedSymbolTable
         ionRep.stepIn();
         while (ionRep.hasNext()) {
             IonType t = ionRep.next();
+
+            if (ionRep.isNullValue()) continue;
+
             switch(ionRep.getFieldId()) {
                 case UnifiedSymbolTable.NAME_SID:
-                    if (IonType.STRING.equals(t) || IonType.SYMBOL.equals(t)) {
+                    if (t == IonType.STRING || t == IonType.SYMBOL) {
                         name = ionRep.stringValue();
                     }
+                    // FIXME test and remove:
                     else throw new IonException("Symbol Table Import Name is not a string, it's a "+t.toString());
                     break;
                 case UnifiedSymbolTable.VERSION_SID:
-                    if (IonType.INT.equals(t)) {
+                    if (t == IonType.INT) {
                         version = ionRep.intValue();
                     }
-                    else throw new IonException("Symbol Table Import Version is not an int, it's a "+t.toString());
                     break;
                 case UnifiedSymbolTable.MAX_ID_SID:
-                    if (IonType.INT.equals(t)) {
+                    if (t == IonType.INT && !ionRep.isNullValue()) {
                         maxid = ionRep.intValue();
                     }
-                    else throw new IonException("Symbol Table Import Max ID is not an int, it's a "+t.toString());
                     break;
                 default:
                     // we just ignore anything else as "open content"
@@ -895,29 +982,54 @@ public final class UnifiedSymbolTable
         }
         ionRep.stepOut();
 
-        // TODO throw if name == null
+        // TODO ignore clause if name == null
         UnifiedSymbolTable itab = null;
-        if (version != -1) {
-            itab = (UnifiedSymbolTable) catalog.getTable(name, version);
+        if (version < 1) {
+            version = 1;
         }
-        else {
-            itab = (UnifiedSymbolTable) catalog.getTable(name);
-        }
-        if (itab == null) {
-            throw new IonException("Import Symbol Table not found: "
-                                   + Text.printString(name)
-                                   + ( (version == -1) ? "" : " version: "+version)
-            );
-        }
-        if (version != itab.getVersion() && maxid == -1) {
+
+        itab = (UnifiedSymbolTable) catalog.getTable(name, version);
+        if ((itab == null || version != itab.getVersion())
+            && maxid < 0)
+        {
             String message =
-                "Missing max_id on import of shared table "
+                "Import of shared table "
                 + Text.printString(name)
-                + " but exact match was not found in catalog (found version "
-                + itab.getVersion() + ").";
+                + " is missing a max_id field, but an exact match was not"
+                + " found in the catalog";
+            if (itab != null) {
+                message += " (found version " + itab.getVersion() + ")";
+            }
+            // TODO custom exception
             throw new IonException(message);
         }
-        addImportedTable(itab, (maxid == -1) ? itab.getMaxId() : maxid);
+//        else {
+//            itab = (UnifiedSymbolTable) catalog.getTable(name);
+//        }
+
+        if (itab == null) {
+            assert maxid >= 0;
+
+            // Construct dummy table with max_id undefined symbols
+            itab = new UnifiedSymbolTable();
+            itab._max_id = maxid;
+            itab.share(name, version);
+
+//            throw new IonException("Import Symbol Table not found: "
+//                                   + Text.printString(name)
+//                                   + ( (version == -1) ? "" : " version: "+version)
+//            );
+        }
+
+//        if (version != itab.getVersion() && maxid == -1) {
+//            String message =
+//                "Missing max_id on import of shared table "
+//                + Text.printString(name)
+//                + " but exact match was not found in catalog (found version "
+//                + itab.getVersion() + ").";
+//            throw new IonException(message);
+//        }
+        addImportedTable(itab, /*(maxid < 0) ? itab.getMaxId() :*/ maxid);
     }
 
 

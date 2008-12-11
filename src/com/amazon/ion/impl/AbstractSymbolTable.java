@@ -4,12 +4,12 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonException;
-import com.amazon.ion.IonInt;
+import static com.amazon.ion.SystemSymbolTable.ION_SHARED_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
+
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonText;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
@@ -260,37 +260,16 @@ public abstract class AbstractSymbolTable
      */
     public static SymbolTableType getSymbolTableType(IonValue candidateTable)
     {
-    	SymbolTableType type = SymbolTableType.INVALID;
-
-    	if ((candidateTable instanceof IonStruct)
-    	 && (candidateTable.hasTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE))
-    	) {
-			IonStruct struct = (IonStruct)candidateTable;
-			IonValue  ionname = struct.get(SystemSymbolTable.NAME);
-			IonValue version = struct.get(SystemSymbolTable.VERSION);
-			if (ionname == null) {
-				if (version != null) {
-					throw new IonException("invalid local symbol table, version is not allowed");
-				}
-				type = SymbolTableType.LOCAL;
-			}
-			else {
-				if (!(ionname instanceof IonString)
-				 || (ionname.isNullValue())
-				 || (version != null && !(version instanceof IonInt))
-				) {
-					throw new IonException("invalid symbol table, the name field must be a string value and version must be an int");
-				}
-				String name = ((IonText)ionname).stringValue();
-				if (name.equals(SystemSymbolTable.ION_1_0)) { // FIXME wrong name
-					type = SymbolTableType.SYSTEM;
-				}
-				else {
-					type = SymbolTableType.SHARED;
-				}
-			}
-    	}
-
-    	return type;
+        if (candidateTable instanceof IonStruct) {
+            if (candidateTable.hasTypeAnnotation(ION_SYMBOL_TABLE))
+            {
+                return SymbolTableType.LOCAL;
+            }
+            if (candidateTable.hasTypeAnnotation(ION_SHARED_SYMBOL_TABLE))
+            {
+                return SymbolTableType.SHARED;
+            }
+        }
+        return SymbolTableType.INVALID;
     }
 }

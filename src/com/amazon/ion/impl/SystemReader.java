@@ -259,7 +259,7 @@ public class SystemReader
             // sync with the binary.  That's okay, though: if the bytes are
             // requested it will be updated.
 
-            IonValueImpl localsym = (IonValueImpl)newLocalSymbtab.getIonRepresentation();
+            IonValue localsym = newLocalSymbtab.getIonRepresentation();
             assert localsym.getSymbolTable() == null || localsym.getSymbolTable().getSystemSymbolTable() == _system.getSystemSymbolTable();
             assert _system.getSystemSymbolTable() == newLocalSymbtab.getSystemSymbolTable();
             // _curr.setSymbolTable(newLocalSymbtab);  // the symbol table of a symbol table struct is itself

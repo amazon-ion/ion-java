@@ -88,7 +88,7 @@ public class AllTests
 
         // FIXME re-enable SymbolTableTest
         // 2008-11-04 Disabled to do beta release of streaming APIs
-        if (false) {
+        if (true) {
             suite.addTestSuite(SymbolTableTest.class);
         }
 

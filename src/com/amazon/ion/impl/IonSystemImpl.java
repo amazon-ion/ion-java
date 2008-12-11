@@ -127,6 +127,14 @@ public class IonSystemImpl
     }
 
 
+    public UnifiedSymbolTable newSharedSymbolTable(IonStruct serialized)
+    {
+        UnifiedSymbolTable st = new UnifiedSymbolTable(serialized);
+//      st.setSystem(this);
+        return st;
+    }
+
+
     public UnifiedSymbolTable newSharedSymbolTable(SymbolTable symbols,
                                                    String name,
                                                    int version)
@@ -464,7 +472,7 @@ public class IonSystemImpl
             if (AbstractSymbolTable.getSymbolTableType(value).equals(SymbolTableType.LOCAL))
             //if (value.hasTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE)) // cas 25 apr 2008 was: ION_1_0
             {
-                symtab = new UnifiedSymbolTable(mySystemSymbols, // FIXME wrong symtab
+                symtab = new UnifiedSymbolTable(value.getSymbolTable().getSystemSymbolTable(),//mySystemSymbols, // FIXME wrong symtab
                                                 (IonStruct) value,
                                                 catalog);
             }
