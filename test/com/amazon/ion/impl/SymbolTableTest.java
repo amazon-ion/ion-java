@@ -48,22 +48,6 @@ public class SymbolTableTest
     public final static int IMPORTED_3_MAX_ID = 5;
 
 
-    public SymbolTable loadSharedSymtab(String serializedSymbolTable)
-    {
-        String text = "$ion_1_0 " + serializedSymbolTable;
-        IonStruct st = (IonStruct) oneValue(text);
-        SymbolTable shared = system().newSharedSymbolTable(st);
-        assertTrue(shared.isSharedTable());
-        return shared;
-    }
-
-    public SymbolTable registerSharedSymtab(String serializedSymbolTable)
-    {
-        SymbolTable shared = loadSharedSymtab(serializedSymbolTable);
-        system().getCatalog().putTable(shared);
-        return shared;
-    }
-
     public SymbolTable registerImportedV1()
     {
         String importingText =
@@ -75,12 +59,9 @@ public class SymbolTableTest
         SymbolTable shared = registerSharedSymtab(importingText);
         assertEquals(IMPORTED_1_MAX_ID, shared.getMaxId());
 
-//        system.getCatalog().putTable(shared);
-
         SymbolTable importedTable =
             system().getCatalog().getTable("imported", 1);
         assertSame(shared, importedTable);
-        assertEquals(IMPORTED_1_MAX_ID, importedTable.getMaxId());
 
         return importedTable;
     }
@@ -89,8 +70,8 @@ public class SymbolTableTest
     {
         IonSystem system = system();
         String importingText =
-            "$ion_1_0\n" +
-            "$ion_symbol_table::{" +
+            SharedSymbolTablePrefix +
+            "{" +
             "  name:'''imported''', version:2," +
             "  symbols:{" +
             "    $1:'''imported 1'''," +
@@ -98,13 +79,13 @@ public class SymbolTableTest
             "    $3:'''fred3'''," +
             "    $4:'''fred4'''," +
             "  }" +
-            "}\n" +
-            "null";
-        loader().load(importingText);
+            "}";
+        SymbolTable shared = registerSharedSymtab(importingText);
+        assertEquals(IMPORTED_2_MAX_ID, shared.getMaxId());
 
         SymbolTable importedTable =
             system.getCatalog().getTable("imported", 2);
-        assertEquals(IMPORTED_2_MAX_ID, importedTable.getMaxId());
+        assertSame(shared, importedTable);
 
         return importedTable;
     }
@@ -113,8 +94,8 @@ public class SymbolTableTest
     {
         IonSystem system = system();
         String importingText =
-            "$ion_1_0\n" +
-            "$ion_symbol_table::{" +
+            SharedSymbolTablePrefix +
+            "{" +
             "  name:'''imported''', version:3," +
             "  symbols:{" +
             "    $1:'''imported 1'''," +
@@ -123,13 +104,13 @@ public class SymbolTableTest
             "    $4:'''fred4'''," +
             "    $5:'''fred5'''," +
             "  }" +
-            "}\n" +
-            "null";
-        oneValue(importingText);
+            "}";
+        SymbolTable shared = registerSharedSymtab(importingText);
+        assertEquals(IMPORTED_3_MAX_ID, shared.getMaxId());
 
         SymbolTable importedTable =
             system.getCatalog().getTable("imported", 3);
-        assertEquals(IMPORTED_3_MAX_ID, importedTable.getMaxId());
+        assertSame(shared, importedTable);
 
         return importedTable;
     }
@@ -814,38 +795,38 @@ public class SymbolTableTest
 
     public void XXXtestKimSymbols() throws Exception
     {
-//    	File input = new File("c:\\data\\samples\\kim.10n");
-//    	File symbols = new File("c:\\data\\samples\\kim_symbols.ion");
-//    	IonDatagram dg = this.mySystem.getLoader().load(symbols);
-    	SymbolTable symtab = mySystem.getCatalog().getTable("ims.item");
-    	IonStruct   str = symtab.getIonRepresentation();
+//        File input = new File("c:\\data\\samples\\kim.10n");
+//        File symbols = new File("c:\\data\\samples\\kim_symbols.ion");
+//        IonDatagram dg = this.mySystem.getLoader().load(symbols);
+        SymbolTable symtab = mySystem.getCatalog().getTable("ims.item");
+        IonStruct   str = symtab.getIonRepresentation();
 
-    	UnifiedSymbolTable ust = new UnifiedSymbolTable(UnifiedSymbolTable.getSystemSymbolTableInstance());
+        UnifiedSymbolTable ust = new UnifiedSymbolTable(UnifiedSymbolTable.getSystemSymbolTableInstance());
 
-    	IonStruct syms = (IonStruct)str.get("symbols");
+        IonStruct syms = (IonStruct)str.get("symbols");
 
-    	for (IonValue v : syms) {
-    		String name  = ((IonText)v).stringValue();
-    		int    id    = v.getFieldId();
-    		int    newid = ust.addSymbol(name);
-    		assertTrue(id == newid);
-    	}
-    	ust.share("ims.item", 1);
+        for (IonValue v : syms) {
+            String name  = ((IonText)v).stringValue();
+            int    id    = v.getFieldId();
+            int    newid = ust.addSymbol(name);
+            assertTrue(id == newid);
+        }
+        ust.share("ims.item", 1);
 
-    	IonCatalog catalog = mySystem.getCatalog();
-    	catalog.putTable(ust);
+        IonCatalog catalog = mySystem.getCatalog();
+        catalog.putTable(ust);
 
-    	IonTextWriter w = new IonTextWriter();
+        IonTextWriter w = new IonTextWriter();
 
-    	byte[] buf = openFileForBuffer("c:\\data\\samples\\kim.10n");
-    	IonReader r = mySystem.newReader(buf);
+        byte[] buf = openFileForBuffer("c:\\data\\samples\\kim.10n");
+        IonReader r = mySystem.newReader(buf);
 
-    	w.writeValues(r);
+        w.writeValues(r);
 
-    	byte[] output = w.getBytes();
+        byte[] output = w.getBytes();
 
-    	String s_output = new String(output, "UTF-8");
-    	System.out.println(s_output);
+        String s_output = new String(output, "UTF-8");
+        System.out.println(s_output);
     }
 
 
