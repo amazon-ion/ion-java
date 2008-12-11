@@ -147,6 +147,9 @@ public interface IonSystem
     /**
      * Creates an iterator over a stream of Ion text data.
      * Values returned by the iterator have no container.
+     * <p>
+     * This API will automatically consume Ion system IDs and local symbol
+     * tables; they will not be returned by the iterator.
      *
      * @param ionText a stream of Ion text data.  The caller is responsible for
      * closing the Reader after iteration is complete.
@@ -161,6 +164,9 @@ public interface IonSystem
     /**
      * Creates an iterator over a string containing Ion text data.
      * Values returned by the iterator have no container.
+     * <p>
+     * This API will automatically consume Ion system IDs and local symbol
+     * tables; they will not be returned by the iterator.
      *
      * @param ionText must not be null.
      *
@@ -174,6 +180,9 @@ public interface IonSystem
     /**
      * Creates an iterator over Ion data.
      * Values returned by the iterator have no container.
+     * <p>
+     * This API will automatically consume Ion system IDs and local symbol
+     * tables; they will not be returned by the iterator.
      *
      * @param ionData may be either Ion binary data or (UTF-8) Ion text.
      * <em>This method assumes ownership of the array</em> and may modify it at
@@ -219,7 +228,6 @@ public interface IonSystem
     // IonReader creation
 
 //  public IonReader newReader(Reader ionText); // TODO add newReader(Reader)
-//  public IonReader newReader(InputStream); // TODO add newReader(InputStream)
 
 
     /**
