@@ -1,0 +1,110 @@
+/*
+ * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
+ */
+
+package com.amazon.ion;
+
+
+
+/**
+ *
+ */
+public abstract class SystemProcessingTestCase
+    extends IonTestCase
+{
+
+    protected abstract void startIteration(String text)
+        throws Exception;
+
+    protected abstract void nextUserValue()
+        throws Exception;
+
+    protected abstract SymbolTable currentSymtab()
+        throws Exception;
+
+    protected abstract void checkSymbol(String expected)
+        throws Exception;
+
+    protected abstract void checkSymbol(String expected, int expectedSid)
+        throws Exception;
+
+    protected abstract void checkInt(long expected)
+        throws Exception;
+
+
+    //=========================================================================
+
+    public void testLocalTableResetting()
+        throws Exception
+    {
+        String text = "bar foo $ion_1_0 1 bar foo";
+
+        startIteration(text);
+
+        nextUserValue();
+        checkSymbol("bar");
+
+        SymbolTable table1 = currentSymtab();
+        checkLocalTable(table1);
+
+        nextUserValue();
+        checkSymbol("foo");
+        assertSame(table1, currentSymtab());
+
+        // Symbol table changes here
+
+        nextUserValue();
+        checkInt(1);
+
+        nextUserValue();
+        checkSymbol("bar");
+
+        SymbolTable table2 = currentSymtab();
+        checkLocalTable(table2);
+        assertNotSame(table1, table2);
+
+        nextUserValue();
+        checkSymbol("foo");
+        assertSame(table2, currentSymtab());
+    }
+
+    public void testLocalTableReplacement()
+        throws Exception
+    {
+        String text =
+            "$ion_symbol_table::{" +
+            "  symbols:{ $100:\"foo\"," +
+            "            $101:\"bar\"}," +
+            "}\n" +
+            "bar foo\n" +
+            "$ion_symbol_table::{" +
+            "  symbols:{ $13:\"foo\"}," +
+            "}\n" +
+            "bar foo";
+
+        startIteration(text);
+
+        nextUserValue();
+        checkSymbol("bar", 101);
+
+        SymbolTable table1 = currentSymtab();
+        checkLocalTable(table1);
+
+        nextUserValue();
+        checkSymbol("foo", 100);
+
+        nextUserValue();
+        checkSymbol("bar", 14);
+
+        SymbolTable table2 = currentSymtab();
+        checkLocalTable(table2);
+        assertNotSame(table1, table2);
+        assertEquals(14, table2.getMaxId());
+
+        nextUserValue();
+        checkSymbol("foo", 13);
+        assertEquals(14, table2.getMaxId());
+        assertSame(table2, currentSymtab());
+    }
+
+}

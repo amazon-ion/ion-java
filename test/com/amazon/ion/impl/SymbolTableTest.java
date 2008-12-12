@@ -16,7 +16,6 @@ import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
-import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonStruct;
@@ -160,130 +159,6 @@ public class SymbolTableTest
 
         assertEquals(-1, symbolTable.findSymbol("not there"));
         assertEquals("$33", symbolTable.findSymbol(33));
-    }
-
-
-    public void testLocalTableReplacement()
-    {
-        String text =
-            LocalSymbolTablePrefix +
-            "{" +
-            "  symbols:{ $100:\"foo\"," +
-            "            $101:\"bar\"}," +
-            "}\n" +
-            "bar foo\n" +
-            LocalSymbolTablePrefix +
-            "{" +
-            "  symbols:{ $13:\"foo\"}," +
-            "}\n" +
-            "bar foo";
-
-//        IonReader scanner = system().newReader(text);
-        Iterator<IonValue> scanner = system().iterate(text);
-
-        IonValue value = scanner.next();
-        checkSymbol("bar", 101, value);
-
-        SymbolTable table1 = //scanner.getLocalSymbolTable();
-            value.getSymbolTable();
-        checkLocalTable(table1);
-
-        value = scanner.next();
-        checkSymbol("foo", 100, value);
-
-        value = scanner.next();
-        checkSymbol("bar", 14, value);
-
-        SymbolTable table2 = //scanner.getLocalSymbolTable();
-            value.getSymbolTable();
-        checkLocalTable(table2);
-        assertNotSame(table1, table2);
-        assertEquals(14, table2.getMaxId());
-
-        value = scanner.next();
-        checkSymbol("foo", 13, value);
-        assertEquals(14, table2.getMaxId());
-
-//        assertSame(table2, scanner.getLocalSymbolTable());
-    }
-
-
-    public void testLocalTableResetting()
-        throws Exception
-    {
-        String text =
-            LocalSymbolTablePrefix +
-            "{" +
-            "  symbols:{ $100:\"foo\"," +
-            "            $101:\"bar\"}," +
-            "}\n" +
-            "bar foo\n" +
-            "$ion_1_0\n" +
-            "1 bar foo";
-
-//        IonReader scanner = system().newReader(text);
-//        testLocalTableResetting(scanner);
-
-        Iterator<IonValue> iterator = system().iterate(text);
-        testLocalTableResetting(iterator);
-
-        IonLoader loader = loader();
-        IonDatagram datagram = loader.load(text);
-
-        testLocalTableResetting(datagram.iterator());
-
-        // FIXME this fails because the (second) local table isn't encoded.
-        datagram = loader.load(datagram.toBytes());
-        testLocalTableResetting(datagram.iterator());
-    }
-
-
-    public void testLocalTableResetting(Iterator<IonValue> values)
-    {
-//        IonReader scanner = ((values instanceof IonReader)
-//                              ? (IonReader) values
-//                              : null);
-
-        IonValue value = values.next();
-        checkSymbol("bar", 101, value);
-
-        SymbolTable table1 = value.getSymbolTable();
-        checkLocalTable(table1);
-//        if (scanner != null) {
-//            assertSame(table1, scanner.getLocalSymbolTable());
-//        }
-
-        value = values.next();
-        checkSymbol("foo", 100, value);
-        assertSame(table1, value.getSymbolTable());
-//        if (scanner != null) {
-//            assertSame(table1, scanner.getLocalSymbolTable());
-//        }
-
-        // Symbol table changes here
-
-        // Make sure the symtab doesn't change until we call next()
-//        assertTrue(values.hasNext());
-//        if (scanner != null) {
-//            assertSame(table1, scanner.getLocalSymbolTable());
-//        }
-
-        value = values.next();
-        checkInt(1, value);
-
-        value = values.next();
-        checkSymbol("bar", value);
-
-        SymbolTable table2 = value.getSymbolTable();
-        checkLocalTable(table2);
-        assertNotSame(table1, table2);
-//        assertEquals(14, table2.getMaxId());  // We don't know the new sid
-
-        value = values.next();
-        checkSymbol("foo", value);
-//        assertEquals(14, table2.getMaxId());
-
-        assertSame(table2, value.getSymbolTable());
     }
 
 
