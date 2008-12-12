@@ -489,17 +489,9 @@ public final class IonBinaryReader
 
             while (_reader.position() < aend && !is_symbol_table) {
                 int a = _reader.readVarUInt();
-                switch (a) {
-                case SystemSymbolTable.ION_SYMBOL_TABLE_SID:
-                // cas 25 apr 2008: removed case SystemSymbolTable.ION_1_0_SID:
-                    is_symbol_table = loadSymbolTable(a, original_position, aend);
-                    break;
-                case SystemSymbolTable.ION_EMBEDDED_VALUE_SID:
-                    // TODO - we should do embedded value processing here
-                    // like: is_embedded_value = true;
-                    break;
-                default:
-                    break;
+                if (a == SystemSymbolTable.ION_SYMBOL_TABLE_SID) {
+                    is_symbol_table =
+                        loadLocalSymbolTable(a, original_position, aend);
                 }
             }
         }
@@ -521,7 +513,9 @@ public final class IonBinaryReader
         return typedesc;
     }
 
-    boolean loadSymbolTable(int annotationid, int original_start, int contents_start) throws IOException
+    boolean loadLocalSymbolTable(int annotationid, int original_start,
+                                 int contents_start)
+        throws IOException
     {
         boolean is_symbol_table = false;
 
@@ -547,7 +541,8 @@ public final class IonBinaryReader
             }
             // TODO: this should get it's system symbol table somewhere else
             // like passed in from the user or deduced from the version stamp
-            SymbolTable systemSymbols = UnifiedSymbolTable.getSystemSymbolTableInstance();
+            SymbolTable systemSymbols = //UnifiedSymbolTable.getSystemSymbolTableInstance();
+                _current_symtab.getSystemSymbolTable();
             UnifiedSymbolTable local =
                 new UnifiedSymbolTable(systemSymbols, this, _catalog);
 
@@ -556,11 +551,12 @@ public final class IonBinaryReader
             // we've read it, it must be a symbol table
             is_symbol_table = true;
 
-            if (local.isLocalTable()) {
+            assert local.isLocalTable();
+            if (local.isLocalTable()) {  // TODO cleanup
                 this._current_symtab = local;
             }
             else {
-                this._catalog.putTable(local);
+                this._catalog.putTable(local);  // FIXME don't do this
             }
             this._parent_tid = prev_parent_tid;
             this._local_end  = prev_end;
@@ -710,14 +706,14 @@ public final class IonBinaryReader
     public void resetSymbolTable()
     {
         // TODO can this just use isSystemTable() ?
-    	if ( _current_symtab == null
-    	 || !_current_symtab.isSharedTable()
-    	 ||  _current_symtab.getMaxId() != UnifiedSymbolTable.getSystemSymbolTableInstance().getMaxId()
-    	) {
-    		// we only need to "reset" the symbol table if it isn't
-    		// the system symbol table already
-    		_current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
-    	}
+        if ( _current_symtab == null
+        || !_current_symtab.isSharedTable()
+        ||  _current_symtab.getMaxId() != UnifiedSymbolTable.getSystemSymbolTableInstance().getMaxId()
+        ) {
+            // we only need to "reset" the symbol table if it isn't
+            // the system symbol table already
+            _current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
+        }
     }
 
 
@@ -1175,3 +1171,4 @@ public final class IonBinaryReader
         return readlen;
     }
 }
+

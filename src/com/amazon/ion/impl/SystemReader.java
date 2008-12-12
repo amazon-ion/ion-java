@@ -124,14 +124,14 @@ public class SystemReader
 
     // TODO: replace this with a better option, this shouldn't be a
     //       table anyone could edit, and we should have a way to
-    // 		 tell that it's a system symbol table and not just an
-    //		 empty local symbol table.
+    //          tell that it's a system symbol table and not just an
+    //         empty local symbol table.
     static SymbolTable getSystemSymbolTableAsLocal(IonSystemImpl system) {
-    	SymbolTable lst;
+        SymbolTable lst;
 
-    	lst = system.newLocalSymbolTable();
+        lst = system.newLocalSymbolTable();
 
-    	return lst;
+        return lst;
     }
 
     public IonSystemImpl getSystem() {
@@ -254,29 +254,30 @@ public class SystemReader
 
         if (newLocalSymbtab != null)
         {
+            assert newLocalSymbtab.isLocalTable();
+            assert _currentSymbolTable.getSystemSymbolTable() == newLocalSymbtab.getSystemSymbolTable();
+
             // Note that we may be replacing the encoded systemId symbol
             // with a struct, in which case the tree view will be out of
             // sync with the binary.  That's okay, though: if the bytes are
             // requested it will be updated.
 
             IonValue localsym = newLocalSymbtab.getIonRepresentation();
-            assert localsym.getSymbolTable() == null || localsym.getSymbolTable().getSystemSymbolTable() == _system.getSystemSymbolTable();
-            assert _system.getSystemSymbolTable() == newLocalSymbtab.getSystemSymbolTable();
+            assert localsym.getSymbolTable() == null
+                || localsym.getSymbolTable().getSystemSymbolTable() == _system.getSystemSymbolTable();
             // _curr.setSymbolTable(newLocalSymbtab);  // the symbol table of a symbol table struct is itself
             _currentSymbolTable = newLocalSymbtab;
             _currentIsHidden = true;
         }
-        // $ion_symbol_table
+        // $ion_shared_symbol_table
         else if (_system.valueIsStaticSymbolTable(_curr))
         {
             SymbolTable newTable =
-                new UnifiedSymbolTable((UnifiedSymbolTable) _currentSymbolTable.getSystemSymbolTable(),
-                                       (IonStruct) _curr,
-                                       (IonCatalog) null);
-            _catalog.putTable(newTable);
+                new UnifiedSymbolTable((IonStruct) _curr);
+            _catalog.putTable(newTable);  // FIXME not any more
 
             // FIXME: really?  I don't think shared tables need to be (or
-            //		  should be hidden.  They should be user values.
+            //          should be hidden.  They should be user values.
             _currentIsHidden = true;
         }
         else {

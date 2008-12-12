@@ -34,14 +34,14 @@ public class SimpleCatalogTest
 
 
         String t1Text =
-            "$ion_symbol_table::{" +
+            "$ion_shared_symbol_table::{" +
             "  name:'''T''', version:1," +
             "  symbols:{" +
             "    $1:'''yes'''," +
             "    $2:'''no'''," +
             "  }" +
             "}";
-        loader().load(t1Text);
+        registerSharedSymtab(t1Text);
 
         SymbolTable t1 = cat.getTable("T", 1);
         assertEquals(1, t1.getVersion());
@@ -52,7 +52,7 @@ public class SimpleCatalogTest
 
 
         String t2Text =
-            "$ion_symbol_table::{" +
+            "$ion_shared_symbol_table::{" +
             "  name:'''T''', version:2," +
             "  symbols:{" +
             "    $1:'''yes'''," +
@@ -60,7 +60,7 @@ public class SimpleCatalogTest
             "    $3:'''maybe'''," +
             "  }" +
             "}";
-        loader().load(t2Text);
+        registerSharedSymtab(t2Text);
 
         SymbolTable t2 = cat.getTable("T", 2);
         assertEquals(2, t2.getVersion());

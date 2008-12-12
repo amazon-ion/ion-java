@@ -370,11 +370,11 @@ public final class IonTextReader
                 if (_annotation_count > 0) {
                     // TODO - this should be done with flags set while we're
                     // recognizing the annotations below (in the fullness of time)
-                    if (hasAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE)) { // cas 25 apr 2008 was: ION_1_0
+                    if (hasAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE)) {
 
                         if (_debug_all_system) this.save_state();
 
-                        SymbolTable local = loadSymbolTable();
+                        SymbolTable local = loadLocalSymbolTable();
                         if (local != null) {
                             _current_symtab = local;
                             skip_value = true;
@@ -382,38 +382,6 @@ public final class IonTextReader
 
                         if (_debug_all_system) this.restore_state();
 
-                    }
-                    else if (_catalog != null && hasAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE)) {
-                        SymbolTable shared = loadSymbolTable();
-                        if (shared != null) {
-                            _catalog.putTable(shared);
-                            // TODO: don't we want to return shared symbol tables?
-                            skip_value = true;
-                        }
-                    }
-                }
-                break;
-            case SEXP:
-                if (_annotation_count > 0) {
-                    if (hasAnnotation(UnifiedSymbolTable.ION_EMBEDDED_VALUE)) {
-                    // TODO: WTF? why are there embedded values in a text input stream
-                    //       fill this in later, especially at the top, datagram, level
-                    }
-                }
-                break;
-            default:
-                break;
-            }
-        }
-        else {
-            // down in the value stack we just look for an embedded value
-            // otherwise we don't care about anything
-            switch (_lookahead_type) {
-            case SEXP:
-                if (_annotation_count > 0) {
-                    if (hasAnnotation(UnifiedSymbolTable.ION_EMBEDDED_VALUE)) {
-                        // TODO: WTF? why are there embedded values in a text input stream
-                        //       fill this in later
                     }
                 }
                 break;
@@ -518,9 +486,11 @@ public final class IonTextReader
         throw new IonParsingException("syntax error. parser in state " + _state.toString()+ _scanner.input_position());
     }
 
-    protected SymbolTable loadSymbolTable() {
+    protected SymbolTable loadLocalSymbolTable() {
+        // TODO do we really want only the system symtab in context?
         SymbolTable temp = _current_symtab;
-        _current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
+        _current_symtab = //UnifiedSymbolTable.getSystemSymbolTableInstance();
+            _current_symtab.getSystemSymbolTable();
         this.stepIn();
         UnifiedSymbolTable table =
             new UnifiedSymbolTable(_current_symtab, this, _catalog);

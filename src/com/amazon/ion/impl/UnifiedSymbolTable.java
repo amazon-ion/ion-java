@@ -4,6 +4,9 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.SymbolTableType.LOCAL;
+import static com.amazon.ion.impl.SymbolTableType.SHARED;
+
 import com.amazon.ion.InvalidSystemSymbolException;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
@@ -194,6 +197,7 @@ public final class UnifiedSymbolTable
     }
 
     /**
+     * Constructs an empty local symbol table.
      *
      * @param systemSymbols must be a system symbol table.
      */
@@ -211,7 +215,13 @@ public final class UnifiedSymbolTable
     }
 
 
-    // FIXME this should be *either* local or shared.
+    /**
+     * Constructs a local symbol table.
+     *
+     * @param systemSymbols must be a system symbol table.
+     * @param ionRep
+     * @param catalog
+     */
     public UnifiedSymbolTable(SymbolTable systemSymbols,
                               IonStruct ionRep,
                               IonCatalog catalog)
@@ -221,7 +231,7 @@ public final class UnifiedSymbolTable
         IonReader reader = new IonTreeReader(ionRep);
 //        reader.next();
 //        reader.stepInto();
-        readIonRep(reader, catalog);
+        readIonRep(SymbolTableType.LOCAL, reader, catalog);
 
         _ion_rep = (IonStructImpl) ionRep;
     }
@@ -237,7 +247,7 @@ public final class UnifiedSymbolTable
         IonReader reader = new IonTreeReader(ionRep);
 //        reader.next();
 //        reader.stepInto();
-        readIonRep(reader, null);
+        readIonRep(SymbolTableType.SHARED, reader, null);
 
         if (! _is_locked) {
             // No name!
@@ -249,6 +259,7 @@ public final class UnifiedSymbolTable
 
 
     /**
+     * Constructs a local symbol table.
      * @param reader must be positioned on the first field of the struct.
      */
     public UnifiedSymbolTable(SymbolTable systemSymbols,
@@ -256,7 +267,7 @@ public final class UnifiedSymbolTable
                               IonCatalog catalog)
     {
         this(systemSymbols);
-        readIonRep(reader, catalog);
+        readIonRep(SymbolTableType.LOCAL, reader, catalog);
     }
 
     /**
@@ -806,6 +817,7 @@ public final class UnifiedSymbolTable
             if (syms == null || syms.getType() != IonType.STRUCT) {
                 // TODO handle list-based representation
                 syms = system.newEmptyStruct();
+                _ion_rep.put(UnifiedSymbolTable.SYMBOLS, syms);
             }
             _ion_symbols_rep = (IonStruct) syms;
         }
@@ -814,13 +826,14 @@ public final class UnifiedSymbolTable
     }
 
 
-    private void readIonRep(IonReader reader, IonCatalog catalog)
+    private void readIonRep(SymbolTableType symtabType,
+                            IonReader reader,
+                            IonCatalog catalog)
     {
         assert reader.isInStruct();
 
         String name = null;
         int version = 1;
-        int maxId = 0;
 
         ArrayList<Symbol> symbolsList = new ArrayList<Symbol>();
 
@@ -832,16 +845,12 @@ public final class UnifiedSymbolTable
             symtabFields:
             switch (reader.getFieldId()) {
             case UnifiedSymbolTable.VERSION_SID:
-                if (fieldType == IonType.INT) {
+                if (symtabType == SHARED && fieldType == IonType.INT) {
                     version = reader.intValue();
                 }
                 break;
-            case UnifiedSymbolTable.MAX_ID_SID:  // FIXME check type
-                maxId = reader.intValue();
-                setMaxId(maxId);  // FIXME this does nothing
-                break;
             case UnifiedSymbolTable.NAME_SID:
-                if (fieldType == IonType.STRING) {
+                if (symtabType == SHARED && fieldType == IonType.STRING) {
                     name = reader.stringValue();
                 }
                 break;
@@ -881,14 +890,16 @@ public final class UnifiedSymbolTable
                 reader.stepOut();
                 break;
             case UnifiedSymbolTable.IMPORTS_SID:
-                // TODO avoid doing imports if this is a shared table
-                readImportList(reader, catalog);
+                if (symtabType == LOCAL) {
+                    readImportList(reader, catalog);
+                }
                 break;
             default:
                 break;
             }
         }
 
+        // FIXME shared symtab with no name
         // set name/version and lock
         if (name != null) {
             // This is a shared table. Forget any system or imported symbols.
@@ -929,6 +940,7 @@ public final class UnifiedSymbolTable
 
     private void readImportList(IonReader reader, IonCatalog catalog)
     {
+        // FIXME gracefully handle bad data
         assert (reader.getFieldId() == SystemSymbolTable.IMPORTS_SID);
         assert (reader.getType().equals(IonType.LIST));
 
@@ -995,7 +1007,7 @@ public final class UnifiedSymbolTable
             String message =
                 "Import of shared table "
                 + Text.printString(name)
-                + " is missing a max_id field, but an exact match was not"
+                + " lacks a valid max_id field, but an exact match was not"
                 + " found in the catalog";
             if (itab != null) {
                 message += " (found version " + itab.getVersion() + ")";
