@@ -28,6 +28,27 @@ public class IteratorSystemProcessingTest
     }
 
     @Override
+    protected void nextUserValue() throws Exception
+    {
+        myCurrentValue = myIterator.next();
+    }
+
+    @Override
+    protected void checkAnnotation(String expected)
+    {
+        if (! myCurrentValue.hasTypeAnnotation(expected))
+        {
+            fail("Didn't find expected annotation: " + expected);
+        }
+    }
+
+    @Override
+    protected void checkType(IonType expected)
+    {
+        assertSame(expected, myCurrentValue.getType());
+    }
+
+    @Override
     protected void checkInt(long expected) throws Exception
     {
         checkInt(expected, myCurrentValue);
@@ -51,11 +72,4 @@ public class IteratorSystemProcessingTest
     {
         return myCurrentValue.getSymbolTable();
     }
-
-    @Override
-    protected void nextUserValue() throws Exception
-    {
-        myCurrentValue = myIterator.next();
-    }
-
 }

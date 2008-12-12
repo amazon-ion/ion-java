@@ -8,7 +8,6 @@ import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.IonBinary.BufferManager;
@@ -267,17 +266,6 @@ public class SystemReader
                 || localsym.getSymbolTable().getSystemSymbolTable() == _system.getSystemSymbolTable();
             // _curr.setSymbolTable(newLocalSymbtab);  // the symbol table of a symbol table struct is itself
             _currentSymbolTable = newLocalSymbtab;
-            _currentIsHidden = true;
-        }
-        // $ion_shared_symbol_table
-        else if (_system.valueIsStaticSymbolTable(_curr))
-        {
-            SymbolTable newTable =
-                new UnifiedSymbolTable((IonStruct) _curr);
-            _catalog.putTable(newTable);  // FIXME not any more
-
-            // FIXME: really?  I don't think shared tables need to be (or
-            //          should be hidden.  They should be user values.
             _currentIsHidden = true;
         }
         else {

@@ -36,6 +36,22 @@ public abstract class ReaderSystemProcessingTestCase
         return myReader.getSymbolTable();
     }
 
+    @Override
+    protected void checkAnnotation(String expected)
+    {
+        String[] typeAnnotations = myReader.getTypeAnnotations();
+        for (int i = 0; i < typeAnnotations.length; i++)
+        {
+            if (typeAnnotations[i].equals(expected)) return;
+        }
+        fail("Didn't find expected annotation: " + expected);
+    }
+
+    @Override
+    protected void checkType(IonType expected)
+    {
+        assertSame(expected, myReader.getType());
+    }
 
     @Override
     protected void checkInt(long expected) throws Exception

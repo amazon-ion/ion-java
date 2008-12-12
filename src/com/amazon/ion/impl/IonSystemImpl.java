@@ -4,6 +4,7 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SystemSymbolTable.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
 
 import com.amazon.ion.ContainedValueException;
@@ -484,17 +485,10 @@ public class IonSystemImpl
                 && value.hasTypeAnnotation(ION_SYMBOL_TABLE));
     }
 
-    public final boolean valueIsStaticSymbolTable(IonValue value)
+    public final boolean valueIsSharedSymbolTable(IonValue value)
     {
-        // FIXME looking for wrong annotation!
-        if (value instanceof IonStruct
-            && value.hasTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE))
-        {
-            IonStruct struct = (IonStruct) value;
-            IonValue nameField = struct.get(SystemSymbolTable.NAME);
-            return (nameField != null && !nameField.isNullValue());
-        }
-        return false;
+        return (value instanceof IonStruct
+                && value.hasTypeAnnotation(ION_SHARED_SYMBOL_TABLE));
     }
 
     public final SymbolTable handleLocalSymbolTable(IonCatalog catalog,

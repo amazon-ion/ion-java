@@ -4,6 +4,8 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.impl.SymbolTableTest;
+
 
 
 /**
@@ -22,6 +24,12 @@ public abstract class SystemProcessingTestCase
     protected abstract SymbolTable currentSymtab()
         throws Exception;
 
+    protected abstract void checkAnnotation(String expected)
+        throws Exception;
+
+    protected abstract void checkType(IonType expected)
+        throws Exception;
+
     protected abstract void checkSymbol(String expected)
         throws Exception;
 
@@ -30,7 +38,6 @@ public abstract class SystemProcessingTestCase
 
     protected abstract void checkInt(long expected)
         throws Exception;
-
 
     //=========================================================================
 
@@ -107,4 +114,38 @@ public abstract class SystemProcessingTestCase
         assertSame(table2, currentSymtab());
     }
 
+
+    public void testSharedTableNotAddedToCatalog()
+        throws Exception
+    {
+        String text =
+            SystemSymbolTable.ION_1_0 + " " +
+            SymbolTableTest.IMPORTED_1_SERIALIZED +
+            " 'imported 1'";
+        assertNull(system().getCatalog().getTable("imported"));
+
+        startIteration(text);
+        nextUserValue();
+        checkType(IonType.STRUCT);
+        checkAnnotation(SystemSymbolTable.ION_SHARED_SYMBOL_TABLE);
+
+        assertNull(system().getCatalog().getTable("imported"));
+
+        nextUserValue();
+        checkSymbol("imported 1");
+    }
+
+    public void testObsoleteSharedTableFormat()
+        throws Exception
+    {
+        String text =
+            "$ion_symbol_table::{ name:'''test''', symbols:['''x'''] }" +
+            "346";
+
+        startIteration(text);
+        nextUserValue();
+        checkInt(346);
+
+        assertNull(system().getCatalog().getTable("test"));
+    }
 }

@@ -38,24 +38,26 @@ import java.util.Iterator;
 public class SymbolTableTest
     extends IonTestCase
 {
-    public final String LocalSymbolTablePrefix = ION_SYMBOL_TABLE + "::";
-    public final String SharedSymbolTablePrefix = ION_SHARED_SYMBOL_TABLE + "::";
+    public static final String LocalSymbolTablePrefix = ION_SYMBOL_TABLE + "::";
+    public static final String SharedSymbolTablePrefix = ION_SHARED_SYMBOL_TABLE + "::";
 
 
     public final static int IMPORTED_1_MAX_ID = 2;
     public final static int IMPORTED_2_MAX_ID = 4;
     public final static int IMPORTED_3_MAX_ID = 5;
 
+    public final static String IMPORTED_1_SERIALIZED =
+        SharedSymbolTablePrefix +
+        "{" +
+        "  name:'''imported''', version:1," +
+        "  symbols:['''imported 1''', '''imported 2''']" +
+        "}";
+
+
 
     public SymbolTable registerImportedV1()
     {
-        String importingText =
-            SharedSymbolTablePrefix +
-            "{" +
-            "  name:'''imported''', version:1," +
-            "  symbols:['''imported 1''', '''imported 2''']" +
-            "}";
-        SymbolTable shared = registerSharedSymtab(importingText);
+        SymbolTable shared = registerSharedSymtab(IMPORTED_1_SERIALIZED);
         assertEquals(IMPORTED_1_MAX_ID, shared.getMaxId());
 
         SymbolTable importedTable =
