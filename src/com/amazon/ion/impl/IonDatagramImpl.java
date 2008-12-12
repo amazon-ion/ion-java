@@ -8,7 +8,6 @@ import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.NullValueException;
@@ -57,6 +56,7 @@ public final class IonDatagramImpl
         BufferManager buffer = new BufferManager();
 
         try {
+            // TODO is this necessary? Should wait to see what the user does.
             buffer.writer().write(IonConstants.BINARY_VERSION_MARKER_1_0);
         }
         catch (IOException e) {
@@ -217,7 +217,6 @@ public final class IonDatagramImpl
 
         // This is only used during construction.
         _rawStream = rawStream;
-//        _system = _rawStream.getSystem();
         _buffer = _rawStream.getBuffer();
 
         // Force reading of the first element, so we get the buffer bootstrapped
@@ -233,7 +232,6 @@ public final class IonDatagramImpl
         // injecting the initial symbol table.
         try {
             materialize(); // This ends up calling doMaterializeValue below.
-            // NOT NEEDED: FIXME: place_symbol_table(rawStream.getLocalSymbolTable());  // cas
         }
         catch (IOException e) {
             throw new IonException(e);
@@ -252,30 +250,13 @@ public final class IonDatagramImpl
         return IonType.DATAGRAM;
     }
 
-    final boolean isSystemValue(IonValueImpl element) {
-        boolean is_system_value = false;
-        if (element instanceof IonSymbolImpl) {
-            IonSymbolImpl symbol = (IonSymbolImpl)element;
-            is_system_value = (symbol.isNullValue() == false)
-                    && (SystemSymbolTable.ION_1_0.equals(symbol.stringValue()));
-        }
-        else if (element._annotations != null) {
-            if (element instanceof IonStructImpl) {
-                is_system_value = element.hasTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE);
-            }
-            else if (element instanceof IonSexpImpl) {
-                is_system_value = element.hasTypeAnnotation(SystemSymbolTable.ION_EMBEDDED_VALUE);
-            }
-        }
-        return is_system_value;
-    }
+
     private IonSymbolImpl makeIonVersionMarker()
     {
-        IonSymbolImpl ivm = (IonSymbolImpl)_system.newSymbol(SystemSymbolTableImpl.ION_1_0);
+        IonSymbolImpl ivm =
+            _system.newSystemIdSymbol(SystemSymbolTable.ION_1_0);
 
-        ivm.setIsIonVersionMarker(true);
-        assert ivm.getSymbolTable() == null;
-
+        // TODO why is this needed?
         ivm._buffer = this._buffer;
 
         return ivm;
@@ -287,22 +268,28 @@ public final class IonDatagramImpl
     public void add(IonValue element)
         throws ContainedValueException, NullPointerException
     {
-        boolean isSystem = isSystemValue((IonValueImpl)element);
-        add(element, isSystem);
-    }
+        boolean isSystem = false;
+        if (_system.valueIsSystemId(element)) {
+            // Ensure systemId has proper symtab and flags
+            _system.blessSystemIdSymbol((IonSymbolImpl) element);
+            isSystem = true;
+        }
+        else {
+            isSystem = _system.valueIsLocalSymbolTable(element);
+        }
 
-    public void add(IonValue element, boolean isSystem)
-        throws ContainedValueException, NullPointerException
-    {
         int systemPos = this._contents.size();
         int userPos = isSystem ? -1 : this._userContents.size();
         try {
-        this.add( element, systemPos, userPos );
+            this.add( element, systemPos, userPos );
         } catch (IOException e) {
             throw new IonException(e);
         }
     }
 
+    /**
+     * @param userPos  if <0 then the element is a system value.
+     */
     private void add(IonValue element, int systemPos, int userPos)
         throws ContainedValueException, NullPointerException, IOException
     {
@@ -318,6 +305,7 @@ public final class IonDatagramImpl
             symtab = getCurrentSymbolTable(userPos, systemPos);
             if (symtab == null) {
                 // FIXME this uses an unpredictable system symtab
+                // TODO can we delay this until later?
                 symtab = _system.newLocalSymbolTable();
                 IonStructImpl ionsymtab = (IonStructImpl)symtab.getIonRepresentation();
                 ionsymtab.setSymbolTable(symtab);
@@ -343,18 +331,17 @@ public final class IonDatagramImpl
         // for a local symbol table, so there's no need to look
         if (systemPos > 0) {
             IonValueImpl v = (IonValueImpl)_contents.get(systemPos - 1);
-            if (v instanceof IonStructImpl
-             && v._annotations != null
-             && v.hasTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE))
+            if (_system.valueIsLocalSymbolTable(v))
             {
+                // We always inject the systemId, so we always have a system table
+                IonValue prior = _contents.get(systemPos - 2);
+                SymbolTable systemTable =
+                    prior.getSymbolTable().getSystemSymbolTable();
+
                 IonStruct symtabStruct = (IonStruct) v;
-                if (symtabStruct.get(SystemSymbolTable.NAME) == null) {
-                    // it's a local symbol table alright
-                    symtab =
-                        new UnifiedSymbolTable(_system.getSystemSymbolTable(),
-                                               symtabStruct,
-                                               _system.getCatalog());
-                }
+                symtab = new UnifiedSymbolTable(systemTable,
+                                                symtabStruct,
+                                                _system.getCatalog());
             }
             else {
                 // if the preceeding value isn't a symbol table in
@@ -613,7 +600,7 @@ public final class IonDatagramImpl
             // as we insert the first value we need to check and make sure there
             // is an IonVersionMarker in place (which is required for a datagram
             // but only if we didn't get one out of the input stream
-            if (previous_value == null && !this.isIonVersionMarkerSymbol(child)) {
+            if (previous_value == null && !_system.valueIsSystemId(child)) {
                 IonSymbolImpl ivm = this.makeIonVersionMarker();
 
                 this.addToContents(ivm);
@@ -629,9 +616,12 @@ public final class IonDatagramImpl
                 // have to add it to the system contents
                 addToContents(child);
 
-                if (this.isIonVersionMarkerSymbol(child)) {
-                    ((IonSymbolImpl)child).setIsIonVersionMarker(true);
+                if (_system.valueIsSystemId(child)) {
                     // if this was loaded by the parser it will have the wrong encoding
+
+                    _system.blessSystemIdSymbol((IonSymbolImpl) child);
+                    // FIXME now previous_symtab is incorrect
+
                     child.setDirty();
                 }
                 child._isSystemValue = true;
@@ -652,7 +642,7 @@ public final class IonDatagramImpl
 
                         // if this doesn't have an Ion Version Marker we have to add
                         // it before the symbol table
-                        if (!this.isIonVersionMarkerSymbol(previous_value)) {
+                        if (!_system.valueIsSystemId(previous_value)) {
                             IonSymbolImpl ivm = this.makeIonVersionMarker();
                             addToContents(ivm);
                         }
@@ -709,21 +699,32 @@ public final class IonDatagramImpl
                 // so here we check and if it doesn't - we fix that
                 if (_contents.size() > 0) {
                     IonValue first = _contents.get(0);
-                    if (!isIonVersionMarkerSymbol(first)) {
+                    if (!_system.valueIsSystemId(first)) {
                         IonSymbolImpl ivm = makeIonVersionMarker();
                         this.add(ivm, 0, -1);
                     }
                 }
+                // TODO why does this iterate _userContents not system contents?
                 for (int ii=0; ii<_userContents.size(); ii++)
                 {
                     IonValueImpl ichild = (IonValueImpl)_userContents.get(ii);
                     SymbolTable symtab = ichild.getSymbolTable();
 
-                    // FIXME: remove or restore - why would we assert this? assert symtab != null;
+                    // FIXME: remove or restore - why would we assert this?
+                    // jonker 2008-12-11: We assert this because we (currently)
+                    // force symtab creation when elements are added.
+                    // That should probably be delayed until necessary here.
+                    assert symtab != null;
+
                     if (symtab == null) {
+                        // FIXME we should use the symtab of the prior child
                         symtab = ichild.materializeSymbolTable();
                     }
                     if (symtab != null) {
+                        if (symtab.isSystemTable()) {
+                            symtab = _system.newLocalSymbolTable(symtab);
+                            ichild.setSymbolTable(symtab);
+                        }
                         ichild.updateSymbolTable(symtab);
 
                         // now that this symbol table is up to date let's make sure
@@ -736,7 +737,7 @@ public final class IonDatagramImpl
                                 assert ichild._container._contents.get(pos) == ichild;
 
                                 if (pos < 1
-                                 || !isIonVersionMarkerSymbol(this._contents.get(pos - 1))
+                                 || !_system.valueIsSystemId(this._contents.get(pos - 1))
                                  ) {
                                     IonSymbolImpl ivm = makeIonVersionMarker();
                                     this.add(ivm, pos, -1);
@@ -774,12 +775,7 @@ public final class IonDatagramImpl
 
         return _buffer.buffer().size() - oldSize;
     }
-    boolean isIonVersionMarkerSymbol(IonValue v)
-    {
-        if (!(v instanceof IonSymbol)) return false;
-        String s = ((IonSymbol)v).stringValue();
-        return SystemSymbolTable.ION_1_0.equals(s);
-    }
+
     boolean isNeededLocalSymbolTable(SymbolTable symtab) {
         if (symtab.isLocalTable()) {
             if (symtab.getImportedTables().length > 0) return true;
@@ -812,24 +808,21 @@ public final class IonDatagramImpl
 
     @Override
     protected int doWriteContainerContents(IonBinary.Writer writer,
-            int cumulativePositionDelta)
-    throws IOException
+                                           int cumulativePositionDelta)
+        throws IOException
     {
         if (_contents != null)
         {
             int ii = 0;
             IonValueImpl child = (IonValueImpl) _contents.get(ii);
 
-            if (this.isIonVersionMarkerSymbol(child)) {
-
-            }
             while (ii < _contents.size())
             {
                 child = (IonValueImpl) _contents.get(ii);
 
                 cumulativePositionDelta =
                 child.updateBuffer2(writer, writer.position(),
-                         cumulativePositionDelta);
+                                    cumulativePositionDelta);
 
                 ii++;
             }

@@ -4,8 +4,10 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SystemSymbolTable.ION;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
+import static com.amazon.ion.SystemSymbolTable.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.UnifiedSymbolTable.ION_SHARED_SYMBOL_TABLE;
 
@@ -18,6 +20,7 @@ import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonStruct;
+import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonText;
@@ -118,7 +121,22 @@ public class SymbolTableTest
 
     public void testInitialSystemSymtab()
     {
+        final SymbolTable systemTable = system().getSystemSymbolTable(ION_1_0);
+        assertEquals(ION, systemTable.getName());
+
         String text = "0";
+        IonValue v = oneValue(text);
+        SymbolTable st = v.getSymbolTable();
+        assertSame(systemTable, st.getSystemSymbolTable());
+
+        IonDatagram dg = loader().load(text);
+        IonSymbol sysId = (IonSymbol) dg.systemGet(0);
+        checkSymbol(ION_1_0, ION_1_0_SID, sysId);
+        assertSame(systemTable, sysId.getSymbolTable());
+
+        v = dg.get(0);
+        st = v.getSymbolTable();
+        assertSame(systemTable, st.getSystemSymbolTable());
     }
 
     public void testLocalTable()

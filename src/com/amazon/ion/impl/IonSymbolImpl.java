@@ -64,7 +64,7 @@ public final class IonSymbolImpl
         IonSymbolImpl clone = new IonSymbolImpl(_system);
 
         clone.copyFrom(this);
-        clone.mySid = 0;
+        clone.mySid = UNKNOWN_SYMBOL_ID;
 
         return clone;
     }
@@ -112,6 +112,7 @@ public final class IonSymbolImpl
             }
         }
 
+        assert mySid != 0;
         return mySid;
     }
 
@@ -196,6 +197,7 @@ public final class IonSymbolImpl
         super.updateSymbolTable(symtab);
 
         if (mySid < 1 && this.isNullValue() == false) {
+            assert _hasNativeValue == true && isDirty();
             mySid = symtab.addSymbol(this._get_value());
         }
     }
@@ -235,10 +237,9 @@ public final class IonSymbolImpl
     @Override
     void detachFromSymbolTable()
     {
-        this.stringValue();
-        this.mySid = 0;
+        this.stringValue();  // Force materialization
+        this.mySid = UNKNOWN_SYMBOL_ID;
         super.detachFromSymbolTable();
-
     }
 
 

@@ -4,7 +4,11 @@
 
 package com.amazon.ion;
 
+import static com.amazon.ion.SystemSymbolTable.ION_1_0;
+import static com.amazon.ion.SystemSymbolTable.ION_1_0_SID;
+
 import com.amazon.ion.impl.IonSequenceImpl;
+import com.amazon.ion.impl.IonSystemImpl;
 import com.amazon.ion.impl.IonValueImpl;
 import java.io.ByteArrayOutputStream;
 import java.util.Iterator;
@@ -38,6 +42,48 @@ public class DatagramTest
         IonDatagram datagram1 = myLoader.load(bytes);
         return datagram1;
     }
+
+
+    public void testAutomaticSystemId()
+        throws Exception
+    {
+        IonSystemImpl system = system();
+        SymbolTable systemSymtab_1_0 = system.getSystemSymbolTable(ION_1_0);
+
+        IonDatagram dg = system.newDatagram();
+
+        IonNull v = system.newNull();
+        assertNull(v.getSymbolTable());
+
+        dg.add(v);
+
+        IonValue sysId = dg.systemGet(0);
+        checkSymbol(ION_1_0, ION_1_0_SID, sysId);
+        assertSame(systemSymtab_1_0, sysId.getSymbolTable());
+
+        assertSame(systemSymtab_1_0, v.getSymbolTable());
+    }
+
+    public void testManualSystemId()
+        throws Exception
+    {
+        IonSystemImpl system = system();
+        SymbolTable systemSymtab_1_0 = system.getSystemSymbolTable(ION_1_0);
+
+        IonDatagram dg = system.newDatagram();
+
+        IonSymbol sysId = system.newSymbol(SystemSymbolTable.ION_1_0);
+        assertNull(sysId.getSymbolTable());
+
+        // $ion_1_0 at the front top-level is a systemId
+        dg.add(sysId);
+
+        assertSame(systemSymtab_1_0, sysId.getSymbolTable());
+
+        // TODO adding $ion_1_1 should fail: unsupported version
+    }
+
+
 
     //public void checkLeadingSymbolTable(IonDatagram dg)
     //{

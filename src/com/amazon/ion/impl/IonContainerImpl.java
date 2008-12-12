@@ -590,8 +590,7 @@ abstract public class IonContainerImpl
         byte[] bytes = null;
         if (concrete._buffer != null
             && !concrete.isDirty()
-            && (concrete.getSymbolTable().isCompatible(this.getSymbolTable())
-                || concrete.deservesEmbeddingWithLocalSymbolTable()))
+            && concrete.getSymbolTable().isCompatible(this.getSymbolTable()))
         {
             // TODO: resuse the bytes that are ready to go
             if (bytes == null)

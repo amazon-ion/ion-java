@@ -384,8 +384,7 @@ public abstract class IonValueImpl
             // the only case where this is valid is if this is
             // really an IonVersionMaker
             assert IonConstants.getLowNibble(typedesc) == 0;
-            value = new IonSymbolImpl(system, SystemSymbolTable.ION_1_0);
-            ((IonSymbolImpl)value).setIsIonVersionMarker(true);
+            value = system.newSystemIdSymbol(SystemSymbolTable.ION_1_0);
             break;
 
         default:
@@ -423,11 +422,6 @@ public abstract class IonValueImpl
         {
             throw new NullValueException();
         }
-    }
-
-    final boolean deservesEmbeddingWithLocalSymbolTable() {
-        // TODO: this is a stub
-        return false;
     }
 
     public String getFieldName()
@@ -532,35 +526,32 @@ public abstract class IonValueImpl
         if (this._symboltable != null)  return this._symboltable;
         if (this._container != null)    return this._container.getSymbolTable();
 
-        // this._symboltable = new LocalSymbolTableImpl();
-        // FIXME: this assert will break right now !
-// cas symtab:        just remove this block
-        if (this._symboltable == null) {
-        assert this._symboltable != null || this._symboltable == null;
-        }
-
         return this._symboltable;
     }
 
     /**
      *
-     * @param symtab must be local or null.
+     * @param symtab must be local, system, or null.
      */
     public void setSymbolTable(SymbolTable symtab) {
-        if (symtab != null && symtab.isSharedTable()) {
-            throw new IllegalArgumentException("symbol table must be local");
+        if (symtab != null
+            && ! (symtab.isLocalTable() || symtab.isSystemTable()))
+        {
+            throw new IllegalArgumentException("symbol table must be local or system");
         }
         checkForLock();
-        // FIXME: should this use getSymbolTable instead of _symboltable
-        // since our symtab may be held by our container?
-        if (this._symboltable != symtab) {
-            detachFromSymbolTable();
+        SymbolTable currentSymtab = getSymbolTable();
+        if (currentSymtab != symtab) {
+            if (currentSymtab != null) {
+                detachFromSymbolTable(); // Calls setDirty
+            }
             this._symboltable = symtab;
         }
     }
 
     /**
      * Recursively materialize all symbol text and detach from any symtab.
+     * Calls {@link #setDirty()}.
      */
     void detachFromSymbolTable()
     {
@@ -571,10 +562,12 @@ public abstract class IonValueImpl
             if (this._fieldName == null) {
                 this._fieldName = this.getSymbolTable().findKnownSymbol(this._fieldSid);
             }
-            this._fieldSid = 0;
+            this._fieldSid = 0; // FIXME should be UNKNOWN_SYMBOL_ID
         }
 
         this._symboltable = null;
+
+        setDirty();
     }
 
     public int getElementId() {
@@ -1044,13 +1037,13 @@ public abstract class IonValueImpl
         // TODO this should really copy the buffer to avoid materialization.
         // Note: that forces extraction and reconstruction of the local symtab.
         detachFromBuffer();
-        detachFromSymbolTable();
+        detachFromSymbolTable(); // Calls setDirty();
+        assert _isDirty;
 
         _container = null;
         _fieldName = null;
         assert _fieldSid == 0;
         _elementid = 0;
-        setDirty();
     }
 
     void setFieldName(String name) {

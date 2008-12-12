@@ -4,6 +4,8 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
+
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonBool;
@@ -385,6 +387,27 @@ public class IonSystemImpl
     //-------------------------------------------------------------------------
     // System Elements
 
+    IonSymbolImpl newSystemIdSymbol(String systemId)
+    {
+        assert textIsSystemId(systemId);
+
+        IonSymbolImpl ivm = (IonSymbolImpl) newSymbol(systemId);
+        blessSystemIdSymbol(ivm);
+        return ivm;
+    }
+
+    final void blessSystemIdSymbol(IonSymbolImpl systemId)
+    {
+        // TODO what if the symbol already has a symtab?
+        // TODO what if the symbol already has a different system?
+
+        SymbolTable symtab = getSystemSymbolTable(systemId.stringValue());
+
+        systemId.setSymbolTable(symtab);  // This clears the sid
+        systemId.setIsIonVersionMarker(true);
+        assert systemId.getSymbolId() == 2;
+    }
+
     /**
      * checks the value to see if it is a symbol and has the
      * form $ION_ddd_ddd.  Where ddd is 1 or more decimal
@@ -392,45 +415,52 @@ public class IonSystemImpl
      * which is really the only valid system id today, but
      * there may be more later.
      */
-    private final boolean valueIsSystemId(IonValue value)
+    final boolean valueIsSystemId(IonValue value)
     {
         if (value instanceof IonSymbol && ! value.isNullValue())
         {
             IonSymbol symbol = (IonSymbol) value;
             int sid = symbol.getSymbolId();
-            if (sid == SystemSymbolTableImpl.ION_1_0_SID)
+            if (sid == SystemSymbolTable.ION_1_0_SID)
             {
                 return true;
             }
+            // TODO quickly skip other sids
             String image = symbol.stringValue();
-            if (SystemSymbolTable.ION_1_0.equals(image))
-            {
-                return true;
-            }
-            if (!image.startsWith(SystemSymbolTable.ION)) {
-                return false;
-            }
-            // now we see if the rest of the symbol is _DDD_DDD
-            int underscore1 = SystemSymbolTable.ION.length();
-            int underscore2 = image.indexOf('_', underscore1 + 1);
-            if (underscore2 < 0)
-            {
-                return false;
-            }
-            if (!isUnderscoreAndDigits(image, underscore1, underscore2))
-            {
-                return false;
-            }
-            if (!isUnderscoreAndDigits(image, underscore2, image.length()))
-            {
-                return false;
-            }
-            return true;
+            return textIsSystemId(image);
         }
         return false;
     }
 
-    boolean isUnderscoreAndDigits(String image, int firstChar, int lastChar)
+    private final boolean textIsSystemId(String image)
+    {
+        if (SystemSymbolTable.ION_1_0.equals(image))
+        {
+            return true;
+        }
+        if (!image.startsWith(SystemSymbolTable.ION)) {
+            return false;
+        }
+        // now we see if the rest of the symbol is _DDD_DDD
+        int underscore1 = SystemSymbolTable.ION.length();
+        int underscore2 = image.indexOf('_', underscore1 + 1);
+        if (underscore2 < 0)
+        {
+            return false;
+        }
+        if (!isUnderscoreAndDigits(image, underscore1, underscore2))
+        {
+            return false;
+        }
+        if (!isUnderscoreAndDigits(image, underscore2, image.length()))
+        {
+            return false;
+        }
+        return true;
+    }
+
+
+    private boolean isUnderscoreAndDigits(String image, int firstChar, int lastChar)
     {
         // you have to have enought characters for the underscore and
         // at least 1 digit
@@ -448,8 +478,15 @@ public class IonSystemImpl
         return true;
     }
 
+    public final boolean valueIsLocalSymbolTable(IonValue value)
+    {
+        return (value instanceof IonStruct
+                && value.hasTypeAnnotation(ION_SYMBOL_TABLE));
+    }
+
     public final boolean valueIsStaticSymbolTable(IonValue value)
     {
+        // FIXME looking for wrong annotation!
         if (value instanceof IonStruct
             && value.hasTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE))
         {
