@@ -379,10 +379,12 @@ public final class UnifiedSymbolTable
 
     public String getSystemId()
     {
-        if (this._system_symbols != null && this._system_symbols != this) {
+        if (this._system_symbols == null) return null;
+
+        if (this._system_symbols != this) {
             return this._system_symbols.getSystemId();
         }
-        // FIXME why should we assume 1.0?  I think this should be null.
+        assert isSystemTable();
         return SystemSymbolTable.ION_1_0;
     }
     public String findKnownSymbol(int id)
@@ -641,12 +643,8 @@ public final class UnifiedSymbolTable
         if (newTable == null || newTable.getName() == null) {
             throw new IllegalArgumentException("imported symbol tables must be named");
         }
-        if (!newTable.isSharedTable()) {
-            throw new IllegalArgumentException("only shared tables can be imported");
-        }
-        // FIXME this precondition will make it hard to change system symtab
-        if (!_system_symbols.getSystemId().equals(newTable.getSystemId())) {
-            throw new IllegalArgumentException("you can only import tables based on the same system symbols");
+        if (newTable.isLocalTable() || newTable.isSystemTable()) {
+            throw new IllegalArgumentException("only non-system shared tables can be imported");
         }
 
         String name = newTable.getName();
@@ -768,8 +766,6 @@ public final class UnifiedSymbolTable
             assert getVersion() > 0;
             _ion_rep.add(UnifiedSymbolTable.NAME, sys.newString(this.getName()));
             _ion_rep.add(UnifiedSymbolTable.VERSION, sys.newInt(this.getVersion()));
-/* TODO */  _ion_rep.add(UnifiedSymbolTable.MAX_ID, sys.newInt(this.getMaxId())); // TODO not needed
-            // TODO do we need to save max_id for local tables?
         }
 
         UnifiedSymbolTable[] imports = this.getImportedTables();
