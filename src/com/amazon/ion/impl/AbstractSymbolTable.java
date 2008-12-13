@@ -4,9 +4,6 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.SystemSymbolTable.ION_SHARED_SYMBOL_TABLE;
-import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
-
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
@@ -215,7 +212,7 @@ public abstract class AbstractSymbolTable
             Printer printer = new Printer();
             IonList symbolsList = (IonList) symbolsElt;
             if (_maxId == 0) {
-            	_maxId = symbolsElt.getSymbolTable().getSystemSymbolTable().getMaxId();
+                _maxId = symbolsElt.getSymbolTable().getSystemSymbolTable().getMaxId();
             }
 
             for (IonValue v : symbolsList)
@@ -246,30 +243,5 @@ public abstract class AbstractSymbolTable
         else if (symbolsElt != null) {
             errors.append(" Field 'symbols' must be a struct or list.");
         }
-    }
-
-    /**
-     * Examines the IonValue candidateTable and checks if it is a
-     * viable symbol table.  If it is this returns which type of
-     * symbol table it might be.  This does not validate the full
-     * contents, it examines the value type (struct), the annotations
-     * and just enough contents to distiguish between the possible
-     * types.
-     * @param candidateTable value to be check
-     * @return (@link SymbolTableType) possible type of table, or {@link SymbolTableType#INVALID}
-     */
-    public static SymbolTableType getSymbolTableType(IonValue candidateTable)
-    {
-        if (candidateTable instanceof IonStruct) {
-            if (candidateTable.hasTypeAnnotation(ION_SYMBOL_TABLE))
-            {
-                return SymbolTableType.LOCAL;
-            }
-            if (candidateTable.hasTypeAnnotation(ION_SHARED_SYMBOL_TABLE))
-            {
-                return SymbolTableType.SHARED;
-            }
-        }
-        return SymbolTableType.INVALID;
     }
 }

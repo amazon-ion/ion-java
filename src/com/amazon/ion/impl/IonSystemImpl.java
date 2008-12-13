@@ -491,6 +491,9 @@ public class IonSystemImpl
                 && value.hasTypeAnnotation(ION_SHARED_SYMBOL_TABLE));
     }
 
+    /**
+     * Helper for {@link SystemReader} that should probably move there.
+     */
     public final SymbolTable handleLocalSymbolTable(IonCatalog catalog,
                                                     IonValue value)
     {
@@ -498,15 +501,11 @@ public class IonSystemImpl
 
         SymbolTable symtab = null;
 
-        if (value instanceof IonStruct)
+        if (valueIsLocalSymbolTable(value))
         {
-            if (AbstractSymbolTable.getSymbolTableType(value).equals(SymbolTableType.LOCAL))
-            //if (value.hasTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE)) // cas 25 apr 2008 was: ION_1_0
-            {
-                symtab = new UnifiedSymbolTable(value.getSymbolTable().getSystemSymbolTable(),//mySystemSymbols, // FIXME wrong symtab
-                                                (IonStruct) value,
-                                                catalog);
-            }
+            symtab = new UnifiedSymbolTable(value.getSymbolTable().getSystemSymbolTable(),//mySystemSymbols, // FIXME wrong symtab
+                                            (IonStruct) value,
+                                            catalog);
         }
         else if (valueIsSystemId(value))
         {

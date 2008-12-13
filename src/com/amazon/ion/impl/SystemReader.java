@@ -51,7 +51,9 @@ public class SystemReader
                         IonCatalog catalog,
                         Reader input)
     {
-        this(system, catalog, getSystemSymbolTableAsLocal(system), input);
+        // TODO this should be an unmodifiable system symtab
+        // but we can't yet replace it with a local symtab on-demand.
+        this(system, catalog, system.newLocalSymbolTable(), input);
     }
 
     /**
@@ -115,23 +117,13 @@ public class SystemReader
         _system = system;
         _catalog = catalog;
 
-        // TODO this should be an unmodifiable bootstram symtab.
-        _currentSymbolTable = getSystemSymbolTableAsLocal(system);
+        // TODO this should be an unmodifiable system symtab
+        // but we can't yet replace it with a local symtab on-demand.
+        _currentSymbolTable = system.newLocalSymbolTable();
         _buffer = buffer;
         _buffer_offset = reader.position();
     }
 
-    // TODO: replace this with a better option, this shouldn't be a
-    //       table anyone could edit, and we should have a way to
-    //          tell that it's a system symbol table and not just an
-    //         empty local symbol table.
-    static SymbolTable getSystemSymbolTableAsLocal(IonSystemImpl system) {
-        SymbolTable lst;
-
-        lst = system.newLocalSymbolTable();
-
-        return lst;
-    }
 
     public IonSystemImpl getSystem() {
         return _system;
@@ -264,7 +256,6 @@ public class SystemReader
             IonValue localsym = newLocalSymbtab.getIonRepresentation();
             assert localsym.getSymbolTable() == null
                 || localsym.getSymbolTable().getSystemSymbolTable() == _system.getSystemSymbolTable();
-            // _curr.setSymbolTable(newLocalSymbtab);  // the symbol table of a symbol table struct is itself
             _currentSymbolTable = newLocalSymbtab;
             _currentIsHidden = true;
         }
