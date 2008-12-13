@@ -1273,7 +1273,6 @@ public abstract class IonValueImpl
         int fieldSidLen = 0;
         int newFieldSid = 0;
         if (_fieldName != null) {
-            // FIXME if this is an embedded value, field name is a layer up
             assert this._container != null;
             assert this._container.pos_getType() == IonConstants.tidStruct;
 

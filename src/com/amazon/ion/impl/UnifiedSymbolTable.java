@@ -129,13 +129,12 @@ public final class UnifiedSymbolTable
     static {
         UnifiedSymbolTable systab = new UnifiedSymbolTable();
 
-        systab._system_symbols = systab;
-
         for (int ii=0; ii<SYSTEM_SYMBOLS.length; ii++) {
             systab.defineSymbol(new Symbol(SYSTEM_SYMBOLS[ii], ii+1, systab));
         }
 
         systab.share(SystemSymbolTable.ION, 1);
+        systab._system_symbols = systab;
         _system_1_0_symbols = systab;
     }
 
@@ -284,7 +283,6 @@ public final class UnifiedSymbolTable
         int maxid = localSymbolTable.getMaxId();
         for (int ii=minid + 1; ii <= maxid; ii++) {
             String symbolText = localSymbolTable.findKnownSymbol(ii);
-            // FIXME shouldn't happen, we decided to not allow removing symbols
             if (symbolText == null) continue;
             this.defineSymbol(symbolText, ii);
         }
@@ -311,9 +309,8 @@ public final class UnifiedSymbolTable
 
         _name = name;
         _version = version;
-//      _system_symbols = null;
+        _system_symbols = null;
         _is_locked = true;
-        // TODO validate that maxId is legal?
     }
 
 
@@ -501,16 +498,28 @@ public final class UnifiedSymbolTable
             }
             _symbols = temp;
         }
-
-        if (_symbols[sid] != null) {
+        else if (_symbols[sid] != null) {
             String message =
                 "Cannot redefine $" + sid + " from "
                 + Text.printQuotedSymbol(_symbols[sid].name)
                 + " to " + Text.printQuotedSymbol(sym.name);
             throw new IonException(message);
         }
+
         _symbols[sid] = sym;
-        _id_map.put(sym.name, sid);
+        Integer priorSid = _id_map.put(sym.name, sid);
+        if (priorSid != null) {
+            if (priorSid < sid) {
+                // Ignore this attempted re-definition
+                _id_map.put(sym.name, priorSid);
+                _symbols[sid] = null;
+            }
+            else {
+                // Replace existing definition with higher sid
+                // TODO test this!
+                _symbols[priorSid] = null;
+            }
+        }
 
         if (sid > _max_id) _max_id = sid;
         if (sym.source == this) {
@@ -645,15 +654,6 @@ public final class UnifiedSymbolTable
         }
         if (newTable.isLocalTable() || newTable.isSystemTable()) {
             throw new IllegalArgumentException("only non-system shared tables can be imported");
-        }
-
-        String name = newTable.getName();
-        if (_import_count > 0) {
-            for (int ii=0; ii<_import_count; ii++) {
-                if (_imports[ii].getName().equals(name)) {
-                    throw new IllegalArgumentException("imported symbol tables already exists");
-                }
-            }
         }
 
         if (_imports == null || _import_count >= _imports.length) {
@@ -883,7 +883,7 @@ public final class UnifiedSymbolTable
                 reader.stepOut();
                 break;
             case UnifiedSymbolTable.IMPORTS_SID:
-                if (symtabType == LOCAL) {
+                if (symtabType == LOCAL && fieldType == IonType.LIST) {
                     readImportList(reader, catalog);
                 }
                 break;
@@ -933,7 +933,6 @@ public final class UnifiedSymbolTable
 
     private void readImportList(IonReader reader, IonCatalog catalog)
     {
-        // FIXME gracefully handle bad data
         assert (reader.getFieldId() == SystemSymbolTable.IMPORTS_SID);
         assert (reader.getType().equals(IonType.LIST));
 
@@ -949,7 +948,6 @@ public final class UnifiedSymbolTable
 
     private void readOneImport(IonReader ionRep, IonCatalog catalog)
     {
-        // assert (this.getFieldId() == SystemSymbolTable.IMPORTS_SID);
         assert (ionRep.getType().equals(IonType.STRUCT));
 
         String name = null;
@@ -964,11 +962,9 @@ public final class UnifiedSymbolTable
 
             switch(ionRep.getFieldId()) {
                 case UnifiedSymbolTable.NAME_SID:
-                    if (t == IonType.STRING || t == IonType.SYMBOL) {
+                    if (t == IonType.STRING) {
                         name = ionRep.stringValue();
                     }
-                    // FIXME test and remove:
-                    else throw new IonException("Symbol Table Import Name is not a string, it's a "+t.toString());
                     break;
                 case UnifiedSymbolTable.VERSION_SID:
                     if (t == IonType.INT) {
@@ -987,7 +983,9 @@ public final class UnifiedSymbolTable
         }
         ionRep.stepOut();
 
-        // TODO ignore clause if name == null
+        // Ignore import clauses with malformed name field.
+        if (name == null || name.length() == 0) return;
+
         UnifiedSymbolTable itab = null;
         if (version < 1) {
             version = 1;
@@ -1008,9 +1006,6 @@ public final class UnifiedSymbolTable
             // TODO custom exception
             throw new IonException(message);
         }
-//        else {
-//            itab = (UnifiedSymbolTable) catalog.getTable(name);
-//        }
 
         if (itab == null) {
             assert maxid >= 0;
@@ -1019,22 +1014,9 @@ public final class UnifiedSymbolTable
             itab = new UnifiedSymbolTable();
             itab._max_id = maxid;
             itab.share(name, version);
-
-//            throw new IonException("Import Symbol Table not found: "
-//                                   + Text.printString(name)
-//                                   + ( (version == -1) ? "" : " version: "+version)
-//            );
         }
 
-//        if (version != itab.getVersion() && maxid == -1) {
-//            String message =
-//                "Missing max_id on import of shared table "
-//                + Text.printString(name)
-//                + " but exact match was not found in catalog (found version "
-//                + itab.getVersion() + ").";
-//            throw new IonException(message);
-//        }
-        addImportedTable(itab, /*(maxid < 0) ? itab.getMaxId() :*/ maxid);
+        addImportedTable(itab, maxid);
     }
 
 

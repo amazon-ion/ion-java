@@ -241,8 +241,6 @@ public class SymbolTableTest
         String text =
             LocalSymbolTablePrefix +
             "{" +
-            "  symbols:{ $100:\"dates\",\n" +  // TODO cleanup, unneccessary
-            "            $101:\"whenDate\"},\n" +
             "  imports:[{name:'''imported''',version:1}],\n" +
             "}\n" +
             "null";
@@ -345,7 +343,6 @@ public class SymbolTableTest
         SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
         assertNotNull(catalog.removeTable("imported", 2));
 
-        // FIXME this will fail until we inject missing max_id
         IonDatagram dg = loader().load(binary);
         checkSymbol("local1", local1id, dg.get(0));
         checkSymbol("local2", local2id, dg.get(1));
@@ -392,7 +389,6 @@ public class SymbolTableTest
         SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
         assertNotNull(catalog.removeTable("imported", 2));
 
-        // FIXME this will fail until we inject missing max_id
         IonDatagram dg = loader().load(binary);
         checkSymbol("local1", local1id, dg.get(0));
         checkSymbol("local2", local2id, dg.get(1));
@@ -406,9 +402,107 @@ public class SymbolTableTest
 //        badValue(text);  FIXME re-enable
     }
 
+    public void testRepeatedImport()
+    {
+        SymbolTable importedV1 = registerImportedV1();
+        SymbolTable importedV2 = registerImportedV2();
 
-    // TODO test empty imports:[]
-    // TODO test non-array imports
+        String text =
+            LocalSymbolTablePrefix +
+            "{" +
+            "  imports:[{name:\"imported\", version:1}," +
+            "           {name:\"imported\", version:2}]," +
+            "}\n" +
+            "null";
+
+        IonValue v = oneValue(text);
+        SymbolTable symbolTable = v.getSymbolTable();
+        SymbolTable[] importedTables = symbolTable.getImportedTables();
+        assertEquals(2, importedTables.length);
+        assertSame(importedV1, importedTables[0]);
+        assertSame(importedV2, importedTables[1]);
+        assertEquals(ION_1_0_MAX_ID + IMPORTED_1_MAX_ID + IMPORTED_2_MAX_ID,
+                     symbolTable.getMaxId());
+
+        assertEquals(10, symbolTable.findSymbol("imported 1"));
+        assertEquals(11, symbolTable.findSymbol("imported 2"));
+        assertEquals(14, symbolTable.findSymbol("fred3"));
+        assertEquals(15, symbolTable.findSymbol("fred4"));
+
+        // Gaps left by second copies of 'imported 1' and 'imported 2'
+        assertNull(symbolTable.findKnownSymbol(12));
+        assertNull(symbolTable.findKnownSymbol(13));
+    }
+
+
+
+    public void testMalformedImportsField()
+    {
+        testMalformedImportsField("[]");
+        testMalformedImportsField("null.list");
+        testMalformedImportsField("null");
+        testMalformedImportsField("'''hello'''");
+        testMalformedImportsField("imports");
+        testMalformedImportsField("a_symbol");
+
+
+        testMalformedImportsField("[{}]");
+        testMalformedImportsField("[null.struct]");
+        testMalformedImportsField("[null]");
+        testMalformedImportsField("[1009]");
+        testMalformedImportsField("[a_symbol]");
+    }
+
+    private void testMalformedImportsField(String value)
+    {
+        String text =
+            LocalSymbolTablePrefix +
+            "{" +
+            "  imports:" + value + "," +
+            "  symbols:['''local''']" +
+            "}\n" +
+            "null";
+        IonValue v = oneValue(text);
+        SymbolTable symbolTable = v.getSymbolTable();
+        assertEquals(0, symbolTable.getImportedTables().length);
+        assertEquals(ION_1_0_MAX_ID + 1, symbolTable.findSymbol("local"));
+        assertEquals(ION_1_0_MAX_ID + 1, symbolTable.getMaxId());
+    }
+
+
+    public void testImportWithMalformedName()
+    {
+        SymbolTable importedV1 = registerImportedV1();
+
+        testImportWithMalformedName(importedV1, null);      // missing field
+        testImportWithMalformedName(importedV1, " \"\" ");  // empty string
+        testImportWithMalformedName(importedV1, "null.string");
+        testImportWithMalformedName(importedV1, "null");
+        testImportWithMalformedName(importedV1, "'syms'");  // symbol
+        testImportWithMalformedName(importedV1, "123");
+    }
+
+    private void testImportWithMalformedName(SymbolTable importedV1,
+                                             String name)
+    {
+        String text =
+            LocalSymbolTablePrefix +
+            "{" +
+            "  imports:[{name:\"imported\", version:1}," +
+            "           {version:1," + fieldText("name", name) + "}]," +
+            "}\n" +
+            "null";
+
+        IonValue v = oneValue(text);
+        SymbolTable symbolTable = v.getSymbolTable();
+        SymbolTable[] importedTables = symbolTable.getImportedTables();
+        assertEquals(1, importedTables.length);
+        assertSame(importedV1, importedTables[0]);
+        assertEquals(ION_1_0_MAX_ID + IMPORTED_1_MAX_ID,
+                     symbolTable.getMaxId());
+    }
+
+
     // TODO test getUsedTable(null)
     // TODO test getImportedTable(null)
 
@@ -763,6 +857,15 @@ public class SymbolTableTest
             throw new IllegalArgumentException("string routines need a filename");
         }
         return buf;
+    }
+
+
+    private static String fieldText(String fieldName, String value)
+    {
+        if (value == null) return "";
+        assert value.length() > 0;
+
+        return fieldName + ':' + value;
     }
 
 }

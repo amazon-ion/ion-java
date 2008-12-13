@@ -56,6 +56,7 @@ public final class IonTreeWriter
 
     void pushParent(IonContainer newParent) {
         if (_current_parent == null) {
+            // TODO document this behavior
             if (_parent_stack_top != 0) {
                 throw new IllegalStateException();
             }
