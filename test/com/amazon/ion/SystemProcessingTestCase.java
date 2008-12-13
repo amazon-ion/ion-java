@@ -75,6 +75,31 @@ public abstract class SystemProcessingTestCase
         assertSame(table2, currentSymtab());
     }
 
+    public void testTrivialLocalTableResetting()
+        throws Exception
+    {
+        String text = "1 $ion_1_0 2";
+
+        startIteration(text);
+
+        nextUserValue();
+        checkInt(1);
+
+        SymbolTable table1 = currentSymtab();
+        checkTrivialLocalTable(table1);
+
+        nextUserValue();
+        checkInt(2);
+
+        SymbolTable table2 = currentSymtab();
+        checkTrivialLocalTable(table2);
+        if (table1.isLocalTable() || table2.isLocalTable())
+        {
+            assertNotSame(table1, table2);
+        }
+        assertEquals(SystemSymbolTable.ION_1_0_MAX_ID, table2.getMaxId());
+    }
+
     public void testLocalTableReplacement()
         throws Exception
     {
@@ -112,6 +137,34 @@ public abstract class SystemProcessingTestCase
         checkSymbol("foo", 13);
         assertEquals(14, table2.getMaxId());
         assertSame(table2, currentSymtab());
+    }
+
+    public void testTrivialLocalTableReplacement()
+        throws Exception
+    {
+        String text =
+            "$ion_symbol_table::{" +
+            "}\n" +
+            "1\n" +
+            "$ion_symbol_table::{" +
+            "}\n" +
+            "2";
+
+        startIteration(text);
+
+        nextUserValue();
+        checkInt(1);
+
+        SymbolTable table1 = currentSymtab();
+        checkLocalTable(table1);
+
+        nextUserValue();
+        checkInt(2);
+
+        SymbolTable table2 = currentSymtab();
+        checkLocalTable(table2);
+        assertNotSame(table1, table2);
+        assertEquals(SystemSymbolTable.ION_1_0_MAX_ID, table2.getMaxId());
     }
 
 

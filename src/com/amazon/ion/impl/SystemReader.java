@@ -8,6 +8,8 @@ import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonStruct;
+import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.IonBinary.BufferManager;
@@ -240,23 +242,41 @@ public class SystemReader
 
     private void checkCurrentForHiddens()
     {
-        SymbolTable newLocalSymbtab =
-            _system.handleLocalSymbolTable(_catalog, _curr);
+        final IonValue curr = _curr;
 
-        if (newLocalSymbtab != null)
+        SymbolTable newLocalSymtab = null;
+
+        if (_system.valueIsLocalSymbolTable(curr))
         {
-            assert newLocalSymbtab.isLocalTable();
-            assert _currentSymbolTable.getSystemSymbolTable() == newLocalSymbtab.getSystemSymbolTable();
+            newLocalSymtab = new UnifiedSymbolTable(curr.getSymbolTable().getSystemSymbolTable(),
+                                                    (IonStruct) curr,
+                                                    _catalog);
+        }
+        else if (_system.valueIsSystemId(curr))
+        {
+            assert curr.getSymbolTable().isLocalTable(); // Unfortunately
+
+            String systemId = ((IonSymbol)curr).stringValue();
+            SymbolTable identifiedSystemTable =
+                _system.getSystemSymbolTable(systemId);
+
+            newLocalSymtab = _system.newLocalSymbolTable(identifiedSystemTable);
+            ((IonValueImpl)curr).setSymbolTable(newLocalSymtab);
+        }
+
+        if (newLocalSymtab != null)
+        {
+            assert newLocalSymtab.isLocalTable();
 
             // Note that we may be replacing the encoded systemId symbol
             // with a struct, in which case the tree view will be out of
             // sync with the binary.  That's okay, though: if the bytes are
             // requested it will be updated.
 
-            IonValue localsym = newLocalSymbtab.getIonRepresentation();
+            IonValue localsym = newLocalSymtab.getIonRepresentation();
             assert localsym.getSymbolTable() == null
                 || localsym.getSymbolTable().getSystemSymbolTable() == _system.getSystemSymbolTable();
-            _currentSymbolTable = newLocalSymbtab;
+            _currentSymbolTable = newLocalSymtab;
             _currentIsHidden = true;
         }
         else {

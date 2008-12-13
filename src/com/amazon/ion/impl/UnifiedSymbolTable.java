@@ -456,11 +456,11 @@ public final class UnifiedSymbolTable
 
     public int addSymbol(String name)
     {
-        if (_is_locked) {
-            throw new IllegalStateException("can't change shared symbol table");
-        }
         int sid = this.findSymbol(name);
         if (sid == UNKNOWN_SID) {
+            if (_is_locked) {
+                throw new IllegalStateException("can't change shared symbol table");
+            }
             sid = _max_id + 1;
             defineSymbol(new Symbol(name, sid, this));
         }
@@ -762,16 +762,13 @@ public final class UnifiedSymbolTable
         if (_ion_rep != null) return _ion_rep;
 
         _ion_rep = (IonStructImpl) sys.newEmptyStruct();
-
-        // TODO this replicates LocalSymbolTableImpl behavior, but its creepy.
-        _ion_rep.setSymbolTable(this);
-
         _ion_rep.addTypeAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE);
+
         if (this.isSharedTable()) {
             assert getVersion() > 0;
             _ion_rep.add(UnifiedSymbolTable.NAME, sys.newString(this.getName()));
             _ion_rep.add(UnifiedSymbolTable.VERSION, sys.newInt(this.getVersion()));
-            _ion_rep.add(UnifiedSymbolTable.MAX_ID, sys.newInt(this.getMaxId()));
+/* TODO */  _ion_rep.add(UnifiedSymbolTable.MAX_ID, sys.newInt(this.getMaxId())); // TODO not needed
             // TODO do we need to save max_id for local tables?
         }
 

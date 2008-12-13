@@ -375,7 +375,7 @@ public final class IonTextReader
                         if (_debug_all_system) this.save_state();
 
                         SymbolTable local = loadLocalSymbolTable();
-                        if (local != null) {
+                        if (local != null) { //FIXME shouldn't happen
                             _current_symtab = local;
                             skip_value = true;
                         }
@@ -489,8 +489,7 @@ public final class IonTextReader
     protected SymbolTable loadLocalSymbolTable() {
         // TODO do we really want only the system symtab in context?
         SymbolTable temp = _current_symtab;
-        _current_symtab = //UnifiedSymbolTable.getSystemSymbolTableInstance();
-            _current_symtab.getSystemSymbolTable();
+        _current_symtab = _current_symtab.getSystemSymbolTable();
         this.stepIn();
         UnifiedSymbolTable table =
             new UnifiedSymbolTable(_current_symtab, this, _catalog);

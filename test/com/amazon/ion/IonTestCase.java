@@ -484,12 +484,34 @@ public abstract class IonTestCase
 
     public void checkLocalTable(SymbolTable symtab)
     {
-        assertTrue(symtab.isLocalTable());
-        assertFalse(symtab.isSharedTable());
-        assertFalse(symtab.isSystemTable());
-        assertNotNull(symtab.getImportedTables());
+        assertTrue("table isn't local", symtab.isLocalTable());
+        assertFalse("table is shared",  symtab.isSharedTable());
+        assertFalse("table is system",  symtab.isSystemTable());
+        assertNotNull("table has imports", symtab.getImportedTables());
 
         SymbolTable system = symtab.getSystemSymbolTable();
+        checkSystemTable(system);
+    }
+
+    /**
+     * @param symtab must be either system table or empty local table
+     */
+    public void checkTrivialLocalTable(SymbolTable symtab)
+    {
+        SymbolTable system = symtab.getSystemSymbolTable();
+
+        if (symtab.isLocalTable())
+        {
+            assertFalse("table is shared",  symtab.isSharedTable());
+            assertFalse("table is system",  symtab.isSystemTable());
+            assertNotNull("table has imports", symtab.getImportedTables());
+            assertEquals(system.getMaxId(), symtab.getMaxId());
+        }
+        else
+        {
+            assertSame(symtab, system);
+        }
+
         checkSystemTable(system);
     }
 
@@ -498,6 +520,7 @@ public abstract class IonTestCase
         assertFalse(symtab.isLocalTable());
         assertTrue(symtab.isSharedTable());
         assertTrue(symtab.isSystemTable());
+        assertSame(symtab, symtab.getSystemSymbolTable());
         assertEquals(SystemSymbolTable.ION_1_0_MAX_ID, symtab.getMaxId());
     }
 
