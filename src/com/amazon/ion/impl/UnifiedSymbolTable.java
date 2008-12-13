@@ -248,10 +248,7 @@ public final class UnifiedSymbolTable
 //        reader.stepInto();
         readIonRep(SymbolTableType.SHARED, reader, null);
 
-        if (! _is_locked) {
-            // No name!
-            throw new IonException("Shared symbol table has no 'name' field.");
-        }
+        assert _is_locked;
 
         _ion_rep = (IonStructImpl) ionRep;
     }
@@ -892,10 +889,15 @@ public final class UnifiedSymbolTable
             }
         }
 
-        // FIXME shared symtab with no name
-        // set name/version and lock
-        if (name != null) {
-            // This is a shared table. Forget any system or imported symbols.
+        if (symtabType == SHARED) {
+            if (name == null || name.length() == 0) {
+                String message =
+                    "Error in " + SystemSymbolTable.ION_SYMBOL_TABLE
+                    + ": Field 'name' must be a non-empty string.";
+                throw new IonException(message);
+            }
+
+            // Forget any system or imported symbols.
             _max_id = 0;
             _system_symbols = null;
             _id_map.clear();
@@ -905,18 +907,8 @@ public final class UnifiedSymbolTable
                 defineSymbol(sym);
             }
 
-            String errors = ""; // TODO cleanup, this is simpler than before.
-            if (name.length() == 0) {
-                errors = " Field 'name' must be a non-empty string.";
-            }
             if (version < 1) {
                 version = 1;
-            }
-            if (errors.length() != 0) {
-                String message =
-                    "Error in " + SystemSymbolTable.ION_SYMBOL_TABLE
-                    + ":" + errors;
-                throw new IonException(message);
             }
 
             share(name, version);
@@ -984,7 +976,9 @@ public final class UnifiedSymbolTable
         ionRep.stepOut();
 
         // Ignore import clauses with malformed name field.
-        if (name == null || name.length() == 0) return;
+        if (name == null || name.length() == 0 || name.equals(ION)) {
+            return;
+        }
 
         UnifiedSymbolTable itab = null;
         if (version < 1) {

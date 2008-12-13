@@ -331,8 +331,6 @@ public class SymbolTableTest
         String text =
             LocalSymbolTablePrefix +
             "{" +
-            "  symbols:{ $" + local1id + ":\"local1\"," +       // FIXME ???
-            "            $" + local2id + ":\"local2\"}," +      // FIXME ???
             "  imports:[{name:\"imported\", version:2, " +
             "            max_id:" + IMPORTED_2_MAX_ID + "}]," + // FIXME remove
             "}\n" +
@@ -480,6 +478,9 @@ public class SymbolTableTest
         testImportWithMalformedName(importedV1, "null");
         testImportWithMalformedName(importedV1, "'syms'");  // symbol
         testImportWithMalformedName(importedV1, "123");
+
+        // Cannot import system symtab
+        testImportWithMalformedName(importedV1, "'''$ion'''");
     }
 
     private void testImportWithMalformedName(SymbolTable importedV1,
@@ -566,27 +567,9 @@ public class SymbolTableTest
     //-------------------------------------------------------------------------
     // Testing name field
 
-    public void testSharedTableMissingName()
-    {
-        String text =
-            SharedSymbolTablePrefix +
-            "{" +
-            "  version:1," +
-            "  symbols:{ $100:\"x\" }\n" +
-            "}";
-        try
-        {
-            loadSharedSymtab(text);
-            fail("Expected exception");
-        }
-        catch (IonException e) {
-            assertTrue(e.getMessage().contains("no 'name'"));
-        }
-    }
-
-
     public void testMalformedSymtabName()
     {
+        testMalformedSymtabName(null);     // missing field
         testMalformedSymtabName(" \"\" "); // empty string
         testMalformedSymtabName("null.string");
         testMalformedSymtabName("null");
@@ -599,9 +582,9 @@ public class SymbolTableTest
         String text =
             SharedSymbolTablePrefix +
             "{" +
-            "  name:" + nameText + "," +
             "  version:1," +
-            "  symbols:[\"x\"]" +
+            "  symbols:[\"x\"]," +
+            fieldText("name", nameText) +
             "}";
         try
         {
