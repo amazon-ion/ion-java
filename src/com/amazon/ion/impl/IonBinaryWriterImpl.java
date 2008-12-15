@@ -925,7 +925,7 @@ int tmp;
         }
 
         int symbol_table_length = 0;
-        if (symtabIsNonTrivial()) {
+        if (symtabIsLocalAndNonTrivial()) {
             symbol_table_length = lenSymbolTable();
         }
 
@@ -971,7 +971,7 @@ int tmp;
         iout.write(IonConstants.BINARY_VERSION_MARKER_1_0, 0, IonConstants.BINARY_VERSION_MARKER_1_0.length);
         total_written += IonConstants.BINARY_VERSION_MARKER_1_0.length;
 
-        if (symtabIsNonTrivial()) {
+        if (symtabIsLocalAndNonTrivial()) {
             total_written += writeSymbolTable(iout);
         }
 

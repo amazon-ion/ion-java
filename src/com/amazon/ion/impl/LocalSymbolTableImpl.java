@@ -68,7 +68,7 @@ public class LocalSymbolTableImpl
      */
     public LocalSymbolTableImpl(IonSystemImpl system)
     {
-    	// assert system != null;
+        // assert system != null;
         this(system, system.getSystemSymbolTable());
     }
 
@@ -111,6 +111,15 @@ public class LocalSymbolTableImpl
     {
         return true;
     }
+
+
+    public synchronized boolean isTrivial()
+    {
+        return (size() == 0
+                && (_importedTables == null
+                    || _importedTables.length == 0));
+    }
+
 
     // Not synchronized since member is final.
     public SymbolTable getSystemSymbolTable()

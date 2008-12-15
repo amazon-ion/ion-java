@@ -107,8 +107,18 @@ public interface SymbolTable
      * returns <code>Integer.MAX_VALUE</code>.
      *
      * @return the number of symbols in this table.
+     * @deprecated Turns out this isn't particularly meaningful
      */
+    @Deprecated
     public int size();
+
+    /**
+     * Determines whether this symbol table defines any non-system symbols.
+     * A trivial symtab is either a shared symtab with no symbols (maxId == 0)
+     * or a local symtab with no imports and no local symbols.
+     * Such a table can be safely discarded in some circumstances.
+     */
+    public boolean isTrivial();
 
 
     /**

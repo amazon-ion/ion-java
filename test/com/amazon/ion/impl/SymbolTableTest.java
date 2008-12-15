@@ -153,9 +153,6 @@ public class SymbolTableTest
         SymbolTable symbolTable = oneValue(text).getSymbolTable();
         checkLocalTable(symbolTable);
 
-        if (false)
-            assertEquals(2, symbolTable.size()); // FIXME correct size() impl
-
         checkSymbol("foo", 100, symbolTable);
         checkSymbol("bar", 101, symbolTable);
 
@@ -638,8 +635,7 @@ public class SymbolTableTest
         SymbolTable table = registerSharedSymtab(text);
         assertEquals("test", table.getName());
         assertEquals(1, table.getVersion());
-        assertEquals(2, table.size());
-
+        assertEquals(2, table.getMaxId());
 
         text =
             LocalSymbolTablePrefix +
@@ -678,7 +674,6 @@ public class SymbolTableTest
         assertEquals("test", table.getName());
         assertEquals(5, table.getVersion());
         assertEquals(0, table.getMaxId());
-        assertEquals(0, table.size());
 
         text =
             LocalSymbolTablePrefix +
@@ -688,7 +683,6 @@ public class SymbolTableTest
         table = v.getSymbolTable();
         assertTrue(table.isLocalTable());
         assertEquals(ION_1_0_MAX_ID, table.getMaxId());
-        assertEquals(0, table.size());
     }
 
     public void testMalformedSymbolDeclarations()
@@ -711,7 +705,6 @@ public class SymbolTableTest
             "}";
         SymbolTable table = registerSharedSymtab(text);
         assertEquals(1, table.getMaxId());
-        assertEquals(1, table.size());
         assertEquals(null, table.findKnownSymbol(1));
         assertEquals("$1", table.findSymbol(1));
 
@@ -723,7 +716,6 @@ public class SymbolTableTest
             "}";
         table = registerSharedSymtab(text);
         assertEquals(100, table.getMaxId());
-        assertEquals(100, table.size());
         assertEquals(null, table.findKnownSymbol(100));
 
         text =
@@ -734,7 +726,6 @@ public class SymbolTableTest
         table = v.getSymbolTable();
         assertTrue(table.isLocalTable());
         assertEquals(ION_1_0_MAX_ID + 1, table.getMaxId());
-        assertEquals(1, table.size());
 
         text =
             LocalSymbolTablePrefix +
@@ -744,7 +735,6 @@ public class SymbolTableTest
         table = v.getSymbolTable();
         assertTrue(table.isLocalTable());
         assertEquals(100, table.getMaxId());
-        assertEquals(100-ION_1_0_MAX_ID, table.size());
     }
 
 

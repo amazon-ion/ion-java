@@ -325,12 +325,16 @@ public final class UnifiedSymbolTable
         return (_is_locked && SystemSymbolTable.ION.equals(_name));
     }
 
+    public boolean isTrivial()
+    {
+        return (_is_locked
+                ? _max_id == 0
+                : (!_has_user_symbols && _import_count == 0));
+    }
+
+    @Deprecated
     public int size()
     {
-        // TODO: what is the size?  is it the number of symbols?
-        //       number of locally defined symbols? maximum symbol
-        //       id (which counts "null symbols")?  We'll start
-        //       with max id, which is the largest and think about it.
         int lowBound =
             (_system_symbols == null ? 0 :_system_symbols.getMaxId());
 
@@ -344,27 +348,17 @@ public final class UnifiedSymbolTable
         }
         return _max_id - lowBound;
     }
+
     public int getMaxId()
     {
         return _max_id;
     }
-    public void setMaxId(int maxId)  // FIXME in-use but nonfunctional
-    {
-        // TODO when can maxId==0 ?
-        if (maxId < 0) {
-            throw new IllegalArgumentException("symbol id's are greater than 0, and maxId must be at least 0");
-        }
-        if (_is_locked) {
-            throw new IllegalStateException("can't change shared symbol table");
-        }
-
-    }
-
 
     public int getVersion()
     {
         return _version;
     }
+
     public String getName()
     {
         return _name;
@@ -477,7 +471,11 @@ public final class UnifiedSymbolTable
         else if (sid == UNKNOWN_SID) {
             defineSymbol(new Symbol(name, id, this));
         }
+
+        // TODO disallow using sid within imports range
     }
+
+
     private void defineSymbol(Symbol sym)
     {
         assert !_is_locked;
@@ -491,7 +489,8 @@ public final class UnifiedSymbolTable
             }
             Symbol[] temp = new Symbol[newlen];
             if (_max_id > 0) {
-                System.arraycopy(_symbols, 0, temp, 0, _max_id + 1);
+                int length = Math.min(_max_id + 1, _symbols.length);
+                System.arraycopy(_symbols, 0, temp, 0, length);
             }
             _symbols = temp;
         }
@@ -518,6 +517,9 @@ public final class UnifiedSymbolTable
             }
         }
 
+        // FIXME lexicographic selection if sid is duplicated
+        // Be sure to only sort within one import!  We can
+
         if (sid > _max_id) _max_id = sid;
         if (sym.source == this) {
             _has_user_symbols = true;
@@ -538,36 +540,7 @@ public final class UnifiedSymbolTable
             return;
         }
 
-        if (sid >= _symbols.length) {
-            int newlen = _max_id > 0 ? _max_id * 2 : 10;
-            while (newlen < sid) {
-                newlen *= 2;
-            }
-            Symbol[] temp = new Symbol[newlen];
-            if (_max_id > 0) {
-                int length = Math.min(_max_id + 1, _symbols.length);
-                System.arraycopy(_symbols, 0, temp, 0, length);
-            }
-            _symbols = temp;
-        }
-
-        if (_symbols[sid] != null) {
-            String message =
-                "Cannot redefine $" + sid + " from "
-                + Text.printQuotedSymbol(_symbols[sid].name)
-                + " to " + Text.printQuotedSymbol(sym.name);
-            throw new IonException(message);
-        }
-        _symbols[sid] = sym;
-        _id_map.put(sym.name, sid);
-
-        if (sid > _max_id) _max_id = sid;
-        if (sym.source == this) {
-            _has_user_symbols = true;
-            if (_ion_rep != null) {
-                recordLocalSymbolInIonRep(sym);
-            }
-        }
+        defineSymbol(sym);
     }
 
     public void removeSymbol(String name, int id)
@@ -805,7 +778,7 @@ public final class UnifiedSymbolTable
         if (_ion_symbols_rep == null) {
             IonValue syms = _ion_rep.get(UnifiedSymbolTable.SYMBOLS);
             if (syms == null || syms.getType() != IonType.STRUCT) {
-                // TODO handle list-based representation
+                // FIXME handle list-based representation
                 syms = system.newEmptyStruct();
                 _ion_rep.put(UnifiedSymbolTable.SYMBOLS, syms);
             }

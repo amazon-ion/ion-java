@@ -165,6 +165,10 @@ public class SystemSymbolTableImpl
         return SYSTEM_SYMBOLS.length;
     }
 
+    public boolean isTrivial()
+    {
+        return false;
+    }
 
     public IonStruct getIonRepresentation()
     {

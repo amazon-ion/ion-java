@@ -49,11 +49,10 @@ public abstract class IonBaseWriter
         _symbol_table = symbols;
     }
 
-    protected boolean symtabIsNonTrivial()
+    protected boolean symtabIsLocalAndNonTrivial()
     {
         return (_symbol_table.isLocalTable()
-                && (_symbol_table.getImportedTables().length != 0
-                    || _symbol_table.size() != 0));
+                && !_symbol_table.isTrivial());
     }
 
     protected String getSymbolTableName() {

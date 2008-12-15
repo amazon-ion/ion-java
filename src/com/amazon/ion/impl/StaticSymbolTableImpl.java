@@ -168,6 +168,10 @@ public class StaticSymbolTableImpl
     }
 
 
+    public boolean isTrivial()
+    {
+        return size() == 0;
+    }
 
     public boolean isCompatible(SymbolTable other)
     {
