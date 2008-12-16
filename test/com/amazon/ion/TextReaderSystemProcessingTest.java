@@ -16,4 +16,10 @@ public class TextReaderSystemProcessingTest
     {
         return system().newReader(text);
     }
+
+    @Override
+    protected IonReader systemRead(String text) throws Exception
+    {
+        return system().newSystemReader(text);
+    }
 }

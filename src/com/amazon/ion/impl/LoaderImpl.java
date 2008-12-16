@@ -162,8 +162,7 @@ public class LoaderImpl
 
     public IonDatagramImpl load(byte[] ionData)
     {
-        SystemReader systemReader = mySystem.newSystemReader(ionData);
-        return new IonDatagramImpl(mySystem, systemReader);
+        return new IonDatagramImpl(mySystem, ionData);
     }
 
 

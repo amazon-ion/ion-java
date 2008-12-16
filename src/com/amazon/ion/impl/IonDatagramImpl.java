@@ -85,7 +85,7 @@ public final class IonDatagramImpl
      */
     public IonDatagramImpl(IonSystemImpl system, byte[] ionData)
     {
-        this(system, system.newSystemReader(ionData));
+        this(system, system.newLegacySystemReader(ionData));
     }
 
 

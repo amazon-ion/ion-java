@@ -18,4 +18,12 @@ public class DatagramTreeReaderSystemProcessingTest
         IonDatagram datagram = loader.load(text);
         return system().newReader(datagram);
     }
+
+    @Override
+    protected IonReader systemRead(String text) throws Exception
+    {
+        IonLoader loader = loader();
+        IonDatagram datagram = loader.load(text);
+        return system().newSystemReader(datagram);
+    }
 }

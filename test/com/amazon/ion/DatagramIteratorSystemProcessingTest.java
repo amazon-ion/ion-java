@@ -19,4 +19,12 @@ public class DatagramIteratorSystemProcessingTest
         IonDatagram datagram = loader.load(text);
         return datagram.iterator();
     }
+
+    @Override
+    protected Iterator<IonValue> systemIterate(String text)
+    {
+        IonLoader loader = loader();
+        IonDatagram datagram = loader.load(text);
+        return datagram.systemIterator();
+    }
 }

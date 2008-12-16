@@ -220,10 +220,15 @@ public class IonSystemImpl
                               new StringReader(ionText));
     }
 
+    public Iterator<IonValue> systemIterate(String ionText)
+    {
+        return new SystemReader(this, ionText);
+    }
+
 
     public Iterator<IonValue> iterate(byte[] ionData)
     {
-        SystemReader systemReader = newSystemReader(ionData);
+        SystemReader systemReader = newLegacySystemReader(ionData);
         return new UserReader(systemReader);
     }
 
@@ -234,7 +239,14 @@ public class IonSystemImpl
 
     public IonReader newReader(String ionText)
     {
+        // FIXME this should pass default catalog
         return new IonTextReader(ionText);
+    }
+
+    public IonReader newSystemReader(String ionText)
+    {
+        // FIXME this should pass default catalog
+        return new IonTextReader(ionText, true);
     }
 
 
@@ -243,15 +255,39 @@ public class IonSystemImpl
         return newReader(ionData, 0, ionData.length);
     }
 
+    public IonReader newSystemReader(byte[] ionData)
+    {
+        return newSystemReader(ionData, 0, ionData.length);
+    }
+
+
     public IonReader newReader(byte[] ionData, int offset, int len)
     {
         boolean isBinary = IonBinary.matchBinaryVersionMarker(ionData);
 
         IonReader reader;
         if (isBinary) {
+            // FIXME pass catalog
             reader = new IonBinaryReader(ionData, offset, len);
         }
         else {
+            // FIXME pass catalog
+            reader = new IonTextReader(ionData, offset, len);
+        }
+        return reader;
+    }
+
+    public IonReader newSystemReader(byte[] ionData, int offset, int len)
+    {
+        boolean isBinary = IonBinary.matchBinaryVersionMarker(ionData);
+
+        IonReader reader;
+        if (isBinary) {
+            // FIXME pass catalog
+            reader = new IonBinaryReader(ionData, offset, len, true);
+        }
+        else {
+            // FIXME pass catalog
             reader = new IonTextReader(ionData, offset, len);
         }
         return reader;
@@ -276,7 +312,14 @@ public class IonSystemImpl
 
     public IonReader newReader(IonValue value)
     {
+        // FIXME this should pass default catalog
         return new IonTreeReader(value);
+    }
+
+    public IonReader newSystemReader(IonDatagram dg)
+    {
+        // FIXME this should pass default catalog
+        return new IonTreeReader(dg, true);
     }
 
 
@@ -320,7 +363,7 @@ public class IonSystemImpl
      *
      * @throws NullPointerException if <code>ionData</code> is null.
      */
-    public SystemReader newSystemReader(byte[] ionData)
+    public SystemReader newLegacySystemReader(byte[] ionData)
     {
         boolean isBinary =
             IonBinary.matchBinaryVersionMarker(ionData);

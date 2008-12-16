@@ -42,7 +42,6 @@ public final class IonTextReader
 
 //////////////////////////////////////////////////////////////////////////debug
     static final boolean _debug = false;
-    static final boolean _debug_all_system = false;
 
 
     IonTextTokenizer    _scanner;
@@ -51,6 +50,8 @@ public final class IonTextReader
 
     boolean         _eof;
     State           _state;
+
+    final boolean   _is_returning_system_values;
 
     boolean         _in_struct;
     boolean         _skip_children;
@@ -201,26 +202,37 @@ public final class IonTextReader
         _value_ready = false;
         _value_is_container = false;
     }
-    private IonTextReader() {}
+
+    private IonTextReader() {
+        _is_returning_system_values = false;  // FIXME really?!?!?
+    }
+
     public IonTextReader(byte[] buf) {
-        this(new IonTextTokenizer(buf), null);
+        this(new IonTextTokenizer(buf), null, false);
     }
     public IonTextReader(byte[] buf, int start, int len) {
-        this(new IonTextTokenizer(buf, start, len), null);
+        this(new IonTextTokenizer(buf, start, len), null, false);
     }
     public IonTextReader(String ionText) {
-        this(new IonTextTokenizer(ionText), null);
+        this(new IonTextTokenizer(ionText), null, false);
+    }
+    public IonTextReader(String ionText, boolean returnSystemValues) {
+        this(new IonTextTokenizer(ionText), null, returnSystemValues);
     }
     public IonTextReader(byte[] buf, IonCatalog catalog) {
-        this(new IonTextTokenizer(buf), catalog);
+        this(new IonTextTokenizer(buf), catalog, false);
     }
     public IonTextReader(byte[] buf, int start, int len, IonCatalog catalog) {
-        this(new IonTextTokenizer(buf, start, len), catalog);
+        this(new IonTextTokenizer(buf, start, len), catalog, false);
     }
     public IonTextReader(String ionText, IonCatalog catalog) {
-        this(new IonTextTokenizer(ionText), catalog);
+        this(new IonTextTokenizer(ionText), catalog, false);
     }
-    IonTextReader(IonTextTokenizer scanner, IonCatalog catalog) {
+
+    private IonTextReader(IonTextTokenizer scanner, IonCatalog catalog,
+                          boolean returnSystemValues)
+    {
+        this._is_returning_system_values = returnSystemValues;
         this._scanner = scanner;
         this._catalog = catalog;
         this._current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
@@ -340,6 +352,10 @@ public final class IonTextReader
 
         return !_eof;
     }
+
+    /**
+     * @return true iff the current value is a system value to be skipped.
+     */
     private boolean checkForSystemValuesToSkipOrProcess() {
         boolean skip_value = false;
 
@@ -353,7 +369,7 @@ public final class IonTextReader
             case SYMBOL:
                 if (UnifiedSymbolTable.ION_1_0.equals(this.stringValue())) {
                     _current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
-                    skip_value = true;
+                    skip_value = true; // FIXME get system tab from current
                 }
                 break;
             case STRUCT:
@@ -372,7 +388,7 @@ public final class IonTextReader
                     // recognizing the annotations below (in the fullness of time)
                     if (hasAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE)) {
 
-                        if (_debug_all_system) this.save_state();
+                        if (_is_returning_system_values) this.save_state();
 
                         SymbolTable local = loadLocalSymbolTable();
                         if (local != null) { //FIXME shouldn't happen
@@ -380,7 +396,7 @@ public final class IonTextReader
                             skip_value = true;
                         }
 
-                        if (_debug_all_system) this.restore_state();
+                        if (_is_returning_system_values) this.restore_state();
 
                     }
                 }
@@ -390,7 +406,7 @@ public final class IonTextReader
             }
         }
 
-        return _debug_all_system ? false : skip_value;
+        return _is_returning_system_values ? false : skip_value;
     }
 
     public IonType next()

@@ -77,15 +77,26 @@ public final class IonTreeReader
         _eof = false;
     }
 
+
+    public IonTreeReader(IonDatagram datagram, boolean returnSystemValues) {
+        this(returnSystemValues, datagram);
+    }
+
     public IonTreeReader(IonValue value) {
+        this(false, value);
+    }
+
+    private IonTreeReader(boolean returnSystemValues, IonValue value) {
         _root = value;
         _curr = null;
         _eof = false;
-        if (value instanceof IonContainer) {
-            _iter = ((IonContainer)value).iterator();
+
+        if (value instanceof IonDatagram) {
+            IonDatagram dg = (IonDatagram) value;
+            _iter = (returnSystemValues ? dg.systemIterator() : dg.iterator());
         }
-        else if (value instanceof IonDatagram) {
-            _iter = ((IonDatagram)value).iterator();
+        else if (value instanceof IonContainer) {
+            _iter = ((IonContainer)value).iterator();
         }
         else {
             _iter = null;

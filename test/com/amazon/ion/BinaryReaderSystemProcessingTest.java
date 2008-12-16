@@ -19,4 +19,13 @@ public class BinaryReaderSystemProcessingTest
         byte[] bytes = datagram.toBytes();
         return system().newReader(bytes);
     }
+
+    @Override
+    protected IonReader systemRead(String text) throws Exception
+    {
+        IonLoader loader = loader();
+        IonDatagram datagram = loader.load(text);
+        byte[] bytes = datagram.toBytes();
+        return system().newSystemReader(bytes);
+    }
 }

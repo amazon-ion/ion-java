@@ -18,7 +18,10 @@ public abstract class SystemProcessingTestCase
     protected abstract void startIteration(String text)
         throws Exception;
 
-    protected abstract void nextUserValue()
+    protected abstract void startSystemIteration(String text)
+    throws Exception;
+
+    protected abstract void nextValue()
         throws Exception;
 
     protected abstract SymbolTable currentSymtab()
@@ -39,6 +42,10 @@ public abstract class SystemProcessingTestCase
     protected abstract void checkInt(long expected)
         throws Exception;
 
+    protected abstract void checkEof()
+        throws Exception;
+
+
     //=========================================================================
 
     public void testLocalTableResetting()
@@ -48,29 +55,29 @@ public abstract class SystemProcessingTestCase
 
         startIteration(text);
 
-        nextUserValue();
+        nextValue();
         checkSymbol("bar");
 
         SymbolTable table1 = currentSymtab();
         checkLocalTable(table1);
 
-        nextUserValue();
+        nextValue();
         checkSymbol("foo");
         assertSame(table1, currentSymtab());
 
         // Symbol table changes here
 
-        nextUserValue();
+        nextValue();
         checkInt(1);
 
-        nextUserValue();
+        nextValue();
         checkSymbol("bar");
 
         SymbolTable table2 = currentSymtab();
         checkLocalTable(table2);
         assertNotSame(table1, table2);
 
-        nextUserValue();
+        nextValue();
         checkSymbol("foo");
         assertSame(table2, currentSymtab());
     }
@@ -82,13 +89,13 @@ public abstract class SystemProcessingTestCase
 
         startIteration(text);
 
-        nextUserValue();
+        nextValue();
         checkInt(1);
 
         SymbolTable table1 = currentSymtab();
         checkTrivialLocalTable(table1);
 
-        nextUserValue();
+        nextValue();
         checkInt(2);
 
         SymbolTable table2 = currentSymtab();
@@ -116,16 +123,16 @@ public abstract class SystemProcessingTestCase
 
         startIteration(text);
 
-        nextUserValue();
+        nextValue();
         checkSymbol("bar", 101);
 
         SymbolTable table1 = currentSymtab();
         checkLocalTable(table1);
 
-        nextUserValue();
+        nextValue();
         checkSymbol("foo", 100);
 
-        nextUserValue();
+        nextValue();
         checkSymbol("bar", 14);
 
         SymbolTable table2 = currentSymtab();
@@ -133,7 +140,7 @@ public abstract class SystemProcessingTestCase
         assertNotSame(table1, table2);
         assertEquals(14, table2.getMaxId());
 
-        nextUserValue();
+        nextValue();
         checkSymbol("foo", 13);
         assertEquals(14, table2.getMaxId());
         assertSame(table2, currentSymtab());
@@ -152,13 +159,13 @@ public abstract class SystemProcessingTestCase
 
         startIteration(text);
 
-        nextUserValue();
+        nextValue();
         checkInt(1);
 
         SymbolTable table1 = currentSymtab();
         checkLocalTable(table1);
 
-        nextUserValue();
+        nextValue();
         checkInt(2);
 
         SymbolTable table2 = currentSymtab();
@@ -178,13 +185,13 @@ public abstract class SystemProcessingTestCase
         assertNull(system().getCatalog().getTable("imported"));
 
         startIteration(text);
-        nextUserValue();
+        nextValue();
         checkType(IonType.STRUCT);
         checkAnnotation(SystemSymbolTable.ION_SHARED_SYMBOL_TABLE);
 
         assertNull(system().getCatalog().getTable("imported"));
 
-        nextUserValue();
+        nextValue();
         checkSymbol("imported 1");
     }
 
@@ -196,9 +203,22 @@ public abstract class SystemProcessingTestCase
             "346";
 
         startIteration(text);
-        nextUserValue();
+        nextValue();
         checkInt(346);
 
         assertNull(system().getCatalog().getTable("test"));
+    }
+
+    //=========================================================================
+
+    public void testSystemIterationShowsIvm()
+        throws Exception
+    {
+        String text = SystemSymbolTable.ION_1_0;
+
+        startSystemIteration(text);
+        nextValue();
+        checkSymbol(SystemSymbolTable.ION_1_0, SystemSymbolTable.ION_1_0_SID);
+        checkEof();
     }
 }

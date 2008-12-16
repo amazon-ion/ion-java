@@ -21,6 +21,12 @@ public class IteratorSystemProcessingTest
         return system().iterate(text);
     }
 
+    protected Iterator<IonValue> systemIterate(String text)
+    {
+        return system().systemIterate(text);
+    }
+
+
     @Override
     protected void startIteration(String text) throws Exception
     {
@@ -28,7 +34,14 @@ public class IteratorSystemProcessingTest
     }
 
     @Override
-    protected void nextUserValue() throws Exception
+    protected void startSystemIteration(String text) throws Exception
+    {
+        myIterator = systemIterate(text);
+
+    }
+
+    @Override
+    protected void nextValue() throws Exception
     {
         myCurrentValue = myIterator.next();
     }
@@ -71,5 +84,11 @@ public class IteratorSystemProcessingTest
     protected SymbolTable currentSymtab() throws Exception
     {
         return myCurrentValue.getSymbolTable();
+    }
+
+    @Override
+    protected void checkEof() throws Exception
+    {
+        assertFalse("expected EOF", myIterator.hasNext());
     }
 }
