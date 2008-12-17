@@ -62,35 +62,6 @@ public interface IonSequence
 
 
     /**
-     * Creates a deep copy of an element and appends it to this sequence in the
-     * most efficient manner possible.
-     *
-     * @param element
-     *
-     * @throws NullPointerException
-     * if <code>element</code> is <code>null</code>.
-     * @throws IllegalArgumentException if <code>element</code> is an
-     * {@link IonDatagram}.
-     */
-//    public void addEmbedded(IonValue element)
-//        throws NullPointerException;
-
-
-    /**
-     * Creates a deep copy of an element and inserts it into this sequence in
-     * the most efficient manner possible.
-     *
-     * @param element
-     *
-     * @throws NullPointerException
-     * if <code>element</code> is <code>null</code>.
-     * @throws IllegalArgumentException if <code>element</code> is an
-     * {@link IonDatagram}.
-     */
-//    public void addEmbedded(int index, IonValue element)
-//        throws NullPointerException;
-
-    /**
      * {@inheritDoc}
      */
     public IonSequence clone();

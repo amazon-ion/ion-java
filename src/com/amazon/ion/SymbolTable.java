@@ -45,7 +45,7 @@ public interface SymbolTable
     /**
      * Gets the unique name of this symbol table.
      *
-     * @return the unique name, or {@code null} if this is not a shared table.
+     * @return the unique name, or {@code null} if {@link #isLocalTable()}.
      */
     public String getName();
 
@@ -62,18 +62,20 @@ public interface SymbolTable
      * Gets the system symbol table being used by this local table.
      * <p>
      * If {@link #isSystemTable()} then this method returns {@code this}.
+     * Otherwise, if {@link #isSharedTable()} then this method returns
+     * {@code null}.
      *
-     * @return not <code>null</code>.
+     * @return not <code>null</code>, except for non-system shared tables.
      */
     public SymbolTable getSystemSymbolTable();
-    // FIXME should this return null for shared symtabs?
 
 
     /**
-     * Gets the identifier for the system symbol table imported by this table.
+     * Gets the identifier for the system symbol table used by this table.
      * The system identifier is a string of the form {@code "$ion_X_Y"}.
      *
-     * @return the system identifier; not {@code null}.
+     * @return the system identifier; or {@code null} for non-system shared
+     *  tables.
      */
     public String getSystemId();
 
@@ -156,7 +158,8 @@ public interface SymbolTable
      * @param name must be non-empty.
      * @return a value greater than zero.
      *
-     * @throws UnsupportedOperationException if {@link #isSharedTable()}.
+     * @throws UnsupportedOperationException if {@link #isSharedTable()}
+     * and the requested symbol is not already defined.
      */
     public int addSymbol(String name);
 
@@ -168,7 +171,8 @@ public interface SymbolTable
      * @param name must be non-empty.
      * @param id must be greater than zero.
      *
-     * @throws UnsupportedOperationException if {@link #isSharedTable()}.
+     * @throws UnsupportedOperationException if {@link #isSharedTable()}
+     * and the requested symbol is not already defined.
      */
     public void defineSymbol(String name, int id);
 
