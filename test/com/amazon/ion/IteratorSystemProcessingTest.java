@@ -17,11 +17,13 @@ public class IteratorSystemProcessingTest
 
 
     protected Iterator<IonValue> iterate(String text)
+        throws Exception
     {
         return system().iterate(text);
     }
 
     protected Iterator<IonValue> systemIterate(String text)
+        throws Exception
     {
         return system().systemIterate(text);
     }
@@ -89,6 +91,9 @@ public class IteratorSystemProcessingTest
     @Override
     protected void checkEof() throws Exception
     {
-        assertFalse("expected EOF", myIterator.hasNext());
+        if (myIterator.hasNext())
+        {
+            fail("expected EOF, found " +  myIterator.next());
+        }
     }
 }

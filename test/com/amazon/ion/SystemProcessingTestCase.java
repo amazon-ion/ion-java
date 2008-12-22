@@ -175,6 +175,25 @@ public abstract class SystemProcessingTestCase
     }
 
 
+    public void testLocalSymtabWithOpenContent()
+        throws Exception
+    {
+        String data = "$ion_symbol_table::{open:33,symbols:[\"a\",\"b\"]} b";
+
+        startIteration(data);
+        nextValue();
+        checkSymbol("b", 11);
+
+        if (false)
+        {
+            // No such promises at the moment...
+            SymbolTable symtab = currentSymtab();
+            IonStruct symtabStruct = symtab.getIonRepresentation();
+            checkInt(33, symtabStruct.get("open"));
+        }
+    }
+
+
     public void testSharedTableNotAddedToCatalog()
         throws Exception
     {
