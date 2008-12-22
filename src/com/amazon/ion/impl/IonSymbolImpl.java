@@ -108,7 +108,15 @@ public final class IonSymbolImpl
                 symtab = materializeSymbolTable();
             }
             if (symtab != null) {
-                mySid = symtab.addSymbol(_get_value());
+                String name = _get_value();
+                if (symtab.isLocalTable())
+                {
+                    mySid = symtab.addSymbol(name);
+                }
+                else
+                {
+                    mySid = symtab.findSymbol(name);
+                }
             }
         }
 
