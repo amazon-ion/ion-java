@@ -23,6 +23,8 @@ import java.io.StringReader;
 public class LoaderImpl
     implements IonLoader
 {
+    private static final boolean USE_NEW_READERS = false;
+
     private final IonSystemImpl mySystem;
 
 
@@ -93,6 +95,26 @@ public class LoaderImpl
     public IonDatagramImpl load(String ionText)
         throws IonException
     {
+        if (USE_NEW_READERS)
+        {
+            IonTextReader textReader = mySystem.newSystemReader(ionText);
+            try
+            {
+                IonDatagramImpl dg = new IonDatagramImpl(mySystem, textReader);
+
+                // Force symtab preparation  FIXME should not be necessary
+                dg.byteSize();
+                return dg;
+            }
+            catch (IOException e)
+            {
+                // Wrap this because it shouldn't happen and we don't want to
+                // propagate it.
+                String message = "Error reading from string: " + e.getMessage();
+                throw new IonException(message, e);
+            }
+        }
+
         StringReader reader = new StringReader(ionText);
         try
         {

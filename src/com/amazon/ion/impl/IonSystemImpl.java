@@ -243,10 +243,9 @@ public class IonSystemImpl
         return new IonTextReader(ionText);
     }
 
-    public IonReader newSystemReader(String ionText)
+    public IonTextReader newSystemReader(String ionText)
     {
-        // FIXME this should pass default catalog
-        return new IonTextReader(ionText, true);
+        return new IonTextReader(ionText, getCatalog(), true);
     }
 
 

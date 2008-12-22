@@ -13,11 +13,12 @@ import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonDecimal;
 import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonSequence;
+import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.TtTimestamp;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -31,19 +32,19 @@ import java.util.Date;
 public final class IonTreeWriter
     extends IonBaseWriter
 {
-    IonSystem           _sys;
+    IonSystemImpl       _sys;
 
     boolean             _in_struct;
     IonContainer        _current_parent;
     int                 _parent_stack_top = 0;
     IonContainer[]      _parent_stack = new IonContainer[10];
 
-    public IonTreeWriter(IonSystem sys) {
+    public IonTreeWriter(IonSystemImpl sys) {
         _sys = sys;
         setSymbolTable(sys.getSystemSymbolTable());
     }
 
-    public IonTreeWriter(IonSystem sys, IonContainer rootContainer) {
+    public IonTreeWriter(IonSystemImpl sys, IonContainer rootContainer) {
         _sys = sys;
         _current_parent = rootContainer;
         _in_struct = (_current_parent instanceof IonStruct);
@@ -52,6 +53,13 @@ public final class IonTreeWriter
 
     void initialize_symbol_table() {
         super.setSymbolTable(_sys.newLocalSymbolTable());
+    }
+
+    private boolean writingDatagram()
+    {
+        IonContainer top =
+            (_parent_stack_top == 0 ? _current_parent : _parent_stack[0]);
+        return top.getType() == IonType.DATAGRAM;
     }
 
     void pushParent(IonContainer newParent) {
@@ -108,6 +116,9 @@ public final class IonTreeWriter
                 this.clearFieldName();
             }
             else {
+                if (_current_parent instanceof IonDatagram) {
+                    ((IonValueImpl)value).setSymbolTable(_symbol_table);
+                }
                 ((IonSequence)_current_parent).add(value);
             }
         }
@@ -135,6 +146,23 @@ public final class IonTreeWriter
     public void stepOut() throws IOException
     {
         popParent();
+
+        if (_current_parent instanceof IonDatagram)
+        {
+            IonDatagram dg = (IonDatagram) _current_parent;
+
+            // TODO see also IonDatagramImpl.getCurrentSymbolTable()
+            IonValue prior = dg.systemGet(dg.systemSize() - 1);
+            if (_sys.valueIsLocalSymbolTable(prior))
+            {
+                SymbolTable systemTable =
+                    prior.getSymbolTable().getSystemSymbolTable();
+                _symbol_table = new UnifiedSymbolTable(systemTable,
+                                                       (IonStruct) prior,
+                                                       _sys.getCatalog());
+            }
+
+        }
     }
 
 
@@ -281,7 +309,7 @@ public final class IonTreeWriter
     public void writeString(String value)
         throws IOException
     {
-        IonValue v = _sys.newString(value);
+        IonString v = _sys.newString(value);
         append(v);
     }
 

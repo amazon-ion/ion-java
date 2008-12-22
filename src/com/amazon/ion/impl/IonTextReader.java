@@ -216,9 +216,14 @@ public final class IonTextReader
     public IonTextReader(String ionText) {
         this(new IonTextTokenizer(ionText), null, false);
     }
-    public IonTextReader(String ionText, boolean returnSystemValues) {
-        this(new IonTextTokenizer(ionText), null, returnSystemValues);
+
+    public IonTextReader(String ionText,
+                         IonCatalog catalog,
+                         boolean returnSystemValues)
+    {
+        this(new IonTextTokenizer(ionText), catalog, returnSystemValues);
     }
+
     public IonTextReader(byte[] buf, IonCatalog catalog) {
         this(new IonTextTokenizer(buf), catalog, false);
     }
@@ -889,7 +894,7 @@ public final class IonTextReader
             assert ! this._is_null;
 
             // we have to "wash" the value through a symbol table to address
-            // cases like $007
+            // cases like $007 TODO is this even well-defined?
             SymbolTable syms = this.getSymbolTable();
             int sid = syms.findSymbol(value);
             if (sid <= 0) {

@@ -43,7 +43,10 @@ public abstract class IonBaseWriter
 
     public void setSymbolTable(SymbolTable symbols)
     {
-        if (! symbols.isLocalTable() && ! symbols.isSystemTable()) {
+        if (symbols != null
+            && ! symbols.isLocalTable()
+            && ! symbols.isSystemTable())
+        {
             throw new IllegalArgumentException("table must be local or system");
         }
         _symbol_table = symbols;
@@ -141,7 +144,7 @@ public abstract class IonBaseWriter
             for (int ii=0; ii<_annotation_count; ii++) {
                 String name;
                 int id = _annotation_sids[ii];
-                name = symtab.findKnownSymbol(id);
+                name = symtab.findKnownSymbol(id); // FIXME can return null
                 _annotations[ii] = name;
             }
         }
@@ -248,7 +251,7 @@ public abstract class IonBaseWriter
             }
             String name;
             int id = _field_name_sid;
-            name = symtab.findKnownSymbol(id);
+            name = symtab.findKnownSymbol(id); // FIXME this can return null
             _field_name = name;
         }
         return _field_name;
@@ -260,6 +263,11 @@ public abstract class IonBaseWriter
         }
         return _field_name_sid;
     }
+
+//    protected void updateCurrentSymbolTable() // XXX
+//    {
+//        return _symbol_table;
+//    }
 
     protected int add_symbol(String name)
     {
@@ -411,7 +419,7 @@ public abstract class IonBaseWriter
         }
 
         if (reader.isNullValue()) {
-            this.writeNull(reader.getType());
+            this.writeNull(reader.getType());  // TODO hoist getType
         }
         else {
             switch (reader.getType()) {
