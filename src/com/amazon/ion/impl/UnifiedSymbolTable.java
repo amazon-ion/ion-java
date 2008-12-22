@@ -1023,4 +1023,20 @@ public final class UnifiedSymbolTable
         return "$" + id;
     }
 
+
+    @Override
+    public String toString()
+    {
+        StringBuilder buf = new StringBuilder("[UnifiedSymbolTable ");
+        if (isSharedTable()) {
+            buf.append(_name);
+            buf.append(' ');
+            buf.append(_version);
+        }
+        else {
+            buf.append("local");
+        }
+        buf.append(']');
+        return buf.toString();
+    }
 }
