@@ -146,9 +146,9 @@ public class IonBinary
         @Override
         public BufferManager clone() throws CloneNotSupportedException
         {
-        	BlockedBuffer buffer_clone = this._buf.clone();
-        	BufferManager clone = new BufferManager(buffer_clone);
-        	return clone;
+            BlockedBuffer buffer_clone = this._buf.clone();
+            BufferManager clone = new BufferManager(buffer_clone);
+            return clone;
         }
 
         public IonBinary.Reader openReader() {
@@ -228,6 +228,10 @@ public class IonBinary
         }
         return len;
     }
+
+    /**
+     * @return zero if input is zero
+     */
     public static int lenVarUInt8(long longVal) {
         int len = 0;
 
@@ -430,6 +434,9 @@ public class IonBinary
     }
 
 
+    /**
+     * @param di may be null
+     */
     public static int lenIonTimestamp(TtTimestamp di)
     {
         if (di == null) return 0;
@@ -447,6 +454,9 @@ public class IonBinary
         return tzlen + bdlen;
     }
 
+    /**
+     * @param v may be null.
+     */
     public static int lenIonString(String v)
     {
         if (v == null) return 0;
@@ -682,24 +692,24 @@ public class IonBinary
             if (c < 0) throwUnexpectedEOFException();
             int typeid = IonConstants.getTypeCode(c);
             if (typeid == IonConstants.tidTypedecl) {
-            	int lownibble = IonConstants.getLowNibble(c);
-            	if (lownibble == 0) {
-            		// 0xE0 is the first byte of the IonVersionMarker
-            		// so we'll return it as is, the caller has to
-            		// verify the remaining bytes and handle them
-            		// appropriately - so here we do nothing
-            	}
-            	else {
-	                this.readLength(typeid, lownibble);
-	                int alen = this.readVarInt7IntValue();
-	                // TODO add skip(int) method instead of this loop.
-	                while (alen > 0) {
-	                    if (this.read() < 0) throwUnexpectedEOFException();
-	                    alen--;
-	                }
-	                c = read();
-	                if (c < 0) throwUnexpectedEOFException();
-            	}
+                int lownibble = IonConstants.getLowNibble(c);
+                if (lownibble == 0) {
+                    // 0xE0 is the first byte of the IonVersionMarker
+                    // so we'll return it as is, the caller has to
+                    // verify the remaining bytes and handle them
+                    // appropriately - so here we do nothing
+                }
+                else {
+                    this.readLength(typeid, lownibble);
+                    int alen = this.readVarInt7IntValue();
+                    // TODO add skip(int) method instead of this loop.
+                    while (alen > 0) {
+                        if (this.read() < 0) throwUnexpectedEOFException();
+                        alen--;
+                    }
+                    c = read();
+                    if (c < 0) throwUnexpectedEOFException();
+                }
             }
             return c;
         }
