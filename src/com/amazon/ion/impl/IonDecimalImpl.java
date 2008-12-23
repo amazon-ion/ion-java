@@ -36,6 +36,7 @@ public final class IonDecimalImpl
     public IonDecimalImpl(IonSystemImpl system)
     {
         super(system, NULL_DECIMAL_TYPEDESC);
+        _hasNativeValue = true; // Since this is null
     }
 
     public IonDecimalImpl(IonSystemImpl system, BigDecimal value)
@@ -145,6 +146,7 @@ public final class IonDecimalImpl
     protected int getNativeValueLength()
     {
         assert _hasNativeValue == true;
+        if (_decimal_value == null) return 0;
         return IonBinary.lenIonDecimal(_decimal_value);
     }
 

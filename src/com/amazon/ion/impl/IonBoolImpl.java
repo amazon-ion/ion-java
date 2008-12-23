@@ -31,8 +31,12 @@ public final class IonBoolImpl
     public IonBoolImpl(IonSystemImpl system)
     {
         super(system, NULL_BOOL_TYPEDESC);
+        _hasNativeValue = true; // Since this is null
     }
 
+    /**
+     * Constructs a binary-backed symbol value.
+     */
     public IonBoolImpl(IonSystemImpl system, int typeDesc)
     {
         super(system, typeDesc);

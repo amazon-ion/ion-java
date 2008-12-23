@@ -33,6 +33,7 @@ public final class IonClobImpl
     public IonClobImpl(IonSystemImpl system)
     {
         super(system, NULL_CLOB_TYPEDESC);
+        _hasNativeValue = true; // Since this is null
     }
 
     /**

@@ -49,6 +49,7 @@ public final class IonIntImpl
     public IonIntImpl(IonSystemImpl system)
     {
         super(system, NULL_INT_TYPEDESC);
+        _hasNativeValue = true; // Since this is null
     }
 
     /**
@@ -177,6 +178,7 @@ public final class IonIntImpl
     protected int getNativeValueLength()
     {
         assert _hasNativeValue == true;
+        if (_int_value == null) return 0;
         // TODO streamline following; this is only call site.
         return IonBinary.lenIonInt(_int_value);
     }

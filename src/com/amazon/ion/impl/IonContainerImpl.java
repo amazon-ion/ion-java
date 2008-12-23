@@ -387,6 +387,15 @@ abstract public class IonContainerImpl
 
         updateToken();
 
+        if (_buffer == null) {
+            _buffer = _container._buffer;
+            assert _buffer != null;
+        }
+        else {
+            assert _buffer == _container._buffer;
+        }
+
+
         assert pos_getOffsetAtFieldId() < 0;
 
         // int newValueStart = newPosition + getFieldNameOverheadLength();

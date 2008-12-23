@@ -35,6 +35,7 @@ public final class IonTimestampImpl
     public IonTimestampImpl(IonSystemImpl system)
     {
         super(system, NULL_TIMESTAMP_TYPEDESC);
+        _hasNativeValue = true; // Since this is null
     }
 
 

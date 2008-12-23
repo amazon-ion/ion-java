@@ -107,18 +107,8 @@ public abstract class IonLobImpl
     protected final int getNativeValueLength()
     {
         assert _hasNativeValue == true;
-        int len;
-
-        switch (this.pos_getType()) {
-        case IonConstants.tidClob: // text(9)
-        case IonConstants.tidBlob: // binary(10)
-            len = _lob_value.length;
-            break;
-        default:
-            throw new IllegalStateException("this value has an illegal type descriptor id");
-        }
-
-        return len;
+        if (_lob_value == null) return 0;
+        return _lob_value.length;
     }
 
 

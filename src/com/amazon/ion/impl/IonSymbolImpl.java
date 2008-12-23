@@ -2,6 +2,8 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.IonConstants.BB_TOKEN_LEN;
+
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonSymbol;
@@ -24,6 +26,12 @@ public final class IonSymbolImpl
         IonConstants.makeTypeDescriptor(IonConstants.tidSymbol,
                                         IonConstants.lnIsNullAtom);
 
+    private static final int NULL_SYMBOL_ID = 0;
+
+
+    /**
+     * SID is zero when this is null.symbol
+     */
     private int     mySid = UNKNOWN_SYMBOL_ID;
     private boolean _is_IonVersionMarker = false;
 
@@ -33,6 +41,7 @@ public final class IonSymbolImpl
     public IonSymbolImpl(IonSystemImpl system)
     {
         this(system, NULL_SYMBOL_TYPEDESC);
+        _hasNativeValue = true; // Since this is null
     }
 
     public IonSymbolImpl(IonSystemImpl system, String name)
@@ -136,7 +145,7 @@ public final class IonSymbolImpl
             mySid = UNKNOWN_SYMBOL_ID;
         }
         else {
-            mySid = 0;
+            mySid = NULL_SYMBOL_ID;
         }
     }
 
@@ -149,8 +158,7 @@ public final class IonSymbolImpl
             return IonConstants.BINARY_VERSION_MARKER_SIZE;
         }
 
-        // We only get here if not null, and after going thru updateSymbolTable
-        assert mySid > 0;
+        assert mySid >= 0;
         return IonBinary.lenVarUInt8(mySid);
     }
 
@@ -174,22 +182,27 @@ public final class IonSymbolImpl
     {
         assert _hasNativeValue == true;
 
-        int ln = 0;
         if (mySid == UNKNOWN_SYMBOL_ID) {
             assert _hasNativeValue == true && isDirty();
-            mySid = getSymbolTable().addSymbol(_get_value());
+            String name = _get_value();
+            mySid = (name == null
+                         ? NULL_SYMBOL_ID
+                         : getSymbolTable().addSymbol(name));
         }
+        assert mySid >= 0;
 
-        // the low nibble of the ion version marker is 0
-        if (!isIonVersionMarker()) {
-            if (mySid < 1) {
-                ln = IonConstants.lnIsNullAtom;
-            }
-            else {
-                ln = getNativeValueLength();
-                if (ln > IonConstants.lnIsVarLen) {
-                    ln = IonConstants.lnIsVarLen;
-                }
+        int ln;
+        if (isIonVersionMarker()) {
+            // the low nibble of the ion version marker is always 0
+            ln = 0;
+        }
+        else if (mySid == NULL_SYMBOL_ID) {
+            ln = IonConstants.lnIsNullAtom;
+        }
+        else {
+            ln = getNativeValueLength();
+            if (ln > IonConstants.lnIsVarLen) {
+                ln = IonConstants.lnIsVarLen;
             }
         }
         return ln;
@@ -210,14 +223,13 @@ public final class IonSymbolImpl
         }
     }
 
-    // TODO rename to getContentLength (from IonValueImpl)
     @Override
     protected int getNakedValueLength() throws IOException
     {
         int len;
 
         if (this._is_IonVersionMarker) {
-            len = IonConstants.BINARY_VERSION_MARKER_SIZE;
+            len = IonConstants.BINARY_VERSION_MARKER_SIZE - IonConstants.BB_TOKEN_LEN;
         }
         else {
             len = super.getNakedValueLength();
@@ -226,18 +238,17 @@ public final class IonSymbolImpl
     }
 
     /**
-     * Length of the core header.
+     * Length of the core header.  We handle version markers as a one-byte TD
+     * plus a three-byte value.
+     *
      * @param contentLength length of the core value.
      * @return at least one.
      */
     @Override
     public int getTypeDescriptorAndLengthOverhead(int contentLength) {
-        int len;
-        if (this._is_IonVersionMarker || isNullValue()) {
-            len = 0;
-        }
-        else {
-            len = IonConstants.BB_TOKEN_LEN + IonBinary.lenLenFieldWithOptionalNibble(contentLength);
+        int len = BB_TOKEN_LEN;
+        if (! this._is_IonVersionMarker) {
+            len += IonBinary.lenLenFieldWithOptionalNibble(contentLength);
         }
         return len;
     }
@@ -245,8 +256,8 @@ public final class IonSymbolImpl
     @Override
     void detachFromSymbolTable()
     {
-        this.stringValue();  // Force materialization
-        this.mySid = UNKNOWN_SYMBOL_ID;
+        String name = stringValue();  // Force materialization
+        this.mySid = (name == null ? 0 : UNKNOWN_SYMBOL_ID);
         super.detachFromSymbolTable();
     }
 
@@ -284,7 +295,7 @@ public final class IonSymbolImpl
             int ln = this.pos_getLowNibble();
             switch ((0xf & ln)) {
             case IonConstants.lnIsNullAtom:
-                mySid = 0;
+                mySid = NULL_SYMBOL_ID;
                 _set_value(null);
                 break;
             case 0:

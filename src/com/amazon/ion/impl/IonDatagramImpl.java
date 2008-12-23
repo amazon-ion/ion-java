@@ -997,9 +997,4 @@ public final class IonDatagramImpl
 
         return len2;
     }
-
-    @Override
-    public BufferManager getBuffer() {
-        return this._buffer;
-    }
 }
