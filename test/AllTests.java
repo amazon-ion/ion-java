@@ -3,21 +3,16 @@
  */
 
 import com.amazon.ion.BadIonTests;
-import com.amazon.ion.BinaryReaderSystemProcessingTest;
 import com.amazon.ion.BinaryTest;
 import com.amazon.ion.BlobTest;
 import com.amazon.ion.BoolTest;
 import com.amazon.ion.ClobTest;
-import com.amazon.ion.DatagramBytesSystemProcessingTest;
-import com.amazon.ion.DatagramIteratorSystemProcessingTest;
 import com.amazon.ion.DatagramTest;
-import com.amazon.ion.DatagramTreeReaderSystemProcessingTest;
 import com.amazon.ion.DecimalTest;
 import com.amazon.ion.EquivsTests;
 import com.amazon.ion.FloatTest;
 import com.amazon.ion.GoodIonTests;
 import com.amazon.ion.IntTest;
-import com.amazon.ion.IteratorSystemProcessingTest;
 import com.amazon.ion.ListTest;
 import com.amazon.ion.LoaderTest;
 import com.amazon.ion.NullTest;
@@ -26,7 +21,7 @@ import com.amazon.ion.SexpTest;
 import com.amazon.ion.StringTest;
 import com.amazon.ion.StructTest;
 import com.amazon.ion.SymbolTest;
-import com.amazon.ion.TextReaderSystemProcessingTest;
+import com.amazon.ion.SystemProcessingTests;
 import com.amazon.ion.TimestampTest;
 import com.amazon.ion.impl.ByteBufferTest;
 import com.amazon.ion.impl.CharacterReaderTest;
@@ -91,12 +86,7 @@ public class AllTests
         suite.addTestSuite(IterationTest.class);
         suite.addTestSuite(ReaderTest.class);
         suite.addTestSuite(PrinterTest.class);
-
-        // FIXME re-enable SymbolTableTest
-        // 2008-11-04 Disabled to do beta release of streaming APIs
-        if (true) {
-            suite.addTestSuite(SymbolTableTest.class);
-        }
+        suite.addTestSuite(SymbolTableTest.class);
 
         suite.addTestSuite(DatagramTest.class);
 
@@ -110,12 +100,9 @@ public class AllTests
         suite.addTest(new EquivsTests());
         suite.addTest(new RoundTripTests());
 
-        suite.addTestSuite(IteratorSystemProcessingTest.class);
-        suite.addTestSuite(DatagramIteratorSystemProcessingTest.class);
-        suite.addTestSuite(DatagramBytesSystemProcessingTest.class);
-        suite.addTestSuite(TextReaderSystemProcessingTest.class);
-        suite.addTestSuite(BinaryReaderSystemProcessingTest.class);
-        suite.addTestSuite(DatagramTreeReaderSystemProcessingTest.class);
+        // Subclasses of SystemProcessingTestCase are collected to make it
+        // easier to run that subset.
+        suite.addTest(SystemProcessingTests.suite());
 
         suite.addTestSuite(MiscStreamingTests.class);
         suite.addTestSuite(BinaryStreamingTest.class);

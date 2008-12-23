@@ -23,6 +23,7 @@ public class SystemProcessingTests
         suite.addTestSuite(BinaryReaderSystemProcessingTest.class);
         suite.addTestSuite(DatagramTreeReaderSystemProcessingTest.class);
         suite.addTestSuite(TextReaderSystemProcessingTest.class);
+        suite.addTestSuite(NewDatagramIteratorSystemProcessingTest.class);
 
         return suite;
     }
