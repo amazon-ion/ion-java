@@ -304,6 +304,12 @@ public class SystemReader
         return _buffer;
     }
 
+    public void resetBuffer() {
+    	if (this._buffer_offset > BINARY_VERSION_MARKER_SIZE) {
+    		this._buffer_offset = BINARY_VERSION_MARKER_SIZE;
+    	}
+    }
+
     public void close()
     {
         _at_eof = true;

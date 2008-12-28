@@ -261,8 +261,12 @@ static final boolean test_with_no_version_checking = false;
         _buf_limit = 0;
         for (int ii=0; ii<_blocks.size(); ii++) {
             _blocks.get(ii).clearBlock();
-            _blocks.get(ii)._idx = -1;
+            // _blocks.get(ii)._idx = -1; this is done in clearBlock()
         }
+        bbBlock first = _blocks.get(0);
+        first._idx = 0;						// cas: 26 dec 2008
+        first._offset = 0;
+        first._limit = 0;
         _next_block_position = 1;
         return;
     }
@@ -371,6 +375,35 @@ static final boolean test_with_no_version_checking = false;
         return _lastCapacity;
     }
 
+    // starts with (pos, 0, _next_block_position) so we're really
+    // looking in blocks with indices from lo to (hi-1) inclusive
+    final bbBlock findBlockHelper(int pos, int lo, int hi)
+    {
+    	bbBlock block;
+    	int     ii;
+    	
+    	if ((hi - lo) <= 3) {
+    		for (ii=lo; ii<hi; ii++) {
+                block = this._blocks.get(ii);
+                if (pos > block._offset + block._limit) continue;
+                if (block.containsForRead(pos)) {
+                    return block;
+                }
+                if (block._offset >= pos) break;
+    		}
+    		return this._blocks.get(ii - 1);		// this will always be > 0
+    	}
+    	int mid = (hi + lo) / 2;
+    	block = this._blocks.get(mid);
+    	assert block != null;
+    	if (block._offset > pos) {
+    		return findBlockHelper(pos, lo, mid);
+    	}
+    	else {
+    		return findBlockHelper(pos, mid, hi);
+    	}
+    }
+
     /**
      * find the block where this offset (newPosition) has already
      * been written. Typically the caller will set _curr to be the
@@ -380,49 +413,38 @@ static final boolean test_with_no_version_checking = false;
      */
     bbBlock findBlockForRead(Object caller, int version, bbBlock curr, int pos)
     {
-        if (pos < 0 || pos > this._buf_limit) {
+    	assert pos >= 0 && "buffer positions are never negative".length() > 0;
+        if (pos > this._buf_limit) {
             throw new BlockedBufferException("invalid position");
         }
         assert _validate();
 
-        int startIdx = 0; // in case we have to look through the block array
         if (curr != null) {
             if (curr.containsForRead(pos)) {
                 return curr;
             }
-            if (pos == this._buf_limit
-            && (pos - curr._offset) == curr._limit) {
+            if (pos == this._buf_limit && (pos - curr._offset) == curr._limit) {
                 return curr;
             }
-            if (pos > curr._offset) {
-                // if the desired position isn't in front of us, start here
-                startIdx = curr._idx;
-            }
         }
-
-        // it's valid and not in the current block, so go
-        // look for the block it should be in
-        bbBlock block = null;
         boolean at_eof = (pos == this._buf_limit);
-        for (int ii=startIdx; ii<this._next_block_position; ii++) {
-            block = this._blocks.get(ii);
-            if (block.containsForRead(pos)) {
-                return block;
-            }
-            else if (at_eof && ii == (this._next_block_position - 1)) {
-                // if this is the last block really in use
-                // and we're looking for the eof position then
-                // we can check for the last byte not quite
-                // written case
-                if ((pos - block._offset) == block._limit) {
-                    return block;
-                }
-            }
+        
+        if (at_eof) {
+            // if this is the last block actually in use
+            // and we're looking for the eof position then
+            // we can check for the "last byte not quite
+            // written yet" case, which is fine
+        	bbBlock block = this._blocks.get(this._next_block_position - 1);
+        	if (block.containsForWrite(pos)) return block;
         }
+        else {
+            bbBlock block = this.findBlockHelper(pos, 0, this._next_block_position);
+            return block;
+        }
+        
         throw new BlockedBufferException("valid position can't be found!");
     }
-
-    /**
+        /**
      * find the block where this offset (newPosition) should be written.
      * typicall the caller will set _curr to be the returned block.
      * @param pos global position to be written to
@@ -431,45 +453,63 @@ static final boolean test_with_no_version_checking = false;
     bbBlock findBlockForWrite(Object caller, int version, bbBlock curr, int pos)
     {
         assert mutation_in_progress(caller, version);
-        if (pos < 0) {
-            throw new BlockedBufferException("invalid position. positions must be >= 0");
-        }
+        assert (pos >= 0 && "invalid position, positions must be >= 0".length() > 0);
         if (pos > this._buf_limit + 1) {
             throw new BlockedBufferException("writes must be contiguous");
         }
         assert _validate();
+        
+        if (curr != null && curr.hasRoomToWrite(pos, 1) == true) {
+        	if (curr._offset + curr._limit == pos && curr._idx < this._next_block_position) {
+        		bbBlock b = this._blocks.get(curr._idx + 1);
+        		if (b.containsForWrite(pos)) {
+        			curr = b;
+        		}
+        	}
+        	return curr;
+        }
 
+        // we're not going to write into curr, so find out the right block
+        bbBlock block;
         if (pos == this._buf_limit) {
-            curr = this._blocks.get(this._next_block_position - 1);
+        	// if we're at the limit the only possible (existing) block
+        	// will be the very last block - shortcut to optimize append
+        	assert this._next_block_position > 0;
+        	block = this._blocks.get(this._next_block_position - 1);
         }
-        else if (curr == null
-             || (curr._offset > pos)
-             || (curr._offset + curr._limit < pos)
-        ) {
-            // note that in this case we can't be right at the EOF since
-            // we already tested for that case
-            curr = findBlockForRead(caller, version, curr, pos);
+        else if (curr != null && pos == curr._offset + curr._limit) {
+        	// if our current position is exactly at the end (and we already know
+        	// we can't write into this block if we can write at all we'll have
+        	// to write into the next block (inner blocks can't be 0 bytes long)
+        	block = this._blocks.get(curr._idx + 1);
         }
-        assert curr != null;
+        else {
+            // since we're not at the limit and we don't have a current block
+            // we'll go find the block in the list (this is an abnormal case)
+        	// since append if usual for writing
+        	block = findBlockHelper(pos, 0, this._next_block_position);
+        }
+        assert block != null;
+        assert block.containsForWrite(pos);
 
-        // see if it fits in the current block now
-        if (( pos < curr._offset + curr._limit )
-        ||
-          (  (curr._idx == this._next_block_position - 1)
-             && curr.hasRoomToWrite(pos, 1)
-          )
-        ) {
-            return curr;
-        }
-        // at this point, we can't use _curr in any event
-        // is if we can just move on to the next block
-        if (curr._idx < this._next_block_position - 1) {
-            curr = this._blocks.get(curr._idx + 1);
-            return curr;
+        // chech our candidate block to see if it's the one we'd write into
+        if (block.hasRoomToWrite(pos, 1)) {
+            return block;
         }
 
-        //so we have to go ahead an actually add a new block
-        int newIdx = curr._idx + 1;
+        // at this point, we can't use _curr in any event so we can just 
+        // move on to the next block since findHelper will have returned 
+        // either the right block (which it didn't) or the one just in
+        // front of the right block - so let's see if there is an allocated
+        // block just following this
+        if (block._idx < this._next_block_position - 1) {
+        	block = this._blocks.get(block._idx + 1);
+            return block;
+        }
+
+        // there wasn't a following block (actually a common case when
+        // you're appending) so we have to go ahead an actually add a new block
+        int newIdx = block._idx + 1;
         assert newIdx == this._next_block_position;
 
         bbBlock ret =  this.addBlock(caller
@@ -870,7 +910,7 @@ static final boolean test_with_no_version_checking = false;
         // we'll even adjust the offset of the first block (if it's the last as well)
         adjustOffsets(startingIdx, -len, -removedBlocks);
         notifyRemove(pos, len);
-
+        
         // DEBUG: int shouldBe = 0;
         // DEBUG: int is = currBlock._offset;
         // DEBUG: if (currBlock._idx > 0) {
@@ -893,6 +933,8 @@ static final boolean test_with_no_version_checking = false;
         boolean err = false;
 
         _validate_count++;
+        
+        if ((_validate_count % 128) != 0) return true;
 
         // you can change the 0 below (in from of the -2) to be the validation counter
         // which reported the failure and the test will be true when _validate() is
@@ -1013,12 +1055,14 @@ static final boolean test_with_no_version_checking = false;
          * maximimum number of bytes that can be held in this block.
          */
         final int blockCapacity() {
+        	assert this._offset >= 0;
             return this._buffer.length ;
         }
         /**
          * maximimum number of bytes that can be appended in this block currently.
          */
         final int unusedBlockCapacity() {
+        	assert this._offset >= 0;
             return this._buffer.length - this._limit;
         }
         /**
@@ -1027,6 +1071,7 @@ static final boolean test_with_no_version_checking = false;
          * @param pos absolute position
          */
         final int bytesAvailableToWrite(int pos) {
+        	assert this._offset >= 0;
             return this._buffer.length - (pos - _offset);
         }
         /**
@@ -1038,6 +1083,7 @@ static final boolean test_with_no_version_checking = false;
          */
 
         public final int bytesAvailableToRead(int pos) {
+        	assert this._offset >= 0;
             return this._limit - (pos - _offset);
         }
 
@@ -1048,15 +1094,19 @@ static final boolean test_with_no_version_checking = false;
          * @return boolean
          */
         final boolean hasRoomToWrite(int pos, int needed) {
+        	assert this._offset >= 0;
             return (needed <= (this._buffer.length - (pos - _offset)));
         }
         final boolean containsForRead(int pos) {
+        	assert this._offset >= 0;
             return (pos >= _offset && pos < _offset + _limit);
         }
         final boolean containsForWrite(int pos) {
+        	assert this._offset >= 0;
             return (pos >= _offset && pos <= _offset + _limit);
         }
         final int blockOffsetFromAbsolute(int pos) {
+        	assert this._offset >= 0;
             return pos - _offset;
         }
     }
@@ -1586,18 +1636,19 @@ static final boolean test_with_no_version_checking = false;
                 }
                 assert writeInThisBlock >= 0;
 
-                System.arraycopy(b, off, _curr._buffer, _blockPosition, writeInThisBlock);
-                off += writeInThisBlock;
-                _pos += writeInThisBlock;
-                _blockPosition += writeInThisBlock;
-                if (_blockPosition > _curr._limit) {
-                    _curr._limit = _blockPosition;
-                    if (_pos > _buf._buf_limit) _buf._buf_limit = _pos;
+                if (writeInThisBlock > 0) {
+	                System.arraycopy(b, off, _curr._buffer, _blockPosition, writeInThisBlock);
+	                off += writeInThisBlock;
+	                _pos += writeInThisBlock;
+	                _blockPosition += writeInThisBlock;
+	                if (_blockPosition > _curr._limit) {
+	                    _curr._limit = _blockPosition;
+	                    if (_pos > _buf._buf_limit) _buf._buf_limit = _pos;
+	                }
+	                else {
+	                    assert _pos <= _buf._buf_limit;
+	                }
                 }
-                else {
-                    assert _pos <= _buf._buf_limit;
-                }
-
                 if (off >= end_b) break;
 
                 _curr = _buf.findBlockForWrite(this, _version, _curr, _pos);

@@ -68,8 +68,28 @@ public class ByteBufferTest
     {
         testRandomUpdates(32*1024, 32*1024, 1000);
     }
+    
+final static boolean _debug_long_test = false;
+	public void testRandomUpdatesLargeAndLong()  throws Exception
+	{
+	    // TODO: turn on a long test, maybe not this long, when we can know it's
+	    //       not going to be oppressive
+		if (!_debug_long_test) return;
+		testRandomUpdates(7, 19, 100000);
+	}
 
+    public void testPreviousFailuresInRandomUpdates() throws Exception
+    {
+        testRandomUpdates(128, 4096, 1000, 1230074384739L);
+    }
+    
     private void testRandomUpdates(int min, int max, int count) throws Exception
+    {
+    	long seed = System.currentTimeMillis();
+    	testRandomUpdates(min, max, count, seed);
+    }
+    
+    private void testRandomUpdates(int min, int max, int count, long seed) throws Exception
     {
         BlockedBuffer.setBlockSizeParameters(min, max); // make it work hard
 
@@ -92,9 +112,6 @@ public class ByteBufferTest
         final int choiceInsert = 2;
         final int choiceRemove = 3;
         final int choiceWrite  = 4;
-
-
-        final long seed = System.currentTimeMillis();
 
         Random r = new Random(seed);
         if (debug_output) System.out.println("seed: " + seed);

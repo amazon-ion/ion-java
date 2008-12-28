@@ -16,6 +16,8 @@ import java.util.NoSuchElementException;
 public class UserReader
     implements Iterator<IonValue>
 {
+	private boolean		 _recycle_buffer; // if true we reset the system reader for each user value
+	
     private SystemReader _systemReader;
 
     /**
@@ -26,8 +28,8 @@ public class UserReader
      */
     private SymbolTable    _localSymbolTable;
 
-    private boolean             _at_eof;
-    private IonValue            _next;
+    private boolean        _at_eof;
+    private IonValue       _next;
 
 
     /**
@@ -44,11 +46,17 @@ public class UserReader
                               input));
     }
 
-
     public UserReader(SystemReader systemReader)
     {
         _systemReader = systemReader;
         _localSymbolTable = systemReader.getLocalSymbolTable();
+    }
+    
+    public void setBufferToRecycle() {
+    	this._recycle_buffer = true;
+    }
+    public void clearBufferRecycling() {
+    	this._recycle_buffer = false;
     }
 
     //Returns true if the iteration has more elements.
@@ -66,6 +74,9 @@ public class UserReader
         assert !_at_eof;
 
         while (_next == null) {
+        	if (this._recycle_buffer) {
+        		this._systemReader.resetBuffer();
+        	}
             if (!this._systemReader.hasNext()) {
                 _at_eof = true;
                 break;
