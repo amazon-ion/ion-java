@@ -596,20 +596,22 @@ abstract public class IonContainerImpl
         // the value is big enough to justify embedding
         // a copy of its symbol table in the stream
         // otherwise clear the buffer and re-init the positions
-        byte[] bytes = null;
-        if (concrete._buffer != null
-            && !concrete.isDirty()
-            && concrete.getSymbolTable().isCompatible(this.getSymbolTable()))
-        {
-            // TODO: resuse the bytes that are ready to go
-            if (bytes == null)
-            {
-                // just a trick to convince Eclipse to ignore two warning
-                // errors that will persist until this code is filled in
-                throw new IonException("feature not implemented - this code should not be reachable.");
-            }
-        }
-        else
+        //byte[] bytes = null;
+        //if (
+        // 	&& concrete._buffer != null
+        //    && !concrete.isDirty()
+        //    && concrete.getSymbolTable().isCompatible(this.getSymbolTable()))
+        //{
+        //    // TODO: resuse the bytes that are ready to go
+        //    if (bytes == null)
+        //    {
+        //        // just a trick to convince Eclipse to ignore two warning
+        //        // errors that will persist until this code is filled in
+        //        throw new IonException("feature not implemented - this code should not be reachable.");
+        //    }
+        //}
+        //else
+        // we do the "copy dom" case instead of the "copy bytes" variation
         {
             concrete.deepMaterialize();
             if (!(this instanceof IonDatagramImpl)) {
