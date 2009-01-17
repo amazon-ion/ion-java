@@ -911,6 +911,9 @@ public final class UnifiedSymbolTable
         reader.stepOut();
     }
 
+    /**
+     * @param catalog may be null
+     */
     private void readOneImport(IonReader ionRep, IonCatalog catalog)
     {
         assert (ionRep.getType().equals(IonType.STRUCT));
@@ -953,12 +956,14 @@ public final class UnifiedSymbolTable
             return;
         }
 
-        UnifiedSymbolTable itab = null;
         if (version < 1) {
             version = 1;
         }
 
-        itab = (UnifiedSymbolTable) catalog.getTable(name, version);
+        UnifiedSymbolTable itab = null;
+        if (catalog != null) {
+            itab = (UnifiedSymbolTable) catalog.getTable(name, version);
+        }
         if ((itab == null || version != itab.getVersion())
             && maxid < 0)
         {
