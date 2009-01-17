@@ -149,8 +149,25 @@ public class IonSystemImpl
     }
 
 
-    public IonDatagram newDatagram()
+    public IonDatagramImpl newDatagram()
     {
+        if (LoaderImpl.USE_NEW_READERS)
+        {
+            try
+            {
+                IonDatagramImpl dg =
+                    new IonDatagramImpl(this, (IonReader) null);
+                // Force symtab preparation  FIXME should not be necessary
+                dg.byteSize();
+                return dg;
+            }
+            catch (IOException e)
+            {
+                // Shouldn't happen actually
+                throw new IonException(e);
+            }
+        }
+
         return new IonDatagramImpl(this);
     }
 
@@ -160,12 +177,13 @@ public class IonSystemImpl
             if (initialChild.getSystem() != this) {
                 throw new IonException("this Ion system can't mix with instances from other system impl's");
             }
+            // FIXME we shouldn't do this, it violates expectations
             if (initialChild.getContainer() != null) {
                 initialChild = clone(initialChild);
             }
         }
 
-        IonDatagramImpl datagram = new IonDatagramImpl(this);
+        IonDatagramImpl datagram = newDatagram();
 
         if (initialChild != null) {
             //LocalSymbolTable symtab = initialChild.getSymbolTable();
@@ -239,8 +257,7 @@ public class IonSystemImpl
 
     public IonReader newReader(String ionText)
     {
-        // FIXME this should pass default catalog
-        return new IonTextReader(ionText);
+        return new IonTextReader(ionText, getCatalog());
     }
 
     public IonTextReader newSystemReader(String ionText)
@@ -266,12 +283,11 @@ public class IonSystemImpl
 
         IonReader reader;
         if (isBinary) {
-            // FIXME pass catalog
-            reader = new IonBinaryReader(ionData, offset, len);
+            reader = new IonBinaryReader(ionData, offset, len, getCatalog());
         }
         else {
-            // FIXME pass catalog
-            reader = new IonTextReader(ionData, offset, len);
+            reader =
+                new IonTextReader(ionData, offset, len, getCatalog(), false);
         }
         return reader;
     }
@@ -282,12 +298,12 @@ public class IonSystemImpl
 
         IonReader reader;
         if (isBinary) {
-            // FIXME pass catalog
-            reader = new IonBinaryReader(ionData, offset, len, true);
+            reader =
+                new IonBinaryReader(ionData, offset, len, getCatalog(), true);
         }
         else {
-            // FIXME pass catalog
-            reader = new IonTextReader(ionData, offset, len);
+            reader =
+                new IonTextReader(ionData, offset, len, getCatalog(), true);
         }
         return reader;
     }
@@ -306,6 +322,21 @@ public class IonSystemImpl
         }
 
         return newReader(bytes, 0, bytes.length);
+    }
+
+    public IonReader newSystemReader(InputStream ionData)
+    {
+        byte[] bytes;
+        try
+        {
+            bytes = IonImplUtils.loadStreamBytes(ionData);
+        }
+        catch (IOException e)
+        {
+            throw new IonException("Error reading from stream", e);
+        }
+
+        return newSystemReader(bytes, 0, bytes.length);
     }
 
 

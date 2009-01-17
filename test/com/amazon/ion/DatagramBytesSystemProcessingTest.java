@@ -7,28 +7,50 @@ package com.amazon.ion;
 import java.util.Iterator;
 
 /**
- *
+ * FIXME this replicates {@link LoadBinaryBytesSystemProcessingTest}
+ * Except for how we get the bytes.
  */
 public class DatagramBytesSystemProcessingTest
     extends IteratorSystemProcessingTest
 {
-    @Override
-    protected Iterator<IonValue> iterate(String text)
-    {
-        IonLoader loader = loader();
-        IonDatagram datagram = loader.load(text);
+    private byte[] myBytes;
 
-        IonDatagram datagramFromBytes = loader.load(datagram.toBytes());
-        return datagramFromBytes.iterator();
+
+    @Override
+    protected boolean processingBinary()
+    {
+        return true;
     }
 
     @Override
-    protected Iterator<IonValue> systemIterate(String text)
+    protected void prepare(String text)
+        throws Exception
     {
         IonLoader loader = loader();
         IonDatagram datagram = loader.load(text);
+        myBytes = datagram.toBytes();
+    }
 
-        IonDatagram datagramFromBytes = loader.load(datagram.toBytes());
-        return datagramFromBytes.systemIterator();
+    @Override
+    protected Iterator<IonValue> iterate()
+    {
+        IonLoader loader = loader();
+        IonDatagram datagram = loader.load(myBytes);
+        return datagram.iterator();
+    }
+
+    @Override
+    protected Iterator<IonValue> systemIterate()
+    {
+        IonLoader loader = loader();
+        IonDatagram datagram = loader.load(myBytes);
+        return datagram.systemIterator();
+    }
+
+    @Override
+    protected void checkMissingSymbol(String expected, int expectedSid)
+        throws Exception
+    {
+        checkSymbol("$" + expectedSid, expectedSid);
     }
 }

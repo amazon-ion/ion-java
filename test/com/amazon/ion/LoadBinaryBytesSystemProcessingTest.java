@@ -8,8 +8,8 @@ package com.amazon.ion;
 /**
  *
  */
-public class BinaryReaderSystemProcessingTest
-    extends ReaderSystemProcessingTestCase
+public class LoadBinaryBytesSystemProcessingTest
+    extends DatagramIteratorSystemProcessingTest
 {
     private byte[] myBytes;
 
@@ -21,22 +21,18 @@ public class BinaryReaderSystemProcessingTest
 
     @Override
     protected void prepare(String text)
+        throws Exception
+    {
+        myBytes = encode(text);
+    }
+
+    @Override
+    protected IonDatagram load()
+        throws Exception
     {
         IonLoader loader = loader();
-        IonDatagram datagram = loader.load(text);
-        myBytes = datagram.toBytes();
-    }
-
-    @Override
-    protected IonReader read() throws Exception
-    {
-        return system().newReader(myBytes);
-    }
-
-    @Override
-    protected IonReader systemRead() throws Exception
-    {
-        return system().newSystemReader(myBytes);
+        IonDatagram datagram = loader.load(myBytes);
+        return datagram;
     }
 
     @Override

@@ -16,23 +16,23 @@ public abstract class ReaderSystemProcessingTestCase
     private IonReader myReader;
 
 
-    protected abstract IonReader read(String text)
+    protected abstract IonReader read()
         throws Exception;
 
-    protected abstract IonReader systemRead(String text)
+    protected abstract IonReader systemRead()
         throws Exception;
 
 
     @Override
-    protected void startIteration(String text) throws Exception
+    protected void startIteration() throws Exception
     {
-        myReader = read(text);
+        myReader = read();
     }
 
     @Override
-    protected void startSystemIteration(String text) throws Exception
+    protected void startSystemIteration() throws Exception
     {
-        myReader = systemRead(text);
+        myReader = systemRead();
     }
 
     @Override

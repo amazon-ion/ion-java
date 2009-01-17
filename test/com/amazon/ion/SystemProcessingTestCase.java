@@ -4,7 +4,11 @@
 
 package com.amazon.ion;
 
+import static com.amazon.ion.Symtabs.LocalSymbolTablePrefix;
+import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
+
 import com.amazon.ion.impl.SymbolTableTest;
+import com.amazon.ion.system.SimpleCatalog;
 
 
 
@@ -14,12 +18,31 @@ import com.amazon.ion.impl.SymbolTableTest;
 public abstract class SystemProcessingTestCase
     extends IonTestCase
 {
+    // Subclasses must override EITHER startIteration(String) OR
+    // prepare(String) and startIteration()
+    protected void prepare(String text)
+        throws Exception
+    {
+        startIteration();
+    }
 
-    protected abstract void startIteration(String text)
+    protected abstract boolean processingBinary();
+
+    protected void startIteration()
+        throws Exception
+    {
+    }
+
+    @Deprecated
+    protected void startIteration(String text)
+        throws Exception
+    {
+        prepare(text);
+        startIteration();
+    }
+
+    protected abstract void startSystemIteration()
         throws Exception;
-
-    protected abstract void startSystemIteration(String text)
-    throws Exception;
 
     protected abstract void nextValue()
         throws Exception;
@@ -37,6 +60,12 @@ public abstract class SystemProcessingTestCase
         throws Exception;
 
     protected abstract void checkSymbol(String expected, int expectedSid)
+        throws Exception;
+
+    /**
+     * Checks a symbol that's defined in a missing symbol table.
+     */
+    protected abstract void checkMissingSymbol(String expected, int expectedSid)
         throws Exception;
 
     protected abstract void checkInt(long expected)
@@ -194,6 +223,114 @@ public abstract class SystemProcessingTestCase
     }
 
 
+    /**
+     * Import v2 but catalog has v1.
+     */
+    public void testLocalTableWithLesserImport()
+        throws Exception
+    {
+        final int fred1id = ION_1_0_MAX_ID + 1;
+        final int fred2id = ION_1_0_MAX_ID + 2;
+        final int fred3id = ION_1_0_MAX_ID + 3;
+
+        final int local = ION_1_0_MAX_ID + Symtabs.FRED_MAX_IDS[2];
+        final int local1id = local + 1;
+        final int local2id = local + 2;
+
+        SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
+        Symtabs.register("fred", 1, catalog);
+        Symtabs.register("fred", 2, catalog);
+
+
+        String text =
+            LocalSymbolTablePrefix +
+            "{" +
+            "  imports:[{name:\"fred\", version:2, " +
+            "            max_id:" + Symtabs.FRED_MAX_IDS[2] + "}]," + // FIXME remove
+            "}\n" +
+            "local1 local2 fred_1 fred_2 fred_3";
+
+        prepare(text);
+
+        // Remove the imported table
+        assertNotNull(catalog.removeTable("fred", 2));
+
+        startIteration();
+        nextValue();
+        checkSymbol("local1", local1id);
+        nextValue();
+        checkSymbol("local2", local2id);
+        nextValue();
+        checkSymbol("fred_1", fred1id);
+        nextValue();
+        checkSymbol("fred_2", fred2id);
+        nextValue();
+        checkMissingSymbol("fred_3", (processingBinary() ? fred3id : local+3));
+        checkEof();
+
+        // We can't load the original text because it doesn't have max_id
+        // and the table isn't in the catalog.
+//        badValue(text);
+    }
+
+    /**
+     * Import v2 but catalog has v3.
+     */
+    public void testLocalTableWithGreaterImport()
+        throws Exception
+    {
+        final int fred1id = ION_1_0_MAX_ID + 1;
+        final int fred2id = ION_1_0_MAX_ID + 2;
+        final int fred3id = ION_1_0_MAX_ID + 3;
+
+        final int local = ION_1_0_MAX_ID + Symtabs.FRED_MAX_IDS[2];
+        final int local1id = local + 1;
+        final int local2id = local + 2;
+        final int local3id = local + 3;
+
+        SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
+        Symtabs.register("fred", 1, catalog);
+        Symtabs.register("fred", 2, catalog);
+        SymbolTable fredV3 = Symtabs.register("fred", 3, catalog);
+
+        // Make sure our syms don't overlap.
+        assertTrue(fredV3.findSymbol("fred_5") != local3id);
+
+        // fred5 is not in table version 2, so it gets local symbol
+        String text =
+            LocalSymbolTablePrefix +
+            "{" +
+            "  imports:[{name:\"fred\", version:2, " +
+            "            max_id:" + Symtabs.FRED_MAX_IDS[2] + "}]," + // FIXME remove
+            "}\n" +
+            "local1 local2 fred_1 fred_2 fred_3 fred_5";
+
+        prepare(text);
+
+        // Remove the imported table before decoding the binary.
+        assertNotNull(catalog.removeTable("fred", 2));
+
+        startIteration();
+        nextValue();
+        checkSymbol("local1", local1id);
+        nextValue();
+        checkSymbol("local2", local2id);
+        nextValue();
+        checkSymbol("fred_1", fred1id);
+        nextValue();
+        checkMissingSymbol("fred_2", (processingBinary() ? fred2id : local+3));
+        nextValue();
+        checkSymbol("fred_3", fred3id);
+        nextValue();
+        checkSymbol("fred_5", (processingBinary() ? local+3 : local+4));
+        checkEof();
+
+        // We can't load the original text because it doesn't have max_id
+        // and the table isn't in the catalog.
+//        badValue(text);  FIXME re-enable
+    }
+
+
     public void testSharedTableNotAddedToCatalog()
         throws Exception
     {
@@ -235,7 +372,8 @@ public abstract class SystemProcessingTestCase
     {
         String text = SystemSymbolTable.ION_1_0;
 
-        startSystemIteration(text);
+        prepare(text);
+        startSystemIteration();
         nextValue();
         checkSymbol(SystemSymbolTable.ION_1_0, SystemSymbolTable.ION_1_0_SID);
         checkEof();

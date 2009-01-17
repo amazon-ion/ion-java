@@ -7,6 +7,7 @@ package com.amazon.ion.impl;
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
@@ -247,31 +248,27 @@ public final class IonDatagramImpl
     }
 
     /**
-     * @param ionText must be in system mode
+     * @param ionData must be in system mode
      */
-    public IonDatagramImpl(IonSystemImpl system, IonTextReader ionText)
+    public IonDatagramImpl(IonSystemImpl system, IonReader ionData)
         throws IOException
     {
         super(system, DATAGRAM_TYPEDESC, false);
-//        this(system, make_empty_buffer());
 
         _userContents = new ArrayList<IonValue>();
-//
-//        _rawStream = null; // XXX
-//
         _buffer = new BufferManager();
-//
-//        // fake up the pos values as this is an odd case
-//        // Note that size is incorrect; we fix it below.
+
+        // fake up the pos values as this is an odd case
+        // Note that size is incorrect; we fix it below.
         pos_initDatagram(DATAGRAM_TYPEDESC, _buffer.buffer().size());
         _isMaterialized = true;
         _hasNativeValue = true;
-//
-//        // TODO this touches privates (testBinaryDataWithNegInt)
-//        _next_start = _buffer.buffer().size();
 
-        IonWriter treeWriter = system.newWriter(this);
-        treeWriter.writeValues(ionText);
+        if (ionData != null)  // FIXME refactor, we don't throw in this case
+        {
+            IonWriter treeWriter = system.newWriter(this);
+            treeWriter.writeValues(ionData);
+        }
     }
 
     public IonType getType()

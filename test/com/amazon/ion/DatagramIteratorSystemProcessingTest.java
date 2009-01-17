@@ -12,19 +12,37 @@ import java.util.Iterator;
 public class DatagramIteratorSystemProcessingTest
     extends IteratorSystemProcessingTest
 {
+    private String myText;
+
     @Override
-    protected Iterator<IonValue> iterate(String text)
+    protected void prepare(String text)
+        throws Exception
+    {
+        myText = text;
+    }
+
+    protected IonDatagram load()
+        throws Exception
     {
         IonLoader loader = loader();
-        IonDatagram datagram = loader.load(text);
+        IonDatagram datagram = loader.load(myText);
+        return datagram;
+    }
+
+
+    @Override
+    protected Iterator<IonValue> iterate()
+        throws Exception
+    {
+        IonDatagram datagram = load();
         return datagram.iterator();
     }
 
     @Override
-    protected Iterator<IonValue> systemIterate(String text)
+    protected Iterator<IonValue> systemIterate()
+        throws Exception
     {
-        IonLoader loader = loader();
-        IonDatagram datagram = loader.load(text);
+        IonDatagram datagram = load();
         return datagram.systemIterator();
     }
 }

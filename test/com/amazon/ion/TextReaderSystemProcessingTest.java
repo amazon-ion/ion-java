@@ -11,15 +11,38 @@ package com.amazon.ion;
 public class TextReaderSystemProcessingTest
     extends ReaderSystemProcessingTestCase
 {
+    private String myText;
+
     @Override
-    protected IonReader read(String text) throws Exception
+    protected boolean processingBinary()
     {
-        return system().newReader(text);
+        return false;
     }
 
     @Override
-    protected IonReader systemRead(String text) throws Exception
+    protected void prepare(String text)
     {
-        return system().newSystemReader(text);
+        myText = text;
+    }
+
+    @Override
+    protected IonReader read() throws Exception
+    {
+        return system().newReader(myText);
+    }
+
+    @Override
+    protected IonReader systemRead() throws Exception
+    {
+        return system().newSystemReader(myText);
+    }
+
+    @Override
+    protected void checkMissingSymbol(String expected, int expectedSid)
+        throws Exception
+    {
+        // When reading text and symtab is missing, we'll get the name right
+        // but we won't know the right sid.
+        checkSymbol(expected);
     }
 }

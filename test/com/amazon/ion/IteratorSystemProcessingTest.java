@@ -12,34 +12,47 @@ import java.util.Iterator;
 public class IteratorSystemProcessingTest
     extends SystemProcessingTestCase
 {
+    private String myText;
     private Iterator<IonValue> myIterator;
     private IonValue myCurrentValue;
 
 
-    protected Iterator<IonValue> iterate(String text)
-        throws Exception
+    @Override
+    protected boolean processingBinary()
     {
-        return system().iterate(text);
+        return false;
     }
 
-    protected Iterator<IonValue> systemIterate(String text)
+    protected Iterator<IonValue> iterate()
         throws Exception
     {
-        return system().systemIterate(text);
+        return system().iterate(myText);
+    }
+
+    protected Iterator<IonValue> systemIterate()
+        throws Exception
+    {
+        return system().systemIterate(myText);
     }
 
 
     @Override
-    protected void startIteration(String text) throws Exception
+    protected void prepare(String text)
+        throws Exception
     {
-        myIterator = iterate(text);
+        myText = text;
     }
 
     @Override
-    protected void startSystemIteration(String text) throws Exception
+    protected void startIteration() throws Exception
     {
-        myIterator = systemIterate(text);
+        myIterator = iterate();
+    }
 
+    @Override
+    protected void startSystemIteration() throws Exception
+    {
+        myIterator = systemIterate();
     }
 
     @Override
@@ -80,6 +93,13 @@ public class IteratorSystemProcessingTest
         throws Exception
     {
         checkSymbol(expected, expectedSid, myCurrentValue);
+    }
+
+    @Override
+    protected void checkMissingSymbol(String expected, int expectedSid)
+        throws Exception
+    {
+        checkSymbol(expected, myCurrentValue);
     }
 
     @Override

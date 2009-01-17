@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonLoader;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.LocalSymbolTable;
 import com.amazon.ion.SymbolTable;
 import java.io.File;
@@ -23,7 +24,7 @@ import java.io.StringReader;
 public class LoaderImpl
     implements IonLoader
 {
-    private static final boolean USE_NEW_READERS = false;
+    static final boolean USE_NEW_READERS = false;
 
     private final IonSystemImpl mySystem;
 
@@ -184,6 +185,22 @@ public class LoaderImpl
 
     public IonDatagramImpl load(byte[] ionData)
     {
+        if (USE_NEW_READERS)
+        {
+            IonReader reader = mySystem.newSystemReader(ionData);
+            try
+            {
+                IonDatagramImpl dg = new IonDatagramImpl(mySystem, reader);
+                // Force symtab preparation  FIXME should not be necessary
+                dg.byteSize();
+                return dg;
+            }
+            catch (IOException e)
+            {
+                throw new IonException(e);
+            }
+        }
+
         return new IonDatagramImpl(mySystem, ionData);
     }
 
@@ -196,8 +213,21 @@ public class LoaderImpl
     {
         PushbackInputStream pushback = new PushbackInputStream(ionData, 8);
         if (IonImplUtils.streamIsIonBinary(pushback)) {
-            SystemReader systemReader = mySystem.newBinarySystemReader(pushback);
-            return new IonDatagramImpl(mySystem, systemReader);
+            if (USE_NEW_READERS)
+            {
+                // FIXME load buffer then reader atop it
+                IonReader reader = mySystem.newSystemReader(pushback);
+                IonDatagramImpl dg = new IonDatagramImpl(mySystem, reader);
+                // Force symtab preparation  FIXME should not be necessary
+                dg.byteSize();
+                return dg;
+            }
+            else
+            {
+                SystemReader systemReader =
+                    mySystem.newBinarySystemReader(pushback);
+                return new IonDatagramImpl(mySystem, systemReader);
+            }
         }
 
         Reader reader = new InputStreamReader(pushback, "UTF-8");

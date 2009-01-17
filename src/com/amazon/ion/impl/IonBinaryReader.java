@@ -90,6 +90,15 @@ public final class IonBinaryReader
     ByteReader          _reader;
     IonCatalog          _catalog;
     SymbolTable         _current_symtab;
+
+    /**
+     * When we encounter a local symtab while returning system values, we first
+     * load the symtab, then back up and allow the user to read the symtab's
+     * data. In the meanwhile, we stash the loaded symtab here then move it
+     * into {@link #_current_symtab} after the data has been scanned again.
+     */
+    private SymbolTable _pending_symtab;
+
     int                 _parent_tid;  // using -1 for eof (or bof aka undefined) and 16 for datagram
 
     final boolean _is_returning_system_values;
@@ -136,11 +145,12 @@ public final class IonBinaryReader
     }
 
     public IonBinaryReader(byte[] buf, int start, int len,
+                           IonCatalog catalog,
                            boolean returnSystemValues)
     {
         this(new SimpleByteBuffer(buf, start, len, true /*isReadOnly*/),
              IonType.DATAGRAM,
-             new SimpleCatalog(),  // FIXME bad news, make caller pass it
+             catalog,
              returnSystemValues);
     }
 
@@ -218,6 +228,10 @@ public final class IonBinaryReader
         try {
             if (is_in_struct()) {
                 _value_field_id = _reader.readVarUInt();
+            }
+            else if (is_at_top_level() && _pending_symtab != null) {
+                _current_symtab = _pending_symtab;
+                _pending_symtab = null;
             }
 
             // the "Possible" routines return -1 if they
@@ -547,8 +561,7 @@ public final class IonBinaryReader
             throw new IonException(e);
         }
 
-        // FIXME need local symtab test case
-        if (is_symbol_table/* && !_return_system_values*/) {
+        if (is_symbol_table && !_is_returning_system_values) {
             // Caller should hide this value and continue with the next.
             // Make our caller read the upcoming byte
             typedesc = -1;
@@ -597,7 +610,14 @@ public final class IonBinaryReader
             is_symbol_table = true;
 
             assert local.isLocalTable();
-            this._current_symtab = local;
+
+            if (_is_returning_system_values) {
+                this._pending_symtab = local;
+            }
+            else {
+                this._current_symtab = local;
+            }
+
             this._parent_tid = prev_parent_tid;
             this._local_end  = prev_end;
 

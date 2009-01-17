@@ -18,6 +18,10 @@ public class SystemProcessingTests
             new TestSuite("SystemProcessingTests");
 
         suite.addTestSuite(IteratorSystemProcessingTest.class);
+        suite.addTestSuite(LoadTextBytesSystemProcessingTest.class);
+        suite.addTestSuite(LoadTextStreamSystemProcessingTest.class);
+        suite.addTestSuite(LoadBinaryBytesSystemProcessingTest.class);
+        suite.addTestSuite(LoadBinaryStreamSystemProcessingTest.class);
         suite.addTestSuite(DatagramBytesSystemProcessingTest.class);
         suite.addTestSuite(DatagramIteratorSystemProcessingTest.class);
         suite.addTestSuite(BinaryReaderSystemProcessingTest.class);

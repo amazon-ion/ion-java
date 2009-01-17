@@ -213,6 +213,16 @@ public final class IonTextReader
     public IonTextReader(byte[] buf, int start, int len) {
         this(new IonTextTokenizer(buf, start, len), null, false);
     }
+
+    public IonTextReader(byte[] buf, int start, int len,
+                         IonCatalog catalog,
+                         boolean returnSystemValues)
+    {
+        this(new IonTextTokenizer(buf, start, len),
+             catalog,
+             returnSystemValues);
+    }
+
     public IonTextReader(String ionText) {
         this(new IonTextTokenizer(ionText), null, false);
     }

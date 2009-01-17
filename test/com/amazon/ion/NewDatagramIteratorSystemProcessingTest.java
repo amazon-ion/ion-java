@@ -9,19 +9,26 @@ import com.amazon.ion.impl.IonTextReader;
 import java.util.Iterator;
 
 /**
- *
+ * TODO replicates other tests in this hierarchy
  */
 public class NewDatagramIteratorSystemProcessingTest
     extends IteratorSystemProcessingTest
 {
+    private String myText;
+
     @Override
-    protected Iterator<IonValue> iterate(String text)
+    protected void prepare(String text)
         throws Exception
     {
-        IonTextReader textReader = system().newSystemReader(text);
+        myText = text;
+    }
 
+    @Override
+    protected Iterator<IonValue> iterate()
+        throws Exception
+    {
+        IonTextReader textReader = system().newSystemReader(myText);
         IonDatagram datagram = new IonDatagramImpl(system(), textReader);
-
         // Force symtab preparation  FIXME should not be necessary
         datagram.byteSize();
 
@@ -29,14 +36,14 @@ public class NewDatagramIteratorSystemProcessingTest
     }
 
     @Override
-    protected Iterator<IonValue> systemIterate(String text)
+    protected Iterator<IonValue> systemIterate()
         throws Exception
     {
-//        IonLoader loader = loader();
-//        IonDatagram datagram = loader.load(text);
-        IonTextReader textReader = system().newSystemReader(text);
+        IonTextReader textReader = system().newSystemReader(myText);
+        IonDatagram datagram = new IonDatagramImpl(system(), textReader);
+        // Force symtab preparation  FIXME should not be necessary
+        datagram.byteSize();
 
-      IonDatagram datagram = new IonDatagramImpl(system(), textReader);
         return datagram.systemIterator();
     }
 }
