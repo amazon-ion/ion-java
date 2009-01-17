@@ -254,8 +254,7 @@ public abstract class IonTestCase
 
     public SymbolTable loadSharedSymtab(String serializedSymbolTable)
     {
-        String text = serializedSymbolTable;
-        IonStruct st = (IonStruct) oneValue(text);
+        IonStruct st = (IonStruct) oneValue(serializedSymbolTable);
         SymbolTable shared = system().newSharedSymbolTable(st);
         assertTrue(shared.isSharedTable());
         return shared;
@@ -267,6 +266,7 @@ public abstract class IonTestCase
         system().getCatalog().putTable(shared);
         return shared;
     }
+
 
 
     // ========================================================================

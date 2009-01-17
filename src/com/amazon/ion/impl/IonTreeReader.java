@@ -275,7 +275,7 @@ public final class IonTreeReader
     public int getFieldId()
     {
         // FIXME IonValueImpl.getFieldId doesn't return -1 as specced here!
-        return (_curr == null) ? -1 : _curr.getFieldId();
+        return (_curr == null) ? UnifiedSymbolTable.UNKNOWN_SID : _curr.getFieldId();
     }
 
     public String getFieldName()
