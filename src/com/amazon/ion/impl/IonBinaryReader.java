@@ -22,7 +22,6 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.TtTimestamp;
-import com.amazon.ion.system.SimpleCatalog;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
@@ -128,21 +127,6 @@ public final class IonBinaryReader
     SymbolTable[] _symbol_stack;
 
 
-    // public to allow someone to DECLARE this buf to be binary
-    // irrespective of the presense or absense of an Ion Version
-    // Marker (aka magic cookie)
-    public IonBinaryReader(byte[] buf)
-    {
-        this ( buf, 0, buf.length );
-    }
-
-    public IonBinaryReader(byte[] buf, int start, int len)
-    {
-        this(new SimpleByteBuffer(buf, start, len, true /*isReadOnly*/),
-             IonType.DATAGRAM,
-             new SimpleCatalog(),  // FIXME bad news, make caller pass it
-             false);
-    }
 
     public IonBinaryReader(byte[] buf, int start, int len,
                            IonCatalog catalog,
