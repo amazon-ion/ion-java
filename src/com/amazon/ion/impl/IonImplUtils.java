@@ -69,6 +69,23 @@ final class IonImplUtils
     }
 
 
+    public static String loadReader(java.io.Reader in)
+        throws IOException
+    {
+        StringBuilder buf = new StringBuilder(2048);
+
+        char[] chars = new char[2048];
+
+        int len;
+        while ((len = in.read(chars)) != -1)
+        {
+            buf.append(chars, 0, len);
+        }
+
+        return buf.toString();
+    }
+
+
     public static boolean streamIsIonBinary(PushbackInputStream pushback)
         throws IonException, IOException
     {

@@ -266,6 +266,21 @@ public class IonSystemImpl
     }
 
 
+    public IonReader newSystemReader(Reader ionText)
+    {
+        try
+        {
+            // FIXME we shouldn't have to load the whole stream into a String.
+            String str = IonImplUtils.loadReader(ionText);
+            return new IonTextReader(str, getCatalog(), true);
+        }
+        catch (IOException e)
+        {
+            throw new IonException(e);
+        }
+    }
+
+
     public IonReader newReader(byte[] ionData)
     {
         return newReader(ionData, 0, ionData.length);

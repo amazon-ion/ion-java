@@ -141,13 +141,13 @@ public class LoaderImpl
     // Loading from Reader
 
     @Deprecated
-    public IonDatagramImpl loadText(Reader ionReader)
+    public IonDatagramImpl loadText(Reader ionText)
         throws IonException, IOException
     {
-        return load(ionReader);
+        return load(ionText);
     }
 
-
+    @Deprecated
     public IonDatagramImpl load(Reader ionText, SymbolTable symbolTable)
         throws IonException, IOException
     {
@@ -173,10 +173,23 @@ public class LoaderImpl
     }
 
 
-    public IonDatagramImpl load(Reader ionReader)
+    public IonDatagramImpl load(Reader ionText)
         throws IonException, IOException
     {
-        return new IonDatagramImpl(mySystem, ionReader);
+        if (USE_NEW_READERS)
+        {
+            IonReader reader = mySystem.newSystemReader(ionText);
+            try
+            {
+                IonDatagramImpl dg = new IonDatagramImpl(mySystem, reader);
+                return dg;
+            }
+            catch (IOException e)
+            {
+                throw new IonException(e);
+            }
+        }
+        return new IonDatagramImpl(mySystem, ionText);
     }
 
 
