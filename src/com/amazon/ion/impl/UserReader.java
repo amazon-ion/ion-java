@@ -17,7 +17,7 @@ public class UserReader
     implements Iterator<IonValue>
 {
 	private boolean		 _recycle_buffer; // if true we reset the system reader for each user value
-	
+
     private SystemReader _systemReader;
 
     /**
@@ -29,7 +29,7 @@ public class UserReader
     private SymbolTable    _localSymbolTable;
 
     private boolean        _at_eof;
-    private IonValue       _next;
+    private IonValueImpl   _next;
 
 
     /**
@@ -51,7 +51,7 @@ public class UserReader
         _systemReader = systemReader;
         _localSymbolTable = systemReader.getLocalSymbolTable();
     }
-    
+
     public void setBufferToRecycle() {
     	this._recycle_buffer = true;
     }
@@ -74,9 +74,9 @@ public class UserReader
         assert !_at_eof;
 
         while (_next == null) {
-        	if (this._recycle_buffer) {
-        		this._systemReader.resetBuffer();
-        	}
+            if (this._recycle_buffer) {
+                this._systemReader.resetBuffer();
+            }
             if (!this._systemReader.hasNext()) {
                 _at_eof = true;
                 break;
@@ -100,9 +100,12 @@ public class UserReader
                 prefetch();
             }
             if (_next != null) {
-                IonValue retval = _next;
+                IonValueImpl retval = _next;
                 _next = null;
                 _localSymbolTable = _systemReader.getLocalSymbolTable();
+                if (this._recycle_buffer) {
+                    retval.clear_position_and_buffer();
+                }
                 return retval;
             }
         }

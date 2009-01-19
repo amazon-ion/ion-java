@@ -162,7 +162,7 @@ public class IonSystemImpl
                 return dg;
             }
             catch (IOException e)
-            {
+    {
                 // Shouldn't happen actually
                 throw new IonException(e);
             }
@@ -227,19 +227,25 @@ public class IonSystemImpl
 
     public Iterator<IonValue> iterate(Reader reader)
     {
-        return new UserReader(this, this.newLocalSymbolTable(), reader);
+        UserReader userReader =
+            new UserReader(this, this.newLocalSymbolTable(), reader);
+        userReader.setBufferToRecycle();
+        return userReader;
     }
 
 
     public Iterator<IonValue> iterate(String ionText)
     {
-        return new UserReader(this,
-                              this.newLocalSymbolTable(),
-                              new StringReader(ionText));
+        UserReader userReader = new UserReader(this,
+                                               this.newLocalSymbolTable(),
+                                               new StringReader(ionText));
+        userReader.setBufferToRecycle();
+        return userReader;
     }
 
     public Iterator<IonValue> systemIterate(String ionText)
     {
+        // FIXME this doesn't reset the buffer so memory grows without bound.
         return new SystemReader(this, ionText);
     }
 
@@ -247,7 +253,9 @@ public class IonSystemImpl
     public Iterator<IonValue> iterate(byte[] ionData)
     {
         SystemReader systemReader = newLegacySystemReader(ionData);
-        return new UserReader(systemReader);
+        UserReader userReader = new UserReader(systemReader);
+        // Don't use buffer-clearing!
+        return userReader;
     }
 
 

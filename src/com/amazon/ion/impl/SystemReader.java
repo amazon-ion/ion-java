@@ -222,7 +222,7 @@ public class SystemReader
     }
 
 
-    public IonValue next() {
+    public IonValueImpl next() {
         if (! _at_eof) {
             _curr = null;
             if (_next == null) {
@@ -306,7 +306,13 @@ public class SystemReader
 
     public void resetBuffer() {
     	if (this._buffer_offset > BINARY_VERSION_MARKER_SIZE) {
-    		this._buffer_offset = BINARY_VERSION_MARKER_SIZE;
+    	    this._buffer_offset = BINARY_VERSION_MARKER_SIZE;
+    	    try {
+                _buffer.writer(BINARY_VERSION_MARKER_SIZE).truncate();
+            }
+            catch (IOException e) {
+                throw new IonException(e);
+            }
     	}
     }
 
