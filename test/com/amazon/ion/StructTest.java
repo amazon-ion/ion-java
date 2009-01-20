@@ -33,13 +33,16 @@ public class StructTest
     {
         StringBuilder buf = new StringBuilder();
         buf.append('{');
-        for (int i = 0; i < children.length; i++)
+        if (children != null)
         {
-            buf.append('f');
-            buf.append(i);
-            buf.append(':');
-            buf.append(children[i]);
-            buf.append(',');
+            for (int i = 0; i < children.length; i++)
+            {
+                buf.append('f');
+                buf.append(i);
+                buf.append(':');
+                buf.append(children[i]);
+                buf.append(',');
+            }
         }
         buf.append('}');
         return buf.toString();

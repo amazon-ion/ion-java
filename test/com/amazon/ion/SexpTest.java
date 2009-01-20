@@ -46,10 +46,13 @@ public class SexpTest
     {
         StringBuilder buf = new StringBuilder();
         buf.append('(');
-        for (String child : children)
+        if (children != null)
         {
-            buf.append(child);
-            buf.append(' ');
+            for (String child : children)
+            {
+                buf.append(child);
+                buf.append(' ');
+            }
         }
         buf.append(')');
         return buf.toString();

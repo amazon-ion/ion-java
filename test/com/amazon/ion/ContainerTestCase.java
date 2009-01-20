@@ -236,4 +236,16 @@ public abstract class ContainerTestCase
             assertNotSame(topSymtab, child.getSymbolTable());
         }
     }
+
+
+    /**
+     * Isolates issue ION-25.
+     */
+    public void testUnmaterializedInsert()
+    {
+        String emptyText = wrap((String[])null);
+        IonContainer c = (IonContainer) system().singleValue(emptyText);
+        IonValue v = system().singleValue("1");
+        add(c, v);
+    }
 }
