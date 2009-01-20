@@ -356,7 +356,8 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
             stream.name = this.getName() + " (as stream)";
             tree.name = this.getName() + " (as IonValue)";
 
-            IonDatagram inputDatagram = loader().load(testBuffer);
+            // load() takes ownership of the buffer
+            IonDatagram inputDatagram = loader().load(testBuffer.clone());
 
             // Turn the DOM back into text...
             tree.string     = makeString(inputDatagram);
