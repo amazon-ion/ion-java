@@ -235,12 +235,10 @@ public class LoaderImpl
                 dg.byteSize();
                 return dg;
             }
-            else
-            {
-                SystemReader systemReader =
-                    mySystem.newBinarySystemReader(pushback);
-                return new IonDatagramImpl(mySystem, systemReader);
-            }
+
+            SystemReader systemReader =
+                mySystem.newBinarySystemReader(pushback);
+            return new IonDatagramImpl(mySystem, systemReader);
         }
 
         Reader reader = new InputStreamReader(pushback, "UTF-8");

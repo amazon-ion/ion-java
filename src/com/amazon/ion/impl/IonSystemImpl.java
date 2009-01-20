@@ -162,7 +162,7 @@ public class IonSystemImpl
                 return dg;
             }
             catch (IOException e)
-    {
+            {
                 // Shouldn't happen actually
                 throw new IonException(e);
             }

@@ -58,12 +58,11 @@ public class IterationTest
         checkEmptyIterator(scanner);
 
 
-        // TODO imlement raw Scanning via public API
-        Iterator<IonValue> iterator = new SystemReader(system(), "");
+        Iterator<IonValue> iterator = system().systemIterate("");
         checkEmptyIterator(iterator);
 
         // Try calling next before hasNext
-        iterator = new SystemReader(system(), "1");
+        iterator = system().systemIterate("1");
         iterator.next();
         checkEmptyIterator(iterator);
     }
