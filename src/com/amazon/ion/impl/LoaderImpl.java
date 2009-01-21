@@ -200,18 +200,25 @@ public class LoaderImpl
     {
         if (USE_NEW_READERS)
         {
-            IonReader reader = mySystem.newSystemReader(ionData);
-            try
+            boolean isBinary = IonBinary.matchBinaryVersionMarker(ionData);
+            if (! isBinary)
             {
-                IonDatagramImpl dg = new IonDatagramImpl(mySystem, reader);
-                // Force symtab preparation  FIXME should not be necessary
-                dg.byteSize();
-                return dg;
+                IonReader reader = mySystem.newSystemReader(ionData);
+                assert reader instanceof IonTextReader;
+                try
+                {
+                    IonDatagramImpl dg = new IonDatagramImpl(mySystem, reader);
+                    // Force symtab preparation  FIXME should not be necessary
+                    dg.byteSize();
+                    return dg;
+                }
+                catch (IOException e)
+                {
+                    throw new IonException(e);
+                }
             }
-            catch (IOException e)
-            {
-                throw new IonException(e);
-            }
+            // else fall through, the old implementation is fine
+            // TODO refactor this path to eliminate SystemReader
         }
 
         return new IonDatagramImpl(mySystem, ionData);
@@ -228,12 +235,9 @@ public class LoaderImpl
         if (IonImplUtils.streamIsIonBinary(pushback)) {
             if (USE_NEW_READERS)
             {
-                // FIXME load buffer then reader atop it
-                IonReader reader = mySystem.newSystemReader(pushback);
-                IonDatagramImpl dg = new IonDatagramImpl(mySystem, reader);
-                // Force symtab preparation  FIXME should not be necessary
-                dg.byteSize();
-                return dg;
+                // Nothing special to do. SystemReader works fine to
+                // materialize the top layer of the datagram.
+                // The streaming APIs add no benefit.
             }
 
             SystemReader systemReader =

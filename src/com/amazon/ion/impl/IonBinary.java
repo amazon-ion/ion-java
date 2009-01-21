@@ -122,8 +122,13 @@ public class IonBinary
         }
 
         /**
-         * creates a blocked byte buffer from an input stream.
+         * Creates a new buffer containing the entire content of an
+         * {@link InputStream}.
+         *
          * @param bytestream a stream interface the byte image to buffer
+         *
+         * @throws IonException wrapping any {@link IOException}s thrown by the
+         * stream.
          */
         public BufferManager(InputStream bytestream)
         {
