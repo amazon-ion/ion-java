@@ -2273,7 +2273,7 @@ done:       for (;;) {
                             if (ii >= s.length()) {
                                 throw new IonException("invalid string, unpaired high surrogate character");
                             }
-                            int c2 = s.charAt(ii++);
+                            int c2 = s.charAt(++ii);
                             if (!IonConstants.isLowSurrogate(c2)) {
                                 throw new IonException("invalid string, unpaired high surrogate character");
                             }

@@ -380,7 +380,8 @@ public abstract class IonTestCase
 
     public void assertEscape(char expected, char escapedChar)
     {
-        IonString value = (IonString) oneValue(makeEscapedCharString(escapedChar));
+        String ionText = makeEscapedCharString(escapedChar);
+        IonString value = (IonString) oneValue(ionText);
         String valString = value.stringValue();
         assertEquals(1, valString.length());
         assertEquals(expected, valString.charAt(0));
@@ -662,7 +663,8 @@ public abstract class IonTestCase
 
                     public void visit(IonString expected) throws Exception
                     {
-                        assertEquals(expected.stringValue(),
+                        assertEquals("IonString text",
+                                     expected.stringValue(),
                                      ((IonString)found).stringValue());
                     }
 

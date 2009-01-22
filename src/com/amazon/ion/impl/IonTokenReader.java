@@ -1012,20 +1012,23 @@ sizedloop:
                 throw new IonException("unexpected line terminator encountered in quoted string");
             case '\\':
                 c = IonTokenReader.readEscapedCharacter(this.in);
-                // EOF throws UnexpectedEofException
+                //    throws UnexpectedEofException on EOF
+                if (c != EMPTY_ESCAPE_SEQUENCE) {
+                    value.appendCodePoint(c);
+                }
                 break;
             default:
-                break;
-            }
-            if (c != EMPTY_ESCAPE_SEQUENCE) {
+                // c could be part of a surrogate pair so we can't use
+                // appendCodePoint()
                 value.append((char)c);
+                break;
             }
         }
 
         if (maxlookahead != -1 && c == '\"') {
-                // this is the normal, non-longline case so we're just done
-                closeString();
-            }
+            // this is the normal, non-longline case so we're just done
+            closeString();
+        }
         else {
             // we're not at the closing quote, so this is an incomplete
             // string which will have to be read to the end ... later
@@ -1251,29 +1254,36 @@ sizedloop:
             case '\'': return '\'';
             case '/':  return '/';
             case '?':  return '?';
-            case 'x':
-                // a pair of hex digits
+
+            case 'U':
                 c = readDigit(r, 16, true);
                 if (c < 0) break;
-                c2 = c << 4; // high nibble
-                c = readDigit(r, 16, false);
+                c2 = c << 28;
+                c = readDigit(r, 16, true);
                 if (c < 0) break;
-                return c2 + c; // high nibble + low nibble
-            // FIXME missing U
+                c2 += c << 24;
+                c = readDigit(r, 16, true);
+                if (c < 0) break;
+                c2 += c << 20;
+                c = readDigit(r, 16, true);
+                if (c < 0) break;
+                c2 += c << 16;
             case 'u':
                 // exactly 4 hex digits
                 c = readDigit(r, 16, true);
                 if (c < 0) break;
-                c2 = c << 12; // highest nibble
+                c2 += c << 12; // highest nibble
                 c = readDigit(r, 16, true);
                 if (c < 0) break;
                 c2 += c << 8; // 2nd high nibble
+            case 'x':
                 c = readDigit(r, 16, true);
                 if (c < 0) break;
                 c2 += c << 4; // almost lowest nibble
                 c = readDigit(r, 16, true);
                 if (c < 0) break;
                 return c2 + c; // high nibble + lowest nibble
+
             case '0':
                 return 0;
             case '\n':
