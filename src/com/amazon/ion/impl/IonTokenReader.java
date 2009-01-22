@@ -1256,8 +1256,9 @@ sizedloop:
             case '?':  return '?';
 
             case 'U':
+                // Expecting 8 hex digits
                 c = readDigit(r, 16, true);
-                if (c < 0) break;
+                if (c < 0) break;  // TODO throw UnexpectedEofException
                 c2 = c << 28;
                 c = readDigit(r, 16, true);
                 if (c < 0) break;
@@ -1268,21 +1269,24 @@ sizedloop:
                 c = readDigit(r, 16, true);
                 if (c < 0) break;
                 c2 += c << 16;
+                // ... fall through...
             case 'u':
-                // exactly 4 hex digits
+                // Expecting 4 hex digits
                 c = readDigit(r, 16, true);
                 if (c < 0) break;
-                c2 += c << 12; // highest nibble
+                c2 += c << 12;
                 c = readDigit(r, 16, true);
                 if (c < 0) break;
-                c2 += c << 8; // 2nd high nibble
+                c2 += c << 8;
+                // ... fall through...
             case 'x':
+                // Expecting 2 hex digits
                 c = readDigit(r, 16, true);
                 if (c < 0) break;
-                c2 += c << 4; // almost lowest nibble
+                c2 += c << 4;
                 c = readDigit(r, 16, true);
                 if (c < 0) break;
-                return c2 + c; // high nibble + lowest nibble
+                return c2 + c;
 
             case '0':
                 return 0;

@@ -33,6 +33,9 @@ public interface IonReader
      * IonType of the value that is found.  Once so positioned the contents of
      * this value can be accessed with the get methods.  This traverses the
      * contents at a constant level.
+     *
+     * @return the type of the next Ion value; never {@link IonType#DATAGRAM}.
+     *
      * @throws NoSuchElementException if there are no more elements.
      */
     public IonType next();
@@ -232,6 +235,8 @@ public interface IonReader
      * Returns the current value as an int symbol id.  This is only valid if
      * there is
      * an underlying value and the value is an Ion symbol.
+     *
+     * @see #stringValue()
      */
     public int getSymbolId();
 

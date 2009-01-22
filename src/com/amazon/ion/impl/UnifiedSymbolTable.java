@@ -865,8 +865,8 @@ public final class UnifiedSymbolTable
         if (symtabType == SHARED) {
             if (name == null || name.length() == 0) {
                 String message =
-                    "Error in " + SystemSymbolTable.ION_SYMBOL_TABLE
-                    + ": Field 'name' must be a non-empty string.";
+                    "Shared symbol table is malformed: field 'name' " +
+                    "must be a non-empty string.";
                 throw new IonException(message);
             }
 

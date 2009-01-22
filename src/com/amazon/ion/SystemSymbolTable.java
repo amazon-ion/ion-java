@@ -21,7 +21,7 @@ public interface SystemSymbolTable
         SystemSymbolTable.IMPORTS,
         SystemSymbolTable.SYMBOLS,
         SystemSymbolTable.MAX_ID,
-        SystemSymbolTable.ION_EMBEDDED_VALUE
+        SystemSymbolTable.ION_SHARED_SYMBOL_TABLE
     };
 
     public static final int ION_1_0_MAX_ID = 9;
