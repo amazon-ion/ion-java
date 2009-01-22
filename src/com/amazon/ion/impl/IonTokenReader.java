@@ -1231,8 +1231,6 @@ sizedloop:
             //    \r The carriage-return character ('\ u 000D')
             //    \f The form-feed character ('\ u 000C')
             //    \a The alert (bell) character ('\ u 0007')
-            //    \e The escape character ('\ u 001B')
-            //    \cx The control character corresponding to x
             //    \" The double quote character
             //    \' The single quote character
             //    \? The question mark character
@@ -1248,7 +1246,6 @@ sizedloop:
             case 'f':  return '\f';
             case 'b':  return '\u0008';
             case 'a':  return '\u0007';
-            case 'e':  return '\u001B';
             case '\\': return '\\';
             case '\"': return '\"';
             case '\'': return '\'';
@@ -1262,6 +1259,7 @@ sizedloop:
                 c = readDigit(r, 16, false);
                 if (c < 0) break;
                 return c2 + c; // high nibble + low nibble
+            // FIXME missing U
             case 'u':
                 // exactly 4 hex digits
                 c = readDigit(r, 16, true);

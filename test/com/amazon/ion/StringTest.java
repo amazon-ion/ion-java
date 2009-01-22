@@ -137,7 +137,7 @@ public class StringTest
     }
 
 
-    public void testStringEscapes()
+    public void testBackslashEof()
     {
         try
         {
@@ -146,7 +146,11 @@ public class StringTest
             fail("Expected UnexpectedEofException");
         }
         catch (UnexpectedEofException e) { }
+    }
 
+
+    public void testStringEscapes()
+    {
         IonString value = (IonString) oneValue(" \"\\\n\"");
         String valString = value.stringValue();
         assertEquals("", valString);
@@ -170,7 +174,6 @@ public class StringTest
 
         assertEscape('\u0000', '0');   // nul
         assertEscape('\u0007', 'a');   // bell
-        assertEscape('\u001B', 'e');   // escape
         assertEscape('\u000B', 'v');   // vertical tab
         assertEscape('\u003F', '?');   // question mark; thank you C++
         assertEscape('\'',     '\'');  // single quote
