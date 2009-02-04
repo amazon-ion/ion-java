@@ -646,6 +646,17 @@ public interface IonSystem
 
 
     /**
+     * Constructs a new Ion null value with the given type.
+     *
+     * @param type must not be Java null, but it may be {@link IonType#NULL}.
+     *
+     * @return a new value such that {@link IonValue#isNullValue()} is
+     * {@code true}.
+     */
+    public IonValue newNull(IonType type);
+
+
+    /**
      * Constructs a new <code>null.sexp</code> instance.
      * @deprecated Use {@link #newNullSexp()} instead
      */

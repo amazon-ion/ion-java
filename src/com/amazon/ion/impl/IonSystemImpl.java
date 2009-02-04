@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion.impl;
@@ -28,10 +28,12 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTimestamp;
+import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
+import com.amazon.ion.TtTimestamp;
 import com.amazon.ion.UnsupportedSystemVersionException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.system.SimpleCatalog;
@@ -227,6 +229,8 @@ public class IonSystemImpl
 
     public Iterator<IonValue> iterate(Reader reader)
     {
+        // TODO optimize to use IonTextReader, but first that must truly stream
+        // instead of requiring a full-stream buffer.
         UserReader userReader =
             new UserReader(this, this.newLocalSymbolTable(), reader);
         userReader.setBufferToRecycle();
@@ -236,6 +240,12 @@ public class IonSystemImpl
 
     public Iterator<IonValue> iterate(String ionText)
     {
+        if (LoaderImpl.USE_NEW_READERS)
+        {
+            IonReader reader = newReader(ionText);
+            return new IonIteratorImpl(this, reader);
+        }
+
         UserReader userReader = new UserReader(this,
                                                this.newLocalSymbolTable(),
                                                new StringReader(ionText));
@@ -245,7 +255,11 @@ public class IonSystemImpl
 
     public Iterator<IonValue> systemIterate(String ionText)
     {
-        // FIXME this doesn't reset the buffer so memory grows without bound.
+        if (LoaderImpl.USE_NEW_READERS)
+        {
+            // TODO use IonIteratorImpl
+        }
+
         return new SystemReader(this, ionText);
     }
 
@@ -334,6 +348,7 @@ public class IonSystemImpl
 
     public IonReader newReader(InputStream ionData)
     {
+        // TODO optimize if stream is text!
         byte[] bytes;
         try
         {
@@ -858,6 +873,29 @@ public class IonSystemImpl
     }
 
 
+    public IonValue newNull(IonType type)
+    {
+        switch (type)
+        {
+            case NULL:          return newNull();
+            case BOOL:          return newNullBool();
+            case INT:           return newNullInt();
+            case FLOAT:         return newNullFloat();
+            case DECIMAL:       return newNullDecimal();
+            case TIMESTAMP:     return newNullTimestamp();
+            case SYMBOL:        return newNullSymbol();
+            case STRING:        return newNullString();
+            case CLOB:          return newNullClob();
+            case BLOB:          return newNullBlob();
+            case LIST:          return newNullList();
+            case SEXP:          return newNullSexp();
+            case STRUCT:        return newNullStruct();
+            default:
+                throw new IllegalArgumentException();
+        }
+    }
+
+
     /**
      * @deprecated Use {@link #newNullSexp()} instead
      */
@@ -983,6 +1021,13 @@ public class IonSystemImpl
     public IonTimestamp newNullTimestamp()
     {
         return new IonTimestampImpl(this);
+    }
+
+    public IonTimestamp newTimestamp(TtTimestamp timestamp)
+    {
+        IonTimestamp result = newNullTimestamp();
+        result.setValue(timestamp);
+        return result;
     }
 
     public IonTimestamp newUtcTimestampFromMillis(long millis)

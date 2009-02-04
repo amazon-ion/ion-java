@@ -245,6 +245,24 @@ public class LoaderImpl
             return new IonDatagramImpl(mySystem, systemReader);
         }
 
+        // Input is text
+        if (USE_NEW_READERS)
+        {
+            IonReader reader = mySystem.newSystemReader(pushback);
+            assert reader instanceof IonTextReader;
+            try
+            {
+                IonDatagramImpl dg = new IonDatagramImpl(mySystem, reader);
+                // Force symtab preparation  FIXME should not be necessary
+                dg.byteSize();
+                return dg;
+            }
+            catch (IOException e)
+            {
+                throw new IonException(e);
+            }
+        }
+
         Reader reader = new InputStreamReader(pushback, "UTF-8");
         return load(reader);
     }
