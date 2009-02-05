@@ -109,7 +109,7 @@ final class IonImplUtils
      * logically equivalent to getIonValue().toString() but may be more efficient
      * and does not require an IonSystem context to operate.
      */
-    public String valueToString(IonReader reader)
+    public static String valueToString(IonReader reader)
     {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonWriter writer = new IonTextWriter(out);
