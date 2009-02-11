@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -74,12 +72,12 @@ public class SymbolTableTest
             SharedSymbolTablePrefix +
             "{" +
             "  name:'''imported''', version:2," +
-            "  symbols:{" +
-            "    $1:'''imported 1'''," +
-            "    $2:'''imported 2'''," +
-            "    $3:'''fred3'''," +
-            "    $4:'''fred4'''," +
-            "  }" +
+            "  symbols:[" +
+            "    '''imported 1'''," +
+            "    '''imported 2'''," +
+            "    '''fred3'''," +
+            "    '''fred4'''," +
+            "  ]" +
             "}";
         SymbolTable shared = registerSharedSymtab(importingText);
         assertEquals(IMPORTED_2_MAX_ID, shared.getMaxId());
@@ -98,13 +96,13 @@ public class SymbolTableTest
             SharedSymbolTablePrefix +
             "{" +
             "  name:'''imported''', version:3," +
-            "  symbols:{" +
-            "    $1:'''imported 1'''," +
-            // Removed symbol     imported 2
-            "    $3:'''fred3'''," +
-            "    $4:'''fred4'''," +
-            "    $5:'''fred5'''," +
-            "  }" +
+            "  symbols:[" +
+            "    '''imported 1'''," +
+            "    null," +            // Removed 'imported 2'
+            "    '''fred3'''," +
+            "    '''fred4'''," +
+            "    '''fred5'''," +
+            "  ]" +
             "}";
         SymbolTable shared = registerSharedSymtab(importingText);
         assertEquals(IMPORTED_3_MAX_ID, shared.getMaxId());
@@ -145,24 +143,56 @@ public class SymbolTableTest
         String text =
             LocalSymbolTablePrefix +
             "{" +
-            "  symbols:{ $100:\"foo\"," +
-            "            $101:\"bar\"}," +
+            "  symbols:[ \"foo\", \"bar\"]," +
             "}\n" +
             "null";
 
         SymbolTable symbolTable = oneValue(text).getSymbolTable();
         checkLocalTable(symbolTable);
 
-        checkSymbol("foo", 100, symbolTable);
-        checkSymbol("bar", 101, symbolTable);
+        checkSymbol("foo", ION_1_0_MAX_ID + 1, symbolTable);
+        checkSymbol("bar", ION_1_0_MAX_ID + 2, symbolTable);
 
         assertEquals(-1, symbolTable.findSymbol("not there"));
         assertEquals("$33", symbolTable.findSymbol(33));
     }
 
+    public void testImportsFollowSymbols()
+    {
+        registerImportedV1();
+
+        final int import1id = ION_1_0_MAX_ID + 1;
+        final int local1id = ION_1_0_MAX_ID + IMPORTED_1_MAX_ID + 1;
+        final int local2id = local1id + 1;
+
+        String importingText =
+            "$ion_1_0 "+
+            LocalSymbolTablePrefix +
+            "{" +
+            "  symbols:[ '''local1''' ]," +
+            "  imports:[{name:'''imported''', version:1, max_id:2}]," +
+            "}\n" +
+            "local2\n" +  // This symbol is added to end of locals
+            "local1\n" +
+            "'imported 1'";
+
+        Iterator<IonValue> scanner = system().iterate(importingText);
+
+        IonValue value = scanner.next();
+        SymbolTable symtab = value.getSymbolTable();
+        checkLocalTable(symtab);
+        checkSymbol("local2", local2id, value);
+
+        value = scanner.next();
+        checkSymbol("local1", local1id, value);
+
+        value = scanner.next();
+        checkSymbol("imported 1", import1id, value);
+    }
+
 
     /**
-     * Attempts to override system sids are ignored.
+     * Attempts to override system symbols are ignored.
      */
     public void testOverridingSystemSymbolId()
     {
@@ -172,10 +202,7 @@ public class SymbolTableTest
         String importingText =
             LocalSymbolTablePrefix +
             "{" +
-            "  symbols:{" +
-            "    $" + nameSid + ":'''shadow'''," +
-            "    $25:'''local25'''," +
-            "  }," +
+            "  symbols:[ '''name''' ]," +
             "}\n" +
             "null";
 
@@ -183,8 +210,7 @@ public class SymbolTableTest
         IonValue v = scanner.next();
         SymbolTable symtab = v.getSymbolTable();
         assertTrue(symtab.isLocalTable());
-        assertEquals(-1, symtab.findSymbol("shadow"));
-        assertEquals(25, symtab.findSymbol("local25"));
+        assertEquals(nameSid, symtab.findSymbol("name"));
     }
 
 
@@ -192,42 +218,28 @@ public class SymbolTableTest
     {
         registerImportedV1();
 
-        int shadowId = ION_1_0_MAX_ID + 1;
+        final int import1id = ION_1_0_MAX_ID + 1;
 
         String importingText =
             "$ion_1_0 "+
             LocalSymbolTablePrefix +
             "{" +
             "  imports:[{name:'''imported''', version:1, max_id:2}]," +
-            "  symbols:{" +
-            "    $" + shadowId + ":'''shadow'''," +
-            "    $25:'''local 25'''," +
-            "  }," +
+            "  symbols:[ '''imported 1''' ]," +
             "}\n" +
-            "'local 25'\n" +
             "'imported 1'\n" +
-            "shadow\n" +
-            "$" + shadowId;
+            "$" + import1id;
 
         Iterator<IonValue> scanner = system().iterate(importingText);
 
         IonValue value = scanner.next();
         SymbolTable symtab = value.getSymbolTable();
         checkLocalTable(symtab);
-
-        checkSymbol("local 25", 25, value);
-
-        assertNull(symtab.findKnownSymbol(26));
-
-        value = scanner.next();
-        checkSymbol("imported 1", shadowId, value);
-
-        value = scanner.next();
-        checkSymbol("shadow", 26, value);
+        checkSymbol("imported 1", import1id, value);
 
         // Here the input text is $NNN  but it comes back correctly.
         value = scanner.next();
-        checkSymbol("imported 1", shadowId, value);
+        checkSymbol("imported 1", import1id, value);
     }
 
 
@@ -277,8 +289,7 @@ public class SymbolTableTest
         String text =
             LocalSymbolTablePrefix +
             "{" +
-            "  symbols:{ $" + local1id + ":\"local1\"," +
-            "            $" + local2id + ":\"local2\"}," +
+            "  symbols:[ \"local1\", \"local2\" ]," +
             "  imports:[{name:\"imported\", version:1," +
             "            max_id:" + IMPORTED_1_MAX_ID + "}]," +
             "}\n" +
@@ -329,7 +340,7 @@ public class SymbolTableTest
             LocalSymbolTablePrefix +
             "{" +
             "  imports:[{name:\"imported\", version:2, " +
-            "            max_id:" + IMPORTED_2_MAX_ID + "}]," + // FIXME remove
+            "            max_id:" + IMPORTED_2_MAX_ID + "}]," +
             "}\n" +
             "local1 local2 'imported 1' 'imported 2' fred3";
         byte[] binary = encode(text);
@@ -344,10 +355,6 @@ public class SymbolTableTest
         checkSymbol("imported 1", import1id, dg.get(2));
         checkSymbol("imported 2", import2id, dg.get(3));
         checkSymbol("$" + fred3id, fred3id, dg.get(4));
-
-        // We can't load the original text because it doesn't have max_id
-        // and the table isn't in the catalog.
-//        badValue(text);
     }
 
     /**
@@ -375,7 +382,7 @@ public class SymbolTableTest
             LocalSymbolTablePrefix +
             "{" +
             "  imports:[{name:\"imported\", version:2, " +
-            "            max_id:" + IMPORTED_2_MAX_ID + "}]," + // FIXME remove
+            "            max_id:" + IMPORTED_2_MAX_ID + "}]," +
             "}\n" +
             "local1 local2 'imported 1' 'imported 2' fred3 fred5";
         byte[] binary = encode(text);
@@ -391,10 +398,6 @@ public class SymbolTableTest
         checkSymbol("$" + import2id, import2id, dg.get(3));
         checkSymbol("fred3", fred3id, dg.get(4));
         checkSymbol("fred5", local3id, dg.get(5));
-
-        // We can't load the original text because it doesn't have max_id
-        // and the table isn't in the catalog.
-//        badValue(text);  FIXME re-enable
     }
 
     public void testRepeatedImport()
@@ -603,7 +606,7 @@ public class SymbolTableTest
             SharedSymbolTablePrefix +
             "{" +
             "  name:\"test\"," +
-            "  symbols:{ $100:\"x\" }\n" +
+            "  symbols:[ \"x\" ]\n" +
             "}";
         SymbolTable symbolTable = loadSharedSymtab(text);
 
@@ -655,6 +658,8 @@ public class SymbolTableTest
 
     public void testMalformedSymbolsField()
     {
+        testMalformedSymbolsField("[]");
+        testMalformedSymbolsField("null.list");
         testMalformedSymbolsField("{}");
         testMalformedSymbolsField("null.struct");
         testMalformedSymbolsField("null");
@@ -708,15 +713,6 @@ public class SymbolTableTest
         assertEquals(null, table.findKnownSymbol(1));
         assertEquals("$1", table.findSymbol(1));
 
-        text =
-            SharedSymbolTablePrefix +
-            "{" +
-            "  name:\"test\", version:1," +
-            "  symbols:{$100:" + symbolValue + "}" +
-            "}";
-        table = registerSharedSymtab(text);
-        assertEquals(100, table.getMaxId());
-        assertEquals(null, table.findKnownSymbol(100));
 
         text =
             LocalSymbolTablePrefix +
@@ -726,15 +722,6 @@ public class SymbolTableTest
         table = v.getSymbolTable();
         assertTrue(table.isLocalTable());
         assertEquals(ION_1_0_MAX_ID + 1, table.getMaxId());
-
-        text =
-            LocalSymbolTablePrefix +
-            "{symbols:{$100:" + symbolValue + "}} " +
-            "null";
-        v = oneValue(text);
-        table = v.getSymbolTable();
-        assertTrue(table.isLocalTable());
-        assertEquals(100, table.getMaxId());
     }
 
 

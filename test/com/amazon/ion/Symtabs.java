@@ -39,25 +39,25 @@ public class Symtabs
         SharedSymbolTablePrefix +
         "{" +
         "  name:'''fred''', version:2," +
-        "  symbols:{" +
-        "    $1:'''fred_1'''," +
-        "    $2:'''fred_2'''," +
-        "    $3:'''fred_3'''," +
-        "    $4:'''fred_4'''," +
-        "  }" +
+        "  symbols:[" +
+        "    '''fred_1'''," +
+        "    '''fred_2'''," +
+        "    '''fred_3'''," +
+        "    '''fred_4'''," +
+        "  ]" +
         "}",
 
         // version: 3
         SharedSymbolTablePrefix +
         "{" +
         "  name:'''fred''', version:3," +
-        "  symbols:{" +
-        "    $1:'''fred_1'''," +
-        // Removed symbol fred_2
-        "    $3:'''fred_3'''," +
-        "    $4:'''fred_4'''," +
-        "    $5:'''fred_5'''," +
-        "  }" +
+        "  symbols:[" +
+        "    '''fred_1'''," +
+        "    null, /* Removed fred_2 */" +
+        "    '''fred_3'''," +
+        "    '''fred_4'''," +
+        "    '''fred_5'''," +
+        "  ]" +
         "}"
     };
 

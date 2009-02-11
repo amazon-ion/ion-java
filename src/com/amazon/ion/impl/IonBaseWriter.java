@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -76,52 +74,7 @@ public abstract class IonBaseWriter
         }
         return null;
     }
-    protected UnifiedSymbolTable.Symbol[] getSymbolArray() {
-        if (_symbol_table instanceof UnifiedSymbolTable) {
-            return ((UnifiedSymbolTable)_symbol_table)._symbols;
-        }
-        else if (_symbol_table != null) {
-            int count = _symbol_table.getMaxId();
-            UnifiedSymbolTable.Symbol[] symbols = new UnifiedSymbolTable.Symbol[count];
-            SymbolTable system = _symbol_table.getSystemSymbolTable();
-            int systemidmax = system == null ? 0 : system.getMaxId();
-            for (int ii=systemidmax; ii<count; ii++) {
-                String name = _symbol_table.findKnownSymbol(ii);
-                if (name != null) {
-                    UnifiedSymbolTable.Symbol sym = new UnifiedSymbolTable.Symbol();
-                    sym.name = name;
-                    sym.sid = ii;
-                    symbols[ii] = sym;
-                }
-            }
-            return symbols;
-        }
-        return null;
-    }
-    /* TODO delete this if the routine above proves more useful
-    Iterator<UnifiedSymbolTable.Symbol> xxgetSymbolTableSymbols() {
-        if (_symbol_table instanceof UnifiedSymbolTable) {
-            return ((UnifiedSymbolTable)_symbol_table).getLocalSymbols();
-        }
-        else if (_symbol_table != null) {
-            int count = _symbol_table.getMaxId();
-            Stack<UnifiedSymbolTable.Symbol> symbols = new Stack<UnifiedSymbolTable.Symbol>();
-            SymbolTable system = _symbol_table.getSystemSymbolTable();
-            int systemidmax = system == null ? 0 : system.getMaxId();
-            for (int ii=systemidmax; ii<count; ii++) {
-                String name = _symbol_table.findKnownSymbol(ii);
-                if (name != null) {
-                    UnifiedSymbolTable.Symbol sym = new UnifiedSymbolTable.Symbol();
-                    sym.name = name;
-                    sym.sid = ii;
-                    symbols.push(sym);
-                }
-            }
-            return symbols.iterator();
-        }
-        return null;
-    }
-    */
+
     protected int getSymbolTableMaxId() {
         if (_symbol_table != null) {
             return _symbol_table.getMaxId();

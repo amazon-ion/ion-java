@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.streaming;
 
@@ -32,35 +30,37 @@ public class MiscStreamingTests
     // need the extra \\'s to get at least one slash to the ion parser
     static final String _QuotingString1_ion  = "s\\\"t1";
     static final String _QuotingString1_java = "s\"t1";
-    static final String _QuotingString2_ion  = "s\\\'t2";
+    static final String _QuotingString2_ion  = "s\\\'t2";  // 5 bytes
     static final String _QuotingString2_java = "s\'t2";
     public void testQuoting()
     throws Exception
     {
     	String s = " \""+_QuotingString1_ion+"\" '"+_QuotingString2_ion+"' ";
-    	// buffer should be 23 bytes long
-    	//		cookie (4 bytes)
-    	//		local symbol table (12 bytes):
-    	//			annotation (ann.len=11, 1, $ion_1_0=2, struct.len=8 )
-    	//			member struct 'symbol' with: (2 bytes)
-    	//				$10:str2 (6 bytes)
-    	//		value1 string "str1" (1 typedesc + 4 bytes)
-    	//		value2 symbol 'str2' (1 typedesc + 1 byte)
+    	// buffer should be 22 bytes long
+    	//	cookie (4 bytes)
+    	//	local symbol table (11 bytes):
+    	//	    annotation           (1 byte tid, len=10)
+    	//              annot size       (1 byte: len=1)
+    	//                  $ion_1_0     (1 byte sid)
+    	//              struct           (1 byte tid, len=7)
+    	//		field 'symbols'  (1 bytes sid)
+    	//                  List         (1 byte tid, len=5)
+    	//		        str2     (5 bytes)
+    	//	value1 string "str1" (5 bytes: 1 typedesc + 4 text)
+    	//	value2 symbol 'str2' (2 bytes: 1 typedesc + 1 sid)
     	IonReader ir = system().newReader(s);
 
     	IonBinaryWriter wr = system().newBinaryWriter();
     	wr.writeValues(ir);
 
         byte[] buffer = wr.getBytes();
-        assertSame("this buffer length is known to be 23", buffer.length, 23);
+        assertSame("this buffer length is known to be 22", buffer.length, 22);
 
         IonReader sir = system().newReader(s);
         IonReader bir = system().newReader(s);
 
         checkIteratorForQuotingTest("string", sir);
         checkIteratorForQuotingTest("binary", bir);
-
-    	return;
     }
     void checkIteratorForQuotingTest(String title, IonReader ir) {
     	IonType t = ir.next();
@@ -111,8 +111,6 @@ public class MiscStreamingTests
 
     	int bin_count = it.getContainerSize();
     	assertSame("tree and binary iterator should have the same size", bin_count, tree_count );
-
-    	return;
     }
 
     public void testBinaryAnnotation()
@@ -154,8 +152,6 @@ public class MiscStreamingTests
     	assertSame( "should be a struct", t, IonType.STRUCT );
     	ann = it.getTypeAnnotations();
     	assertTrue(ann.length == 1 && ann[0].equals("item_view"));
-
-    	return;
     }
 
 

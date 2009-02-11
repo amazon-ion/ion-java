@@ -80,9 +80,10 @@ public abstract class SystemProcessingTestCase
     public void testLocalTableResetting()
         throws Exception
     {
-        String text = "bar foo $ion_1_0 1 bar foo";
+        String text = "bar foo $ion_1_0 1 far boo";
 
-        startIteration(text);
+        prepare(text);
+        startIteration();
 
         nextValue();
         checkSymbol("bar");
@@ -94,20 +95,20 @@ public abstract class SystemProcessingTestCase
         checkSymbol("foo");
         assertSame(table1, currentSymtab());
 
-        // Symbol table changes here
+        // The symbol table changes here
 
         nextValue();
         checkInt(1);
 
         nextValue();
-        checkSymbol("bar");
+        checkSymbol("far");
 
         SymbolTable table2 = currentSymtab();
         checkLocalTable(table2);
         assertNotSame(table1, table2);
 
         nextValue();
-        checkSymbol("foo");
+        checkSymbol("boo");
         assertSame(table2, currentSymtab());
     }
 
@@ -141,37 +142,39 @@ public abstract class SystemProcessingTestCase
     {
         String text =
             "$ion_symbol_table::{" +
-            "  symbols:{ $100:\"foo\"," +
-            "            $101:\"bar\"}," +
+            "  symbols:[ \"foo\", \"bar\" ]," +
             "}\n" +
             "bar foo\n" +
             "$ion_symbol_table::{" +
-            "  symbols:{ $13:\"foo\"}," +
+            "  symbols:[ \"bar\" ]," +
             "}\n" +
             "bar foo";
 
         startIteration(text);
 
         nextValue();
-        checkSymbol("bar", 101);
+        checkSymbol("bar", ION_1_0_MAX_ID + 2);
 
         SymbolTable table1 = currentSymtab();
         checkLocalTable(table1);
 
         nextValue();
-        checkSymbol("foo", 100);
+        checkSymbol("foo", ION_1_0_MAX_ID + 1);
+
+        // Symtab changes here...
 
         nextValue();
-        checkSymbol("bar", 14);
+        checkSymbol("bar", ION_1_0_MAX_ID + 1);
 
         SymbolTable table2 = currentSymtab();
         checkLocalTable(table2);
         assertNotSame(table1, table2);
-        assertEquals(14, table2.getMaxId());
+        assertTrue(ION_1_0_MAX_ID + 1 <= table2.getMaxId());
+        assertTrue(ION_1_0_MAX_ID + 2 >= table2.getMaxId());
 
         nextValue();
-        checkSymbol("foo", 13);
-        assertEquals(14, table2.getMaxId());
+        checkSymbol("foo", ION_1_0_MAX_ID + 2);
+        assertEquals(ION_1_0_MAX_ID + 2, table2.getMaxId());
         assertSame(table2, currentSymtab());
     }
 
@@ -200,7 +203,7 @@ public abstract class SystemProcessingTestCase
         SymbolTable table2 = currentSymtab();
         checkLocalTable(table2);
         assertNotSame(table1, table2);
-        assertEquals(SystemSymbolTable.ION_1_0_MAX_ID, table2.getMaxId());
+        assertEquals(ION_1_0_MAX_ID, table2.getMaxId());
     }
 
 
@@ -246,7 +249,7 @@ public abstract class SystemProcessingTestCase
             LocalSymbolTablePrefix +
             "{" +
             "  imports:[{name:\"fred\", version:2, " +
-            "            max_id:" + Symtabs.FRED_MAX_IDS[2] + "}]," + // FIXME remove
+            "            max_id:" + Symtabs.FRED_MAX_IDS[2] + "}]," +
             "}\n" +
             "local1 local2 fred_1 fred_2 fred_3";
 
@@ -267,10 +270,6 @@ public abstract class SystemProcessingTestCase
         nextValue();
         checkMissingSymbol("fred_3", (processingBinary() ? fred3id : local+3));
         checkEof();
-
-        // We can't load the original text because it doesn't have max_id
-        // and the table isn't in the catalog.
-//        badValue(text);
     }
 
     /**
@@ -296,13 +295,14 @@ public abstract class SystemProcessingTestCase
         // Make sure our syms don't overlap.
         assertTrue(fredV3.findSymbol("fred_5") != local3id);
 
-        // fred5 is not in table version 2, so it gets local symbol
+        // fred_5 is not in table version 2, so it gets local symbol
+        // fred_2 is missing from version 3
         String text =
             LocalSymbolTablePrefix +
             "{" +
             "  imports:[{name:\"fred\", version:2, " +
-            "            max_id:" + Symtabs.FRED_MAX_IDS[2] + "}]," + // FIXME remove
-            "}\n" +
+            "            max_id:" + Symtabs.FRED_MAX_IDS[2] + "}]" +
+            "} " +
             "local1 local2 fred_1 fred_2 fred_3 fred_5";
 
         prepare(text);
@@ -324,10 +324,6 @@ public abstract class SystemProcessingTestCase
         nextValue();
         checkSymbol("fred_5", (processingBinary() ? local+3 : local+4));
         checkEof();
-
-        // We can't load the original text because it doesn't have max_id
-        // and the table isn't in the catalog.
-//        badValue(text);  FIXME re-enable
     }
 
 

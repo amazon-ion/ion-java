@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.system;
 
@@ -36,10 +34,7 @@ public class SimpleCatalogTest
         String t1Text =
             "$ion_shared_symbol_table::{" +
             "  name:'''T''', version:1," +
-            "  symbols:{" +
-            "    $1:'''yes'''," +
-            "    $2:'''no'''," +
-            "  }" +
+            "  symbols:[ '''yes''', '''no''' ]" +
             "}";
         registerSharedSymtab(t1Text);
 
@@ -54,11 +49,7 @@ public class SimpleCatalogTest
         String t2Text =
             "$ion_shared_symbol_table::{" +
             "  name:'''T''', version:2," +
-            "  symbols:{" +
-            "    $1:'''yes'''," +
-            "    $2:'''no'''," +
-            "    $3:'''maybe'''," +
-            "  }" +
+            "  symbols:[ '''yes''', '''no''', '''maybe''' ]" +
             "}";
         registerSharedSymtab(t2Text);
 
@@ -77,30 +68,6 @@ public class SimpleCatalogTest
         assertSame(t2, cat.getTable("T", 5));
     }
 
-
-    public void testMaterializeOneValue()
-    {
-        String ionText =
-            "{" +
-            "  name:'''T''', version:2," +
-            "  symbols:{" +
-            "    x:'''yes'''," +
-            "    y:'''no'''," +
-            "    z:'''maybe'''," +
-            "  }" +
-            "}";
-
-        IonSystem sys = system();
-        IonValue v1           = sys.newNullStruct();
-        IonDatagram dg        = sys.newDatagram(v1);
-        byte[] b              = dg.toBytes();
-
-        IonValue v2           = sys.singleValue(b);
-
-        assertIonEquals(v1, v2);
-
-        //  assertSame(t2, cat.getTable("T", 5));
-    }
 
     @SuppressWarnings("unchecked")
     public void testBenchmark() {

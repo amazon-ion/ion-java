@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -272,16 +270,6 @@ public final class IonBinaryWriterImpl
         _in_struct = this.topInStruct();
     }
 
-
-    @Override
-    public void setFieldName(String name)
-    {
-        if (!_in_struct) {
-            throw new IllegalStateException();
-        }
-        super.setFieldName(name);
-    }
-
     @Override
     public void setFieldId(int id)
     {
@@ -316,6 +304,7 @@ public final class IonBinaryWriterImpl
         case SEXP:      tid = IonConstants.tidSexp;      break;
         case LIST:      tid = IonConstants.tidList;      break;
         case STRUCT:    tid = IonConstants.tidStruct;    break;
+        default: throw new IllegalArgumentException("Invalid type: " + type);
         }
         _writer.write((tid << 4) | IonConstants.lnIsNullAtom);
         patch(1);
@@ -1053,6 +1042,7 @@ int tmp;
         // we go to write out the typedesc headers when we write out the
         // values themselves.
         String name = super.getSymbolTableName();
+        assert name == null; // TODO remove unused code: locals have no name
         int max_id = 0;
         if (name != null) {
             name_len = IonBinary.lenIonStringWithTypeDesc(name);
@@ -1100,15 +1090,14 @@ int tmp;
         //while (syms.hasNext()) {
         //    UnifiedSymbolTable.Symbol s = syms.next();
 
-        UnifiedSymbolTable.Symbol[] syms = super.getSymbolArray();
-        for (int ii=0; ii<syms.length; ii++) {
+        UnifiedSymbolTable symtab = (UnifiedSymbolTable) this._symbol_table;
+        UnifiedSymbolTable.Symbol[] syms = symtab._symbols;
+        for (int ii=symtab.getImportMaxId()+1; ii<=symtab.getMaxId(); ii++) {
             UnifiedSymbolTable.Symbol s = syms[ii];
             if (s == null) continue;
-            if (s.source != this._symbol_table) continue; // we only care about our own symbols
-            //int s_len = IonBinary.lenVarUInt7(s.sid);
-            //s_len += IonBinary.lenIonStringWithTypeDesc(s.name);
-            //symbol_list_content_len += s_len;
-            symbol_list_content_len += s.sid_len + s.td_len + s.name_len;
+            assert s.source == symtab;
+
+            symbol_list_content_len += s.td_len + s.name_len;
         }
         if (symbol_list_content_len > 0) {
             symbol_list_len = 2; // fldid + typedesc
@@ -1194,21 +1183,19 @@ int tmp;
 
         if (symbol_list_content_len > 0) {
             written_symbols_header_len += out.writeVarUInt(UnifiedSymbolTable.SYMBOLS_SID, 1, true);
-            written_symbols_header_len += out.writeTypeDescWithLength2(IonConstants.tidStruct, symbol_list_content_len);
+            written_symbols_header_len += out.writeTypeDescWithLength2(IonConstants.tidList, symbol_list_content_len);
             //syms = super.getSymbolTableSymbols();
             //while (syms.hasNext()) {
             //    UnifiedSymbolTable.Symbol s = syms.next();
-            for (int ii=0; ii<syms.length; ii++) {
+            for (int ii=symtab.getImportMaxId()+1; ii<=symtab.getMaxId(); ii++) {
                 UnifiedSymbolTable.Symbol s = syms[ii];
-                if (s == null) continue;
-                if (s.source != this._symbol_table) continue; // we only care about our own symbols
-                //int s_len = IonBinary.lenIonString(s.name);
-                //int sidlen = IonBinary.lenVarUInt7(s.sid);
-                int sid_len2 = out.writeVarUInt(s.sid, s.sid_len, true);
+                if (s == null) continue; // TODO can this happen?
+                assert s.source == symtab;
+
                 int td_len2 = out.writeTypeDescWithLength(IonConstants.tidString, s.td_len - IonConstants.BB_TOKEN_LEN, s.name_len);
                 int name_len2 = out.writeString(s.name);
-                int t_len = sid_len2 + td_len2 + name_len2;
-                if (t_len != s.sid_len + s.td_len + s.name_len) {
+                int t_len = td_len2 + name_len2;
+                if (t_len != s.td_len + s.name_len) {
                     int name_len3 = out.writeString(s.name);
                     throw new IllegalStateException("symbol length is wrong as " + name_len3);
                 }
