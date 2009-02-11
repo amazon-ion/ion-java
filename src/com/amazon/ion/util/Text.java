@@ -668,13 +668,21 @@ public class Text
                 char c2 = text.charAt(i);
                 if (i >= len || !IonConstants.isLowSurrogate(c2))
                 {
-                    throw new IllegalArgumentException("string is not valid UTF-16");
+                    String message =
+                        "text is invalid UTF-16. It contains an unmatched " +
+                        "high surrogate 0x" + Integer.toHexString(c) +
+                        " at index " + i;
+                    throw new IllegalArgumentException(message);
                 }
                 c = IonConstants.makeUnicodeScalar(c, c2);
             }
             else if (IonConstants.isLowSurrogate(c))
             {
-                throw new IllegalArgumentException("string is not valid UTF-16");
+                String message =
+                    "text is invalid UTF-16. It contains an unmatched " +
+                    "low surrogate 0x" + Integer.toHexString(c) +
+                    " at index " + i;
+                throw new IllegalArgumentException(message);
             }
 
             printCodePoint(out, c, surroundingQuoteChar, mode);

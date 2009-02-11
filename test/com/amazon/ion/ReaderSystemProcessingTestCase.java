@@ -72,6 +72,13 @@ public abstract class ReaderSystemProcessingTestCase
     }
 
     @Override
+    protected void checkString(String expected) throws Exception
+    {
+        assertSame(IonType.STRING, myReader.getType());
+        assertEquals(expected, myReader.stringValue());
+    }
+
+    @Override
     protected void checkSymbol(String expected) throws Exception
     {
         assertSame(IonType.SYMBOL, myReader.getType());

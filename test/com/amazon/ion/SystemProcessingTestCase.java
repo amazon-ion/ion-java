@@ -56,6 +56,9 @@ public abstract class SystemProcessingTestCase
     protected abstract void checkType(IonType expected)
         throws Exception;
 
+    protected abstract void checkString(String expected)
+        throws Exception;
+
     protected abstract void checkSymbol(String expected)
         throws Exception;
 
@@ -74,6 +77,8 @@ public abstract class SystemProcessingTestCase
     protected abstract void checkEof()
         throws Exception;
 
+
+    //=========================================================================
 
     //=========================================================================
 
@@ -360,6 +365,65 @@ public abstract class SystemProcessingTestCase
 
         assertNull(system().getCatalog().getTable("test"));
     }
+
+
+    /**
+     * Parse Ion string data and ensure it matches expected text.
+     */
+    protected void testString(String expected, String ionData)
+        throws Exception
+    {
+        startIteration(ionData);
+        nextValue();
+        checkString(expected);
+    }
+
+    public void testUnicodeCharacters()
+    throws Exception
+    {
+        String ionData = "\"\\0\"";
+        testString("\0", ionData);
+
+        ionData = "\"\\x01\"";
+        testString("\01", ionData);
+
+        // U+007F is a control character
+        ionData = "\"\\x7f\"";
+        testString("\u007f", ionData);
+
+        ionData = "\"\\xff\"";
+        testString("\u00ff", ionData);
+        IonString value = (IonString) oneValue(ionData);
+        assertEquals(1, value.stringValue().length());  // one code unit
+        assertEquals(ionData, value.toString());
+
+        ionData = "\"\\" + "u0110\""; // Carefully avoid Java escape
+        testString("\u0110", ionData);
+        value = (IonString) oneValue(ionData);
+        assertEquals(1, value.stringValue().length());  // one code unit
+        assertEquals(ionData, value.toString());
+
+        ionData = "\"\\" + "uffff\""; // Carefully avoid Java escape
+        testString("\uffff", ionData);
+        value = (IonString) oneValue(ionData);
+        assertEquals(1, value.stringValue().length());  // one code unit
+        assertEquals(ionData, value.toString());
+
+        ionData = "\"\\" + "U0001d110\""; // Carefully avoid Java escape
+        testString("\ud834\udd10", ionData);
+        value = (IonString) oneValue(ionData);
+        assertEquals(2, value.stringValue().length());  // two code units
+        assertEquals(ionData, value.toString());
+
+        // The largest legal code point
+        ionData = "\"\\" + "U0010ffff\""; // Carefully avoid Java escape
+        testString("\udbff\udfff", ionData);
+        value = (IonString) oneValue(ionData);
+        assertEquals(2, value.stringValue().length());  // two code units
+        assertEquals(ionData, value.toString());
+
+    }
+
 
     //=========================================================================
 

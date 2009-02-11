@@ -83,6 +83,12 @@ public class IteratorSystemProcessingTest
     }
 
     @Override
+    protected void checkString(String expected) throws Exception
+    {
+        checkString(expected, myCurrentValue);
+    }
+
+    @Override
     protected void checkSymbol(String expected) throws Exception
     {
         checkSymbol(expected, myCurrentValue);
@@ -115,5 +121,13 @@ public class IteratorSystemProcessingTest
         {
             fail("expected EOF, found " +  myIterator.next());
         }
+    }
+
+    @Override
+    protected void testString(String expected, String ionData)
+        throws Exception
+    {
+        super.testString(expected, ionData);
+        assertEquals(ionData, myCurrentValue.toString());
     }
 }
