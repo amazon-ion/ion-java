@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -22,18 +20,28 @@ public class EquivsTests
         public void runTest()
             throws Exception
         {
-            IonDatagram values = readIonText(myTestFile);
-            int valueCount = values.size();
+            IonDatagram sequences = load(myTestFile);
+            int sequenceCount = sequences.size();
 
-            assertTrue("File must have at least two values",
-                       valueCount > 1);
+            assertTrue("File must have at least one sequence",
+                       sequenceCount > 0);
 
-            for (int i = 0; i < valueCount - 1; i++)
+            for (int i = 0; i < sequenceCount - 1; i++)
             {
-                IonValue current = values.get(i);
-                IonValue next    = values.get(i + 1);
+                IonSequence sequence = (IonSequence) sequences.get(i);
 
-                assertIonEquals(current, next);
+                int valueCount = sequence.size();
+
+                assertTrue("Each sequence must have at least two values",
+                           valueCount > 1);
+
+                for (int j = 0; j < valueCount - 1; j++)
+                {
+                    IonValue current = sequence.get(j);
+                    IonValue next    = sequence.get(j + 1);
+
+                    assertIonEquals(current, next);
+                }
             }
         }
     }
