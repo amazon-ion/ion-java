@@ -675,17 +675,17 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         IonReader ir = system().newReader(doublebuffer);
 
         // first copy
-        assertTrue(ir.next().equals(IonType.STRUCT));
+        assertEquals(IonType.STRUCT, ir.next());
         ir.stepIn();
-        assertEquals(ir.next(), IonType.BOOL);
-        assertEquals(ir.getFieldName(), "Foo");
+        assertEquals(IonType.BOOL, ir.next());
+        assertEquals("Foo", ir.getFieldName());
         //assertEquals(ir.getAnnotations(), new String[] { "boolean" });
         String[] annotations = ir.getTypeAnnotations();
         assertTrue(annotations != null && annotations.length == 1);
         if (annotations != null) { // just to shut eclipse up, we already tested this above
             assertTrue("boolean".equals(annotations[0]));
         }
-        assertEquals(ir.booleanValue(), true);
+        assertTrue(ir.booleanValue());
         ir.stepOut();
 
         // second copy
