@@ -9,18 +9,15 @@ import static com.amazon.ion.SystemSymbolTable.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.UnifiedSymbolTable.ION_SHARED_SYMBOL_TABLE;
 
-import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
-import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTestCase;
-import com.amazon.ion.IonText;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.system.SimpleCatalog;
@@ -744,42 +741,6 @@ public class SymbolTableTest
         String text = "($ion_1_0)";
         IonSexp v = oneSexp(text);
         checkSymbol(ION_1_0, v.get(0));
-    }
-
-    public void XXXtestKimSymbols() throws Exception
-    {
-//        File input = new File("c:\\data\\samples\\kim.10n");
-//        File symbols = new File("c:\\data\\samples\\kim_symbols.ion");
-//        IonDatagram dg = this.mySystem.getLoader().load(symbols);
-        SymbolTable symtab = mySystem.getCatalog().getTable("ims.item");
-        IonStruct   str = symtab.getIonRepresentation();
-
-        UnifiedSymbolTable ust = new UnifiedSymbolTable(UnifiedSymbolTable.getSystemSymbolTableInstance());
-
-        IonStruct syms = (IonStruct)str.get("symbols");
-
-        for (IonValue v : syms) {
-            String name  = ((IonText)v).stringValue();
-            int    id    = v.getFieldId();
-            int    newid = ust.addSymbol(name);
-            assertTrue(id == newid);
-        }
-        ust.share("ims.item", 1);
-
-        IonCatalog catalog = mySystem.getCatalog();
-        catalog.putTable(ust);
-
-        IonTextWriter w = new IonTextWriter();
-
-        byte[] buf = openFileForBuffer("c:\\data\\samples\\kim.10n");
-        IonReader r = mySystem.newReader(buf);
-
-        w.writeValues(r);
-
-        byte[] output = w.getBytes();
-
-        String s_output = new String(output, "UTF-8");
-        System.out.println(s_output);
     }
 
 

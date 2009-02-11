@@ -85,13 +85,7 @@ public class Symtabs
 
 
     public static SymbolTable register(String name, int version,
-                                       IonSystem system)
-    {
-        return register(name, version, system.getCatalog());
-    }
-
-    public static SymbolTable register(String name, int version,
-                                       IonCatalog catalog)
+                                       SimpleCatalog catalog)
     {
         SymbolTable table = CATALOG.getTable(name, version);
         catalog.putTable(table);

@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -41,6 +39,10 @@ public interface IonCatalog
      * the same name and version.
      *
      * @param sharedTable must be shared but not a system table.
+     *
+     * @deprecated The Ion libraries do not need to insert symbol tables, so
+     * this method is being removed.
      */
+    @Deprecated
     public void putTable(SymbolTable sharedTable);
 }

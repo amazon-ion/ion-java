@@ -1,10 +1,9 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import com.amazon.ion.impl.IonSystemImpl;
+import com.amazon.ion.system.SimpleCatalog;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -195,6 +194,11 @@ public abstract class IonTestCase
         return mySystem;
     }
 
+    protected SimpleCatalog catalog()
+    {
+        return (SimpleCatalog) system().getCatalog();
+    }
+
     protected IonLoader loader()
     {
         if (myLoader == null)
@@ -263,7 +267,7 @@ public abstract class IonTestCase
     public SymbolTable registerSharedSymtab(String serializedSymbolTable)
     {
         SymbolTable shared = loadSharedSymtab(serializedSymbolTable);
-        system().getCatalog().putTable(shared);
+        catalog().putTable(shared);
         return shared;
     }
 
