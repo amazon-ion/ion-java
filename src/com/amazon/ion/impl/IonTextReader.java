@@ -24,6 +24,7 @@ import com.amazon.ion.TtTimestamp;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.impl.Base64Encoder.BinaryStream;
 import com.amazon.ion.impl.IonTokenReader.Type.timeinfo;
+import com.amazon.ion.util.Text;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -625,7 +626,7 @@ public final class IonTextReader
         if (!_value_ready || _current_symtab == null) {
             throw new IllegalStateException();
         }
-        int id = 0;
+        int id = 0; // FIXME this violates contract
         if (_field_name != null) {
             id = _current_symtab.findSymbol(_field_name);
         }
@@ -1408,10 +1409,23 @@ public final class IonTextReader
         _extended_value_end[_extended_value_count]   = end;
         _extended_value_count++;
     }
+
+    // FIXME this is probably not appropriate for syntax errors
+    // use version below that takes a more explicit description.
     void consumeToken(int token) {
         int current_token = _scanner.lookahead(0);
         if (current_token != token) {
             throw new IonParsingException("token mismatch consuming token (internal error)" + this._scanner.input_position());
+        }
+        _scanner.consumeToken();
+    }
+
+    void consumeToken(int token, String description) {
+        int current_token = _scanner.lookahead(0);
+        if (current_token != token) {
+            String message =
+                "Expected " + description + this._scanner.input_position();
+            throw new IonParsingException(message);
         }
         _scanner.consumeToken();
     }
@@ -2334,7 +2348,9 @@ public final class IonTextReader
             }
             String fieldname = parser._scanner.consumeTokenAsString();
             parser.setFieldname(fieldname);
-            parser.consumeToken( IonTextTokenizer.TOKEN_COLON );
+            String description =
+                "colon (:) after field name " + Text.printQuotedSymbol(fieldname);
+            parser.consumeToken( IonTextTokenizer.TOKEN_COLON, description );
             return State_read_struct_member;
         }
     }
@@ -2346,7 +2362,9 @@ public final class IonTextReader
         State transition_method(IonTextReader parser) {
             String fieldname = parser._scanner.consumeTokenAsString();
             parser.setFieldname(fieldname);
-            parser.consumeToken( IonTextTokenizer.TOKEN_COLON );
+            String description =
+                "colon (:) after field name " + Text.printQuotedSymbol(fieldname);
+            parser.consumeToken( IonTextTokenizer.TOKEN_COLON, description );
             return State_read_struct_member;
         }
     }
