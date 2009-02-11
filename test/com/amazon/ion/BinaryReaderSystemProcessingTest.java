@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion;
@@ -11,7 +11,7 @@ package com.amazon.ion;
 public class BinaryReaderSystemProcessingTest
     extends ReaderSystemProcessingTestCase
 {
-    private byte[] myBytes;
+    protected byte[] myBytes;
 
     @Override
     protected boolean processingBinary()
@@ -21,6 +21,7 @@ public class BinaryReaderSystemProcessingTest
 
     @Override
     protected void prepare(String text)
+        throws Exception
     {
         IonLoader loader = loader();
         IonDatagram datagram = loader.load(text);

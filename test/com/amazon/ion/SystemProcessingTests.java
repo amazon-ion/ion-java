@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -28,6 +26,8 @@ public class SystemProcessingTests
         suite.addTestSuite(DatagramTreeReaderSystemProcessingTest.class);
         suite.addTestSuite(TextReaderSystemProcessingTest.class);
         suite.addTestSuite(NewDatagramIteratorSystemProcessingTest.class);
+
+        suite.addTestSuite(TrBwBrProcessingTest.class);
 
         return suite;
     }
