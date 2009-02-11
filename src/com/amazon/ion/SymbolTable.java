@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -53,7 +51,7 @@ public interface SymbolTable
     /**
      * Gets the version of this symbol table.
      *
-     * @return at least one, or zero if this is not a shared table.
+     * @return at least one, or zero if {@link #isLocalTable()}.
      */
     public int getVersion();
 
@@ -173,7 +171,10 @@ public interface SymbolTable
      *
      * @throws UnsupportedOperationException if {@link #isSharedTable()}
      * and the requested symbol is not already defined.
+     *
+     * @deprecated Use {@link #addSymbol(String)}.
      */
+    @Deprecated
     public void defineSymbol(String name, int id);
 
 
