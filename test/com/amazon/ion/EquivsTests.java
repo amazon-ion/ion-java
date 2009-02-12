@@ -27,7 +27,7 @@ public class EquivsTests
             assertTrue("File must have at least one sequence",
                        sequenceCount > 0);
 
-            for (int i = 0; i < sequenceCount - 1; i++)
+            for (int i = 0; i < sequenceCount; i++)
             {
                 IonSequence sequence = (IonSequence) sequences.get(i);
 
