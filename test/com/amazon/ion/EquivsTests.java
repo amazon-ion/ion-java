@@ -3,6 +3,7 @@
 package com.amazon.ion;
 
 import java.io.File;
+import junit.framework.AssertionFailedError;
 import junit.framework.TestSuite;
 
 public class EquivsTests
@@ -40,7 +41,19 @@ public class EquivsTests
                     IonValue current = sequence.get(j);
                     IonValue next    = sequence.get(j + 1);
 
-                    assertIonEquals(current, next);
+                    try
+                    {
+                        assertIonEquals(current, next);
+                    }
+                    catch (Throwable e)
+                    {
+                        String message =
+                            "Error comparing children " + j + " and " + (j+1) +
+                            " of equivalence sequence " + i + " (zero-based)";
+                        Error wrap = new AssertionFailedError(message);
+                        wrap.initCause(e);
+                        throw wrap;
+                    }
                 }
             }
         }

@@ -683,7 +683,8 @@ public abstract class IonTestCase
 
                     public void visit(IonSymbol expected) throws Exception
                     {
-                        assertEquals(expected.stringValue(),
+                        assertEquals("IonSymbol text",
+                                     expected.stringValue(),
                                      ((IonSymbol)found).stringValue());
                     }
 
