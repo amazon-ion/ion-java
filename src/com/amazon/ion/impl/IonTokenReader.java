@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
+/* Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion.impl;
 
@@ -752,9 +752,11 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
                 if (c == '\\') {
                     c = IonTokenReader.readEscapedCharacter(this.in);
                 }
-                value.append((char)c);
+                if (c != EMPTY_ESCAPE_SEQUENCE) {
+                    value.append((char)c);
+                }
             }
-            if (c == -1) {
+            if (c == -1) { // TODO throw UnexpectedEofException
                 throw new IonException("end encountered before closing quote '\\" + (char)endquote+ "'");
             }
             // c, at this point is a single quote, which we don't append
@@ -1197,8 +1199,8 @@ sizedloop:
 
     /**
      * @return the translated escape sequence.  Will not return -1 since EOF is
-     * not legal in this context.
-     * @throws IOException
+     * not legal in this context. May return {@link #EMPTY_ESCAPE_SEQUENCE} to
+     * indicate a zero-length sequence such as BS-NL.
      * @throws UnexpectedEofException if the EOF is encountered in the middle
      * of the escape sequence.
      * @deprecated

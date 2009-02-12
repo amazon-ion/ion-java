@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -16,7 +14,7 @@ public class SymbolTest
         assertNull("stringValue() isn't null", value.stringValue());
 
         try {
-            value.intValue();
+            value.getSymbolId();
             fail("Expected NullValueException");
         }
         catch (NullValueException e) { }
@@ -37,15 +35,15 @@ public class SymbolTest
         String modValue1 = "dude!";
         value.setValue(modValue1);
         assertEquals(modValue1, value.stringValue());
-        int sid = value.intValue();
+        int sid = value.getSymbolId();
 
         try {
             value.setValue("");
-            fail("Expecte EmptySymbolException");
+            fail("Expected EmptySymbolException");
         }
         catch (EmptySymbolException e) { }
         assertEquals(modValue1, value.stringValue());
-        assertEquals(sid, value.intValue());
+        assertEquals(sid, value.getSymbolId());
 
         value.setValue(null);
         checkNullSymbol(value);
@@ -83,19 +81,19 @@ public class SymbolTest
         IonSymbol value = (IonSymbol) oneValue("foo");
         assertSame(IonType.SYMBOL, value.getType());
         assertEquals("foo", value.stringValue());
-        assertTrue(value.intValue() > 0);
+        assertTrue(value.getSymbolId() > 0);
         modifySymbol(value);
 
         value = (IonSymbol) oneValue("'foo'");
         assertSame(IonType.SYMBOL, value.getType());
         assertEquals("foo", value.stringValue());
-        assertTrue(value.intValue() > 0);
+        assertTrue(value.getSymbolId() > 0);
         modifySymbol(value);
 
         value = (IonSymbol) oneValue("'foo bar'");
         assertSame(IonType.SYMBOL, value.getType());
         assertEquals("foo bar", value.stringValue());
-        assertTrue(value.intValue() > 0);
+        assertTrue(value.getSymbolId() > 0);
         modifySymbol(value);
     }
 
@@ -104,7 +102,7 @@ public class SymbolTest
         String symText = "$324";
         IonSymbol value = (IonSymbol) oneValue(symText);
         checkSymbol(symText, value);
-        assertEquals(324, value.intValue());
+        assertEquals(324, value.getSymbolId());
     }
 
     public void testQuotesOnMediumStringBoundary()
@@ -114,16 +112,21 @@ public class SymbolTest
     }
 
     public void testSymbolClone()
-    	throws Exception
-	{
-	    testSimpleClone("null.symbol");
-	    testSimpleClone("root");
-	}
-    
+        throws Exception
+    {
+        testSimpleClone("null.symbol");
+        testSimpleClone("root");
+    }
+
     public void testClone()
     {
         IonValue data = system().singleValue("root");
         IonValue clone = data.clone();
         assertEquals(data, clone);
+    }
+
+    public void testSymbolWithEscapedNewline()
+    {
+        badValue("'\\\n'");
     }
 }
