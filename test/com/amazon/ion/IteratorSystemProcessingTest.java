@@ -124,10 +124,12 @@ public class IteratorSystemProcessingTest
     }
 
     @Override
-    protected void testString(String expected, String ionData)
+    protected void testString(String expectedValue,
+                              String expectedRendering,
+                              String ionData)
         throws Exception
     {
-        super.testString(expected, ionData);
-        assertEquals(ionData, myCurrentValue.toString());
+        super.testString(expectedValue, expectedRendering, ionData);
+        assertEquals(expectedRendering, myCurrentValue.toString());
     }
 }

@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -24,6 +22,17 @@ import java.util.NoSuchElementException;
  */
 final class IonImplUtils
 {
+    /**
+     * TODO Jonker 2009-02-12: Actual lookahead limit is unclear to me!
+     *
+     * (null.timestamp) requires 11 ASCII chars to distinguish from
+     * (null.timestamps) aka (null '.' 'timestamps')
+     *
+     * @see IonCharacterReader#DEFAULT_BUFFER_SIZE
+     * @see IonCharacterReader#BUFFER_PADDING
+     */
+    public static final int MAX_LOOKAHEAD_UTF16 = 11;
+
 
     public static final Iterator<?> EMPTY_ITERATOR = new Iterator() {
         public boolean hasNext() { return false; }

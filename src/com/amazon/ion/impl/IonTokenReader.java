@@ -522,7 +522,9 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
     public PushbackReader getPushbackReader() {
         if (localReader == null) {
             localReader = new LocalReader(this);
-            pushbackReader = new PushbackReader(localReader);
+            pushbackReader =
+                new PushbackReader(localReader,
+                                   IonImplUtils.MAX_LOOKAHEAD_UTF16);
         }
         localReader.reset();
         return pushbackReader ;
