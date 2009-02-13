@@ -92,6 +92,7 @@ package com.amazon.ion;
  * thread-safe.
  */
 public interface IonValue
+    extends Cloneable
 {
     /**
      * Gets an enumeration value identifying the core Ion data type of this
