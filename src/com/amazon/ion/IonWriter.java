@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -52,12 +50,14 @@ public interface IonWriter
      * sets the symbol table to use for encoding to be the passed
      * in symbol table.
      * @param symbols base symbol table for encoding
+     *
+     * @deprecated Removed pending a better API.
      */
-    public void setSymbolTable(SymbolTable symbols);
+//    public void setSymbolTable(SymbolTable symbols);
 
     /**
-     * returns the symbol table that is currently in use by the writer.
-     * At the end of writing a number of values this table will be
+     * Gets the symbol table that is currently in use by the writer.
+     * While writing a number of values the symbol table will be
      * populated with any added symbols.
      * <p>
      * Note that the table may be replaced during processing.  For example,
