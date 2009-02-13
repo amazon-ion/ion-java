@@ -231,8 +231,8 @@ public final class UnifiedSymbolTable
         this(systemSymbols);
 
         IonReader reader = new IonTreeReader(ionRep);
-//        reader.next();
-//        reader.stepInto();
+        reader.next();
+        reader.stepIn();
         readIonRep(SymbolTableType.LOCAL, reader, catalog);
 
         _ion_rep = (IonStructImpl) ionRep;
@@ -247,8 +247,8 @@ public final class UnifiedSymbolTable
         this();
 
         IonReader reader = new IonTreeReader(ionRep);
-//        reader.next();
-//        reader.stepInto();
+        reader.next();
+        reader.stepIn();
         readIonRep(SymbolTableType.SHARED, reader, null);
 
         assert _is_locked;
@@ -260,6 +260,8 @@ public final class UnifiedSymbolTable
     /**
      * Constructs a local symbol table.
      * @param reader must be positioned on the first field of the struct.
+     * That's a bit odd but it's currently necessary due to state management
+     * in the binary reader.
      */
     public UnifiedSymbolTable(SymbolTable systemSymbols,
                               IonReader reader,

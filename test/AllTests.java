@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 import com.amazon.ion.BadIonTests;
 import com.amazon.ion.BinaryTest;
@@ -29,6 +27,7 @@ import com.amazon.ion.impl.IonEqualsTest;
 import com.amazon.ion.impl.IterationTest;
 import com.amazon.ion.impl.ReaderTest;
 import com.amazon.ion.impl.SymbolTableTest;
+import com.amazon.ion.impl.TreeReaderTest;
 import com.amazon.ion.streaming.BadIonStreamingTests;
 import com.amazon.ion.streaming.BinaryStreamingTest;
 import com.amazon.ion.streaming.GoodIonStreamingTests;
@@ -104,6 +103,7 @@ public class AllTests
         // easier to run that subset.
         suite.addTest(SystemProcessingTests.suite());
 
+        suite.addTestSuite(TreeReaderTest.class);
         suite.addTestSuite(MiscStreamingTests.class);
         suite.addTestSuite(BinaryStreamingTest.class);
         suite.addTest(new BadIonStreamingTests());
