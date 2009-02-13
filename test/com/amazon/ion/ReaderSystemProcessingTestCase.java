@@ -1,10 +1,10 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import com.amazon.ion.impl.IonBinaryReader;
+import com.amazon.ion.impl.TreeReaderTest;
+import java.util.NoSuchElementException;
 
 
 /**
@@ -103,4 +103,84 @@ public abstract class ReaderSystemProcessingTestCase
     {
         assertFalse("not at eof", myReader.hasNext());
     }
+
+    protected void badNext()
+    {
+        try {
+            myReader.next();
+            fail("expected exception");
+        }
+        catch (NoSuchElementException e) { }
+    }
+
+
+    //=========================================================================
+
+    public void testNextAtEnd()
+        throws Exception
+    {
+        String text = "[]";
+        startIteration(text);
+        myReader.next();
+        myReader.stepIn();
+        badNext();
+        myReader.stepOut();
+        badNext();
+
+        text = "[1]";
+        startIteration(text);
+        myReader.next();
+        myReader.stepIn();
+        myReader.next();
+        badNext();
+        myReader.stepOut();
+        badNext();
+    }
+
+    /**
+     * When this is working,
+     * remove {@link TreeReaderTest#testInitialStateForStruct()}
+     */
+    public void testIsInStruct()
+        throws Exception
+    {
+        String text = "{}";
+        startIteration(text);
+        assertFalse(myReader.isInStruct());
+
+        assertTrue(myReader.hasNext());
+//        assertFalse(myReader.isInStruct()); // FIXME text reader is broken
+
+        assertEquals(IonType.STRUCT, myReader.next());
+        assertEquals(0, myReader.getDepth());
+//        assertFalse(myReader.isInStruct()); // text reader is broken
+
+        myReader.stepIn();
+        assertTrue(myReader.isInStruct());
+        assertEquals(1, myReader.getDepth());
+
+        assertFalse(myReader.hasNext());
+        assertTrue(myReader.isInStruct());
+
+        myReader.stepOut();
+//        assertFalse(myReader.isInStruct()); // text reader is broken
+        assertFalse(myReader.hasNext());
+    }
+
+
+    public void testHasNextLeavesCurrentData()
+        throws Exception
+    {
+        String text = "hello 2";
+        startIteration(text);
+
+        assertTrue(myReader.hasNext());
+        assertEquals(IonType.SYMBOL, myReader.next());
+        assertEquals(IonType.SYMBOL, myReader.getType());
+        assertTrue(myReader.hasNext());
+        // FIXME text reader is broken
+//        assertEquals(IonType.SYMBOL, myReader.getType());
+        assertEquals(IonType.INT, myReader.next());
+    }
+
 }

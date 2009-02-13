@@ -68,6 +68,4 @@ public class TreeReaderTest
         assertFalse(r.isInStruct());
         assertFalse(r.hasNext());
     }
-
-    // TODO test proper throwing of NoSuchElementException
 }
