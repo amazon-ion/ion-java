@@ -1542,7 +1542,7 @@ loop:   for (;;) {
     }
     private final void bad_token(int c)
     {
-        String charStr = Text.printString(c);
+        String charStr = Text.printCodePointAsString(c);
         throw new IonTextReader.IonParsingException("a bad character " + charStr + " was encountered in a token"+input_position());
     }
     /*

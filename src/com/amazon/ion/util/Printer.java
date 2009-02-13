@@ -471,9 +471,7 @@ public class Printer
             }
             else if (Text.symbolNeedsQuoting(text, myQuoteOperators))
             {
-                myOut.append('\'');
-                Text.printAsIon(myOut, text, '\'');
-                myOut.append('\'');
+                Text.printQuotedSymbol(myOut, text);
             }
             else
             {
@@ -484,16 +482,14 @@ public class Printer
 
         public void writeString(String text) throws IOException
         {
-            myOut.append('\"');
             if (myOptions.stringAsJson)
             {
-                Text.printAsJson(myOut, text);
+                Text.printJsonString(myOut, text);
             }
             else
             {
-                Text.printAsIon(myOut, text, '\"');
+                Text.printString(myOut, text);
             }
-            myOut.append('\"');
         }
 
 
@@ -566,14 +562,14 @@ public class Printer
                     {
                         while ((c = byteStream.read()) != -1)
                         {
-                            Text.printAsJson(myOut, c);
+                            Text.printJsonCodePoint(myOut, c);
                         }
                     }
                     else
                     {
                         while ((c = byteStream.read()) != -1)
                         {
-                            Text.printAsIon(myOut, c, '"');
+                            Text.printStringCodePoint(myOut, c);
                         }
                     }
                 }
@@ -842,9 +838,7 @@ public class Printer
         public void writeSymbol(String text)
         throws IOException
         {
-            myOut.append('\"');
-            Text.printAsIon(myOut, text, '\"');
-            myOut.append('\"');
+            Text.printJsonString(myOut, text);
         }
 
         public void writeFloat(BigDecimal value)

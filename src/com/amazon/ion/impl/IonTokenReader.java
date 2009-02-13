@@ -1330,7 +1330,7 @@ sizedloop:
             if ( ! this.isValueTerminatingCharacter(c) ) {
                 final String message =
                     position() + ": Numeric value followed by illegal character "
-                    + Text.printString(c);
+                    + Text.printCodePointAsString(c);
                 throw new IonException(message);
             }
             this.unread(c);

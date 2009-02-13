@@ -308,12 +308,40 @@ public class Text
      * @param codePoint a Unicode code point.
      * @param surroundingQuoteChar must be either {@code '\''}, {@code '\"'},
      * or {@link #ANY_SURROUNDING_QUOTES}.
+     *
+     * @deprecated Use {@link #printStringCodePoint(Appendable, int)} or
+     * {@link #printSymbolCodePoint(Appendable, int)}.
      */
+    @Deprecated
     public static void printAsIon(Appendable out, int codePoint,
                                   int surroundingQuoteChar)
         throws IOException
     {
         printCodePoint(out, codePoint, surroundingQuoteChar, EscapeMode.ION);
+    }
+
+    /**
+     * Prints a single Unicode code point for use in an ASCII-safe Ion string.
+     *
+     * @param out the stream to receive the data.
+     * @param codePoint a Unicode code point.
+     */
+    public static void printStringCodePoint(Appendable out, int codePoint)
+        throws IOException
+    {
+        printCodePoint(out, codePoint, '\"', EscapeMode.ION);
+    }
+
+    /**
+     * Prints a single Unicode code point for use in an ASCII-safe Ion symbol.
+     *
+     * @param out the stream to receive the data.
+     * @param codePoint a Unicode code point.
+     */
+    public static void printSymbolCodePoint(Appendable out, int codePoint)
+        throws IOException
+    {
+        printCodePoint(out, codePoint, '\'', EscapeMode.ION);
     }
 
     /**
@@ -323,6 +351,23 @@ public class Text
      * @param out the stream to receive the data.
      * @param codePoint a Unicode code point.
      */
+    public static void printJsonCodePoint(Appendable out, int codePoint)
+        throws IOException
+    {
+        // JSON only allows double-quote strings.
+        printCodePoint(out, codePoint, '"', EscapeMode.JSON);
+    }
+
+    /**
+     * Prints a single character (Unicode code point) in JSON string format,
+     * escaping as necessary.
+     *
+     * @param out the stream to receive the data.
+     * @param codePoint a Unicode code point.
+     *
+     * @deprecated Renamed to {@link #printJsonCodePoint(Appendable, int)}.
+     */
+    @Deprecated
     public static void printAsJson(Appendable out, int codePoint)
         throws IOException
     {
@@ -402,6 +447,8 @@ public class Text
             printCodePointAsFourHexDigits(out, c);
         }
         else {
+            // FIXME JSON doesn't support eight-digit \U syntax!
+            // https://issue-tracking.amazon.com/browse/ION-33
             printCodePointAsEightHexDigits(out, c);
         }
     }
@@ -477,7 +524,11 @@ public class Text
      * @throws IOException if the {@link Appendable} throws an exception.
      * @throws IllegalArgumentException
      *     if the text contains invalid UTF-16 surrogates.
+     *
+     * @deprecated Use {@link #printString(Appendable, CharSequence)} or
+     * {@link #printSymbol(Appendable, CharSequence)}.
      */
+    @Deprecated
     public static void printAsIon(Appendable out, CharSequence text,
                                   int surroundingQuoteChar)
         throws IOException
@@ -490,9 +541,10 @@ public class Text
     /**
      * Prints characters as an ASCII-encoded Ion string, including surrounding
      * double-quotes.
+     * If the {@code text} is null, this prints {@code null.string}.
      *
      * @param out the stream to receive the data.
-     * @param text the text to print.
+     * @param text the text to print, may be {@code null}.
      *
      * @throws IOException if the {@link Appendable} throws an exception.
      * @throws IllegalArgumentException
@@ -501,23 +553,63 @@ public class Text
     public static void printString(Appendable out, CharSequence text)
         throws IOException
     {
-        out.append('"');
-        printAsIon(out, text, '"');
-        out.append('"');
+        if (text == null)
+        {
+            out.append("null.string");
+        }
+        else
+        {
+            out.append('"');
+            printChars(out, text, '"', EscapeMode.ION);
+            out.append('"');
+        }
+    }
+
+    /**
+     * Prints characters as an ASCII-encoded JSON string, including surrounding
+     * double-quotes.
+     * If the {@code text} is null, this prints {@code null}.
+     *
+     * @param out the stream to receive the JSON data.
+     * @param text the text to print, may be {@code null}.
+     *
+     * @throws IOException if the {@link Appendable} throws an exception.
+     * @throws IllegalArgumentException
+     *     if the text contains invalid UTF-16 surrogates.
+     */
+    public static void printJsonString(Appendable out, CharSequence text)
+        throws IOException
+    {
+        if (text == null)
+        {
+            out.append("null");
+        }
+        else
+        {
+            out.append('"');
+            printChars(out, text, '"', EscapeMode.JSON);
+            out.append('"');
+        }
     }
 
 
     /**
      * Builds a String denoting an ASCII-encoded Ion string,
      * including surrounding double-quotes.
+     * If the {@code text} is null, this returns {@code "null.string"}.
      *
-     * @param text the text to print.
+     * @param text the text to print; may be {@code null}.
      *
      * @throws IllegalArgumentException
      *     if the text contains invalid UTF-16 surrogates.
      */
     public static String printString(CharSequence text)
     {
+        if (text == null)
+        {
+            return "null.string";
+        }
+
         StringBuilder builder = new StringBuilder(text.length() + 2);
         try
         {
@@ -531,13 +623,19 @@ public class Text
         return builder.toString();
     }
 
-    public static String printString(int codePoint)
+    /**
+     * Builds a String denoting an ASCII-encoded Ion string,
+     * with double-quotes surrounding a single Unicode code point.
+     *
+     * @param codePoint a Unicode code point.
+     */
+    public static String printCodePointAsString(int codePoint)
     {
         StringBuilder builder = new StringBuilder(12);
         builder.append('"');
         try
         {
-            Text.printAsIon(builder, codePoint, '"');
+            printStringCodePoint(builder, codePoint);
         }
         catch (IOException e)
         {
@@ -552,16 +650,22 @@ public class Text
     /**
      * Prints the text as an Ion symbol, including surrounding single-quotes if
      * they are necessary.  Operator symbols such as {@code '+'} are quoted.
+     * If the {@code text} is null, this prints {@code null.symbol}.
      *
-     * @param out the stream to receive the data.
-     * @param text the symbol text.
+     * @param out the stream to receive the Ion data.
+     * @param text the symbol text; may be {@code null}.
+
      *
      * @throws IOException if the {@link Appendable} throws an exception.
      */
     public static void printSymbol(Appendable out, CharSequence text)
         throws IOException
     {
-        if (symbolNeedsQuoting(text, true))
+        if (text == null)
+        {
+            out.append("null.symbol");
+        }
+        else if (symbolNeedsQuoting(text, true))
         {
             printQuotedSymbol(out, text);
         }
@@ -572,8 +676,22 @@ public class Text
     }
 
 
+    /**
+     * Prints the text as an Ion symbol, including surrounding single-quotes if
+     * they are necessary.  Operator symbols such as {@code '+'} are quoted.
+     * If the {@code text} is null, this returns {@code "null.symbol"}.
+     *
+     * @param text the symbol text; may be {@code null}.
+     *
+     * @return a string containing the resulting Ion data.
+     */
     public static String printSymbol(CharSequence text)
     {
+        if (text == null)
+        {
+            return "null.symbol";
+        }
+
         StringBuilder builder = new StringBuilder(text.length() + 2);
         try
         {
@@ -590,9 +708,10 @@ public class Text
 
     /**
      * Prints text as a single-quoted Ion symbol.
+     * If the {@code text} is null, this prints {@code null.symbol}.
      *
      * @param out the stream to receive the data.
-     * @param text the symbol text.
+     * @param text the symbol text; may be {@code null}.
      *
      * @throws IOException if the {@link Appendable} throws an exception.
      * @throws IllegalArgumentException
@@ -601,22 +720,35 @@ public class Text
     public static void printQuotedSymbol(Appendable out, CharSequence text)
         throws IOException
     {
-        out.append('\'');
-        printAsIon(out, text, '\'');
-        out.append('\'');
+        if (text == null)
+        {
+            out.append("null.symbol");
+        }
+        else
+        {
+            out.append('\'');
+            printChars(out, text, '\'', EscapeMode.ION);
+            out.append('\'');
+        }
     }
 
 
     /**
      * Builds a String containing a single-quoted Ion symbol.
+     * If the {@code text} is null, this returns {@code "null.symbol"}.
      *
-     * @param text the symbol text.
+     * @param text the symbol text; may be {@code null}.
      *
      * @throws IllegalArgumentException
      *     if the text contains invalid UTF-16 surrogates.
      */
     public static String printQuotedSymbol(CharSequence text)
     {
+        if (text == null)
+        {
+            return "null.symbol";
+        }
+
         StringBuilder builder = new StringBuilder(text.length() + 2);
         try
         {
@@ -642,7 +774,11 @@ public class Text
      * @throws IOException if the {@link Appendable} throws an exception.
      * @throws IllegalArgumentException
      *     if the text contains invalid UTF-16 surrogates.
+     *
+     * @deprecated Use {@link #printJsonString(Appendable, CharSequence)},
+     * which always prints surrounding double-quotes.
      */
+    @Deprecated
     public static void printAsJson(Appendable out, CharSequence text)
         throws IOException
     {
