@@ -48,11 +48,13 @@ public final class IonTreeWriter
         _sys = sys;
         _current_parent = rootContainer;
         _in_struct = (_current_parent instanceof IonStruct);
+
+        // FIXME this won't do the right thing for datagram
         setSymbolTable(rootContainer.getSymbolTable());
     }
 
     void initialize_symbol_table() {
-        super.setSymbolTable(_sys.newLocalSymbolTable());
+        setSymbolTable(_sys.newLocalSymbolTable());
     }
 
     private boolean writingDatagram()
@@ -61,6 +63,23 @@ public final class IonTreeWriter
             (_parent_stack_top == 0 ? _current_parent : _parent_stack[0]);
         return top.getType() == IonType.DATAGRAM;
     }
+
+
+
+    @Override
+    protected void setSymbolTable(SymbolTable symbols)
+    {
+        try
+        {
+            super.setSymbolTable(symbols);
+        }
+        catch (IOException e)
+        {
+            // Shouldn't happen, super doesn't ever throw.
+            throw new Error(e);
+        }
+    }
+
 
     void pushParent(IonContainer newParent) {
         if (_current_parent == null) {

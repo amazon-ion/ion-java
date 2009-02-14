@@ -8,6 +8,7 @@ import com.amazon.ion.IonList;
 import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.util.Printer;
@@ -101,6 +102,13 @@ public abstract class AbstractSymbolTable
     public synchronized int size()
     {
         return _byString.size();
+    }
+
+
+    public void writeTo(IonWriter writer)
+        throws IOException
+    {
+        writer.writeValue(_symtabElement);
     }
 
 

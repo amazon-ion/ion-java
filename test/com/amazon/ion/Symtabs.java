@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -61,28 +59,47 @@ public class Symtabs
         "}"
     };
 
+    public final static String[] GINGER_SERIALIZED = {
+        null,
+
+        // version: 1
+        SharedSymbolTablePrefix +
+        "{" +
+        "  name:'''ginger''', version:1," +
+        "  symbols:['''g1''', '''g2''']" +
+        "}",
+    };
+
 
     public final static int[] FRED_MAX_IDS;
+    public final static int[] GINGER_MAX_IDS;
 
 
     static
     {
-        FRED_MAX_IDS = new int[FRED_SERIALIZED.length];
+        FRED_MAX_IDS   = registerTables(FRED_SERIALIZED);
+        GINGER_MAX_IDS = registerTables(GINGER_SERIALIZED);
+    }
+
+    private static int[] registerTables(String[] serializedTables)
+    {
+        int[] maxIds = new int[serializedTables.length];
 
         IonSystemImpl system = (IonSystemImpl) SystemFactory.newSystem(CATALOG);
 
-        for (int i = 1; i < FRED_SERIALIZED.length; i++)
+        for (int i = 1; i < serializedTables.length; i++)
         {
-            String serialized = FRED_SERIALIZED[i];
+            String serialized = serializedTables[i];
 
             IonStruct st = (IonStruct) system.singleValue(serialized);
             SymbolTable shared = system.newSharedSymbolTable(st);
             CATALOG.putTable(shared);
 
-            FRED_MAX_IDS[i] = shared.getMaxId();
+            maxIds[i] = shared.getMaxId();
         }
-    }
 
+        return maxIds;
+    }
 
     public static SymbolTable register(String name, int version,
                                        SimpleCatalog catalog)

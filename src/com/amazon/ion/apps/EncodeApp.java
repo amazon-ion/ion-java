@@ -8,8 +8,7 @@ import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.impl.IonBinaryWriterImpl;
-import com.amazon.ion.impl.UnifiedSymbolTable;
+import com.amazon.ion.impl.IonSystemImpl;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -21,7 +20,7 @@ import java.util.ArrayList;
 public class EncodeApp
     extends BaseApp
 {
-    private UnifiedSymbolTable[] myImports;
+    private SymbolTable[] myImports;
     private File myOutputDir;
 
 
@@ -68,8 +67,7 @@ public class EncodeApp
      */
     private int processOptions(String[] args)
     {
-        ArrayList<UnifiedSymbolTable> imports =
-            new ArrayList<UnifiedSymbolTable>();
+        ArrayList<SymbolTable> imports = new ArrayList<SymbolTable>();
 
         int i;
         for (i = 0; i < args.length; i++)
@@ -84,7 +82,7 @@ public class EncodeApp
             {
                 // We'll use the latest version available.
                 String name = args[++i];
-                UnifiedSymbolTable symtab = getLatestSharedSymtab(name);
+                SymbolTable symtab = getLatestSharedSymtab(name);
                 imports.add(symtab);
             }
             else if ("--output-dir".equals(arg))
@@ -104,7 +102,7 @@ public class EncodeApp
             }
         }
 
-        myImports = imports.toArray(new UnifiedSymbolTable[0]);
+        myImports = imports.toArray(new SymbolTable[0]);
 
         return i;
     }
@@ -114,9 +112,9 @@ public class EncodeApp
     protected void process(File inputFile, IonReader reader)
         throws IOException, IonException
     {
-        SymbolTable systemSymbolTable = mySystem.getSystemSymbolTable();
-        IonBinaryWriter writer = new IonBinaryWriterImpl(systemSymbolTable,
-                                                         myImports);
+        IonBinaryWriter writer =
+            ((IonSystemImpl) mySystem).newBinaryWriter(myImports);
+
         writer.writeValues(reader);
 
         byte[] binaryBytes = writer.getBytes();

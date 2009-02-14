@@ -39,7 +39,8 @@ public abstract class IonBaseWriter
         return _symbol_table;
     }
 
-    public void setSymbolTable(SymbolTable symbols)
+    protected void setSymbolTable(SymbolTable symbols)
+        throws IOException
     {
         if (symbols != null
             && ! symbols.isLocalTable()
@@ -54,32 +55,6 @@ public abstract class IonBaseWriter
     {
         return (_symbol_table.isLocalTable()
                 && !_symbol_table.isTrivial());
-    }
-
-    protected String getSymbolTableName() {
-        if (_symbol_table != null) {
-            return _symbol_table.getName();
-        }
-        return null;
-    }
-    protected int getSymbolTableVersion() {
-        if (_symbol_table != null) {
-            return _symbol_table.getVersion();
-        }
-        return 0;
-    }
-    protected UnifiedSymbolTable[] getSymbolTableImportedTables() {
-        if (_symbol_table instanceof UnifiedSymbolTable) {
-            return ((UnifiedSymbolTable)_symbol_table).getImportedTables();
-        }
-        return null;
-    }
-
-    protected int getSymbolTableMaxId() {
-        if (_symbol_table != null) {
-            return _symbol_table.getMaxId();
-        }
-        return 0;
     }
 
     public void clearAnnotations()

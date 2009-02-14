@@ -7,6 +7,7 @@ package com.amazon.ion.impl;
 import com.amazon.ion.InvalidSystemSymbolException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 
@@ -168,6 +169,11 @@ public class SystemSymbolTableImpl
     public boolean isTrivial()
     {
         return false;
+    }
+
+    public void writeTo(IonWriter writer)
+    {
+        throw new UnsupportedOperationException();
     }
 
     public IonStruct getIonRepresentation()

@@ -9,6 +9,7 @@ import static com.amazon.ion.impl.IonConstants.tidSexp;
 import static com.amazon.ion.impl.IonConstants.tidStruct;
 
 import com.amazon.ion.IonType;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.TtTimestamp;
 import com.amazon.ion.impl.Base64Encoder.TextStream;
 import com.amazon.ion.impl.IonBinary.BufferManager;
@@ -88,6 +89,31 @@ public final class IonTextWriter
         _utf8_as_ascii = utf8AsAscii;
         _separator_character = ' ';
     }
+
+
+    @Override
+    protected void setSymbolTable(SymbolTable symbols)
+        throws IOException
+    {
+        if (_top != 0)
+        {
+            throw new IllegalStateException("not at top level");
+        }
+
+        // This ensures that symbols is system or local
+        super.setSymbolTable(symbols);
+
+        startValue();
+        _output.append(symbols.getSystemId());
+        closeValue();
+
+        if (symbols.isLocalTable())
+        {
+            symbols.writeTo(this);
+        }
+    }
+
+
     public boolean isInStruct() {
         return this._in_struct;
     }

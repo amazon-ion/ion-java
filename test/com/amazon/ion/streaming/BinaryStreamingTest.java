@@ -15,9 +15,7 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.TtTimestamp;
-import com.amazon.ion.impl.IonBinaryWriterImpl;
 import com.amazon.ion.impl.IonTokenReader;
-import com.amazon.ion.impl.UnifiedSymbolTable;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -579,9 +577,8 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
     	SymbolTable sym = v.getSymbolTable();
     	assert v2.getSymbolTable() == sym;
     	IonReader ir = system().newReader(s);
-    	UnifiedSymbolTable u = system().newSharedSymbolTable(sym, "items", 1);
-    	IonBinaryWriter wr =
-    	    new IonBinaryWriterImpl(system().getSystemSymbolTable(), u);
+    	SymbolTable u = system().newSharedSymbolTable(sym, "items", 1);
+    	IonBinaryWriter wr = system().newBinaryWriter(u);
 
     	wr.writeValues(ir);
         byte[] buffer = wr.getBytes();

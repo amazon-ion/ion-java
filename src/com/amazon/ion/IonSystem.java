@@ -1,9 +1,9 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
+import com.amazon.ion.impl.IonBinaryWriterImpl;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
@@ -148,8 +148,11 @@ public interface IonSystem
      * Creates an iterator over a stream of Ion text data.
      * Values returned by the iterator have no container.
      * <p>
-     * This API will automatically consume Ion system IDs and local symbol
+     * The iterator will automatically consume Ion system IDs and local symbol
      * tables; they will not be returned by the iterator.
+     * <p>
+     * This method is suitable for use over unbounded streams with a reasonable
+     * schema.
      *
      * @param ionText a stream of Ion text data.  The caller is responsible for
      * closing the Reader after iteration is complete.
@@ -165,7 +168,7 @@ public interface IonSystem
      * Creates an iterator over a string containing Ion text data.
      * Values returned by the iterator have no container.
      * <p>
-     * This API will automatically consume Ion system IDs and local symbol
+     * The iterator will automatically consume Ion system IDs and local symbol
      * tables; they will not be returned by the iterator.
      *
      * @param ionText must not be null.
@@ -181,7 +184,7 @@ public interface IonSystem
      * Creates an iterator over Ion data.
      * Values returned by the iterator have no container.
      * <p>
-     * This API will automatically consume Ion system IDs and local symbol
+     * The iterator will automatically consume Ion system IDs and local symbol
      * tables; they will not be returned by the iterator.
      *
      * @param ionData may be either Ion binary data or (UTF-8) Ion text.
@@ -315,11 +318,42 @@ public interface IonSystem
     public IonWriter newTextWriter(OutputStream out);
 
     /**
+     * Creates a new writer that will write UTF-8 text to the given output
+     * stream, using the given shared symbol tables as imports.
+     * <p>
+     * The output stream will be start with an Ion Version Marker and a
+     * local symbol table that uses the given {@code imports}.
+     *
+     * @param out the stream that will receive UTF-8 Ion text data.
+     * Must not be null.
+     * @param imports a sequence of shared symbol tables
+     *
+     * @return a new {@link IonWriter} instance; not {@code null}.
+     *
+     * @throws IOException if its thrown by the output stream.
+     */
+    public IonWriter newTextWriter(OutputStream out, SymbolTable... imports)
+        throws IOException;
+
+    /**
      * Creates a new writer that will encode binary Ion data.
      *
      * @return a new {@link IonBinaryWriter} instance; not {@code null}.
      */
     public IonBinaryWriter newBinaryWriter();
+
+    /**
+     * Creates a new writer that will encode binary Ion data,
+     * using the given shared symbol tables as imports.
+     * <p>
+     * The output stream will be start with an Ion Version Marker and a
+     * local symbol table that uses the given {@code imports}.
+     *
+     * @param imports a sequence of shared symbol tables
+     *
+     * @return a new {@link IonBinaryWriter} instance; not {@code null}.
+     */
+    public IonBinaryWriterImpl newBinaryWriter(SymbolTable... imports);
 
 
     //-------------------------------------------------------------------------

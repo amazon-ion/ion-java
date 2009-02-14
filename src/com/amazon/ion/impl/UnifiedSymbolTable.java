@@ -15,9 +15,12 @@ import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
+import com.amazon.ion.system.SystemFactory;
 import com.amazon.ion.util.Text;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -734,21 +737,42 @@ public final class UnifiedSymbolTable
         return imports;
     }
 
+
+    public void writeTo(IonWriter writer) throws IOException
+    {
+        IonStruct rep = _ion_rep;
+        if (rep == null)
+        {
+            // FIXME don't create a new system.
+            rep = makeIonRepresentation(SystemFactory.newSystem());
+        }
+
+        writer.writeValue(rep);
+    }
+
     public IonStruct getIonRepresentation() {
         return getIonRepresentation(_sys_holder);
     }
 
+    @Deprecated
     public IonStruct getIonRepresentation(IonSystem sys)
     {
         if (_ion_rep != null) return _ion_rep;
 
-        _ion_rep = (IonStructImpl) sys.newEmptyStruct();
-        _ion_rep.addTypeAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE);
+        _ion_rep = makeIonRepresentation(sys);
+        _ion_symbols_rep = (IonList) _ion_rep.get(SYMBOLS);
+        return _ion_rep;
+    }
+
+    IonStructImpl makeIonRepresentation(IonSystem sys)
+    {
+        IonStructImpl ionRep = (IonStructImpl) sys.newEmptyStruct();
+        ionRep.addTypeAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE);
 
         if (this.isSharedTable()) {
             assert getVersion() > 0;
-            _ion_rep.add(UnifiedSymbolTable.NAME, sys.newString(this.getName()));
-            _ion_rep.add(UnifiedSymbolTable.VERSION, sys.newInt(this.getVersion()));
+            ionRep.add(UnifiedSymbolTable.NAME, sys.newString(this.getName()));
+            ionRep.add(UnifiedSymbolTable.VERSION, sys.newInt(this.getVersion()));
         }
 
         UnifiedSymbolTable[] imports = this.getImportedTables();
@@ -764,20 +788,26 @@ public final class UnifiedSymbolTable
                 imp.add(UnifiedSymbolTable.MAX_ID, sys.newInt(imptable.getMaxId()));
                 imports_as_ion.add(imp);
             }
+            ionRep.add(IMPORTS, imports_as_ion);
         }
 
-        _ion_symbols_rep = sys.newEmptyList();
-        _ion_rep.add(UnifiedSymbolTable.SYMBOLS, _ion_symbols_rep);
-        for (int ii=0; ii<this._symbols.length; ii++) {
-            Symbol sym = this._symbols[ii];
+        if (_max_id > _import_max_id)
+        {
+            _ion_rep = ionRep;  // FIXME ugly hack to enable recordLocal... below
+            IonList symbolsList = sys.newEmptyList();
+            ionRep.add(UnifiedSymbolTable.SYMBOLS, symbolsList);
+            for (int sid = _import_max_id+1; sid <= _max_id; sid++) {
+                Symbol sym = this._symbols[sid];
 
-            // Ignore imported symbols
-            if (sym == null || sym.source != this) continue;
+                if (sym == null) continue;
+                assert sym.source == this;
 
-            recordLocalSymbolInIonRep(sym);
+                recordLocalSymbolInIonRep(sym);
+            }
+            _ion_rep = null;
         }
 
-        return _ion_rep;
+        return ionRep;
     }
 
 

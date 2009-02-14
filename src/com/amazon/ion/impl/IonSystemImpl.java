@@ -131,6 +131,18 @@ public class IonSystemImpl
         return st;
     }
 
+    public UnifiedSymbolTable newLocalSymbolTable(SymbolTable... imports)
+    {
+        // TODO Allow the first symtab to be system symtab
+        UnifiedSymbolTable st = newLocalSymbolTable();
+        for (int i = 0; i < imports.length; i++)
+        {
+            UnifiedSymbolTable symbolTable = (UnifiedSymbolTable) imports[i];
+            st.addImportedTable(symbolTable, symbolTable.getMaxId());
+        }
+        return st;
+    }
+
 
     public UnifiedSymbolTable newSharedSymbolTable(IonStruct serialized)
     {
@@ -231,6 +243,7 @@ public class IonSystemImpl
     {
         // TODO optimize to use IonTextReader, but first that must truly stream
         // instead of requiring a full-stream buffer.
+        // See https://issue-tracking.amazon.com/browse/ION-31
         UserReader userReader =
             new UserReader(this, this.newLocalSymbolTable(), reader);
         userReader.setBufferToRecycle();
@@ -405,6 +418,15 @@ public class IonSystemImpl
         return new IonTextWriter(out);
     }
 
+    public IonWriter newTextWriter(OutputStream out, SymbolTable... imports)
+        throws IOException
+    {
+        UnifiedSymbolTable lst = newLocalSymbolTable(imports);
+        IonTextWriter writer = new IonTextWriter(out);
+        writer.setSymbolTable(lst);
+        return writer;
+    }
+
     // TODO also Utf8AsAscii flag
     public IonWriter newTextWriter(OutputStream out, boolean pretty)
     {
@@ -414,7 +436,13 @@ public class IonSystemImpl
     public IonBinaryWriterImpl newBinaryWriter()
     {
         SymbolTable systemSymbolTable = getSystemSymbolTable();
-        return new com.amazon.ion.impl.IonBinaryWriterImpl(systemSymbolTable);
+        return new IonBinaryWriterImpl(systemSymbolTable);
+    }
+
+    public IonBinaryWriterImpl newBinaryWriter(SymbolTable... imports)
+    {
+        UnifiedSymbolTable lst = newLocalSymbolTable(imports);
+        return new IonBinaryWriterImpl(lst);
     }
 
 

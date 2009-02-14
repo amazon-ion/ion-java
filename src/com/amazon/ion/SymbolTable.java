@@ -2,6 +2,8 @@
 
 package com.amazon.ion;
 
+import java.io.IOException;
+
 /**
  * A symbol table maps symbols between their textual form and an integer ID
  * used in the binary encoding.
@@ -186,6 +188,11 @@ public interface SymbolTable
      * @return a non-null struct.
      */
     public IonStruct getIonRepresentation();
+
+
+    public void writeTo(IonWriter writer)
+        throws IOException;
+
 
     /**
      * Compares the two symbol table to determine if this symbol
