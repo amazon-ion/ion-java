@@ -73,6 +73,9 @@ public interface IonContainer
      * empty.
      * <p>
      * Use {@link #makeNull} to make this container null rather than empty.
+     * <p>
+     * <b>WARNING:</b> This method is not support for instances of
+     * {@link IonDatagram}.
      */
     public void clear();
 
