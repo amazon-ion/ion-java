@@ -1029,42 +1029,12 @@ int tmp;
     }
     int writeSymbolTable(SimpleByteBuffer.SimpleByteWriter out) throws IOException
     {
-        int name_len, ver_len, max_id_len, symbol_list_len, import_len;
-
         final UnifiedSymbolTable symtab = (UnifiedSymbolTable) this._symbol_table;
 
-        // first calculate the length of the bits and pieces we will be
-        // writing out in the second phase.  We do this all in one big
-        // hairy method so that we can remember the lengths of most of
-        // these bits and pieces so that we have to recalculate them as
-        // we go to write out the typedesc headers when we write out the
-        // values themselves.
-        final String name = symtab.getName();
-        assert name == null; // TODO remove unused code: locals have no name
-        int max_id = 0;
-        if (name != null) {
-            name_len = IonBinary.lenIonStringWithTypeDesc(name);
-            ver_len = IonBinary.lenVarInt8(symtab.getVersion());
-
-            // unless there's a name (i.e. this is a shared table) the
-            // max id value is of no use
-            max_id = symtab.getMaxId();
-            if (max_id > 0) {
-                // +2 is 1 for symbol sid, 1 for typedesc byte
-                max_id_len = IonBinary.lenVarUInt8(max_id) + 2;
-            }
-            else {
-                max_id_len = 0;
-            }
-        }
-        else {
-            name_len = 0;
-            ver_len = 0;
-            max_id_len = 0;
-        }
+        assert symtab.getName() == null;
 
         int import_header_len = 0;
-        import_len = 0;
+        int import_len = 0;
         SymbolTable [] imports = symtab.getImportedTables();
         int [] import_lens = null;
         if (imports != null && imports.length > 0) {
@@ -1082,7 +1052,7 @@ int tmp;
         }
 
         int symbol_list_content_len = 0;
-        symbol_list_len = 0;
+        int symbol_list_len = 0;
 
         //Iterator<UnifiedSymbolTable.Symbol> syms = super.getSymbolTableSymbols();
         //while (syms.hasNext()) {
@@ -1105,8 +1075,7 @@ int tmp;
             }
         }
 
-        int content_len = name_len + ver_len + max_id_len + symbol_list_len;
-        content_len += import_header_len + import_len;
+        int content_len = symbol_list_len + import_header_len + import_len;
         int content_len_len = 0;
         if (content_len >= IonConstants.lnIsVarLen) {
             content_len_len = IonBinary.lenVarUInt7(content_len);
@@ -1136,28 +1105,6 @@ int tmp;
 
         total_len_written += out.writeTypeDescWithLength2(IonConstants.tidStruct, content_len);
 
-        assert name == null; // FIXME (see above) remove dead code
-        if (name != null) {
-            total_len_written += out.writeVarUInt(UnifiedSymbolTable.NAME_SID, 1, true);
-            total_len_written += out.writeTypeDescWithLength2(IonConstants.tidString,
-                                                             IonBinary.lenIonString(name));
-            total_len_written += out.writeString(name);
-
-            // if there's no name, there's no need for a version
-            // -2 is to remove the cost of the typedesc byte and the fieldsid length
-            total_len_written += out.writeVarUInt(UnifiedSymbolTable.VERSION_SID, 1, true);
-            total_len_written += out.writeTypeDescWithLength2(IonConstants.tidPosInt, ver_len - 2);
-            int ver = symtab.getVersion();
-            int lenover = IonBinary.lenIonInt(ver);
-            total_len_written += out.writeIonInt(ver, lenover);
-
-            if (max_id > 0) {
-                total_len_written += out.writeVarUInt(UnifiedSymbolTable.MAX_ID_SID, 1, true);
-                total_len_written += out.writeTypeDescWithLength2(IonConstants.tidPosInt, max_id_len - 1);
-                int lenomaxid = IonBinary.lenIonInt(max_id);
-                total_len_written += out.writeIonInt(max_id, lenomaxid);
-            }
-        }
 
         // now write imports (if we have any)
         int written_import_len = 0;
