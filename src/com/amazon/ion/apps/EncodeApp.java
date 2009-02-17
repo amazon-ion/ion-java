@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.apps;
 
@@ -8,7 +6,6 @@ import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.impl.IonSystemImpl;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -112,8 +109,7 @@ public class EncodeApp
     protected void process(File inputFile, IonReader reader)
         throws IOException, IonException
     {
-        IonBinaryWriter writer =
-            ((IonSystemImpl) mySystem).newBinaryWriter(myImports);
+        IonBinaryWriter writer = mySystem.newBinaryWriter(myImports);
 
         writer.writeValues(reader);
 
