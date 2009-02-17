@@ -326,8 +326,9 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
             case constTime:
                 tr.dateValue = timeinfo.parse(s);
                 return this;
+            default:
+                throw new  AssertionError("Unknown op for numeric case: " + this);
             }
-            throw new  AssertionError("Unknown op for numeric case: " + this);
         }
 
         public boolean isPunctuation() { return ((flags & isPunctuation) != 0); }
@@ -373,6 +374,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
             return;
         }
 
+        @Override
         public void reset() {
             _sboffset = 0;
             _sbavailable = _tr.value.length();
@@ -752,7 +754,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
                 c = read();
                 if (c < 0 || c == quote) break;
                 if (c == '\\') {
-                    c = IonTokenReader.readEscapedCharacter(this.in);
+                    c = readEscapedCharacter(this.in, false /*not clob*/);
                 }
                 if (c != EMPTY_ESCAPE_SEQUENCE) {
                     value.append((char)c);
@@ -1015,7 +1017,7 @@ sizedloop:
             case '\n':
                 throw new IonException("unexpected line terminator encountered in quoted string");
             case '\\':
-                c = IonTokenReader.readEscapedCharacter(this.in);
+                c = readEscapedCharacter(this.in, false /*not clob*/);
                 //    throws UnexpectedEofException on EOF
                 if (c != EMPTY_ESCAPE_SEQUENCE) {
                     value.appendCodePoint(c);
@@ -1073,7 +1075,7 @@ sizedloop:
             }
             if (c == endquote) break;  // endquote == -1 during long strings
             if (c == '\\') {
-                c = IonTokenReader.readEscapedCharacter(this.in);
+                c = readEscapedCharacter(this.in, false /*not clob*/);
                 if (c != EMPTY_ESCAPE_SEQUENCE) {
                     value.append((char)c);
                 }
@@ -1160,44 +1162,7 @@ sizedloop:
         this.inQuotedContent = false;
         this.isLongString = true;
     }
-    public static class EscapedCharacterReader {
-        PushbackReader  _pbr;
-        IonTokenReader _atr;
-        int             _readerType; // 1=pushback, 2=iontoken
 
-        EscapedCharacterReader() {}
-
-        void setReader(PushbackReader pbr) {
-            _pbr = pbr;
-            _readerType = 1;
-        }
-        void setReader(IonTokenReader atr) {
-            _atr = atr;
-            _readerType = 2;
-        }
-
-        /**
-         *
-         * @return -1 at end of stream.
-         * @throws IOException
-         */
-        int read() throws IOException {
-            switch (_readerType) {
-            case 1: return _pbr.read();
-            case 2: return _atr.read();
-            }
-            throw new IllegalStateException("Invalid reader type encountered (probably an uninitialized object)");
-        }
-        void unread(int c) throws IOException {
-            switch (_readerType) {
-            case 1: _pbr.unread(c); return;
-            case 2: _atr.unread(c); return;
-            }
-            throw new IllegalStateException("Invalid reader type encountered (probably an uninitialized object)");
-        }
-    }
-
-    EscapedCharacterReader _ecr = new EscapedCharacterReader();
 
     /**
      * @return the translated escape sequence.  Will not return -1 since EOF is
@@ -1205,27 +1170,8 @@ sizedloop:
      * indicate a zero-length sequence such as BS-NL.
      * @throws UnexpectedEofException if the EOF is encountered in the middle
      * of the escape sequence.
-     * @deprecated
      * */
-    @Deprecated
-    public static int readEscapedCharacter(PushbackReader r) throws IOException
-    {
-        EscapedCharacterReader ecr = new EscapedCharacterReader();
-        ecr.setReader(r);
-        return readEscapedCharacter(ecr);
-    }
-
-
-    /**
-     *
-     * @param r
-     * @return the translated escape sequence.  Will not return -1 since EOF is
-     * not legal in this context.
-     * @throws IOException
-     * @throws UnexpectedEofException if the EOF is encountered in the middle
-     * of the escape sequence.
-     */
-    public static int readEscapedCharacter(EscapedCharacterReader r)
+    public static int readEscapedCharacter(PushbackReader r, boolean inClob)
         throws IOException, UnexpectedEofException
     {
             //    \\ The backslash character
@@ -1261,6 +1207,9 @@ sizedloop:
 
             case 'U':
                 // Expecting 8 hex digits
+                if (inClob) {
+                    throw new IonException("Unicode escapes \\U not allowed in clob");
+                }
                 c = readDigit(r, 16, true);
                 if (c < 0) break;  // TODO throw UnexpectedEofException
                 c2 = c << 28;
@@ -1276,6 +1225,7 @@ sizedloop:
                 // ... fall through...
             case 'u':
                 // Expecting 4 hex digits
+                // FIXME throw if inClob
                 c = readDigit(r, 16, true);
                 if (c < 0) break;
                 c2 += c << 12;
@@ -1303,7 +1253,7 @@ sizedloop:
                                        + (char) c + "\" [" + c + "]");
     }
 
-    public static int readDigit(EscapedCharacterReader r, int radix, boolean isRequired) throws IOException {
+    public static int readDigit(/*EscapedCharacterReader*/PushbackReader r, int radix, boolean isRequired) throws IOException {
         int c = r.read();
         if (c < 0) {
             r.unread(c);

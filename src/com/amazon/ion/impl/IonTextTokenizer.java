@@ -207,14 +207,14 @@ static final boolean _debug = false;
     static final int _offset_queue_size = 6; // 5 + 1, character lookahead + 1
     int              _char_lookahead_top = 0;
     int[]            _char_lookahead_stack = new int[_offset_queue_size - 1];
-    int[]			 _char_lookahead_stack_char_length = new int[_offset_queue_size - 1];
+    int[]	     _char_lookahead_stack_char_length = new int[_offset_queue_size - 1];
     int              _peek_ahead_char = EMPTY_PEEKAHEAD;
     int              _char_length = 0;
     int              _offset = 0;
     int              _line = 1;
-    int 			 _offset_queue_head = 0;
-    int 			 _offset_queue_tail = 0;
-    int[] 			 _offset_queue = new int[_offset_queue_size];
+    int              _offset_queue_head = 0;
+    int 	     _offset_queue_tail = 0;
+    int[] 	     _offset_queue = new int[_offset_queue_size];
 
     /**
      * calculates the first byte of the current character in the input buffer
@@ -598,8 +598,8 @@ loop:   for (;;) {
             case '\'':
                 t = read_quoted_symbol(c);
                 break loop;
-           	case '<': case '>': case '*': case '=': case '^': case '&': case '|':
-           	case '~': case ';': case '!': case '?': case '@': case '%': case '`':
+            case '<': case '>': case '*': case '=': case '^': case '&': case '|':
+            case '~': case ';': case '!': case '?': case '@': case '%': case '`':
             	t = this.read_symbol_extended(c);
             	break loop;
             case '"':

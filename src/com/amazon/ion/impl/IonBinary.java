@@ -1606,7 +1606,7 @@ done:       for (;;) {
         {
             if (debugValidation) _validate();
 
-            int len = chars.length();
+            int len = chars.length(); // TODO is this ever >0 for clob?
 
             for (int ii = 0; ii < len; ii++)
             {
@@ -1729,7 +1729,7 @@ done:       for (;;) {
                         if (_pending_high_surrogate != 0) {
                             throw new IonException("unmatched high surrogate encountered");
                         }
-                        c = IonTokenReader.readEscapedCharacter(r);
+                        c = IonTokenReader.readEscapedCharacter(r, onlyByteSizedCharacters);
                         // for the slash followed by a real new line (ascii 10)
                         if (c == IonTokenReader.EMPTY_ESCAPE_SEQUENCE) {
                             continue;

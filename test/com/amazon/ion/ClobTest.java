@@ -188,6 +188,12 @@ public class ClobTest
                      SAMPLE_ASCII_AS_UTF8.length);
     }
 
+    public void testHighUnicodeEscapes()
+    {
+        badValue("{{\"\\U0000003f\"}}");
+    }
+
+
     // TODO  test use of other encodings
     // TODO test long strings and concatenation
 }
