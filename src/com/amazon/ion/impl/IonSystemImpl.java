@@ -6,6 +6,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbolTable.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
+import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonBlob;
@@ -38,6 +39,7 @@ import com.amazon.ion.UnsupportedSystemVersionException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.system.SimpleCatalog;
 import com.amazon.ion.util.Printer;
+import com.amazon.ion.util.Text;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -152,14 +154,38 @@ public class IonSystemImpl
     }
 
 
-    public UnifiedSymbolTable newSharedSymbolTable(SymbolTable symbols,
-                                                   String name,
-                                                   int version)
+    public UnifiedSymbolTable newSharedSymbolTable(String name,
+                                                   int version,
+                                                   Iterator<String> newSymbols,
+                                                   SymbolTable... imports)
     {
-        // TODO prior version should be in Catalog to verify supersetting
-        UnifiedSymbolTable st = new UnifiedSymbolTable(symbols, name, version);
-        st.setSystem(this);
-        return st;
+        // TODO streamline to avoid making this collection
+        ArrayList<String> syms = new ArrayList<String>();
+
+        if (version > 1)
+        {
+            int priorVersion = version - 1;
+            SymbolTable prior = myCatalog.getTable(name, priorVersion);
+            if (prior == null || prior.getVersion() != priorVersion)
+            {
+                String message =
+                    "Catalog does not contain symbol table " +
+                    Text.printString(name) + " version " + priorVersion +
+                    " required to create version " + version;
+                throw new IonException(message);
+            }
+
+            addAllNonNull(syms, prior.iterateDeclaredSymbols());
+        }
+
+        for (SymbolTable imported : imports)
+        {
+            addAllNonNull(syms, imported.iterateDeclaredSymbols());
+        }
+
+        addAllNonNull(syms, newSymbols);
+
+        return new UnifiedSymbolTable(name, version, syms.iterator());
     }
 
 

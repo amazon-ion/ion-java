@@ -88,6 +88,41 @@ public interface IonSystem
 
 
     /**
+     * Creates a new shared symbol table containing a given set of symbols.
+     * The table will contain symbols in the following order:
+     * <ol>
+     *   <li>
+     *     If {@code version} is larger than 1, the prior version of the
+     *     named table is retrieved from the catalog and all of its symbols
+     *     are added.
+     *   </li>
+     *   <li>
+     *     For each non-system table in {@code imports}, add all of its
+     *     declared symbols.
+     *   </li>
+     *   <li>
+     *     Add all of the symbols provided by {@code newSymbols}.
+     *   </li>
+     * </ol>
+     * Any duplicate symbol texts or null strings are ignored.
+     *
+     * @param name the symbol table name, a non-empty string.
+     * @param version at least one.
+     * @param newSymbols provides symbol names; may be null.
+     * @param imports other tables from which to import symbols.
+     *
+     * @return a new shared symbol table with the given name and version.
+     *
+     * @throws IonException if {@code version > 1} and the prior version does
+     * not exist in this system's catalog.
+     */
+    public SymbolTable newSharedSymbolTable(String name,
+                                            int version,
+                                            Iterator<String> newSymbols,
+                                            SymbolTable... imports);
+
+
+    /**
      * Creates a new empty datagram.
      *
      * @return a new datagram with no user values.

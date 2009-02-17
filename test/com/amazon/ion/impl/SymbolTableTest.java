@@ -20,12 +20,15 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.Symtabs;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 
 /**
  *
@@ -558,6 +561,132 @@ public class SymbolTableTest
             "null";
         IonValue v = oneValue(text);
         assertSame(expected, v.getSymbolTable().getImportedTables()[0]);
+    }
+
+
+    //-------------------------------------------------------------------------
+    // Shared symtab creation
+
+    public void testBasicSharedSymtabCreation()
+    {
+        String[] syms = { "a", null, "b" };
+        SymbolTable st =
+            system().newSharedSymbolTable("ST", 1,
+                                          Arrays.asList(syms).iterator());
+        checkSharedTable("ST", 1, new String[]{"a", "b"}, st);
+
+
+        // Now create version two
+        catalog().putTable(st);
+
+        String[] syms2 = { "c", "a" };
+        SymbolTable st2 =
+            system().newSharedSymbolTable("ST", 2,
+                                          Arrays.asList(syms2).iterator());
+        checkSharedTable("ST", 2, new String[]{"a", "b", "c"}, st2);
+    }
+
+    public void testEmptySharedSymtabCreation()
+    {
+        String[] noStrings = new String[0];
+
+        SymbolTable st = system().newSharedSymbolTable("ST", 1, null);
+        checkSharedTable("ST", 1, noStrings, st);
+
+        st = system().newSharedSymbolTable("ST", 1,
+                                           Arrays.asList(noStrings).iterator());
+        checkSharedTable("ST", 1, noStrings, st);
+    }
+
+    public void testSharedSymtabCreationWithImports()
+    {
+        SymbolTable fred1   = Symtabs.CATALOG.getTable("fred", 1);
+        SymbolTable ginger1 = Symtabs.CATALOG.getTable("ginger", 1);
+
+        String[] syms = { "a", "fred_1", "b" };
+        UnifiedSymbolTable st =
+            system().newSharedSymbolTable("ST", 1,
+                                          Arrays.asList(syms).iterator(),
+                                          fred1);
+        checkSharedTable("ST", 1,
+                         new String[]{"fred_1", "fred_2", "a", "b"},
+                         st);
+
+
+        // Again, with two imports
+
+        st = system().newSharedSymbolTable("ST", 1,
+                                           Arrays.asList(syms).iterator(),
+                                           fred1, ginger1);
+        checkSharedTable("ST", 1,
+                         new String[]{"fred_1", "fred_2", "g1", "g2", "a", "b"},
+                         st);
+    }
+
+    public void testBadSharedSymtabCreation()
+    {
+        String[] syms = { "a" };
+        List<String> symList = Arrays.asList(syms);
+
+        try
+        {
+            // Prior version doesn't exist
+            system().newSharedSymbolTable("ST", 2, symList.iterator());
+            fail("expected exception");
+        }
+        catch (IonException e) { }
+
+        try
+        {
+            system().newSharedSymbolTable(null, 1, symList.iterator());
+            fail("expected exception");
+        }
+        catch (IllegalArgumentException e) { }
+
+        try
+        {
+            system().newSharedSymbolTable("", 1, symList.iterator());
+            fail("expected exception");
+        }
+        catch (IllegalArgumentException e) { }
+
+        try
+        {
+            system().newSharedSymbolTable("ST", 0, symList.iterator());
+            fail("expected exception");
+        }
+        catch (IllegalArgumentException e) { }
+
+        try
+        {
+            system().newSharedSymbolTable("ST", -1, symList.iterator());
+            fail("expected exception");
+        }
+        catch (IllegalArgumentException e) { }
+    }
+
+    // TODO test import that has null sid
+    // TODO test insertion of empty symbol
+
+    public void checkSharedTable(String name, int version,
+                                 String[] expectedSymbols,
+                                 SymbolTable actual)
+    {
+        assertTrue(actual.isSharedTable());
+        assertFalse(actual.isSystemTable());
+        assertEquals(name, actual.getName());
+        assertEquals(version, actual.getVersion());
+        assertEquals(0, ((UnifiedSymbolTable)actual).getImportMaxId());
+
+        assertEquals("symbol count",
+                     expectedSymbols.length, actual.getMaxId());
+
+        for (int i = 0; i < expectedSymbols.length; i++)
+        {
+            int sid = i+1;
+            assertEquals("sid " + sid,
+                         expectedSymbols[i], actual.findKnownSymbol(sid));
+        }
     }
 
 

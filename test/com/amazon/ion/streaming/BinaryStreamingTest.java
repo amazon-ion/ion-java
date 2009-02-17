@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
 import java.util.Date;
+import java.util.Iterator;
 
 /**
  *
@@ -577,7 +578,9 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
     	SymbolTable sym = v.getSymbolTable();
     	assert v2.getSymbolTable() == sym;
     	IonReader ir = system().newReader(s);
-    	SymbolTable u = system().newSharedSymbolTable(sym, "items", 1);
+
+    	Iterator<String> symbols = sym.iterateDeclaredSymbols();
+    	SymbolTable u = system().newSharedSymbolTable("items", 1, symbols);
     	IonBinaryWriter wr = system().newBinaryWriter(u);
 
     	wr.writeValues(ir);

@@ -3,6 +3,7 @@
 package com.amazon.ion;
 
 import java.io.IOException;
+import java.util.Iterator;
 
 /**
  * A symbol table maps symbols between their textual form and an integer ID
@@ -83,6 +84,10 @@ public interface SymbolTable
     /**
      * Gets the sequence of shared symbol tables imported by this (local)
      * symbol table. The result does not include a system table.
+     * <p>
+     * If this local table imported a shared table that was not available in
+     * the appropriate {@link IonCatalog}, then that entry will be a dummy
+     * table with no known symbol text.
      *
      * @return {@code null} if this is a shared or system table, otherwise a
      * non-null but potentially zero-length array of shared tables (but no
@@ -178,6 +183,16 @@ public interface SymbolTable
      */
     @Deprecated
     public void defineSymbol(String name, int id);
+
+
+    /**
+     * Creates an iterator that will return all non-imported symbol text, in
+     * order of their symbol IDs. The iterator will return {@code null} where
+     * there is an undefined sid.
+     *
+     * @return a new iterator.
+     */
+    public Iterator<String> iterateDeclaredSymbols();
 
 
     /**

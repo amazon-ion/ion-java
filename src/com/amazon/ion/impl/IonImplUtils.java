@@ -14,6 +14,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PushbackInputStream;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -39,6 +40,23 @@ final class IonImplUtils
         public Object  next()    { throw new NoSuchElementException(); }
         public void    remove()  { throw new IllegalStateException(); }
     };
+
+
+    public static <T> void addAllNonNull(Collection<T> dest, Iterator<T> src)
+    {
+        if (src != null)
+        {
+            while (src.hasNext())
+            {
+                T sym = src.next();
+                if (sym != null)
+                {
+                    dest.add(sym);
+                }
+            }
+        }
+    }
+
 
     public static byte[] loadFileBytes(File file)
         throws IOException

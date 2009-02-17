@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -79,7 +77,8 @@ public interface IonReader
     public int getDepth();
 
     /**
-     * Returns the current symbol table.
+     * Returns the symbol table that is applicable to the current value.
+     * This may be either a system or local symbol table.
      */
     public SymbolTable getSymbolTable();
 

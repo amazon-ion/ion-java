@@ -2,8 +2,8 @@
 
 package com.amazon.ion;
 
+import static com.amazon.ion.SystemSymbolTable.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
-import static com.amazon.ion.impl.UnifiedSymbolTable.ION_SHARED_SYMBOL_TABLE;
 
 import com.amazon.ion.impl.IonSystemImpl;
 import com.amazon.ion.system.SimpleCatalog;

@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -14,6 +12,7 @@ import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.util.Printer;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -98,6 +97,10 @@ public abstract class AbstractSymbolTable
         return _maxId;
     }
 
+    public synchronized Iterator<String> iterateDeclaredSymbols()
+    {
+        throw new UnsupportedOperationException();
+    }
 
     public synchronized int size()
     {

@@ -23,6 +23,7 @@ import com.amazon.ion.util.Text;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 
 /**
  *
@@ -41,7 +42,7 @@ import java.util.HashMap;
  *   then local names from the new max id
  *
  */
-public final class UnifiedSymbolTable
+final class UnifiedSymbolTable
     implements SymbolTable
 {
 
@@ -275,21 +276,21 @@ public final class UnifiedSymbolTable
     }
 
     /**
-     * Converts a local symbol table into a shared table.
-     * @param localSymbolTable
-     * @param name
-     * @param version
+     * Constructs a shared symbol table with given symbols.
+     * Null values returned by the iterator cause undefined sids.
      */
-    UnifiedSymbolTable(SymbolTable localSymbolTable, String name, int version)
+    UnifiedSymbolTable(String name, int version, Iterator<String> symbols)
     {
-        this(localSymbolTable.getSystemSymbolTable());
+        this();
 
-        int minid = this._system_symbols.getMaxId();
-        int maxid = localSymbolTable.getMaxId();
-        for (int ii=minid + 1; ii <= maxid; ii++) {
-            String symbolText = localSymbolTable.findKnownSymbol(ii);
-            if (symbolText == null) continue;
-            this.defineSymbol(symbolText, ii);
+        while (symbols.hasNext())
+        {
+            String text = symbols.next();
+            if (findSymbol(text) == UNKNOWN_SID)
+            {
+                int sid = _max_id + 1;
+                defineSymbol(new Symbol(text, sid, this));
+            }
         }
 
         share(name, version);
@@ -388,6 +389,33 @@ public final class UnifiedSymbolTable
         assert isSystemTable();
         return SystemSymbolTable.ION_1_0;
     }
+
+
+    public synchronized Iterator<String> iterateDeclaredSymbols()
+    {
+        return new Iterator<String>()
+        {
+            int myCurrentId = _import_max_id;
+            final int myMaxId = _max_id;
+
+            public boolean hasNext()
+            {
+                return myCurrentId < myMaxId;
+            }
+
+            public String next()
+            {
+                return findKnownSymbol(++myCurrentId);
+            }
+
+            public void remove()
+            {
+                throw new UnsupportedOperationException();
+            }
+        };
+    }
+
+
     public String findKnownSymbol(int id)
     {
         String name = null;
@@ -462,7 +490,7 @@ public final class UnifiedSymbolTable
         int sid = this.findSymbol(name);
         if (sid == UNKNOWN_SID) {
             if (_is_locked) {
-                throw new IllegalStateException("can't change shared symbol table");
+                throw new UnsupportedOperationException("can't change shared symbol table");
             }
             sid = _max_id + 1;
             defineSymbol(new Symbol(name, sid, this));
@@ -472,7 +500,7 @@ public final class UnifiedSymbolTable
     public void defineSymbol(String name, int id)
     {
         if (_is_locked) {
-            throw new IllegalStateException("can't change shared symbol table");
+            throw new UnsupportedOperationException("can't change shared symbol table");
         }
         if (name == null || name.length() < 1 || id < 1) {
             throw new IllegalArgumentException("invalid symbol definition");
@@ -558,46 +586,6 @@ public final class UnifiedSymbolTable
         defineSymbol(sym);
     }
 
-    public void removeSymbol(String name, int id)
-    {
-        if (_is_locked) {
-            throw new IllegalStateException("can't change shared symbol table");
-        }
-        int sid = this.findSymbol(name);
-        if (sid != id) {
-            throw new IllegalArgumentException("id doesn't match existing id");
-        }
-        removeSymbol(name, id, this);
-    }
-    public void removeSymbol(String name)
-    {
-        if (_is_locked) {
-            throw new IllegalStateException("can't change shared symbol table");
-        }
-        int sid = this.findSymbol(name);
-        if (sid == UNKNOWN_SID) return;
-
-        removeSymbol(name, sid, this);
-    }
-    private void removeSymbol(String name, int sid, UnifiedSymbolTable table)
-    {
-        assert !_is_locked;
-        assert sid > 0 && sid <= _max_id;
-
-        if (_system_symbols != null && sid <= _system_symbols.getMaxId()) {
-            throw new IllegalArgumentException("you can't remove system symbols");
-        }
-
-        assert _symbols[sid].name.equals(name);
-        assert _symbols[sid].source == table;
-
-        _symbols[sid] = null;
-        _id_map.remove(name);
-
-        if (table == this && _ion_symbols_rep != null) {
-            _ion_symbols_rep.add(sid, _ion_symbols_rep.getSystem().newNull());
-        }
-    }
 
     public UnifiedSymbolTable getImportedTable(String name)
     {
@@ -628,7 +616,7 @@ public final class UnifiedSymbolTable
             throw new IllegalStateException("importing tables is not valid once user symbols have been added");
         }
         if (_is_locked) {
-            throw new IllegalStateException("importing tables is not valid on a locked table");
+            throw new UnsupportedOperationException("importing tables is not valid on a shared table");
         }
         if (_system_symbols == null) {
             throw new IllegalStateException("a system table must be defined before importing other tables");

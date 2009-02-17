@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.apps;
 
@@ -11,7 +9,6 @@ import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.impl.UnifiedSymbolTable;
 import com.amazon.ion.system.SimpleCatalog;
 import com.amazon.ion.system.SystemFactory;
 import java.io.File;
@@ -177,24 +174,8 @@ abstract class BaseApp
 //        logDebug("----");
     }
 
-    @Deprecated
-    protected void importLatestVersion(UnifiedSymbolTable symtab, String name)
-    {
-        IonCatalog catalog = mySystem.getCatalog();
-        SymbolTable table = catalog.getTable(name);
-        if (table == null)
-        {
-            String message =
-                "There's no symbol table in the catalog named " +
-                name;
-            throw new RuntimeException(message);
-        }
-        symtab.addImportedTable((UnifiedSymbolTable)table, table.getMaxId());
-        logDebug("Imported symbol table " + name
-                   + "@" + table.getVersion());
-    }
 
-    protected UnifiedSymbolTable getLatestSharedSymtab(String name)
+    protected SymbolTable getLatestSharedSymtab(String name)
     {
         IonCatalog catalog = mySystem.getCatalog();
         SymbolTable table = catalog.getTable(name);
@@ -206,7 +187,7 @@ abstract class BaseApp
         }
         logDebug("Found shared symbol table " + name
                    + "@" + table.getVersion());
-        return (UnifiedSymbolTable) table;
+        return table;
     }
 
 

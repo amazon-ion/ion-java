@@ -10,6 +10,7 @@ import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
+import java.util.Iterator;
 
 /**
  *
@@ -88,6 +89,12 @@ public class SystemSymbolTableImpl
     public SymbolTable[] getImportedTables()
     {
         return null;
+    }
+
+
+    public synchronized Iterator<String> iterateDeclaredSymbols()
+    {
+        throw new UnsupportedOperationException();
     }
 
 
