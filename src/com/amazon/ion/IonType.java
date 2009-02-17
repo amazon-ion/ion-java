@@ -16,12 +16,12 @@ public enum IonType
     FLOAT,
     DECIMAL,
     TIMESTAMP,
-    STRING,
     SYMBOL,
-    BLOB,
+    STRING,
     CLOB,
-    STRUCT,
+    BLOB,
     LIST,
     SEXP,
+    STRUCT,
     DATAGRAM
 }
