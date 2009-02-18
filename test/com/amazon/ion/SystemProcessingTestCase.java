@@ -18,23 +18,15 @@ import com.amazon.ion.system.SimpleCatalog;
 public abstract class SystemProcessingTestCase
     extends IonTestCase
 {
-    // Subclasses must override EITHER startIteration(String) OR
-    // prepare(String) and startIteration()
-    protected void prepare(String text)
-        throws Exception
-    {
-        startIteration();
-    }
+    protected abstract void prepare(String text)
+        throws Exception;
 
     protected abstract boolean processingBinary();
 
-    protected void startIteration()
-        throws Exception
-    {
-    }
+    protected abstract void startIteration()
+        throws Exception;
 
-    @Deprecated
-    protected void startIteration(String text)
+    protected final void startIteration(String text)
         throws Exception
     {
         prepare(text);

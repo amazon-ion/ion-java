@@ -62,5 +62,35 @@ public abstract class WriterTestCase
         assertSame(ginger1, importedTables[1]);
     }
 
+    public void testWritingWithSystemImport()
+        throws Exception
+    {
+        final int FRED_ID_OFFSET   = ION_1_0_MAX_ID;
+        final int LOCAL_ID_OFFSET  = FRED_ID_OFFSET + FRED_MAX_IDS[1];
+
+        SymbolTable fred1   = Symtabs.register("fred",   1, catalog());
+
+        IonWriter writer = makeWriter(system().getSystemSymbolTable(), fred1);
+        writer.writeSymbol("fred_2");
+        writer.writeSymbol("localSym");
+
+        byte[] bytes = outputByteArray();
+        IonDatagram dg = loader().load(bytes);
+
+        assertEquals(4, dg.systemSize());
+
+        IonValue f2sym = dg.systemGet(2);
+        IonValue local = dg.systemGet(3);
+
+        checkSymbol("fred_2",   FRED_ID_OFFSET + 2,   f2sym);
+        checkSymbol("localSym", LOCAL_ID_OFFSET + 1,  local);
+
+        SymbolTable symtab = f2sym.getSymbolTable();
+        assertSame(symtab, local.getSymbolTable());
+        SymbolTable[] importedTables = symtab.getImportedTables();
+        assertEquals(1, importedTables.length);
+        assertSame(fred1, importedTables[0]);
+    }
+
     // TODO test stepOut() when at top-level
 }

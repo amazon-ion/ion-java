@@ -112,36 +112,36 @@ public class IonSystemImpl
     }
 
 
-    public UnifiedSymbolTable newLocalSymbolTable()
-    {
-        UnifiedSymbolTable st = new UnifiedSymbolTable(mySystemSymbols);
-        st.setSystem(this);
-        return st;
-    }
-
-
-    public UnifiedSymbolTable newLocalSymbolTable(SymbolTable systemSymbols)
-    {
-        if (! systemSymbols.isSystemTable())
-        {
-            String message = "systemSymbols is not a system symbol table.";
-            throw new IllegalArgumentException(message);
-        }
-
-        UnifiedSymbolTable st = new UnifiedSymbolTable(systemSymbols);
-        st.setSystem(this);
-        return st;
-    }
-
     public UnifiedSymbolTable newLocalSymbolTable(SymbolTable... imports)
     {
-        // TODO Allow the first symtab to be system symtab
-        UnifiedSymbolTable st = newLocalSymbolTable();
-        for (int i = 0; i < imports.length; i++)
+        if (imports == null || imports.length == 0)
         {
-            UnifiedSymbolTable symbolTable = (UnifiedSymbolTable) imports[i];
+            UnifiedSymbolTable st = new UnifiedSymbolTable(mySystemSymbols);
+            st.setSystem(this);
+            return st;
+        }
+
+        int i = 0;
+        SymbolTable systemTable;
+        if (imports[0].isSystemTable())
+        {
+            systemTable = imports[0];
+            i++;
+        }
+        else
+        {
+            systemTable = mySystemSymbols;
+        }
+
+        UnifiedSymbolTable st = new UnifiedSymbolTable(systemTable);
+
+        while (i < imports.length)
+        {
+            UnifiedSymbolTable symbolTable = (UnifiedSymbolTable) imports[i++];
             st.addImportedTable(symbolTable, symbolTable.getMaxId());
         }
+
+        st.setSystem(this); // XXX
         return st;
     }
 
@@ -149,7 +149,6 @@ public class IonSystemImpl
     public UnifiedSymbolTable newSharedSymbolTable(IonStruct serialized)
     {
         UnifiedSymbolTable st = new UnifiedSymbolTable(serialized);
-//      st.setSystem(this);
         return st;
     }
 
@@ -419,13 +418,11 @@ public class IonSystemImpl
 
     public IonReader newReader(IonValue value)
     {
-        // FIXME this should pass default catalog
         return new IonTreeReader(value);
     }
 
     public IonReader newSystemReader(IonDatagram dg)
     {
-        // FIXME this should pass default catalog
         return new IonTreeReader(dg, true);
     }
 

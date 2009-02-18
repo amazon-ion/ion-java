@@ -70,21 +70,21 @@ public interface IonSystem
 
 
     /**
-     * Creates a new local symbol table using the default system symbol table.
-     * @return not <code>null</code>.
-     */
-    public SymbolTable newLocalSymbolTable();
-
-
-    /**
-     * Creates a new local symbol table based on a specific system table.
+     * Creates a new local symbol table based on specific imported tables.
+     * If the first imported table is a system table, then the local table will
+     * use it appropriately. Otherwise, the local table will use this system's
+     * {@linkplain #getCatalog() default catalog}.
      *
-     * @param systemSymbols must not be null and must have
-     * {@link SymbolTable#isSystemTable()} true.
+     * @param imports the set of initial symbols.
+     * The first (and only the first) may be a system table.
      *
-     * @return a new symbol table.
+     * @return a new local symbol table.
+     *
+     * @throws IllegalArgumentException if any import is a local table,
+     * or if any but the first is a system table.
+     * @throws NullPointerException if any import is null.
      */
-    public SymbolTable newLocalSymbolTable(SymbolTable systemSymbols);
+    public SymbolTable newLocalSymbolTable(SymbolTable... imports);
 
 
     /**

@@ -565,6 +565,91 @@ public class SymbolTableTest
 
 
     //-------------------------------------------------------------------------
+    // Local symtab creation
+
+    public void testEmptyLocalSymtabCreation()
+    {
+        SymbolTable st = system().newLocalSymbolTable();
+        checkEmptyLocalSymtab(st);
+
+        st = system().newLocalSymbolTable((SymbolTable[])null);
+        checkEmptyLocalSymtab(st);
+
+        st = system().newLocalSymbolTable(new SymbolTable[0]);
+        checkEmptyLocalSymtab(st);
+
+
+        SymbolTable systemTable = system().getSystemSymbolTable();
+
+        st = system().newLocalSymbolTable(systemTable);
+        checkEmptyLocalSymtab(st);
+
+        st = system().newLocalSymbolTable(new SymbolTable[]{ systemTable });
+        checkEmptyLocalSymtab(st);
+    }
+
+    public void checkEmptyLocalSymtab(SymbolTable st)
+    {
+        SymbolTable systemTable = system().getSystemSymbolTable();
+
+        checkLocalTable(st);
+        assertSame(systemTable, st.getSystemSymbolTable());
+        assertEquals(systemTable.getMaxId(), st.getMaxId());
+        // TODO getImportMaxId
+        assertEquals(0, st.getImportedTables().length);
+    }
+
+    public void testBasicLocalSymtabCreation()
+    {
+        SymbolTable systemTable = system().getSystemSymbolTable();
+        SymbolTable fred1 = Symtabs.CATALOG.getTable("fred", 1);
+
+        SymbolTable st = system().newLocalSymbolTable(systemTable, fred1);
+
+        checkLocalTable(st);
+        assertSame(systemTable, st.getSystemSymbolTable());
+        assertEquals(systemTable.getMaxId() + fred1.getMaxId(), st.getMaxId());
+        // TODO getImportMaxId
+        assertEquals(1, st.getImportedTables().length);
+        assertSame(fred1, st.getImportedTables()[0]);
+
+        st = system().newLocalSymbolTable(new SymbolTable[]{ systemTable });
+        checkEmptyLocalSymtab(st);
+    }
+
+    public void testBadLocalSymtabCreation()
+    {
+        SymbolTable systemTable = system().getSystemSymbolTable();
+        SymbolTable fred1 = Symtabs.CATALOG.getTable("fred", 1);
+
+        try
+        {
+            system().newLocalSymbolTable((SymbolTable)null);
+        }
+        catch (NullPointerException e) { }
+
+        try
+        {
+            system().newLocalSymbolTable(fred1, systemTable);
+        }
+        catch (IllegalArgumentException e) { }
+
+        try
+        {
+            system().newLocalSymbolTable(fred1, null);
+        }
+        catch (NullPointerException e) { }
+
+        try
+        {
+            system().newLocalSymbolTable(fred1,
+                                         system().newLocalSymbolTable());
+        }
+        catch (IllegalArgumentException e) { }
+
+    }
+
+    //-------------------------------------------------------------------------
     // Shared symtab creation
 
     public void testBasicSharedSymtabCreation()
