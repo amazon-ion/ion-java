@@ -7,7 +7,6 @@ package com.amazon.ion;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0_SID;
 
-import com.amazon.ion.impl.IonSequenceImpl;
 import com.amazon.ion.impl.IonSystemImpl;
 import com.amazon.ion.impl.IonValueImpl;
 import java.io.ByteArrayOutputStream;
@@ -410,38 +409,5 @@ public class DatagramTest
         }
         catch (IonException e) { }
         assertEquals(1, dg.size());
-    }
-
-    // FIXME implement embedding
-    public void XXXtestEmbedding()
-    {
-        IonDatagram sourceDatagram = myLoader.load("bean");
-        IonDatagram destDatagram = myLoader.load("[java]");
-
-        IonSymbol sourceBean = (IonSymbol) sourceDatagram.get(0);
-        assertEquals("bean", sourceBean.stringValue());
-        int beanSid = sourceBean.getSymbolId();
-        assertTrue(beanSid > 0);
-
-        IonList destList = (IonList) destDatagram.get(0);
-        IonSymbol javaSym = (IonSymbol) destList.get(0);
-        assertEquals(beanSid, javaSym.getSymbolId());
-
-        // TODO remove cast
-        ((IonSequenceImpl)destList).addEmbedded(sourceBean);
-        assertIonEquals(sourceBean, destList.get(1));
-
-        IonDatagram reloadedDatagram = myLoader.load(destDatagram.toBytes());
-        IonList reloadedList = (IonList) reloadedDatagram.get(0);
-
-        // Both symbols have the same sid!
-        IonSymbol reloadedBean = (IonSymbol) reloadedList.get(1);
-        checkSymbol("java", beanSid, reloadedList.get(0));
-        checkSymbol("bean", beanSid, reloadedBean);
-
-        assertSame(reloadedList, reloadedBean.getContainer());
-        // TODO add this API to IonValues
-//        assertNotSame(reloadedList, reloadedBean.getSystemContainer());
-        // ...
     }
 }
