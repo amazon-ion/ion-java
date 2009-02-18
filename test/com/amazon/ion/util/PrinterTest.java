@@ -1,9 +1,9 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
+
+import static com.amazon.ion.SystemSymbolTable.ION_1_0;
 
 import com.amazon.ion.BlobTest;
 import com.amazon.ion.ClobTest;
@@ -186,13 +186,27 @@ public class PrinterTest
     public void testPrintingDatagram()
         throws Exception
     {
-        String text = "a b c";
-        IonDatagram dg = loader().load(text);
-        checkRendering(text, dg);
+        IonDatagram dg = loader().load("a b c");
+        StringBuilder w = new StringBuilder();
+        myPrinter.print(dg, w);
+        String text = w.toString();
+        assertTrue("missing version marker",
+                   text.startsWith(ION_1_0 + ' '));
+        assertTrue("missing data",
+                   text.endsWith(" a b c"));
 
-//        text = "$ion_1_0 a + [a,'+']";
-//        dg = loader.load(text);
-//        checkRendering(text, dg);
+        // Just force symtab analysis and make sure output is still okay
+        dg.getBytes(new byte[dg.byteSize()]);
+        text = w.toString();
+        assertTrue("missing version marker",
+                   text.startsWith(ION_1_0 + ' '));
+        assertTrue("missing data",
+                   text.endsWith(" a b c"));
+
+        // We shouldn't jnject a local table if its not needed.
+        String data = "$ion_1_0 2 + [2,'+']";
+        dg = loader().load(data);
+        checkRendering(data, dg);
     }
 
 

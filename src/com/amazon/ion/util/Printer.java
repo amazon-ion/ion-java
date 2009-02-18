@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
@@ -25,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.Iterator;
 
 
 /**
@@ -590,7 +589,8 @@ public class Printer
         public void visit(IonDatagram value) throws IOException, Exception
         {
             boolean hitOne = false;
-            for (IonValue child : value)
+            Iterator<IonValue> i = value.systemIterator();
+            while (i.hasNext())
             {
                 if (hitOne)
                 {
@@ -598,6 +598,7 @@ public class Printer
                 }
                 hitOne = true;
 
+                IonValue child = i.next();
                 writeChild(child, false);
             }
         }

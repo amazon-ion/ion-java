@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -614,17 +614,20 @@ public class StructTest
 
         // what happened to j?
         IonDatagram dg = ionSystem.newDatagram(s1);
+        // Do this before toString, ensuring we have local symtab
+        byte[] bytes = dg.toBytes();
+
         String i3 = dg.toString();
         //System.out.println(i3);
 
-        byte[] bytes = dg.toBytes();
         IonLoader loader = ionSystem.getLoader();
-        IonValue v = loader.load(bytes);
+        IonDatagram v = loader.load(bytes);
+        assertIonEquals(s1, v.get(0));
         String i4 = v.toString();
         //System.out.println(i4);
 
         assertEquals(i1, i2);
-        assertEquals(i2, i3);
+//        assertEquals(i2, i3);  // Not true, i3 has system stuff
         assertEquals(i3, i4);
     }
 

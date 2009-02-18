@@ -424,9 +424,25 @@ public class DatagramTest
      */
     public void testToString()
     {
-        IonDatagram dg = loader().load("{a:b}");
-        assertEquals("{a:b}", dg.toString());
+        IonDatagram dg = loader().load("1");
+        assertEquals("$ion_1_0 1", dg.toString());
+
+        dg = loader().load("{a:b}");
+        String text = dg.toString();
+        assertTrue("missing version marker",
+                   text.startsWith(SystemSymbolTable.ION_1_0 + ' '));
+        assertTrue("missing data",
+                   text.endsWith(" {a:b}"));
+
+        // Just force symtab analysis and make sure output is still okay
+        dg.getBytes(new byte[dg.byteSize()]);
+        text = dg.toString();
+        assertTrue("missing version marker",
+                   text.startsWith(SystemSymbolTable.ION_1_0 + ' '));
+        assertTrue("missing data",
+                   text.endsWith(" {a:b}"));
     }
+
 
     public void testReadOnlyDatagram()
     {
