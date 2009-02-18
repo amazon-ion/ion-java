@@ -38,18 +38,6 @@ public interface IonReader
      */
     public IonType next();
 
-    /**
-     * Determines the number of children in the current value. The iterator
-     * must be positioned on (but not yet stepped into) a container.
-     * this operation is typically very efficient if the iterator is
-     * traversing a tree, reasonably efficient (it does have to count)
-     * when traversing binary-encoded data, and it can be fairly expensive
-     * if the input source is Ion text.  As such this should only be used
-     * when the benefits of knowing the number of elements is known to
-     * outweight the costs of the call.  Using a flexible representation
-     * in the caller is usually more efficient.
-     */
-    public int getContainerSize();
 
     /**
      * Positions the iterator in the contents of the current value.  The current
@@ -87,13 +75,6 @@ public interface IonReader
      * current value.
      */
     public IonType getType();
-
-    /**
-     * Return an int representing the Ion type id of the current. This is the value
-     * stored in the high nibble of the binary type descriptor byte, or -1 if there
-     * is no valid current value.
-     */
-    public int getTypeId();
 
     /**
      * Return the annotations of the current value as an array of strings.  The

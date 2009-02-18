@@ -91,26 +91,40 @@ public class MiscStreamingTests
     	IonDatagram dg = sys.getLoader().load(s);
     	IonValue v = dg.get(0);
     	IonType t = v.getType();
-    	assertSame( "should be a struct", t, IonType.STRUCT );
+    	assertSame( "should be a struct", IonType.STRUCT, t );
 
     	int tree_count = ((IonStruct)v).size();
 
     	IonReader it = system().newReader(s);
 
     	t = it.next();
-    	assertSame( "should be a struct", t, IonType.STRUCT );
+    	assertSame( "should be a struct", IonType.STRUCT, t );
 
-    	int string_count = it.getContainerSize();
-    	assertSame("tree and string iterator should have the same size", string_count, tree_count );
+    	int string_count = 0;
+    	it.stepIn();
+    	while (it.hasNext()) {
+    	    it.next();
+    	    string_count++;
+    	}
+    	it.stepOut();
+    	assertSame("tree and string iterator should have the same size",
+    	           tree_count, string_count);
 
     	byte[] buf = dg.toBytes();
     	it = system().newReader(buf);
 
     	t = it.next();
-    	assertSame( "should be a struct", t, IonType.STRUCT );
+    	assertSame( "should be a struct", IonType.STRUCT, t );
 
-    	int bin_count = it.getContainerSize();
-    	assertSame("tree and binary iterator should have the same size", bin_count, tree_count );
+    	int bin_count = 0;
+        it.stepIn();
+        while (it.hasNext()) {
+            it.next();
+            bin_count++;
+        }
+        it.stepOut();
+    	assertSame("tree and binary iterator should have the same size",
+    	           tree_count, bin_count);
     }
 
     public void testBinaryAnnotation()

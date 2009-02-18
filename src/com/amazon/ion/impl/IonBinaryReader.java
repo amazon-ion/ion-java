@@ -617,52 +617,6 @@ public final class IonBinaryReader
         return _top;
     }
 
-    public int getContainerSize()
-    {
-        int size = 0;
-        boolean counting_a_struct = false;
-
-        if (_state != S_BEFORE_CONTENTS) {
-            throw new IllegalStateException();
-        }
-        int tid = (_value_tid >>> 4);
-        switch (tid) {
-            case IonConstants.tidSexp:
-            case IonConstants.tidList:
-                counting_a_struct = false;
-                break;
-            case IonConstants.tidStruct:
-                counting_a_struct = true;
-                break;
-            default:
-                throw new IllegalStateException();
-        }
-
-        int original_position = _reader.position();
-
-        try {
-            int aend = _value_len + original_position;
-
-            while (_reader.position() < aend) {
-                if (counting_a_struct) {
-                    int fldid = _reader.readVarUInt();
-                    assert fldid == fldid;
-                }
-                int td = _reader.read();
-                int vlen = this.read_length(td);
-                _reader.skip(vlen);
-                size++;
-            }
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-
-        _reader.position(original_position);
-        return size;
-    }
-
-
     public void stepIn()
     {
         if (_state != S_BEFORE_CONTENTS) {
@@ -767,14 +721,6 @@ public final class IonBinaryReader
             throw new IllegalStateException();
         }
         return _value_type;
-    }
-
-    public int getTypeId()
-    {
-        if (_eof || _state == IonBinaryReader.S_BEFORE_TID) {
-            throw new IllegalStateException();
-        }
-        return ((_value_tid >>> 4) & 0xf);
     }
 
     public int[] getTypeAnnotationIds()

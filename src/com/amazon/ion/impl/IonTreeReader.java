@@ -116,13 +116,6 @@ public final class IonTreeReader
         return this._curr.getType();
     }
 
-    public int getContainerSize() {
-        if (!(this._curr instanceof IonContainer)) {
-            throw new IllegalStateException("current value must be a container");
-        }
-        return ((IonContainer)_curr).size();
-    }
-
     public void stepIn()
     {
         if (!(this._curr instanceof IonContainer)) {
@@ -187,11 +180,6 @@ public final class IonTreeReader
     public IonType getType()
     {
         return (_curr == null) ? null : _curr.getType();
-    }
-
-    public int getTypeId()
-    {
-        return (_curr == null) ? -1 : _curr.getType().ordinal();
     }
 
     public String[] getTypeAnnotations()

@@ -278,35 +278,6 @@ public final class IonTextReader
         _annotation_count = 0;
     }
 
-    public int getContainerSize() {
-        int size = 0;
-
-        if (_value_type == null || _eof) {
-            throw new IllegalStateException();
-        }
-        switch (_value_type) {
-            case STRUCT:
-            case LIST:
-            case SEXP:
-                // this is the OK case
-                break;
-            default:
-                throw new IllegalStateException();
-        }
-
-        save_state();
-
-        stepIn();
-        while (hasNext()) {
-            next();
-            size++;
-        }
-
-        restore_state();
-
-        return size;
-    }
-
     public void stepIn()
     {
         if (_value_type == null || _eof) {
@@ -530,27 +501,6 @@ public final class IonTextReader
         return table;
     }
 
-    public int getTypeId()
-    {
-        switch (_value_type) {
-            case NULL:      return IonConstants.tidNull;
-            case BOOL:      return IonConstants.tidBoolean;
-            case INT:
-                // BUGBUG: we really need to look at the sign of the token for this
-                            return IonConstants.tidPosInt;
-            case FLOAT:     return IonConstants.tidFloat;
-            case DECIMAL:   return IonConstants.tidDecimal;
-            case TIMESTAMP: return IonConstants.tidTimestamp;
-            case STRING:    return IonConstants.tidString;
-            case SYMBOL:    return IonConstants.tidSymbol;
-            case BLOB:      return IonConstants.tidBlob;
-            case CLOB:      return IonConstants.tidClob;
-            case STRUCT:    return IonConstants.tidStruct;
-            case LIST:      return IonConstants.tidList;
-            case SEXP:      return IonConstants.tidSexp;
-        }
-        return -1;
-    }
 
     public IonType getType()
     {
@@ -643,61 +593,58 @@ public final class IonTextReader
 
     public IonValue getIonValue(IonSystem sys)
     {
-        int tid = getTypeId();
         if (isNullValue()) {
-            switch (tid) {
-            case IonConstants.tidNull:      return sys.newNull();
-            case IonConstants.tidBoolean:   return sys.newNullBool();
-            case IonConstants.tidPosInt:
-            case IonConstants.tidNegInt:    return sys.newNullInt();
-            case IonConstants.tidFloat:     return sys.newNullFloat();
-            case IonConstants.tidDecimal:   return sys.newNullDecimal();
-            case IonConstants.tidTimestamp: return sys.newNullTimestamp();
-            case IonConstants.tidSymbol:    return sys.newNullSymbol();
-            case IonConstants.tidString:    return sys.newNullString();
-            case IonConstants.tidClob:      return sys.newNullClob();
-            case IonConstants.tidBlob:      return sys.newNullBlob();
-            case IonConstants.tidList:      return sys.newNullList();
-            case IonConstants.tidSexp:      return sys.newNullSexp();
-            case IonConstants.tidStruct:    return sys.newNullString();
+            switch (_value_type) {
+            case NULL:      return sys.newNull();
+            case BOOL:      return sys.newNullBool();
+            case INT:       return sys.newNullInt();
+            case FLOAT:     return sys.newNullFloat();
+            case DECIMAL:   return sys.newNullDecimal();
+            case TIMESTAMP: return sys.newNullTimestamp();
+            case SYMBOL:    return sys.newNullSymbol();
+            case STRING:    return sys.newNullString();
+            case CLOB:      return sys.newNullClob();
+            case BLOB:      return sys.newNullBlob();
+            case LIST:      return sys.newNullList();
+            case SEXP:      return sys.newNullSexp();
+            case STRUCT:    return sys.newNullString();
             default:
                 throw new IonException("unrecognized type encountered");
             }
         }
 
-        switch (tid) {
-        case IonConstants.tidNull:      return sys.newNull();
-        case IonConstants.tidBoolean:   return sys.newBool(booleanValue());
-        case IonConstants.tidPosInt:
-        case IonConstants.tidNegInt:    return sys.newInt(longValue());
-        case IonConstants.tidFloat:     return sys.newFloat(doubleValue());
-        case IonConstants.tidDecimal:   return sys.newDecimal(bigDecimalValue());
-        case IonConstants.tidTimestamp:
+        switch (_value_type) {
+        case NULL:      return sys.newNull();
+        case BOOL:      return sys.newBool(booleanValue());
+        case INT:       return sys.newInt(longValue());
+        case FLOAT:     return sys.newFloat(doubleValue());
+        case DECIMAL:   return sys.newDecimal(bigDecimalValue());
+        case TIMESTAMP:
             IonTimestamp t = sys.newNullTimestamp();
             TtTimestamp ti = timestampValue();
             t.setValue(ti);
             return t;
-        case IonConstants.tidSymbol:    return sys.newSymbol(stringValue());
-        case IonConstants.tidString:    return sys.newString(stringValue());
-        case IonConstants.tidClob:
+        case SYMBOL:    return sys.newSymbol(stringValue());
+        case STRING:    return sys.newString(stringValue());
+        case CLOB:
             IonClob clob = sys.newNullClob();
             // FIXME inefficient: both newBytes and setBytes copy the data
             clob.setBytes(newBytes());
             return clob;
-        case IonConstants.tidBlob:
+        case BLOB:
             IonBlob blob = sys.newNullBlob();
             // FIXME inefficient: both newBytes and setBytes copy the data
             blob.setBytes(newBytes());
             return blob;
-        case IonConstants.tidList:
+        case LIST:
             IonList list = sys.newNullList();
             fillContainerList(sys, list);
             return list;
-        case IonConstants.tidSexp:
+        case SEXP:
             IonSexp sexp = sys.newNullSexp();
             fillContainerList(sys, sexp);
             return sexp;
-        case IonConstants.tidStruct:
+        case STRUCT:
             IonStruct struct = sys.newNullStruct();
             fillContainerStruct(sys, struct);
             return struct;
