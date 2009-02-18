@@ -66,6 +66,15 @@ public abstract class SystemProcessingTestCase
     protected abstract void checkInt(long expected)
         throws Exception;
 
+    protected abstract void checkDecimal(double expected)
+        throws Exception;
+
+    protected abstract void checkFloat(double expected)
+        throws Exception;
+
+    protected abstract void checkTimestamp(String expected)
+        throws Exception;
+
     protected abstract void checkEof()
         throws Exception;
 
@@ -424,6 +433,51 @@ public abstract class SystemProcessingTestCase
     }
 
     // TODO similar tests on clob
+
+    public void testPosInt()
+        throws Exception
+    {
+        startIteration("+1");
+        nextValue();
+        checkSymbol("+");
+        nextValue();
+        checkInt(1);
+        checkEof();
+    }
+
+    public void testPosDecimal()
+        throws Exception
+    {
+        startIteration("+123d0");
+        nextValue();
+        checkSymbol("+");
+        nextValue();
+        checkDecimal(123D);
+        checkEof();
+    }
+
+    public void testPosFloat()
+        throws Exception
+    {
+        startIteration("+123e0");
+        nextValue();
+        checkSymbol("+");
+        nextValue();
+        checkFloat(123D);
+        checkEof();
+    }
+
+    public void testPosTimestamp()
+        throws Exception
+    {
+        startIteration("+2009-02-18");
+        nextValue();
+        checkSymbol("+");
+        nextValue();
+        // FIXME this should only by YMD
+        checkTimestamp("2009-02-18T00:00:00.000-00:00");
+        checkEof();
+    }
 
 
     //=========================================================================

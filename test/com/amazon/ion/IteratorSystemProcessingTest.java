@@ -83,6 +83,18 @@ public class IteratorSystemProcessingTest
     }
 
     @Override
+    protected void checkDecimal(double expected) throws Exception
+    {
+        checkDecimal(expected, myCurrentValue);
+    }
+
+    @Override
+    protected void checkFloat(double expected) throws Exception
+    {
+        checkFloat(expected, myCurrentValue);
+    }
+
+    @Override
     protected void checkString(String expected) throws Exception
     {
         checkString(expected, myCurrentValue);
@@ -106,6 +118,12 @@ public class IteratorSystemProcessingTest
         throws Exception
     {
         checkSymbol(expected, myCurrentValue);
+    }
+
+    @Override
+    protected void checkTimestamp(String expected) throws Exception
+    {
+        checkTimestamp(expected, myCurrentValue);
     }
 
     @Override

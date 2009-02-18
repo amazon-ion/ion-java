@@ -665,7 +665,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
             this.unread(c2);
             inQuotedContent = true;
             return scanIdentifier(c);
-        case '-': case '+':
+        case '-':
             c2 = read();
             if (c2 >= '0' && c2 <= '9') {
                 this.unread(c2);
@@ -682,7 +682,12 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
                 return scanOperator(c);
             }
         }
-        throw new IonException("bad token "+c+" encountered at line " + this.getLineNumber() + " column " + this.getColumn());
+
+        String message =
+            "Unexpected character " + Text.printCodePointAsString(c) +
+            " encountered at line " + this.getLineNumber() +
+            " column " + this.getColumn();
+        throw new IonException(message);
     }
 
 

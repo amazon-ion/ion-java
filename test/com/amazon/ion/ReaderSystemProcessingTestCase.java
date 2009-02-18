@@ -68,7 +68,23 @@ public abstract class ReaderSystemProcessingTestCase
     protected void checkInt(long expected) throws Exception
     {
         assertSame(IonType.INT, myReader.getType());
-        assertEquals(expected, myReader.longValue());
+        assertEquals("int content", expected, myReader.longValue());
+    }
+
+    @Override
+    protected void checkDecimal(double expected) throws Exception
+    {
+        assertSame(IonType.DECIMAL, myReader.getType());
+        // TODO also test longValue, bigDecimalValue, etc.
+//        assertEquals("decimal content", expected, myReader.longValue());
+        assertEquals("decimal content", expected, myReader.doubleValue());
+    }
+
+    @Override
+    protected void checkFloat(double expected) throws Exception
+    {
+        assertSame(IonType.FLOAT, myReader.getType());
+        assertEquals("float content", expected, myReader.doubleValue());
     }
 
     @Override
@@ -96,6 +112,16 @@ public abstract class ReaderSystemProcessingTestCase
         if (!(myReader instanceof IonBinaryReader)) {
             assertEquals(expectedSid, myReader.getSymbolId());
         }
+    }
+
+
+    @Override
+    protected void checkTimestamp(String expected) throws Exception
+    {
+        assertSame(IonType.TIMESTAMP, myReader.getType());
+        // TODO handle null.timestamp
+        assertEquals("timestamp",
+                     expected, myReader.timestampValue().toString());
     }
 
     @Override

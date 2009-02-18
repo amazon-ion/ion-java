@@ -410,6 +410,7 @@ public abstract class IonTestCase
      */
     public void checkInt(Long expected, IonValue actual)
     {
+        assertSame(IonType.INT, actual.getType());
         IonInt i = (IonInt) actual;
 
         if (expected == null) {
@@ -427,9 +428,73 @@ public abstract class IonTestCase
      */
     public void checkInt(Integer expected, IonValue actual)
     {
-        assertSame(IonType.INT, actual.getType());
         checkInt((expected == null ? null : expected.longValue()), actual);
     }
+
+
+    /**
+     * Checks that the value is an IonDecimal with the given value.
+     * @param expected may be null to check for null.decimal
+     */
+    public void checkDecimal(Double expected, IonValue actual)
+    {
+        assertSame(IonType.DECIMAL, actual.getType());
+        IonDecimal i = (IonDecimal) actual;
+
+        if (expected == null) {
+            assertTrue("expected null value", actual.isNullValue());
+        }
+        else
+        {
+            assertEquals("decimal content",
+                         expected.doubleValue(), i.doubleValue());
+        }
+    }
+
+
+    /**
+     * Checks that the value is an IonTimestamp with the given value.
+     * @param expected may be null to check for null.timestamp
+     */
+    public void checkTimestamp(String expected, IonValue actual)
+    {
+        assertSame(IonType.TIMESTAMP, actual.getType());
+        IonTimestamp v = (IonTimestamp) actual;
+
+        if (expected == null) {
+            assertTrue("expected null value", v.isNullValue());
+            assertNull(v.timestampValue());
+        }
+        else
+        {
+            assertEquals("timestamp content",
+                         expected, v.timestampValue().toString());
+            assertEquals("timestamp content",
+                         expected, v.toString());
+        }
+    }
+
+
+    /**
+     * Checks that the value is an IonFloat with the given value.
+     * @param expected may be null to check for null.float
+     */
+    public void checkFloat(Double expected, IonValue actual)
+    {
+        assertSame(IonType.FLOAT, actual.getType());
+        IonFloat i = (IonFloat) actual;
+
+        if (expected == null) {
+            assertTrue("expected null value", actual.isNullValue());
+        }
+        else
+        {
+            assertEquals("decimal content",
+                         expected.doubleValue(), i.doubleValue());
+        }
+    }
+
+
 
     public void checkNullNull(IonValue actual)
     {

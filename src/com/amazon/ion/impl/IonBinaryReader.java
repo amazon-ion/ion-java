@@ -980,12 +980,17 @@ public final class IonBinaryReader
             throw new IllegalStateException();
         }
         int tid = (_value_tid >>> 4);
-        if (tid != IonConstants.tidFloat) {
-            throw new IllegalStateException();
-        }
-
         try {
-            value = _reader.readFloat(_value_len);
+            if (tid == IonConstants.tidDecimal) {
+                BigDecimal dec = _reader.readDecimal(_value_len);
+                value = dec.doubleValue();
+            }
+            else if (tid == IonConstants.tidFloat) {
+                value = _reader.readFloat(_value_len);
+            }
+            else {
+                throw new IllegalStateException();
+            }
         }
         catch (IOException e) {
             throw new IonException(e);
@@ -1002,9 +1007,6 @@ public final class IonBinaryReader
         int tid = (_value_tid >>> 4);
         if (tid != IonConstants.tidDecimal) {
             throw new IllegalStateException();
-        }
-        if (tid == IonConstants.tidNull) {
-            throw new NullPointerException();
         }
 
         BigDecimal value;

@@ -325,12 +325,12 @@ public class TimestampTest
 
     public void testNegativeYear()
     {
-        badValue("-2000-01-01");
+        badValue("[ -2000-01-01 ]");
     }
 
     public void testPositiveYear()
     {
-        badValue("+2000-01-01");
+        badValue("[ +2000-01-01 ]");
     }
 
     public void testYearOne()

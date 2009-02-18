@@ -598,6 +598,7 @@ loop:   for (;;) {
             case '\'':
                 t = read_quoted_symbol(c);
                 break loop;
+            case '+':
             case '<': case '>': case '*': case '=': case '^': case '&': case '|':
             case '~': case ';': case '!': case '?': case '@': case '%': case '`':
             	t = this.read_symbol_extended(c);
@@ -623,8 +624,7 @@ loop:   for (;;) {
                 t = read_number(c);
                 break loop;
             case '-':
-            case '+':
-            	// see if we have a real number or what might be an extended symbol
+            	// see if we have a number or what might be an extended symbol
             	c2 = this.read_char();
             	this.unread_char(c2);
             	if (Character.isDigit(c2)) {

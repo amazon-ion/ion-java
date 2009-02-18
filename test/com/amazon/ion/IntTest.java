@@ -118,6 +118,15 @@ public class IntTest
         assertEquals(Integer.MIN_VALUE, value.intValue());
     }
 
+
+    public void testPositiveSign()
+    {
+        // Array keeps this from parsing as datagram "+ 1"
+        badValue("[+1]");
+        badValue("[+0]");
+    }
+
+
     public void testNegativeIntRoundTrip()
     {
         IonInt i = system().newInt(-20);
