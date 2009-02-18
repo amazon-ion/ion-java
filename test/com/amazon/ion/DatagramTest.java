@@ -1,10 +1,10 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
+import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0;
+import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0_SID;
 
 import com.amazon.ion.impl.IonSystemImpl;
@@ -373,6 +373,39 @@ public class DatagramTest
         }
         catch (IllegalArgumentException e) { }
     }
+
+
+    public void testNewDatagramWithImports()
+    {
+        final int FRED_ID_OFFSET   = ION_1_0_MAX_ID;
+        final int LOCAL_ID_OFFSET  = FRED_ID_OFFSET + FRED_MAX_IDS[1];
+
+        SymbolTable fred1   = Symtabs.register("fred",   1, catalog());
+
+        IonDatagram dg = system().newDatagram(fred1);
+        dg.add(system().newSymbol("fred_2"));
+        dg.add(system().newSymbol("localSym"));
+
+
+        byte[] bytes = dg.toBytes();
+        dg = loader().load(bytes);
+        // TODO dg is dirty at this point... why? It's freshly loaded!
+
+        assertEquals(4, dg.systemSize());
+
+        IonValue f2sym = dg.systemGet(2);
+        IonValue local = dg.systemGet(3);
+
+        checkSymbol("fred_2",   FRED_ID_OFFSET + 2,   f2sym);
+        checkSymbol("localSym", LOCAL_ID_OFFSET + 1,  local);
+
+        SymbolTable symtab = f2sym.getSymbolTable();
+        assertSame(symtab, local.getSymbolTable());
+        SymbolTable[] importedTables = symtab.getImportedTables();
+        assertEquals(1, importedTables.length);
+        assertSame(fred1, importedTables[0]);
+    }
+
 
     public void testCloningDatagram()
     {

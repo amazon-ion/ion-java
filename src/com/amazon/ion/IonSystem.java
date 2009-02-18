@@ -75,7 +75,7 @@ public interface IonSystem
      * use it appropriately. Otherwise, the local table will use this system's
      * {@linkplain #getCatalog() default catalog}.
      *
-     * @param imports the set of initial symbols.
+     * @param imports the set of shared symbol tables to import.
      * The first (and only the first) may be a system table.
      *
      * @return a new local symbol table.
@@ -146,6 +146,26 @@ public interface IonSystem
      *   if {@code initialChild} is an {@link IonDatagram}.
      */
     public IonDatagram newDatagram(IonValue initialChild);
+
+
+    /**
+     * Creates a new datagram, bootstrapped with imported symbol tables.
+     * Generally an application will use this to aquire a datagram, then adds
+     * values to it, then calls {@link IonDatagram#getBytes(byte[])}
+     * (or similar) to extract binary data.
+     *
+     * @param imports the set of shared symbol tables to import.
+     * The first (and only the first) may be a system table.
+     *
+     * @return a new datagram with no user values.
+     *
+     * @throws IllegalArgumentException if any import is a local table,
+     * or if any but the first is a system table.
+     *
+     * @see #newLocalSymbolTable(SymbolTable...)
+     */
+    public IonDatagram newDatagram(SymbolTable... imports);
+
 
 
     /**

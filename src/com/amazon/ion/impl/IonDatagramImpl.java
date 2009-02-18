@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -786,6 +784,8 @@ public final class IonDatagramImpl
                         }
 
                         symtab = currentSymtab;
+
+                        // TODO this shouldn't happen if ichild is local symtab
                         ichild.setSymbolTable(symtab);
                     }
 

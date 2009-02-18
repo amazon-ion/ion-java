@@ -241,6 +241,25 @@ public class IonSystemImpl
         return datagram;
     }
 
+    public IonDatagram newDatagram(SymbolTable... imports)
+    {
+        // TODO this implementation is awkward.
+        UnifiedSymbolTable lst = newLocalSymbolTable(imports);
+
+        IonDatagramImpl datagram = newDatagram();
+        IonWriter newWriter = newWriter(datagram);
+        try
+        {
+            lst.writeTo(newWriter);
+        }
+        catch (IOException e)
+        {
+            // Shouldn't happen
+            throw new Error(e);
+        }
+        return datagram;
+    }
+
 
     public IonLoader newLoader()
     {
