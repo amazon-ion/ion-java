@@ -1,10 +1,9 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import static com.amazon.ion.Symtabs.LocalSymbolTablePrefix;
+import static com.amazon.ion.SystemSymbolTable.ION_1_0;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
 
 import com.amazon.ion.impl.SymbolTableTest;
@@ -498,12 +497,15 @@ public abstract class SystemProcessingTestCase
     public void testSystemIterationShowsIvm()
         throws Exception
     {
-        String text = SystemSymbolTable.ION_1_0;
+        String text = ION_1_0;
 
         prepare(text);
         startSystemIteration();
         nextValue();
-        checkSymbol(SystemSymbolTable.ION_1_0, SystemSymbolTable.ION_1_0_SID);
+        checkSymbol(ION_1_0, SystemSymbolTable.ION_1_0_SID);
+        SymbolTable st = currentSymtab();
+        assertTrue(st.isSystemTable());
+        assertEquals(ION_1_0, st.getSystemId());
         checkEof();
     }
 }

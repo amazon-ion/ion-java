@@ -632,13 +632,8 @@ public final class IonDatagramImpl
 
         while (_rawStream.hasNext())
         {
-            IonValueImpl     child = (IonValueImpl) _rawStream.next();
+            IonValueImpl child = _rawStream.next();
             SymbolTable child_symtab = child.getSymbolTable();
-
-            // Sadly, this is true even for IVMs because systemReader always
-            // has a local symtab as current. It (and IonParser, etc) can't
-            // automatically upgrade a system symtab into a local symtab.
-            assert child_symtab.isLocalTable();
 
             // as we insert the first value we need to check and make sure there
             // is an IonVersionMarker in place (which is required for a datagram
@@ -659,11 +654,8 @@ public final class IonDatagramImpl
                 // have to add it to the system contents
 
                 if (_system.valueIsSystemId(child)) {
-                    // If this was loaded by the parser it will have a local
-                    // symtab instead of it's correct system symtab.
-                    _system.blessSystemIdSymbol((IonSymbolImpl) child);
-                    // FIXME now previous_symtab is incorrect
-
+                    // Not sure why this is the case, but it forces the whole
+                    // datagram to be marked dirty (see below).
                     assert child.isDirty();
                 }
 
@@ -694,7 +686,8 @@ public final class IonDatagramImpl
                 _userContents.add(child);
             }
 
-            // TODO doc why this would happen. Isn't child fresh from binary?
+            // TODO it would be better if this didn't happen, but IVMs come out
+            // dirty already. See assertion above.
             if (child.isDirty()) {
                 setDirty();
             }

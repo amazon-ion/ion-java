@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -9,7 +7,6 @@ import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.IonBinary.BufferManager;
@@ -255,13 +252,10 @@ public class SystemReader
         else if (_system.valueIsSystemId(curr))
         {
             assert curr.getSymbolTable().isLocalTable(); // Unfortunately
-
-            String systemId = ((IonSymbol)curr).stringValue();
-            SymbolTable identifiedSystemTable =
-                _system.getSystemSymbolTable(systemId);
-
+            // This makes the value dirty:
+            _system.blessSystemIdSymbol((IonSymbolImpl) curr);
+            SymbolTable identifiedSystemTable = curr.getSymbolTable();
             newLocalSymtab = _system.newLocalSymbolTable(identifiedSystemTable);
-            ((IonValueImpl)curr).setSymbolTable(newLocalSymtab);
         }
 
         if (newLocalSymtab != null)
