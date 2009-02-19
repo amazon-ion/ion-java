@@ -209,7 +209,10 @@ public interface SymbolTable
      * very unwise to modify the return value directly.
      *
      * @return a non-null struct.
+     *
+     * @deprecated For internal use only.
      */
+    @Deprecated
     public IonStruct getIonRepresentation();
 
 
