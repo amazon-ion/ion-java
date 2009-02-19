@@ -479,6 +479,19 @@ public abstract class SystemProcessingTestCase
         checkEof();
     }
 
+    public void testSpecialFloats()
+        throws Exception
+    {
+        startIteration("nan +inf -inf");
+        nextValue();
+        checkFloat(Double.NaN);
+        nextValue();
+        checkFloat(Double.POSITIVE_INFINITY);
+        nextValue();
+        checkFloat(Double.NEGATIVE_INFINITY);
+        checkEof();
+    }
+
 
     //=========================================================================
 
