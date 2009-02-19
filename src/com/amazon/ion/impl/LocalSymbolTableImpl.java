@@ -325,9 +325,9 @@ public class LocalSymbolTableImpl
             _symtabElement.get(SystemSymbolTable.IMPORTS);
         if (importsElement instanceof IonList) {
             IonList importsList = (IonList) importsElement;
-            if (! importsList.isNullValue() && importsList.size() != 0)
+            int count = importsList.size();
+            if (count != 0)
             {
-                int count = importsList.size();
                 imports = new ImportedTable[count];
                 for (int i = 0; i < count; i++)
                 {

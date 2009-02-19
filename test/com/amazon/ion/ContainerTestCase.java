@@ -33,13 +33,7 @@ public abstract class ContainerTestCase
     {
         assertTrue(value.isNullValue());
         assertFalse(value.iterator().hasNext());
-
-        try
-        {
-            value.size();
-            fail("Expected NullValueException");
-        }
-        catch (NullValueException e) { }
+        assertEquals(0, value.size());
 
         try
         {

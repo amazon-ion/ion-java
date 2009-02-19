@@ -124,9 +124,8 @@ abstract public class IonContainerImpl
     public int size()
         throws NullValueException
     {
-        validateThisNotNull();
         makeReady();
-        return _contents.size();
+        return (_contents == null ? 0 : _contents.size());
     }
 
     @Override
