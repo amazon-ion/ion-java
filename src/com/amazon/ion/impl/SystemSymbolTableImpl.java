@@ -6,7 +6,6 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.InvalidSystemSymbolException;
 import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
@@ -127,7 +126,7 @@ public class SystemSymbolTableImpl
             }
         }
 
-        return IonSymbol.UNKNOWN_SYMBOL_ID;
+        return UNKNOWN_SYMBOL_ID;
     }
 
     public String findKnownSymbol(int id)
