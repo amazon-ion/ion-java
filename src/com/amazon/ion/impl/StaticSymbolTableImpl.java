@@ -172,10 +172,4 @@ public class StaticSymbolTableImpl
     {
         return size() == 0;
     }
-
-    public boolean isCompatible(SymbolTable other)
-    {
-        // TODO Auto-generated method stub
-        return false;
-    }
 }

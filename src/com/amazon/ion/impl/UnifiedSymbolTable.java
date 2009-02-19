@@ -1029,30 +1029,6 @@ final class UnifiedSymbolTable
     }
 
 
-    public boolean isCompatible(SymbolTable other)
-    {
-        UnifiedSymbolTable master;
-        UnifiedSymbolTable candidate;
-
-        if (!(other instanceof UnifiedSymbolTable)) {
-            return false;
-//          throw new IllegalArgumentException("sorry, both instances must be UnifiedSymbolTable's");
-        }
-
-        master = this;
-        candidate = (UnifiedSymbolTable)other;
-
-        for (int ii=0; ii<candidate._symbols.length; ii++) {
-            Symbol sym = candidate._symbols[ii];
-            if (sym == null) continue;
-            int id = master.findSymbol(sym.name);
-            if (id != sym.sid) {
-                return false;
-            }
-        }
-
-        return true;
-    }
     /**
      * Generate the string representation of a symbol with an unknown id.
      * @param id must be a value greater than zero.

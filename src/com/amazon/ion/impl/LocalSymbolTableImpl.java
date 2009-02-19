@@ -291,13 +291,6 @@ public class LocalSymbolTableImpl
     }
 
 
-    public boolean isCompatible(SymbolTable other)
-    {
-        // FIXME implement LocalSymbolTable.isCompatible()
-        return false;
-    }
-
-
     //=========================================================================
     // Helpers
 

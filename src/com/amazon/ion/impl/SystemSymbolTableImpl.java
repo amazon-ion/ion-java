@@ -192,11 +192,4 @@ public class SystemSymbolTableImpl
     {
         throw new UnsupportedOperationException();
     }
-
-
-    public boolean isCompatible(SymbolTable other)
-    {
-        // FIXME Auto-generated method stub
-        return false;
-    }
 }

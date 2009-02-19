@@ -229,19 +229,12 @@ public interface SymbolTable
     public IonStruct getIonRepresentation();
 
 
+    /**
+     * Writes an Ion representation of this symbol table.
+     *
+     * @param writer must not be null.
+     * @throws IOException if thrown by the writer.
+     */
     public void writeTo(IonWriter writer)
         throws IOException;
-
-
-    /**
-     * Compares the two symbol table to determine if this symbol
-     * table is a strict superset of the other symbol table. A
-     * strict superset in the case is that this symbol table contains
-     * all symbols in the other symbol table and the symbols are
-     * assigned to the same ids.
-     * @param other possible strict subset
-     * @return true if this is a strict superset of other
-     */
-    public boolean isCompatible(SymbolTable other);
-
 }
