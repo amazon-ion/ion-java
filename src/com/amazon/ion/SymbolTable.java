@@ -85,8 +85,21 @@ public interface SymbolTable
      *
      * @return the system identifier; or {@code null} for non-system shared
      *  tables.
+     *
+     * @deprecated Renamed to {@link #getIonVersionId()}.
      */
+    @Deprecated
     public String getSystemId();
+
+    /**
+     * Gets the identifier for the Ion version (and thus the system symbol
+     * table) used by this table.
+     * The version identifier is a string of the form {@code "$ion_X_Y"}.
+     *
+     * @return the version identifier; or {@code null} for non-system shared
+     *  tables.
+     */
+    public String getIonVersionId();
 
 
     /**

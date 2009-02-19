@@ -38,16 +38,16 @@ public interface IonSystem
 
 
     /**
-     * Gets a system symbol table of a specific version.
+     * Gets a system symbol table for a specific version of Ion.
      *
-     * @param systemId must be of the form <code>"$ion_X_Y"</code>.
+     * @param ionVersionId must be of the form <code>"$ion_X_Y"</code>.
      * @return the requested system table.
      *
-     * @throws UnsupportedSystemVersionException if the requested system
-     * version is not supported by this implementation.
+     * @throws UnsupportedIonVersionException if the requested version of
+     * Ion is not supported by this implementation.
      */
-    public SymbolTable getSystemSymbolTable(String systemId)
-        throws UnsupportedSystemVersionException;
+    public SymbolTable getSystemSymbolTable(String ionVersionId)
+        throws UnsupportedIonVersionException;
 
 
     /**

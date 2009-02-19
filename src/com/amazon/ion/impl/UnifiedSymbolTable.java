@@ -376,13 +376,18 @@ final class UnifiedSymbolTable
         return _name;
     }
 
-
+    @Deprecated
     public String getSystemId()
+    {
+        return getIonVersionId();
+    }
+
+    public String getIonVersionId()
     {
         if (this._system_symbols == null) return null;
 
         if (this._system_symbols != this) {
-            return this._system_symbols.getSystemId();
+            return this._system_symbols.getIonVersionId();
         }
         assert isSystemTable();
         return SystemSymbolTable.ION_1_0;

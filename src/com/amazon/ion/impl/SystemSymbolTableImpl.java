@@ -79,10 +79,16 @@ public class SystemSymbolTableImpl
         return this;
     }
 
+    public String getIonVersionId()
+    {
+        return ION_1_0;
+    }
+
     public String getSystemId()
     {
         return ION_1_0;
     }
+
 
 
     public SymbolTable[] getImportedTables()

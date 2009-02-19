@@ -86,10 +86,16 @@ public abstract class AbstractSymbolTable
     }
 
 
-    public String getSystemId()
+
+    public String getIonVersionId()
     {
         // FIXME I'm not sure this is correct...
         return SystemSymbolTable.ION_1_0;
+    }
+
+    public String getSystemId()
+    {
+        return getIonVersionId();
     }
 
     public synchronized int getMaxId()

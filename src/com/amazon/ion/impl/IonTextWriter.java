@@ -104,7 +104,7 @@ public final class IonTextWriter
         super.setSymbolTable(symbols);
 
         startValue();
-        _output.append(symbols.getSystemId());
+        _output.append(symbols.getIonVersionId());
         closeValue();
 
         if (symbols.isLocalTable())

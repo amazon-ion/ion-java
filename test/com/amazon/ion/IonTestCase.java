@@ -561,7 +561,7 @@ public abstract class IonTestCase
 
         SymbolTable system = symtab.getSystemSymbolTable();
         checkSystemTable(system);
-        assertEquals(system.getSystemId(), symtab.getSystemId());
+        assertEquals(system.getIonVersionId(), symtab.getIonVersionId());
     }
 
     /**
@@ -590,7 +590,7 @@ public abstract class IonTestCase
         assertTrue(symtab.isSystemTable());
         assertSame(symtab, symtab.getSystemSymbolTable());
         assertEquals(SystemSymbolTable.ION_1_0_MAX_ID, symtab.getMaxId());
-        assertEquals(SystemSymbolTable.ION_1_0, symtab.getSystemId());
+        assertEquals(SystemSymbolTable.ION_1_0, symtab.getIonVersionId());
     }
 
     public SymbolTable findImportedTable(SymbolTable localTable,

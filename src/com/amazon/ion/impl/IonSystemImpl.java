@@ -36,7 +36,7 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.TtTimestamp;
-import com.amazon.ion.UnsupportedSystemVersionException;
+import com.amazon.ion.UnsupportedIonVersionException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.system.SimpleCatalog;
 import com.amazon.ion.util.Printer;
@@ -88,14 +88,14 @@ public class IonSystemImpl
 
 
     public UnifiedSymbolTable getSystemSymbolTable(String systemId)
-        throws UnsupportedSystemVersionException
+        throws UnsupportedIonVersionException
     {
         if (systemId.equals(SystemSymbolTable.ION_1_0))
         {
             return mySystemSymbols;
         }
 
-        throw new UnsupportedSystemVersionException(systemId);
+        throw new UnsupportedIonVersionException(systemId);
     }
 
 

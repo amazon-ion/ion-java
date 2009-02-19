@@ -505,7 +505,7 @@ public abstract class SystemProcessingTestCase
         checkSymbol(ION_1_0, SystemSymbolTable.ION_1_0_SID);
         SymbolTable st = currentSymtab();
         assertTrue(st.isSystemTable());
-        assertEquals(ION_1_0, st.getSystemId());
+        assertEquals(ION_1_0, st.getIonVersionId());
         checkEof();
     }
 }
