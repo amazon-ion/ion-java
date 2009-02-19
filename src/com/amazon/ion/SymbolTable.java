@@ -14,6 +14,14 @@ import java.util.Iterator;
 public interface SymbolTable
 {
     /**
+     * Indicates that a symbol's integer ID could not be determined.  That's
+     * generally the case when constructing value instances that are not yet
+     * contained by a datagram.
+     */
+    public final static int UNKNOWN_SYMBOL_ID = -1;
+
+
+    /**
      * Determines whether this symbol table is local, and therefore unnamed,
      * unversioned, and modifiable.
      * <p>
@@ -132,7 +140,7 @@ public interface SymbolTable
      *
      * @param name must not be null or empty.
      * @return the id of the requested symbol, or
-     * {@link IonSymbol#UNKNOWN_SYMBOL_ID} if it's not defined.
+     * {@link #UNKNOWN_SYMBOL_ID} if it's not defined.
      */
     public int findSymbol(String name);
 

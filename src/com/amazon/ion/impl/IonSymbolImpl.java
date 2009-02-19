@@ -1,7 +1,8 @@
-/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.impl.IonConstants.BB_TOKEN_LEN;
 
 import com.amazon.ion.EmptySymbolException;

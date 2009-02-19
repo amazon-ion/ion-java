@@ -11,7 +11,6 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
@@ -441,11 +440,11 @@ final class UnifiedSymbolTable
         if (name == null || name.length() < 1) {
             throw new IllegalArgumentException("a symbol name must have something in it");
         }
-        int sid = IonSymbol.UNKNOWN_SYMBOL_ID;
+        int sid = UNKNOWN_SYMBOL_ID;
         if (_system_symbols != null && _system_symbols != this) {
             sid = _system_symbols.findSymbol(name);
         }
-        if (sid == IonSymbol.UNKNOWN_SYMBOL_ID) {
+        if (sid == UNKNOWN_SYMBOL_ID) {
             Integer isid = _id_map.get(name);
             if (isid != null) {
                 sid = isid;
@@ -456,7 +455,7 @@ final class UnifiedSymbolTable
                     try {
                         sid = Integer.parseInt(sidText);
                         if (sid < 0) {
-                            sid = IonSymbol.UNKNOWN_SYMBOL_ID;
+                            sid = UNKNOWN_SYMBOL_ID;
                         }
                         // else fall through
                     }
