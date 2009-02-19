@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -77,7 +75,13 @@ public abstract class IonLobImpl
         return new ByteArrayInputStream(_lob_value);
     }
 
+    @Deprecated
     public final byte[] newBytes()
+    {
+        return getBytes();
+    }
+
+    public final byte[] getBytes()
     {
         makeReady();
         return (_lob_value == null ? null : _lob_value.clone());

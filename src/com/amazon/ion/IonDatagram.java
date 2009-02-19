@@ -1,11 +1,10 @@
-/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Iterator;
-
 
 
 /**
@@ -18,17 +17,19 @@ import java.util.Iterator;
  * but applications that need visibility into that data can use the
  * <code>system*()</code> methods.
  * <p>
- * <b>Warning:</b> most modification methods are not yet implemented!
+ * <b>Warning:</b> some inherited methods are not yet implemented or are
+ * unsupported for datagrams.
  */
 public interface IonDatagram
     extends IonSequence
 {
-
-//    public void add(IonValue element)
-//        throws ContainedValueException, NullPointerException;
-
-//    public void add(int index, IonValue element)
-//        throws ContainedValueException, NullPointerException;
+    /**
+     * This inherited method is not yet supported by datagrams.
+     *
+     * @throws UnsupportedOperationException at every call.
+     */
+    public void add(int index, IonValue element)
+        throws ContainedValueException, NullPointerException;
 
 
     /**
@@ -124,8 +125,22 @@ public interface IonDatagram
      * @return a new, non-empty byte array containing the encoded datagram.
      *
      * @throws IonException if there's an error encoding the data.
+     *
+     * @deprecated renamed to {@link #getBytes()} for consistency with other
+     * interfaces.
      */
+    @Deprecated
     public byte[] toBytes()
+        throws IonException;
+
+    /**
+     * Copies the binary-encoded form of this datagram into a new byte array.
+     *
+     * @return a new, non-empty byte array containing the encoded datagram.
+     *
+     * @throws IonException if there's an error encoding the data.
+     */
+    public byte[] getBytes()
         throws IonException;
 
 
@@ -206,12 +221,18 @@ public interface IonDatagram
     public void addTypeAnnotation(String annotation);
 
     /**
+     * This inherited method is not yet supported by datagrams.
+     *
+     * @throws UnsupportedOperationException at every call.
+     */
+    public void clear();
+
+    /**
      * This inherited method is not supported by datagrams.
      *
      * @throws UnsupportedOperationException at every call.
      */
     public void makeNull();
-
 
     public IonDatagram clone();
 }

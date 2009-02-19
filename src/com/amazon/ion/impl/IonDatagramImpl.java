@@ -112,7 +112,7 @@ public final class IonDatagramImpl
     @Override
     public IonDatagramImpl clone()
     {
-        byte[] data = this.toBytes();
+        byte[] data = this.getBytes();
 
         IonDatagramImpl clone = new IonDatagramImpl(this._system, data);
 
@@ -942,7 +942,13 @@ public final class IonDatagramImpl
         return _buffer.buffer().size();
     }
 
+    @Deprecated
     public byte[] toBytes() throws IonException
+    {
+        return getBytes();
+    }
+
+    public byte[] getBytes() throws IonException
     {
         int len = byteSize();
         byte[] bytes = new byte[len];

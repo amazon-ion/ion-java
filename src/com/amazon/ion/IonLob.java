@@ -1,13 +1,12 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import java.io.InputStream;
 
 /**
- *
+ * Common functionality of Ion <code>blob</code> and <code>clob</code>
+ * types.
  */
 public interface IonLob
     extends IonValue
@@ -27,8 +26,21 @@ public interface IonLob
      *
      * @return a new byte array,
      * or <code>null</code> if <code>this.isNullValue()</code>.
+     *
+     * @deprecated renamed to {@link #getBytes()} for consistency with other
+     * interfaces.
      */
+    @Deprecated
     public byte[] newBytes();
+
+    /**
+     * Gets all the data of this lob, or <code>null</code> if this is an Ion
+     * <code>null</code> value.
+     *
+     * @return a new byte array,
+     * or <code>null</code> if <code>this.isNullValue()</code>.
+     */
+    public byte[] getBytes();
 
     /**
      * Sets the data of this lob, copying bytes from an array.
@@ -47,9 +59,9 @@ public interface IonLob
      * @param bytes the new data for the lob;
      * may be <code>null</code> to make this an Ion <code>null</code> value.
      * @param offset the offset within the array of the first byte to copy;
-     * must be non-negative an no larger than {@code bytes.length}.
+     * must be non-negative and no larger than {@code bytes.length}.
      * @param length the number of bytes to be copied from the given array;
-     * must be non-negative an no larger than {@code bytes.length - offset}.
+     * must be non-negative and no larger than {@code bytes.length - offset}.
      *
      * @throws IndexOutOfBoundsException
      * if the preconditions on the {@code offset} and {@code length} parameters
