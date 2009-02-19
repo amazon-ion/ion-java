@@ -2,11 +2,16 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.util.IonTextUtils.isDigit;
+import static com.amazon.ion.util.IonTextUtils.isOperatorPart;
+import static com.amazon.ion.util.IonTextUtils.isWhitespace;
+import static com.amazon.ion.util.IonTextUtils.printCodePointAsString;
+
 import com.amazon.ion.IonException;
 import com.amazon.ion.TtTimestamp;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.impl.IonConstants.HighNibble;
-import com.amazon.ion.util.Text;
+import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
 import java.io.PushbackReader;
 import java.io.Reader;
@@ -168,7 +173,7 @@ SimpleDateFormat DATE_TIME_SECS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm:ss");
                             int fraction = 0, fraclen = 0;
                             for (int ii=20; ii<s.length(); ii++) {
                                 char c = s.charAt(ii);
-                                if (!Text.isDigit(c, 10)) break;
+                                if (!isDigit(c, 10)) break;
                                 fraction *= 10;
                                 fraction += c - '0';
                                 fraclen ++;
@@ -551,7 +556,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
         int c;
         do {
             c = read();
-        } while (Text.isWhitespace(c));
+        } while (isWhitespace(c));
         return c;
     }
 
@@ -598,7 +603,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
                     unread(c2);
                 }
             }
-            if (/* inContent ||*/ !Text.isWhitespace(c)) {
+            if (/* inContent ||*/ !isWhitespace(c)) {
                 break;
             }
         }
@@ -675,16 +680,16 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
             this.unread(c2);                // cas: otherwise the character following the symbol is lost
             // fall through to the default case
         default:
-            if (Text.isIdentifierStartChar(c)) {
+            if (IonTextUtils.isIdentifierStart(c)) {
                 return scanIdentifier(c);
             }
-            if (is_in_expression && Text.isOperatorChar(c)) {
+            if (is_in_expression && isOperatorPart(c)) {
                 return scanOperator(c);
             }
         }
 
         String message =
-            "Unexpected character " + Text.printCodePointAsString(c) +
+            "Unexpected character " + printCodePointAsString(c) +
             " encountered at line " + this.getLineNumber() +
             " column " + this.getColumn();
         throw new IonException(message);
@@ -775,7 +780,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
             value.append((char)c);
             for (;;) {
                 c = read();
-                if (!Text.isIdentifierFollowChar(c)) {
+                if (!IonTextUtils.isIdentifierPart(c)) {
                     break;
                 }
                 value.append((char)c);
@@ -993,7 +998,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
         value.append((char)c);
         for (;;) {
             c = read();
-            if (!Text.isOperatorChar(c)) {
+            if (!IonTextUtils.isOperatorPart(c)) {
                 break;
             }
             value.append((char)c);
@@ -1285,29 +1290,29 @@ sizedloop:
             if ( ! this.isValueTerminatingCharacter(c) ) {
                 final String message =
                     position() + ": Numeric value followed by illegal character "
-                    + Text.printCodePointAsString(c);
+                    + printCodePointAsString(c);
                 throw new IonException(message);
             }
             this.unread(c);
         }
     }
 
-	private final boolean isValueTerminatingCharacter(int c) throws IOException
-	{
-		boolean isTerminator;
+    private final boolean isValueTerminatingCharacter(int c) throws IOException
+    {
+        boolean isTerminator;
 
     	if (c == '/') {
-    		// this is terminating only if it starts a comment of some sort
-    		c = this.read();
-    		this.unread(c);  // we never "keep" this character
-    		isTerminator = (c == '/' || c == '*');
+    	    // this is terminating only if it starts a comment of some sort
+    	    c = this.read();
+    	    this.unread(c);  // we never "keep" this character
+    	    isTerminator = (c == '/' || c == '*');
     	}
     	else {
-    		isTerminator = Text.isNumericStopChar(c);
+    	    isTerminator = IonTextUtils.isNumericStop(c);
     	}
 
     	return isTerminator;
-	}
+    }
 
     public Type readNumber(int c) throws IOException {
         // clear out our string buffer
@@ -1336,7 +1341,7 @@ sizedloop:
         }
 
         // process the initial digit.  Caller has checked that it's a digit.
-        assert Text.isDigit(c, 10);
+        assert isDigit(c, 10);
         value.append((char)c);
         boolean isZero = (c == '0');
         boolean leadingZero = isZero;
@@ -1366,7 +1371,7 @@ sizedloop:
             value.append((char)c);
             break;
         default:
-            if (!Text.isDigit(c, 10)) {
+            if (!isDigit(c, 10)) {
                 checkAndUnreadNumericStopper(c);
                 if (isZero && this.numberType == NT_NEGINT) {
                     t = Type.constPosInt;
@@ -1385,7 +1390,7 @@ sizedloop:
             // read in the remaining whole number digits
             for (;;) {
                 c = this.read();
-                if (!Text.isDigit(c, 10)) break;
+                if (!isDigit(c, 10)) break;
                 value.append((char)c);
                 isZero &= (c == '0');
             }
@@ -1437,7 +1442,7 @@ sizedloop:
         if (this.numberType == NT_DECIMAL) {
             for (;;) {
                 c = this.read();
-                if (!Text.isDigit(c, 10)) break;
+                if (!isDigit(c, 10)) break;
                 value.append((char)c);
             }
             // and see what we ran aground on this time..
@@ -1479,7 +1484,7 @@ sizedloop:
             // we eat the plus sign
             break;
         default:
-            if (!Text.isDigit(c, 10)) {
+            if (!isDigit(c, 10)) {
                 // this they said 'e' then they better put something valid after it!
                 throw new IonException("badly formed number encountered at " + position());
             }
@@ -1491,7 +1496,7 @@ sizedloop:
         // read in the remaining whole number digits and then quit
         for (;;) {
             c = this.read();
-            if (!Text.isDigit(c, 10)) break;
+            if (!isDigit(c, 10)) break;
             value.append((char)c);
         }
 
@@ -1514,7 +1519,7 @@ sizedloop:
         // read in the remaining whole number digits and then quit
         for (;;) {
             c = this.read();
-            if (!Text.isDigit(c, 16)) break;
+            if (!isDigit(c, 16)) break;
             anydigits = true;
             isZero &= (c == '0');
             value.append((char)c);
@@ -1620,7 +1625,7 @@ endofdate:
         // read in the remaining whole number digits and then quit
         for (;;) {
             c = this.read();
-            if (!Text.isDigit(c, 10)) break;
+            if (!isDigit(c, 10)) break;
             len++;
             if (len > limit) {
                 throw new IonException("invalid format " + field + " too long at " + this.position());

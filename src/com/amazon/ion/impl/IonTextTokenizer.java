@@ -4,8 +4,10 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.util.IonTextUtils.printCodePointAsString;
+
 import com.amazon.ion.UnexpectedEofException;
-import com.amazon.ion.util.Text;
+import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
 
 /**
@@ -183,7 +185,7 @@ static final boolean _debug = false;
             isTerminator = (c == '/' || c == '*');
         }
         else {
-            isTerminator = Text.isNumericStopChar(c);
+            isTerminator = IonTextUtils.isNumericStop(c);
         }
 
         return isTerminator;
@@ -1542,7 +1544,7 @@ loop:   for (;;) {
     }
     private final void bad_token(int c)
     {
-        String charStr = Text.printCodePointAsString(c);
+        String charStr = printCodePointAsString(c);
         throw new IonTextReader.IonParsingException("a bad character " + charStr + " was encountered in a token"+input_position());
     }
     /*

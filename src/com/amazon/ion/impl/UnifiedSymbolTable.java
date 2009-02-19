@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.SymbolTableType.LOCAL;
 import static com.amazon.ion.impl.SymbolTableType.SHARED;
+import static com.amazon.ion.util.IonTextUtils.printQuotedSymbol;
 
 import com.amazon.ion.InvalidSystemSymbolException;
 import com.amazon.ion.IonCatalog;
@@ -18,7 +19,7 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.system.SystemFactory;
-import com.amazon.ion.util.Text;
+import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -535,8 +536,8 @@ final class UnifiedSymbolTable
         else if (_symbols[sid] != null) {
             String message =
                 "Cannot redefine $" + sid + " from "
-                + Text.printQuotedSymbol(_symbols[sid].name)
-                + " to " + Text.printQuotedSymbol(sym.name);
+                + printQuotedSymbol(_symbols[sid].name)
+                + " to " + printQuotedSymbol(sym.name);
             throw new IonException(message);
         }
 
@@ -1000,7 +1001,7 @@ final class UnifiedSymbolTable
         {
             String message =
                 "Import of shared table "
-                + Text.printString(name)
+                + IonTextUtils.printString(name)
                 + " lacks a valid max_id field, but an exact match was not"
                 + " found in the catalog";
             if (itab != null) {

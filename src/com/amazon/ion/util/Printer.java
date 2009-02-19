@@ -19,6 +19,7 @@ import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.TtTimestamp;
+import com.amazon.ion.util.IonTextUtils.SymbolVariant;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
@@ -468,13 +469,25 @@ public class Printer
             {
                 writeString(text);
             }
-            else if (Text.symbolNeedsQuoting(text, myQuoteOperators))
-            {
-                Text.printQuotedSymbol(myOut, text);
-            }
             else
             {
-                myOut.append(text);
+                SymbolVariant variant = IonTextUtils.symbolVariant(text);
+                switch (variant)
+                {
+                    case IDENTIFIER:
+                        myOut.append(text);
+                        break;
+                    case OPERATOR:
+                        if (! myQuoteOperators)
+                        {
+                            myOut.append(text);
+                            break;
+                        }
+                        // else fall through...
+                    case QUOTED:
+                        IonTextUtils.printQuotedSymbol(myOut, text);
+                        break;
+                }
             }
         }
 
@@ -483,11 +496,11 @@ public class Printer
         {
             if (myOptions.stringAsJson)
             {
-                Text.printJsonString(myOut, text);
+                IonTextUtils.printJsonString(myOut, text);
             }
             else
             {
-                Text.printString(myOut, text);
+                IonTextUtils.printString(myOut, text);
             }
         }
 
@@ -514,7 +527,7 @@ public class Printer
             else
             {
                 myOut.append(myOptions.blobAsString ? "\"" : "{{");
-                value.appendBase64(myOut);
+                value.printBase64(myOut);
                 myOut.append(myOptions.blobAsString ? "\"" : "}}");
             }
         }
@@ -561,14 +574,14 @@ public class Printer
                     {
                         while ((c = byteStream.read()) != -1)
                         {
-                            Text.printJsonCodePoint(myOut, c);
+                            IonTextUtils.printJsonCodePoint(myOut, c);
                         }
                     }
                     else
                     {
                         while ((c = byteStream.read()) != -1)
                         {
-                            Text.printStringCodePoint(myOut, c);
+                            IonTextUtils.printStringCodePoint(myOut, c);
                         }
                     }
                 }
@@ -839,7 +852,7 @@ public class Printer
         public void writeSymbol(String text)
         throws IOException
         {
-            Text.printJsonString(myOut, text);
+            IonTextUtils.printJsonString(myOut, text);
         }
 
         public void writeFloat(BigDecimal value)

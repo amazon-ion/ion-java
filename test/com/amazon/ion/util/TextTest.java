@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
@@ -26,19 +24,19 @@ public class TextTest
         quotedEverywhere("123");
         quotedEverywhere("hi!");
         quotedEverywhere("hi:");
-        
+
         // Keywords
         quotedEverywhere("true");
         quotedEverywhere("false");
         quotedEverywhere("null");
         quotedEverywhere("null.int");
-        
+
         // Operators
         unquotedInSexp("!");
         unquotedInSexp("<");
         unquotedInSexp("<===");
-        
-        quotedEverywhere("<abc");        
+
+        quotedEverywhere("<abc");
         quotedEverywhere("<abc>");
         quotedEverywhere("abc>");
         quotedEverywhere("< ");
@@ -59,14 +57,20 @@ public class TextTest
 
     private void unquotedAnywhere(String symbol)
     {
+        assertEquals(IonTextUtils.SymbolVariant.IDENTIFIER,
+                     IonTextUtils.symbolVariant(symbol));
+
         // unquoted in sexp
         assertFalse(Text.symbolNeedsQuoting(symbol, false));
         // unquoted elsewhere
         assertFalse(Text.symbolNeedsQuoting(symbol, true));
     }
-    
+
     private void quotedEverywhere(String symbol)
     {
+        assertEquals(IonTextUtils.SymbolVariant.QUOTED,
+                     IonTextUtils.symbolVariant(symbol));
+
         // Quoted in sexp
         assertTrue(Text.symbolNeedsQuoting(symbol, false));
         // Quoted elsewhere
@@ -75,6 +79,9 @@ public class TextTest
 
     private void unquotedInSexp(String symbol)
     {
+        assertEquals(IonTextUtils.SymbolVariant.OPERATOR,
+                     IonTextUtils.symbolVariant(symbol));
+
         // unquoted in sexp
         assertFalse(Text.symbolNeedsQuoting(symbol, false));
         // quoted elsewheres

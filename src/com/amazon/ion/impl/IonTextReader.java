@@ -5,6 +5,7 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_ITERATOR;
+import static com.amazon.ion.util.IonTextUtils.printQuotedSymbol;
 
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonCatalog;
@@ -24,7 +25,6 @@ import com.amazon.ion.TtTimestamp;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.impl.Base64Encoder.BinaryStream;
 import com.amazon.ion.impl.IonTokenReader.Type.timeinfo;
-import com.amazon.ion.util.Text;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -2296,7 +2296,7 @@ public final class IonTextReader
             String fieldname = parser._scanner.consumeTokenAsString();
             parser.setFieldname(fieldname);
             String description =
-                "colon (:) after field name " + Text.printQuotedSymbol(fieldname);
+                "colon (:) after field name " + printQuotedSymbol(fieldname);
             parser.consumeToken( IonTextTokenizer.TOKEN_COLON, description );
             return State_read_struct_member;
         }
@@ -2310,7 +2310,7 @@ public final class IonTextReader
             String fieldname = parser._scanner.consumeTokenAsString();
             parser.setFieldname(fieldname);
             String description =
-                "colon (:) after field name " + Text.printQuotedSymbol(fieldname);
+                "colon (:) after field name " + printQuotedSymbol(fieldname);
             parser.consumeToken( IonTextTokenizer.TOKEN_COLON, description );
             return State_read_struct_member;
         }

@@ -8,16 +8,15 @@ import java.io.IOException;
 
 /**
  * Utility methods for working with Ion text.
- *
- * @deprecated Use {@link IonTextUtils}
  */
-@Deprecated
-public class Text
-    extends IonTextUtils
+public class IonTextUtils
 {
+
+    public enum SymbolVariant { IDENTIFIER, OPERATOR, QUOTED }
+
     private enum EscapeMode { ION, JSON }
 
-    public static final int ANY_SURROUNDING_QUOTES = -2;
+    private static final int ANY_SURROUNDING_QUOTES = -2;
 
     private static final boolean[] IDENTIFIER_START_CHAR_FLAGS;
     private static final boolean[] IDENTIFIER_FOLLOW_CHAR_FLAGS;
@@ -64,10 +63,36 @@ public class Text
 
     //=========================================================================
 
-
-    public final static boolean isNumericStopChar(int c)
+    /**
+     * Ion whitespace is defined as one of the characters space, tab, newline,
+     * and carriage-return.  This matches the definition of whitespace used by
+     * JSON.
+     *
+     * @param codePoint the character to test.
+     * @return <code>true</code> if <code>c</code> is one of the four legal
+     * Ion whitespace characters.
+     *
+     * @see <a href="http://tools.ietf.org/html/rfc4627">RFC 4627</a>
+     */
+    public static boolean isWhitespace(int codePoint)
     {
-        switch (c) {
+        switch (codePoint)
+        {
+            // FIXME look for BOM
+            case ' ':  case '\t':  case '\n':  case '\r':
+            {
+                return true;
+            }
+            default:
+            {
+                return false;
+            }
+        }
+    }
+
+    public static boolean isNumericStop(int codePoint)
+    {
+        switch (codePoint) {
         case -1:
         case '{':  case '}':
         case '[':  case ']':
@@ -84,25 +109,43 @@ public class Text
         }
     }
 
-    public static boolean isIdentifierStartChar(int c) {
-        if (c < ' ' || c > '~') {
-            return false;
+    public static boolean isDigit(int codePoint, int radix) {
+        switch (codePoint) {
+        case '0': case '1': case '2': case '3': case '4':
+        case '5': case '6': case '7':
+            return (radix == 8 || radix == 10 || radix == 16);
+        case '8': case '9':
+            return (radix == 10 || radix == 16);
+        case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
+        case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
+            return (radix == 16);
         }
-        return IDENTIFIER_START_CHAR_FLAGS[c];
+        return false;
     }
 
-    public static boolean isIdentifierFollowChar(int c) {
-        if (c < ' ' || c > '~') {
+
+    public static boolean isIdentifierStart(int codePoint) {
+        if (codePoint < ' ' || codePoint > '~') {
             return false;
         }
-        return IDENTIFIER_FOLLOW_CHAR_FLAGS[c];
+        // FIXME check array bounds
+        return IDENTIFIER_START_CHAR_FLAGS[codePoint];
     }
 
-    public static boolean isOperatorChar(int c) {
-        if (c < ' ' || c > '~') {
+    public static boolean isIdentifierPart(int codePoint) {
+        if (codePoint < ' ' || codePoint > '~') {
             return false;
         }
-        return OPERATOR_CHAR_FLAGS[c];
+        // FIXME check array bounds
+        return IDENTIFIER_FOLLOW_CHAR_FLAGS[codePoint];
+    }
+
+    public static boolean isOperatorPart(int codePoint) {
+        if (codePoint < ' ' || codePoint > '~') {
+            return false;
+        }
+        // FIXME check array bounds
+        return OPERATOR_CHAR_FLAGS[codePoint];
     }
 
     /**
@@ -171,8 +214,8 @@ public class Text
      *         if <code>symbol</code> is <code>null</code>.
      * @throws IllegalArgumentException if <code>symbol</code> is empty.
      */
-    public static boolean symbolNeedsQuoting(CharSequence symbol,
-                                             boolean      quoteOperators)
+    private static boolean symbolNeedsQuoting(CharSequence symbol,
+                                              boolean      quoteOperators)
     {
         int length = symbol.length();
         if (length == 0) {
@@ -184,24 +227,25 @@ public class Text
         if (! isIdentifierKeyword(symbol))
         {
             char c = symbol.charAt(0);
-            if (!quoteOperators && isOperatorChar(c))
+            // FIXME do we need to handle surrogates?
+            if (!quoteOperators && isOperatorPart(c))
             {
                 for (int ii = 0; ii < length; ii++) {
                     c = symbol.charAt(ii);
                     // We don't need to look for escapes since all
                     // operator characters are ASCII.
-                    if (!isOperatorChar(c)) {
+                    if (!isOperatorPart(c)) {
                         return true;
                     }
                 }
                 return false;
             }
-            else if (isIdentifierStartChar(c))
+            else if (isIdentifierStart(c))
             {
                 for (int ii = 0; ii < length; ii++) {
                     c = symbol.charAt(ii);
                     if (needsEscapeForAsciiPrinting(c, '\'')
-                        || !isIdentifierFollowChar(c))
+                        || !isIdentifierPart(c))
                     {
                         return true;
                     }
@@ -214,20 +258,67 @@ public class Text
     }
 
 
-    //=========================================================================
-    @Deprecated
-    public static boolean needsEscapeForAsciiRendering(int c) {
-        switch (c) {
-        case '\"':
-            return true;
-        case '\'':
-            return true;
-        case '\\':
-            return true;
-        default:
-            return (c < 32 || c > 126);
+    /**
+     * Determines whether the text of a symbol represents an identifier, an
+     * operator, or a symbol that always requires (single) quotes.
+     *
+     * @param symbol must be a non-empty string.
+     *
+     * @return the variant of the symbol.
+     *
+     * @throws NullPointerException
+     *         if <code>symbol</code> is <code>null</code>.
+     * @throws IllegalArgumentException if <code>symbol</code> is empty.
+     */
+    public static SymbolVariant symbolVariant(CharSequence symbol)
+    {
+        int length = symbol.length();
+        if (length == 0) {
+            throw new IllegalArgumentException("symbol must be non-empty");
         }
+
+        // If the symbol's text matches an Ion keyword, we must quote it.
+        // Eg, the symbol 'false' must be rendered quoted.
+        if (isIdentifierKeyword(symbol))
+        {
+            return SymbolVariant.QUOTED;
+        }
+
+        char c = symbol.charAt(0);
+        // FIXME do we need to handle surrogates?
+
+        if (isIdentifierStart(c))
+        {
+            for (int ii = 0; ii < length; ii++) {
+                c = symbol.charAt(ii);
+                if (needsEscapeForAsciiPrinting(c, '\'')
+                    || !isIdentifierPart(c))
+                {
+                    return SymbolVariant.QUOTED;
+                }
+            }
+            return SymbolVariant.IDENTIFIER;
+        }
+
+        if (isOperatorPart(c))
+        {
+            for (int ii = 0; ii < length; ii++) {
+                c = symbol.charAt(ii);
+                // We don't need to look for escapes since all
+                // operator characters are ASCII.
+                if (!isOperatorPart(c)) {
+                    return SymbolVariant.QUOTED;
+                }
+            }
+            return SymbolVariant.OPERATOR;
+        }
+
+        return SymbolVariant.QUOTED;
     }
+
+
+    //=========================================================================
+
 
     /**
      * Determines whether a single character (Unicode code point) needs an
@@ -239,8 +330,8 @@ public class Text
      *
      * @return {@code true} if the character needs to be escaped.
      */
-    public static boolean needsEscapeForAsciiPrinting(int codePoint,
-                                                      int surroundingQuoteChar)
+    private static boolean needsEscapeForAsciiPrinting(int codePoint,
+                                                       int surroundingQuoteChar)
     {
         switch (codePoint) {
         case '\"':
@@ -254,34 +345,29 @@ public class Text
         }
     }
 
-    @Deprecated
-    public static Appendable renderAsAscii(int c, Appendable out)
-        throws IOException
-    {
-        printAsIon(out, c, ANY_SURROUNDING_QUOTES);
-        return out;
-    }
-
     /**
-     * Prints a single character (Unicode code point) in Ion ASCII text format,
-     * using escapes suitable for a specified quoting context.
+     * Prints a single Unicode code point for use in an ASCII-safe Ion string.
      *
      * @param out the stream to receive the data.
      * @param codePoint a Unicode code point.
-     * @param surroundingQuoteChar must be either {@code '\''}, {@code '\"'},
-     * or {@link #ANY_SURROUNDING_QUOTES}.
-     *
-     * @deprecated Use {@link #printStringCodePoint(Appendable, int)} or
-     * {@link #printSymbolCodePoint(Appendable, int)}.
      */
-    @Deprecated
-    public static void printAsIon(Appendable out, int codePoint,
-                                  int surroundingQuoteChar)
+    public static void printStringCodePoint(Appendable out, int codePoint)
         throws IOException
     {
-        printCodePoint(out, codePoint, surroundingQuoteChar, EscapeMode.ION);
+        printCodePoint(out, codePoint, '\"', EscapeMode.ION);
     }
 
+    /**
+     * Prints a single Unicode code point for use in an ASCII-safe Ion symbol.
+     *
+     * @param out the stream to receive the data.
+     * @param codePoint a Unicode code point.
+     */
+    public static void printSymbolCodePoint(Appendable out, int codePoint)
+        throws IOException
+    {
+        printCodePoint(out, codePoint, '\'', EscapeMode.ION);
+    }
 
     /**
      * Prints a single character (Unicode code point) in JSON string format,
@@ -289,16 +375,14 @@ public class Text
      *
      * @param out the stream to receive the data.
      * @param codePoint a Unicode code point.
-     *
-     * @deprecated Renamed to {@link #printJsonCodePoint(Appendable, int)}.
      */
-    @Deprecated
-    public static void printAsJson(Appendable out, int codePoint)
+    public static void printJsonCodePoint(Appendable out, int codePoint)
         throws IOException
     {
         // JSON only allows double-quote strings.
         printCodePoint(out, codePoint, '"', EscapeMode.JSON);
     }
+
 
     private static void printCodePoint(Appendable out, int c, int quote,
                                        EscapeMode mode)
@@ -419,69 +503,229 @@ public class Text
 
 
     /**
-     * Renders text content as ASCII using escapes suitable for Ion strings and
-     * symbols.  No surrounding quotation marks are rendered.
-     *
-     * @param text the text to render.
-     * @param out the stream to receive the data.
-     *
-     * @return the same instance supplied by the parameter {@code out}.
-     *
-     * @throws IOException if the {@link Appendable} throws an exception.
-     */
-    @Deprecated
-    public static Appendable printAsAscii(CharSequence text, Appendable out)
-        throws IOException
-    {
-        printAsIon(out, text, ANY_SURROUNDING_QUOTES);
-        return out;
-    }
-
-    /**
-     * Prints characters as Ion ASCII text content, using escapes suitable for
-     * a specified quoting context. No surrounding quotation marks are printed.
+     * Prints characters as an ASCII-encoded Ion string, including surrounding
+     * double-quotes.
+     * If the {@code text} is null, this prints {@code null.string}.
      *
      * @param out the stream to receive the data.
-     * @param text the text to print.
-     * @param surroundingQuoteChar must be either {@code '\''}, {@code '\"'},
-     * or {@link #ANY_SURROUNDING_QUOTES}.
+     * @param text the text to print, may be {@code null}.
      *
      * @throws IOException if the {@link Appendable} throws an exception.
      * @throws IllegalArgumentException
      *     if the text contains invalid UTF-16 surrogates.
-     *
-     * @deprecated Use {@link #printString(Appendable, CharSequence)} or
-     * {@link #printSymbol(Appendable, CharSequence)}.
      */
-    @Deprecated
-    public static void printAsIon(Appendable out, CharSequence text,
-                                  int surroundingQuoteChar)
+    public static void printString(Appendable out, CharSequence text)
         throws IOException
     {
-        printChars(out, text, surroundingQuoteChar, EscapeMode.ION);
+        if (text == null)
+        {
+            out.append("null.string");
+        }
+        else
+        {
+            out.append('"');
+            printChars(out, text, '"', EscapeMode.ION);
+            out.append('"');
+        }
     }
 
-
     /**
-     * Prints characters as JSON ASCII text content.
-     * No surrounding quotation marks are printed.
+     * Prints characters as an ASCII-encoded JSON string, including surrounding
+     * double-quotes.
+     * If the {@code text} is null, this prints {@code null}.
      *
-     * @param out the stream to receive the data.
-     * @param text the text to print.
+     * @param out the stream to receive the JSON data.
+     * @param text the text to print, may be {@code null}.
      *
      * @throws IOException if the {@link Appendable} throws an exception.
      * @throws IllegalArgumentException
      *     if the text contains invalid UTF-16 surrogates.
-     *
-     * @deprecated Use {@link #printJsonString(Appendable, CharSequence)},
-     * which always prints surrounding double-quotes.
      */
-    @Deprecated
-    public static void printAsJson(Appendable out, CharSequence text)
+    public static void printJsonString(Appendable out, CharSequence text)
         throws IOException
     {
-        printChars(out, text, '"', EscapeMode.JSON);
+        if (text == null)
+        {
+            out.append("null");
+        }
+        else
+        {
+            out.append('"');
+            printChars(out, text, '"', EscapeMode.JSON);
+            out.append('"');
+        }
     }
+
+
+    /**
+     * Builds a String denoting an ASCII-encoded Ion string,
+     * including surrounding double-quotes.
+     * If the {@code text} is null, this returns {@code "null.string"}.
+     *
+     * @param text the text to print; may be {@code null}.
+     *
+     * @throws IllegalArgumentException
+     *     if the text contains invalid UTF-16 surrogates.
+     */
+    public static String printString(CharSequence text)
+    {
+        if (text == null)
+        {
+            return "null.string";
+        }
+
+        StringBuilder builder = new StringBuilder(text.length() + 2);
+        try
+        {
+            printString(builder, text);
+        }
+        catch (IOException e)
+        {
+            // Shouldn't happen
+            throw new Error(e);
+        }
+        return builder.toString();
+    }
+
+    /**
+     * Builds a String denoting an ASCII-encoded Ion string,
+     * with double-quotes surrounding a single Unicode code point.
+     *
+     * @param codePoint a Unicode code point.
+     */
+    public static String printCodePointAsString(int codePoint)
+    {
+        StringBuilder builder = new StringBuilder(12);
+        builder.append('"');
+        try
+        {
+            printStringCodePoint(builder, codePoint);
+        }
+        catch (IOException e)
+        {
+            // Shouldn't happen
+            throw new Error(e);
+        }
+        builder.append('"');
+        return builder.toString();
+    }
+
+
+    /**
+     * Prints the text as an Ion symbol, including surrounding single-quotes if
+     * they are necessary.  Operator symbols such as {@code '+'} are quoted.
+     * If the {@code text} is null, this prints {@code null.symbol}.
+     *
+     * @param out the stream to receive the Ion data.
+     * @param text the symbol text; may be {@code null}.
+
+     *
+     * @throws IOException if the {@link Appendable} throws an exception.
+     */
+    public static void printSymbol(Appendable out, CharSequence text)
+        throws IOException
+    {
+        if (text == null)
+        {
+            out.append("null.symbol");
+        }
+        else if (symbolNeedsQuoting(text, true))
+        {
+            printQuotedSymbol(out, text);
+        }
+        else
+        {
+            out.append(text);
+        }
+    }
+
+
+    /**
+     * Prints the text as an Ion symbol, including surrounding single-quotes if
+     * they are necessary.  Operator symbols such as {@code '+'} are quoted.
+     * If the {@code text} is null, this returns {@code "null.symbol"}.
+     *
+     * @param text the symbol text; may be {@code null}.
+     *
+     * @return a string containing the resulting Ion data.
+     */
+    public static String printSymbol(CharSequence text)
+    {
+        if (text == null)
+        {
+            return "null.symbol";
+        }
+
+        StringBuilder builder = new StringBuilder(text.length() + 2);
+        try
+        {
+            printSymbol(builder, text);
+        }
+        catch (IOException e)
+        {
+            // Shouldn't happen
+            throw new Error(e);
+        }
+        return builder.toString();
+    }
+
+
+    /**
+     * Prints text as a single-quoted Ion symbol.
+     * If the {@code text} is null, this prints {@code null.symbol}.
+     *
+     * @param out the stream to receive the data.
+     * @param text the symbol text; may be {@code null}.
+     *
+     * @throws IOException if the {@link Appendable} throws an exception.
+     * @throws IllegalArgumentException
+     *     if the text contains invalid UTF-16 surrogates.
+     */
+    public static void printQuotedSymbol(Appendable out, CharSequence text)
+        throws IOException
+    {
+        if (text == null)
+        {
+            out.append("null.symbol");
+        }
+        else
+        {
+            out.append('\'');
+            printChars(out, text, '\'', EscapeMode.ION);
+            out.append('\'');
+        }
+    }
+
+
+    /**
+     * Builds a String containing a single-quoted Ion symbol.
+     * If the {@code text} is null, this returns {@code "null.symbol"}.
+     *
+     * @param text the symbol text; may be {@code null}.
+     *
+     * @throws IllegalArgumentException
+     *     if the text contains invalid UTF-16 surrogates.
+     */
+    public static String printQuotedSymbol(CharSequence text)
+    {
+        if (text == null)
+        {
+            return "null.symbol";
+        }
+
+        StringBuilder builder = new StringBuilder(text.length() + 2);
+        try
+        {
+            printQuotedSymbol(builder, text);
+        }
+        catch (IOException e)
+        {
+            // Shouldn't happen
+            throw new Error(e);
+        }
+        return builder.toString();
+    }
+
 
     /**
      * @throws IllegalArgumentException
@@ -526,55 +770,6 @@ public class Text
 
     ////////////////////////////////////
 
-    static boolean isLetterOrDigit(int c) {
-        switch (c) {
-        case '0': case '1': case '2': case '3': case '4':
-        case '5': case '6': case '7': case '8': case '9':
-        case '_': case '$':
-        case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
-        case 'G': case 'H': case 'I': case 'J': case 'K': case 'L':
-        case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R':
-        case 'S': case 'T': case 'U': case 'V': case 'W': case 'X':
-        case 'Y': case 'Z':
-        case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
-        case 'g': case 'h': case 'i': case 'j': case 'k': case 'l':
-        case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
-        case 's': case 't': case 'u': case 'v': case 'w': case 'x':
-        case 'y': case 'z':
-            return true;
-        default:
-            return false;
-        }
-    }
-
-
-    static boolean[] isEscapeOutChar = getEscapeOutChars();
-    static boolean isEscapeOutChar(int c) {
-        if (c < ' ' || c > '~') return true;
-        return isEscapeOutChar[c];
-    }
-    static boolean[] getEscapeOutChars() {
-        final char[] escoutchars = { '\\' ,'\"', '\'' };
-
-        boolean[] flags = new boolean[256];
-
-        for (int ii=0; ii<escoutchars.length; ii++) {
-            int jj = escoutchars[ii];
-            flags[jj] = true;
-        }
-        for (int ii=0; ii<32; ii++) {
-            flags[ii] = true;
-        }
-        flags[255] = true;
-        return flags;
-    }
-
-    static boolean[] isEscapeInChar = getEscapeInChars();
-    static boolean isEscapeInChar(int c) {
-        if (c < ' ' || c > '~') return false;
-        return isEscapeInChar[c];
-    }
-    static boolean[] getEscapeInChars() {
     // from the Java 1.5 spec at (with extra spacing to keep the parser happy):
     // http://java.sun.com/docs/books/jls/second_edition/html/lexical.doc.html#101089
     //
@@ -655,70 +850,4 @@ public class Text
     //    \\uhhhh Unicode character in hexadecimal
     //     \Uhhhhhhhh Unicode character in hexadecimal
 
-        final char[] escinchars = {
-                'a', 'b', 'f', 'n', 'r', 't', 'v',
-                '\'', '\"', '\\', '/', '?',
-                'u', 'U', 'x',
-                '0',
-             };
-
-        boolean[] flags = new boolean[256];
-
-        for (int ii=0; ii<escinchars.length; ii++) {
-            int jj = escinchars[ii];
-            flags[jj] = true;
-        }
-
-        return flags;
-    }
-
-    /**
-     * @deprecated  Use {@line #printAsIon(Appendable, int, int)}.
-     */
-    @Deprecated
-    public static String getEscapeString(int c, int surroundingQuoteChar) {
-        switch (c) {
-        case '\u0007':     return "\\a";
-        case '\u0008':     return "\\b";
-        case '\f':         return "\\f";
-        case '\n':         return "\\n";
-        case '\r':         return "\\r";
-        case '\t':         return "\\t";
-        case '\u000b':     return "\\v";
-        case '\\':         return "\\\\";
-        case '\"':         if (surroundingQuoteChar == c
-                            || surroundingQuoteChar == ANY_SURROUNDING_QUOTES
-                        ) {
-                            return "\\\"";
-                        }
-                        break;
-        case '\'':           if (surroundingQuoteChar == c
-                            || surroundingQuoteChar == ANY_SURROUNDING_QUOTES
-                            ) {
-                                return "\\\'";
-                            }
-                            break;
-        case '/':          return "\\/";
-        case '?':          return "\\?";
-        default:
-            if (c == 0) {
-                return "\\0";
-            }
-            else if (c < 32) {
-                if (c < 0) {
-                    throw new IllegalArgumentException("fatal - unescapable int character to escape");
-                }
-                return "\\x"+Integer.toHexString(c & 0xFF);
-            }
-            else if (c > '~') {
-                String s = Integer.toHexString(c);
-                if (s.length() > 4) {
-                    return "\\U00000000".substring(0, 10-s.length()) + s;
-                }
-                return "\\u0000".substring(0, 6-s.length()) + s;
-            }
-            break;
-        }
-        return ""+(char)c;
-    }
 }

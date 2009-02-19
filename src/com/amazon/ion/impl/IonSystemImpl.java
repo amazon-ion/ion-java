@@ -7,6 +7,7 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.SystemSymbolTable.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
+import static com.amazon.ion.util.IonTextUtils.printString;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonBlob;
@@ -39,7 +40,6 @@ import com.amazon.ion.UnsupportedSystemVersionException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.system.SimpleCatalog;
 import com.amazon.ion.util.Printer;
-import com.amazon.ion.util.Text;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -169,7 +169,7 @@ public class IonSystemImpl
             {
                 String message =
                     "Catalog does not contain symbol table " +
-                    Text.printString(name) + " version " + priorVersion +
+                    printString(name) + " version " + priorVersion +
                     " required to create version " + version;
                 throw new IonException(message);
             }
@@ -1136,7 +1136,7 @@ public class IonSystemImpl
 
         if (value instanceof IonDatagram)
         {
-            byte[] data = ((IonDatagram)value).toBytes();
+            byte[] data = ((IonDatagram)value).getBytes();
 
             // TODO This can probably be optimized further.
             return (T) new IonDatagramImpl(this, data);

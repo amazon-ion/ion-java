@@ -8,7 +8,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.PositionMarker;
-import com.amazon.ion.util.Text;
+import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
 import java.io.PushbackReader;
 import java.io.Reader;
@@ -668,7 +668,7 @@ loop:   for (;;) {
             // the first closing curly brace (the reader will consume the correct
             // number of trailing '=' characters), so skip past any whitespace
             c = bin64reader.terminatingChar();
-            while (Text.isWhitespace(c)) {
+            while (IonTextUtils.isWhitespace(c)) {
                 c = this._in.readIgnoreWhitespaceButNotComments();
             }
             // we haven't seen the first one yet

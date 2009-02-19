@@ -13,7 +13,7 @@ package com.amazon.ion.impl;
  * It's character translation table is:
  *
  *    Table 2: The "URL and Filename safe" Base 64 Alphabet
- *    
+ *
  * NO LONGER URL/FILENAME SAFE, BACK TO THE ORIGINAL URL CHARACTERS
  *
  *   Value Encoding  Value Encoding  Value Encoding  Value Encoding
@@ -28,9 +28,9 @@ package com.amazon.ion.impl;
  *        8 I            25 Z            42 q            59 7
  *        9 J            26 a            43 r            60 8
  *       10 K            27 b            44 s            61 9
- *       11 L            28 c            45 t            62 + 
+ *       11 L            28 c            45 t            62 +
  *       12 M            29 d            46 u            63 /
- *       13 N            30 e            47 v           
+ *       13 N            30 e            47 v
  *       14 O            31 f            48 w
  *       15 P            32 g            49 x
  *       16 Q            33 h            50 y            (pad) =
@@ -41,11 +41,10 @@ package com.amazon.ion.impl;
  *
  */
 
+import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
-
-import com.amazon.ion.util.Text;
 
 
 public class Base64Encoder
@@ -133,7 +132,7 @@ public class Base64Encoder
      *               as there is a 3:4 output to input character ratio
      */
     final static int BUFSIZE = 1024;
-    public static class BinaryStream extends Reader 
+    public static class BinaryStream extends Reader
     {
         boolean  _ready;
         Reader   _source;
@@ -146,7 +145,7 @@ public class Base64Encoder
         int      _bufEnd;
         int      _bufPos;
 
-        BinaryStream(Reader input, int[] chartobin, char terminator, char otherTerminator) 
+        BinaryStream(Reader input, int[] chartobin, char terminator, char otherTerminator)
         {
             _source = input;
             _chartobin = chartobin;
@@ -157,18 +156,18 @@ public class Base64Encoder
             _ready = true;
         }
 
-        public BinaryStream(Reader input, char altterminator) 
+        public BinaryStream(Reader input, char altterminator)
         {
             this(input, URLSafe64CharToInt, URLSafe64IntToCharTerminator, altterminator);
         }
 
-        public int terminatingChar() 
+        public int terminatingChar()
         {
             return this._terminatingChar;
         }
 
         // Read a buffer from the input stream and prep the output stream
-        private void loadNextBuffer() throws IOException 
+        private void loadNextBuffer() throws IOException
         {
 
             int inlen = 0;
@@ -188,7 +187,7 @@ public class Base64Encoder
                     _terminatingChar = c;
                     break;
                 }
-                if (Text.isWhitespace(c)) continue;
+                if (IonTextUtils.isWhitespace(c)) continue;
                 cbin = this._chartobin[c];
                 if (cbin == -1) {
                     throw new IOException("invalid base64 character (" + c + ")");
@@ -258,20 +257,20 @@ public class Base64Encoder
         }
 
         @Override
-        public boolean markSupported() 
+        public boolean markSupported()
         {
             return false;
         }
 
         @Override
-        public void close() throws IOException 
+        public void close() throws IOException
         {
             this._source.close();
         }
 
         //Read a single character.
         @Override
-        public int read() throws IOException 
+        public int read() throws IOException
         {
             int outchar = -1;
             if (!_ready) {
@@ -290,7 +289,7 @@ public class Base64Encoder
 
         // Read characters into an array.
         @Override
-        public int read(char[] cbuf) throws IOException 
+        public int read(char[] cbuf) throws IOException
         {
             int ii = 0;
             for (ii=0; ii<cbuf.length; ii++) {
@@ -303,7 +302,7 @@ public class Base64Encoder
 
         // Read characters into a portion of an array.
         @Override
-        public int read(char[] cbuf, int off, int rlen) throws IOException 
+        public int read(char[] cbuf, int off, int rlen) throws IOException
         {
             int ii = 0;
             for (ii=0; ii<rlen; ii++) {
@@ -338,7 +337,7 @@ public class Base64Encoder
         int      _outBufEnd;
         int      _outBufPos;
 
-        TextStream(InputStream input, int[] bintochar, char terminator) 
+        TextStream(InputStream input, int[] bintochar, char terminator)
         {
             _source = input;
             _bintochar = bintochar;
@@ -346,14 +345,14 @@ public class Base64Encoder
             _ready = true;
         }
 
-        public TextStream(InputStream input) 
+        public TextStream(InputStream input)
         {
             this(input, URLSafe64IntToChar, URLSafe64IntToCharTerminator);
         }
 
         //Close the stream.
         @Override
-        public void close() throws IOException 
+        public void close() throws IOException
         {
             if (_ready) {
                 _ready = false;
@@ -380,7 +379,7 @@ public class Base64Encoder
         // bytes produce 4 ascii characters
         //
         @SuppressWarnings("cast")
-        private void loadNextBuffer() throws IOException 
+        private void loadNextBuffer() throws IOException
         {
             this._outBufEnd = 0;
             this._outBufPos = 0;
@@ -430,7 +429,7 @@ public class Base64Encoder
         }
         //Read a single character.
         @Override
-        public int read() throws IOException 
+        public int read() throws IOException
         {
             int outchar = -1;
             if (!_ready) {
@@ -450,7 +449,7 @@ public class Base64Encoder
 
         // Read characters into an array.
         @Override
-        public int read(char[] cbuf) throws IOException 
+        public int read(char[] cbuf) throws IOException
         {
             if (!_ready) {
                 throw new IOException(this.getClass().getName()+ " is not ready");
@@ -479,7 +478,7 @@ public class Base64Encoder
 
         // Read characters into a portion of an array.
         @Override
-        public int read(char[] cbuf, int off, int rlen) throws IOException 
+        public int read(char[] cbuf, int off, int rlen) throws IOException
         {
             if (!_ready) {
                 throw new IOException(this.getClass().getName()+ " is not ready");
@@ -508,7 +507,7 @@ public class Base64Encoder
 
         // Tell whether this stream is ready to be read.
         @Override
-        public boolean ready() throws IOException 
+        public boolean ready() throws IOException
         {
             // TODO I don't think this is strictly correct.
             return this._ready && (_source.available() > 0);
@@ -516,14 +515,14 @@ public class Base64Encoder
 
         // Reset the stream.
         @Override
-        public void reset() throws IOException 
+        public void reset() throws IOException
         {
             throw new IOException("mark not supported");
         }
 
         //Skip characters.
         @Override
-        public long skip(long n) throws IOException 
+        public long skip(long n) throws IOException
         {
             if (!_ready) {
                 throw new IOException(this.getClass().getName()+ " is not ready");
@@ -553,6 +552,6 @@ public class Base64Encoder
         }
     }
 
-    
-    
+
+
 }
