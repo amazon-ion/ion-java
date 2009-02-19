@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -23,6 +21,8 @@ public final class IonBoolImpl
         IonConstants.makeTypeDescriptor(IonConstants.tidBoolean,
                                         IonConstants.lnIsNullAtom);
 
+    // TODO we can probably take less space by using two booleans
+    // private boolean isNull, value;
     private Boolean _bool_value;
 
     /**

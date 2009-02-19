@@ -1,11 +1,11 @@
-/* Copyright (c) 2008 Amazon.com, Inc.  All rights reserved. */
+// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import java.io.IOException;
 
 /**
- *
+ * An {@link IonWriter} that encodes Ion binary data.
  */
 public interface IonBinaryWriter
     extends IonWriter

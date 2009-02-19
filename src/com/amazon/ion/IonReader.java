@@ -11,26 +11,33 @@ import java.util.NoSuchElementException;
 /**
  * Provides stream-based access to Ion data independent of its underlying
  * representation (text, binary, or {@link IonValue} tree).
+ * <p>
+ * In general, method names are intended to parallel similar methods in the
+ * {@link IonValue} hierarchy.  For example, to get the text of a symbol one
+ * would use {@link #stringValue()} which mirrors
+ * {@link IonSymbol#stringValue()}.
  */
 public interface IonReader
 {
 
     /**
-     * Returns true when there is another value at the current iteration level.
-     * The iteration takes place at the same "level" in the value it only
-     * steps into a child value using stepInto().  So this returns whether
-     * or not there is a sibling value that may be visited using next(). This
-     * must be called before calling next() or next() may fail.  It may be
+     * Determines whether there is another value at the current depth;
+     * in other words whether there is a sibling value that may be reached
+     * using {@link #next()}.
+     * This method may be
      * called multiple times, which does not move the current position.
-     *
      */
     public boolean hasNext();
 
     /**
-     * Positions the iterator on the next value.  This returns the underlying
+     * Positions the reader on the next sibling after the current value.
+     * This returns the underlying
      * IonType of the value that is found.  Once so positioned the contents of
-     * this value can be accessed with the get methods.  This traverses the
-     * contents at a constant level.
+     * this value can be accessed with the {@code *value()} methods.
+     * <p>
+     * A sequence of {@code next()} calls traverses the data at a constant
+     * level, and {@link #stepIn()} must be used in order to traverse down into
+     * any containers.
      *
      * @return the type of the next Ion value; never {@link IonType#DATAGRAM}.
      *
@@ -41,10 +48,13 @@ public interface IonReader
 
     /**
      * Positions the iterator in the contents of the current value.  The current
-     * value must be a container (sexp, list, or struct).  Once this method has
-     * been called {@link #hasNext()} and {@link #next()} will iterate the child values.
+     * value must be a container (sexp, list, or struct).
+     * After calling this method, {@link #hasNext()} and {@link #next()} will
+     * iterate the child values.
+     * There's no current value immediately after stepping in.
+     * <p>
      * At any time {@link #stepOut()} may be called to move the cursor back to
-     * (just after) the parent value.
+     * (just after) the parent value, even if there's more children remaining.
      *
      * @throws IllegalStateException if the current value isn't an Ion container.
      */
@@ -53,7 +63,9 @@ public interface IonReader
     /**
      * Positions the iterator after the current parents value.  Once stepOut()
      * has been called hasNext() must be called to see if a value follows
-     * the parent.
+     * the parent. In other words, there's no current value immediately after
+     * stepping out.
+     *
      * @throws IllegalStateException if the current value wasn't stepped into.
      */
     public void stepOut();
@@ -71,7 +83,7 @@ public interface IonReader
     public SymbolTable getSymbolTable();
 
     /**
-     * Returns IonType of the current value, or null if there is no valid
+     * Returns the type of the current value, or null if there is no valid
      * current value.
      */
     public IonType getType();
