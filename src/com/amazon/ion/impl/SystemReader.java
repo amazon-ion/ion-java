@@ -241,36 +241,21 @@ public class SystemReader
     {
         final IonValue curr = _curr;
 
-        SymbolTable newLocalSymtab = null;
-
         if (_system.valueIsLocalSymbolTable(curr))
         {
-            newLocalSymtab = new UnifiedSymbolTable(curr.getSymbolTable().getSystemSymbolTable(),
-                                                    (IonStruct) curr,
-                                                    _catalog);
+            _currentSymbolTable =
+                new UnifiedSymbolTable((IonStruct) curr, _catalog);
+            _currentIsHidden = true;
         }
         else if (_system.valueIsSystemId(curr))
         {
             assert curr.getSymbolTable().isLocalTable(); // Unfortunately
             // This makes the value dirty:
             _system.blessSystemIdSymbol((IonSymbolImpl) curr);
+
             SymbolTable identifiedSystemTable = curr.getSymbolTable();
-            newLocalSymtab = _system.newLocalSymbolTable(identifiedSystemTable);
-        }
-
-        if (newLocalSymtab != null)
-        {
-            assert newLocalSymtab.isLocalTable();
-
-            // Note that we may be replacing the encoded systemId symbol
-            // with a struct, in which case the tree view will be out of
-            // sync with the binary.  That's okay, though: if the bytes are
-            // requested it will be updated.
-
-            IonValue localsym = newLocalSymtab.getIonRepresentation();
-            assert localsym.getSymbolTable() == null
-                || localsym.getSymbolTable().getSystemSymbolTable() == _system.getSystemSymbolTable();
-            _currentSymbolTable = newLocalSymtab;
+            _currentSymbolTable =
+                _system.newLocalSymbolTable(identifiedSystemTable);
             _currentIsHidden = true;
         }
         else {

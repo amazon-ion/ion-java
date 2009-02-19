@@ -223,15 +223,13 @@ final class UnifiedSymbolTable
     /**
      * Constructs a local symbol table.
      *
-     * @param systemSymbols must be a system symbol table.
      * @param ionRep
      * @param catalog
      */
-    public UnifiedSymbolTable(SymbolTable systemSymbols,
-                              IonStruct ionRep,
+    public UnifiedSymbolTable(IonStruct ionRep,
                               IonCatalog catalog)
     {
-        this(systemSymbols);
+        this(ionRep.getSymbolTable().getSystemSymbolTable());
 
         IonReader reader = new IonTreeReader(ionRep);
         reader.next();

@@ -57,14 +57,6 @@ public final class IonTreeWriter
         setSymbolTable(_sys.newLocalSymbolTable());
     }
 
-    private boolean writingDatagram()
-    {
-        IonContainer top =
-            (_parent_stack_top == 0 ? _current_parent : _parent_stack[0]);
-        return top.getType() == IonType.DATAGRAM;
-    }
-
-
 
     @Override
     protected void setSymbolTable(SymbolTable symbols)
@@ -174,13 +166,9 @@ public final class IonTreeWriter
             IonValue prior = dg.systemGet(dg.systemSize() - 1);
             if (_sys.valueIsLocalSymbolTable(prior))
             {
-                SymbolTable systemTable =
-                    prior.getSymbolTable().getSystemSymbolTable();
-                _symbol_table = new UnifiedSymbolTable(systemTable,
-                                                       (IonStruct) prior,
+                _symbol_table = new UnifiedSymbolTable((IonStruct) prior,
                                                        _sys.getCatalog());
             }
-
         }
     }
 

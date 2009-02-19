@@ -332,7 +332,7 @@ public final class IonDatagramImpl
                 // TODO can we delay this until later?
                 symtab = _system.newLocalSymbolTable();
                 IonStructImpl ionsymtab = (IonStructImpl)symtab.getIonRepresentation();
-                ionsymtab.setSymbolTable(symtab);
+                ionsymtab.setSymbolTable(symtab);  // XXX wrong
             }
             // NOTE: this doesn't reset any extant encoded data
             ((IonValueImpl)element).setSymbolTable(symtab);
@@ -368,13 +368,10 @@ public final class IonDatagramImpl
 
                 // We always inject the systemId, so we always have a system table
                 IonValue prior = _contents.get(systemPos - 2);
-                SymbolTable systemTable =
-                    prior.getSymbolTable().getSystemSymbolTable();
 
 //                if (false) {
                 IonStruct symtabStruct = (IonStruct) v;
-                symtab = new UnifiedSymbolTable(systemTable,
-                                                symtabStruct,
+                symtab = new UnifiedSymbolTable(symtabStruct,
                                                 _system.getCatalog());
 //                }
 //                else {
@@ -763,8 +760,7 @@ public final class IonDatagramImpl
                         if (priorIsLocalSymtab)
                         {
                             currentSymtab =
-                                new UnifiedSymbolTable(currentSymtab.getSystemSymbolTable(),
-                                                       (IonStruct) _contents.get(ii - 1),
+                                new UnifiedSymbolTable((IonStruct) _contents.get(ii - 1),
                                                        _system.getCatalog());
                         }
                         else if (currentSymtab.isSystemTable())
