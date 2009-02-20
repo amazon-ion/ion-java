@@ -184,6 +184,12 @@ public class IonTextUtils
             ) {
                 keyword = true;
             }
+            else if (valuelen == 3 // 'n'
+             && text.charAt(pos++) == 'a'
+             && text.charAt(pos++) == 'n'
+            ) {
+                keyword = true;
+            }
             break;
         case 't':
             if (valuelen == 4 //      't'

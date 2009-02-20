@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
+/* Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion.impl;
 
@@ -229,6 +229,11 @@ public class IonParser
         switch(_t) {
         case eof:
             break;
+
+        case kwNan:
+        case kwPosInf:
+        case kwNegInf:
+
         case constNegInt:
         case constPosInt:
         case constFloat:
@@ -581,7 +586,10 @@ loop:   for (;;) {
                         size);
                 this._out.writer().writeVarUInt8Value(l, size);
             }
-        break;
+            break;
+        case kwNan:
+        case kwPosInf:
+        case kwNegInf:
         case constFloat:
             {
                 double d = this._in.doubleValue.doubleValue();
@@ -602,7 +610,10 @@ loop:   for (;;) {
             }
             break;
         default:
-            throw new IonException("internal error, unrecognized numeric token type at " + this._in.position());
+            String message =
+                "internal error, unrecognized numeric token type " + castto +
+                " at " + this._in.position();
+            throw new IonException(message);
         }
 
     }

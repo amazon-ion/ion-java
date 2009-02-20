@@ -1,8 +1,7 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
+
 
 
 /**
@@ -151,6 +150,8 @@ public class FloatTest
     {
         checkSpecial(Float.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY, "-inf",
                      actual);
+        checkSpecial(Float.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY, "-inf",
+                     actual.clone());
     }
 
     public void checkSpecial(float expectedFloat,
@@ -161,5 +162,12 @@ public class FloatTest
         assertEquals(expectedFloat, actual.floatValue());
         assertEquals(expectedDouble, actual.doubleValue());
         assertEquals(expectedText, actual.toString());
+
+        try
+        {
+            actual.bigDecimalValue();
+            fail("expected exception");
+        }
+        catch (NumberFormatException e) { }
     }
 }

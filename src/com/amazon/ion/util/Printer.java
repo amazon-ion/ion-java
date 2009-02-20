@@ -665,6 +665,18 @@ public class Printer
                         myOut.append("-0e0");
                     }
                 }
+                else if (Double.isNaN(real))
+                {
+                    myOut.append("nan");
+                }
+                else if (real == Double.POSITIVE_INFINITY)
+                {
+                    myOut.append("+inf");
+                }
+                else if (real == Double.NEGATIVE_INFINITY)
+                {
+                    myOut.append("-inf");
+                }
                 else
                 {
                     BigDecimal decimal = value.bigDecimalValue();

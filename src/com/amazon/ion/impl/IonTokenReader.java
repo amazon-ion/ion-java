@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
  */
 public class IonTokenReader
 {
-
+    // TODO clean up, many of these are unused.
     public static int isPunctuation = 0x0001;
     public static int isKeyword     = 0x0002;
     public static int isTypeName    = 0x0004;
@@ -73,6 +73,10 @@ public class IonTokenReader
         kwNullBoolean     ((isConstant + isTag + isKeyword),  "null.bool",      HighNibble.hnBoolean),
         kwNullDecimal     ((isConstant + isTag + isKeyword),  "null.decimal",   HighNibble.hnDecimal),
         kwNullTimestamp   ((isConstant + isTag + isKeyword),  "null.timestamp", HighNibble.hnTimestamp),
+
+        kwNan             ((isConstant + isKeyword),          "nan",            HighNibble.hnFloat),
+        kwPosInf          ((isConstant + isKeyword),          "+inf",           HighNibble.hnFloat),
+        kwNegInf          ((isConstant + isKeyword),          "-inf",           HighNibble.hnFloat),
 
         constNegInt       ((isConstant + isNegInt),           "cNegInt",        HighNibble.hnNegInt),
         constPosInt       ((isConstant + isPosInt),           "cPosInt",        HighNibble.hnPosInt),
@@ -298,6 +302,15 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
         // TODO move out of this class into TR.
         public Type setNumericValue(IonTokenReader tr, String s) {
             switch (this) {
+            case kwNan:
+                tr.doubleValue = Double.NaN;
+                return this;
+            case kwPosInf:
+                tr.doubleValue = Double.POSITIVE_INFINITY;
+                return this;
+            case kwNegInf:
+                tr.doubleValue = Double.NEGATIVE_INFINITY;
+                return this;
             case constNegInt:
             case constPosInt:
                 if (tr.numberType == NT_HEX) {
@@ -336,16 +349,8 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
             }
         }
 
-        public boolean isPunctuation() { return ((flags & isPunctuation) != 0); }
         public boolean isKeyword()     { return ((flags & isKeyword) != 0); }
-        public boolean isTypeName()    { return ((flags & isTypeName) != 0); }
         public boolean isConstant()    { return ((flags & isConstant) != 0); }
-        public boolean isTag()         { return ((flags & isTag) != 0); }
-
-        public boolean isUint()        { return ((flags & isPosInt) != 0); }
-        public boolean isInt()         { return ((flags & isNegInt) != 0); }
-        public boolean isFloat()       { return ((flags & isFloat) != 0); }
-        public boolean isDecimal()     { return ((flags & isDecimal) != 0); }
         public boolean isNumeric()     { return ((flags & (isPosInt + isNegInt + isFloat + isDecimal)) != 0); }
 
         public String  getImage()      { return (image == null) ? this.name() : image; }
@@ -670,15 +675,50 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
             this.unread(c2);
             inQuotedContent = true;
             return scanIdentifier(c);
+        case '+':
+            c2 = read();
+            if (c2 == 'i') {
+                c2 = read();
+                if (c2 == 'n') {
+                    c2 = read();
+                    if (c2 == 'f') {
+                        return (t = Type.kwPosInf);
+                    }
+                    this.unread(c2);
+                    c2 = 'n';
+                }
+                this.unread(c2);
+                c2 = 'i';
+            }
+            this.unread(c2);
+            if (is_in_expression) {
+                return scanOperator(c);
+            }
+            break; // break to error
         case '-':
             c2 = read();
             if (c2 >= '0' && c2 <= '9') {
                 this.unread(c2);
                 return readNumber(c);
             }
-            if (!is_in_expression) break; // break to error
-            this.unread(c2);                // cas: otherwise the character following the symbol is lost
-            // fall through to the default case
+            if (c2 == 'i') {
+                c2 = read();
+                if (c2 == 'n') {
+                    c2 = read();
+                    if (c2 == 'f') {
+                        return (t = Type.kwNegInf);
+                    }
+                    this.unread(c2);
+                    c2 = 'n';
+                }
+                this.unread(c2);
+                c2 = 'i';
+            }
+            this.unread(c2);
+            if (is_in_expression) {
+                return scanOperator(c);
+            }
+            break; // break to error
         default:
             if (IonTextUtils.isIdentifierStart(c)) {
                 return scanIdentifier(c);
@@ -812,6 +852,12 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
              && sb.charAt(pos++) == 'l'
             ) {
                 keyword = Type.kwNull;
+            }
+            else if (valuelen == 3 //   'n'
+                 && sb.charAt(pos++) == 'a'
+                 && sb.charAt(pos++) == 'n'
+            ) {
+                keyword = Type.kwNan;
             }
             break;
         case 't':
