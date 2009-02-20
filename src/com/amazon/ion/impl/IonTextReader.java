@@ -485,8 +485,15 @@ public final class IonTextReader
         }
         return is_current;
     }
+
     void error() {
         throw new IonParsingException("syntax error. parser in state " + _state.toString()+ _scanner.input_position());
+    }
+
+    void error(String reason) {
+        String message =
+            "Syntax error" + _scanner.input_position() + ": " + reason;
+        throw new IonParsingException(message);
     }
 
     protected SymbolTable loadLocalSymbolTable() {
@@ -1263,7 +1270,10 @@ public final class IonTextReader
             case IonTextTokenizer.KEYWORD_FALSE:
             case IonTextTokenizer.KEYWORD_TRUE:
             case IonTextTokenizer.KEYWORD_NULL:
-                error();
+                String reason =
+                    "Cannot use unquoted keyword " +
+                    _scanner.getValueAsString() + " as annotation";
+                error(reason);
             default:
                 break;
             }
