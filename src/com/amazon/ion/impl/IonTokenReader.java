@@ -1281,7 +1281,9 @@ sizedloop:
                 // ... fall through...
             case 'u':
                 // Expecting 4 hex digits
-                // FIXME throw if inClob
+                if (inClob) {
+                    throw new IonException("Unicode escapes \\u not allowed in clob");
+                }
                 c = readDigit(r, 16, true);
                 if (c < 0) break;
                 c2 += c << 12;
