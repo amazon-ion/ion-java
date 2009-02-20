@@ -116,9 +116,12 @@ public interface IonReader
     public Iterator<Integer> iterateTypeAnnotationIds();
 
     /**
-     * Return an symbol table id of the field name of the current value. Or -1 if
-     * there is no valid current value or if the current value is not a field
-     * of a struct.
+     * Gets the symbol ID of the field name attached to the current value.
+     *
+     * @return the symbol ID of the field name, if the current value is a
+     * field within a struct.
+     * If the current value is not a field, or if the symbol ID cannot be
+     * determined, this method returns a value <em>less than one</em>.
      */
     public int getFieldId();
 
