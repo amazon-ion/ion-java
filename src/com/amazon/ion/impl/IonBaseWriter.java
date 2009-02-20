@@ -51,10 +51,23 @@ public abstract class IonBaseWriter
         _symbol_table = symbols;
     }
 
+    /**
+     * Must we retain this symbol table?
+     */
     protected boolean symtabIsLocalAndNonTrivial()
     {
-        return (_symbol_table.isLocalTable()
-                && !_symbol_table.isTrivial());
+        if (! _symbol_table.isLocalTable()) return false;
+
+        if (_symbol_table.getMaxId() != _symbol_table.getImportedMaxId())
+        {
+            // Symbols are defined here, so we must keep symtab.
+            return true;
+        }
+
+        // If symtab has imports we must retain it.
+        // Note that I chose to retain imports even in the degenerate case
+        // where the imports have no symbols.
+        return (_symbol_table.getImportedTables().length != 0);
     }
 
     public void clearAnnotations()

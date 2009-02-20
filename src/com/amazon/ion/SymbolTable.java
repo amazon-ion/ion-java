@@ -118,6 +118,15 @@ public interface SymbolTable
 
 
     /**
+     * Gets the highest symbol id reserved by this table's imports (including
+     * system symbols). Any id higher than this value is a local symbol
+     * declared by this table. This value is zero for shared symbol tables,
+     * since they do not utilize imports.
+     */
+    public int getImportedMaxId();
+
+
+    /**
      * Gets the highest symbol id reserved by this table.
      *
      * @return the largest integer such that {@link #findSymbol(int)} could
@@ -139,14 +148,6 @@ public interface SymbolTable
      */
     @Deprecated
     public int size();
-
-    /**
-     * Determines whether this symbol table defines any non-system symbols.
-     * A trivial symtab is either a shared symtab with no symbols (maxId == 0)
-     * or a local symtab with no imports and no local symbols.
-     * Such a table can be safely discarded in some circumstances.
-     */
-    public boolean isTrivial();
 
 
     /**
@@ -207,13 +208,17 @@ public interface SymbolTable
 
 
     /**
-     * Creates an iterator that will return all non-imported symbol text, in
+     * Creates an iterator that will return all non-imported symbol names, in
      * order of their symbol IDs. The iterator will return {@code null} where
      * there is an undefined sid.
+     * <p>
+     * The first string returned by the iterator has a symbol ID that is one
+     * more than {@link #getImportedMaxId()}, and the last string has symbol
+     * ID equals to {@link #getMaxId()}.
      *
      * @return a new iterator.
      */
-    public Iterator<String> iterateDeclaredSymbols();
+    public Iterator<String> iterateDeclaredSymbolNames();
 
 
     /**

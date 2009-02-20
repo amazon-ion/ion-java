@@ -166,10 +166,4 @@ public class StaticSymbolTableImpl
         String message = "Cannot call defineSymbol on shared symbol table";
         throw new UnsupportedOperationException(message);
     }
-
-
-    public boolean isTrivial()
-    {
-        return size() == 0;
-    }
 }

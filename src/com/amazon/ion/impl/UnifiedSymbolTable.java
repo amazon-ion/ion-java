@@ -332,13 +332,6 @@ final class UnifiedSymbolTable
         return (_is_locked && SystemSymbolTable.ION.equals(_name));
     }
 
-    public boolean isTrivial()
-    {
-        return (_is_locked
-                ? _max_id == 0
-                : (!_has_user_symbols && _import_count == 0));
-    }
-
     @Deprecated
     public int size()
     {
@@ -356,7 +349,7 @@ final class UnifiedSymbolTable
         return _max_id - lowBound;
     }
 
-    int getImportMaxId()
+    public int getImportedMaxId()
     {
         return _import_max_id;
     }
@@ -394,7 +387,7 @@ final class UnifiedSymbolTable
     }
 
 
-    public synchronized Iterator<String> iterateDeclaredSymbols()
+    public synchronized Iterator<String> iterateDeclaredSymbolNames()
     {
         return new Iterator<String>()
         {

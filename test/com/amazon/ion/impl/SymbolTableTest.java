@@ -761,7 +761,7 @@ public class SymbolTableTest
         assertFalse(actual.isSystemTable());
         assertEquals(name, actual.getName());
         assertEquals(version, actual.getVersion());
-        assertEquals(0, ((UnifiedSymbolTable)actual).getImportMaxId());
+        assertEquals(0, ((UnifiedSymbolTable)actual).getImportedMaxId());
 
         assertEquals("symbol count",
                      expectedSymbols.length, actual.getMaxId());

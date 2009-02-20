@@ -98,12 +98,17 @@ public abstract class AbstractSymbolTable
         return getIonVersionId();
     }
 
+    public synchronized int getImportedMaxId()
+    {
+        throw new UnsupportedOperationException();
+    }
+
     public synchronized int getMaxId()
     {
         return _maxId;
     }
 
-    public synchronized Iterator<String> iterateDeclaredSymbols()
+    public synchronized Iterator<String> iterateDeclaredSymbolNames()
     {
         throw new UnsupportedOperationException();
     }

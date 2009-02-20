@@ -97,7 +97,7 @@ public class SystemSymbolTableImpl
     }
 
 
-    public synchronized Iterator<String> iterateDeclaredSymbols()
+    public synchronized Iterator<String> iterateDeclaredSymbolNames()
     {
         throw new UnsupportedOperationException();
     }
@@ -167,6 +167,12 @@ public class SystemSymbolTableImpl
     }
 
 
+    public int getImportedMaxId()
+    {
+        return 0;
+    }
+
+
     public int getMaxId()
     {
         return SYSTEM_SYMBOLS.length;
@@ -178,10 +184,6 @@ public class SystemSymbolTableImpl
         return SYSTEM_SYMBOLS.length;
     }
 
-    public boolean isTrivial()
-    {
-        return false;
-    }
 
     public void writeTo(IonWriter writer)
     {

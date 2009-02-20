@@ -174,12 +174,12 @@ public class IonSystemImpl
                 throw new IonException(message);
             }
 
-            addAllNonNull(syms, prior.iterateDeclaredSymbols());
+            addAllNonNull(syms, prior.iterateDeclaredSymbolNames());
         }
 
         for (SymbolTable imported : imports)
         {
-            addAllNonNull(syms, imported.iterateDeclaredSymbols());
+            addAllNonNull(syms, imported.iterateDeclaredSymbolNames());
         }
 
         addAllNonNull(syms, newSymbols);

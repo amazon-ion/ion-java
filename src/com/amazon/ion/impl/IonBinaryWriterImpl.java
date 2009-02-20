@@ -1059,7 +1059,7 @@ int tmp;
         //    UnifiedSymbolTable.Symbol s = syms.next();
 
         UnifiedSymbolTable.Symbol[] syms = symtab._symbols;
-        for (int ii=symtab.getImportMaxId()+1; ii<=symtab.getMaxId(); ii++) {
+        for (int ii=symtab.getImportedMaxId()+1; ii<=symtab.getMaxId(); ii++) {
             UnifiedSymbolTable.Symbol s = syms[ii];
             if (s == null) continue;
             assert s.source == symtab;
@@ -1130,7 +1130,7 @@ int tmp;
             //syms = super.getSymbolTableSymbols();
             //while (syms.hasNext()) {
             //    UnifiedSymbolTable.Symbol s = syms.next();
-            for (int ii=symtab.getImportMaxId()+1; ii<=symtab.getMaxId(); ii++) {
+            for (int ii=symtab.getImportedMaxId()+1; ii<=symtab.getMaxId(); ii++) {
                 UnifiedSymbolTable.Symbol s = syms[ii];
                 if (s == null) continue; // TODO can this happen?
                 assert s.source == symtab;

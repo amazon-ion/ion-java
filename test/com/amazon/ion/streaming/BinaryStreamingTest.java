@@ -579,7 +579,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
     	assert v2.getSymbolTable() == sym;
     	IonReader ir = system().newReader(s);
 
-    	Iterator<String> symbols = sym.iterateDeclaredSymbols();
+    	Iterator<String> symbols = sym.iterateDeclaredSymbolNames();
     	SymbolTable u = system().newSharedSymbolTable("items", 1, symbols);
     	IonBinaryWriter wr = system().newBinaryWriter(u);
 
