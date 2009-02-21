@@ -9,7 +9,7 @@ import static com.amazon.ion.impl.IonConstants.tidStruct;
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.TtTimestamp;
+import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.SimpleByteBuffer.SimpleByteWriter;
 import java.io.IOException;
@@ -62,7 +62,7 @@ public final class IonBinaryWriterImpl
 
         if (initialSymtab.isSystemTable()) {
             _system_symbols = initialSymtab;
-        }
+            }
         else if (initialSymtab.isLocalTable()) {
             _system_symbols = initialSymtab.getSystemSymbolTable();
         }
@@ -406,13 +406,13 @@ public final class IonBinaryWriterImpl
         patch(patch_len);
     }
 
-    public void writeTimestamp(TtTimestamp value) throws IOException
+    public void writeTimestamp(Timestamp value) throws IOException
     {
         if (value == null) {
             writeNull(IonType.TIMESTAMP);
             return;
         }
-        TtTimestamp di = value;
+        Timestamp di = value;
 
         int patch_len = 1;
         int len = IonBinary.lenIonTimestamp(di);
@@ -439,8 +439,8 @@ public final class IonBinaryWriterImpl
             writeNull(IonType.TIMESTAMP);
             return;
         }
-        TtTimestamp di =
-            new TtTimestamp(value.getTime(), TtTimestamp.UTC_OFFSET);
+        Timestamp di =
+            new Timestamp(value.getTime(), Timestamp.UTC_OFFSET);
         writeTimestamp(di);
     }
 
@@ -450,7 +450,7 @@ public final class IonBinaryWriterImpl
             writeNull(IonType.TIMESTAMP);
             return;
         }
-        TtTimestamp di = new TtTimestamp(value.getTime(), localOffset);
+        Timestamp di = new Timestamp(value.getTime(), localOffset);
         writeTimestamp(di);
     }
 

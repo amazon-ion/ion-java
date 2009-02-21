@@ -20,7 +20,7 @@ public interface IonTimestamp
      * @return the value of this timestamp,
      * or <code>null</code> if <code>this.isNullValue()</code>.
      */
-    public TtTimestamp timestampValue();
+    public Timestamp timestampValue();
 
 
     /**
@@ -66,8 +66,7 @@ public interface IonTimestamp
     public BigDecimal getDecimalMillis();
 
 
-    public void setValue(TtTimestamp timestamp);
-
+    public void setValue(Timestamp timestamp);
 
     public void setValue(BigDecimal millis, Integer localOffset);
 

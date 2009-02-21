@@ -19,7 +19,7 @@ import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.TtTimestamp;
+import com.amazon.ion.Timestamp;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
@@ -56,7 +56,6 @@ public final class IonTreeWriter
     void initialize_symbol_table() {
         setSymbolTable(_sys.newLocalSymbolTable());
     }
-
 
     @Override
     protected void setSymbolTable(SymbolTable symbols)
@@ -289,7 +288,7 @@ public final class IonTreeWriter
         append(v);
     }
 
-    public void writeTimestamp(TtTimestamp value) throws IOException
+    public void writeTimestamp(Timestamp value) throws IOException
     {
         IonTimestamp v = _sys.newNullTimestamp();
         if (value != null) {

@@ -4,7 +4,7 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.TtTimestamp;
+import com.amazon.ion.Timestamp;
 import java.io.IOException;
 import java.math.BigDecimal;
 
@@ -152,16 +152,16 @@ public interface ByteReader
     public BigDecimal readDecimal(int len) throws IOException;
 
     /**
-     * Reads the next len bytes and returns them as a {@link TtTimestamp}
+     * Reads the next len bytes and returns them as a {@link Timestamp}
      * object.  This contains an UTC date and time value and a
      * timezone offset of the original value.
      *
      * @param len
-     * @return a new {@link TtTimestamp} instance,
+     * @return a new {@link Timestamp} instance,
      * or {@code null} if the encoded value is {@code null.timestamp}.
      * @throws IOException
      */
-    public TtTimestamp readTimestamp(int len) throws IOException;
+    public Timestamp readTimestamp(int len) throws IOException;
 
     /** reads the next len bytes and converts them from UTF-8 into Java
      * characters and returns those characters as a String.  This may throw

@@ -35,7 +35,7 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
-import com.amazon.ion.TtTimestamp;
+import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnsupportedIonVersionException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.system.SimpleCatalog;
@@ -115,16 +115,16 @@ public class IonSystemImpl
     public UnifiedSymbolTable newLocalSymbolTable(SymbolTable... imports)
     {
         if (imports == null || imports.length == 0)
-        {
-            UnifiedSymbolTable st = new UnifiedSymbolTable(mySystemSymbols);
-            st.setSystem(this);
-            return st;
-        }
+    {
+        UnifiedSymbolTable st = new UnifiedSymbolTable(mySystemSymbols);
+        st.setSystem(this);
+        return st;
+    }
 
         int i = 0;
         SymbolTable systemTable;
         if (imports[0].isSystemTable())
-        {
+    {
             systemTable = imports[0];
             i++;
         }
@@ -136,7 +136,7 @@ public class IonSystemImpl
         UnifiedSymbolTable st = new UnifiedSymbolTable(systemTable);
 
         while (i < imports.length)
-        {
+    {
             UnifiedSymbolTable symbolTable = (UnifiedSymbolTable) imports[i++];
             st.addImportedTable(symbolTable, symbolTable.getMaxId());
         }
@@ -178,7 +178,7 @@ public class IonSystemImpl
         }
 
         for (SymbolTable imported : imports)
-        {
+    {
             addAllNonNull(syms, imported.iterateDeclaredSymbolNames());
         }
 
@@ -1093,7 +1093,7 @@ public class IonSystemImpl
         return new IonTimestampImpl(this);
     }
 
-    public IonTimestamp newTimestamp(TtTimestamp timestamp)
+    public IonTimestamp newTimestamp(Timestamp timestamp)
     {
         IonTimestamp result = newNullTimestamp();
         result.setValue(timestamp);

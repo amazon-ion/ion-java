@@ -8,7 +8,7 @@ import static com.amazon.ion.util.IonTextUtils.isWhitespace;
 import static com.amazon.ion.util.IonTextUtils.printCodePointAsString;
 
 import com.amazon.ion.IonException;
-import com.amazon.ion.TtTimestamp;
+import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.impl.IonConstants.HighNibble;
 import com.amazon.ion.util.IonTextUtils;
@@ -16,15 +16,12 @@ import java.io.IOException;
 import java.io.PushbackReader;
 import java.io.Reader;
 import java.math.BigDecimal;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Stack;
-import java.util.TimeZone;
-import java.util.regex.Pattern;
 
 /**
- *
+ *  This class is responsible for breaking the input stream into Tokens.
+ *  It does both the token recognition (aka the scanner) and the state
+ *  management needed to use the value underlying some of these tokens. 
  */
 public class IonTokenReader
 {
@@ -119,124 +116,16 @@ public class IonTokenReader
          */
         public static class timeinfo {  // TODO remove vestigial class timeinfo
 
-            private static SimpleDateFormat newFormat(String pattern) {
-                SimpleDateFormat f = new SimpleDateFormat(pattern);
-                f.setLenient(false);
-                f.setTimeZone(TimeZone.getTimeZone("GMT"));
-                return f;
-            }
-
-            static final private String DATE_REGEX =
-                "\\d\\d\\d\\d-[01]\\d-[0-3]\\d";
-            static final private String HHMM_REGEX =
-                "[012]\\d:[0-5]\\d";
-            static final private String SEC_MILLIS_REGEX =
-                "(:[0-5]\\d(\\.\\d+)?)?";
-            static final private String OFFSET_REGEX =
-                "(Z|([+-]" + HHMM_REGEX + "))";
-            static final public String TIMESTAMP_REGEX =
-                DATE_REGEX
-                + "(T" + HHMM_REGEX
-                +   SEC_MILLIS_REGEX
-                +   OFFSET_REGEX + ")?";
-
-            static final public Pattern TIMESTAMP_PATTERN =
-                Pattern.compile(TIMESTAMP_REGEX);
-
-            static public TtTimestamp parse(String s) {
+            static public Timestamp parse(String s) {
+            	Timestamp t = null;
                 s = s.trim(); // TODO why is this necessary?
-
-                if (! TIMESTAMP_PATTERN.matcher(s).matches()) {
-                    throw new IonException("invalid timestamp: " + s);
-                }
-
-                Date d;
-                Integer localOffset;
-
                 try {
-                    int len = s.length();
-                    if (len == 10) {
-                        // "yyyy-MM-dd");
- SimpleDateFormat DATE_PARSER = newFormat("yyyy-MM-dd");
-                        d = DATE_PARSER.parse(s);
-                        localOffset = null;
-                    }
-                    else if (len > 16 && s.charAt(16) == ':'){
-                        // yyyy-MM-dd'T'HH:mm:ss.SSSZ
-                        if (len < 20) {
-                            // Not enough characters for seconds and TZD
-                            throw new IonException("invalid timestamp: " + s);
-                        }
-SimpleDateFormat DATE_TIME_SECS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm:ss");
-                        d = DATE_TIME_SECS_PARSER.parse(s.substring(0, 19));
-
-                        int tzdOffset = 19;
-
-                        if (s.charAt(19) == '.') {
-                            tzdOffset++;
-                            int fraction = 0, fraclen = 0;
-                            for (int ii=20; ii<s.length(); ii++) {
-                                char c = s.charAt(ii);
-                                if (!isDigit(c, 10)) break;
-                                fraction *= 10;
-                                fraction += c - '0';
-                                fraclen ++;
-                                tzdOffset++;
-                            }
-
-                            // force fractional seconds to be in milliseconds
-                            while(fraclen < 3) {
-                                fraction *= 10;
-                                fraclen++;
-                            }
-                            // this is really a bug in Java Date (it's not accurate
-                            // enough)
-                            // TODO : do we want to fix this?
-                            //        or do we want to throw if this is true??
-                            while (fraclen > 3) {
-                                fraction /= 10;
-                                fraclen--;
-                            }
-                            // add in the fractional seconds as milliseconds
-                            d = new Date(d.getTime() + fraction);
-                        }
-
-                        localOffset =
-                            parseLocalOffset(s.substring(tzdOffset));
-                    }
-                    else if (len > 16) {
-                        // yyyy-MM-dd'T'HH:mmZ
-SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
-                        d = DATE_TIME_MINS_PARSER.parse(s.substring(0, 16));
-                        localOffset = parseLocalOffset(s.substring(16));
-                    }
-                    else {
-                        if (s.equals("null") || s.equals(kwNullTimestamp.getImage())) {
-                            // I don't think this is reachable due to the regex
-                            // match at the start of this method.
-                            d= null;
-                            localOffset = null;
-                        }
-                        else {
-                            throw new IonException("invalid timestamp: " + s);
-                        }
-                    }
+                	t = new Timestamp(s);  // TODO should Timestamp just throw an IonException?
                 }
-                catch (ParseException pe) {
-                    // TODO this message is confusing to user.
-                    String msg = (pe.getMessage() == null) ? "" : pe.getMessage();
-                    throw new IonException("bad date '"+s+"'"+msg, pe);
+                catch (IllegalArgumentException e) {
+                	throw new IonException(e);
                 }
-
-                // Adjust the Java Date instance into UTC
-                if (localOffset != null) {
-                    long offsetMillis = localOffset.longValue() * 60 * 1000;
-                    long origTime = d.getTime();
-                    d.setTime(origTime - offsetMillis);
-                }
-
-                // FIXME we've lost fractional milliseconds!
-                return new TtTimestamp(d.getTime(), localOffset);
+                return t;
             }
 
             /**
@@ -290,9 +179,9 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
                 }
                 if (value == 0) {
                     if (sign == -1) {
-                        return TtTimestamp.UNKNOWN_OFFSET;
+                        return Timestamp.UNKNOWN_OFFSET;
                     }
-                    return TtTimestamp.UTC_OFFSET;
+                    return Timestamp.UTC_OFFSET;
                 }
 
                 return new Integer(value * sign);
@@ -483,7 +372,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
     public Double           doubleValue;
     public Long             intValue;
 
-    public TtTimestamp      dateValue;
+    public Timestamp      dateValue;
     public BigDecimal       decimalValue;
 
     public int              numberType;
@@ -807,8 +696,8 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
                     c = readEscapedCharacter(this.in, false /*not clob*/);
                 }
                 if (c != EMPTY_ESCAPE_SEQUENCE) {
-                    value.append((char)c);
-                }
+                value.append((char)c);
+            }
             }
             if (c == -1) { // TODO throw UnexpectedEofException
                 throw new IonException("end encountered before closing quote '\\" + (char)endquote+ "'");
@@ -1345,22 +1234,22 @@ sizedloop:
         }
     }
 
-    private final boolean isValueTerminatingCharacter(int c) throws IOException
-    {
-        boolean isTerminator;
+	private final boolean isValueTerminatingCharacter(int c) throws IOException
+	{
+		boolean isTerminator;
 
     	if (c == '/') {
-    	    // this is terminating only if it starts a comment of some sort
-    	    c = this.read();
-    	    this.unread(c);  // we never "keep" this character
-    	    isTerminator = (c == '/' || c == '*');
+    		// this is terminating only if it starts a comment of some sort
+    		c = this.read();
+    		this.unread(c);  // we never "keep" this character
+    		isTerminator = (c == '/' || c == '*');
     	}
     	else {
     	    isTerminator = IonTextUtils.isNumericStop(c);
     	}
 
     	return isTerminator;
-    }
+	}
 
     public Type readNumber(int c) throws IOException {
         // clear out our string buffer

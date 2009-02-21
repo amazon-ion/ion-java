@@ -18,7 +18,7 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.TtTimestamp;
+import com.amazon.ion.Timestamp;
 import com.amazon.ion.util.IonTextUtils.SymbolVariant;
 import java.io.IOException;
 import java.io.InputStream;
@@ -473,14 +473,14 @@ public class Printer
             {
                 SymbolVariant variant = IonTextUtils.symbolVariant(text);
                 switch (variant)
-                {
+            {
                     case IDENTIFIER:
                         myOut.append(text);
                         break;
                     case OPERATOR:
                         if (! myQuoteOperators)
-                        {
-                            myOut.append(text);
+            {
+                myOut.append(text);
                             break;
                         }
                         // else fall through...
@@ -826,7 +826,7 @@ public class Printer
             }
             else
             {
-                TtTimestamp ts = value.timestampValue();
+                Timestamp ts = value.timestampValue();
 
                 if (myOptions.timestampAsString)
                 {

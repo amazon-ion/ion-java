@@ -302,7 +302,7 @@ public interface IonWriter
      *
      * @param value may be null to represent {@code null.timestamp}.
      */
-    public void writeTimestamp(TtTimestamp value) throws IOException;
+    public void writeTimestamp(Timestamp value) throws IOException;
 
     /**
      * writes the passed in Date (in milliseconds since the epoch) as an

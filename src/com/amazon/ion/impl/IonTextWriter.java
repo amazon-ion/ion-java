@@ -10,7 +10,7 @@ import static com.amazon.ion.impl.IonConstants.tidStruct;
 
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.TtTimestamp;
+import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.Base64Encoder.TextStream;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import java.io.ByteArrayInputStream;
@@ -416,22 +416,22 @@ public final class IonTextWriter
         closeValue();
     }
 
-
+// TODO - should this be removed? use writeTimestamp(long millis, ... ??
     public void writeTimestamp(Date value, Integer localOffset)
         throws IOException
     {
-        TtTimestamp ts =
-            (value == null ? null : new TtTimestamp(value, localOffset));
+        Timestamp ts =
+            (value == null ? null : new Timestamp(value.getTime(), localOffset));
         writeTimestamp(ts);
     }
 
     public void writeTimestampUTC(Date value)
         throws IOException
     {
-        writeTimestamp(value, TtTimestamp.UTC_OFFSET);
+        writeTimestamp(value, Timestamp.UTC_OFFSET);
     }
 
-    public void writeTimestamp(TtTimestamp value) throws IOException
+    public void writeTimestamp(Timestamp value) throws IOException
     {
         if (value == null) {
             writeNull(IonType.TIMESTAMP);

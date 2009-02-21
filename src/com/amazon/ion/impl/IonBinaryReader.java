@@ -21,7 +21,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
-import com.amazon.ion.TtTimestamp;
+import com.amazon.ion.Timestamp;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
@@ -852,7 +852,7 @@ public final class IonBinaryReader
         case IonConstants.tidDecimal:   return sys.newDecimal(bigDecimalValue());
         case IonConstants.tidTimestamp:
             IonTimestamp t = sys.newTimestamp();
-            TtTimestamp ti = timestampValue();
+            Timestamp ti = timestampValue();
             t.setValue(ti);
             return t;
         case IonConstants.tidSymbol:    return sys.newSymbol(stringValue());
@@ -989,8 +989,8 @@ public final class IonBinaryReader
                 value = _reader.readFloat(_value_len);
             }
             else {
-                throw new IllegalStateException();
-            }
+            throw new IllegalStateException();
+        }
         }
         catch (IOException e) {
             throw new IonException(e);
@@ -1047,9 +1047,9 @@ public final class IonBinaryReader
         return timestampValue().dateValue();
     }
 
-    public TtTimestamp timestampValue()
+    public Timestamp timestampValue()
     {
-        TtTimestamp ti;
+        Timestamp ti;
 
         if (_state != S_BEFORE_CONTENTS) {
             throw new IllegalStateException();

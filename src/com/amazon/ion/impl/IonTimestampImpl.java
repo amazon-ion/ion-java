@@ -8,7 +8,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
-import com.amazon.ion.TtTimestamp;
+import com.amazon.ion.Timestamp;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -21,13 +21,13 @@ public final class IonTimestampImpl
     extends IonValueImpl
     implements IonTimestamp
 {
-    public final static Integer UTC_OFFSET = TtTimestamp.UTC_OFFSET;
+    public final static Integer UTC_OFFSET = Timestamp.UTC_OFFSET;
 
     static final int NULL_TIMESTAMP_TYPEDESC =
         IonConstants.makeTypeDescriptor(IonConstants.tidTimestamp,
                                         IonConstants.lnIsNullAtom);
 
-    private TtTimestamp _timestamp_value;
+    private Timestamp _timestamp_value;
 
     /**
      * Constructs a <code>null.timestamp</code> value.
@@ -71,8 +71,7 @@ public final class IonTimestampImpl
         return IonType.TIMESTAMP;
     }
 
-
-    public TtTimestamp timestampValue()
+    public Timestamp timestampValue()
     {
         makeReady();
         return _timestamp_value;
@@ -104,7 +103,7 @@ public final class IonTimestampImpl
         return _timestamp_value.getLocalOffset();
     }
 
-    public void setValue(TtTimestamp timestamp)
+    public void setValue(Timestamp timestamp)
     {
         checkForLock();
         _timestamp_value = timestamp;
@@ -114,12 +113,12 @@ public final class IonTimestampImpl
 
     public void setValue(BigDecimal millis, Integer localOffset)
     {
-        setValue(new TtTimestamp(millis, localOffset));
+        setValue(new Timestamp(millis, localOffset));
     }
 
     public void setValue(long millis, Integer localOffset)
     {
-        setValue(new TtTimestamp(millis, localOffset));
+        setValue(new Timestamp(millis, localOffset));
     }
 
     public void setTime(Date value)
@@ -278,7 +277,7 @@ public final class IonTimestampImpl
             _timestamp_value = null;
             break;
         case 0:
-            _timestamp_value = new TtTimestamp(0, null);
+            _timestamp_value = new Timestamp(0, null);
             break;
         case IonConstants.lnIsVarLen:
             ln = reader.readVarUInt7IntValue();

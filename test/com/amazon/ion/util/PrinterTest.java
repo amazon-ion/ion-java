@@ -489,26 +489,26 @@ public class PrinterTest
         checkRendering("null.timestamp", value);
 
         value = (IonTimestamp) oneValue("2007-05-15T18:45-00:00");
-        checkRendering("2007-05-15T18:45:00.000-00:00", value);
+        checkRendering("2007-05-15T18:45-00:00", value);
 
         value = (IonTimestamp) oneValue("2007-05-15T18:45Z");
-        checkRendering("2007-05-15T18:45:00.000Z", value);
+        checkRendering("2007-05-15T18:45Z", value);
 
         // offset +0 shortens to Z
         value = (IonTimestamp) oneValue("2007-05-15T18:45+00:00");
-        checkRendering("2007-05-15T18:45:00.000Z", value);
+        checkRendering("2007-05-15T18:45Z", value);
 
         value = (IonTimestamp) oneValue("2007-05-15T18:45+01:12");
-        checkRendering("2007-05-15T18:45:00.000+01:12", value);
+        checkRendering("2007-05-15T18:45+01:12", value);
 
         value = (IonTimestamp) oneValue("2007-05-15T18:45-10:01");
-        checkRendering("2007-05-15T18:45:00.000-10:01", value);
+        checkRendering("2007-05-15T18:45-10:01", value);
 
         value.addTypeAnnotation("an");
-        checkRendering("an::2007-05-15T18:45:00.000-10:01", value);
+        checkRendering("an::2007-05-15T18:45-10:01", value);
 
         myPrinter.setPrintTimestampAsString(true);
-        checkRendering("an::\"2007-05-15T18:45:00.000-10:01\"", value);
+        checkRendering("an::\"2007-05-15T18:45-10:01\"", value);
 
         myPrinter.setJsonMode();
         checkRendering("" + value.getMillis(), value);

@@ -21,7 +21,7 @@ import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.TtTimestamp;
+import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.impl.Base64Encoder.BinaryStream;
 import com.amazon.ion.impl.IonTokenReader.Type.timeinfo;
@@ -628,7 +628,7 @@ public final class IonTextReader
         case DECIMAL:   return sys.newDecimal(bigDecimalValue());
         case TIMESTAMP:
             IonTimestamp t = sys.newNullTimestamp();
-            TtTimestamp ti = timestampValue();
+            Timestamp ti = timestampValue();
             t.setValue(ti);
             return t;
         case SYMBOL:    return sys.newSymbol(stringValue());
@@ -810,13 +810,13 @@ public final class IonTextReader
         throw new IllegalStateException("current value is not an ion decimal");
     }
 
-    public TtTimestamp timestampValue()
+    public Timestamp timestampValue()
     {
         if (!_value_type.equals(IonType.TIMESTAMP)) {
             throw new IllegalStateException("current value is not a timestamp");
         }
         String image = _scanner.getValueAsString(_value_start, _value_end);
-        TtTimestamp ti = timeinfo.parse(image);
+        Timestamp ti = timeinfo.parse(image);
 
         // FIXME broken for null.timestamp?!?
 

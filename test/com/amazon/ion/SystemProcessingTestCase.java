@@ -473,8 +473,7 @@ public abstract class SystemProcessingTestCase
         nextValue();
         checkSymbol("+");
         nextValue();
-        // FIXME this should only by YMD
-        checkTimestamp("2009-02-18T00:00:00.000-00:00");
+        checkTimestamp("2009-02-18");
         checkEof();
     }
 

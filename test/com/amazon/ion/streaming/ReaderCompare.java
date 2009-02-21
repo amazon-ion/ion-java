@@ -6,7 +6,7 @@ package com.amazon.ion.streaming;
 
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
-import com.amazon.ion.TtTimestamp;
+import com.amazon.ion.Timestamp;
 import java.math.BigDecimal;
 import org.junit.Assert;
 
@@ -130,8 +130,8 @@ public class ReaderCompare
                 assertEquals(bd1, bd2);
                 break;
             case TIMESTAMP:
-                TtTimestamp t1 = it1.timestampValue();
-                TtTimestamp t2 = it2.timestampValue();
+            	Timestamp t1 = it1.timestampValue();
+            	Timestamp t2 = it2.timestampValue();
                 assertEquals(t1, t2);
                 break;
             case STRING:

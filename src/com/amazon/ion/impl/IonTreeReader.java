@@ -22,7 +22,7 @@ import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.TtTimestamp;
+import com.amazon.ion.Timestamp;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
@@ -230,7 +230,7 @@ public final class IonTreeReader
     public boolean isInStruct()
     {
         return (_parent instanceof IonStruct);
-    }
+        }
 
     public boolean isNullValue()
     {
@@ -314,7 +314,7 @@ public final class IonTreeReader
         throw new IllegalStateException("current value is not an ion decimal");
     }
 
-    public TtTimestamp timestampValue()
+    public Timestamp timestampValue()
     {
         if (_curr instanceof IonTimestamp) {
             return ((IonTimestamp)_curr).timestampValue();

@@ -14,7 +14,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.TtTimestamp;
+import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.IonTokenReader;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -157,12 +157,12 @@ public class BinaryStreamingTest
                         wr.writeTimestampUTC((Date)value);
                     }
                     else if (value instanceof String) {
-                        TtTimestamp ti =
+                        Timestamp ti =
                             IonTokenReader.Type.timeinfo.parse((String)value);
                         wr.writeTimestamp(ti);
                     }
-                    else if (value instanceof TtTimestamp) {
-                        wr.writeTimestamp((TtTimestamp)value);
+                    else if (value instanceof Timestamp) {
+                        wr.writeTimestamp((Timestamp)value);
                     }
                     else {
                         throw new IllegalStateException("we only write Date (as is), a TtTimestamp or a String (parsed) to an IonTimestamp");
@@ -285,19 +285,19 @@ public class BinaryStreamingTest
                     assertTrue( bd1.equals(bd2) );
                     break;
                 case TIMESTAMP:
-                    TtTimestamp actual = r.timestampValue();
+                	Timestamp actual = r.timestampValue();
 
                     if (value instanceof Date) {
                         assertEquals(value, actual.dateValue());
-                        assertEquals(TtTimestamp.UTC_OFFSET, actual.getLocalOffset());
+                        assertEquals(Timestamp.UTC_OFFSET, actual.getLocalOffset());
                     }
                     else if (value instanceof String) {
-                        TtTimestamp ti2 =
+                    	Timestamp ti2 =
                             IonTokenReader.Type.timeinfo.parse((String)value);
                         assertEquals(ti2, actual);
                     }
-                    else if (value instanceof TtTimestamp) {
-                        TtTimestamp ti2 = (TtTimestamp)value;
+                    else if (value instanceof Timestamp) {
+                    	Timestamp ti2 = (Timestamp)value;
                         assertEquals(ti2, actual);
                     }
                     else {

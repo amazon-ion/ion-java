@@ -211,14 +211,14 @@ public interface IonReader
     public Date dateValue();
 
     /**
-     * Returns the current value as a {@link TtTimestamp}.
+     * Returns the current value as a {@link Timestamp}.
      * This is only valid when {@link #getType()} returns
      * {@link IonType#TIMESTAMP}.
      *
-     * @return the current value as a {@link TtTimestamp},
+     * @return the current value as a {@link Timestamp},
      * or {@code null} if the current value is {@code null.timestamp}.
      */
-    public TtTimestamp timestampValue();
+    public Timestamp timestampValue();
 
     /**
      * Returns the current value as a Java String.  This is only valid if there
