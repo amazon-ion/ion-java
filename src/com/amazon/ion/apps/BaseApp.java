@@ -11,10 +11,12 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.system.SimpleCatalog;
 import com.amazon.ion.system.SystemFactory;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 
 /**
  *   ion_encode  ion_print
@@ -27,6 +29,20 @@ abstract class BaseApp
 
     //=========================================================================
     // Static methods
+
+    protected static byte[] loadAsByteArray(InputStream in)
+        throws IOException
+    {
+	byte[] buf = new byte[4096];
+	ByteArrayOutputStream bos = new ByteArrayOutputStream();
+	int cnt;
+
+	while ((cnt = in.read(buf)) != -1) {
+	    bos.write(buf, 0, cnt);
+	}
+	return bos.toByteArray();
+    }
+
 
     protected static byte[] loadAsByteArray(File file)
         throws FileNotFoundException, IOException
@@ -66,7 +82,7 @@ abstract class BaseApp
     {
         if (args.length == 0)
         {
-            System.err.println("Must provide list of files to " + action);
+            processStdIn();
         }
         else
         {
@@ -82,10 +98,17 @@ abstract class BaseApp
 
     protected void processFiles(String[] filePaths, int startingIndex)
     {
-        for (int i = startingIndex; i < filePaths.length; i++)
+        if (startingIndex == 0)
         {
-            String filePath = filePaths[i];
-            processFile(filePath);
+            processStdIn();
+        }
+        else
+        {
+            for (int i = startingIndex; i < filePaths.length; i++)
+            {
+                String filePath = filePaths[i];
+                processFile(filePath);
+            }
         }
     }
 
@@ -119,6 +142,25 @@ abstract class BaseApp
         return false;
     }
 
+    protected void processStdIn() {
+	try
+	    {
+		byte[] buffer = loadAsByteArray(System.in);
+		IonReader reader = mySystem.newReader(buffer);
+		process(reader);
+            }
+	catch (IonException e)
+            {
+                System.err.println("An error occurred while processing stdin");
+                System.err.println(e.getMessage());
+            }
+	catch (IOException e)
+            {
+                System.err.println("An error occurred while processing stdin");
+		System.err.println(e.getMessage());
+            }
+    }
+    
     protected void process(File file)
         throws IOException, IonException
     {

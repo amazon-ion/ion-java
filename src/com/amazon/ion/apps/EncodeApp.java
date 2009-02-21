@@ -19,6 +19,7 @@ public class EncodeApp
 {
     private SymbolTable[] myImports;
     private File myOutputDir;
+    private String myOutputFile;
 
 
     //=========================================================================
@@ -45,15 +46,7 @@ public class EncodeApp
     public void doMain(String[] args)
     {
         int firstFileIndex = processOptions(args);
-
-        if (firstFileIndex == args.length)
-        {
-            System.err.println("Must provide list of files to encode");
-        }
-        else
-        {
-            processFiles(args, firstFileIndex);
-        }
+	processFiles(args, firstFileIndex);
     }
 
 
@@ -92,6 +85,17 @@ public class EncodeApp
                                                + path);
                 }
             }
+            else if ("--output".equals(arg))
+	    {
+		String path = args[++i];
+                myOutputFile = path;
+                myOutputDir = new File(path).getParentFile();
+                if (! myOutputDir.isDirectory() || ! myOutputDir.canWrite())
+                {
+                    throw new RuntimeException("Not a writeable directory: "
+                                               + path);
+                }
+            }
             else
             {
                 // this arg is not an option, we're done here
@@ -119,6 +123,35 @@ public class EncodeApp
         {
             String fileName = inputFile.getName();
             File outputFile = new File(myOutputDir, fileName);
+            FileOutputStream out = new FileOutputStream(outputFile);
+            try
+            {
+                out.write(binaryBytes);
+            }
+            finally
+            {
+                out.close();
+            }
+        }
+        else
+        {
+            System.out.write(binaryBytes);
+        }
+    }
+
+    @Override
+    protected void process(IonReader reader)
+        throws IOException, IonException
+    {
+        IonBinaryWriter writer = mySystem.newBinaryWriter(myImports);
+
+        writer.writeValues(reader);
+
+        byte[] binaryBytes = writer.getBytes();
+
+        if (myOutputDir != null)
+        {
+            File outputFile = new File(myOutputFile);
             FileOutputStream out = new FileOutputStream(outputFile);
             try
             {

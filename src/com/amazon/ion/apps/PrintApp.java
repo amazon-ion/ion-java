@@ -21,6 +21,7 @@ public class PrintApp
     extends BaseApp
 {
     private File myOutputDir;
+    private String myOutputFile;
 
 
     //=========================================================================
@@ -38,15 +39,7 @@ public class PrintApp
     public void doMain(String[] args)
     {
         int firstFileIndex = processOptions(args);
-
-        if (firstFileIndex == args.length)
-        {
-            System.err.println("Must provide list of files to print");
-        }
-        else
-        {
-            processFiles(args, firstFileIndex);
-        }
+	processFiles(args, firstFileIndex);
     }
 
 
@@ -69,6 +62,17 @@ public class PrintApp
             {
                 String path = args[++i];
                 myOutputDir = new File(path);
+                if (! myOutputDir.isDirectory() || ! myOutputDir.canWrite())
+                {
+                    throw new RuntimeException("Not a writeable directory: "
+                                               + path);
+                }
+            }
+            else if ("--output".equals(arg))
+	    {
+		String path = args[++i];
+                myOutputFile = path;
+                myOutputDir = new File(path).getParentFile();
                 if (! myOutputDir.isDirectory() || ! myOutputDir.canWrite())
                 {
                     throw new RuntimeException("Not a writeable directory: "
@@ -98,6 +102,29 @@ public class PrintApp
         {
             String fileName = inputFile.getName();
             File outputFile = new File(myOutputDir, fileName);
+            FileOutputStream out = new FileOutputStream(outputFile);
+            try
+            {
+                process(reader, out);
+            }
+            finally
+            {
+                out.close();
+            }
+        }
+    }
+
+    @Override
+    protected void process(IonReader reader)
+        throws IOException, IonException
+    {
+        if (myOutputDir == null)
+        {
+            process(reader, System.out);
+        }
+        else
+        {
+            File outputFile = new File(myOutputFile);
             FileOutputStream out = new FileOutputStream(outputFile);
             try
             {
