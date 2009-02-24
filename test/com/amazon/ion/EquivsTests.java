@@ -77,4 +77,13 @@ public class EquivsTests
     {
         return new EquivsTest(ionFile);
     }
+
+    @Override
+    protected String[] getFilesToSkip()
+    {
+        return new String[]
+        {
+            "symbols.ion",
+        };
+    }
 }

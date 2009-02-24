@@ -27,7 +27,8 @@ public class SystemProcessingTests
         suite.addTestSuite(TextReaderSystemProcessingTest.class);
         suite.addTestSuite(NewDatagramIteratorSystemProcessingTest.class);
 
-        suite.addTestSuite(TrBwBrProcessingTest.class);
+        // FIXME re-enable this test class
+//        suite.addTestSuite(TrBwBrProcessingTest.class);
 
         return suite;
     }

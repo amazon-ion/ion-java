@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -66,24 +64,24 @@ public class RoundTripTests
         }
 
         private String renderUserView(IonDatagram datagram)
-        throws IOException
-	    {
-	        // TODO use Printer in raw mode.
-	        for (Iterator i = datagram.iterator(); i.hasNext();)
-	        {
-	            IonValue value = (IonValue) i.next();
-	            myPrinter.print(value, myBuilder);
-	            myBuilder.append('\n');
-	        }
+            throws IOException
+        {
+            // TODO use Printer in raw mode.
+            for (Iterator i = datagram.iterator(); i.hasNext();)
+            {
+                IonValue value = (IonValue) i.next();
+                myPrinter.print(value, myBuilder);
+                myBuilder.append('\n');
+            }
 
-	        String text = myBuilder.toString();
-	        myBuilder.setLength(0);
-	        return text;
-	    }
+            String text = myBuilder.toString();
+            myBuilder.setLength(0);
+            return text;
+        }
 
         private byte[] encode(IonDatagram datagram)
         {
-            return datagram.toBytes();
+            return datagram.getBytes();
         }
 
 
@@ -92,7 +90,7 @@ public class RoundTripTests
         public void runTest()
             throws Exception
         {
-            IonDatagram values = readIonText(myTestFile);
+            IonDatagram values = loader().load(myTestFile);
 
             // Turn the DOM back into text...
             String text1   = renderSystemView(values);

@@ -1,11 +1,10 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.List;
 import junit.framework.Test;
 import junit.framework.TestSuite;
 
@@ -32,10 +31,19 @@ public abstract class DirectoryTestSuite
             throw new IllegalArgumentException(message);
         }
 
+        List<String> skip = Arrays.asList(getFilesToSkip());
+
         // Sort the fileNames so they are listed in order.
         Arrays.sort(fileNames);
         for (String fileName : fileNames)
         {
+            if (skip.contains(fileName))
+            {
+                System.err.println("WARNING: " + getName()
+                                   + " skipping " + fileName);
+                continue;
+            }
+
             File testFile = new File(goodFilesDir, fileName);
 
             Test test = makeTest(testFile);
@@ -55,4 +63,9 @@ public abstract class DirectoryTestSuite
      * ignored.
      */
     protected abstract Test makeTest(File testFile);
+
+    protected String[] getFilesToSkip()
+    {
+        return new String[0];
+    }
 }

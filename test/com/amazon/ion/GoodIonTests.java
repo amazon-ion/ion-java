@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -80,5 +78,17 @@ public class GoodIonTests
             return new GoodIonTestCase(ionFile, true);
         }
         return null;
+    }
+
+    @Override
+    protected String[] getFilesToSkip()
+    {
+        return new String[]
+        {
+            "annotationQuotedFalse.ion",
+            "annotationQuotedNull.ion",
+            "annotationQuotedTrue.ion",
+            "floatSpecials.ion",
+        };
     }
 }
