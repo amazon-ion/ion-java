@@ -21,7 +21,7 @@ import java.util.Stack;
 /**
  *  This class is responsible for breaking the input stream into Tokens.
  *  It does both the token recognition (aka the scanner) and the state
- *  management needed to use the value underlying some of these tokens. 
+ *  management needed to use the value underlying some of these tokens.
  */
 public class IonTokenReader
 {
@@ -120,10 +120,10 @@ public class IonTokenReader
             	Timestamp t = null;
                 s = s.trim(); // TODO why is this necessary?
                 try {
-                	t = new Timestamp(s);  // TODO should Timestamp just throw an IonException?
+                    t = Timestamp.parse(s);  // TODO should Timestamp just throw an IonException?
                 }
                 catch (IllegalArgumentException e) {
-                	throw new IonException(e);
+                    throw new IonException(e);
                 }
                 return t;
             }

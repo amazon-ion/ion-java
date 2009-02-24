@@ -1,7 +1,12 @@
-/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
+/* Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
+import static com.amazon.ion.Timestamp.UNKNOWN_OFFSET;
+import static com.amazon.ion.Timestamp.UTC_OFFSET;
+
+import com.amazon.ion.Timestamp.Precision;
+import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -25,15 +30,6 @@ public class TimestampTest
      * TODO determine if this is well-defined.
      */
     private static final TimeZone UTC = TimeZone.getTimeZone("UTC");
-    private static final TimeZone PST = TimeZone.getTimeZone("PST");
-
-
-    private static final Calendar MAGIC_DAY;
-    static {
-        MAGIC_DAY = makeUtcCalendar();
-        // month is zero-based!
-        MAGIC_DAY.set(1969, 01, 23);
-    }
 
 
     public static Calendar makeUtcCalendar()
@@ -43,18 +39,10 @@ public class TimestampTest
         return cal;
     }
 
-    /**
-     *
-     * @param year
-     * @param month is zero-based!
-     * @param dayOfMonth
-     * @return a new Calendar
-     */
-    public static Calendar makeCalendarDate(int year, int month, int dayOfMonth)
+
+    public IonTimestamp parse(String text)
     {
-        Calendar cal = makeUtcCalendar();
-        cal.set(year, month, dayOfMonth);
-        return cal;
+        return (IonTimestamp) oneValue(text);
     }
 
     private void checkTimestamp(Date expected, IonTimestamp actual)
@@ -62,10 +50,12 @@ public class TimestampTest
         assertSame(IonType.TIMESTAMP, actual.getType());
         Date found = actual.dateValue();
         assertNotNull("date is null", found);
+
         // Ensure that dateValue() returns a new instance each call!
         assertNotSame(found, actual.dateValue());
 
-        assertEquals(found.getTime(), actual.getMillis());
+        assertEquals(expected, found);
+        assertEquals(expected.getTime(), actual.getMillis());
 
         if (expected.getTime() != found.getTime())
         {
@@ -95,25 +85,117 @@ public class TimestampTest
     }
 
 
-    private void checkMagicDay(String text)
+    private void checkFields(int expectedYear, int expectedMonth, int expectedDay,
+                             int expectedHour, int expectedMinute,
+                             int expectedSecond,
+                             BigDecimal expectedFraction,
+                             Integer expectedOffset,
+                             Timestamp ts)
     {
-        checkMagicDay(null, text);
+        assertEquals(expectedYear,     ts.getYear());
+        assertEquals(expectedMonth,    ts.getMonth());
+        assertEquals(expectedDay,      ts.getDay());
+        assertEquals(expectedHour,     ts.getHour());
+        assertEquals(expectedMinute,   ts.getMinute());
+        assertEquals(expectedSecond,   ts.getSecond());
+        assertEquals(expectedFraction, ts.getFractionalSecond());
+        assertEquals(expectedOffset,   ts.getLocalOffset());
     }
 
-    private void checkMagicDay(TimeZone tz, String text)
+    private void checkTime(int expectedYear, int expectedMonth, int expectedDay,
+                           String ionText)
     {
-        IonTimestamp value = (IonTimestamp) oneValue(text);
-        Calendar magicDay = makeUtcCalendar();
-        // month is zero-based!
-        magicDay.set(1969, 01, 23);
+        String expectedText = ionText;
+        Timestamp ts = new Timestamp(expectedYear, expectedMonth, expectedDay);
+        checkFields(expectedYear, expectedMonth, expectedDay, 0, 0, 0, null,
+                    UNKNOWN_OFFSET, ts);
+        assertEquals(Precision.DATE, ts.getPrecision());
+        assertEquals(expectedText, ts.toString());
 
-        if (tz != null)
-        {
-            magicDay.setTimeZone(tz);
+        checkTime(expectedYear, expectedMonth, expectedDay,
+                  0, 0, 0, null,
+                  UNKNOWN_OFFSET, expectedText, ionText);
+    }
+
+
+    private void checkTime(int expectedYear, int expectedMonth, int expectedDay,
+                           int expectedHour, int expectedMinute,
+                           int expectedSecond,
+                           BigDecimal expectedFraction,
+                           Integer expectedOffset,
+                           String ionText)
+    {
+        String expectedText = ionText;
+        checkTime(expectedYear, expectedMonth, expectedDay,
+                    expectedHour, expectedMinute, expectedSecond, expectedFraction,
+                    expectedOffset, expectedText, ionText);
+    }
+
+    private void checkTime(int expectedYear, int expectedMonth, int expectedDay,
+                           int expectedHour, int expectedMinute,
+                           int expectedSecond,
+                           BigDecimal expectedFraction,
+                           Integer expectedOffset,
+                           String expectedText,
+                           String ionText)
+    {
+        IonTimestamp actual = parse(ionText);
+        checkFields(expectedYear, expectedMonth, expectedDay,
+                    expectedHour, expectedMinute, expectedSecond, expectedFraction,
+                    expectedOffset, actual);
+
+        assertEquals(expectedText, actual.toString());
+        assertEquals(expectedText, actual.timestampValue().toString());
+
+        Timestamp ts1 = Timestamp.parse(expectedText);
+        Timestamp ts2 = Timestamp.parse(ionText);
+
+        assertEquals(ts1, ts2);
+        assertEquals(ts1, actual.timestampValue());
+    }
+
+    private void checkFields(int expectedYear, int expectedMonth, int expectedDay,
+                             int expectedHour, int expectedMinute,
+                             int expectedSecond,
+                             BigDecimal expectedFraction,
+                             Integer expectedOffset,
+                             IonTimestamp actual)
+    {
+        assertFalse(actual.isNullValue());
+        assertEquals(expectedOffset, actual.getLocalOffset());
+
+        Timestamp ts = actual.timestampValue();
+        checkFields(expectedYear, expectedMonth, expectedDay,
+                    expectedHour, expectedMinute, expectedSecond,
+                    expectedFraction, expectedOffset,
+                    ts);
+
+        Calendar cal = makeUtcCalendar();
+        cal.set(expectedYear, expectedMonth - 1, expectedDay,
+                expectedHour, expectedMinute, expectedSecond);
+        if (expectedFraction != null) {
+            int millis = expectedFraction.movePointRight(3).intValue();
+            cal.set(Calendar.MILLISECOND, millis);
+        }
+        if (expectedOffset != null) {
+            int rawOffset = expectedOffset.intValue();
+            cal.add(Calendar.MINUTE, -rawOffset);
+
+            boolean neg = (rawOffset < 0);
+            if (neg) rawOffset = -rawOffset;
+
+            int hours = rawOffset / 60;
+            int minutes = rawOffset % 60;
+
+            String tzId =
+                (neg?"GMT-":"GMT+") + hours + (minutes<10?":0":":") + minutes;
+            TimeZone tz = TimeZone.getTimeZone(tzId);
+            cal.setTimeZone(tz);
         }
 
-        checkTimestamp(magicDay, value);
+        checkTimestamp(cal, actual);
     }
+
 
     public void checkNullTimestamp(IonTimestamp value)
     {
@@ -126,6 +208,7 @@ public class TimestampTest
             fail("Expected NullValueException");
         }
         catch (NullValueException e) { }
+        assertNull(value.timestampValue());
     }
 
     public void modifyTimestamp(IonTimestamp value)
@@ -205,39 +288,47 @@ public class TimestampTest
 
     public void testMillis()
     {
-        IonTimestamp value =
-            (IonTimestamp) oneValue("2001-01-01T12:34:56.789Z");
-
-        Calendar cal = makeUtcCalendar();
-        cal.set(2001, 00, 01, 12, 34, 56);
-        cal.set(Calendar.MILLISECOND, 789);
-
-        checkTimestamp(cal, value);
+        checkTime(2001, 1, 1, 12, 34, 56, new BigDecimal(".789"),
+                  UTC_OFFSET,
+                  "2001-01-01T12:34:56.789Z");
     }
 
     public void testBareDate()
     {
-        checkMagicDay("1969-02-23");
+        checkTime(1969, 02, 23,
+                  "1969-02-23");
     }
 
     public void testDateWithMinutes()
     {
-        checkMagicDay("1969-02-23T00:00Z");
+        checkTime(1969, 02, 23, 0, 0, 0, null, UTC_OFFSET,
+                  "1969-02-23T00:00Z");
+    }
+
+    public void testDateWithSeconds()
+    {
+        checkTime(1969, 02, 23, 0, 0, 0, null, UTC_OFFSET,
+                  "1969-02-23T00:00:00Z");
     }
 
     public void testDateWithMillis()
     {
-        checkMagicDay("1969-02-23T00:00:00.000Z");
+        checkTime(1969, 02, 23, 0, 0, 0, new BigDecimal("0.000"), UTC_OFFSET,
+                  "1969-02-23T00:00:00.000Z");
     }
 
     public void testDateWithMinutesAndPosTzd()
     {
-        checkMagicDay("1969-02-23T00:00+00:00");
+        checkTime(1969, 02, 23, 0, 0, 0, null, UTC_OFFSET,
+                  "1969-02-23T00:00Z",
+                  "1969-02-23T00:00+00:00");
     }
 
     public void testDateWithMillisAndPosTzd()
     {
-        checkMagicDay("1969-02-23T00:00:00.00+00:00");
+        checkTime(1969, 02, 23, 0, 0, 0, new BigDecimal("0.00"), UTC_OFFSET,
+                  "1969-02-23T00:00:00.00Z",
+                  "1969-02-23T00:00:00.00+00:00");
     }
 
 
@@ -250,36 +341,25 @@ public class TimestampTest
 
     public void testPrecision()
     {
-        // FIXME All of these should be distinct
-//        checkCanonicalText("2007-08-28");
-//        checkCanonicalText("2007-08-28T16:37:24Z");
-//        checkCanonicalText("2007-08-28T16:37:24.0Z");
-//        checkCanonicalText("2007-08-28T16:37:24.00Z");
+        checkCanonicalText("2007-08-28");
+        checkCanonicalText("2007-08-28T16:37:24Z");
+        checkCanonicalText("2007-08-28T16:37:24.0Z");
+        checkCanonicalText("2007-08-28T16:37:24.00Z");
         checkCanonicalText("2007-08-28T16:37:24.000Z");
-//        checkCanonicalText("2007-08-28T16:37:24.0000Z");
+        checkCanonicalText("2007-08-28T16:37:24.0000Z");
     }
 
 
     public void testDateWithNormalTzd()
     {
-        IonTimestamp value = (IonTimestamp) oneValue("1969-02-22T16:00-08:00");
-        Calendar magicDay = makeUtcCalendar();
-        // month is zero-based!
-        magicDay.set(1969, 01, 22, 16, 0);
-        magicDay.setTimeZone(PST);
-
-        checkTimestamp(magicDay, value);
+        checkTime(1969, 02, 22, 16, 0, 0, null, new Integer(-480),
+                  "1969-02-22T16:00-08:00");
     }
 
     public void testdateWithOddTzd()
     {
-        IonTimestamp value = (IonTimestamp) oneValue("1969-02-23T01:15:00.00+01:15");
-        Calendar magicDay = makeUtcCalendar();
-        // month is zero-based!
-        magicDay.set(1969, 01, 23);
-
-        checkTimestamp(magicDay.getTime(), value);
-        assertEquals(75, value.getLocalOffset().intValue());
+        checkTime(1969, 02, 23, 1, 15, 0, new BigDecimal("0.00"), new Integer(75),
+                  "1969-02-23T01:15:00.00+01:15");
     }
 
     public void testLocalOffset()
@@ -287,17 +367,30 @@ public class TimestampTest
         IonTimestamp value = (IonTimestamp) oneValue("1969-02-23T00:00+01:23");
         assertEquals(83, value.getLocalOffset().intValue());
 
+        checkTime(1969, 02, 23, 0, 0, 0, null, new Integer(83),
+                  "1969-02-23T00:00+01:23");
+
         value = (IonTimestamp) oneValue("2007-05-08T05:17-12:07");
         assertEquals(-727, value.getLocalOffset().intValue());
 
+        checkTime(2007, 5, 8, 5, 17, 0, null, new Integer(-727),
+                  "2007-05-08T05:17-12:07");
+
         value = (IonTimestamp) oneValue("2007-05-08T05:17Z");
         assertEquals(0, value.getLocalOffset().intValue());
+
+        checkTime(2007, 5, 8, 5, 17, 0, null, new Integer(0),
+                  "2007-05-08T05:17Z");
+
     }
 
     public void testUnknownLocalOffset()
     {
         IonTimestamp value = (IonTimestamp) oneValue("2007-05-08T05:17-00:00");
         assertEquals(null, value.getLocalOffset());
+
+        checkTime(2007, 5, 8, 5, 17, 0, null, Timestamp.UNKNOWN_OFFSET,
+                  "2007-05-08T05:17-00:00");
     }
 
     public void testDateWithZ()
@@ -335,11 +428,10 @@ public class TimestampTest
 
     public void testYearOne()
     {
-        IonTimestamp value = (IonTimestamp) oneValue("0001-01-01");
-        checkTimestamp(makeCalendarDate(1, 0, 1), value);
-
-        value = (IonTimestamp) oneValue("0001-12-31");
-        checkTimestamp(makeCalendarDate(1, 11, 31), value);
+        checkTime(1, 1, 1, 0, 0, 0, null, Timestamp.UNKNOWN_OFFSET,
+                  "0001-01-01");
+        checkTime(1, 12, 31, 0, 0, 0, null, Timestamp.UNKNOWN_OFFSET,
+                  "0001-12-31");
     }
 
 
@@ -371,7 +463,7 @@ public class TimestampTest
     {
         Iterable<IonValue> values = readTestFile("good/timestamps.ion");
         // File is a sequence of many timestamp values.
-        
+
         int count = 0;
 
         for (IonValue value : values)

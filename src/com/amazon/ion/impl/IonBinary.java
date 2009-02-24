@@ -449,30 +449,30 @@ public class IonBinary
      */
     public static int lenIonTimestamp(Timestamp di)
     {
+        if (di == null) return 0;
+
     	int len = 0;
-		switch (di.getPrecision()) {
-    	case TT_FRAC:
-    		len += IonBinary.lenIonDecimal(di.getFractionalSeconds());
-    	case TT_SECS:
-    		len++; // len of seconds < 60
-    	case TT_TIME:
-    		len += 2; // len of hour and minutes (both < 127)
-    	case TT_DATE:
-    		len += IonBinary.lenVarUInt7(di.getZYear());
-    		len += 2; // len of month and day (both < 127)
-    	case TT_NULL:  // len of null is 0 (since the "null"ness is in the typedesc byte
-    		break;
+    	switch (di.getPrecision()) {
+    	case FRACTION:
+    	    len += IonBinary.lenIonDecimal(di.getFractionalSecond());
+    	case SECOND:
+    	    len++; // len of seconds < 60
+    	case MINUTE:
+    	    len += 2; // len of hour and minutes (both < 127)
+    	case DATE:
+    	    len += IonBinary.lenVarUInt7(di.getZYear());
+    	    len += 2; // len of month and day (both < 127)
      	}
-		Integer offset = di.getLocalOffset();
-		if (offset == null) {
-			len++; // room for the -0 (i.e. offset is "no specified offset")
-		}
-		else if (offset == 0) {
-			len++;
-		}
-		else {
-			len += IonBinary.lenVarInt7(offset.longValue());
-		}
+    	Integer offset = di.getLocalOffset();
+    	if (offset == null) {
+    	    len++; // room for the -0 (i.e. offset is "no specified offset")
+    	}
+    	else if (offset == 0) {
+    	    len++;
+    	}
+    	else {
+    	    len += IonBinary.lenVarInt7(offset.longValue());
+    	}
         return len;
     }
 
@@ -1300,53 +1300,54 @@ done:       for (;;) {
 
         public Timestamp readTimestampValue(int len) throws IOException
         {
-        	Timestamp val;
-        	Precision   p = Precision.TT_NULL;
-        	Integer     offset = null;
-        	int         year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
-        	BigDecimal  frac = null;
-        	int         remaining, end = this.position() + len;        
-        	
             if (len < 1) {
                 // nothing to do here - and the timestamp will be NULL
             	return null;
             }
+
+            Timestamp val;
+            Integer     offset = null;
+            int         year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
+            BigDecimal  frac = null;
+            int         remaining, end = this.position() + len;
+            Precision   p = null;// FIXME remove
 
             // first up is the offset, which requires a special int reader
             // to return the -0 as a null Integer
             offset = this.readVarInt7WithNegativeZero();
 
             // now we'll read the struct values from the input stream
-            if (position() < end) {
+            assert position() < end;
+            if (position() < end) {  // FIXME remove
                 // year is from 0001 to 9999
                 // or 0x1 to 0x270F or 14 bits - 1 or 2 bytes
             	year  = readVarUInt7IntValue();
             	month = readVarUInt7IntValue();
             	day   = readVarUInt7IntValue();
-                p = Precision.TT_DATE; // our lowest significant option
+                p = Precision.DATE; // our lowest significant option
 
                 // now we look for hours and minutes
                 if (position() < end) {
-                	hour   = readVarUInt7IntValue();
-                	minute = readVarUInt7IntValue();
-                    p = Precision.TT_TIME;
+                    hour   = readVarUInt7IntValue();
+                    minute = readVarUInt7IntValue();
+                    p = Precision.MINUTE;
 
                     if (position() < end) {
                     	second = readVarUInt7IntValue();
-                        p = Precision.TT_SECS;
+                        p = Precision.SECOND;
 
                         remaining = end - position();
                         if (remaining > 0) {
                             // now we read in our actual "milliseconds since the epoch"
-                        	frac = this.readDecimalValue(remaining);
-                            p = Precision.TT_FRAC;
+                            frac = this.readDecimalValue(remaining);
+                            p = Precision.FRACTION;
                         }
                     }
                 }
             }
-            
-            // now we let timestamp put it all together            
-            val = new Timestamp(p, year, month, day, hour, minute, second, frac, offset);
+
+            // now we let timestamp put it all together
+            val = Timestamp.createFromUtcFields(p, year, month, day, hour, minute, second, frac, offset);
             return val;
         }
 
@@ -2359,7 +2360,7 @@ done:       for (;;) {
         {
             int  returnlen;
 
-            if (Timestamp.isNull(di)) {
+            if (di == null) {
                 returnlen = this.writeCommonHeader(
                                                    IonConstants.tidTimestamp
                                                    ,IonConstants.lnIsNullAtom);
@@ -2378,9 +2379,9 @@ done:       for (;;) {
 
         public int writeTimestamp(Timestamp di)
             throws IOException
-        {            
-            if (Timestamp.isNull(di)) return 0;
-         
+        {
+            if (di == null) return 0;
+
             int returnlen = 0;
             Timestamp.Precision precision = di.getPrecision();
 
@@ -2388,7 +2389,7 @@ done:       for (;;) {
         	if (offset == null) {
                 // TODO don't use magic numbers!
                 this.write((byte)(0xff & (0x80 | 0x40))); // negative 0 (no timezone)
-                returnlen ++;            		
+                returnlen ++;
         	}
         	else {
         		returnlen += this.writeVarInt7Value(offset.intValue(), true);
@@ -2400,22 +2401,22 @@ done:       for (;;) {
         	returnlen += this.writeVarUInt7Value(di.getZMonth(), true);
         	returnlen += this.writeVarUInt7Value(di.getZDay(), true);
         	// how much more do we have?
-        	if (precision == Timestamp.Precision.TT_TIME
-             || precision == Timestamp.Precision.TT_SECS
-             || precision == Timestamp.Precision.TT_FRAC
+        	if (precision == Timestamp.Precision.MINUTE
+             || precision == Timestamp.Precision.SECOND
+             || precision == Timestamp.Precision.FRACTION
              ) {
         		// now hours and minutes
-            	returnlen += this.writeVarUInt7Value(di.getZHours(), true);
-            	returnlen += this.writeVarUInt7Value(di.getZMinutes(), true);
-            	
-            	if (precision == Timestamp.Precision.TT_SECS
-                 || precision == Timestamp.Precision.TT_FRAC
+            	returnlen += this.writeVarUInt7Value(di.getZHour(), true);
+            	returnlen += this.writeVarUInt7Value(di.getZMinute(), true);
+
+            	if (precision == Timestamp.Precision.SECOND
+                 || precision == Timestamp.Precision.FRACTION
              	) {
                		// seconds
-                   	returnlen += this.writeVarUInt7Value(di.getZSeconds(), true);
-                	if (precision == Timestamp.Precision.TT_FRAC) {
+                   	returnlen += this.writeVarUInt7Value(di.getZSecond(), true);
+                	if (precision == Timestamp.Precision.FRACTION) {
                 		// and, finally, any fractional component that is known
-                		returnlen += this.writeDecimalContent(di.getZFractionalSeconds());
+                		returnlen += this.writeDecimalContent(di.getZFractionalSecond());
                 	}
             	}
         	}
