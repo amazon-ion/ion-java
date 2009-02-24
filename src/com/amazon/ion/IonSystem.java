@@ -2,7 +2,6 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl.IonBinaryWriterImpl;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -408,7 +407,7 @@ public interface IonSystem
      *
      * @return a new {@link IonBinaryWriter} instance; not {@code null}.
      */
-    public IonBinaryWriterImpl newBinaryWriter(SymbolTable... imports);
+    public IonBinaryWriter newBinaryWriter(SymbolTable... imports);
 
 
     //-------------------------------------------------------------------------
