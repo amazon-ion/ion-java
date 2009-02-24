@@ -124,9 +124,8 @@ abstract public class IonContainerImpl
     public int size()
         throws NullValueException
     {
-        validateThisNotNull();
         makeReady();
-        return _contents.size();
+        return (_contents == null ? 0 : _contents.size());
     }
 
     @Override
@@ -387,6 +386,15 @@ abstract public class IonContainerImpl
 
         updateToken();
 
+        if (_buffer == null) {
+            _buffer = _container._buffer;
+            assert _buffer != null;
+        }
+        else {
+            assert _buffer == _container._buffer;
+        }
+
+
         assert pos_getOffsetAtFieldId() < 0;
 
         // int newValueStart = newPosition + getFieldNameOverheadLength();
@@ -587,21 +595,22 @@ abstract public class IonContainerImpl
         // the value is big enough to justify embedding
         // a copy of its symbol table in the stream
         // otherwise clear the buffer and re-init the positions
-        byte[] bytes = null;
-        if (concrete._buffer != null
-            && !concrete.isDirty()
-            && (concrete.getSymbolTable().isCompatible(this.getSymbolTable())
-                || concrete.deservesEmbeddingWithLocalSymbolTable()))
-        {
-            // TODO: resuse the bytes that are ready to go
-            if (bytes == null)
-            {
-                // just a trick to convince Eclipse to ignore two warning
-                // errors that will persist until this code is filled in
-                throw new IonException("feature not implemented - this code should not be reachable.");
-            }
-        }
-        else
+        //byte[] bytes = null;
+        //if (
+        // 	&& concrete._buffer != null
+        //    && !concrete.isDirty()
+        //    && concrete.getSymbolTable().isCompatible(this.getSymbolTable()))
+        //{
+        //    // TODO: resuse the bytes that are ready to go
+        //    if (bytes == null)
+        //    {
+        //        // just a trick to convince Eclipse to ignore two warning
+        //        // errors that will persist until this code is filled in
+        //        throw new IonException("feature not implemented - this code should not be reachable.");
+        //    }
+        //}
+        //else
+        // we do the "copy dom" case instead of the "copy bytes" variation
         {
             concrete.deepMaterialize();
             if (!(this instanceof IonDatagramImpl)) {
@@ -673,7 +682,6 @@ abstract public class IonContainerImpl
     public boolean remove(IonValue element)
     {
         checkForLock();
-        validateThisNotNull();
         if (element.getContainer() != this)
             return false;
 
@@ -703,11 +711,16 @@ abstract public class IonContainerImpl
         throw new AssertionError("element's index is not correct");
     }
 
+    @SuppressWarnings("unchecked")
     public Iterator<IonValue> iterator()
     {
-        validateThisNotNull();
+        if (isNullValue())
+        {
+            return (Iterator<IonValue>) IonImplUtils.EMPTY_ITERATOR;
+        }
+
         makeReady();
-        return new IonContainerIterator(_contents.iterator(), true);
+        return new IonContainerIterator(_contents.iterator(), !isReadOnly());
     }
 
     /** Encapsulates an iterator and implements a custom remove method */

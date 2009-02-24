@@ -63,7 +63,12 @@ public abstract class IonValueImpl
      */
     private int _type_desc;
 
-    private int _entry_start;       // offset of initial td, possibly an annotation
+    /**
+     * Offset of the inital TD, possibly an annotation wrapper TD.
+     * May be -1 to indicate that the real position is unknown; the other
+     * position fields will then be relative to that faux position.
+     */
+    private int _entry_start;
     private int _value_td_start;    // offset of td of the actual value
     private int _value_content_start;// offset of td of the actual value
 
@@ -114,7 +119,7 @@ public abstract class IonValueImpl
      * a non-buffer backed value is dirty, and a buffer backed value (even
      * if it has not been materialized) is clean.  Don't modify this directly,
      * go through {@link #setDirty()}.  If this flag is true, then our parent
-     * must be dirty, too.  If this flag is true, we {@link #_hasNativeValue}
+     * must be dirty, too.  If this flag is true, then {@link #_hasNativeValue}
      * must be true too.
      * <p>
      * Note that a value with no buffer is always dirty.
@@ -143,7 +148,7 @@ public abstract class IonValueImpl
      * The buffer with this element's binary-encoded data.  May be non-null
      * even when {@link #_container} is null.
      */
-    BufferManager       _buffer;
+    protected BufferManager _buffer;
 
     /**
      * The local symbol table is an updatable (?) copy of the
@@ -166,7 +171,7 @@ public abstract class IonValueImpl
 
     /**
      * Constructs a value with the given native value and high-nibble, and zero
-     * low-nibble.
+     * low-nibble. This instance is dirty by default.
      *
      * @param system must not be null.
      */
@@ -206,6 +211,9 @@ public abstract class IonValueImpl
      * It overwrites these values on the current instance.
      * Since these will be the string representations it
      * is unnecessary to update the symbol table ... yet.
+     * <p>
+     * This method will materialize this instance and the source.
+     *
      * @param source instance to copy from
      */
     protected void copyAnnotationsFrom(IonValueImpl source)
@@ -381,8 +389,7 @@ public abstract class IonValueImpl
             // the only case where this is valid is if this is
             // really an IonVersionMaker
             assert IonConstants.getLowNibble(typedesc) == 0;
-            value = new IonSymbolImpl(system, SystemSymbolTable.ION_1_0);
-            ((IonSymbolImpl)value).setIsIonVersionMarker(true);
+            value = system.newSystemIdSymbol(SystemSymbolTable.ION_1_0);
             break;
 
         default:
@@ -420,11 +427,6 @@ public abstract class IonValueImpl
         {
             throw new NullValueException();
         }
-    }
-
-    final boolean deservesEmbeddingWithLocalSymbolTable() {
-        // TODO: this is a stub
-        return false;
     }
 
     public String getFieldName()
@@ -512,15 +514,10 @@ public abstract class IonValueImpl
     }
 
     protected void setClean() {
-        assert this.getBuffer() != null;
+        assert _buffer != null;
         this._isDirty = false;
     }
 
-    public BufferManager getBuffer() {
-        if (_buffer != null)    return _buffer;
-        if (_container != null) return _container.getBuffer();
-        return null;
-    }
 
     // Not really: overridden for struct, which really needs to have a
     // symbol table.  Everyone needs to have a symbol table since they
@@ -529,35 +526,32 @@ public abstract class IonValueImpl
         if (this._symboltable != null)  return this._symboltable;
         if (this._container != null)    return this._container.getSymbolTable();
 
-        // this._symboltable = new LocalSymbolTableImpl();
-        // FIXME: this assert will break right now !
-// cas symtab:        just remove this block
-        if (this._symboltable == null) {
-        assert this._symboltable != null || this._symboltable == null;
-        }
-
         return this._symboltable;
     }
 
     /**
      *
-     * @param symtab must be local or null.
+     * @param symtab must be local, system, or null.
      */
     public void setSymbolTable(SymbolTable symtab) {
-        if (symtab != null && symtab.isSharedTable()) {
-            throw new IllegalArgumentException("symbol table must be local");
+        if (symtab != null
+            && ! (symtab.isLocalTable() || symtab.isSystemTable()))
+        {
+            throw new IllegalArgumentException("symbol table must be local or system");
         }
         checkForLock();
-        // FIXME: should this use getSymbolTable instead of _symboltable
-        // since our symtab may be held by our container?
-        if (this._symboltable != symtab) {
-            detachFromSymbolTable();
+        SymbolTable currentSymtab = getSymbolTable();
+        if (currentSymtab != symtab) {
+            if (currentSymtab != null) {
+                detachFromSymbolTable(); // Calls setDirty
+            }
             this._symboltable = symtab;
         }
     }
 
     /**
      * Recursively materialize all symbol text and detach from any symtab.
+     * Calls {@link #setDirty()}.
      */
     void detachFromSymbolTable()
     {
@@ -568,10 +562,12 @@ public abstract class IonValueImpl
             if (this._fieldName == null) {
                 this._fieldName = this.getSymbolTable().findKnownSymbol(this._fieldSid);
             }
-            this._fieldSid = 0;
+            this._fieldSid = 0; // FIXME should be UNKNOWN_SYMBOL_ID
         }
 
         this._symboltable = null;
+
+        setDirty();
     }
 
     public int getElementId() {
@@ -873,29 +869,6 @@ public abstract class IonValueImpl
         this._next_start += delta;
     }
 
-    /**
-     * Gets the buffer for this element, set to the given position.
-     * @param position
-     * @return this element's buffer; can be null.
-     * @throws IOException
-     */
-    IonBinary.Reader getReader(int position) throws IOException
-    {
-        BufferManager buf = this.getBuffer();
-        if (buf == null) return null;
-        return buf.reader(position);
-    }
-    IonBinary.Writer getWriter(int position) throws IOException
-    {
-        BufferManager buf = this.getBuffer();
-        if (buf == null) return null;
-        IonBinary.Writer writer = buf.writer();
-        if (writer == null) return null;
-        writer.setPosition(position);
-        return writer;
-    }
-
-
     static int getFieldLength(int td, IonBinary.Reader reader) throws IOException
     {
         int ln = IonConstants.getLowNibble(td);
@@ -920,6 +893,7 @@ public abstract class IonValueImpl
             if (this._buffer != null) {
                 throw new IonException("invalid value state - buffer but not loaded!");
             }
+            // No buffer, so no work to do.
             return;
         }
 
@@ -929,7 +903,7 @@ public abstract class IonValueImpl
 
         assert ! this._isLocked;
 
-        IonBinary.Reader reader = this.getBuffer().reader();
+        IonBinary.Reader reader = _buffer.reader();
         reader.sync();
         if ( ! this.pos_isAnnotated() ) {
             // if there aren't annoations, just position the reader
@@ -961,8 +935,8 @@ public abstract class IonValueImpl
                 // TODO - should this be here or can we put this off
                 //        even longer (until someone asks for the binary
                 //        buffer, for example)
-                _symboltable = _system.newLocalSymbolTable();
-                symtab = _symboltable;
+//                _symboltable = _system.newLocalSymbolTable();
+//                symtab = _symboltable;
             }
         }
         return symtab;
@@ -1041,13 +1015,13 @@ public abstract class IonValueImpl
         // TODO this should really copy the buffer to avoid materialization.
         // Note: that forces extraction and reconstruction of the local symtab.
         detachFromBuffer();
-        detachFromSymbolTable();
+        detachFromSymbolTable(); // Calls setDirty();
+        assert _isDirty;
 
         _container = null;
         _fieldName = null;
         assert _fieldSid == 0;
         _elementid = 0;
-        setDirty();
     }
 
     void setFieldName(String name) {
@@ -1264,7 +1238,7 @@ public abstract class IonValueImpl
      * changed.
      * @throws IOException
      */
-    public final int updateToken() throws IOException {
+    protected final int updateToken() throws IOException {
         if (!this._isDirty) return 0;
 
         int old_next_start = _next_start;
@@ -1277,7 +1251,6 @@ public abstract class IonValueImpl
         int fieldSidLen = 0;
         int newFieldSid = 0;
         if (_fieldName != null) {
-            // FIXME if this is an embedded value, field name is a layer up
             assert this._container != null;
             assert this._container.pos_getType() == IonConstants.tidStruct;
 
@@ -1308,6 +1281,8 @@ public abstract class IonValueImpl
 
         // overwrite the sid as everything is computed on the new value
         _fieldSid = newFieldSid;
+
+        _isPositionLoaded = true;
 
         // and the delta is how far the end moved
         return _next_start - old_next_start;
@@ -1446,6 +1421,14 @@ public abstract class IonValueImpl
         assert writer.position() == newPosition;
 
         updateToken();
+
+        if (_buffer == null) {
+            _buffer = _container._buffer;
+            assert _buffer != null;
+        }
+        else {
+            assert _buffer == _container._buffer;
+        }
 
         assert pos_getOffsetAtFieldId() < 0;
 
@@ -1610,7 +1593,6 @@ public abstract class IonValueImpl
             default:
                 this.doWriteNakedValue(writer, vlen);
                 break;
-
             }
         }
         return cumulativePositionDelta;

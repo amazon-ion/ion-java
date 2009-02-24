@@ -1,10 +1,9 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import com.amazon.ion.impl.IonSystemImpl;
+import com.amazon.ion.system.SimpleCatalog;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -195,6 +194,11 @@ public abstract class IonTestCase
         return mySystem;
     }
 
+    protected SimpleCatalog catalog()
+    {
+        return (SimpleCatalog) system().getCatalog();
+    }
+
     protected IonLoader loader()
     {
         if (myLoader == null)
@@ -248,6 +252,23 @@ public abstract class IonTestCase
         dg = loader().load(bytes);
         assertEquals(1, dg.size());
         return dg.get(0);
+    }
+
+
+
+    public SymbolTable loadSharedSymtab(String serializedSymbolTable)
+    {
+        IonStruct st = (IonStruct) oneValue(serializedSymbolTable);
+        SymbolTable shared = system().newSharedSymbolTable(st);
+        assertTrue(shared.isSharedTable());
+        return shared;
+    }
+
+    public SymbolTable registerSharedSymtab(String serializedSymbolTable)
+    {
+        SymbolTable shared = loadSharedSymtab(serializedSymbolTable);
+        catalog().putTable(shared);
+        return shared;
     }
 
 
@@ -363,7 +384,8 @@ public abstract class IonTestCase
 
     public void assertEscape(char expected, char escapedChar)
     {
-        IonString value = (IonString) oneValue(makeEscapedCharString(escapedChar));
+        String ionText = makeEscapedCharString(escapedChar);
+        IonString value = (IonString) oneValue(ionText);
         String valString = value.stringValue();
         assertEquals(1, valString.length());
         assertEquals(expected, valString.charAt(0));
@@ -388,6 +410,7 @@ public abstract class IonTestCase
      */
     public void checkInt(Long expected, IonValue actual)
     {
+        assertSame(IonType.INT, actual.getType());
         IonInt i = (IonInt) actual;
 
         if (expected == null) {
@@ -405,9 +428,73 @@ public abstract class IonTestCase
      */
     public void checkInt(Integer expected, IonValue actual)
     {
-        assertSame(IonType.INT, actual.getType());
         checkInt((expected == null ? null : expected.longValue()), actual);
     }
+
+
+    /**
+     * Checks that the value is an IonDecimal with the given value.
+     * @param expected may be null to check for null.decimal
+     */
+    public void checkDecimal(Double expected, IonValue actual)
+    {
+        assertSame(IonType.DECIMAL, actual.getType());
+        IonDecimal i = (IonDecimal) actual;
+
+        if (expected == null) {
+            assertTrue("expected null value", actual.isNullValue());
+        }
+        else
+        {
+            assertEquals("decimal content",
+                         expected.doubleValue(), i.doubleValue());
+        }
+    }
+
+
+    /**
+     * Checks that the value is an IonTimestamp with the given value.
+     * @param expected may be null to check for null.timestamp
+     */
+    public void checkTimestamp(String expected, IonValue actual)
+    {
+        assertSame(IonType.TIMESTAMP, actual.getType());
+        IonTimestamp v = (IonTimestamp) actual;
+
+        if (expected == null) {
+            assertTrue("expected null value", v.isNullValue());
+            assertNull(v.timestampValue());
+        }
+        else
+        {
+            assertEquals("timestamp content",
+                         expected, v.timestampValue().toString());
+            assertEquals("timestamp content",
+                         expected, v.toString());
+        }
+    }
+
+
+    /**
+     * Checks that the value is an IonFloat with the given value.
+     * @param expected may be null to check for null.float
+     */
+    public void checkFloat(Double expected, IonValue actual)
+    {
+        assertSame(IonType.FLOAT, actual.getType());
+        IonFloat i = (IonFloat) actual;
+
+        if (expected == null) {
+            assertTrue("expected null value", actual.isNullValue());
+        }
+        else
+        {
+            assertEquals("decimal content",
+                         expected.doubleValue(), i.doubleValue());
+        }
+    }
+
+
 
     public void checkNullNull(IonValue actual)
     {
@@ -467,13 +554,33 @@ public abstract class IonTestCase
 
     public void checkLocalTable(SymbolTable symtab)
     {
-        assertTrue(symtab.isLocalTable());
-        assertFalse(symtab.isSharedTable());
-        assertFalse(symtab.isSystemTable());
-        assertNotNull(symtab.getImportedTables());
+        assertTrue("table isn't local", symtab.isLocalTable());
+        assertFalse("table is shared",  symtab.isSharedTable());
+        assertFalse("table is system",  symtab.isSystemTable());
+        assertNotNull("table has imports", symtab.getImportedTables());
 
         SymbolTable system = symtab.getSystemSymbolTable();
         checkSystemTable(system);
+        assertEquals(system.getIonVersionId(), symtab.getIonVersionId());
+    }
+
+    /**
+     * @param symtab must be either system table or empty local table
+     */
+    public void checkTrivialLocalTable(SymbolTable symtab)
+    {
+        SymbolTable system = symtab.getSystemSymbolTable();
+
+        if (symtab.isLocalTable())
+        {
+            checkLocalTable(symtab);
+            assertEquals(system.getMaxId(), symtab.getMaxId());
+        }
+        else
+        {
+            assertSame(symtab, system);
+            checkSystemTable(symtab);
+        }
     }
 
     public void checkSystemTable(SymbolTable symtab)
@@ -481,7 +588,9 @@ public abstract class IonTestCase
         assertFalse(symtab.isLocalTable());
         assertTrue(symtab.isSharedTable());
         assertTrue(symtab.isSystemTable());
+        assertSame(symtab, symtab.getSystemSymbolTable());
         assertEquals(SystemSymbolTable.ION_1_0_MAX_ID, symtab.getMaxId());
+        assertEquals(SystemSymbolTable.ION_1_0, symtab.getIonVersionId());
     }
 
     public SymbolTable findImportedTable(SymbolTable localTable,
@@ -623,7 +732,8 @@ public abstract class IonTestCase
 
                     public void visit(IonString expected) throws Exception
                     {
-                        assertEquals(expected.stringValue(),
+                        assertEquals("IonString text",
+                                     expected.stringValue(),
                                      ((IonString)found).stringValue());
                     }
 
@@ -638,7 +748,8 @@ public abstract class IonTestCase
 
                     public void visit(IonSymbol expected) throws Exception
                     {
-                        assertEquals(expected.stringValue(),
+                        assertEquals("IonSymbol text",
+                                     expected.stringValue(),
                                      ((IonSymbol)found).stringValue());
                     }
 

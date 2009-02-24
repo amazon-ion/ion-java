@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -16,20 +14,49 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PushbackInputStream;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
  * For internal use only!
  */
-public final class IonImplUtils
+final class IonImplUtils
 {
+    /**
+     * TODO Jonker 2009-02-12: Actual lookahead limit is unclear to me!
+     *
+     * (null.timestamp) requires 11 ASCII chars to distinguish from
+     * (null.timestamps) aka (null '.' 'timestamps')
+     *
+     * @see IonCharacterReader#DEFAULT_BUFFER_SIZE
+     * @see IonCharacterReader#BUFFER_PADDING
+     */
+    public static final int MAX_LOOKAHEAD_UTF16 = 11;
+
 
     public static final Iterator<?> EMPTY_ITERATOR = new Iterator() {
         public boolean hasNext() { return false; }
         public Object  next()    { throw new NoSuchElementException(); }
-        public void    remove()  { throw new UnsupportedOperationException(); }
+        public void    remove()  { throw new IllegalStateException(); }
     };
+
+
+    public static <T> void addAllNonNull(Collection<T> dest, Iterator<T> src)
+    {
+        if (src != null)
+        {
+            while (src.hasNext())
+            {
+                T sym = src.next();
+                if (sym != null)
+                {
+                    dest.add(sym);
+                }
+            }
+        }
+    }
+
 
     public static byte[] loadFileBytes(File file)
         throws IOException
@@ -69,6 +96,23 @@ public final class IonImplUtils
     }
 
 
+    public static String loadReader(java.io.Reader in)
+        throws IOException
+    {
+        StringBuilder buf = new StringBuilder(2048);
+
+        char[] chars = new char[2048];
+
+        int len;
+        while ((len = in.read(chars)) != -1)
+        {
+            buf.append(chars, 0, len);
+        }
+
+        return buf.toString();
+    }
+
+
     public static boolean streamIsIonBinary(PushbackInputStream pushback)
         throws IonException, IOException
     {
@@ -92,7 +136,7 @@ public final class IonImplUtils
      * logically equivalent to getIonValue().toString() but may be more efficient
      * and does not require an IonSystem context to operate.
      */
-    public String valueToString(IonReader reader)
+    public static String valueToString(IonReader reader)
     {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonWriter writer = new IonTextWriter(out);

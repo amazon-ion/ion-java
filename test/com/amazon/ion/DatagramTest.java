@@ -1,10 +1,13 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl.IonSequenceImpl;
+import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
+import static com.amazon.ion.SystemSymbolTable.ION_1_0;
+import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
+import static com.amazon.ion.SystemSymbolTable.ION_1_0_SID;
+
+import com.amazon.ion.impl.IonSystemImpl;
 import com.amazon.ion.impl.IonValueImpl;
 import java.io.ByteArrayOutputStream;
 import java.util.Iterator;
@@ -38,6 +41,48 @@ public class DatagramTest
         IonDatagram datagram1 = myLoader.load(bytes);
         return datagram1;
     }
+
+
+    public void testAutomaticSystemId()
+        throws Exception
+    {
+        IonSystemImpl system = system();
+        SymbolTable systemSymtab_1_0 = system.getSystemSymbolTable(ION_1_0);
+
+        IonDatagram dg = system.newDatagram();
+
+        IonNull v = system.newNull();
+        assertNull(v.getSymbolTable());
+
+        dg.add(v);
+
+        IonValue sysId = dg.systemGet(0);
+        checkSymbol(ION_1_0, ION_1_0_SID, sysId);
+        assertSame(systemSymtab_1_0, sysId.getSymbolTable());
+
+        assertSame(systemSymtab_1_0, v.getSymbolTable());
+    }
+
+    public void testManualSystemId()
+        throws Exception
+    {
+        IonSystemImpl system = system();
+        SymbolTable systemSymtab_1_0 = system.getSystemSymbolTable(ION_1_0);
+
+        IonDatagram dg = system.newDatagram();
+
+        IonSymbol sysId = system.newSymbol(SystemSymbolTable.ION_1_0);
+        assertNull(sysId.getSymbolTable());
+
+        // $ion_1_0 at the front top-level is a systemId
+        dg.add(sysId);
+
+        assertSame(systemSymtab_1_0, sysId.getSymbolTable());
+
+        // TODO adding $ion_1_1 should fail: unsupported version
+    }
+
+
 
     //public void checkLeadingSymbolTable(IonDatagram dg)
     //{
@@ -329,6 +374,39 @@ public class DatagramTest
         catch (IllegalArgumentException e) { }
     }
 
+
+    public void testNewDatagramWithImports()
+    {
+        final int FRED_ID_OFFSET   = ION_1_0_MAX_ID;
+        final int LOCAL_ID_OFFSET  = FRED_ID_OFFSET + FRED_MAX_IDS[1];
+
+        SymbolTable fred1   = Symtabs.register("fred",   1, catalog());
+
+        IonDatagram dg = system().newDatagram(fred1);
+        dg.add(system().newSymbol("fred_2"));
+        dg.add(system().newSymbol("localSym"));
+
+
+        byte[] bytes = dg.toBytes();
+        dg = loader().load(bytes);
+        // TODO dg is dirty at this point... why? It's freshly loaded!
+
+        assertEquals(4, dg.systemSize());
+
+        IonValue f2sym = dg.systemGet(2);
+        IonValue local = dg.systemGet(3);
+
+        checkSymbol("fred_2",   FRED_ID_OFFSET + 2,   f2sym);
+        checkSymbol("localSym", LOCAL_ID_OFFSET + 1,  local);
+
+        SymbolTable symtab = f2sym.getSymbolTable();
+        assertSame(symtab, local.getSymbolTable());
+        SymbolTable[] importedTables = symtab.getImportedTables();
+        assertEquals(1, importedTables.length);
+        assertSame(fred1, importedTables[0]);
+    }
+
+
     public void testCloningDatagram()
     {
         IonDatagram dg1 = loader().load("one 1 [1.0]");
@@ -346,9 +424,25 @@ public class DatagramTest
      */
     public void testToString()
     {
-        IonDatagram dg = loader().load("{a:b}");
-        assertEquals("{a:b}", dg.toString());
+        IonDatagram dg = loader().load("1");
+        assertEquals("$ion_1_0 1", dg.toString());
+
+        dg = loader().load("{a:b}");
+        String text = dg.toString();
+        assertTrue("missing version marker",
+                   text.startsWith(SystemSymbolTable.ION_1_0 + ' '));
+        assertTrue("missing data",
+                   text.endsWith(" {a:b}"));
+
+        // Just force symtab analysis and make sure output is still okay
+        dg.getBytes(new byte[dg.byteSize()]);
+        text = dg.toString();
+        assertTrue("missing version marker",
+                   text.startsWith(SystemSymbolTable.ION_1_0 + ' '));
+        assertTrue("missing data",
+                   text.endsWith(" {a:b}"));
     }
+
 
     public void testReadOnlyDatagram()
     {
@@ -364,38 +458,5 @@ public class DatagramTest
         }
         catch (IonException e) { }
         assertEquals(1, dg.size());
-    }
-
-    // FIXME implement embedding
-    public void XXXtestEmbedding()
-    {
-        IonDatagram sourceDatagram = myLoader.load("bean");
-        IonDatagram destDatagram = myLoader.load("[java]");
-
-        IonSymbol sourceBean = (IonSymbol) sourceDatagram.get(0);
-        assertEquals("bean", sourceBean.stringValue());
-        int beanSid = sourceBean.getSymbolId();
-        assertTrue(beanSid > 0);
-
-        IonList destList = (IonList) destDatagram.get(0);
-        IonSymbol javaSym = (IonSymbol) destList.get(0);
-        assertEquals(beanSid, javaSym.getSymbolId());
-
-        // TODO remove cast
-        ((IonSequenceImpl)destList).addEmbedded(sourceBean);
-        assertIonEquals(sourceBean, destList.get(1));
-
-        IonDatagram reloadedDatagram = myLoader.load(destDatagram.toBytes());
-        IonList reloadedList = (IonList) reloadedDatagram.get(0);
-
-        // Both symbols have the same sid!
-        IonSymbol reloadedBean = (IonSymbol) reloadedList.get(1);
-        checkSymbol("java", beanSid, reloadedList.get(0));
-        checkSymbol("bean", beanSid, reloadedBean);
-
-        assertSame(reloadedList, reloadedBean.getContainer());
-        // TODO add this API to IonValues
-//        assertNotSame(reloadedList, reloadedBean.getSystemContainer());
-        // ...
     }
 }

@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
@@ -20,11 +18,13 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.TtTimestamp;
+import com.amazon.ion.Timestamp;
+import com.amazon.ion.util.IonTextUtils.SymbolVariant;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.Iterator;
 
 
 /**
@@ -254,6 +254,20 @@ public class Printer
 
     /**
      * Configures this printer's options to render legal JSON text.
+     * The following options are modified so that:
+     * <ul>
+     *   <li>{@link Options#blobAsString}</li> is {@code true}
+     *   <li>{@link Options#clobAsString}</li> is {@code true}
+     *   <li>{@link Options#decimalAsFloat}</li> is {@code true}
+     *   <li>{@link Options#skipAnnotations}</li> is {@code true}
+     *   <li>{@link Options#sexpAsList}</li> is {@code true}
+     *   <li>{@link Options#stringAsJson}</li> is {@code true}
+     *   <li>{@link Options#symbolAsString}</li> is {@code true}
+     *   <li>{@link Options#timestampAsString}</li> is {@code false}
+     *   <li>{@link Options#timestampAsMillis}</li> is {@code true}
+     *   <li>{@link Options#untypedNulls}</li> is {@code true}
+     * </ul>
+     * All other options are left as is.
      */
     public synchronized void setJsonMode()
     {
@@ -455,31 +469,39 @@ public class Printer
             {
                 writeString(text);
             }
-            else if (Text.symbolNeedsQuoting(text, myQuoteOperators))
-            {
-                myOut.append('\'');
-                Text.printAsIon(myOut, text, '\'');
-                myOut.append('\'');
-            }
             else
             {
+                SymbolVariant variant = IonTextUtils.symbolVariant(text);
+                switch (variant)
+            {
+                    case IDENTIFIER:
+                        myOut.append(text);
+                        break;
+                    case OPERATOR:
+                        if (! myQuoteOperators)
+            {
                 myOut.append(text);
+                            break;
+                        }
+                        // else fall through...
+                    case QUOTED:
+                        IonTextUtils.printQuotedSymbol(myOut, text);
+                        break;
+                }
             }
         }
 
 
         public void writeString(String text) throws IOException
         {
-            myOut.append('\"');
             if (myOptions.stringAsJson)
             {
-                Text.printAsJson(myOut, text);
+                IonTextUtils.printJsonString(myOut, text);
             }
             else
             {
-                Text.printAsIon(myOut, text, '\"');
+                IonTextUtils.printString(myOut, text);
             }
-            myOut.append('\"');
         }
 
 
@@ -505,7 +527,7 @@ public class Printer
             else
             {
                 myOut.append(myOptions.blobAsString ? "\"" : "{{");
-                value.appendBase64(myOut);
+                value.printBase64(myOut);
                 myOut.append(myOptions.blobAsString ? "\"" : "}}");
             }
         }
@@ -552,14 +574,14 @@ public class Printer
                     {
                         while ((c = byteStream.read()) != -1)
                         {
-                            Text.printAsJson(myOut, c);
+                            IonTextUtils.printJsonCodePoint(myOut, c);
                         }
                     }
                     else
                     {
                         while ((c = byteStream.read()) != -1)
                         {
-                            Text.printAsIon(myOut, c, '"');
+                            IonTextUtils.printStringCodePoint(myOut, c);
                         }
                     }
                 }
@@ -580,7 +602,8 @@ public class Printer
         public void visit(IonDatagram value) throws IOException, Exception
         {
             boolean hitOne = false;
-            for (IonValue child : value)
+            Iterator<IonValue> i = value.systemIterator();
+            while (i.hasNext())
             {
                 if (hitOne)
                 {
@@ -588,6 +611,7 @@ public class Printer
                 }
                 hitOne = true;
 
+                IonValue child = i.next();
                 writeChild(child, false);
             }
         }
@@ -640,6 +664,18 @@ public class Printer
                         // negative zero
                         myOut.append("-0e0");
                     }
+                }
+                else if (Double.isNaN(real))
+                {
+                    myOut.append("nan");
+                }
+                else if (real == Double.POSITIVE_INFINITY)
+                {
+                    myOut.append("+inf");
+                }
+                else if (real == Double.NEGATIVE_INFINITY)
+                {
+                    myOut.append("-inf");
                 }
                 else
                 {
@@ -790,7 +826,7 @@ public class Printer
             }
             else
             {
-                TtTimestamp ts = value.timestampValue();
+                Timestamp ts = value.timestampValue();
 
                 if (myOptions.timestampAsString)
                 {
@@ -828,9 +864,7 @@ public class Printer
         public void writeSymbol(String text)
         throws IOException
         {
-            myOut.append('\"');
-            Text.printAsIon(myOut, text, '\"');
-            myOut.append('\"');
+            IonTextUtils.printJsonString(myOut, text);
         }
 
         public void writeFloat(BigDecimal value)

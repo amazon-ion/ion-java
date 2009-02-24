@@ -1,7 +1,6 @@
-/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
- package com.amazon.ion.impl;
+package com.amazon.ion.impl;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
@@ -9,7 +8,6 @@ import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.LocalSymbolTable;
@@ -68,7 +66,7 @@ public class LocalSymbolTableImpl
      */
     public LocalSymbolTableImpl(IonSystemImpl system)
     {
-    	// assert system != null;
+        // assert system != null;
         this(system, system.getSystemSymbolTable());
     }
 
@@ -111,6 +109,7 @@ public class LocalSymbolTableImpl
     {
         return true;
     }
+
 
     // Not synchronized since member is final.
     public SymbolTable getSystemSymbolTable()
@@ -167,7 +166,7 @@ public class LocalSymbolTableImpl
 
     public synchronized int findSymbol(String name) {
         int sid = _systemSymbols.findSymbol(name);
-        if (sid != IonSymbol.UNKNOWN_SYMBOL_ID) return sid;
+        if (sid != UNKNOWN_SYMBOL_ID) return sid;
 
         synchronized (this)
         {
@@ -201,7 +200,7 @@ public class LocalSymbolTableImpl
             }
         }
 
-        return IonSymbol.UNKNOWN_SYMBOL_ID;
+        return UNKNOWN_SYMBOL_ID;
     }
 
 
@@ -284,13 +283,6 @@ public class LocalSymbolTableImpl
     }
 
 
-    public boolean isCompatible(SymbolTable other)
-    {
-        // FIXME implement LocalSymbolTable.isCompatible()
-        return false;
-    }
-
-
     //=========================================================================
     // Helpers
 
@@ -316,9 +308,9 @@ public class LocalSymbolTableImpl
             _symtabElement.get(SystemSymbolTable.IMPORTS);
         if (importsElement instanceof IonList) {
             IonList importsList = (IonList) importsElement;
-            if (! importsList.isNullValue() && importsList.size() != 0)
+            int count = importsList.size();
+            if (count != 0)
             {
-                int count = importsList.size();
                 imports = new ImportedTable[count];
                 for (int i = 0; i < count; i++)
                 {

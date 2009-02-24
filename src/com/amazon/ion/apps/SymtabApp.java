@@ -1,17 +1,15 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.apps;
 
+import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
-import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.impl.UnifiedSymbolTable;
-import com.amazon.ion.util.Printer;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 
 /**
@@ -20,8 +18,11 @@ import java.util.Iterator;
 public class SymtabApp
     extends BaseApp
 {
-    private SymbolTable mySystemSymtab;
-    private UnifiedSymbolTable mySymtab;
+    private ArrayList<SymbolTable> myImports = new ArrayList<SymbolTable>();
+    private ArrayList<String>      mySymbols = new ArrayList<String>();
+
+    private String mySymtabName;
+    private int    mySymtabVersion;
 
 
     //=========================================================================
@@ -45,9 +46,6 @@ public class SymtabApp
 
     public SymtabApp()
     {
-        mySystemSymtab = mySystem.getSystemSymbolTable();
-        mySymtab = (UnifiedSymbolTable)
-            mySystem.newLocalSymbolTable(mySystemSymtab);
     }
 
 
@@ -57,15 +55,15 @@ public class SymtabApp
     {
         int firstFileIndex = processOptions(args);
 
-        if (mySymtab.getName() == null)
+        if (mySymtabName == null)
         {
             throw new RuntimeException("Must provide --name");
         }
         // TODO verify that we don't import the same name.
 
-        if (mySymtab.getVersion() == 0)
+        if (mySymtabVersion == 0)
         {
-            mySymtab.setVersion(1);
+            mySymtabVersion = 1;
         }
 
 
@@ -78,16 +76,21 @@ public class SymtabApp
             processFiles(args, firstFileIndex);
         }
 
-        // TODO mySymtab should have new symbols relative to last version
 
-        mySymtab.lock();
+        SymbolTable[] importArray = new SymbolTable[myImports.size()];
+        myImports.toArray(importArray);
 
-        IonStruct symtabIon = mySymtab.getIonRepresentation(mySystem);
-        Printer p = new Printer();
+        SymbolTable mySymtab =
+            mySystem.newSharedSymbolTable(mySymtabName,
+                                          mySymtabVersion,
+                                          mySymbols.iterator(),
+                                          importArray);
+
+        IonWriter w = mySystem.newTextWriter(System.out);
         try
         {
             // TODO ensure IVM is printed
-            p.print(symtabIon, System.out);
+            mySymtab.writeTo(w);
             System.out.println();
         }
         catch (IOException e)
@@ -111,20 +114,34 @@ public class SymtabApp
             {
                 // We'll use the latest version available.
                 String name = args[++i];
-                importLatestVersion(mySymtab, name);
+                IonCatalog catalog = mySystem.getCatalog();
+                SymbolTable table = catalog.getTable(name);
+                if (table == null)
+                {
+                    String message =
+                        "There's no symbol table in the catalog named " +
+                        name;
+                    throw new RuntimeException(message);
+                }
+                myImports.add(table);
+                logDebug("Imported symbol table " + name
+                           + "@" + table.getVersion());
             }
             else if ("--name".equals(arg))
             {
-                if (mySymtab.getName() != null)
+                if (mySymtabName != null)
                 {
                     throw new RuntimeException("Multiple names");
                 }
-                String name = args[++i];
-                mySymtab.setName(name);
+                mySymtabName = args[++i];
+                if (mySymtabName.length() == 0)
+                {
+                    throw new RuntimeException("Name must not be empty");
+                }
             }
             else if ("--version".equals(arg))
             {
-                if (mySymtab.getVersion() != 0)
+                if (mySymtabVersion != 0)
                 {
                     throw new RuntimeException("Multiple versions");
                 }
@@ -138,7 +155,7 @@ public class SymtabApp
                     String message = "Symtab extension not implemented";
                     throw new UnsupportedOperationException(message);
                 }
-                mySymtab.setVersion(version);
+                mySymtabVersion = version;
             }
             else
             {
@@ -169,7 +186,7 @@ public class SymtabApp
                 if (fieldName != null)
                 {
 //                    System.err.println("Adding field name: " + fieldName);
-                    mySymtab.addSymbol(fieldName);
+                    mySymbols.add(fieldName);
                 }
             }
 
@@ -181,7 +198,7 @@ public class SymtabApp
                     String text = reader.stringValue();
                     if (text != null)
                     {
-                        mySymtab.addSymbol(text);
+                        mySymbols.add(text);
                     }
                     break;
                 }
@@ -215,7 +232,7 @@ public class SymtabApp
         while (i.hasNext())
         {
             String ann = i.next();
-            mySymtab.addSymbol(ann);
+            mySymbols.add(ann);
         }
     }
 }

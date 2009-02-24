@@ -100,7 +100,8 @@ public final class IonStructImpl
     public IonValue get(String fieldName)
     {
         validateFieldName(fieldName);
-        validateThisNotNull();
+
+        if (isNullValue()) return null;
 
         makeReady();
 

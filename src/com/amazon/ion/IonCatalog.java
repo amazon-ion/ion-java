@@ -1,15 +1,23 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
+
+import com.amazon.ion.system.SimpleCatalog;
+import com.amazon.ion.system.SystemFactory;
 
 
 
 /**
  * Collects shared symbol tables for use by an {@link IonSystem}.
- * It is expected that
- * applications may implement this interface to customize caching behavior.
+ * <p>
+ * It is expected that many applications will implement this interface to
+ * customize behavior beyond that provided by the default {@link SimpleCatalog}.
+ * A typical implementation would retrieval symbol tables from some external
+ * source.
+ * <p>
+ * To utilize a custom catalog, it must be passed to
+ * {@link SystemFactory#newSystem(IonCatalog)} when a system is created, or to
+ * selected methods of the {@link IonSystem} for localized use.
  */
 public interface IonCatalog
 {
@@ -41,6 +49,10 @@ public interface IonCatalog
      * the same name and version.
      *
      * @param sharedTable must be shared but not a system table.
+     *
+     * @deprecated The Ion libraries do not need to insert symbol tables, so
+     * this method is being removed.
      */
+    @Deprecated
     public void putTable(SymbolTable sharedTable);
 }

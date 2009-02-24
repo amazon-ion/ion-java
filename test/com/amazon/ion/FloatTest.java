@@ -1,8 +1,7 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
+
 
 
 /**
@@ -92,5 +91,83 @@ public class FloatTest
         checkAnnotation("a", value);
 
         // TODO test BigDecimal
+    }
+
+    public void testParsingSpecialFloats()
+    {
+        IonFloat value = (IonFloat) oneValue("nan");
+        checkNan(value);
+
+        value = (IonFloat) oneValue("+inf");
+        checkPosInf(value);
+
+        value = (IonFloat) oneValue("-inf");
+        checkNegInf(value);
+    }
+
+    public void testCreatingSpecialFloats()
+    {
+        IonFloat value = system().newFloat(Double.NaN);
+        checkNan(value);
+
+        value = system().newFloat(Double.POSITIVE_INFINITY);
+        checkPosInf(value);
+
+        value = system().newFloat(Double.NEGATIVE_INFINITY);
+        checkNegInf(value);
+
+        value.setValue(Float.NaN);
+        checkNan(value);
+
+        value.setValue(Float.POSITIVE_INFINITY);
+        checkPosInf(value);
+
+        value.setValue(Float.NEGATIVE_INFINITY);
+        checkNegInf(value);
+
+        value.setValue(Double.NaN);
+        checkNan(value);
+
+        value.setValue(Double.POSITIVE_INFINITY);
+        checkPosInf(value);
+
+        value.setValue(Double.NEGATIVE_INFINITY);
+        checkNegInf(value);
+    }
+
+    public void checkNan(IonFloat actual)
+    {
+        checkSpecial(Float.NaN, Double.NaN, "nan", actual);
+    }
+
+    public void checkPosInf(IonFloat actual)
+    {
+        checkSpecial(Float.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, "+inf",
+                     actual);
+    }
+
+    public void checkNegInf(IonFloat actual)
+    {
+        checkSpecial(Float.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY, "-inf",
+                     actual);
+        checkSpecial(Float.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY, "-inf",
+                     actual.clone());
+    }
+
+    public void checkSpecial(float expectedFloat,
+                             double expectedDouble,
+                             String expectedText,
+                             IonFloat actual)
+    {
+        assertEquals(expectedFloat, actual.floatValue());
+        assertEquals(expectedDouble, actual.doubleValue());
+        assertEquals(expectedText, actual.toString());
+
+        try
+        {
+            actual.bigDecimalValue();
+            fail("expected exception");
+        }
+        catch (NumberFormatException e) { }
     }
 }

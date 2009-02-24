@@ -2,7 +2,6 @@
 
 package com.amazon.ion;
 
-import java.util.Iterator;
 
 
 /**
@@ -25,16 +24,6 @@ public interface IonSequence
 
 
     /**
-     * Creates an iterator that provides the elements of this sequence,
-     * in order of their appearance in the Ion representation.
-     *
-     * @throws NullValueException if <code>this.isNullValue()</code>.
-     */
-    public Iterator<IonValue> iterator()
-        throws NullValueException;
-
-
-    /**
      * Appends a child value to the end of this sequence.
      * If <code>this.isNullValue()</code>, then it becomes a single-element
      * sequence.
@@ -50,6 +39,7 @@ public interface IonSequence
      */
     public void add(IonValue child)
         throws ContainedValueException, NullPointerException;
+
 
     /**
      * Inserts a child value at the specified position in this sequence.
@@ -70,35 +60,6 @@ public interface IonSequence
     public void add(int index, IonValue child)
         throws ContainedValueException, NullPointerException;
 
-
-    /**
-     * Creates a deep copy of an element and appends it to this sequence in the
-     * most efficient manner possible.
-     *
-     * @param element
-     *
-     * @throws NullPointerException
-     * if <code>element</code> is <code>null</code>.
-     * @throws IllegalArgumentException if <code>element</code> is an
-     * {@link IonDatagram}.
-     */
-//    public void addEmbedded(IonValue element)
-//        throws NullPointerException;
-
-
-    /**
-     * Creates a deep copy of an element and inserts it into this sequence in
-     * the most efficient manner possible.
-     *
-     * @param element
-     *
-     * @throws NullPointerException
-     * if <code>element</code> is <code>null</code>.
-     * @throws IllegalArgumentException if <code>element</code> is an
-     * {@link IonDatagram}.
-     */
-//    public void addEmbedded(int index, IonValue element)
-//        throws NullPointerException;
 
     /**
      * {@inheritDoc}

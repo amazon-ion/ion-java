@@ -1,29 +1,31 @@
-/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
+/* Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.util.IonTextUtils.isDigit;
+import static com.amazon.ion.util.IonTextUtils.isOperatorPart;
+import static com.amazon.ion.util.IonTextUtils.isWhitespace;
+import static com.amazon.ion.util.IonTextUtils.printCodePointAsString;
+
 import com.amazon.ion.IonException;
-import com.amazon.ion.TtTimestamp;
+import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.impl.IonConstants.HighNibble;
-import com.amazon.ion.util.Text;
+import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
 import java.io.PushbackReader;
 import java.io.Reader;
 import java.math.BigDecimal;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Stack;
-import java.util.TimeZone;
-import java.util.regex.Pattern;
 
 /**
- *
+ *  This class is responsible for breaking the input stream into Tokens.
+ *  It does both the token recognition (aka the scanner) and the state
+ *  management needed to use the value underlying some of these tokens.
  */
 public class IonTokenReader
 {
-
+    // TODO clean up, many of these are unused.
     public static int isPunctuation = 0x0001;
     public static int isKeyword     = 0x0002;
     public static int isTypeName    = 0x0004;
@@ -69,6 +71,10 @@ public class IonTokenReader
         kwNullDecimal     ((isConstant + isTag + isKeyword),  "null.decimal",   HighNibble.hnDecimal),
         kwNullTimestamp   ((isConstant + isTag + isKeyword),  "null.timestamp", HighNibble.hnTimestamp),
 
+        kwNan             ((isConstant + isKeyword),          "nan",            HighNibble.hnFloat),
+        kwPosInf          ((isConstant + isKeyword),          "+inf",           HighNibble.hnFloat),
+        kwNegInf          ((isConstant + isKeyword),          "-inf",           HighNibble.hnFloat),
+
         constNegInt       ((isConstant + isNegInt),           "cNegInt",        HighNibble.hnNegInt),
         constPosInt       ((isConstant + isPosInt),           "cPosInt",        HighNibble.hnPosInt),
         constFloat        ((isConstant + isFloat),            "cFloat",         HighNibble.hnFloat),
@@ -110,124 +116,16 @@ public class IonTokenReader
          */
         public static class timeinfo {  // TODO remove vestigial class timeinfo
 
-            private static SimpleDateFormat newFormat(String pattern) {
-                SimpleDateFormat f = new SimpleDateFormat(pattern);
-                f.setLenient(false);
-                f.setTimeZone(TimeZone.getTimeZone("GMT"));
-                return f;
-            }
-
-            static final private String DATE_REGEX =
-                "\\d\\d\\d\\d-[01]\\d-[0-3]\\d";
-            static final private String HHMM_REGEX =
-                "[012]\\d:[0-5]\\d";
-            static final private String SEC_MILLIS_REGEX =
-                "(:[0-5]\\d(\\.\\d+)?)?";
-            static final private String OFFSET_REGEX =
-                "(Z|([+-]" + HHMM_REGEX + "))";
-            static final public String TIMESTAMP_REGEX =
-                DATE_REGEX
-                + "(T" + HHMM_REGEX
-                +   SEC_MILLIS_REGEX
-                +   OFFSET_REGEX + ")?";
-
-            static final public Pattern TIMESTAMP_PATTERN =
-                Pattern.compile(TIMESTAMP_REGEX);
-
-            static public TtTimestamp parse(String s) {
+            static public Timestamp parse(String s) {
+            	Timestamp t = null;
                 s = s.trim(); // TODO why is this necessary?
-
-                if (! TIMESTAMP_PATTERN.matcher(s).matches()) {
-                    throw new IonException("invalid timestamp: " + s);
-                }
-
-                Date d;
-                Integer localOffset;
-
                 try {
-                    int len = s.length();
-                    if (len == 10) {
-                        // "yyyy-MM-dd");
- SimpleDateFormat DATE_PARSER = newFormat("yyyy-MM-dd");
-                        d = DATE_PARSER.parse(s);
-                        localOffset = null;
-                    }
-                    else if (len > 16 && s.charAt(16) == ':'){
-                        // yyyy-MM-dd'T'HH:mm:ss.SSSZ
-                        if (len < 20) {
-                            // Not enough characters for seconds and TZD
-                            throw new IonException("invalid timestamp: " + s);
-                        }
-SimpleDateFormat DATE_TIME_SECS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm:ss");
-                        d = DATE_TIME_SECS_PARSER.parse(s.substring(0, 19));
-
-                        int tzdOffset = 19;
-
-                        if (s.charAt(19) == '.') {
-                            tzdOffset++;
-                            int fraction = 0, fraclen = 0;
-                            for (int ii=20; ii<s.length(); ii++) {
-                                char c = s.charAt(ii);
-                                if (!Text.isDigit(c, 10)) break;
-                                fraction *= 10;
-                                fraction += c - '0';
-                                fraclen ++;
-                                tzdOffset++;
-                            }
-
-                            // force fractional seconds to be in milliseconds
-                            while(fraclen < 3) {
-                                fraction *= 10;
-                                fraclen++;
-                            }
-                            // this is really a bug in Java Date (it's not accurate
-                            // enough)
-                            // TODO : do we want to fix this?
-                            //        or do we want to throw if this is true??
-                            while (fraclen > 3) {
-                                fraction /= 10;
-                                fraclen--;
-                            }
-                            // add in the fractional seconds as milliseconds
-                            d = new Date(d.getTime() + fraction);
-                        }
-
-                        localOffset =
-                            parseLocalOffset(s.substring(tzdOffset));
-                    }
-                    else if (len > 16) {
-                        // yyyy-MM-dd'T'HH:mmZ
-SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
-                        d = DATE_TIME_MINS_PARSER.parse(s.substring(0, 16));
-                        localOffset = parseLocalOffset(s.substring(16));
-                    }
-                    else {
-                        if (s.equals("null") || s.equals(kwNullTimestamp.getImage())) {
-                            // I don't think this is reachable due to the regex
-                            // match at the start of this method.
-                            d= null;
-                            localOffset = null;
-                        }
-                        else {
-                            throw new IonException("invalid timestamp: " + s);
-                        }
-                    }
+                    t = Timestamp.parse(s);  // TODO should Timestamp just throw an IonException?
                 }
-                catch (ParseException pe) {
-                    // TODO this message is confusing to user.
-                    String msg = (pe.getMessage() == null) ? "" : pe.getMessage();
-                    throw new IonException("bad date '"+s+"'"+msg, pe);
+                catch (IllegalArgumentException e) {
+                    throw new IonException(e);
                 }
-
-                // Adjust the Java Date instance into UTC
-                if (localOffset != null) {
-                    long offsetMillis = localOffset.longValue() * 60 * 1000;
-                    long origTime = d.getTime();
-                    d.setTime(origTime - offsetMillis);
-                }
-
-                // FIXME we've lost fractional milliseconds!
-                return new TtTimestamp(d.getTime(), localOffset);
+                return t;
             }
 
             /**
@@ -281,9 +179,9 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
                 }
                 if (value == 0) {
                     if (sign == -1) {
-                        return TtTimestamp.UNKNOWN_OFFSET;
+                        return Timestamp.UNKNOWN_OFFSET;
                     }
-                    return TtTimestamp.UTC_OFFSET;
+                    return Timestamp.UTC_OFFSET;
                 }
 
                 return new Integer(value * sign);
@@ -293,6 +191,15 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
         // TODO move out of this class into TR.
         public Type setNumericValue(IonTokenReader tr, String s) {
             switch (this) {
+            case kwNan:
+                tr.doubleValue = Double.NaN;
+                return this;
+            case kwPosInf:
+                tr.doubleValue = Double.POSITIVE_INFINITY;
+                return this;
+            case kwNegInf:
+                tr.doubleValue = Double.NEGATIVE_INFINITY;
+                return this;
             case constNegInt:
             case constPosInt:
                 if (tr.numberType == NT_HEX) {
@@ -326,20 +233,13 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
             case constTime:
                 tr.dateValue = timeinfo.parse(s);
                 return this;
+            default:
+                throw new  AssertionError("Unknown op for numeric case: " + this);
             }
-            throw new  AssertionError("Unknown op for numeric case: " + this);
         }
 
-        public boolean isPunctuation() { return ((flags & isPunctuation) != 0); }
         public boolean isKeyword()     { return ((flags & isKeyword) != 0); }
-        public boolean isTypeName()    { return ((flags & isTypeName) != 0); }
         public boolean isConstant()    { return ((flags & isConstant) != 0); }
-        public boolean isTag()         { return ((flags & isTag) != 0); }
-
-        public boolean isUint()        { return ((flags & isPosInt) != 0); }
-        public boolean isInt()         { return ((flags & isNegInt) != 0); }
-        public boolean isFloat()       { return ((flags & isFloat) != 0); }
-        public boolean isDecimal()     { return ((flags & isDecimal) != 0); }
         public boolean isNumeric()     { return ((flags & (isPosInt + isNegInt + isFloat + isDecimal)) != 0); }
 
         public String  getImage()      { return (image == null) ? this.name() : image; }
@@ -373,6 +273,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
             return;
         }
 
+        @Override
         public void reset() {
             _sboffset = 0;
             _sbavailable = _tr.value.length();
@@ -471,7 +372,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
     public Double           doubleValue;
     public Long             intValue;
 
-    public TtTimestamp      dateValue;
+    public Timestamp      dateValue;
     public BigDecimal       decimalValue;
 
     public int              numberType;
@@ -522,7 +423,9 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
     public PushbackReader getPushbackReader() {
         if (localReader == null) {
             localReader = new LocalReader(this);
-            pushbackReader = new PushbackReader(localReader);
+            pushbackReader =
+                new PushbackReader(localReader,
+                                   IonImplUtils.MAX_LOOKAHEAD_UTF16);
         }
         localReader.reset();
         return pushbackReader ;
@@ -547,7 +450,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
         int c;
         do {
             c = read();
-        } while (Text.isWhitespace(c));
+        } while (isWhitespace(c));
         return c;
     }
 
@@ -594,7 +497,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
                     unread(c2);
                 }
             }
-            if (/* inContent ||*/ !Text.isWhitespace(c)) {
+            if (/* inContent ||*/ !isWhitespace(c)) {
                 break;
             }
         }
@@ -661,24 +564,64 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
             this.unread(c2);
             inQuotedContent = true;
             return scanIdentifier(c);
-        case '-': case '+':
+        case '+':
+            c2 = read();
+            if (c2 == 'i') {
+                c2 = read();
+                if (c2 == 'n') {
+                    c2 = read();
+                    if (c2 == 'f') {
+                        return (t = Type.kwPosInf);
+                    }
+                    this.unread(c2);
+                    c2 = 'n';
+                }
+                this.unread(c2);
+                c2 = 'i';
+            }
+            this.unread(c2);
+            if (is_in_expression) {
+                return scanOperator(c);
+            }
+            break; // break to error
+        case '-':
             c2 = read();
             if (c2 >= '0' && c2 <= '9') {
                 this.unread(c2);
                 return readNumber(c);
             }
-            if (!is_in_expression) break; // break to error
-            this.unread(c2);                // cas: otherwise the character following the symbol is lost
-            // fall through to the default case
+            if (c2 == 'i') {
+                c2 = read();
+                if (c2 == 'n') {
+                    c2 = read();
+                    if (c2 == 'f') {
+                        return (t = Type.kwNegInf);
+                    }
+                    this.unread(c2);
+                    c2 = 'n';
+                }
+                this.unread(c2);
+                c2 = 'i';
+            }
+            this.unread(c2);
+            if (is_in_expression) {
+                return scanOperator(c);
+            }
+            break; // break to error
         default:
-            if (Text.isIdentifierStartChar(c)) {
+            if (IonTextUtils.isIdentifierStart(c)) {
                 return scanIdentifier(c);
             }
-            if (is_in_expression && Text.isOperatorChar(c)) {
+            if (is_in_expression && isOperatorPart(c)) {
                 return scanOperator(c);
             }
         }
-        throw new IonException("bad token "+c+" encountered at line " + this.getLineNumber() + " column " + this.getColumn());
+
+        String message =
+            "Unexpected character " + printCodePointAsString(c) +
+            " encountered at line " + this.getLineNumber() +
+            " column " + this.getColumn();
+        throw new IonException(message);
     }
 
 
@@ -750,11 +693,13 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
                 c = read();
                 if (c < 0 || c == quote) break;
                 if (c == '\\') {
-                    c = IonTokenReader.readEscapedCharacter(this.in);
+                    c = readEscapedCharacter(this.in, false /*not clob*/);
                 }
+                if (c != EMPTY_ESCAPE_SEQUENCE) {
                 value.append((char)c);
             }
-            if (c == -1) {
+            }
+            if (c == -1) { // TODO throw UnexpectedEofException
                 throw new IonException("end encountered before closing quote '\\" + (char)endquote+ "'");
             }
             // c, at this point is a single quote, which we don't append
@@ -764,7 +709,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
             value.append((char)c);
             for (;;) {
                 c = read();
-                if (!Text.isIdentifierFollowChar(c)) {
+                if (!IonTextUtils.isIdentifierPart(c)) {
                     break;
                 }
                 value.append((char)c);
@@ -796,6 +741,12 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
              && sb.charAt(pos++) == 'l'
             ) {
                 keyword = Type.kwNull;
+            }
+            else if (valuelen == 3 //   'n'
+                 && sb.charAt(pos++) == 'a'
+                 && sb.charAt(pos++) == 'n'
+            ) {
+                keyword = Type.kwNan;
             }
             break;
         case 't':
@@ -982,7 +933,7 @@ SimpleDateFormat DATE_TIME_MINS_PARSER = newFormat("yyyy-MM-dd'T'HH:mm");
         value.append((char)c);
         for (;;) {
             c = read();
-            if (!Text.isOperatorChar(c)) {
+            if (!IonTextUtils.isOperatorPart(c)) {
                 break;
             }
             value.append((char)c);
@@ -1011,21 +962,24 @@ sizedloop:
             case '\n':
                 throw new IonException("unexpected line terminator encountered in quoted string");
             case '\\':
-                c = IonTokenReader.readEscapedCharacter(this.in);
-                // EOF throws UnexpectedEofException
+                c = readEscapedCharacter(this.in, false /*not clob*/);
+                //    throws UnexpectedEofException on EOF
+                if (c != EMPTY_ESCAPE_SEQUENCE) {
+                    value.appendCodePoint(c);
+                }
                 break;
             default:
-                break;
-            }
-            if (c != EMPTY_ESCAPE_SEQUENCE) {
+                // c could be part of a surrogate pair so we can't use
+                // appendCodePoint()
                 value.append((char)c);
+                break;
             }
         }
 
         if (maxlookahead != -1 && c == '\"') {
-                // this is the normal, non-longline case so we're just done
-                closeString();
-            }
+            // this is the normal, non-longline case so we're just done
+            closeString();
+        }
         else {
             // we're not at the closing quote, so this is an incomplete
             // string which will have to be read to the end ... later
@@ -1066,7 +1020,7 @@ sizedloop:
             }
             if (c == endquote) break;  // endquote == -1 during long strings
             if (c == '\\') {
-                c = IonTokenReader.readEscapedCharacter(this.in);
+                c = readEscapedCharacter(this.in, false /*not clob*/);
                 if (c != EMPTY_ESCAPE_SEQUENCE) {
                     value.append((char)c);
                 }
@@ -1153,72 +1107,16 @@ sizedloop:
         this.inQuotedContent = false;
         this.isLongString = true;
     }
-    public static class EscapedCharacterReader {
-        PushbackReader  _pbr;
-        IonTokenReader _atr;
-        int             _readerType; // 1=pushback, 2=iontoken
 
-        EscapedCharacterReader() {}
-
-        void setReader(PushbackReader pbr) {
-            _pbr = pbr;
-            _readerType = 1;
-        }
-        void setReader(IonTokenReader atr) {
-            _atr = atr;
-            _readerType = 2;
-        }
-
-        /**
-         *
-         * @return -1 at end of stream.
-         * @throws IOException
-         */
-        int read() throws IOException {
-            switch (_readerType) {
-            case 1: return _pbr.read();
-            case 2: return _atr.read();
-            }
-            throw new IllegalStateException("Invalid reader type encountered (probably an uninitialized object)");
-        }
-        void unread(int c) throws IOException {
-            switch (_readerType) {
-            case 1: _pbr.unread(c); return;
-            case 2: _atr.unread(c); return;
-            }
-            throw new IllegalStateException("Invalid reader type encountered (probably an uninitialized object)");
-        }
-    }
-
-    EscapedCharacterReader _ecr = new EscapedCharacterReader();
 
     /**
      * @return the translated escape sequence.  Will not return -1 since EOF is
-     * not legal in this context.
-     * @throws IOException
+     * not legal in this context. May return {@link #EMPTY_ESCAPE_SEQUENCE} to
+     * indicate a zero-length sequence such as BS-NL.
      * @throws UnexpectedEofException if the EOF is encountered in the middle
      * of the escape sequence.
-     * @deprecated
      * */
-    @Deprecated
-    public static int readEscapedCharacter(PushbackReader r) throws IOException
-    {
-        EscapedCharacterReader ecr = new EscapedCharacterReader();
-        ecr.setReader(r);
-        return readEscapedCharacter(ecr);
-    }
-
-
-    /**
-     *
-     * @param r
-     * @return the translated escape sequence.  Will not return -1 since EOF is
-     * not legal in this context.
-     * @throws IOException
-     * @throws UnexpectedEofException if the EOF is encountered in the middle
-     * of the escape sequence.
-     */
-    public static int readEscapedCharacter(EscapedCharacterReader r)
+    public static int readEscapedCharacter(PushbackReader r, boolean inClob)
         throws IOException, UnexpectedEofException
     {
             //    \\ The backslash character
@@ -1231,8 +1129,6 @@ sizedloop:
             //    \r The carriage-return character ('\ u 000D')
             //    \f The form-feed character ('\ u 000C')
             //    \a The alert (bell) character ('\ u 0007')
-            //    \e The escape character ('\ u 001B')
-            //    \cx The control character corresponding to x
             //    \" The double quote character
             //    \' The single quote character
             //    \? The question mark character
@@ -1248,34 +1144,51 @@ sizedloop:
             case 'f':  return '\f';
             case 'b':  return '\u0008';
             case 'a':  return '\u0007';
-            case 'e':  return '\u001B';
             case '\\': return '\\';
             case '\"': return '\"';
             case '\'': return '\'';
             case '/':  return '/';
             case '?':  return '?';
-            case 'x':
-                // a pair of hex digits
+
+            case 'U':
+                // Expecting 8 hex digits
+                if (inClob) {
+                    throw new IonException("Unicode escapes \\U not allowed in clob");
+                }
+                c = readDigit(r, 16, true);
+                if (c < 0) break;  // TODO throw UnexpectedEofException
+                c2 = c << 28;
                 c = readDigit(r, 16, true);
                 if (c < 0) break;
-                c2 = c << 4; // high nibble
-                c = readDigit(r, 16, false);
+                c2 += c << 24;
+                c = readDigit(r, 16, true);
                 if (c < 0) break;
-                return c2 + c; // high nibble + low nibble
+                c2 += c << 20;
+                c = readDigit(r, 16, true);
+                if (c < 0) break;
+                c2 += c << 16;
+                // ... fall through...
             case 'u':
-                // exactly 4 hex digits
+                // Expecting 4 hex digits
+                if (inClob) {
+                    throw new IonException("Unicode escapes \\u not allowed in clob");
+                }
                 c = readDigit(r, 16, true);
                 if (c < 0) break;
-                c2 = c << 12; // highest nibble
+                c2 += c << 12;
                 c = readDigit(r, 16, true);
                 if (c < 0) break;
-                c2 += c << 8; // 2nd high nibble
+                c2 += c << 8;
+                // ... fall through...
+            case 'x':
+                // Expecting 2 hex digits
                 c = readDigit(r, 16, true);
                 if (c < 0) break;
-                c2 += c << 4; // almost lowest nibble
+                c2 += c << 4;
                 c = readDigit(r, 16, true);
                 if (c < 0) break;
-                return c2 + c; // high nibble + lowest nibble
+                return c2 + c;
+
             case '0':
                 return 0;
             case '\n':
@@ -1287,7 +1200,7 @@ sizedloop:
                                        + (char) c + "\" [" + c + "]");
     }
 
-    public static int readDigit(EscapedCharacterReader r, int radix, boolean isRequired) throws IOException {
+    public static int readDigit(/*EscapedCharacterReader*/PushbackReader r, int radix, boolean isRequired) throws IOException {
         int c = r.read();
         if (c < 0) {
             r.unread(c);
@@ -1314,7 +1227,7 @@ sizedloop:
             if ( ! this.isValueTerminatingCharacter(c) ) {
                 final String message =
                     position() + ": Numeric value followed by illegal character "
-                    + Text.getEscapeString(c, -2);
+                    + printCodePointAsString(c);
                 throw new IonException(message);
             }
             this.unread(c);
@@ -1332,7 +1245,7 @@ sizedloop:
     		isTerminator = (c == '/' || c == '*');
     	}
     	else {
-    		isTerminator = Text.isNumericStopChar(c);
+    	    isTerminator = IonTextUtils.isNumericStop(c);
     	}
 
     	return isTerminator;
@@ -1365,7 +1278,7 @@ sizedloop:
         }
 
         // process the initial digit.  Caller has checked that it's a digit.
-        assert Text.isDigit(c, 10);
+        assert isDigit(c, 10);
         value.append((char)c);
         boolean isZero = (c == '0');
         boolean leadingZero = isZero;
@@ -1395,7 +1308,7 @@ sizedloop:
             value.append((char)c);
             break;
         default:
-            if (!Text.isDigit(c, 10)) {
+            if (!isDigit(c, 10)) {
                 checkAndUnreadNumericStopper(c);
                 if (isZero && this.numberType == NT_NEGINT) {
                     t = Type.constPosInt;
@@ -1414,7 +1327,7 @@ sizedloop:
             // read in the remaining whole number digits
             for (;;) {
                 c = this.read();
-                if (!Text.isDigit(c, 10)) break;
+                if (!isDigit(c, 10)) break;
                 value.append((char)c);
                 isZero &= (c == '0');
             }
@@ -1466,7 +1379,7 @@ sizedloop:
         if (this.numberType == NT_DECIMAL) {
             for (;;) {
                 c = this.read();
-                if (!Text.isDigit(c, 10)) break;
+                if (!isDigit(c, 10)) break;
                 value.append((char)c);
             }
             // and see what we ran aground on this time..
@@ -1508,7 +1421,7 @@ sizedloop:
             // we eat the plus sign
             break;
         default:
-            if (!Text.isDigit(c, 10)) {
+            if (!isDigit(c, 10)) {
                 // this they said 'e' then they better put something valid after it!
                 throw new IonException("badly formed number encountered at " + position());
             }
@@ -1520,7 +1433,7 @@ sizedloop:
         // read in the remaining whole number digits and then quit
         for (;;) {
             c = this.read();
-            if (!Text.isDigit(c, 10)) break;
+            if (!isDigit(c, 10)) break;
             value.append((char)c);
         }
 
@@ -1543,7 +1456,7 @@ sizedloop:
         // read in the remaining whole number digits and then quit
         for (;;) {
             c = this.read();
-            if (!Text.isDigit(c, 16)) break;
+            if (!isDigit(c, 16)) break;
             anydigits = true;
             isZero &= (c == '0');
             value.append((char)c);
@@ -1649,7 +1562,7 @@ endofdate:
         // read in the remaining whole number digits and then quit
         for (;;) {
             c = this.read();
-            if (!Text.isDigit(c, 10)) break;
+            if (!isDigit(c, 10)) break;
             len++;
             if (len > limit) {
                 throw new IonException("invalid format " + field + " too long at " + this.position());

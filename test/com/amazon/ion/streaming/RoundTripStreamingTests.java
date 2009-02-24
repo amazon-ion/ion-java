@@ -1,3 +1,5 @@
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+
 package com.amazon.ion.streaming;
 
 import com.amazon.ion.DirectoryTestSuite;
@@ -41,6 +43,25 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
         if (fileName == null || fileName.length() < 1) throw new IllegalArgumentException("files should have names");
         return new StreamingRoundTripTest(ionFile);
     }
+
+
+    @Override
+    protected String[] getFilesToSkip()
+    {
+        return new String[]
+        {
+            "annotationQuotedFalse.ion",
+            "annotationQuotedNan.ion",
+            "annotationQuotedNull.ion",
+            "annotationQuotedTrue.ion",
+            "fieldNameQuotedFalse.ion",
+            "fieldNameQuotedNan.ion",
+            "fieldNameQuotedNull.ion",
+            "fieldNameQuotedTrue.ion",
+            "floatSpecials.ion",
+        };
+    }
+
 
     private static class StreamingRoundTripTest
     extends FileTestCase
@@ -356,7 +377,8 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
             stream.name = this.getName() + " (as stream)";
             tree.name = this.getName() + " (as IonValue)";
 
-            IonDatagram inputDatagram = loader().load(testBuffer);
+            // load() takes ownership of the buffer
+            IonDatagram inputDatagram = loader().load(testBuffer.clone());
 
             // Turn the DOM back into text...
             tree.string     = makeString(inputDatagram);

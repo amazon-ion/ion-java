@@ -1,16 +1,19 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
+import com.amazon.ion.impl.IonConstants;
 import java.io.IOException;
 
 
 /**
  * Utility methods for working with Ion text.
+ *
+ * @deprecated Use {@link IonTextUtils}
  */
+@Deprecated
 public class Text
+    extends IonTextUtils
 {
     private enum EscapeMode { ION, JSON }
 
@@ -61,31 +64,6 @@ public class Text
 
     //=========================================================================
 
-    /**
-     * Ion whitespace is defined as one of the characters space, tab, newline,
-     * and carriage-return.  This matches the definition of whitespace used by
-     * JSON.
-     *
-     * @param c the character to test.
-     * @return <code>true</code> if <code>c</code> is one of the four legal
-     * Ion whitespace characters.
-     *
-     * @see <a href="http://tools.ietf.org/html/rfc4627">RFC 4627</a>
-     */
-    public static boolean isWhitespace(int c)
-    {
-        switch (c)
-        {
-            case ' ':  case '\t':  case '\n':  case '\r':
-            {
-                return true;
-            }
-            default:
-            {
-                return false;
-            }
-        }
-    }
 
     public final static boolean isNumericStopChar(int c)
     {
@@ -105,21 +83,6 @@ public class Text
             return false;
         }
     }
-
-    public static boolean isDigit(int c, int radix) {
-        switch (c) {
-        case '0': case '1': case '2': case '3': case '4':
-        case '5': case '6': case '7':
-            return (radix == 8 || radix == 10 || radix == 16);
-        case '8': case '9':
-            return (radix == 10 || radix == 16);
-        case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
-        case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
-            return (radix == 16);
-        }
-        return false;
-    }
-
 
     public static boolean isIdentifierStartChar(int c) {
         if (c < ' ' || c > '~') {
@@ -267,19 +230,19 @@ public class Text
     }
 
     /**
-     * Determines whether a single character needs an escape sequence for
-     * printing within an Ion text value.
+     * Determines whether a single character (Unicode code point) needs an
+     * escape sequence for printing within an Ion text value.
      *
-     * @param c the character to be printed (by some other means).
+     * @param codePoint a Unicode code point.
      * @param surroundingQuoteChar must be either {@code '\''}, {@code '\"'},
      * or {@link #ANY_SURROUNDING_QUOTES}.
      *
      * @return {@code true} if the character needs to be escaped.
      */
-    public static boolean needsEscapeForAsciiPrinting(int c,
+    public static boolean needsEscapeForAsciiPrinting(int codePoint,
                                                       int surroundingQuoteChar)
     {
-        switch (c) {
+        switch (codePoint) {
         case '\"':
             return (surroundingQuoteChar == '\"');
         case '\'':
@@ -287,7 +250,7 @@ public class Text
         case '\\':
             return true;
         default:
-            return (c < 32 || c > 126);
+            return (codePoint < 32 || codePoint > 126);
         }
     }
 
@@ -300,36 +263,45 @@ public class Text
     }
 
     /**
-     * Prints a single character in Ion ASCII text format, using escapes
-     * suitable for a specified quoting context.
+     * Prints a single character (Unicode code point) in Ion ASCII text format,
+     * using escapes suitable for a specified quoting context.
      *
      * @param out the stream to receive the data.
-     * @param c the character to print.
+     * @param codePoint a Unicode code point.
      * @param surroundingQuoteChar must be either {@code '\''}, {@code '\"'},
      * or {@link #ANY_SURROUNDING_QUOTES}.
+     *
+     * @deprecated Use {@link #printStringCodePoint(Appendable, int)} or
+     * {@link #printSymbolCodePoint(Appendable, int)}.
      */
-    public static void printAsIon(Appendable out, int c,
+    @Deprecated
+    public static void printAsIon(Appendable out, int codePoint,
                                   int surroundingQuoteChar)
         throws IOException
     {
-        printChar(out, c, surroundingQuoteChar, EscapeMode.ION);
+        printCodePoint(out, codePoint, surroundingQuoteChar, EscapeMode.ION);
     }
 
+
     /**
-     * Prints a single character in JSON string format, escaping as necessary.
+     * Prints a single character (Unicode code point) in JSON string format,
+     * escaping as necessary.
      *
      * @param out the stream to receive the data.
-     * @param c the character to print.
+     * @param codePoint a Unicode code point.
+     *
+     * @deprecated Renamed to {@link #printJsonCodePoint(Appendable, int)}.
      */
-    public static void printAsJson(Appendable out, int c)
+    @Deprecated
+    public static void printAsJson(Appendable out, int codePoint)
         throws IOException
     {
         // JSON only allows double-quote strings.
-        printChar(out, c, '"', EscapeMode.JSON);
+        printCodePoint(out, codePoint, '"', EscapeMode.JSON);
     }
 
-    private static void printChar(Appendable out, int c, int quote,
-                                  EscapeMode mode)
+    private static void printCodePoint(Appendable out, int c, int quote,
+                                       EscapeMode mode)
         throws IOException
     {
         // JSON only allows uHHHH numeric escapes.
@@ -379,26 +351,69 @@ public class Text
 
         if (c < 32) {
             if (mode == EscapeMode.JSON) {
-                printCharAsFourHexDigits(out, c);
+                printCodePointAsFourHexDigits(out, c);
             }
             else {
-                out.append("\\x");
-                out.append(Integer.toHexString(c & 0xFF));
+                printCodePointAsTwoHexDigits(out, c);
             }
         }
-        else if (c > 126) { // FIXME this is broken for chars over 2 bytes
-            printCharAsFourHexDigits(out, c);
+        else if (c < 0x7F) {  // Printable ASCII
+            out.append((char)c);
+        }
+        else if (c <= 0xFF) {
+            if (mode == EscapeMode.JSON) {
+                printCodePointAsFourHexDigits(out, c);
+            }
+            else {
+                printCodePointAsTwoHexDigits(out, c);
+            }
+        }
+        else if (c <= 0xFFFF) {
+            printCodePointAsFourHexDigits(out, c);
         }
         else {
-            out.append((char) c);
+            // FIXME JSON doesn't support eight-digit \U syntax!
+            // https://issue-tracking.amazon.com/browse/ION-33
+            printCodePointAsEightHexDigits(out, c);
         }
     }
 
-    private static void printCharAsFourHexDigits(Appendable out, int c)
+    private final static String[] ZERO_PADDING =
+    {
+        "",
+        "0",
+        "00",
+        "000",
+        "0000",
+        "00000",
+        "000000",
+        "0000000",
+    };
+
+    private static void printCodePointAsTwoHexDigits(Appendable out, int c)
         throws IOException
     {
         String s = Integer.toHexString(c);
-        out.append("\\u0000".substring(0, 6-s.length()));
+        out.append("\\x");
+        out.append(ZERO_PADDING[2-s.length()]);
+        out.append(s);
+    }
+
+    private static void printCodePointAsFourHexDigits(Appendable out, int c)
+        throws IOException
+    {
+        String s = Integer.toHexString(c);
+        out.append("\\u");
+        out.append(ZERO_PADDING[4-s.length()]);
+        out.append(s);
+    }
+
+    private static void printCodePointAsEightHexDigits(Appendable out, int c)
+        throws IOException
+    {
+        String s = Integer.toHexString(c);
+        out.append("\\U");
+        out.append(ZERO_PADDING[8-s.length()]);
         out.append(s);
     }
 
@@ -432,111 +447,19 @@ public class Text
      * or {@link #ANY_SURROUNDING_QUOTES}.
      *
      * @throws IOException if the {@link Appendable} throws an exception.
+     * @throws IllegalArgumentException
+     *     if the text contains invalid UTF-16 surrogates.
+     *
+     * @deprecated Use {@link #printString(Appendable, CharSequence)} or
+     * {@link #printSymbol(Appendable, CharSequence)}.
      */
+    @Deprecated
     public static void printAsIon(Appendable out, CharSequence text,
                                   int surroundingQuoteChar)
         throws IOException
     {
         printChars(out, text, surroundingQuoteChar, EscapeMode.ION);
     }
-
-
-    public static void printString(Appendable out, CharSequence text)
-        throws IOException
-    {
-        out.append('"');
-        printAsIon(out, text, '"');
-        out.append('"');
-    }
-
-
-    public static String printString(CharSequence text)
-    {
-        StringBuilder builder = new StringBuilder(text.length() + 2);
-        try
-        {
-            printString(builder, text);
-        }
-        catch (IOException e)
-        {
-            // Shouldn't happen
-            throw new Error(e);
-        }
-        return builder.toString();
-    }
-
-
-    /**
-     * Prints the text as an Ion symbol, including surrounding single-quotes if
-     * they are necessary.  Operator symbols such as {@code '+'} are quoted.
-     *
-     * @param out the stream to receive the data.
-     * @param text the symbol text.
-     *
-     * @throws IOException if the {@link Appendable} throws an exception.
-     */
-    public static void printSymbol(Appendable out, CharSequence text)
-        throws IOException
-    {
-        if (symbolNeedsQuoting(text, true))
-        {
-            printQuotedSymbol(out, text);
-        }
-        else
-        {
-            out.append(text);
-        }
-    }
-
-
-    public static String printSymbol(CharSequence text)
-    {
-        StringBuilder builder = new StringBuilder(text.length() + 2);
-        try
-        {
-            printSymbol(builder, text);
-        }
-        catch (IOException e)
-        {
-            // Shouldn't happen
-            throw new Error(e);
-        }
-        return builder.toString();
-    }
-
-
-    /**
-     * Prints the text as a single-quoted Ion symbol.
-     *
-     * @param out the stream to receive the data.
-     * @param text the symbol text.
-     *
-     * @throws IOException if the {@link Appendable} throws an exception.
-     */
-    public static void printQuotedSymbol(Appendable out, CharSequence text)
-        throws IOException
-    {
-        out.append('\'');
-        printAsIon(out, text, '\'');
-        out.append('\'');
-    }
-
-
-    public static String printQuotedSymbol(CharSequence text)
-    {
-        StringBuilder builder = new StringBuilder(text.length() + 2);
-        try
-        {
-            printQuotedSymbol(builder, text);
-        }
-        catch (IOException e)
-        {
-            // Shouldn't happen
-            throw new Error(e);
-        }
-        return builder.toString();
-    }
-
 
 
     /**
@@ -547,13 +470,23 @@ public class Text
      * @param text the text to print.
      *
      * @throws IOException if the {@link Appendable} throws an exception.
+     * @throws IllegalArgumentException
+     *     if the text contains invalid UTF-16 surrogates.
+     *
+     * @deprecated Use {@link #printJsonString(Appendable, CharSequence)},
+     * which always prints surrounding double-quotes.
      */
+    @Deprecated
     public static void printAsJson(Appendable out, CharSequence text)
         throws IOException
     {
         printChars(out, text, '"', EscapeMode.JSON);
     }
 
+    /**
+     * @throws IllegalArgumentException
+     *     if the text contains invalid UTF-16 surrogates.
+     */
     private static void printChars(Appendable out, CharSequence text,
                                    int surroundingQuoteChar, EscapeMode mode)
         throws IOException
@@ -562,7 +495,31 @@ public class Text
         for (int i = 0; i < len; i++)
         {
             int c = text.charAt(i);
-            printChar(out, c, surroundingQuoteChar, mode);
+
+            if (IonConstants.isHighSurrogate(c))
+            {
+                i++;
+                char c2 = text.charAt(i);
+                if (i >= len || !IonConstants.isLowSurrogate(c2))
+                {
+                    String message =
+                        "text is invalid UTF-16. It contains an unmatched " +
+                        "high surrogate 0x" + Integer.toHexString(c) +
+                        " at index " + i;
+                    throw new IllegalArgumentException(message);
+                }
+                c = IonConstants.makeUnicodeScalar(c, c2);
+            }
+            else if (IonConstants.isLowSurrogate(c))
+            {
+                String message =
+                    "text is invalid UTF-16. It contains an unmatched " +
+                    "low surrogate 0x" + Integer.toHexString(c) +
+                    " at index " + i;
+                throw new IllegalArgumentException(message);
+            }
+
+            printCodePoint(out, c, surroundingQuoteChar, mode);
         }
     }
 
@@ -715,6 +672,10 @@ public class Text
         return flags;
     }
 
+    /**
+     * @deprecated  Use {@line #printAsIon(Appendable, int, int)}.
+     */
+    @Deprecated
     public static String getEscapeString(int c, int surroundingQuoteChar) {
         switch (c) {
         case '\u0007':     return "\\a";

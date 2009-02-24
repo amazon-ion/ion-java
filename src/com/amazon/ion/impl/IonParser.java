@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
+/* Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion.impl;
 
@@ -8,7 +8,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.PositionMarker;
-import com.amazon.ion.util.Text;
+import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
 import java.io.PushbackReader;
 import java.io.Reader;
@@ -229,6 +229,11 @@ public class IonParser
         switch(_t) {
         case eof:
             break;
+
+        case kwNan:
+        case kwPosInf:
+        case kwNegInf:
+
         case constNegInt:
         case constPosInt:
         case constFloat:
@@ -581,7 +586,10 @@ loop:   for (;;) {
                         size);
                 this._out.writer().writeVarUInt8Value(l, size);
             }
-        break;
+            break;
+        case kwNan:
+        case kwPosInf:
+        case kwNegInf:
         case constFloat:
             {
                 double d = this._in.doubleValue.doubleValue();
@@ -602,7 +610,10 @@ loop:   for (;;) {
             }
             break;
         default:
-            throw new IonException("internal error, unrecognized numeric token type at " + this._in.position());
+            String message =
+                "internal error, unrecognized numeric token type " + castto +
+                " at " + this._in.position();
+            throw new IonException(message);
         }
 
     }
@@ -668,7 +679,7 @@ loop:   for (;;) {
             // the first closing curly brace (the reader will consume the correct
             // number of trailing '=' characters), so skip past any whitespace
             c = bin64reader.terminatingChar();
-            while (Text.isWhitespace(c)) {
+            while (IonTextUtils.isWhitespace(c)) {
                 c = this._in.readIgnoreWhitespaceButNotComments();
             }
             // we haven't seen the first one yet

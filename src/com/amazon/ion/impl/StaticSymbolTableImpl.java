@@ -18,6 +18,7 @@ import com.amazon.ion.SystemSymbolTable;
  * <p>
  * Instances of this class are safe for use from multiple threads.
  */
+@Deprecated
 public class StaticSymbolTableImpl
     extends AbstractSymbolTable
 {
@@ -164,13 +165,5 @@ public class StaticSymbolTableImpl
     {
         String message = "Cannot call defineSymbol on shared symbol table";
         throw new UnsupportedOperationException(message);
-    }
-
-
-
-    public boolean isCompatible(SymbolTable other)
-    {
-        // TODO Auto-generated method stub
-        return false;
     }
 }

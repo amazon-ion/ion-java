@@ -7,10 +7,7 @@ package com.amazon.ion.impl;
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonSequence;
-import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.SymbolTable;
-import com.amazon.ion.SystemSymbolTable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -129,31 +126,6 @@ public abstract class IonSequenceImpl
         super.add(index, element);
     }
 
-    public void addEmbedded(IonValue element)
-        throws NullPointerException
-    {
-        checkForLock();
-
-        SymbolTable symtab = element.getSymbolTable();
-
-        IonSexpImpl wrapper = new IonSexpImpl(_system);
-        wrapper.addTypeAnnotation(SystemSymbolTable.ION_EMBEDDED_VALUE);
-
-        String systemId = symtab.getSystemId();
-        // TO DO inject systemId ($ion_1_0)
-        IonSymbolImpl sysid = new IonSymbolImpl(_system, systemId);
-        wrapper.add(sysid);
-
-        // TO DO inject symtab
-        IonStruct symtabion = symtab.getIonRepresentation();
-        wrapper.add(symtabion);
-
-        // TO DO inject value
-        wrapper.add(element);
-
-        assert wrapper._isSystemValue; // so we can unwrap it
-        super.add(wrapper);
-    }
 
     @Override
     protected int computeLowNibble(int valuelen)

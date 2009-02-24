@@ -14,15 +14,14 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.TtTimestamp;
-import com.amazon.ion.impl.IonBinaryWriterImpl;
+import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.IonTokenReader;
-import com.amazon.ion.impl.UnifiedSymbolTable;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
 import java.util.Date;
+import java.util.Iterator;
 
 /**
  *
@@ -158,12 +157,12 @@ public class BinaryStreamingTest
                         wr.writeTimestampUTC((Date)value);
                     }
                     else if (value instanceof String) {
-                        TtTimestamp ti =
+                        Timestamp ti =
                             IonTokenReader.Type.timeinfo.parse((String)value);
                         wr.writeTimestamp(ti);
                     }
-                    else if (value instanceof TtTimestamp) {
-                        wr.writeTimestamp((TtTimestamp)value);
+                    else if (value instanceof Timestamp) {
+                        wr.writeTimestamp((Timestamp)value);
                     }
                     else {
                         throw new IllegalStateException("we only write Date (as is), a TtTimestamp or a String (parsed) to an IonTimestamp");
@@ -286,19 +285,19 @@ public class BinaryStreamingTest
                     assertTrue( bd1.equals(bd2) );
                     break;
                 case TIMESTAMP:
-                    TtTimestamp actual = r.timestampValue();
+                	Timestamp actual = r.timestampValue();
 
                     if (value instanceof Date) {
                         assertEquals(value, actual.dateValue());
-                        assertEquals(TtTimestamp.UTC_OFFSET, actual.getLocalOffset());
+                        assertEquals(Timestamp.UTC_OFFSET, actual.getLocalOffset());
                     }
                     else if (value instanceof String) {
-                        TtTimestamp ti2 =
+                    	Timestamp ti2 =
                             IonTokenReader.Type.timeinfo.parse((String)value);
                         assertEquals(ti2, actual);
                     }
-                    else if (value instanceof TtTimestamp) {
-                        TtTimestamp ti2 = (TtTimestamp)value;
+                    else if (value instanceof Timestamp) {
+                    	Timestamp ti2 = (Timestamp)value;
                         assertEquals(ti2, actual);
                     }
                     else {
@@ -560,8 +559,6 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
     	wr.writeValues(ir);
         byte[] buffer = wr.getBytes();
         dumpBuffer(buffer, buffer.length);
-
-    	return;
     }
     public void testValue2()
     throws Exception
@@ -581,17 +578,14 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
     	SymbolTable sym = v.getSymbolTable();
     	assert v2.getSymbolTable() == sym;
     	IonReader ir = system().newReader(s);
-    	UnifiedSymbolTable u = UnifiedSymbolTable.copyFrom(sym);
-    	u.setName("items");
-    	u.setVersion(1);
-    	u.lock();
-    	IonBinaryWriter wr = new IonBinaryWriterImpl(u);
+
+    	Iterator<String> symbols = sym.iterateDeclaredSymbolNames();
+    	SymbolTable u = system().newSharedSymbolTable("items", 1, symbols);
+    	IonBinaryWriter wr = system().newBinaryWriter(u);
 
     	wr.writeValues(ir);
         byte[] buffer = wr.getBytes();
         dumpBuffer(buffer, buffer.length);
-
-    	return;
     }
     void dumpBuffer(byte[] buffer, int len)
     {
@@ -681,17 +675,17 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         IonReader ir = system().newReader(doublebuffer);
 
         // first copy
-        assertTrue(ir.next().equals(IonType.STRUCT));
+        assertEquals(IonType.STRUCT, ir.next());
         ir.stepIn();
-        assertEquals(ir.next(), IonType.BOOL);
-        assertEquals(ir.getFieldName(), "Foo");
+        assertEquals(IonType.BOOL, ir.next());
+        assertEquals("Foo", ir.getFieldName());
         //assertEquals(ir.getAnnotations(), new String[] { "boolean" });
         String[] annotations = ir.getTypeAnnotations();
         assertTrue(annotations != null && annotations.length == 1);
         if (annotations != null) { // just to shut eclipse up, we already tested this above
             assertTrue("boolean".equals(annotations[0]));
         }
-        assertEquals(ir.booleanValue(), true);
+        assertTrue(ir.booleanValue());
         ir.stepOut();
 
         // second copy

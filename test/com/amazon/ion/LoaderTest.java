@@ -1,10 +1,9 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import com.amazon.ion.impl.IonSystemImpl;
+import com.amazon.ion.impl.UserReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -15,6 +14,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.Iterator;
 
 /**
@@ -263,12 +264,12 @@ public class LoaderTest
         IonValue v1 =  sys.singleValue(image);
 
         IonDatagram dg = sys.newLoader().load(image);
-        assert  v1.toString().equals( dg.get(0).toString() );
+        assertEquals(v1.toString(), dg.get(0).toString());
 
         byte[] bytes = dg.toBytes();
 
         IonValue v2 = sys.singleValue(bytes);
-        assert v1.toString().equals( v2.toString() );
+        assertEquals(v1.toString(), v2.toString());
 
         try {
             v1 = sys.singleValue("(one) (two)");
@@ -285,13 +286,150 @@ public class LoaderTest
         catch (IonException ie) { /* ok */ }
     }
 
-
     public void testDeepMaterialize()
         throws Exception
     {
         File testdataFile = getTestdataFile("good/structs.ion");
         IonDatagram dg = loader().load(testdataFile);
         dg.deepMaterialize();
+    }
+
+final static boolean _debug_long_test = false;
+
+    public void testIteratingVeryLongFile()
+    throws Exception
+	{
+    	TestTimer gc = new TestTimer("gc()", 10, 5);
+    	TestTimer read = new TestTimer("read", 10, 2);
+    	long loop_counter = 0;
+    	IonValue value = null;
+    	boolean  more;
+
+// TODO: turn this long test on someday
+if (!_debug_long_test) return;
+
+	    LongInputStream longStream = new LongInputStream("$ion_1_0 { this:is, a:struct } ");
+        Reader reader = new InputStreamReader(longStream, "UTF-8");
+        UserReader r = (UserReader)system().iterate(reader);
+        r.setBufferToRecycle();
+
+        Iterator<IonValue> i = r;
+
+        for (;;)
+        {
+        	read.start();
+        	more = i.hasNext();
+            if (more) {
+            	value = i.next();
+            }
+            read.finish(loop_counter);
+
+            assertFalse(value == null || value.isNullValue());
+            assertNull(value.getContainer());
+            //assertFalse(i.isNullValue());
+            //assertFalse(i.isInStruct());
+
+            loop_counter++;
+            if (loop_counter % 1000 == 0) {
+            	System.out.println("counter = "+loop_counter+", moving average = "+read.getAverage());
+            }
+            if (loop_counter > 100000) break;
+
+        	gc.start();
+        	System.gc();
+        	gc.finish(loop_counter);
+        }
+	}
+
+    static class TestTimer {
+    	String _title;
+    	long[] _samples;
+    	int	   _next;
+    	int    _sample_length;
+    	long   _moving_average;  // really the moving total
+    	long   _threshold;
+    	int    _multiplier;
+    	long   _start;
+
+    	TestTimer(String title, int length, int multiplier) {
+    		this._title = title;
+    		this._samples = new long[length];
+    		this._sample_length = length;
+    		this._moving_average = 0;
+    		this._threshold = -1;
+    		this._multiplier = multiplier;
+    	}
+    	void reset() {
+    		this._next = 0;
+    		this._threshold = -1;
+    		this._moving_average = 0;
+    		for (int ii=0; ii<this._sample_length; ii++) {
+    			this._samples[ii] = 0;
+    		}
+    	}
+    	long getAverage() {
+    		if (this._threshold < 0) return -1;
+    		return this._moving_average / this._sample_length;
+    	}
+    	void start() {
+    		this._start = System.nanoTime();
+    	}
+    	void finish(long counter) {
+    		long end = System.nanoTime();
+    		long duration = end - this._start;
+
+    		if (this._next == this._sample_length) {
+    			if (this._threshold == -1) {
+    				long temp = 0;
+    				for (int ii=0; ii<this._sample_length; ii++) {
+    					temp += this._samples[ii];
+    				}
+    				this._moving_average = temp;
+    				this._threshold = temp / this._sample_length;
+    				this._threshold *= this._multiplier;
+    			}
+    			this._next = 0;
+    		}
+    		this._moving_average -= this._samples[this._next];
+    		this._moving_average += duration;
+    		this._samples[this._next] =  duration;
+    		this._next++;
+    		if ((this._moving_average/this._sample_length) > this._threshold) {
+    			if (this._threshold != -1) {
+    				System.out.println("it's taking too long to "+this._title+" at counter = "+counter+". moving average = "+this._moving_average+", timer threshold = "+this._threshold);
+    				this.reset();
+    			}
+    		}
+    	}
+    }
+    static class LongInputStream extends InputStream
+    {
+    	byte[] _pattern;
+    	int    _pos;
+    	int    _limit;
+
+    	LongInputStream(String pattern) {
+    		Charset cs = Charset.forName("UTF-8");
+    		ByteBuffer bb = cs.encode(pattern);			// nio bytebuffer
+    		this._limit = bb.limit();
+    		this._pattern = new byte[this._limit];
+    		for (int ii=0; ii<this._limit; ii++) {
+    			this._pattern[ii] = bb.get(ii);
+    		}
+    		this._pos = 0;
+    	}
+
+    	@Override
+    	public int read()
+    	{
+    		if (this._pos >= this._limit) {
+    			this._pos = 0;
+    		}
+    		int c = this._pattern[this._pos];
+    		this._pos++;
+    		return c;
+    	}
+
     }
 
     public static void main(String[] args)

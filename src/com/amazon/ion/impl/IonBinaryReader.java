@@ -9,9 +9,7 @@ import static com.amazon.ion.impl.IonImplUtils.EMPTY_ITERATOR;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonClob;
-import com.amazon.ion.IonDecimal;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSequence;
@@ -23,8 +21,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
-import com.amazon.ion.TtTimestamp;
-import com.amazon.ion.system.SimpleCatalog;
+import com.amazon.ion.Timestamp;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
@@ -38,9 +35,6 @@ import java.util.NoSuchElementException;
 public final class IonBinaryReader
     implements IonReader
 {
-    static final boolean _debug_return_system_values = false;
-
-
     // TODO------------------------------------------------------------------------------------------
     static final boolean _verbose_debug = false;
     static String getTidAsString(int tid) {
@@ -95,8 +89,18 @@ public final class IonBinaryReader
     ByteReader          _reader;
     IonCatalog          _catalog;
     SymbolTable         _current_symtab;
+
+    /**
+     * When we encounter a local symtab while returning system values, we first
+     * load the symtab, then back up and allow the user to read the symtab's
+     * data. In the meanwhile, we stash the loaded symtab here then move it
+     * into {@link #_current_symtab} after the data has been scanned again.
+     */
+    private SymbolTable _pending_symtab;
+
     int                 _parent_tid;  // using -1 for eof (or bof aka undefined) and 16 for datagram
 
+    final boolean _is_returning_system_values;
     boolean _eof;
     int     _local_end;
 
@@ -122,33 +126,28 @@ public final class IonBinaryReader
     int[]       _local_end_stack;
     SymbolTable[] _symbol_stack;
 
-    IonBinaryReader() {}
 
-    // public to allow someone to DECLARE this buf to be binary
-    // irrespective of the presense or absense of an Ion Version
-    // Marker (aka magic cookie)
-    public IonBinaryReader(byte[] buf)
+
+    public IonBinaryReader(byte[] buf, int start, int len,
+                           IonCatalog catalog,
+                           boolean returnSystemValues)
     {
-        this ( buf, 0, buf.length );
+        this(new SimpleByteBuffer(buf, start, len, true /*isReadOnly*/),
+             IonType.DATAGRAM,
+             catalog,
+             returnSystemValues);
     }
 
-    public IonBinaryReader(byte[] buf, int start, int len)
-    {
-        this(  new SimpleByteBuffer(buf, start, len, true /*isReadOnly*/)
-             , null
-             , new SimpleCatalog()
-        );
-    }
     public IonBinaryReader(byte[] buf, IonCatalog catalog)
     {
         this ( buf, 0, buf.length, catalog );
     }
     public IonBinaryReader(byte[] buf, int start, int len, IonCatalog catalog)
     {
-        this(  new SimpleByteBuffer(buf, start, len, true /*isReadOnly*/)
-             , null
-             , catalog
-        );
+        this(new SimpleByteBuffer(buf, start, len, true /*isReadOnly*/),
+             IonType.DATAGRAM,
+             catalog,
+             false);
     }
     //
     // sometime (in the far distant future) we might want to allow the caller to
@@ -161,25 +160,30 @@ public final class IonBinaryReader
     //        , catalog
     //    );
     //}
-    IonBinaryReader(SimpleByteBuffer ssb, IonType parent, IonCatalog catalog)
+
+
+    private IonBinaryReader(SimpleByteBuffer ssb,
+                            IonType parent,
+                            IonCatalog catalog,
+                            boolean returnSystemValues)
     {
+        _is_returning_system_values = returnSystemValues;
         _buffer = ssb;
         _reader = _buffer.getReader();
         _local_end = _buffer._eob;
         _state = S_BEFORE_TID;
         _catalog = catalog;
         _current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
-        _parent_tid = (parent == null) ? IonConstants.tidDATAGRAM : get_tid_from_ion_type(parent);
+        _parent_tid = (parent == IonType.DATAGRAM
+                           ? IonConstants.tidDATAGRAM
+                           : get_tid_from_ion_type(parent));
     }
 
-    final boolean expect_symbol_table() {
-        // FIXME - this should be looking at tidSexp, it should be looking at
-        //         is embedded value or is datagram instead !!
-        boolean expected =  (  _parent_tid == IonConstants.tidSexp
-                            || _parent_tid == IonConstants.tidDATAGRAM
-                            );
+    final boolean is_at_top_level() {
+        boolean expected = (_parent_tid == IonConstants.tidDATAGRAM);
         return expected;
     }
+
     final boolean is_in_struct() {
         boolean is_struct = (_parent_tid == IonConstants.tidStruct);
         return is_struct;
@@ -194,7 +198,7 @@ public final class IonBinaryReader
             // if we stepped into the value with next() and then
             // decided never read the value itself we have to skip
             // over the value contents here
-            _reader.skip(_value_len);
+            _reader.skip(_value_len);  // FIXME _state = S_BEFORE_TID
         }
 
         int value_start = _reader.position();
@@ -209,6 +213,10 @@ public final class IonBinaryReader
             if (is_in_struct()) {
                 _value_field_id = _reader.readVarUInt();
             }
+            else if (is_at_top_level() && _pending_symtab != null) {
+                _current_symtab = _pending_symtab;
+                _pending_symtab = null;
+            }
 
             // the "Possible" routines return -1 if they
             // found, and consumed, interesting data. And
@@ -219,7 +227,7 @@ public final class IonBinaryReader
                     _eof = true;
                     return false;
                 }
-                if (expect_symbol_table()) {
+                if (is_at_top_level()) {
                     // first check for the magic cookie - especially since the first byte
                     // says this is an annotation (with an, otherwise, invalid length of zero)
                     final int marker_byte_1 = (IonConstants.BINARY_VERSION_MARKER_1_0[0] & 0xff);
@@ -227,11 +235,6 @@ public final class IonBinaryReader
                         td = processPossibleMagicCookie(td);
                     }
                     else if (((td >>> 4) & 0xf) == IonConstants.tidTypedecl) {
-                        // this looks at the current value, checks to see if it has the
-                        // $ion_1_0 annoation and if it does load the symbol table and
-                        // move forward, otherwise just read the actual values td and
-                        // return that instead.  If it's not a symbol table, then the 14
-                        // (user type annotation) will be handled during "next()"
                         td = processPossibleSymbolTable(td);
                     }
                 }
@@ -253,45 +256,64 @@ public final class IonBinaryReader
         if (!hasNext()) {
             throw new NoSuchElementException();
         }
-        int ion_type = this.nextTid();
-        _value_type = get_iontype_from_tid(ion_type);
+        int tid = this.nextTid();
+        _value_type = get_iontype_from_tid(tid);
         return _value_type;
     }
-    int nextTid()
+
+    private int nextTid()
     {
         if (_state != IonBinaryReader.S_AFTER_TID && !this.hasNext()) {
                 throw new NoSuchElementException();
         }
 
         // get actual type id
-        int ion_type = (_value_tid & 0xf0) >>> 4;
+        int tid = (_value_tid & 0xf0) >>> 4;
 
         try {
-            // if 14 (annotation)
-            if (ion_type == IonConstants.tidTypedecl) {
+            _value_len = read_length(_value_tid);
+
+            if (tid == IonConstants.tidTypedecl) {
+
                 //      skip forward annotation length
 
                 //      first we skip the value length and then
                 //      read the local annotation length
-                read_length(_value_tid);
+                if (_value_len == 0) {
+                    // This is a version marker (or broken data)
+                    if (! is_at_top_level()) {
+                        // TODO test this
+                        throw new IonException("invalid type descriptor byte encountered at "+_reader.position());
+                    }
 
-                //      set annotation start to the position of
-                //      the first type desc byte
-                this._annotation_start = _reader.position();
-                int annotation_len = _reader.readVarUInt();
-                _reader.skip(annotation_len);
+                    // If we're seeing $E0 at this point, we've already matched
+                    // the next three bytes
+                    assert _is_returning_system_values;
 
-                //      read tid again
-                _value_tid = _reader.read();
-                ion_type = (_value_tid & 0xf0) >>> 4;
+                    // This isn't a real annotation.
+                    _annotation_start = -1;
+                }
+                else {
+                    //      set annotation start to the position of
+                    //      the first type desc byte
+                    this._annotation_start = _reader.position();
+                    int annotation_len = _reader.readVarUInt();
+                    _reader.skip(annotation_len);
+
+                    // Read the "real" tid nested inside the annotation wrapper
+                    _value_tid = _reader.read();
+                    tid = (_value_tid & 0xf0) >>> 4;
+                    if (tid == IonConstants.tidTypedecl) {
+                        // TODO test this
+                        throw new IonException("invalid nested annotations encountered at "+_reader.position());
+                    }
+                    _value_len = read_length(_value_tid);
+                }
             }
             else {
                 // clear the annotation marker that's left over from our previous value
                 _annotation_start = -1;
             }
-
-            // read length (if necessary)
-            _value_len = read_length(_value_tid);
         }
         catch (IOException e) {
             throw new IonException(e);
@@ -299,9 +321,10 @@ public final class IonBinaryReader
 
         // set the state forward
         _state = IonBinaryReader.S_BEFORE_CONTENTS;
-        return ion_type;
+        return tid;
     }
-    final int get_tid_from_ion_type(IonType t) {
+
+    private final int get_tid_from_ion_type(IonType t) {
         int tid;
         switch (t) {
         case NULL:
@@ -347,9 +370,9 @@ public final class IonBinaryReader
             tid = -1;
         }
         return tid;
-
     }
-    final IonType get_iontype_from_tid(int tid)
+
+    private final IonType get_iontype_from_tid(int tid)
     {
         IonType t = null;
         switch (tid) {
@@ -397,6 +420,12 @@ public final class IonBinaryReader
             t = IonType.STRUCT;
             break;
         case IonConstants.tidTypedecl:  // 14 E
+            if (is_at_top_level()) {
+                assert (_value_tid == 0xE0);
+                t = IonType.SYMBOL;
+                break;
+            }
+            // else fall through to fail...
         default:
             throw new IonException("unrecognized value type encountered: "+tid);
         }
@@ -430,7 +459,7 @@ public final class IonBinaryReader
             if (len == 14) {
                 len = _reader.readVarUInt();
             }
-            else if (len == 15) {
+            else if (len == 15) {  // FIXME This is actually invalid
                 len = 0;
             }
             return len;
@@ -464,11 +493,14 @@ public final class IonBinaryReader
                     // a fresh new symbol table!
                     this.resetSymbolTable();
                     _state = IonBinaryReader.S_BEFORE_TID;
-                    td = -1; // this says we used up the value and the caller can skip it
+                }
+
+                if (is_magic && !_is_returning_system_values) {
+                    // Caller should skip this value and return the next one.
+                    td = -1;
                 }
                 else {
-                    // the magic was lost, go back to your regularly
-                    // scheduled activity
+                    // Caller should re-read this value and return it.
                     _reader.position(original_position);
                 }
             }
@@ -479,29 +511,33 @@ public final class IonBinaryReader
         return td;
     }
 
+    /**
+     * Looks at the current value, checks to see if it has the
+     * $ion_symbol_table annotation and if it does load the symbol table and
+     * move forward, otherwise just read the actual values td and
+     * return that instead.  If it's not a symbol table, then the 14
+     * (user type annotation) will be handled during "next()"
+     *
+     * @param typedesc
+     *
+     * @return -1 if we've skipped a local symtab, so the caller should read
+     * the next typedesc.
+     */
+
     int processPossibleSymbolTable(int typedesc) {
         int original_position = _reader.position();
         boolean is_symbol_table = false;
 
         try {
+            @SuppressWarnings("unused")
             int vlen = read_length(typedesc);   // we have to read past the overall value length first
-            assert vlen == vlen;                // shut eclipse up about not reading vlen
             int alen = _reader.readVarUInt();   // now we have the length of the annotations themselves
             int aend = _reader.position() + alen;
-
+// FIXME what if loadLocalSymbolTableIfStruct returns false? why keep looping?
             while (_reader.position() < aend && !is_symbol_table) {
                 int a = _reader.readVarUInt();
-                switch (a) {
-                case SystemSymbolTable.ION_SYMBOL_TABLE_SID:
-                // cas 25 apr 2008: removed case SystemSymbolTable.ION_1_0_SID:
-                    is_symbol_table = loadSymbolTable(a, original_position, aend);
-                    break;
-                case SystemSymbolTable.ION_EMBEDDED_VALUE_SID:
-                    // TODO - we should do embedded value processing here
-                    // like: is_embedded_value = true;
-                    break;
-                default:
-                    break;
+                if (a == SystemSymbolTable.ION_SYMBOL_TABLE_SID) {
+                    is_symbol_table = loadLocalSymbolTableIfStruct(aend);
                 }
             }
         }
@@ -509,21 +545,21 @@ public final class IonBinaryReader
             throw new IonException(e);
         }
 
-// FIXME: return everything ...
-        if (!_debug_return_system_values) {
-            if (is_symbol_table) {
-                // make our caller read the upcoming byte
-                typedesc = -1;
-            }
-            else {
-                // we changed our minds, everything is as is should be
-                _reader.position(original_position);
-           }
+        if (is_symbol_table && !_is_returning_system_values) {
+            // Caller should hide this value and continue with the next.
+            // Make our caller read the upcoming byte
+            typedesc = -1;
         }
+        else {
+            // Caller should return this value to the user.
+            _reader.position(original_position);
+        }
+
         return typedesc;
     }
 
-    boolean loadSymbolTable(int annotationid, int original_start, int contents_start) throws IOException
+    boolean loadLocalSymbolTableIfStruct(int contents_start)
+        throws IOException
     {
         boolean is_symbol_table = false;
 
@@ -533,7 +569,7 @@ public final class IonBinaryReader
 
         if (((td >>> 4) & 0xf) == IonConstants.tidStruct) {
             //boolean was_struct = this._in_struct;
-            int     prev_parent_tid = this._parent_tid;
+            int     prev_parent_tid = this._parent_tid;  // TODO Always DATAGRAM
             int     prev_end = this._local_end;
 
             this._value_tid = td;
@@ -547,23 +583,25 @@ public final class IonBinaryReader
                 _state = IonBinaryReader.S_INVALID;
                 throw new IonException("invalid binary format");
             }
-            // TODO: this should get it's system symbol table somewhere else
-            // like passed in from the user or deduced from the version stamp
-            SymbolTable systemSymbols = UnifiedSymbolTable.getSystemSymbolTableInstance();
+
+            SymbolTable systemSymbols = _current_symtab.getSystemSymbolTable();
             UnifiedSymbolTable local =
                 new UnifiedSymbolTable(systemSymbols, this, _catalog);
 
-            _eof = false; // the hasNext() on the last field in the symbol table sets this
+            _eof = false; // set by hasNext() on the last field in the symtab
 
             // we've read it, it must be a symbol table
             is_symbol_table = true;
 
-            if (local.isLocalTable()) {
-                this._current_symtab = local;
+            assert local.isLocalTable();
+
+            if (_is_returning_system_values) {
+                this._pending_symtab = local;
             }
             else {
-                this._catalog.putTable(local);
+                this._current_symtab = local;
             }
+
             this._parent_tid = prev_parent_tid;
             this._local_end  = prev_end;
 
@@ -578,52 +616,6 @@ public final class IonBinaryReader
     public int getDepth() {
         return _top;
     }
-
-    public int getContainerSize()
-    {
-        int size = 0;
-        boolean counting_a_struct = false;
-
-        if (_state != S_BEFORE_CONTENTS) {
-            throw new IllegalStateException();
-        }
-        int tid = (_value_tid >>> 4);
-        switch (tid) {
-            case IonConstants.tidSexp:
-            case IonConstants.tidList:
-                counting_a_struct = false;
-                break;
-            case IonConstants.tidStruct:
-                counting_a_struct = true;
-                break;
-            default:
-                throw new IllegalStateException();
-        }
-
-        int original_position = _reader.position();
-
-        try {
-            int aend = _value_len + original_position;
-
-            while (_reader.position() < aend) {
-                if (counting_a_struct) {
-                    int fldid = _reader.readVarUInt();
-                    assert fldid == fldid;
-                }
-                int td = _reader.read();
-                int vlen = this.read_length(td);
-                _reader.skip(vlen);
-                size++;
-            }
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-
-        _reader.position(original_position);
-        return size;
-    }
-
 
     public void stepIn()
     {
@@ -712,14 +704,14 @@ public final class IonBinaryReader
     public void resetSymbolTable()
     {
         // TODO can this just use isSystemTable() ?
-    	if ( _current_symtab == null
-    	 || !_current_symtab.isSharedTable()
-    	 ||  _current_symtab.getMaxId() != UnifiedSymbolTable.getSystemSymbolTableInstance().getMaxId()
-    	) {
-    		// we only need to "reset" the symbol table if it isn't
-    		// the system symbol table already
-    		_current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
-    	}
+        if ( _current_symtab == null
+        || !_current_symtab.isSharedTable()
+        ||  _current_symtab.getMaxId() != UnifiedSymbolTable.getSystemSymbolTableInstance().getMaxId()
+        ) {
+            // we only need to "reset" the symbol table if it isn't
+            // the system symbol table already
+            _current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
+        }
     }
 
 
@@ -729,14 +721,6 @@ public final class IonBinaryReader
             throw new IllegalStateException();
         }
         return _value_type;
-    }
-
-    public int getTypeId()
-    {
-        if (_eof || _state == IonBinaryReader.S_BEFORE_TID) {
-            throw new IllegalStateException();
-        }
-        return ((_value_tid >>> 4) & 0xf);
     }
 
     public int[] getTypeAnnotationIds()
@@ -864,27 +848,23 @@ public final class IonBinaryReader
         case IonConstants.tidBoolean:   return sys.newBool(booleanValue());
         case IonConstants.tidPosInt:
         case IonConstants.tidNegInt:    return sys.newInt(longValue());
-        case IonConstants.tidFloat:
-            IonFloat f = sys.newFloat();
-            f.setValue(doubleValue());
-            return f;
-        case IonConstants.tidDecimal:
-            IonDecimal dec = sys.newDecimal();
-            dec.setValue(bigDecimalValue());
-            return dec;
+        case IonConstants.tidFloat:     return sys.newFloat(doubleValue());
+        case IonConstants.tidDecimal:   return sys.newDecimal(bigDecimalValue());
         case IonConstants.tidTimestamp:
             IonTimestamp t = sys.newTimestamp();
-            TtTimestamp ti = timestampValue();
+            Timestamp ti = timestampValue();
             t.setValue(ti);
             return t;
         case IonConstants.tidSymbol:    return sys.newSymbol(stringValue());
         case IonConstants.tidString:    return sys.newString(stringValue());
         case IonConstants.tidClob:
             IonClob clob = sys.newNullClob();
+            // FIXME inefficient: both newBytes and setBytes copy the data
             clob.setBytes(newBytes());
             return clob;
         case IonConstants.tidBlob:
             IonBlob blob = sys.newNullBlob();
+            // FIXME inefficient: both newBytes and setBytes copy the data
             blob.setBytes(newBytes());
             return blob;
         case IonConstants.tidList:
@@ -1000,12 +980,17 @@ public final class IonBinaryReader
             throw new IllegalStateException();
         }
         int tid = (_value_tid >>> 4);
-        if (tid != IonConstants.tidFloat) {
+        try {
+            if (tid == IonConstants.tidDecimal) {
+                BigDecimal dec = _reader.readDecimal(_value_len);
+                value = dec.doubleValue();
+            }
+            else if (tid == IonConstants.tidFloat) {
+                value = _reader.readFloat(_value_len);
+            }
+            else {
             throw new IllegalStateException();
         }
-
-        try {
-            value = _reader.readFloat(_value_len);
         }
         catch (IOException e) {
             throw new IonException(e);
@@ -1022,9 +1007,6 @@ public final class IonBinaryReader
         int tid = (_value_tid >>> 4);
         if (tid != IonConstants.tidDecimal) {
             throw new IllegalStateException();
-        }
-        if (tid == IonConstants.tidNull) {
-            throw new NullPointerException();
         }
 
         BigDecimal value;
@@ -1065,9 +1047,9 @@ public final class IonBinaryReader
         return timestampValue().dateValue();
     }
 
-    public TtTimestamp timestampValue()
+    public Timestamp timestampValue()
     {
-        TtTimestamp ti;
+        Timestamp ti;
 
         if (_state != S_BEFORE_CONTENTS) {
             throw new IllegalStateException();
@@ -1094,16 +1076,27 @@ public final class IonBinaryReader
         if (_state != S_BEFORE_CONTENTS) {
             throw new IllegalStateException();
         }
-        int tid = (_value_tid >>> 4);
-        if (tid != IonConstants.tidSymbol && tid != IonConstants.tidString) {
-            throw new IllegalStateException();
-        }
-
-        if ((_value_tid & 0xf) == IonConstants.lnIsNullAtom) {
-            return null;
-        }
 
         try {
+            int tid = (_value_tid >>> 4);
+            if (tid != IonConstants.tidSymbol && tid != IonConstants.tidString)
+            {
+                // Is it a version marker?
+                if (is_at_top_level() && tid == IonConstants.tidTypedecl) {
+                    // Skip the remaining 3 bytes of the BVM
+                    _reader.read();
+                    _reader.read();
+                    _reader.read();
+
+                    return SystemSymbolTable.ION_1_0;
+                }
+                throw new IllegalStateException();
+            }
+
+            if ((_value_tid & 0xf) == IonConstants.lnIsNullAtom) {
+                return null;
+            }
+
             if (tid == IonConstants.tidSymbol) {
                 long sid = _reader.readULong(_value_len);
                 if (_current_symtab == null) {
@@ -1181,3 +1174,4 @@ public final class IonBinaryReader
         return readlen;
     }
 }
+

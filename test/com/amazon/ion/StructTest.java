@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -33,13 +33,16 @@ public class StructTest
     {
         StringBuilder buf = new StringBuilder();
         buf.append('{');
-        for (int i = 0; i < children.length; i++)
+        if (children != null)
         {
-            buf.append('f');
-            buf.append(i);
-            buf.append(':');
-            buf.append(children[i]);
-            buf.append(',');
+            for (int i = 0; i < children.length; i++)
+            {
+                buf.append('f');
+                buf.append(i);
+                buf.append(':');
+                buf.append(children[i]);
+                buf.append(',');
+            }
         }
         buf.append('}');
         return buf.toString();
@@ -56,50 +59,24 @@ public class StructTest
         return value;
     }
 
-    public static void checkNullStruct(IonStruct value)
+    public void checkNullStruct(IonStruct value)
     {
         checkNullStruct(value, "");
     }
 
-    public static void checkNullStruct(IonStruct value, String annotationText)
+    public void checkNullStruct(IonStruct value, String annotationText)
     {
         assertSame(IonType.STRUCT, value.getType());
-        assertTrue(value.isNullValue());
 
+        checkNullContainer(value);
+
+        assertNull(value.get("f"));
         try
         {
-            value.size();
-            fail("Expected NullValueException");
+            value.get(null);
+            fail("Expected NullPointerException");
         }
-        catch (NullValueException e) { }
-
-        try
-        {
-            value.get("f");
-            fail("Expected NullValueException");
-        }
-        catch (NullValueException e) { }
-
-        try
-        {
-            value.iterator();
-            fail("Expected NullValueException");
-        }
-        catch (NullValueException e) { }
-
-        try
-        {
-            value.remove(null);
-            fail("Expected NullValueException");
-        }
-        catch (NullValueException e) { }
-
-        try
-        {
-            value.isEmpty();
-            fail("Expected NullValueException");
-        }
-        catch (NullValueException e) { }
+        catch (NullPointerException e) { }
 
         assertEquals(annotationText + "null.struct", value.toString());
     }
@@ -396,6 +373,20 @@ public class StructTest
         catch (IllegalArgumentException e) { }
     }
 
+    public void testGetFromNull()
+    {
+        IonValue n = system().newNull();
+        IonStruct s = system().newEmptyStruct();
+        s.put("f", n);
+
+        assertSame(n, s.get("f"));
+        assertNull(s.get("g"));
+
+        s.makeNull();
+        assertNull(s.get("f"));
+        assertNull(s.get("g"));
+    }
+
     public void testPutNull()
     {
         IonStruct value = system().newNullStruct();
@@ -623,17 +614,20 @@ public class StructTest
 
         // what happened to j?
         IonDatagram dg = ionSystem.newDatagram(s1);
+        // Do this before toString, ensuring we have local symtab
+        byte[] bytes = dg.toBytes();
+
         String i3 = dg.toString();
         //System.out.println(i3);
 
-        byte[] bytes = dg.toBytes();
         IonLoader loader = ionSystem.getLoader();
-        IonValue v = loader.load(bytes);
+        IonDatagram v = loader.load(bytes);
+        assertIonEquals(s1, v.get(0));
         String i4 = v.toString();
         //System.out.println(i4);
 
         assertEquals(i1, i2);
-        assertEquals(i2, i3);
+//        assertEquals(i2, i3);  // Not true, i3 has system stuff
         assertEquals(i3, i4);
     }
 

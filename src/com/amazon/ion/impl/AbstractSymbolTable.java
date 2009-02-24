@@ -1,21 +1,18 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonException;
-import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonText;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.util.Printer;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -89,10 +86,21 @@ public abstract class AbstractSymbolTable
     }
 
 
-    public String getSystemId()
+
+    public String getIonVersionId()
     {
         // FIXME I'm not sure this is correct...
         return SystemSymbolTable.ION_1_0;
+    }
+
+    public String getSystemId()
+    {
+        return getIonVersionId();
+    }
+
+    public synchronized int getImportedMaxId()
+    {
+        throw new UnsupportedOperationException();
     }
 
     public synchronized int getMaxId()
@@ -100,10 +108,21 @@ public abstract class AbstractSymbolTable
         return _maxId;
     }
 
+    public synchronized Iterator<String> iterateDeclaredSymbolNames()
+    {
+        throw new UnsupportedOperationException();
+    }
 
     public synchronized int size()
     {
         return _byString.size();
+    }
+
+
+    public void writeTo(IonWriter writer)
+        throws IOException
+    {
+        writer.writeValue(_symtabElement);
     }
 
 
@@ -215,7 +234,7 @@ public abstract class AbstractSymbolTable
             Printer printer = new Printer();
             IonList symbolsList = (IonList) symbolsElt;
             if (_maxId == 0) {
-            	_maxId = symbolsElt.getSymbolTable().getSystemSymbolTable().getMaxId();
+                _maxId = symbolsElt.getSymbolTable().getSystemSymbolTable().getMaxId();
             }
 
             for (IonValue v : symbolsList)
@@ -246,51 +265,5 @@ public abstract class AbstractSymbolTable
         else if (symbolsElt != null) {
             errors.append(" Field 'symbols' must be a struct or list.");
         }
-    }
-
-    /**
-     * Examines the IonValue candidateTable and checks if it is a
-     * viable symbol table.  If it is this returns which type of
-     * symbol table it might be.  This does not validate the full
-     * contents, it examines the value type (struct), the annotations
-     * and just enough contents to distiguish between the possible
-     * types.
-     * @param candidateTable value to be check
-     * @return (@link SymbolTableType) possible type of table, or {@link SymbolTableType#INVALID}
-     */
-    public static SymbolTableType getSymbolTableType(IonValue candidateTable)
-    {
-    	SymbolTableType type = SymbolTableType.INVALID;
-
-    	if ((candidateTable instanceof IonStruct)
-    	 && (candidateTable.hasTypeAnnotation(SystemSymbolTable.ION_SYMBOL_TABLE))
-    	) {
-			IonStruct struct = (IonStruct)candidateTable;
-			IonValue  ionname = struct.get(SystemSymbolTable.NAME);
-			IonValue version = struct.get(SystemSymbolTable.VERSION);
-			if (ionname == null) {
-				if (version != null) {
-					throw new IonException("invalid local symbol table, version is not allowed");
-				}
-				type = SymbolTableType.LOCAL;
-			}
-			else {
-				if (!(ionname instanceof IonString)
-				 || (ionname.isNullValue())
-				 || (version != null && !(version instanceof IonInt))
-				) {
-					throw new IonException("invalid symbol table, the name field must be a string value and version must be an int");
-				}
-				String name = ((IonText)ionname).stringValue();
-				if (name.equals(SystemSymbolTable.ION_1_0)) { // FIXME wrong name
-					type = SymbolTableType.SYSTEM;
-				}
-				else {
-					type = SymbolTableType.SHARED;
-				}
-			}
-    	}
-
-    	return type;
     }
 }

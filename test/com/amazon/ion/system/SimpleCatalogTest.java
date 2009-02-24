@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.system;
 
@@ -34,14 +32,11 @@ public class SimpleCatalogTest
 
 
         String t1Text =
-            "$ion_symbol_table::{" +
+            "$ion_shared_symbol_table::{" +
             "  name:'''T''', version:1," +
-            "  symbols:{" +
-            "    $1:'''yes'''," +
-            "    $2:'''no'''," +
-            "  }" +
+            "  symbols:[ '''yes''', '''no''' ]" +
             "}";
-        loader().load(t1Text);
+        registerSharedSymtab(t1Text);
 
         SymbolTable t1 = cat.getTable("T", 1);
         assertEquals(1, t1.getVersion());
@@ -52,15 +47,11 @@ public class SimpleCatalogTest
 
 
         String t2Text =
-            "$ion_symbol_table::{" +
+            "$ion_shared_symbol_table::{" +
             "  name:'''T''', version:2," +
-            "  symbols:{" +
-            "    $1:'''yes'''," +
-            "    $2:'''no'''," +
-            "    $3:'''maybe'''," +
-            "  }" +
+            "  symbols:[ '''yes''', '''no''', '''maybe''' ]" +
             "}";
-        loader().load(t2Text);
+        registerSharedSymtab(t2Text);
 
         SymbolTable t2 = cat.getTable("T", 2);
         assertEquals(2, t2.getVersion());
@@ -77,30 +68,6 @@ public class SimpleCatalogTest
         assertSame(t2, cat.getTable("T", 5));
     }
 
-
-    public void testMaterializeOneValue()
-    {
-        String ionText =
-            "{" +
-            "  name:'''T''', version:2," +
-            "  symbols:{" +
-            "    x:'''yes'''," +
-            "    y:'''no'''," +
-            "    z:'''maybe'''," +
-            "  }" +
-            "}";
-
-        IonSystem sys = system();
-        IonValue v1           = sys.newNullStruct();
-        IonDatagram dg        = sys.newDatagram(v1);
-        byte[] b              = dg.toBytes();
-
-        IonValue v2           = sys.singleValue(b);
-
-        assertIonEquals(v1, v2);
-
-        //  assertSame(t2, cat.getTable("T", 5));
-    }
 
     @SuppressWarnings("unchecked")
     public void testBenchmark() {

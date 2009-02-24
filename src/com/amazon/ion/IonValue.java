@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -84,7 +82,7 @@ package com.amazon.ion;
  * Use the most appropriate mechanism for your algorithm, depending upon how
  * much validation you've done on the data.
  * <p>
- * <b>Instances of {@code IonValue} are not thread-safe!</b>
+ * <b>Mutable instances of {@code IonValue} are not thread-safe!</b>
  * Your application must perform its own synchronization if you need to access
  * nodes from multiple threads.  Alternatively, you can invoke
  * {@link #makeReadOnly()} from a single thread, after which point the value
@@ -92,6 +90,7 @@ package com.amazon.ion;
  * thread-safe.
  */
 public interface IonValue
+    extends Cloneable
 {
     /**
      * Gets an enumeration value identifying the core Ion data type of this
@@ -125,8 +124,8 @@ public interface IonValue
 
 
     /**
-     * Gets the symbol table used to encode this value.  The result is always a
-     * local (not shared) symbol table.
+     * Gets the symbol table used to encode this value.  The result is either a
+     * local or system symbol table (or null).
      *
      * @return the symbol table, or <code>null</code> if this value is not
      * currently backed by binary-encoded data.
@@ -262,12 +261,12 @@ public interface IonValue
 
 
     /**
-     * Creates a copy of this value and all its children.    The clones may share
-     * static symbol tables.  They will have independant local
-     * symbol tables if any are needed.  The cloned value will
+     * Creates a copy of this value and all its children.  The clone may use
+     * the same shared symbol tables, but it will have an independant local
+     * symbol table if necessary.  The cloned value will
      * be modifiable whether or not this one {@link #isReadOnly()}.
      * <p>
-     * The cloned values will be created in the context of the same
+     * The cloned value will be created in the context of the same
      * {@link IonSystem} as this instance; if you want a copy using a different
      * system, then use {@link IonSystem#clone(IonValue)} instead.
      */
@@ -275,10 +274,25 @@ public interface IonValue
 
 
     /**
-     * Returns a canonical text representation of this value.
+     * Returns a canonical ASCII text representation of this value.
+     * All data will be on a single line, with minimal whitespace.
      * For more configurable rendering, see {@link com.amazon.ion.util.Printer}.
      *
      * @return Ion text data equivalent to this value.
      */
     public String toString();
+
+
+    /**
+     * Compares two Ion values for structural equality, which means that they
+     * represent the exact same semantics, including annotations.
+     *
+     * @see com.amazon.ion.util.Equivalence
+     *
+     * @param   other   The value to compare with.
+     *
+     * @return  A boolean, true if the other value is an Ion Value that is the same
+     *          content and annotations.
+     */
+    public boolean equals(Object other);
 }

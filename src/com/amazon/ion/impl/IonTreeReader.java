@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -24,7 +22,7 @@ import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.TtTimestamp;
+import com.amazon.ion.Timestamp;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
@@ -39,14 +37,14 @@ import java.util.NoSuchElementException;
 public final class IonTreeReader
     implements IonReader
 {
-    Iterator<IonValue> _iter;
-    IonValue _root;
-    IonValue _next;
-    IonValue _curr;
-    boolean  _eof;
+    private Iterator<IonValue> _iter;
+    private IonValue _parent;
+    private IonValue _next;
+    private IonValue _curr;
+    private boolean  _eof;
 
-    Object[] _stack = new Object[10];
-    int      _top;
+    private Object[] _stack = new Object[10];
+    private int      _top;
 
     void push() {
         if (_top > (_stack.length - 2)) {
@@ -54,41 +52,43 @@ public final class IonTreeReader
             System.arraycopy(_stack, 0, temp, 0, _top);
             _stack = temp;
         }
-        _stack[_top++] = _root;
+        _stack[_top++] = _parent;
         _stack[_top++] = _iter;
     }
 
     @SuppressWarnings("unchecked")
     void pop() {
         assert _top >= 2;
-        assert _stack != null;
-        assert (_stack[_top - 1] instanceof Iterator);
-        assert (_stack[_top - 2] instanceof IonValue);
 
         _top--;
         _iter = (Iterator<IonValue>)_stack[_top];
         _stack[_top] = null;  // Allow iterator to be garbage collected!
 
         _top--;
-        _root = (IonValue)_stack[_top];
+        _parent = (IonValue)_stack[_top];
         _stack[_top] = null;
 
         // We don't know if we're at the end of the container, so check again.
         _eof = false;
     }
 
+
+    public IonTreeReader(IonDatagram datagram, boolean returnSystemValues) {
+        this(returnSystemValues, datagram);
+    }
+
     public IonTreeReader(IonValue value) {
-        _root = value;
-        _curr = null;
-        _eof = false;
-        if (value instanceof IonContainer) {
-            _iter = ((IonContainer)value).iterator();
-        }
-        else if (value instanceof IonDatagram) {
-            _iter = ((IonDatagram)value).iterator();
+        this(false, value);
+    }
+
+    private IonTreeReader(boolean returnSystemValues, IonValue value) {
+        if (value instanceof IonDatagram) {
+            IonDatagram dg = (IonDatagram) value;
+            _parent = dg;
+            _iter = (returnSystemValues ? dg.systemIterator() : dg.iterator());
         }
         else {
-            _iter = null;
+            _next = value;
         }
     }
 
@@ -98,10 +98,7 @@ public final class IonTreeReader
         if (this._eof) return false;
         if (this._next != null) return true;
 
-        if (this._iter == null) {
-            this._next = this._root;
-        }
-        else if (this._iter.hasNext()) {
+        if (this._iter != null && this._iter.hasNext()) {
             this._next = this._iter.next();
         }
         this._eof = (this._next == null);
@@ -119,20 +116,13 @@ public final class IonTreeReader
         return this._curr.getType();
     }
 
-    public int getContainerSize() {
-        if (!(this._curr instanceof IonContainer)) {
-            throw new IllegalStateException("current iterator value must be a container");
-        }
-        return ((IonContainer)_curr).size();
-    }
-
     public void stepIn()
     {
         if (!(this._curr instanceof IonContainer)) {
-            throw new IllegalStateException("current iterator value must be a container");
+            throw new IllegalStateException("current value must be a container");
         }
         push();
-        _root = _curr;
+        _parent = _curr;
         _iter = ((IonContainer)this._curr).iterator();
         _curr = null;
     }
@@ -140,7 +130,7 @@ public final class IonTreeReader
     public void stepOut()
     {
         if (this._top < 1) {
-            throw new IllegalStateException("current iterator must be in a stepped into container");
+            throw new IllegalStateException("not in a container");
         }
         pop();
     }
@@ -152,20 +142,20 @@ public final class IonTreeReader
     public void position(IonReader other)
     {
         if (!(other instanceof IonTreeReader)) {
-            throw new IllegalArgumentException("invalid iterator type, classes must match");
+            throw new IllegalArgumentException("invalid reader type, classes must match");
         }
         IonTreeReader iother = (IonTreeReader)other;
 
         this._eof = iother._eof;
         this._curr = iother._curr;
-        this._root = iother._root;
+        this._parent = iother._parent;
 
         if (iother._iter == null) {
             this._iter = null;
         }
         else {
-            assert iother._root instanceof IonContainer;
-            this._iter = ((IonContainer)iother._root).iterator();
+            assert iother._parent instanceof IonContainer;
+            this._iter = ((IonContainer)iother._parent).iterator();
             while (this.hasNext()) {
                 this.next();
                 if (this._curr == iother._curr) break;
@@ -180,8 +170,8 @@ public final class IonTreeReader
         if (_curr != null) {
             symboltable = _curr.getSymbolTable();
         }
-        else if (_root != null) {
-            symboltable = _root.getSymbolTable();
+        else if (_parent != null) {
+            symboltable = _parent.getSymbolTable();
         }
 
         return symboltable;
@@ -190,11 +180,6 @@ public final class IonTreeReader
     public IonType getType()
     {
         return (_curr == null) ? null : _curr.getType();
-    }
-
-    public int getTypeId()
-    {
-        return (_curr == null) ? -1 : _curr.getType().ordinal();
     }
 
     public String[] getTypeAnnotations()
@@ -244,18 +229,14 @@ public final class IonTreeReader
 
     public boolean isInStruct()
     {
-        Object r = _root;
-        if (_top > 1) {
-            r = _stack[_top - 1];
+        return (_parent instanceof IonStruct);
         }
-        return (r instanceof IonStruct);
-    }
 
     public boolean isNullValue()
     {
         if (_curr instanceof IonNull) return true;
         if (_curr == null) {
-            throw new IllegalStateException("curr of iterator is not yet set");
+            throw new IllegalStateException("must call next() before isNullValue()");
 
         }
         return _curr.isNullValue();
@@ -263,9 +244,8 @@ public final class IonTreeReader
 
     public int getFieldId()
     {
-        // FIXME why does this return null? What does that even mean for int?
         // FIXME IonValueImpl.getFieldId doesn't return -1 as specced here!
-        return (_curr == null) ? null : _curr.getFieldId();
+        return (_curr == null) ? UnifiedSymbolTable.UNKNOWN_SID : _curr.getFieldId();
     }
 
     public String getFieldName()
@@ -334,7 +314,7 @@ public final class IonTreeReader
         throw new IllegalStateException("current value is not an ion decimal");
     }
 
-    public TtTimestamp timestampValue()
+    public Timestamp timestampValue()
     {
         if (_curr instanceof IonTimestamp) {
             return ((IonTimestamp)_curr).timestampValue();

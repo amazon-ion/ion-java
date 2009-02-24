@@ -1,11 +1,9 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 /**
- *
+ * Base class for exceptions thrown throughout this library.
  */
 public class IonException extends RuntimeException
 {

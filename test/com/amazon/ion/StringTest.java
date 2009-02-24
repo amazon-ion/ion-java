@@ -137,7 +137,7 @@ public class StringTest
     }
 
 
-    public void testStringEscapes()
+    public void testBackslashEof()
     {
         try
         {
@@ -146,7 +146,11 @@ public class StringTest
             fail("Expected UnexpectedEofException");
         }
         catch (UnexpectedEofException e) { }
+    }
 
+
+    public void testStringEscapes()
+    {
         IonString value = (IonString) oneValue(" \"\\\n\"");
         String valString = value.stringValue();
         assertEquals("", valString);
@@ -170,13 +174,54 @@ public class StringTest
 
         assertEscape('\u0000', '0');   // nul
         assertEscape('\u0007', 'a');   // bell
-        assertEscape('\u001B', 'e');   // escape
         assertEscape('\u000B', 'v');   // vertical tab
         assertEscape('\u003F', '?');   // question mark; thank you C++
         assertEscape('\'',     '\'');  // single quote
+    }
 
+    public void testUnicodeEscapes()
+    {
+        String ionData = "\"\\0\"";
+        IonString value = (IonString) oneValue(ionData);
+        assertEquals(1, value.stringValue().length());
+        assertEquals(ionData, value.toString());
 
-        // TODO test escape groups uHHHH UHHHHHHHH xHH
+        ionData = "\"\\x01\"";
+        value = (IonString) oneValue(ionData);
+        assertEquals(1, value.stringValue().length());  // one code unit
+        assertEquals(ionData, value.toString());
+
+        // U+007F is a control character
+        ionData = "\"\\x7f\"";
+        value = (IonString) oneValue(ionData);
+        assertEquals(1, value.stringValue().length());  // one code unit
+        assertEquals(ionData, value.toString());
+
+        ionData = "\"\\xff\"";
+        value = (IonString) oneValue(ionData);
+        assertEquals(1, value.stringValue().length());  // one code unit
+        assertEquals(ionData, value.toString());
+
+        ionData = "\"\\" + "u0110\""; // Carefully avoid Java escape
+        value = (IonString) oneValue(ionData);
+        assertEquals(1, value.stringValue().length());  // one code unit
+        assertEquals(ionData, value.toString());
+
+        ionData = "\"\\" + "uffff\""; // Carefully avoid Java escape
+        value = (IonString) oneValue(ionData);
+        assertEquals(1, value.stringValue().length());  // one code unit
+        assertEquals(ionData, value.toString());
+
+        ionData = "\"\\" + "U0001d110\""; // Carefully avoid Java escape
+        value = (IonString) oneValue(ionData);
+        assertEquals(2, value.stringValue().length());  // two code units
+        assertEquals(ionData, value.toString());
+
+        // The largest legal code point
+        ionData = "\"\\" + "U0010ffff\""; // Carefully avoid Java escape
+        value = (IonString) oneValue(ionData);
+        assertEquals(2, value.stringValue().length());  // two code units
+        assertEquals(ionData, value.toString());
     }
 
 
@@ -207,7 +252,6 @@ public class StringTest
         expected = "\u0000 \u0007 \u0012 \u0123 \u1234 \uceed"; // was \ufeed but that's an illegal unicode scalar
         value = (IonString) oneValue('"'+expected+'"');
         checkString(expected, value);
-
     }
 
     public void testTrickyEscapes()

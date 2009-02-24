@@ -131,6 +131,15 @@ public class DecimalTest
 
         value = (IonDecimal) oneValue("-123d-1");
         assertEquals(-12.3D, value.doubleValue());
+
+        value = (IonDecimal) oneValue("-0.");
+        // Yes, Java double can handle -0.0!
+        // FIXME correct impl of decimal negative zeros.
+//        assertEquals(Double.parseDouble("-0."), value.doubleValue());
+
+        BigDecimal dec = value.bigDecimalValue();
+        checkDecimal(0, 0, dec);
+//        assertEquals(-1, dec.signum());
     }
 
     public void checkDecimal(int unscaled, int scale, BigDecimal actual)

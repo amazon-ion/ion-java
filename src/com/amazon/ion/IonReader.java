@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -13,49 +11,50 @@ import java.util.NoSuchElementException;
 /**
  * Provides stream-based access to Ion data independent of its underlying
  * representation (text, binary, or {@link IonValue} tree).
+ * <p>
+ * In general, method names are intended to parallel similar methods in the
+ * {@link IonValue} hierarchy.  For example, to get the text of a symbol one
+ * would use {@link #stringValue()} which mirrors
+ * {@link IonSymbol#stringValue()}.
  */
 public interface IonReader
 {
 
     /**
-     * Returns true when there is another value at the current iteration level.
-     * The iteration takes place at the same "level" in the value it only
-     * steps into a child value using stepInto().  So this returns whether
-     * or not there is a sibling value that may be visited using next(). This
-     * must be called before calling next() or next() may fail.  It may be
+     * Determines whether there is another value at the current depth;
+     * in other words whether there is a sibling value that may be reached
+     * using {@link #next()}.
+     * This method may be
      * called multiple times, which does not move the current position.
-     *
      */
     public boolean hasNext();
 
     /**
-     * Positions the iterator on the next value.  This returns the underlying
+     * Positions the reader on the next sibling after the current value.
+     * This returns the underlying
      * IonType of the value that is found.  Once so positioned the contents of
-     * this value can be accessed with the get methods.  This traverses the
-     * contents at a constant level.
+     * this value can be accessed with the {@code *value()} methods.
+     * <p>
+     * A sequence of {@code next()} calls traverses the data at a constant
+     * level, and {@link #stepIn()} must be used in order to traverse down into
+     * any containers.
+     *
+     * @return the type of the next Ion value; never {@link IonType#DATAGRAM}.
+     *
      * @throws NoSuchElementException if there are no more elements.
      */
     public IonType next();
 
-    /**
-     * Determines the number of children in the current value. The iterator
-     * must be positioned on (but not yet stepped into) a container.
-     * this operation is typically very efficient if the iterator is
-     * traversing a tree, reasonably efficient (it does have to count)
-     * when traversing binary-encoded data, and it can be fairly expensive
-     * if the input source is Ion text.  As such this should only be used
-     * when the benefits of knowing the number of elements is known to
-     * outweight the costs of the call.  Using a flexible representation
-     * in the caller is usually more efficient.
-     */
-    public int getContainerSize();
 
     /**
      * Positions the iterator in the contents of the current value.  The current
-     * value must be a container (sexp, list, or struct).  Once this method has
-     * been called {@link #hasNext()} and {@link #next()} will iterate the child values.
+     * value must be a container (sexp, list, or struct).
+     * After calling this method, {@link #hasNext()} and {@link #next()} will
+     * iterate the child values.
+     * There's no current value immediately after stepping in.
+     * <p>
      * At any time {@link #stepOut()} may be called to move the cursor back to
-     * (just after) the parent value.
+     * (just after) the parent value, even if there's more children remaining.
      *
      * @throws IllegalStateException if the current value isn't an Ion container.
      */
@@ -64,7 +63,9 @@ public interface IonReader
     /**
      * Positions the iterator after the current parents value.  Once stepOut()
      * has been called hasNext() must be called to see if a value follows
-     * the parent.
+     * the parent. In other words, there's no current value immediately after
+     * stepping out.
+     *
      * @throws IllegalStateException if the current value wasn't stepped into.
      */
     public void stepOut();
@@ -76,22 +77,16 @@ public interface IonReader
     public int getDepth();
 
     /**
-     * Returns the current symbol table.
+     * Returns the symbol table that is applicable to the current value.
+     * This may be either a system or local symbol table.
      */
     public SymbolTable getSymbolTable();
 
     /**
-     * Returns IonType of the current value, or null if there is no valid
+     * Returns the type of the current value, or null if there is no valid
      * current value.
      */
     public IonType getType();
-
-    /**
-     * Return an int representing the Ion type id of the current. This is the value
-     * stored in the high nibble of the binary type descriptor byte, or -1 if there
-     * is no valid current value.
-     */
-    public int getTypeId();
 
     /**
      * Return the annotations of the current value as an array of strings.  The
@@ -121,9 +116,12 @@ public interface IonReader
     public Iterator<Integer> iterateTypeAnnotationIds();
 
     /**
-     * Return an symbol table id of the field name of the current value. Or -1 if
-     * there is no valid current value or if the current value is not a field
-     * of a struct.
+     * Gets the symbol ID of the field name attached to the current value.
+     *
+     * @return the symbol ID of the field name, if the current value is a
+     * field within a struct.
+     * If the current value is not a field, or if the symbol ID cannot be
+     * determined, this method returns a value <em>less than one</em>.
      */
     public int getFieldId();
 
@@ -213,14 +211,14 @@ public interface IonReader
     public Date dateValue();
 
     /**
-     * Returns the current value as a {@link TtTimestamp}.
+     * Returns the current value as a {@link Timestamp}.
      * This is only valid when {@link #getType()} returns
      * {@link IonType#TIMESTAMP}.
      *
-     * @return the current value as a {@link TtTimestamp},
+     * @return the current value as a {@link Timestamp},
      * or {@code null} if the current value is {@code null.timestamp}.
      */
-    public TtTimestamp timestampValue();
+    public Timestamp timestampValue();
 
     /**
      * Returns the current value as a Java String.  This is only valid if there
@@ -232,6 +230,8 @@ public interface IonReader
      * Returns the current value as an int symbol id.  This is only valid if
      * there is
      * an underlying value and the value is an Ion symbol.
+     *
+     * @see #stringValue()
      */
     public int getSymbolId();
 

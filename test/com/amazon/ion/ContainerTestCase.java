@@ -28,50 +28,29 @@ public abstract class ContainerTestCase
      */
     protected abstract IonContainer wrap(IonValue... children);
 
-    /**
-     * Clears a container and verifies that it is not a <code>null</code>
-     * value, it is empty, its size is 0, and that it has no iterable
-     * contained values.
-     * @param container the container to test
-     */
-    public void testClearContainer(IonContainer container)
+
+    public void checkNullContainer(IonContainer value)
     {
-        container.clear();
-        assertFalse(container.isNullValue());
-        assertTrue(container.isEmpty());
-        assertEquals(container.size(), 0);
-        assertFalse(container.iterator().hasNext());
-    }
+        assertTrue(value.isNullValue());
+        assertFalse(value.iterator().hasNext());
+        assertEquals(0, value.size());
 
-    /**
-     * Using an iterator, remove a value in the container and verify
-     * that the value no longer exists in the container.
-     * @param container the container to test
-     */
-    public void testIteratorRemove(IonContainer container)
-    {
-        Iterator<IonValue> it = container.iterator();
-        IonValue removedValue = it.next();
-        int prevSize = container.size();
-        it.remove();
-
-        // make sure we removed something
-        assertEquals(container.size(), prevSize - 1);
-        assertNull(removedValue.getContainer());
-        assertNull(removedValue.getFieldName());
-        // TODO check that index is not set.
-
-        // make sure the value we removed isn't there anymore
-        it = container.iterator();
-        while (it.hasNext())
+        try
         {
-            IonValue value = it.next();
-            assertNotSame(removedValue, value);
+            value.remove(null);
+            fail("Expected NullPointerException");
         }
+        catch (NullPointerException e) { }
 
-        // TODO concurrency tests.  it.remove should throw after (eg) container.makeNull().
-        // TODO test proper behavior of remove() when next() not called, or when remove() called twice.
-        // (should throw IllegalStateException)
+        // Remove from null container is no-op.
+        assertFalse(value.remove(system().newNull()));
+
+        try
+        {
+            value.isEmpty();
+            fail("Expected NullValueException");
+        }
+        catch (NullValueException e) { }
     }
 
     public void testNullMakeReadOnly()
@@ -113,7 +92,7 @@ public abstract class ContainerTestCase
     public void testNonEmptyMakeReadOnly()
     {
         IonSystem s = system();
-        IonContainer c = wrap(s.newString("one"), s.newInt(2), s.newInt(3));
+        IonContainer c = wrap(s.newString("one"), s.newInt(2), s.newDecimal(3));
         c.makeReadOnly();
         assertEquals(3, c.size());
         assertTrue(c.isReadOnly());
@@ -143,6 +122,70 @@ public abstract class ContainerTestCase
 
         assertEquals(3, c.size());
         assertTrue(c.isReadOnly());
+    }
+
+
+    /**
+     * Clears a container and verifies that it is not a <code>null</code>
+     * value, it is empty, its size is 0, and that it has no iterable
+     * contained values.
+     * @param container the container to test
+     */
+    public void testClearContainer(IonContainer container)
+    {
+        container.clear();
+        assertFalse(container.isNullValue());
+        assertTrue(container.isEmpty());
+        assertEquals(container.size(), 0);
+        assertFalse(container.iterator().hasNext());
+    }
+
+    /**
+     * Using an iterator, remove a value in the container and verify
+     * that the value no longer exists in the container.
+     * @param container the container to test
+     */
+    public void testIteratorRemove(IonContainer container)
+    {
+        Iterator<IonValue> it = container.iterator();
+        IonValue removedValue = it.next();
+        int prevSize = container.size();
+        it.remove();
+
+        // make sure we removed something
+        assertEquals(container.size(), prevSize - 1);
+        assertNull(removedValue.getContainer());
+        assertNull(removedValue.getFieldName());
+        // TODO check that index is not set.
+
+        // make sure the value we removed isn't there anymore
+        it = container.iterator();
+        while (it.hasNext())
+        {
+            IonValue value = it.next();
+            assertNotSame(removedValue, value);
+        }
+
+        // Another call to remove should be no-op
+        assertFalse(container.remove(removedValue));
+
+        // TODO concurrency tests.  it.remove should throw after (eg) container.makeNull().
+        // TODO test proper behavior of remove() when next() not called, or when remove() called twice.
+        // (should throw IllegalStateException)
+    }
+
+
+    public void testRemoveFromNull()
+    {
+        IonValue n = system().newNull();
+
+        IonContainer c = wrap(n);
+        assertTrue(c.remove(n));
+        assertFalse(c.remove(n));
+        assertTrue(c.isEmpty());
+
+        c.makeNull();
+        assertFalse(c.remove(n));
     }
 
 
@@ -187,5 +230,17 @@ public abstract class ContainerTestCase
             assertEquals("a::3", child.toString());
             assertNotSame(topSymtab, child.getSymbolTable());
         }
+    }
+
+
+    /**
+     * Isolates issue ION-25.
+     */
+    public void testUnmaterializedInsert()
+    {
+        String emptyText = wrap((String[])null);
+        IonContainer c = (IonContainer) system().singleValue(emptyText);
+        IonValue v = system().singleValue("1");
+        add(c, v);
     }
 }

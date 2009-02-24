@@ -17,12 +17,12 @@ public class ClobTest
 {
     private static final Charset UTF8 = Charset.forName("UTF-8");
 
-    
+
     public static final String SAMPLE_ASCII = "Wow!";
     public static final byte[] SAMPLE_ASCII_AS_UTF8 =
         stringToBytes(SAMPLE_ASCII, UTF8);
-    
-    
+
+
     public static byte[] stringToBytes(String string, Charset charset)
     {
         ByteBuffer buffer = charset.encode(string);
@@ -30,7 +30,7 @@ public class ClobTest
         buffer.get(bytes);
         return bytes;
     }
-    
+
     public void checkNullClob(IonClob value)
     {
         assertSame(IonType.CLOB, value.getType());
@@ -38,7 +38,7 @@ public class ClobTest
         assertNull(value.newInputStream());
         assertNull(value.newReader(UTF8));
         assertNull(value.stringValue(UTF8));
-        
+
         try
         {
             value.byteSize();
@@ -104,7 +104,7 @@ public class ClobTest
     {
         value.setBytes(SAMPLE_ASCII_AS_UTF8);
         checkUtf8(SAMPLE_ASCII, value);
-        
+
         value.setBytes(null);
         checkNullClob(value);
 
@@ -120,6 +120,10 @@ public class ClobTest
         throws Exception
     {
         IonClob value = system().newNullClob();
+        checkNullClob(value);
+        modifyClob(value);
+
+        value = system().newClob(null);
         checkNullClob(value);
         modifyClob(value);
     }
@@ -143,7 +147,7 @@ public class ClobTest
         IonClob value = (IonClob) oneValue("{{\"\"}}");
         assertFalse(value.isNullValue());
         checkUtf8("", value);
-        
+
         // There was once a problem with whitespace between {{ "
         value = (IonClob) oneValue("{{ \"\" }}");
         assertFalse(value.isNullValue());
@@ -155,9 +159,9 @@ public class ClobTest
     {
         IonClob value = (IonClob) oneValue("{{ '''''' }}");
         assertFalse(value.isNullValue());
-        checkUtf8("", value);        
+        checkUtf8("", value);
     }
-    
+
     public void testConcatenatedClob()
         throws Exception
     {
@@ -171,14 +175,24 @@ public class ClobTest
     {
         checkUtf8("abc", "{{\"abc\"}}");
     }
-    
+
     public void testByteSize()
     {
         IonClob value = system().newNullClob();
         value.setBytes(SAMPLE_ASCII_AS_UTF8);
-        assertEquals("unexpected byte size", value.byteSize(), 
+        assertEquals("unexpected byte size", value.byteSize(),
+                     SAMPLE_ASCII_AS_UTF8.length);
+
+        value = system().newClob(SAMPLE_ASCII_AS_UTF8);
+        assertEquals("unexpected byte size", value.byteSize(),
                      SAMPLE_ASCII_AS_UTF8.length);
     }
+
+    public void testHighUnicodeEscapes()
+    {
+        badValue("{{\"\\U0000003f\"}}");
+    }
+
 
     // TODO  test use of other encodings
     // TODO test long strings and concatenation

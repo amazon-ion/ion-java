@@ -1,12 +1,13 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
@@ -36,16 +37,16 @@ public interface IonSystem
 
 
     /**
-     * Gets a system symbol table of a specific version.
+     * Gets a system symbol table for a specific version of Ion.
      *
-     * @param systemId must be of the form <code>"$ion_X_Y"</code>.
+     * @param ionVersionId must be of the form <code>"$ion_X_Y"</code>.
      * @return the requested system table.
      *
-     * @throws UnsupportedSystemVersionException if the requested system
-     * version is not supported by this implementation.
+     * @throws UnsupportedIonVersionException if the requested version of
+     * Ion is not supported by this implementation.
      */
-    public SymbolTable getSystemSymbolTable(String systemId)
-        throws UnsupportedSystemVersionException;
+    public SymbolTable getSystemSymbolTable(String ionVersionId)
+        throws UnsupportedIonVersionException;
 
 
     /**
@@ -68,21 +69,56 @@ public interface IonSystem
 
 
     /**
-     * Creates a new local symbol table using the default system symbol table.
-     * @return not <code>null</code>.
+     * Creates a new local symbol table based on specific imported tables.
+     * If the first imported table is a system table, then the local table will
+     * use it appropriately. Otherwise, the local table will use this system's
+     * {@linkplain #getCatalog() default catalog}.
+     *
+     * @param imports the set of shared symbol tables to import.
+     * The first (and only the first) may be a system table.
+     *
+     * @return a new local symbol table.
+     *
+     * @throws IllegalArgumentException if any import is a local table,
+     * or if any but the first is a system table.
+     * @throws NullPointerException if any import is null.
      */
-    public SymbolTable newLocalSymbolTable();
+    public SymbolTable newLocalSymbolTable(SymbolTable... imports);
 
 
     /**
-     * Creates a new local symbol table based on a specific system table.
+     * Creates a new shared symbol table containing a given set of symbols.
+     * The table will contain symbols in the following order:
+     * <ol>
+     *   <li>
+     *     If {@code version} is larger than 1, the prior version of the
+     *     named table is retrieved from the catalog and all of its symbols
+     *     are added.
+     *   </li>
+     *   <li>
+     *     For each non-system table in {@code imports}, add all of its
+     *     declared symbols.
+     *   </li>
+     *   <li>
+     *     Add all of the symbols provided by {@code newSymbols}.
+     *   </li>
+     * </ol>
+     * Any duplicate symbol texts or null strings are ignored.
      *
-     * @param systemSymbols must not be null and must have
-     * {@link SymbolTable#isSystemTable()} true.
+     * @param name the symbol table name, a non-empty string.
+     * @param version at least one.
+     * @param newSymbols provides symbol names; may be null.
+     * @param imports other tables from which to import symbols.
      *
-     * @return a new symbol table.
+     * @return a new shared symbol table with the given name and version.
+     *
+     * @throws IonException if {@code version > 1} and the prior version does
+     * not exist in this system's catalog.
      */
-    public SymbolTable newLocalSymbolTable(SymbolTable systemSymbols);
+    public SymbolTable newSharedSymbolTable(String name,
+                                            int version,
+                                            Iterator<String> newSymbols,
+                                            SymbolTable... imports);
 
 
     /**
@@ -109,6 +145,26 @@ public interface IonSystem
      *   if {@code initialChild} is an {@link IonDatagram}.
      */
     public IonDatagram newDatagram(IonValue initialChild);
+
+
+    /**
+     * Creates a new datagram, bootstrapped with imported symbol tables.
+     * Generally an application will use this to aquire a datagram, then adds
+     * values to it, then calls {@link IonDatagram#getBytes(byte[])}
+     * (or similar) to extract binary data.
+     *
+     * @param imports the set of shared symbol tables to import.
+     * The first (and only the first) may be a system table.
+     *
+     * @return a new datagram with no user values.
+     *
+     * @throws IllegalArgumentException if any import is a local table,
+     * or if any but the first is a system table.
+     *
+     * @see #newLocalSymbolTable(SymbolTable...)
+     */
+    public IonDatagram newDatagram(SymbolTable... imports);
+
 
 
     /**
@@ -145,6 +201,12 @@ public interface IonSystem
     /**
      * Creates an iterator over a stream of Ion text data.
      * Values returned by the iterator have no container.
+     * <p>
+     * The iterator will automatically consume Ion system IDs and local symbol
+     * tables; they will not be returned by the iterator.
+     * <p>
+     * This method is suitable for use over unbounded streams with a reasonable
+     * schema.
      *
      * @param ionText a stream of Ion text data.  The caller is responsible for
      * closing the Reader after iteration is complete.
@@ -159,6 +221,9 @@ public interface IonSystem
     /**
      * Creates an iterator over a string containing Ion text data.
      * Values returned by the iterator have no container.
+     * <p>
+     * The iterator will automatically consume Ion system IDs and local symbol
+     * tables; they will not be returned by the iterator.
      *
      * @param ionText must not be null.
      *
@@ -172,6 +237,9 @@ public interface IonSystem
     /**
      * Creates an iterator over Ion data.
      * Values returned by the iterator have no container.
+     * <p>
+     * The iterator will automatically consume Ion system IDs and local symbol
+     * tables; they will not be returned by the iterator.
      *
      * @param ionData may be either Ion binary data or (UTF-8) Ion text.
      * <em>This method assumes ownership of the array</em> and may modify it at
@@ -217,7 +285,6 @@ public interface IonSystem
     // IonReader creation
 
 //  public IonReader newReader(Reader ionText); // TODO add newReader(Reader)
-//  public IonReader newReader(InputStream); // TODO add newReader(InputStream)
 
 
     /**
@@ -305,11 +372,42 @@ public interface IonSystem
     public IonWriter newTextWriter(OutputStream out);
 
     /**
+     * Creates a new writer that will write UTF-8 text to the given output
+     * stream, using the given shared symbol tables as imports.
+     * <p>
+     * The output stream will be start with an Ion Version Marker and a
+     * local symbol table that uses the given {@code imports}.
+     *
+     * @param out the stream that will receive UTF-8 Ion text data.
+     * Must not be null.
+     * @param imports a sequence of shared symbol tables
+     *
+     * @return a new {@link IonWriter} instance; not {@code null}.
+     *
+     * @throws IOException if its thrown by the output stream.
+     */
+    public IonWriter newTextWriter(OutputStream out, SymbolTable... imports)
+        throws IOException;
+
+    /**
      * Creates a new writer that will encode binary Ion data.
      *
      * @return a new {@link IonBinaryWriter} instance; not {@code null}.
      */
     public IonBinaryWriter newBinaryWriter();
+
+    /**
+     * Creates a new writer that will encode binary Ion data,
+     * using the given shared symbol tables as imports.
+     * <p>
+     * The output stream will be start with an Ion Version Marker and a
+     * local symbol table that uses the given {@code imports}.
+     *
+     * @param imports a sequence of shared symbol tables
+     *
+     * @return a new {@link IonBinaryWriter} instance; not {@code null}.
+     */
+    public IonBinaryWriter newBinaryWriter(SymbolTable... imports);
 
 
     //-------------------------------------------------------------------------
@@ -327,6 +425,35 @@ public interface IonSystem
      * Constructs a new <code>null.blob</code> instance.
      */
     public IonBlob newNullBlob();
+
+    /**
+     * Constructs a new Ion {@code blob} instance, copying bytes from an array.
+     *
+     * @param value the data for the new blob, to be <em>copied</em> from the
+     * given array into the new instance.
+     * May be {@code null} to create a {@code null.blob} value.
+     */
+    public IonBlob newBlob(byte[] value);
+
+    /**
+     * Constructs a new Ion {@code blob}, copying bytes from part of an array.
+     * <p>
+     * This method copies {@code length} bytes from the given array into the
+     * new value, starting at the given offset in the array.
+     *
+     * @param value the data for the new blob, to be <em>copied</em> from the
+     * given array into the new instance.
+     * May be {@code null} to create a {@code null.blob} value.
+     * @param offset the offset within the array of the first byte to copy;
+     * must be non-negative an no larger than {@code bytes.length}.
+     * @param length the number of bytes to be copied from the given array;
+     * must be non-negative an no larger than {@code bytes.length - offset}.
+     *
+     * @throws IndexOutOfBoundsException
+     * if the preconditions on the {@code offset} and {@code length} parameters
+     * are not met.
+     */
+    public IonBlob newBlob(byte[] value, int offset, int length);
 
 
     /**
@@ -346,12 +473,20 @@ public interface IonSystem
     /**
      * Constructs a new <code>bool</code> instance with the given content.
      *
-     * @param content the initial content of the value.
+     * @param value the initial content of the value.
      *
      * @return a bool with
      * <code>{@link IonBool#booleanValue()} == content</code>.
      */
-    public IonBool newBool(boolean content);
+    public IonBool newBool(boolean value);
+
+    /**
+     * Constructs a new <code>bool</code> instance with the given content.
+     *
+     * @param value the initial value of the instance;
+     * may be {@code null} to make {@code null.bool}.
+     */
+    public IonBool newBool(Boolean value);
 
 
     /**
@@ -366,6 +501,35 @@ public interface IonSystem
      * Constructs a new <code>null.clob</code> instance.
      */
     public IonClob newNullClob();
+
+    /**
+     * Constructs a new Ion {@code clob} instance from a byte array.
+     *
+     * @param value the data for the new clob, to be <em>copied</em> from the
+     * given array into the new instance.
+     * May be {@code null} to create a {@code null.clob} value.
+     */
+    public IonClob newClob(byte[] value);
+
+    /**
+     * Constructs a new Ion {@code clob}, copying bytes from part of an array.
+     * <p>
+     * This method copies {@code length} bytes from the given array into the
+     * new value, starting at the given offset in the array.
+     *
+     * @param value the data for the new blob, to be <em>copied</em> from the
+     * given array into the new instance.
+     * May be {@code null} to create a {@code null.clob} value.
+     * @param offset the offset within the array of the first byte to copy;
+     * must be non-negative an no larger than {@code bytes.length}.
+     * @param length the number of bytes to be copied from the given array;
+     * must be non-negative an no larger than {@code bytes.length - offset}.
+     *
+     * @throws IndexOutOfBoundsException
+     * if the preconditions on the {@code offset} and {@code length} parameters
+     * are not met.
+     */
+    public IonClob newClob(byte[] value, int offset, int length);
 
 
     /**
@@ -383,6 +547,31 @@ public interface IonSystem
 
 
     /**
+     * Constructs a new Ion {@code decimal} instance from a Java
+     * {@code long}.
+     */
+    public IonDecimal newDecimal(long value);
+
+    /**
+     * Constructs a new Ion {@code decimal} instance from a Java
+     * {@code double}.
+     */
+    public IonDecimal newDecimal(double value);
+
+    /**
+     * Constructs a new Ion {@code decimal} instance from a Java
+     * {@link BigInteger}.
+     */
+    public IonDecimal newDecimal(BigInteger value);
+
+    /**
+     * Constructs a new Ion {@code decimal} instance from a Java
+     * {@link BigDecimal}.
+     */
+    public IonDecimal newDecimal(BigDecimal value);
+
+
+    /**
      * Constructs a new <code>null.float</code> instance.
      * @deprecated Use {@link #newNullFloat()} instead
      */
@@ -394,6 +583,18 @@ public interface IonSystem
      * Constructs a new <code>null.float</code> instance.
      */
     public IonFloat newNullFloat();
+
+    /**
+     * Constructs a new Ion {@code float} instance from a Java
+     * {@code long}.
+     */
+    public IonFloat newFloat(long value);
+
+    /**
+     * Constructs a new Ion {@code float} instance from a Java
+     * {@code double}.
+     */
+    public IonFloat newFloat(double value);
 
 
     /**
@@ -530,6 +731,17 @@ public interface IonSystem
      * Constructs a new <code>null.null</code> instance.
      */
     public IonNull newNull();
+
+
+    /**
+     * Constructs a new Ion null value with the given type.
+     *
+     * @param type must not be Java null, but it may be {@link IonType#NULL}.
+     *
+     * @return a new value such that {@link IonValue#isNullValue()} is
+     * {@code true}.
+     */
+    public IonValue newNull(IonType type);
 
 
     /**

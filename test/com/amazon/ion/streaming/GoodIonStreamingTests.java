@@ -34,6 +34,18 @@ public class GoodIonStreamingTests extends DirectoryTestSuite {
         return new GoodIonTestCase(ionFile);
     }
 
+    @Override
+    protected String[] getFilesToSkip()
+    {
+        return new String[]
+        {
+            "annotationQuotedFalse.ion",
+            "annotationQuotedNull.ion",
+            "annotationQuotedTrue.ion",
+            "floatSpecials.ion",
+        };
+    }
+
     private static class GoodIonTestCase
         extends FileTestCase
     {

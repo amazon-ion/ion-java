@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 import com.amazon.ion.BadIonTests;
 import com.amazon.ion.BinaryTest;
@@ -21,13 +19,17 @@ import com.amazon.ion.SexpTest;
 import com.amazon.ion.StringTest;
 import com.amazon.ion.StructTest;
 import com.amazon.ion.SymbolTest;
+import com.amazon.ion.SystemProcessingTests;
 import com.amazon.ion.TimestampTest;
+import com.amazon.ion.impl.BinaryWriterTest;
 import com.amazon.ion.impl.ByteBufferTest;
 import com.amazon.ion.impl.CharacterReaderTest;
 import com.amazon.ion.impl.IonEqualsTest;
 import com.amazon.ion.impl.IterationTest;
 import com.amazon.ion.impl.ReaderTest;
 import com.amazon.ion.impl.SymbolTableTest;
+import com.amazon.ion.impl.TextWriterTest;
+import com.amazon.ion.impl.TreeReaderTest;
 import com.amazon.ion.streaming.BadIonStreamingTests;
 import com.amazon.ion.streaming.BinaryStreamingTest;
 import com.amazon.ion.streaming.GoodIonStreamingTests;
@@ -85,12 +87,7 @@ public class AllTests
         suite.addTestSuite(IterationTest.class);
         suite.addTestSuite(ReaderTest.class);
         suite.addTestSuite(PrinterTest.class);
-
-        // FIXME re-enable SymbolTableTest
-        // 2008-11-04 Disabled to do beta release of streaming APIs
-        if (false) {
-            suite.addTestSuite(SymbolTableTest.class);
-        }
+        suite.addTestSuite(SymbolTableTest.class);
 
         suite.addTestSuite(DatagramTest.class);
 
@@ -104,6 +101,13 @@ public class AllTests
         suite.addTest(new EquivsTests());
         suite.addTest(new RoundTripTests());
 
+        // Subclasses of SystemProcessingTestCase are collected to make it
+        // easier to run that subset.
+        suite.addTest(SystemProcessingTests.suite());
+
+        suite.addTestSuite(TreeReaderTest.class);
+        suite.addTestSuite(TextWriterTest.class);
+        suite.addTestSuite(BinaryWriterTest.class);
         suite.addTestSuite(MiscStreamingTests.class);
         suite.addTestSuite(BinaryStreamingTest.class);
         suite.addTest(new BadIonStreamingTests());

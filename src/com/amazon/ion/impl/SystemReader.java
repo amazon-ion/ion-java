@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -52,7 +50,9 @@ public class SystemReader
                         IonCatalog catalog,
                         Reader input)
     {
-        this(system, catalog, getSystemSymbolTableAsLocal(system), input);
+        // TODO this should be an unmodifiable system symtab
+        // but we can't yet replace it with a local symtab on-demand.
+        this(system, catalog, system.newLocalSymbolTable(), input);
     }
 
     /**
@@ -116,23 +116,13 @@ public class SystemReader
         _system = system;
         _catalog = catalog;
 
-        // TODO this should be an unmodifiable bootstram symtab.
-        _currentSymbolTable = getSystemSymbolTableAsLocal(system);
+        // TODO this should be an unmodifiable system symtab
+        // but we can't yet replace it with a local symtab on-demand.
+        _currentSymbolTable = system.newLocalSymbolTable();
         _buffer = buffer;
         _buffer_offset = reader.position();
     }
 
-    // TODO: replace this with a better option, this shouldn't be a
-    //       table anyone could edit, and we should have a way to
-    // 		 tell that it's a system symbol table and not just an
-    //		 empty local symbol table.
-    static SymbolTable getSystemSymbolTableAsLocal(IonSystemImpl system) {
-    	SymbolTable lst;
-
-    	lst = system.newLocalSymbolTable();
-
-    	return lst;
-    }
 
     public IonSystemImpl getSystem() {
         return _system;
@@ -229,7 +219,7 @@ public class SystemReader
     }
 
 
-    public IonValue next() {
+    public IonValueImpl next() {
         if (! _at_eof) {
             _curr = null;
             if (_next == null) {
@@ -249,34 +239,23 @@ public class SystemReader
 
     private void checkCurrentForHiddens()
     {
-        SymbolTable newLocalSymbtab =
-            _system.handleLocalSymbolTable(_catalog, _curr);
+        final IonValue curr = _curr;
 
-        if (newLocalSymbtab != null)
+        if (_system.valueIsLocalSymbolTable(curr))
         {
-            // Note that we may be replacing the encoded systemId symbol
-            // with a struct, in which case the tree view will be out of
-            // sync with the binary.  That's okay, though: if the bytes are
-            // requested it will be updated.
-
-            IonValueImpl localsym = (IonValueImpl)newLocalSymbtab.getIonRepresentation();
-            assert localsym.getSymbolTable() == null || localsym.getSymbolTable().getSystemSymbolTable() == _system.getSystemSymbolTable();
-            assert _system.getSystemSymbolTable() == newLocalSymbtab.getSystemSymbolTable();
-            // _curr.setSymbolTable(newLocalSymbtab);  // the symbol table of a symbol table struct is itself
-            _currentSymbolTable = newLocalSymbtab;
+            _currentSymbolTable =
+                new UnifiedSymbolTable((IonStruct) curr, _catalog);
             _currentIsHidden = true;
         }
-        // $ion_symbol_table
-        else if (_system.valueIsStaticSymbolTable(_curr))
+        else if (_system.valueIsSystemId(curr))
         {
-            SymbolTable newTable =
-                new UnifiedSymbolTable((UnifiedSymbolTable) _currentSymbolTable.getSystemSymbolTable(),
-                                       (IonStruct) _curr,
-                                       (IonCatalog) null);
-            _catalog.putTable(newTable);
+            assert curr.getSymbolTable().isLocalTable(); // Unfortunately
+            // This makes the value dirty:
+            _system.blessSystemIdSymbol((IonSymbolImpl) curr);
 
-            // FIXME: really?  I don't think shared tables need to be (or
-            //		  should be hidden.  They should be user values.
+            SymbolTable identifiedSystemTable = curr.getSymbolTable();
+            _currentSymbolTable =
+                _system.newLocalSymbolTable(identifiedSystemTable);
             _currentIsHidden = true;
         }
         else {
@@ -302,6 +281,18 @@ public class SystemReader
 
     public BufferManager getBuffer() {
         return _buffer;
+    }
+
+    public void resetBuffer() {
+    	if (this._buffer_offset > BINARY_VERSION_MARKER_SIZE) {
+    	    this._buffer_offset = BINARY_VERSION_MARKER_SIZE;
+    	    try {
+                _buffer.writer(BINARY_VERSION_MARKER_SIZE).truncate();
+            }
+            catch (IOException e) {
+                throw new IonException(e);
+            }
+    	}
     }
 
     public void close()

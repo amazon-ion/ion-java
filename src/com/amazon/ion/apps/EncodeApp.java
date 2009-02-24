@@ -1,14 +1,11 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.apps;
 
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
-import com.amazon.ion.impl.IonBinaryWriterImpl;
-import com.amazon.ion.impl.UnifiedSymbolTable;
+import com.amazon.ion.SymbolTable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -20,8 +17,9 @@ import java.util.ArrayList;
 public class EncodeApp
     extends BaseApp
 {
-    private UnifiedSymbolTable[] myImports;
+    private SymbolTable[] myImports;
     private File myOutputDir;
+    private String myOutputFile;
 
 
     //=========================================================================
@@ -48,15 +46,7 @@ public class EncodeApp
     public void doMain(String[] args)
     {
         int firstFileIndex = processOptions(args);
-
-        if (firstFileIndex == args.length)
-        {
-            System.err.println("Must provide list of files to encode");
-        }
-        else
-        {
-            processFiles(args, firstFileIndex);
-        }
+	processFiles(args, firstFileIndex);
     }
 
 
@@ -67,8 +57,7 @@ public class EncodeApp
      */
     private int processOptions(String[] args)
     {
-        ArrayList<UnifiedSymbolTable> imports =
-            new ArrayList<UnifiedSymbolTable>();
+        ArrayList<SymbolTable> imports = new ArrayList<SymbolTable>();
 
         int i;
         for (i = 0; i < args.length; i++)
@@ -83,13 +72,24 @@ public class EncodeApp
             {
                 // We'll use the latest version available.
                 String name = args[++i];
-                UnifiedSymbolTable symtab = getLatestSharedSymtab(name);
+                SymbolTable symtab = getLatestSharedSymtab(name);
                 imports.add(symtab);
             }
             else if ("--output-dir".equals(arg))
             {
                 String path = args[++i];
                 myOutputDir = new File(path);
+                if (! myOutputDir.isDirectory() || ! myOutputDir.canWrite())
+                {
+                    throw new RuntimeException("Not a writeable directory: "
+                                               + path);
+                }
+            }
+            else if ("--output".equals(arg))
+	    {
+		String path = args[++i];
+                myOutputFile = path;
+                myOutputDir = new File(path).getParentFile();
                 if (! myOutputDir.isDirectory() || ! myOutputDir.canWrite())
                 {
                     throw new RuntimeException("Not a writeable directory: "
@@ -103,7 +103,7 @@ public class EncodeApp
             }
         }
 
-        myImports = imports.toArray(new UnifiedSymbolTable[0]);
+        myImports = imports.toArray(new SymbolTable[0]);
 
         return i;
     }
@@ -113,7 +113,8 @@ public class EncodeApp
     protected void process(File inputFile, IonReader reader)
         throws IOException, IonException
     {
-        IonBinaryWriter writer = new IonBinaryWriterImpl(myImports);
+        IonBinaryWriter writer = mySystem.newBinaryWriter(myImports);
+
         writer.writeValues(reader);
 
         byte[] binaryBytes = writer.getBytes();
@@ -122,6 +123,35 @@ public class EncodeApp
         {
             String fileName = inputFile.getName();
             File outputFile = new File(myOutputDir, fileName);
+            FileOutputStream out = new FileOutputStream(outputFile);
+            try
+            {
+                out.write(binaryBytes);
+            }
+            finally
+            {
+                out.close();
+            }
+        }
+        else
+        {
+            System.out.write(binaryBytes);
+        }
+    }
+
+    @Override
+    protected void process(IonReader reader)
+        throws IOException, IonException
+    {
+        IonBinaryWriter writer = mySystem.newBinaryWriter(myImports);
+
+        writer.writeValues(reader);
+
+        byte[] binaryBytes = writer.getBytes();
+
+        if (myOutputDir != null)
+        {
+            File outputFile = new File(myOutputFile);
             FileOutputStream out = new FileOutputStream(outputFile);
             try
             {

@@ -37,6 +37,15 @@ public final class IonFloatImpl
     public IonFloatImpl(IonSystemImpl system)
     {
         super(system, NULL_FLOAT_TYPEDESC);
+        _hasNativeValue = true; // Since this is null
+    }
+
+    public IonFloatImpl(IonSystemImpl system, Double value)
+    {
+        super(system, NULL_FLOAT_TYPEDESC);
+        _float_value = value;
+        _hasNativeValue = true;
+        assert isDirty();
     }
 
     /**
@@ -153,6 +162,7 @@ public final class IonFloatImpl
     protected int getNativeValueLength()
     {
         assert _hasNativeValue == true;
+        if (_float_value == null) return 0;
         return IonBinary.lenIonFloat(_float_value);
     }
 

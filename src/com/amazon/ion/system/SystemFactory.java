@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.system;
 
@@ -11,6 +9,10 @@ import com.amazon.ion.impl.IonSystemImpl;
 /**
  * The bootstrap factory to create an application's {@link IonSystem}.
  * See the documentation of that class for important constraints.
+ * <p>
+ * Most long-lived applications will want to provide a custom
+ * {@link IonCatalog} implementation rather than using the default
+ * {@link SimpleCatalog}.
  */
 public final class SystemFactory
 {
@@ -24,7 +26,8 @@ public final class SystemFactory
      * Constructs a new system instance with a default configuration.
      * <p>
      * The catalog used by the new instance will be a {@link SimpleCatalog}
-     * with no initial entries.
+     * with no initial entries, so please be aware of the limitations of that
+     * class.
      *
      * @return a new {@link IonSystem} instance; not null.
      */

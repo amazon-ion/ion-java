@@ -30,6 +30,7 @@ public final class IonStringImpl
     public IonStringImpl(IonSystemImpl system)
     {
         super(system, NULL_STRING_TYPEDESC);
+        _hasNativeValue = true; // Since this is null
     }
 
 

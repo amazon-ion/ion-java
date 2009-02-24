@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -29,6 +27,7 @@ public final class IonBlobImpl
     public IonBlobImpl(IonSystemImpl system)
     {
         super(system, NULL_BLOB_TYPEDESC);
+        _hasNativeValue = true; // Since this is null
     }
 
     /**
@@ -63,7 +62,14 @@ public final class IonBlobImpl
     }
 
 
+    @Deprecated
     public void appendBase64(Appendable out)
+        throws IOException
+    {
+        printBase64(out);
+    }
+
+    public void printBase64(Appendable out)
         throws IOException
     {
         validateThisNotNull();

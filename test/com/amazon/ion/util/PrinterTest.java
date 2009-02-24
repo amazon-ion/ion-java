@@ -1,9 +1,9 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
+
+import static com.amazon.ion.SystemSymbolTable.ION_1_0;
 
 import com.amazon.ion.BlobTest;
 import com.amazon.ion.ClobTest;
@@ -186,13 +186,27 @@ public class PrinterTest
     public void testPrintingDatagram()
         throws Exception
     {
-        String text = "a b c";
-        IonDatagram dg = loader().load(text);
-        checkRendering(text, dg);
+        IonDatagram dg = loader().load("a b c");
+        StringBuilder w = new StringBuilder();
+        myPrinter.print(dg, w);
+        String text = w.toString();
+        assertTrue("missing version marker",
+                   text.startsWith(ION_1_0 + ' '));
+        assertTrue("missing data",
+                   text.endsWith(" a b c"));
 
-//        text = "$ion_1_0 a + [a,'+']";
-//        dg = loader.load(text);
-//        checkRendering(text, dg);
+        // Just force symtab analysis and make sure output is still okay
+        dg.getBytes(new byte[dg.byteSize()]);
+        text = w.toString();
+        assertTrue("missing version marker",
+                   text.startsWith(ION_1_0 + ' '));
+        assertTrue("missing data",
+                   text.endsWith(" a b c"));
+
+        // We shouldn't jnject a local table if its not needed.
+        String data = "$ion_1_0 2 + [2,'+']";
+        dg = loader().load(data);
+        checkRendering(data, dg);
     }
 
 
@@ -475,26 +489,26 @@ public class PrinterTest
         checkRendering("null.timestamp", value);
 
         value = (IonTimestamp) oneValue("2007-05-15T18:45-00:00");
-        checkRendering("2007-05-15T18:45:00.000-00:00", value);
+        checkRendering("2007-05-15T18:45-00:00", value);
 
         value = (IonTimestamp) oneValue("2007-05-15T18:45Z");
-        checkRendering("2007-05-15T18:45:00.000Z", value);
+        checkRendering("2007-05-15T18:45Z", value);
 
         // offset +0 shortens to Z
         value = (IonTimestamp) oneValue("2007-05-15T18:45+00:00");
-        checkRendering("2007-05-15T18:45:00.000Z", value);
+        checkRendering("2007-05-15T18:45Z", value);
 
         value = (IonTimestamp) oneValue("2007-05-15T18:45+01:12");
-        checkRendering("2007-05-15T18:45:00.000+01:12", value);
+        checkRendering("2007-05-15T18:45+01:12", value);
 
         value = (IonTimestamp) oneValue("2007-05-15T18:45-10:01");
-        checkRendering("2007-05-15T18:45:00.000-10:01", value);
+        checkRendering("2007-05-15T18:45-10:01", value);
 
         value.addTypeAnnotation("an");
-        checkRendering("an::2007-05-15T18:45:00.000-10:01", value);
+        checkRendering("an::2007-05-15T18:45-10:01", value);
 
         myPrinter.setPrintTimestampAsString(true);
-        checkRendering("an::\"2007-05-15T18:45:00.000-10:01\"", value);
+        checkRendering("an::\"2007-05-15T18:45-10:01\"", value);
 
         myPrinter.setJsonMode();
         checkRendering("" + value.getMillis(), value);

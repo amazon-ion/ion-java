@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -21,10 +19,10 @@ public abstract class IonBaseWriter
     private static final boolean _debug_on = false;
 
     /**
+     * Must be either local or system table.
      * FIXME when can this be null?  When can it be changed?
      */
     protected SymbolTable _symbol_table;
-    protected boolean     _no_local_symbols = true;
 
     protected IonType     _field_name_type;     // really ion type is only used for int, string or null (unknown)
     protected String      _field_name;
@@ -41,90 +39,35 @@ public abstract class IonBaseWriter
         return _symbol_table;
     }
 
-    public void setSymbolTable(SymbolTable symbols)
+    protected void setSymbolTable(SymbolTable symbols)
+        throws IOException
     {
-        assert symbols.isLocalTable();
+        if (symbols != null
+            && ! symbols.isLocalTable()
+            && ! symbols.isSystemTable())
+        {
+            throw new IllegalArgumentException("table must be local or system");
+        }
         _symbol_table = symbols;
     }
 
-    public void importSharedSymbolTable(UnifiedSymbolTable sharedSymbolTable) {
-        if (_symbol_table == null) {
-            UnifiedSymbolTable symbol_table =
-                new UnifiedSymbolTable(sharedSymbolTable.getSystemSymbolTable());
-            _symbol_table = symbol_table;
-        }
-        ((UnifiedSymbolTable)_symbol_table).addImportedTable(sharedSymbolTable, 0);
-    }
+    /**
+     * Must we retain this symbol table?
+     */
+    protected boolean symtabIsLocalAndNonTrivial()
+    {
+        if (! _symbol_table.isLocalTable()) return false;
 
-    protected String getSymbolTableName() {
-        if (_symbol_table != null) {
-            return _symbol_table.getName();
+        if (_symbol_table.getMaxId() != _symbol_table.getImportedMaxId())
+        {
+            // Symbols are defined here, so we must keep symtab.
+            return true;
         }
-        return null;
-    }
-    protected int getSymbolTableVersion() {
-        if (_symbol_table != null) {
-            return _symbol_table.getVersion();
-        }
-        return 0;
-    }
-    protected UnifiedSymbolTable[] getSymbolTableImportedTables() {
-        if (_symbol_table instanceof UnifiedSymbolTable) {
-            return ((UnifiedSymbolTable)_symbol_table).getImportedTables();
-        }
-        return null;
-    }
-    protected UnifiedSymbolTable.Symbol[] getSymbolArray() {
-        if (_symbol_table instanceof UnifiedSymbolTable) {
-            return ((UnifiedSymbolTable)_symbol_table)._symbols;
-        }
-        else if (_symbol_table != null) {
-            int count = _symbol_table.getMaxId();
-            UnifiedSymbolTable.Symbol[] symbols = new UnifiedSymbolTable.Symbol[count];
-            SymbolTable system = _symbol_table.getSystemSymbolTable();
-            int systemidmax = system == null ? 0 : system.getMaxId();
-            for (int ii=systemidmax; ii<count; ii++) {
-                String name = _symbol_table.findKnownSymbol(ii);
-                if (name != null) {
-                    UnifiedSymbolTable.Symbol sym = new UnifiedSymbolTable.Symbol();
-                    sym.name = name;
-                    sym.sid = ii;
-                    symbols[ii] = sym;
-                }
-            }
-            return symbols;
-        }
-        return null;
-    }
-    /* TODO delete this if the routine above proves more useful
-    Iterator<UnifiedSymbolTable.Symbol> xxgetSymbolTableSymbols() {
-        if (_symbol_table instanceof UnifiedSymbolTable) {
-            return ((UnifiedSymbolTable)_symbol_table).getLocalSymbols();
-        }
-        else if (_symbol_table != null) {
-            int count = _symbol_table.getMaxId();
-            Stack<UnifiedSymbolTable.Symbol> symbols = new Stack<UnifiedSymbolTable.Symbol>();
-            SymbolTable system = _symbol_table.getSystemSymbolTable();
-            int systemidmax = system == null ? 0 : system.getMaxId();
-            for (int ii=systemidmax; ii<count; ii++) {
-                String name = _symbol_table.findKnownSymbol(ii);
-                if (name != null) {
-                    UnifiedSymbolTable.Symbol sym = new UnifiedSymbolTable.Symbol();
-                    sym.name = name;
-                    sym.sid = ii;
-                    symbols.push(sym);
-                }
-            }
-            return symbols.iterator();
-        }
-        return null;
-    }
-    */
-    protected int getSymbolTableMaxId() {
-        if (_symbol_table != null) {
-            return _symbol_table.getMaxId();
-        }
-        return 0;
+
+        // If symtab has imports we must retain it.
+        // Note that I chose to retain imports even in the degenerate case
+        // where the imports have no symbols.
+        return (_symbol_table.getImportedTables().length != 0);
     }
 
     public void clearAnnotations()
@@ -142,7 +85,7 @@ public abstract class IonBaseWriter
             for (int ii=0; ii<_annotation_count; ii++) {
                 String name;
                 int id = _annotation_sids[ii];
-                name = symtab.findKnownSymbol(id);
+                name = symtab.findKnownSymbol(id); // FIXME can return null
                 _annotations[ii] = name;
             }
         }
@@ -153,7 +96,7 @@ public abstract class IonBaseWriter
         if (_annotations_type == IonType.STRING) {
             for (int ii=0; ii<_annotation_count; ii++) {
                 String name = _annotations[ii];
-                _annotation_sids[ii] = add_local_symbol(name);
+                _annotation_sids[ii] = add_symbol(name);
             }
         }
         return _annotation_sids;
@@ -210,7 +153,7 @@ public abstract class IonBaseWriter
     {
         growAnnotations(_annotation_count + 1);
         if (_annotations_type == IonType.INT) {
-            int sid = this.add_local_symbol(annotation);
+            int sid = this.add_symbol(annotation);
             this.addTypeAnnotationId(sid);
         }
         else {
@@ -249,7 +192,7 @@ public abstract class IonBaseWriter
             }
             String name;
             int id = _field_name_sid;
-            name = symtab.findKnownSymbol(id);
+            name = symtab.findKnownSymbol(id); // FIXME this can return null
             _field_name = name;
         }
         return _field_name;
@@ -257,40 +200,39 @@ public abstract class IonBaseWriter
 
     protected int get_field_name_as_int() {
         if (_field_name_type == IonType.STRING) {
-            _field_name_sid = add_local_symbol(_field_name);
+            _field_name_sid = add_symbol(_field_name);
         }
         return _field_name_sid;
     }
-    protected int add_local_symbol(String name)
+
+//    protected void updateCurrentSymbolTable() // XXX
+//    {
+//        return _symbol_table;
+//    }
+
+    protected int add_symbol(String name)
     {
-        SymbolTable symtab = getSymbolTable();
-        if (symtab == null) {
-            UnifiedSymbolTable temp = new UnifiedSymbolTable(UnifiedSymbolTable.getSystemSymbolTableInstance());
-            setSymbolTable(temp);  // TODO why is this get-then-set needed?
-            symtab = getSymbolTable();
+        // FIXME I think the current symtab should *never* be null.
+        // That's because any Ion data must be written in the context of a
+        // specific system version (eg $ion_1_0) and therefore we should always
+        // know a specific system symtab at any point of the data.
+
+        if (_symbol_table == null) {
+            _symbol_table = new UnifiedSymbolTable(UnifiedSymbolTable.getSystemSymbolTableInstance());
         }
 
-        int sid = symtab.findSymbol(name);
-        if (sid < 1) {
-            UnifiedSymbolTable utab = null;
-            if (symtab instanceof UnifiedSymbolTable) {
-                utab = ((UnifiedSymbolTable)symtab);
-                if (utab.isSystemTable()) {
-                    UnifiedSymbolTable localtable = new UnifiedSymbolTable(utab);
-                    this.setSymbolTable(localtable);
-                    utab = localtable;
-                }
-            }
-            else {
-                UnifiedSymbolTable localtable = UnifiedSymbolTable.copyFrom(symtab);
-                this.setSymbolTable(localtable);
-                utab = localtable;
-            }
-            sid = utab.addSymbol(name);
-            _no_local_symbols = false;
+        int sid = _symbol_table.findSymbol(name);
+        if (sid > 0) return sid;
+
+        if (_symbol_table.isSystemTable()) {
+            _symbol_table = new UnifiedSymbolTable(_symbol_table);
         }
+        assert _symbol_table.isLocalTable();
+
+        sid = _symbol_table.addSymbol(name);
         return sid;
     }
+
     public void setFieldName(String name)
     {
         if (!this.isInStruct()) {
@@ -418,7 +360,7 @@ public abstract class IonBaseWriter
         }
 
         if (reader.isNullValue()) {
-            this.writeNull(reader.getType());
+            this.writeNull(reader.getType());  // TODO hoist getType
         }
         else {
             switch (reader.getType()) {

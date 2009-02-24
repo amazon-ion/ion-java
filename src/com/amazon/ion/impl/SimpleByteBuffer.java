@@ -5,7 +5,8 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
-import com.amazon.ion.TtTimestamp;
+import com.amazon.ion.Timestamp;
+import com.amazon.ion.Timestamp.Precision;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
@@ -468,19 +469,57 @@ done:       for (;;) {
             return bd;
         }
 
-        public TtTimestamp readTimestamp(int len) throws IOException
+        public Timestamp readTimestamp(int len) throws IOException
         {
-            if (len < 1) return null;
-            int startpos = this.position();
+            if (len < 1) {
+                // nothing to do here - and the timestamp will be NULL
+                return null;
+            }
 
-            // first the timezone, and -0 is unknown
-            Integer tz = this.readVarInteger();
+            Timestamp val;
+            Precision   p = null; // FIXME remove
+            Integer     offset = null;
+            int         year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
+            BigDecimal  frac = null;
+            int         remaining, end = this.position() + len;
 
-            // now the time part
-            BigDecimal bd = this.readDecimal(len - (this.position() - startpos));
+            // first up is the offset, which requires a special int reader
+            // to return the -0 as a null Integer
+            offset = this.readVarInteger(); // this.readVarInt7WithNegativeZero();
 
-            // now we put it together
-            return new TtTimestamp(bd, tz);
+            // now we'll read the struct values from the input stream
+            assert position() < end;
+            if (position() < end) {  // FIXME remove
+                // year is from 0001 to 9999
+                // or 0x1 to 0x270F or 14 bits - 1 or 2 bytes
+            	year  = readVarUInt();
+            	month = readVarUInt();
+            	day   = readVarUInt();
+                p = Precision.DATE; // our lowest significant option
+
+                // now we look for hours and minutes
+                if (position() < end) {
+                    hour   = readVarUInt();
+                    minute = readVarUInt();
+                    p = Precision.MINUTE;
+
+                    if (position() < end) {
+                    	second = readVarUInt();
+                        p = Precision.SECOND;
+
+                        remaining = end - position();
+                        if (remaining > 0) {
+                            // now we read in our actual "milliseconds since the epoch"
+                            frac = this.readDecimal(remaining);
+                            p = Precision.FRACTION;
+                        }
+                    }
+                }
+            }
+
+            // now we let timestamp put it all together
+            val = Timestamp.createFromUtcFields(p, year, month, day, hour, minute, second, frac, offset);
+            return val;
         }
 
         public String readString(int len) throws IOException
@@ -737,6 +776,13 @@ done:       for (;;) {
             return len;
         }
 
+        public int writeVarInt(int value, boolean force_zero_write)
+        {
+            int len = IonBinary.lenVarInt7(value);
+            len = writeVarInt(value, len, force_zero_write);
+            return len;
+        }
+
         public int writeVarUInt(int value, int len, boolean force_zero_write)
         {
             int mask = 0x7F;
@@ -759,6 +805,13 @@ done:       for (;;) {
                 }
                 break;
             }
+            return len;
+        }
+
+        public int writeVarUInt(int value, boolean force_zero_write)
+        {
+            int len = IonBinary.lenVarUInt7(value);
+            len = writeVarUInt(value, len, force_zero_write);
             return len;
         }
 
@@ -962,31 +1015,51 @@ done:       for (;;) {
             return returnlen;
         }
 
-        public int writeTimestamp(TtTimestamp di)
+        public int writeTimestamp(Timestamp di)
         throws IOException
         {
-            int  returnlen = 0;
+            if (di == null) return 0;
 
-            if (di != null) {
-                BigDecimal bd = di.getDecimalMillis();
-                bd.setScale(13); // millisecond time has 13 significant digits
+            int returnlen = 0;
+            Timestamp.Precision precision = di.getPrecision();
 
-                Integer localOffset = di.getLocalOffset();
-                int  tzoffset = (localOffset == null) ? 0 : localOffset.intValue();
-
-                int  tzlen = IonBinary.lenVarInt7(tzoffset);
-                if (tzlen == 0) tzlen = 1;
-
-                if (localOffset == null) {
-                    // TODO don't use magic numbers!
-                    this.write((byte)(0xff & (0x80 | 0x40))); // negative 0 (no timezone)
-                    returnlen ++;
-                }
-                else {
-                    returnlen += writeIonInt(tzoffset, IonBinary.lenVarUInt7(tzoffset));
-                }
-                returnlen += writeDecimal(bd);
+            Integer offset = di.getLocalOffset();
+            if (offset == null) {
+                // TODO don't use magic numbers!
+                this.write((byte)(0xff & (0x80 | 0x40))); // negative 0 (no timezone)
+                returnlen ++;
             }
+            else {
+                int value = offset.intValue();
+                returnlen += this.writeVarInt(value, true);
+            }
+
+            // now the date - year, month, day as varUint7's
+            // if we have a non-null value we have at least the date
+            returnlen += this.writeVarUInt(di.getZYear(), true);
+            returnlen += this.writeVarUInt(di.getZMonth(), true);
+            returnlen += this.writeVarUInt(di.getZDay(), true);
+            // how much more do we have?
+            if (precision == Timestamp.Precision.MINUTE
+                || precision == Timestamp.Precision.SECOND
+                || precision == Timestamp.Precision.FRACTION
+            ) {
+                // now hours and minutes
+                returnlen += this.writeVarUInt(di.getZHour(), true);
+                returnlen += this.writeVarUInt(di.getZMinute(), true);
+
+                if (precision == Timestamp.Precision.SECOND
+                    || precision == Timestamp.Precision.FRACTION
+                ) {
+                    // seconds
+                    returnlen += this.writeVarUInt(di.getZSecond(), true);
+                    if (precision == Timestamp.Precision.FRACTION) {
+                        // and, finally, any fractional component that is known
+                        returnlen += this.writeDecimal(di.getZFractionalSecond());
+                    }
+                }
+            }
+
             return returnlen;
         }
 

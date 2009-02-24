@@ -21,7 +21,7 @@ public interface SystemSymbolTable
         SystemSymbolTable.IMPORTS,
         SystemSymbolTable.SYMBOLS,
         SystemSymbolTable.MAX_ID,
-        SystemSymbolTable.ION_EMBEDDED_VALUE
+        SystemSymbolTable.ION_SHARED_SYMBOL_TABLE
     };
 
     public static final int ION_1_0_MAX_ID = 9;
@@ -83,6 +83,14 @@ public interface SystemSymbolTable
     /**
      * The system symbol <tt>'$ion_embedded_value'</tt>, as defined by Ion 1.0.
      */
+    @Deprecated
     public static final String ION_EMBEDDED_VALUE = "$ion_embedded_value";
+    @Deprecated
     public static final int    ION_EMBEDDED_VALUE_SID = 9;
+
+    /*
+     * The system symbol <tt>'$ion_shared_symbol_table'</tt>, as defined by Ion 1.0.
+     */
+    public static final String ION_SHARED_SYMBOL_TABLE = "$ion_shared_symbol_table";
+    public static final int    ION_SHARED_SYMBOL_TABLE_SID = 9;
 }

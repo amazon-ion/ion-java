@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -11,7 +9,7 @@ import static com.amazon.ion.impl.IonConstants.tidStruct;
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.TtTimestamp;
+import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.SimpleByteBuffer.SimpleByteWriter;
 import java.io.IOException;
@@ -23,12 +21,15 @@ import java.util.Date;
  * implementation of the IonWrite where the output is
  * Ion binary formatted bytes.  This will include a local
  * symbol table in the output if a symbol table is necessary.
+ * <p>
+ * One invariant of this class is that the (inherited) member _symbol_table
+ * is never null. It may be either a system or local symbol table.
  */
 public final class IonBinaryWriterImpl
     extends IonBaseWriter
     implements IonBinaryWriter
 {
-    private static final boolean _verbose_debug = false;
+//    private static final boolean _verbose_debug = false;
 
     static final int UNKNOWN_LENGTH = -1;
 
@@ -48,35 +49,31 @@ public final class IonBinaryWriterImpl
     int    _top;
     int [] _patch_stack = new int[10];
 
-    public IonBinaryWriterImpl() {
+    /**
+     * This method requires a symbol table because all binary data must
+     * start with a system ID.
+     *
+     * @param initialSymtab
+     *   the initial symbol table; must be local or system.
+     */
+    public IonBinaryWriterImpl(SymbolTable initialSymtab) {
         _manager = new BufferManager();
         _writer = _manager.openWriter();
-    }
 
-    public IonBinaryWriterImpl(UnifiedSymbolTable imported) {
-        this();
-        if (imported != null) {
-            this._system_symbols = imported.getSystemSymbolTable();
-            importSharedSymbolTable(imported);
-        }
-    }
-
-    /**
-     *
-     * @param sharedSymbolTables
-     *   the inital imports for the local symbol table.
-     */
-    public IonBinaryWriterImpl(UnifiedSymbolTable... sharedSymbolTables) {
-        this();
-        if (sharedSymbolTables != null && sharedSymbolTables.length > 0) {
-            this._system_symbols = sharedSymbolTables[0].getSystemSymbolTable();
-            for (UnifiedSymbolTable imported : sharedSymbolTables)
-            {
-
-                importSharedSymbolTable(imported);
+        if (initialSymtab.isSystemTable()) {
+            _system_symbols = initialSymtab;
             }
+        else if (initialSymtab.isLocalTable()) {
+            _system_symbols = initialSymtab.getSystemSymbolTable();
         }
+        else {
+            throw new IllegalArgumentException("initialSymtab must be local or system");
+        }
+
+        _symbol_table = initialSymtab;
     }
+
+
     public boolean isInStruct() {
         return this._in_struct;
     }
@@ -156,12 +153,7 @@ public final class IonBinaryWriterImpl
     {
         int patch_len = 0;
 
-        // start a local symbol table if necessary
-        if (_symbol_table == null) {
-            _symbol_table = UnifiedSymbolTable.getSystemSymbolTableInstance();
-            _system_symbols = _symbol_table;
-            _no_local_symbols = true;
-        }
+        assert _symbol_table != null;
 
         // write field name
         if (_in_struct) {
@@ -274,16 +266,6 @@ public final class IonBinaryWriterImpl
         _in_struct = this.topInStruct();
     }
 
-
-    @Override
-    public void setFieldName(String name)
-    {
-        if (!_in_struct) {
-            throw new IllegalStateException();
-        }
-        super.setFieldName(name);
-    }
-
     @Override
     public void setFieldId(int id)
     {
@@ -318,6 +300,7 @@ public final class IonBinaryWriterImpl
         case SEXP:      tid = IonConstants.tidSexp;      break;
         case LIST:      tid = IonConstants.tidList;      break;
         case STRUCT:    tid = IonConstants.tidStruct;    break;
+        default: throw new IllegalArgumentException("Invalid type: " + type);
         }
         _writer.write((tid << 4) | IonConstants.lnIsNullAtom);
         patch(1);
@@ -423,13 +406,13 @@ public final class IonBinaryWriterImpl
         patch(patch_len);
     }
 
-    public void writeTimestamp(TtTimestamp value) throws IOException
+    public void writeTimestamp(Timestamp value) throws IOException
     {
         if (value == null) {
             writeNull(IonType.TIMESTAMP);
             return;
         }
-        TtTimestamp di = value;
+        Timestamp di = value;
 
         int patch_len = 1;
         int len = IonBinary.lenIonTimestamp(di);
@@ -456,8 +439,8 @@ public final class IonBinaryWriterImpl
             writeNull(IonType.TIMESTAMP);
             return;
         }
-        TtTimestamp di =
-            new TtTimestamp(value.getTime(), TtTimestamp.UTC_OFFSET);
+        Timestamp di =
+            new Timestamp(value.getTime(), Timestamp.UTC_OFFSET);
         writeTimestamp(di);
     }
 
@@ -467,7 +450,7 @@ public final class IonBinaryWriterImpl
             writeNull(IonType.TIMESTAMP);
             return;
         }
-        TtTimestamp di = new TtTimestamp(value.getTime(), localOffset);
+        Timestamp di = new Timestamp(value.getTime(), localOffset);
         writeTimestamp(di);
     }
 
@@ -522,31 +505,8 @@ public final class IonBinaryWriterImpl
 
     public void writeSymbol(String value) throws IOException
     {
-        int symbolId = makeSymbol(value);
+        int symbolId = add_symbol(value);
         writeSymbol(symbolId);
-    }
-    int makeSymbol(String name) {
-        int sid;
-
-        if (_symbol_table != null) {
-            sid = _symbol_table.findSymbol(name);
-            if (sid > 0) return sid;
-        }
-
-        if (_no_local_symbols) {
-            UnifiedSymbolTable syssyms;
-            if (_system_symbols instanceof UnifiedSymbolTable) {
-                syssyms = (UnifiedSymbolTable)_system_symbols;
-            }
-            else {
-                syssyms = UnifiedSymbolTable.getSystemSymbolTableInstance();
-            }
-            _symbol_table = new UnifiedSymbolTable(syssyms);
-            _no_local_symbols = false;
-        }
-
-        sid = _symbol_table.addSymbol(name);
-        return sid;
     }
 
     public void writeClob(byte[] value) throws IOException
@@ -950,11 +910,7 @@ int tmp;
         }
 
         int symbol_table_length = 0;
-        if (!_no_local_symbols
-            || (_symbol_table != null
-                && _symbol_table.isLocalTable()
-                && _symbol_table.getImportedTables().length != 0))
-        {
+        if (symtabIsLocalAndNonTrivial()) {
             symbol_table_length = lenSymbolTable();
         }
 
@@ -969,9 +925,7 @@ int tmp;
     public byte[] getBytes() throws IOException
     {
         int total_length = byteSize();
-        byte[] bytes = null;
-
-        bytes = new byte[total_length];
+        byte[] bytes = new byte[total_length];
         SimpleByteBuffer outbuf = new SimpleByteBuffer(bytes);
         SimpleByteWriter writer = (SimpleByteWriter) outbuf.getWriter();
         int written_len = writeBytes(writer);
@@ -1002,11 +956,7 @@ int tmp;
         iout.write(IonConstants.BINARY_VERSION_MARKER_1_0, 0, IonConstants.BINARY_VERSION_MARKER_1_0.length);
         total_written += IonConstants.BINARY_VERSION_MARKER_1_0.length;
 
-        if (!_no_local_symbols
-            || (_symbol_table != null
-                && _symbol_table.isLocalTable()
-                && _symbol_table.getImportedTables().length != 0)
-        ) {
+        if (symtabIsLocalAndNonTrivial()) {
             total_written += writeSymbolTable(iout);
         }
 
@@ -1079,40 +1029,13 @@ int tmp;
     }
     int writeSymbolTable(SimpleByteBuffer.SimpleByteWriter out) throws IOException
     {
-        int name_len, ver_len, max_id_len, symbol_list_len, import_len;
+        final UnifiedSymbolTable symtab = (UnifiedSymbolTable) this._symbol_table;
 
-        // first calculate the length of the bits and pieces we will be
-        // writing out in the second phase.  We do this all in one big
-        // hairy method so that we can remember the lengths of most of
-        // these bits and pieces so that we have to recalculate them as
-        // we go to write out the typedesc headers when we write out the
-        // values themselves.
-        String name = super.getSymbolTableName();
-        int max_id = 0;
-        if (name != null) {
-            name_len = IonBinary.lenIonStringWithTypeDesc(name);
-            ver_len = IonBinary.lenVarInt8(super.getSymbolTableVersion());
-
-            // unless there's a name (i.e. this is a shared table) the
-            // max id value is of no use
-            max_id = super.getSymbolTableMaxId();
-            if (max_id > 0) {
-                // +2 is 1 for symbol sid, 1 for typedesc byte
-                max_id_len = IonBinary.lenVarUInt8(max_id) + 2;
-            }
-            else {
-                max_id_len = 0;
-            }
-        }
-        else {
-            name_len = 0;
-            ver_len = 0;
-            max_id_len = 0;
-        }
+        assert symtab.getName() == null;
 
         int import_header_len = 0;
-        import_len = 0;
-        UnifiedSymbolTable [] imports = super.getSymbolTableImportedTables();
+        int import_len = 0;
+        SymbolTable [] imports = symtab.getImportedTables();
         int [] import_lens = null;
         if (imports != null && imports.length > 0) {
             import_lens = new int[imports.length];
@@ -1129,21 +1052,19 @@ int tmp;
         }
 
         int symbol_list_content_len = 0;
-        symbol_list_len = 0;
+        int symbol_list_len = 0;
 
         //Iterator<UnifiedSymbolTable.Symbol> syms = super.getSymbolTableSymbols();
         //while (syms.hasNext()) {
         //    UnifiedSymbolTable.Symbol s = syms.next();
 
-        UnifiedSymbolTable.Symbol[] syms = super.getSymbolArray();
-        for (int ii=0; ii<syms.length; ii++) {
+        UnifiedSymbolTable.Symbol[] syms = symtab._symbols;
+        for (int ii=symtab.getImportedMaxId()+1; ii<=symtab.getMaxId(); ii++) {
             UnifiedSymbolTable.Symbol s = syms[ii];
             if (s == null) continue;
-            if (s.source != this._symbol_table) continue; // we only care about our own symbols
-            //int s_len = IonBinary.lenVarUInt7(s.sid);
-            //s_len += IonBinary.lenIonStringWithTypeDesc(s.name);
-            //symbol_list_content_len += s_len;
-            symbol_list_content_len += s.sid_len + s.td_len + s.name_len;
+            assert s.source == symtab;
+
+            symbol_list_content_len += s.td_len + s.name_len;
         }
         if (symbol_list_content_len > 0) {
             symbol_list_len = 2; // fldid + typedesc
@@ -1154,8 +1075,7 @@ int tmp;
             }
         }
 
-        int content_len = name_len + ver_len + max_id_len + symbol_list_len;
-        content_len += import_header_len + import_len;
+        int content_len = symbol_list_len + import_header_len + import_len;
         int content_len_len = 0;
         if (content_len >= IonConstants.lnIsVarLen) {
             content_len_len = IonBinary.lenVarUInt7(content_len);
@@ -1185,29 +1105,6 @@ int tmp;
 
         total_len_written += out.writeTypeDescWithLength2(IonConstants.tidStruct, content_len);
 
-        name = super.getSymbolTableName();
-        if (name != null) {
-            total_len_written += out.writeVarUInt(UnifiedSymbolTable.NAME_SID, 1, true);
-            total_len_written += out.writeTypeDescWithLength2(IonConstants.tidString,
-                                                             IonBinary.lenIonString(name));
-            total_len_written += out.writeString(name);
-
-            // if there's no name, there's no need for a version
-            // -2 is to remove the cost of the typedesc byte and the fieldsid length
-            total_len_written += out.writeVarUInt(UnifiedSymbolTable.VERSION_SID, 1, true);
-            total_len_written += out.writeTypeDescWithLength2(IonConstants.tidPosInt, ver_len - 2);
-            int ver = super.getSymbolTableVersion();
-            int lenover = IonBinary.lenIonInt(ver);
-            total_len_written += out.writeIonInt(ver, lenover);
-
-            if (max_id > 0) {
-                total_len_written += out.writeVarUInt(UnifiedSymbolTable.MAX_ID_SID, 1, true);
-                total_len_written += out.writeTypeDescWithLength2(IonConstants.tidPosInt, max_id_len - 1);
-                int maxid = super.getSymbolTableVersion();
-                int lenomaxid = IonBinary.lenIonInt(maxid);
-                total_len_written += out.writeIonInt(maxid, lenomaxid);
-            }
-        }
 
         // now write imports (if we have any)
         int written_import_len = 0;
@@ -1229,21 +1126,19 @@ int tmp;
 
         if (symbol_list_content_len > 0) {
             written_symbols_header_len += out.writeVarUInt(UnifiedSymbolTable.SYMBOLS_SID, 1, true);
-            written_symbols_header_len += out.writeTypeDescWithLength2(IonConstants.tidStruct, symbol_list_content_len);
+            written_symbols_header_len += out.writeTypeDescWithLength2(IonConstants.tidList, symbol_list_content_len);
             //syms = super.getSymbolTableSymbols();
             //while (syms.hasNext()) {
             //    UnifiedSymbolTable.Symbol s = syms.next();
-            for (int ii=0; ii<syms.length; ii++) {
+            for (int ii=symtab.getImportedMaxId()+1; ii<=symtab.getMaxId(); ii++) {
                 UnifiedSymbolTable.Symbol s = syms[ii];
-                if (s == null) continue;
-                if (s.source != this._symbol_table) continue; // we only care about our own symbols
-                //int s_len = IonBinary.lenIonString(s.name);
-                //int sidlen = IonBinary.lenVarUInt7(s.sid);
-                int sid_len2 = out.writeVarUInt(s.sid, s.sid_len, true);
+                if (s == null) continue; // TODO can this happen?
+                assert s.source == symtab;
+
                 int td_len2 = out.writeTypeDescWithLength(IonConstants.tidString, s.td_len - IonConstants.BB_TOKEN_LEN, s.name_len);
                 int name_len2 = out.writeString(s.name);
-                int t_len = sid_len2 + td_len2 + name_len2;
-                if (t_len != s.sid_len + s.td_len + s.name_len) {
+                int t_len = td_len2 + name_len2;
+                if (t_len != s.td_len + s.name_len) {
                     int name_len3 = out.writeString(s.name);
                     throw new IllegalStateException("symbol length is wrong as " + name_len3);
                 }

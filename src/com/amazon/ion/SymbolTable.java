@@ -1,8 +1,9 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
+
+import java.io.IOException;
+import java.util.Iterator;
 
 /**
  * A symbol table maps symbols between their textual form and an integer ID
@@ -12,6 +13,14 @@ package com.amazon.ion;
  */
 public interface SymbolTable
 {
+    /**
+     * Indicates that a symbol's integer ID could not be determined.  That's
+     * generally the case when constructing value instances that are not yet
+     * contained by a datagram.
+     */
+    public final static int UNKNOWN_SYMBOL_ID = -1;
+
+
     /**
      * Determines whether this symbol table is local, and therefore unnamed,
      * unversioned, and modifiable.
@@ -45,7 +54,7 @@ public interface SymbolTable
     /**
      * Gets the unique name of this symbol table.
      *
-     * @return the unique name, or {@code null} if this is not a shared table.
+     * @return the unique name, or {@code null} if {@link #isLocalTable()}.
      */
     public String getName();
 
@@ -53,7 +62,7 @@ public interface SymbolTable
     /**
      * Gets the version of this symbol table.
      *
-     * @return at least one, or zero if this is not a shared table.
+     * @return at least one, or zero if {@link #isLocalTable()}.
      */
     public int getVersion();
 
@@ -62,31 +71,59 @@ public interface SymbolTable
      * Gets the system symbol table being used by this local table.
      * <p>
      * If {@link #isSystemTable()} then this method returns {@code this}.
+     * Otherwise, if {@link #isSharedTable()} then this method returns
+     * {@code null}.
      *
-     * @return not <code>null</code>.
+     * @return not <code>null</code>, except for non-system shared tables.
      */
     public SymbolTable getSystemSymbolTable();
-    // FIXME should this return null for shared symtabs?
 
 
     /**
-     * Gets the identifier for the system symbol table imported by this table.
+     * Gets the identifier for the system symbol table used by this table.
      * The system identifier is a string of the form {@code "$ion_X_Y"}.
      *
-     * @return the system identifier; not {@code null}.
+     * @return the system identifier; or {@code null} for non-system shared
+     *  tables.
+     *
+     * @deprecated Renamed to {@link #getIonVersionId()}.
      */
+    @Deprecated
     public String getSystemId();
+
+    /**
+     * Gets the identifier for the Ion version (and thus the system symbol
+     * table) used by this table.
+     * The version identifier is a string of the form {@code "$ion_X_Y"}.
+     *
+     * @return the version identifier; or {@code null} for non-system shared
+     *  tables.
+     */
+    public String getIonVersionId();
 
 
     /**
      * Gets the sequence of shared symbol tables imported by this (local)
      * symbol table. The result does not include a system table.
+     * <p>
+     * If this local table imported a shared table that was not available in
+     * the appropriate {@link IonCatalog}, then that entry will be a dummy
+     * table with no known symbol text.
      *
      * @return {@code null} if this is a shared or system table, otherwise a
      * non-null but potentially zero-length array of shared tables (but no
      * system table).
      */
     public SymbolTable[] getImportedTables();
+
+
+    /**
+     * Gets the highest symbol id reserved by this table's imports (including
+     * system symbols). Any id higher than this value is a local symbol
+     * declared by this table. This value is zero for shared symbol tables,
+     * since they do not utilize imports.
+     */
+    public int getImportedMaxId();
 
 
     /**
@@ -107,7 +144,9 @@ public interface SymbolTable
      * returns <code>Integer.MAX_VALUE</code>.
      *
      * @return the number of symbols in this table.
+     * @deprecated Turns out this isn't particularly meaningful
      */
+    @Deprecated
     public int size();
 
 
@@ -115,7 +154,7 @@ public interface SymbolTable
      *
      * @param name must not be null or empty.
      * @return the id of the requested symbol, or
-     * {@link IonSymbol#UNKNOWN_SYMBOL_ID} if it's not defined.
+     * {@link #UNKNOWN_SYMBOL_ID} if it's not defined.
      */
     public int findSymbol(String name);
 
@@ -146,7 +185,8 @@ public interface SymbolTable
      * @param name must be non-empty.
      * @return a value greater than zero.
      *
-     * @throws UnsupportedOperationException if {@link #isSharedTable()}.
+     * @throws UnsupportedOperationException if {@link #isSharedTable()}
+     * and the requested symbol is not already defined.
      */
     public int addSymbol(String name);
 
@@ -158,9 +198,27 @@ public interface SymbolTable
      * @param name must be non-empty.
      * @param id must be greater than zero.
      *
-     * @throws UnsupportedOperationException if {@link #isSharedTable()}.
+     * @throws UnsupportedOperationException if {@link #isSharedTable()}
+     * and the requested symbol is not already defined.
+     *
+     * @deprecated Use {@link #addSymbol(String)}.
      */
+    @Deprecated
     public void defineSymbol(String name, int id);
+
+
+    /**
+     * Creates an iterator that will return all non-imported symbol names, in
+     * order of their symbol IDs. The iterator will return {@code null} where
+     * there is an undefined sid.
+     * <p>
+     * The first string returned by the iterator has a symbol ID that is one
+     * more than {@link #getImportedMaxId()}, and the last string has symbol
+     * ID equals to {@link #getMaxId()}.
+     *
+     * @return a new iterator.
+     */
+    public Iterator<String> iterateDeclaredSymbolNames();
 
 
     /**
@@ -169,18 +227,19 @@ public interface SymbolTable
      * very unwise to modify the return value directly.
      *
      * @return a non-null struct.
+     *
+     * @deprecated For internal use only.
      */
+    @Deprecated
     public IonStruct getIonRepresentation();
 
-    /**
-     * Compares the two symbol table to determine if this symbol
-     * table is a strict superset of the other symbol table. A
-     * strict superset in the case is that this symbol table contains
-     * all symbols in the other symbol table and the symbols are
-     * assigned to the same ids.
-     * @param other possible strict subset
-     * @return true if this is a strict superset of other
-     */
-    public boolean isCompatible(SymbolTable other);
 
+    /**
+     * Writes an Ion representation of this symbol table.
+     *
+     * @param writer must not be null.
+     * @throws IOException if thrown by the writer.
+     */
+    public void writeTo(IonWriter writer)
+        throws IOException;
 }

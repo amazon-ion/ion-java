@@ -6,13 +6,15 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.InvalidSystemSymbolException;
 import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonSymbol;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
+import java.util.Iterator;
 
 /**
  *
  */
+@Deprecated
 public class SystemSymbolTableImpl
     implements SystemSymbolTable
 {
@@ -77,15 +79,27 @@ public class SystemSymbolTableImpl
         return this;
     }
 
+    public String getIonVersionId()
+    {
+        return ION_1_0;
+    }
+
     public String getSystemId()
     {
         return ION_1_0;
     }
 
 
+
     public SymbolTable[] getImportedTables()
     {
         return null;
+    }
+
+
+    public synchronized Iterator<String> iterateDeclaredSymbolNames()
+    {
+        throw new UnsupportedOperationException();
     }
 
 
@@ -118,7 +132,7 @@ public class SystemSymbolTableImpl
             }
         }
 
-        return IonSymbol.UNKNOWN_SYMBOL_ID;
+        return UNKNOWN_SYMBOL_ID;
     }
 
     public String findKnownSymbol(int id)
@@ -153,6 +167,12 @@ public class SystemSymbolTableImpl
     }
 
 
+    public int getImportedMaxId()
+    {
+        return 0;
+    }
+
+
     public int getMaxId()
     {
         return SYSTEM_SYMBOLS.length;
@@ -165,15 +185,13 @@ public class SystemSymbolTableImpl
     }
 
 
-    public IonStruct getIonRepresentation()
+    public void writeTo(IonWriter writer)
     {
         throw new UnsupportedOperationException();
     }
 
-
-    public boolean isCompatible(SymbolTable other)
+    public IonStruct getIonRepresentation()
     {
-        // FIXME Auto-generated method stub
-        return false;
+        throw new UnsupportedOperationException();
     }
 }

@@ -28,6 +28,7 @@ public final class IonNullImpl
     public IonNullImpl(IonSystemImpl system)
     {
         super(system, NULL_NULL_TYPEDESC);
+        _hasNativeValue = true;
     }
 
     /**
@@ -36,8 +37,10 @@ public final class IonNullImpl
     public IonNullImpl(IonSystemImpl system, int typeDesc)
     {
         super(system, typeDesc);
+        _hasNativeValue = true;
 
         // This is necessary to trap badly-encoded data.
+        // FIXME don't error in this case.
         if (typeDesc != NULL_NULL_TYPEDESC)
         {
             throw new IonException("Invalid type descriptor byte " + typeDesc);
@@ -110,7 +113,7 @@ public final class IonNullImpl
     @Override
     protected void doWriteNakedValue(IonBinary.Writer writer, int valueLen) throws IOException
     {
-        throw new IonException("call not needed!");
+        throw new UnsupportedOperationException("should not be called");
     }
 
 

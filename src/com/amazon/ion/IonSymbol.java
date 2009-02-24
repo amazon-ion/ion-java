@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -8,13 +8,6 @@ package com.amazon.ion;
 public interface IonSymbol
     extends IonText
 {
-    /**
-     * Indicates that a symbol's integer ID could not be determined.  That's
-     * generally the case when constructing value instances that are not yet
-     * contained by a datagram.
-     */
-    public final static int UNKNOWN_SYMBOL_ID = -1;
-
     /**
      * Gets the characters that name this symbol.
      *
@@ -27,7 +20,7 @@ public interface IonSymbol
      * Gets the integer symbol id used in the binary encoding of this symbol.
      *
      * @return an integer greater than zero, if this value has an associated
-     * symbol table.  Otherwise, return {@link #UNKNOWN_SYMBOL_ID}.
+     * symbol table.  Otherwise, return {@link SymbolTable#UNKNOWN_SYMBOL_ID}.
      *
      * @throws NullValueException if this is <code>null.symbol</code>.
      * @deprecated Use {@link #getSymbolId()} instead.
@@ -40,7 +33,7 @@ public interface IonSymbol
      * Gets the integer symbol id used in the binary encoding of this symbol.
      *
      * @return an integer greater than zero, if this value has an associated
-     * symbol table.  Otherwise, return {@link #UNKNOWN_SYMBOL_ID}.
+     * symbol table.  Otherwise, return {@link SymbolTable#UNKNOWN_SYMBOL_ID}.
      *
      * @throws NullValueException if this is <code>null.symbol</code>.
      */

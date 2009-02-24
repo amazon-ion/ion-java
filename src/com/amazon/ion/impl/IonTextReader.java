@@ -5,13 +5,12 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_ITERATOR;
+import static com.amazon.ion.util.IonTextUtils.printQuotedSymbol;
 
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonClob;
-import com.amazon.ion.IonDecimal;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSequence;
@@ -22,7 +21,7 @@ import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.TtTimestamp;
+import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.impl.Base64Encoder.BinaryStream;
 import com.amazon.ion.impl.IonTokenReader.Type.timeinfo;
@@ -44,7 +43,6 @@ public final class IonTextReader
 
 //////////////////////////////////////////////////////////////////////////debug
     static final boolean _debug = false;
-    static final boolean _debug_all_system = false;
 
 
     IonTextTokenizer    _scanner;
@@ -53,6 +51,8 @@ public final class IonTextReader
 
     boolean         _eof;
     State           _state;
+
+    final boolean   _is_returning_system_values;
 
     boolean         _in_struct;
     boolean         _skip_children;
@@ -203,26 +203,52 @@ public final class IonTextReader
         _value_ready = false;
         _value_is_container = false;
     }
-    private IonTextReader() {}
+
+    private IonTextReader() {
+        _is_returning_system_values = false;  // FIXME really?!?!?
+    }
+
     public IonTextReader(byte[] buf) {
-        this(new IonTextTokenizer(buf), null);
+        this(new IonTextTokenizer(buf), null, false);
     }
     public IonTextReader(byte[] buf, int start, int len) {
-        this(new IonTextTokenizer(buf, start, len), null);
+        this(new IonTextTokenizer(buf, start, len), null, false);
     }
+
+    public IonTextReader(byte[] buf, int start, int len,
+                         IonCatalog catalog,
+                         boolean returnSystemValues)
+    {
+        this(new IonTextTokenizer(buf, start, len),
+             catalog,
+             returnSystemValues);
+    }
+
     public IonTextReader(String ionText) {
-        this(new IonTextTokenizer(ionText), null);
+        this(new IonTextTokenizer(ionText), null, false);
     }
+
+    public IonTextReader(String ionText,
+                         IonCatalog catalog,
+                         boolean returnSystemValues)
+    {
+        this(new IonTextTokenizer(ionText), catalog, returnSystemValues);
+    }
+
     public IonTextReader(byte[] buf, IonCatalog catalog) {
-        this(new IonTextTokenizer(buf), catalog);
+        this(new IonTextTokenizer(buf), catalog, false);
     }
     public IonTextReader(byte[] buf, int start, int len, IonCatalog catalog) {
-        this(new IonTextTokenizer(buf, start, len), catalog);
+        this(new IonTextTokenizer(buf, start, len), catalog, false);
     }
     public IonTextReader(String ionText, IonCatalog catalog) {
-        this(new IonTextTokenizer(ionText), catalog);
+        this(new IonTextTokenizer(ionText), catalog, false);
     }
-    IonTextReader(IonTextTokenizer scanner, IonCatalog catalog) {
+
+    private IonTextReader(IonTextTokenizer scanner, IonCatalog catalog,
+                          boolean returnSystemValues)
+    {
+        this._is_returning_system_values = returnSystemValues;
         this._scanner = scanner;
         this._catalog = catalog;
         this._current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
@@ -250,35 +276,6 @@ public final class IonTextReader
     }
     void clearAnnotationList() {
         _annotation_count = 0;
-    }
-
-    public int getContainerSize() {
-        int size = 0;
-
-        if (_value_type == null || _eof) {
-            throw new IllegalStateException();
-        }
-        switch (_value_type) {
-            case STRUCT:
-            case LIST:
-            case SEXP:
-                // this is the OK case
-                break;
-            default:
-                throw new IllegalStateException();
-        }
-
-        save_state();
-
-        stepIn();
-        while (hasNext()) {
-            next();
-            size++;
-        }
-
-        restore_state();
-
-        return size;
     }
 
     public void stepIn()
@@ -342,6 +339,10 @@ public final class IonTextReader
 
         return !_eof;
     }
+
+    /**
+     * @return true iff the current value is a system value to be skipped.
+     */
     private boolean checkForSystemValuesToSkipOrProcess() {
         boolean skip_value = false;
 
@@ -355,7 +356,7 @@ public final class IonTextReader
             case SYMBOL:
                 if (UnifiedSymbolTable.ION_1_0.equals(this.stringValue())) {
                     _current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
-                    skip_value = true;
+                    skip_value = true; // FIXME get system tab from current
                 }
                 break;
             case STRUCT:
@@ -372,50 +373,18 @@ public final class IonTextReader
                 if (_annotation_count > 0) {
                     // TODO - this should be done with flags set while we're
                     // recognizing the annotations below (in the fullness of time)
-                    if (hasAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE)) { // cas 25 apr 2008 was: ION_1_0
+                    if (hasAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE)) {
 
-                        if (_debug_all_system) this.save_state();
+                        if (_is_returning_system_values) this.save_state();
 
-                        SymbolTable local = loadSymbolTable();
-                        if (local != null) {
+                        SymbolTable local = loadLocalSymbolTable();
+                        if (local != null) { //FIXME shouldn't happen
                             _current_symtab = local;
                             skip_value = true;
                         }
 
-                        if (_debug_all_system) this.restore_state();
+                        if (_is_returning_system_values) this.restore_state();
 
-                    }
-                    else if (_catalog != null && hasAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE)) {
-                        SymbolTable shared = loadSymbolTable();
-                        if (shared != null) {
-                            _catalog.putTable(shared);
-                            // TODO: don't we want to return shared symbol tables?
-                            skip_value = true;
-                        }
-                    }
-                }
-                break;
-            case SEXP:
-                if (_annotation_count > 0) {
-                    if (hasAnnotation(UnifiedSymbolTable.ION_EMBEDDED_VALUE)) {
-                    // TODO: WTF? why are there embedded values in a text input stream
-                    //       fill this in later, especially at the top, datagram, level
-                    }
-                }
-                break;
-            default:
-                break;
-            }
-        }
-        else {
-            // down in the value stack we just look for an embedded value
-            // otherwise we don't care about anything
-            switch (_lookahead_type) {
-            case SEXP:
-                if (_annotation_count > 0) {
-                    if (hasAnnotation(UnifiedSymbolTable.ION_EMBEDDED_VALUE)) {
-                        // TODO: WTF? why are there embedded values in a text input stream
-                        //       fill this in later
                     }
                 }
                 break;
@@ -424,7 +393,7 @@ public final class IonTextReader
             }
         }
 
-        return _debug_all_system ? false : skip_value;
+        return _is_returning_system_values ? false : skip_value;
     }
 
     public IonType next()
@@ -516,13 +485,21 @@ public final class IonTextReader
         }
         return is_current;
     }
+
     void error() {
         throw new IonParsingException("syntax error. parser in state " + _state.toString()+ _scanner.input_position());
     }
 
-    protected SymbolTable loadSymbolTable() {
+    void error(String reason) {
+        String message =
+            "Syntax error" + _scanner.input_position() + ": " + reason;
+        throw new IonParsingException(message);
+    }
+
+    protected SymbolTable loadLocalSymbolTable() {
+        // TODO do we really want only the system symtab in context?
         SymbolTable temp = _current_symtab;
-        _current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
+        _current_symtab = _current_symtab.getSystemSymbolTable();
         this.stepIn();
         UnifiedSymbolTable table =
             new UnifiedSymbolTable(_current_symtab, this, _catalog);
@@ -531,27 +508,6 @@ public final class IonTextReader
         return table;
     }
 
-    public int getTypeId()
-    {
-        switch (_value_type) {
-            case NULL:      return IonConstants.tidNull;
-            case BOOL:      return IonConstants.tidBoolean;
-            case INT:
-                // BUGBUG: we really need to look at the sign of the token for this
-                            return IonConstants.tidPosInt;
-            case FLOAT:     return IonConstants.tidFloat;
-            case DECIMAL:   return IonConstants.tidDecimal;
-            case TIMESTAMP: return IonConstants.tidTimestamp;
-            case STRING:    return IonConstants.tidString;
-            case SYMBOL:    return IonConstants.tidSymbol;
-            case BLOB:      return IonConstants.tidBlob;
-            case CLOB:      return IonConstants.tidClob;
-            case STRUCT:    return IonConstants.tidStruct;
-            case LIST:      return IonConstants.tidList;
-            case SEXP:      return IonConstants.tidSexp;
-        }
-        return -1;
-    }
 
     public IonType getType()
     {
@@ -627,7 +583,7 @@ public final class IonTextReader
         if (!_value_ready || _current_symtab == null) {
             throw new IllegalStateException();
         }
-        int id = 0;
+        int id = 0; // FIXME this violates contract
         if (_field_name != null) {
             id = _current_symtab.findSymbol(_field_name);
         }
@@ -644,65 +600,58 @@ public final class IonTextReader
 
     public IonValue getIonValue(IonSystem sys)
     {
-        int tid = getTypeId();
         if (isNullValue()) {
-            switch (tid) {
-            case IonConstants.tidNull:      return sys.newNull();
-            case IonConstants.tidBoolean:   return sys.newNullBool();
-            case IonConstants.tidPosInt:
-            case IonConstants.tidNegInt:    return sys.newNullInt();
-            case IonConstants.tidFloat:     return sys.newNullFloat();
-            case IonConstants.tidDecimal:   return sys.newNullDecimal();
-            case IonConstants.tidTimestamp: return sys.newNullTimestamp();
-            case IonConstants.tidSymbol:    return sys.newNullSymbol();
-            case IonConstants.tidString:    return sys.newNullString();
-            case IonConstants.tidClob:      return sys.newNullClob();
-            case IonConstants.tidBlob:      return sys.newNullBlob();
-            case IonConstants.tidList:      return sys.newNullList();
-            case IonConstants.tidSexp:      return sys.newNullSexp();
-            case IonConstants.tidStruct:    return sys.newNullString();
+            switch (_value_type) {
+            case NULL:      return sys.newNull();
+            case BOOL:      return sys.newNullBool();
+            case INT:       return sys.newNullInt();
+            case FLOAT:     return sys.newNullFloat();
+            case DECIMAL:   return sys.newNullDecimal();
+            case TIMESTAMP: return sys.newNullTimestamp();
+            case SYMBOL:    return sys.newNullSymbol();
+            case STRING:    return sys.newNullString();
+            case CLOB:      return sys.newNullClob();
+            case BLOB:      return sys.newNullBlob();
+            case LIST:      return sys.newNullList();
+            case SEXP:      return sys.newNullSexp();
+            case STRUCT:    return sys.newNullString();
             default:
                 throw new IonException("unrecognized type encountered");
             }
         }
 
-        switch (tid) {
-        case IonConstants.tidNull:      return sys.newNull();
-        case IonConstants.tidBoolean:   return sys.newBool(booleanValue());
-        case IonConstants.tidPosInt:
-        case IonConstants.tidNegInt:    return sys.newInt(longValue());
-        case IonConstants.tidFloat:
-            IonFloat f = sys.newNullFloat();
-            f.setValue(doubleValue());
-            return f;
-        case IonConstants.tidDecimal:
-            IonDecimal dec = sys.newNullDecimal();
-            dec.setValue(bigDecimalValue());
-            return dec;
-        case IonConstants.tidTimestamp:
+        switch (_value_type) {
+        case NULL:      return sys.newNull();
+        case BOOL:      return sys.newBool(booleanValue());
+        case INT:       return sys.newInt(longValue());
+        case FLOAT:     return sys.newFloat(doubleValue());
+        case DECIMAL:   return sys.newDecimal(bigDecimalValue());
+        case TIMESTAMP:
             IonTimestamp t = sys.newNullTimestamp();
-            TtTimestamp ti = timestampValue();
+            Timestamp ti = timestampValue();
             t.setValue(ti);
             return t;
-        case IonConstants.tidSymbol:    return sys.newSymbol(stringValue());
-        case IonConstants.tidString:    return sys.newString(stringValue());
-        case IonConstants.tidClob:
+        case SYMBOL:    return sys.newSymbol(stringValue());
+        case STRING:    return sys.newString(stringValue());
+        case CLOB:
             IonClob clob = sys.newNullClob();
+            // FIXME inefficient: both newBytes and setBytes copy the data
             clob.setBytes(newBytes());
             return clob;
-        case IonConstants.tidBlob:
+        case BLOB:
             IonBlob blob = sys.newNullBlob();
+            // FIXME inefficient: both newBytes and setBytes copy the data
             blob.setBytes(newBytes());
             return blob;
-        case IonConstants.tidList:
+        case LIST:
             IonList list = sys.newNullList();
             fillContainerList(sys, list);
             return list;
-        case IonConstants.tidSexp:
+        case SEXP:
             IonSexp sexp = sys.newNullSexp();
             fillContainerList(sys, sexp);
             return sexp;
-        case IonConstants.tidStruct:
+        case STRUCT:
             IonStruct struct = sys.newNullStruct();
             fillContainerStruct(sys, struct);
             return struct;
@@ -861,13 +810,13 @@ public final class IonTextReader
         throw new IllegalStateException("current value is not an ion decimal");
     }
 
-    public TtTimestamp timestampValue()
+    public Timestamp timestampValue()
     {
         if (!_value_type.equals(IonType.TIMESTAMP)) {
             throw new IllegalStateException("current value is not a timestamp");
         }
         String image = _scanner.getValueAsString(_value_start, _value_end);
-        TtTimestamp ti = timeinfo.parse(image);
+        Timestamp ti = timeinfo.parse(image);
 
         // FIXME broken for null.timestamp?!?
 
@@ -910,7 +859,7 @@ public final class IonTextReader
             assert ! this._is_null;
 
             // we have to "wash" the value through a symbol table to address
-            // cases like $007
+            // cases like $007 TODO is this even well-defined?
             SymbolTable syms = this.getSymbolTable();
             int sid = syms.findSymbol(value);
             if (sid <= 0) {
@@ -1321,7 +1270,10 @@ public final class IonTextReader
             case IonTextTokenizer.KEYWORD_FALSE:
             case IonTextTokenizer.KEYWORD_TRUE:
             case IonTextTokenizer.KEYWORD_NULL:
-                error();
+                String reason =
+                    "Cannot use unquoted keyword " +
+                    _scanner.getValueAsString() + " as annotation";
+                error(reason);
             default:
                 break;
             }
@@ -1414,10 +1366,23 @@ public final class IonTextReader
         _extended_value_end[_extended_value_count]   = end;
         _extended_value_count++;
     }
+
+    // FIXME this is probably not appropriate for syntax errors
+    // use version below that takes a more explicit description.
     void consumeToken(int token) {
         int current_token = _scanner.lookahead(0);
         if (current_token != token) {
             throw new IonParsingException("token mismatch consuming token (internal error)" + this._scanner.input_position());
+        }
+        _scanner.consumeToken();
+    }
+
+    void consumeToken(int token, String description) {
+        int current_token = _scanner.lookahead(0);
+        if (current_token != token) {
+            String message =
+                "Expected " + description + this._scanner.input_position();
+            throw new IonParsingException(message);
         }
         _scanner.consumeToken();
     }
@@ -2340,7 +2305,9 @@ public final class IonTextReader
             }
             String fieldname = parser._scanner.consumeTokenAsString();
             parser.setFieldname(fieldname);
-            parser.consumeToken( IonTextTokenizer.TOKEN_COLON );
+            String description =
+                "colon (:) after field name " + printQuotedSymbol(fieldname);
+            parser.consumeToken( IonTextTokenizer.TOKEN_COLON, description );
             return State_read_struct_member;
         }
     }
@@ -2352,7 +2319,9 @@ public final class IonTextReader
         State transition_method(IonTextReader parser) {
             String fieldname = parser._scanner.consumeTokenAsString();
             parser.setFieldname(fieldname);
-            parser.consumeToken( IonTextTokenizer.TOKEN_COLON );
+            String description =
+                "colon (:) after field name " + printQuotedSymbol(fieldname);
+            parser.consumeToken( IonTextTokenizer.TOKEN_COLON, description );
             return State_read_struct_member;
         }
     }

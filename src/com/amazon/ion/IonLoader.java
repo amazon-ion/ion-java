@@ -179,7 +179,10 @@ public interface IonLoader
      * @throws IonException if there's a syntax error in the Ion content.
      * @throws IOException if reading from the specified input stream results
      * in an <code>IOException</code>.
+     *
+     * @deprecated Use {@link #load(Reader)}.
      */
+    @Deprecated
     public IonDatagram load(Reader ionText, SymbolTable symbolTable)
         throws IonException, IOException;
 
@@ -199,7 +202,7 @@ public interface IonLoader
      * @throws IOException if reading from the specified input stream results
      * in an <code>IOException</code>.
      *
-     * @deprecated Use {@link #load(Reader,SymbolTable)}.
+     * @deprecated Use {@link #load(Reader)}.
      */
     @Deprecated
     public IonDatagram load(Reader ionText, LocalSymbolTable symbolTable)
@@ -221,7 +224,7 @@ public interface IonLoader
      * @throws IOException if reading from the specified input stream results
      * in an <code>IOException</code>.
      *
-     * @deprecated Use {@link #load(Reader,SymbolTable)}.
+     * @deprecated Use {@link #load(Reader)}.
      */
     @Deprecated
     public IonDatagram loadText(Reader ionText, LocalSymbolTable symbolTable)

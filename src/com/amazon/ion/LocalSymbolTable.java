@@ -15,6 +15,7 @@ public interface LocalSymbolTable
     /**
      * Indicates whether this local table has imported any static tables.
      */
+    @Deprecated
     public boolean hasImports();
 
 
@@ -23,5 +24,6 @@ public interface LocalSymbolTable
      * @return the used table, or <code>null</code> if it's not in use.
      * @throws NullPointerException if <code>name</code> is null.
      */
+    @Deprecated
     public SymbolTable getImportedTable(String name);
 }
