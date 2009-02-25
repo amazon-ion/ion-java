@@ -50,7 +50,7 @@ public class IonTextUtils
     {
         final char[] operatorChars = {
             '<', '>', '=', '+', '-', '*', '&', '^', '%',
-            '~', '/', '?', '.', ';', '!', '|', '@', '`'
+            '~', '/', '?', '.', ';', '!', '|', '@', '`', '#'
            };
 
         OPERATOR_CHAR_FLAGS = new boolean[256];

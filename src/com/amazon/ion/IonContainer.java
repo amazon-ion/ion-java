@@ -16,11 +16,9 @@ public interface IonContainer
     /**
      * Returns the number of elements in this container.
      *
-     * @return the number of elements.
-     * @throws NullValueException if <code>this.isNullValue()</code>.
+     * @return the number of elements, zero if (@code this.isNullValue()}.
      */
-    public int size()
-        throws NullValueException;
+    public int size();
 
     /**
      * Creates an iterator providing the (direct) elements of this container.
