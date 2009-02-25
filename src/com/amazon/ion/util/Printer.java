@@ -417,7 +417,8 @@ public class Printer
                 if (anns != null)
                 {
                     for (String ann : anns) {
-                        writeSymbol(ann);
+                        IonTextUtils.printSymbol(myOut, ann);
+//                        writeSymbol(ann);
                         myOut.append("::");
                     }
                 }
@@ -473,14 +474,14 @@ public class Printer
             {
                 SymbolVariant variant = IonTextUtils.symbolVariant(text);
                 switch (variant)
-            {
+                {
                     case IDENTIFIER:
                         myOut.append(text);
                         break;
                     case OPERATOR:
                         if (! myQuoteOperators)
-            {
-                myOut.append(text);
+                        {
+                            myOut.append(text);
                             break;
                         }
                         // else fall through...
@@ -612,7 +613,7 @@ public class Printer
                 hitOne = true;
 
                 IonValue child = i.next();
-                writeChild(child, false);
+                writeChild(child, true);
             }
         }
 

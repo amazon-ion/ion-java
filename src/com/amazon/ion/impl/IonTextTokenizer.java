@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -111,8 +109,8 @@ static final boolean _debug = false;
         case TOKEN_STRING4: return "TOKEN_STRING4";
 
         case TOKEN_DOT:          return "TOKEN_DOT";
-        case TOKEN_COMMA: 		 return "TOKEN_COMMA";
-        case TOKEN_COLON: 		 return "TOKEN_COLON";
+        case TOKEN_COMMA:          return "TOKEN_COMMA";
+        case TOKEN_COLON:          return "TOKEN_COLON";
         case TOKEN_DOUBLE_COLON: return "TOKEN_DOUBLE_COLON";
 
         case TOKEN_OPEN_PAREN:   return "TOKEN_OPEN_PAREN";
@@ -209,14 +207,14 @@ static final boolean _debug = false;
     static final int _offset_queue_size = 6; // 5 + 1, character lookahead + 1
     int              _char_lookahead_top = 0;
     int[]            _char_lookahead_stack = new int[_offset_queue_size - 1];
-    int[]	     _char_lookahead_stack_char_length = new int[_offset_queue_size - 1];
+    int[]         _char_lookahead_stack_char_length = new int[_offset_queue_size - 1];
     int              _peek_ahead_char = EMPTY_PEEKAHEAD;
     int              _char_length = 0;
     int              _offset = 0;
     int              _line = 1;
     int              _offset_queue_head = 0;
-    int 	     _offset_queue_tail = 0;
-    int[] 	     _offset_queue = new int[_offset_queue_size];
+    int          _offset_queue_tail = 0;
+    int[]          _offset_queue = new int[_offset_queue_size];
 
     /**
      * calculates the first byte of the current character in the input buffer
@@ -225,14 +223,14 @@ static final boolean _debug = false;
      * @return byte offset
      */
     public final int currentCharStart() {
-    	int p = this._r.position();
-    	p -= ((_peek_ahead_char == EMPTY_PEEKAHEAD) ? 0 : 1);
-    	if (_char_lookahead_top > 0) {
-    	    for (int ii=0; ii<_char_lookahead_top; ii++) {
-    	        p -= _char_lookahead_stack_char_length[ii];
-    	    }
-    	}
-    	return p - _char_length;
+        int p = this._r.position();
+        p -= ((_peek_ahead_char == EMPTY_PEEKAHEAD) ? 0 : 1);
+        if (_char_lookahead_top > 0) {
+            for (int ii=0; ii<_char_lookahead_top; ii++) {
+                p -= _char_lookahead_stack_char_length[ii];
+            }
+        }
+        return p - _char_length;
     }
     /**
      * calculates the last byte of the current character in the input buffer
@@ -241,14 +239,14 @@ static final boolean _debug = false;
      * @return byte offset
      */
     public final int nextCharStart() {
-    	int p = this._r.position();
-    	p -= ((_peek_ahead_char == EMPTY_PEEKAHEAD) ? 0 : 1);
-    	if (_char_lookahead_top > 0) {
-    	    for (int ii=0; ii<_char_lookahead_top; ii++) {
-    	        p -= _char_lookahead_stack_char_length[ii];
-    	    }
-    	}
-    	return p;
+        int p = this._r.position();
+        p -= ((_peek_ahead_char == EMPTY_PEEKAHEAD) ? 0 : 1);
+        if (_char_lookahead_top > 0) {
+            for (int ii=0; ii<_char_lookahead_top; ii++) {
+                p -= _char_lookahead_stack_char_length[ii];
+            }
+        }
+        return p;
     }
 
     private IonTextTokenizer() {}
@@ -282,8 +280,8 @@ static final boolean _debug = false;
                         ,other._char_lookahead_stack, 0
                         ,this._char_lookahead_top);
         System.arraycopy(this._char_lookahead_stack_char_length, 0
-                		,other._char_lookahead_stack_char_length, 0
-                		,this._char_lookahead_top);
+                        ,other._char_lookahead_stack_char_length, 0
+                        ,this._char_lookahead_top);
 
         other._char_length = this._char_length;
         other._line = this._line;
@@ -291,7 +289,7 @@ static final boolean _debug = false;
         other._peek_ahead_char = this._peek_ahead_char;
         other._offset_queue_head = this._offset_queue_head;
         other._offset_queue_tail = this._offset_queue_tail;
-    	System.arraycopy(this._offset_queue, 0
+        System.arraycopy(this._offset_queue, 0
                 ,other._offset_queue, 0
                 ,_offset_queue_size);
 
@@ -346,7 +344,7 @@ static final boolean _debug = false;
         //_end = -1;
     }
     final void enqueueToken(int token) {
-    	int next = _token_lookahead_next_available;
+        int next = _token_lookahead_next_available;
         _token_lookahead_token[next] = token;
         next++;
         if (next == _token_lookahead_size) next = 0;
@@ -392,18 +390,18 @@ static final boolean _debug = false;
         return pos;
     }
     final void setNextStart(int start) {
-    	_token_lookahead_start[_token_lookahead_next_available] = start;
+        _token_lookahead_start[_token_lookahead_next_available] = start;
     }
     final void setNextEnd(int end) {
-    	_token_lookahead_end[_token_lookahead_next_available] = end;
+        _token_lookahead_end[_token_lookahead_next_available] = end;
     }
     final void setStart(int start, int lookahead) {
-    	int pos = queuePosition(lookahead);
-    	_token_lookahead_start[pos] = start;
+        int pos = queuePosition(lookahead);
+        _token_lookahead_start[pos] = start;
     }
     final void setEnd(int end, int lookahead) {
-    	int pos = queuePosition(lookahead);
-    	_token_lookahead_end[pos] = end;
+        int pos = queuePosition(lookahead);
+        _token_lookahead_end[pos] = end;
     }
     final int getStart() {
         int start = this.peekTokenStart(0);
@@ -466,19 +464,19 @@ static final boolean _debug = false;
         }
     }
     public final int lob_lookahead() {
-    	assert queueCount() == 0;
+        assert queueCount() == 0;
 
-    	int c;
-    	try {
-    	    do {
-    	        c = this.read_char();
-    	    } while (Character.isWhitespace((char)c));
-    	} catch (IOException e) {
-    	    throw new IonTextReader.IonParsingException(e, " in scanner"+this.input_position());
-    	}
-    	// we don't consume it, we just look at it
-    	this.unread_char(c);
-    	return c;
+        int c;
+        try {
+            do {
+                c = this.read_char();
+            } while (Character.isWhitespace((char)c));
+        } catch (IOException e) {
+            throw new IonTextReader.IonParsingException(e, " in scanner"+this.input_position());
+        }
+        // we don't consume it, we just look at it
+        this.unread_char(c);
+        return c;
     }
     public final int lookahead(int distance)
     {
@@ -524,18 +522,18 @@ loop:   for (;;) {
             case '\n': // new line normalization is handled in read_char
                 break;
             case '/':
-            	c2 = this.read_char();
-            	if (c2 == '/') {
-            	    this.read_single_line_comment();
-            	} else if (c2 == '*') {
-            	    this.read_block_comment();
-            	}
-            	else {
-            	    this.unread_char(c2);
-            	    t = read_symbol_extended(c);
-            	    break loop;
-            	}
-            	break;
+                c2 = this.read_char();
+                if (c2 == '/') {
+                    this.read_single_line_comment();
+                } else if (c2 == '*') {
+                    this.read_block_comment();
+                }
+                else {
+                    this.unread_char(c2);
+                    t = read_symbol_extended(c);
+                    break loop;
+                }
+                break;
             case ':':
                 c2 = this.read_char();
                 if (c2 != ':') {
@@ -557,11 +555,11 @@ loop:   for (;;) {
                 }
                 break loop;
             case '}':
-            	t = IonTextTokenizer.TOKEN_CLOSE_BRACE;
-            	// detection of double closing braces is done
-            	// in the parser in the blob and clob handling
-            	// state - it's otherwise ambiguous with closing
-            	// two structs together. see tryForDoubleBrace() below
+                t = IonTextTokenizer.TOKEN_CLOSE_BRACE;
+                // detection of double closing braces is done
+                // in the parser in the blob and clob handling
+                // state - it's otherwise ambiguous with closing
+                // two structs together. see tryForDoubleBrace() below
                 //c2 = this.read_char();
                 //if (c2 != '}') {
                 //    this.unread_char(c2);
@@ -584,27 +582,27 @@ loop:   for (;;) {
                 t = IonTextTokenizer.TOKEN_CLOSE_PAREN;
                 break loop;
             case ',':
-            	// since we're not calling a helper (which all fill in the
-            	// start and end) we need to do it ourselves here
-            	setNextStart(currentCharStart());
-            	setNextEnd(nextCharStart());
+                // since we're not calling a helper (which all fill in the
+                // start and end) we need to do it ourselves here
+                setNextStart(currentCharStart());
+                setNextEnd(nextCharStart());
                 t = IonTextTokenizer.TOKEN_COMMA;
                 break loop;
             case '.':
-            	// since we're not calling a helper (which all fill in the
-            	// start and end) we need to do it ourselves here
-            	setNextStart(currentCharStart());
-            	setNextEnd(nextCharStart());
-            	t = IonTextTokenizer.TOKEN_DOT;
-            	break loop;
+                // since we're not calling a helper (which all fill in the
+                // start and end) we need to do it ourselves here
+                setNextStart(currentCharStart());
+                setNextEnd(nextCharStart());
+                t = IonTextTokenizer.TOKEN_DOT;
+                break loop;
             case '\'':
                 t = read_quoted_symbol(c);
                 break loop;
-            case '+':
+            case '+': case '#':
             case '<': case '>': case '*': case '=': case '^': case '&': case '|':
             case '~': case ';': case '!': case '?': case '@': case '%': case '`':
-            	t = this.read_symbol_extended(c);
-            	break loop;
+                t = this.read_symbol_extended(c);
+                break loop;
             case '"':
                 t = read_quoted_string(c);
                 break loop;
@@ -626,15 +624,15 @@ loop:   for (;;) {
                 t = read_number(c);
                 break loop;
             case '-':
-            	// see if we have a number or what might be an extended symbol
-            	c2 = this.read_char();
-            	this.unread_char(c2);
-            	if (Character.isDigit(c2)) {
-            	    t = read_number(c);
-            	}
-            	else {
-            	    t = read_symbol_extended(c);
-            	}
+                // see if we have a number or what might be an extended symbol
+                c2 = this.read_char();
+                this.unread_char(c2);
+                if (Character.isDigit(c2)) {
+                    t = read_number(c);
+                }
+                else {
+                    t = read_symbol_extended(c);
+                }
                 break loop;
             default:
                 bad_token_start(c);
@@ -647,8 +645,8 @@ loop:   for (;;) {
     }
 
     public String input_position() {
-    	String s = " at line " + _line + " offset " + _offset;
-    	return s;
+        String s = " at line " + _line + " offset " + _offset;
+        return s;
     }
     void enqueue_offset(int offset)
     {
@@ -666,23 +664,23 @@ loop:   for (;;) {
     }
     int dequeue_offset()
     {
-    	int offset = _offset_queue[_offset_queue_head];
+        int offset = _offset_queue[_offset_queue_head];
 
-    	_offset_queue_head--;
-    	if (_offset_queue_head < 0) {
-    	    _offset_queue_head = _offset_queue_size - 1;
-    	}
-    	if (_offset_queue_head == _offset_queue_tail) {
-    	    _offset_queue_tail--;
-    	    if (_offset_queue_tail < 0) {
-    	        _offset_queue_tail = _offset_queue_size - 1;
-    	    }
-    	}
-    	return offset;
+        _offset_queue_head--;
+        if (_offset_queue_head < 0) {
+            _offset_queue_head = _offset_queue_size - 1;
+        }
+        if (_offset_queue_head == _offset_queue_tail) {
+            _offset_queue_tail--;
+            if (_offset_queue_tail < 0) {
+                _offset_queue_tail = _offset_queue_size - 1;
+            }
+        }
+        return offset;
     }
     private final void unread_char(int c) {
-    	int next_length = _char_lookahead_stack_char_length[_char_lookahead_top];
-    	_char_lookahead_stack_char_length[_char_lookahead_top] = _char_length;
+        int next_length = _char_lookahead_stack_char_length[_char_lookahead_top];
+        _char_lookahead_stack_char_length[_char_lookahead_top] = _char_length;
         _char_lookahead_stack[_char_lookahead_top++] = c;
         _char_length = next_length;
         if (c == '\n') {
@@ -698,9 +696,9 @@ loop:   for (;;) {
     // new line (since it is, by definition, a low surrogate character)
     // but it also never incremented the offset, so we don't decrement it
     private final void preread_char(int c) {
-    	int half_length = _char_length / 2;   // we don't really use this when there are surrogates
-    	_char_length -= half_length;          // in play, but we still need values - they may as well be reasonable
-    	_char_lookahead_stack_char_length[_char_lookahead_top] = half_length;
+        int half_length = _char_length / 2;   // we don't really use this when there are surrogates
+        _char_length -= half_length;          // in play, but we still need values - they may as well be reasonable
+        _char_lookahead_stack_char_length[_char_lookahead_top] = half_length;
         _char_lookahead_stack[_char_lookahead_top++] = c;
     }
     final int peek_char()
@@ -713,32 +711,32 @@ loop:   for (;;) {
                                                         , " getting character in tokenizer"+input_position());
         }
         unread_char(c);
-    	return c;
+        return c;
     }
     private final int read_char() throws IOException
     {
-    	int c;
+        int c;
 
-    	if (_char_lookahead_top > 0) {
-    	    _char_lookahead_top--;
-    	    c = _char_lookahead_stack[_char_lookahead_top];
-    	    _char_length = _char_lookahead_stack_char_length[_char_lookahead_top];
-    	}
-    	else {
-    	    // save the length so that if we unread a character it will restore
-    	    // the length of the character we will have "re-exposed"
-    	    _char_lookahead_stack_char_length[_char_lookahead_top] = _char_length;
-    	    c = fetchchar();
-    	}
-    	// watch for end of lines to handle the offset processing
-    	if (c == '\n') {
-    	    enqueue_offset(_offset);
-    	    _offset = 0;
-    	    _line++;
-    	}
-    	else {
-    	    _offset++;
-    	}
+        if (_char_lookahead_top > 0) {
+            _char_lookahead_top--;
+            c = _char_lookahead_stack[_char_lookahead_top];
+            _char_length = _char_lookahead_stack_char_length[_char_lookahead_top];
+        }
+        else {
+            // save the length so that if we unread a character it will restore
+            // the length of the character we will have "re-exposed"
+            _char_lookahead_stack_char_length[_char_lookahead_top] = _char_length;
+            c = fetchchar();
+        }
+        // watch for end of lines to handle the offset processing
+        if (c == '\n') {
+            enqueue_offset(_offset);
+            _offset = 0;
+            _line++;
+        }
+        else {
+            _offset++;
+        }
         return c;
     }
     private final int fetchchar() throws IOException
@@ -783,13 +781,13 @@ loop:   for (;;) {
             }
             // not needed
             //else if (c == '\n') {
-            //	c2 = _r.read();
-            //	if (c2 != '\r') {
-            //		_peek_ahead_char = c2;
-            //	}
-            //	else {
-            //		_char_length++;
-            //	}
+            //    c2 = _r.read();
+            //    if (c2 != '\r') {
+            //        _peek_ahead_char = c2;
+            //    }
+            //    else {
+            //        _char_length++;
+            //    }
             //}
             return c;
         }
@@ -904,7 +902,7 @@ loop:   for (;;) {
 
     private final int read_symbol(int c) throws IOException
     {
-    	int start, end;
+        int start, end;
         _saved_symbol.setLength(0);
         _saved_symbol.append((char)c);
         //_saved_symbol_len = 0;
@@ -928,11 +926,11 @@ loop:   for (;;) {
             case '$': case '_':
             case '0': case '1': case '2': case '3': case '4':
             case '5': case '6': case '7': case '8': case '9':
-            	_saved_symbol.append((char)c);
+                _saved_symbol.append((char)c);
                 //saved_symbol_append((char)c);
                 break;
             default:
-            	this.unread_char(c);
+                this.unread_char(c);
                 break loop;
             }
         }
@@ -944,7 +942,7 @@ loop:   for (;;) {
     }
     private final int read_quoted_symbol(int c) throws IOException
     {
-    	int start, end;
+        int start, end;
         c = this.read_char();
 
         if (c == '\'') {
@@ -979,23 +977,14 @@ loop:   for (;;) {
 
         return IonTextTokenizer.TOKEN_SYMBOL2;
     }
-    final boolean isOperatorCharacter(int c) {
-    	switch (c) {
-    	case '.': case '+': case '-': case '/':
-       	case '<': case '>': case '*': case '=': case '^': case '&': case '|':
-       	case '~': case ';': case '!': case '?': case '@': case '%': case '`':
-       		return true;
-       	default:
-       		return false;
-    	}
-    }
+
     private final int read_symbol_extended(int c) throws IOException
     {
-    	int start, end;
+        int start, end;
         _saved_symbol.setLength(0);
         _saved_symbol.append((char)c);
-    	//_saved_symbol_len = 0;
-    	//saved_symbol_append((char)c);
+        //_saved_symbol_len = 0;
+        //saved_symbol_append((char)c);
         start = currentCharStart();
         setNextStart(start);
 
@@ -1021,10 +1010,10 @@ loop:   for (;;) {
             //case '=': case ';': case '?':
             //case '/': case '>': case '<': case '|': case '\\':
 
-           	case '.': case '+': case '-': case '/':
-           	case '<': case '>': case '*': case '=': case '^': case '&': case '|':
-           	case '~': case ';': case '!': case '?': case '@': case '%': case '`':
-           		_saved_symbol.append((char)c);
+            case '.': case '+': case '-': case '/':
+            case '<': case '>': case '*': case '=': case '^': case '&': case '|':
+            case '~': case ';': case '!': case '?': case '@': case '%': case '`':
+                _saved_symbol.append((char)c);
                 //saved_symbol_append((char)c);
                 break;
             default:
@@ -1047,8 +1036,8 @@ loop:   for (;;) {
             c = '\u0000';
             break;
         case '\n':  // slash-new line the new line eater
-        	c = EMPTY_ESCAPE_SEQUENCE;
-        	break;
+            c = EMPTY_ESCAPE_SEQUENCE;
+            break;
         case 'a':
             //    \u0007  \a  alert BEL
             c = '\u0007';
@@ -1134,13 +1123,13 @@ loop:   for (;;) {
             preread_char(c2); // we'll put the low order bits in the queue for later
         }
         else if (IonConstants.isSurrogate(hexchar)) {
-        	bad_character();
+            bad_character();
         }
         return hexchar;
     }
     private final int read_quoted_string(int c) throws IOException
     {
-    	int start, end;
+        int start, end;
         // the position should always be correct here
         // since there's no reason to lookahead into a
         // quoted symbol
@@ -1332,30 +1321,30 @@ loop:   for (;;) {
         return c;
     }
     final int read_timestamp_get_year(int start) throws IOException {
-    	int pos = _r.position();
-    	_r.setPosition(start);
+        int pos = _r.position();
+        _r.setPosition(start);
 
-    	int year = 0;
-    	for (int ii=0; ii<4; ii++) {
-    	    int c = _r.read();
-    	    year *= 10;
-    	    year += c - '0'; // we already check for digits before we got here
-    	}
+        int year = 0;
+        for (int ii=0; ii<4; ii++) {
+            int c = _r.read();
+            year *= 10;
+            year += c - '0'; // we already check for digits before we got here
+        }
 
-    	_r.setPosition(pos);
-    	return year;
+        _r.setPosition(pos);
+        return year;
     }
     final boolean read_timestamp_is_leap_year(int year) {
-    	boolean is_leap = false;
-    	if ((year & 0x3) == 0) {
-    	    is_leap = true; // divisible by 4 generally is a leap year
-    	    int topdigits = (year / 100);
-    	    if (year - (topdigits * 100) == 0) {
-    	        is_leap = false; // but mostly not on even centuries
-    	        if ((topdigits & 0x3) == 0) is_leap = true; // but it's still a leap year if we divide by 400 evenly
-    	    }
-    	}
-    	return is_leap;
+        boolean is_leap = false;
+        if ((year & 0x3) == 0) {
+            is_leap = true; // divisible by 4 generally is a leap year
+            int topdigits = (year / 100);
+            if (year - (topdigits * 100) == 0) {
+                is_leap = false; // but mostly not on even centuries
+                if ((topdigits & 0x3) == 0) is_leap = true; // but it's still a leap year if we divide by 400 evenly
+            }
+        }
+        return is_leap;
     }
     final int read_timestamp(int year) throws IOException
     {
@@ -1367,8 +1356,8 @@ loop:   for (;;) {
         if (!Character.isDigit(c1)) bad_token();
         c2 = read_char();
         if (!Character.isDigit(c1)) bad_token();
-    	int month = (c1 - '0') * 10 + (c2 - '0');
-    	if (month < 1 || month > 12) bad_token();
+        int month = (c1 - '0') * 10 + (c2 - '0');
+        if (month < 1 || month > 12) bad_token();
 
         c = read_char();
         if (c != '-') bad_token();
@@ -1383,34 +1372,34 @@ loop:   for (;;) {
         /// now we validate the month values
         switch (c1) {
         case '0':
-        	if (c2 < '1' || c2 > '9') bad_token();
-        	break;
+            if (c2 < '1' || c2 > '9') bad_token();
+            break;
         case '1':
-        	if (c2 < '0' || c2 > '9') bad_token();
-        	break;
+            if (c2 < '0' || c2 > '9') bad_token();
+            break;
         case '2':
-        	if (c2 < '0' || c2 > '9') bad_token();
-        	// I guess we do try to figure out leap years here
-        	if (c2 == '9' && month == 2 && !read_timestamp_is_leap_year(year)) bad_token();
-        	break;
+            if (c2 < '0' || c2 > '9') bad_token();
+            // I guess we do try to figure out leap years here
+            if (c2 == '9' && month == 2 && !read_timestamp_is_leap_year(year)) bad_token();
+            break;
         case '3':
-        	if (month == 2) bad_token();
-        	if (c2 > '1') bad_token();
-        	if (c2 == '0') break;
-        	// c2 == '1'
-    		switch (month) {
-    		case  2: // feb
-    		case  4: // apr
-    		case  6: // jun
-    		case  9: // sept
-    		case 11: // nov
-    		    bad_token();
-    		default:
-    		    break;
-    		}
-        	break;
-    	default:
-    		bad_token();
+            if (month == 2) bad_token();
+            if (c2 > '1') bad_token();
+            if (c2 == '0') break;
+            // c2 == '1'
+            switch (month) {
+            case  2: // feb
+            case  4: // apr
+            case  6: // jun
+            case  9: // sept
+            case 11: // nov
+                bad_token();
+            default:
+                break;
+            }
+            break;
+        default:
+            bad_token();
         }
 
         // look for the 't', otherwise we're done (and happy about it)
@@ -1441,8 +1430,8 @@ loop:   for (;;) {
                 if (!Character.isDigit(c1)) bad_token();
                 c2 = read_char();
                 if (!Character.isDigit(c2)) bad_token();
-    	        tmp = (c1 - '0')*10 + (c2 - '0');
-    	        if (tmp < 0 || tmp > 59) bad_token();
+                tmp = (c1 - '0')*10 + (c2 - '0');
+                if (tmp < 0 || tmp > 59) bad_token();
                 c = read_char();
                 if (c == '.') {
                     // then the optional fractional seconds
@@ -1536,6 +1525,7 @@ loop:   for (;;) {
     }
     private final void bad_token_start(int c)
     {
+        // TODO improve error message, print the codepoint
         throw new IonTextReader.IonParsingException("bad character ["+c+"] encountered where a token was supposed to start"+input_position());
     }
     private final void bad_token()
@@ -1606,8 +1596,8 @@ loop:   for (;;) {
         return value;
     }
     int getByte(int pos) {
-    	int b = _r.getByte(pos);
-    	return b;
+        int b = _r.getByte(pos);
+        return b;
     }
     String getValueAsString() {
         int start = peekTokenStart(0);
@@ -1627,31 +1617,31 @@ loop:   for (;;) {
     private char[] _saved_symbol_buf = new char[32];
     private int    _saved_symbol_len = 0;
     private final void saved_symbol_grow(int needed) {
-    	int len;
-    	for (len = _saved_symbol_buf.length; len < needed; len *= 2);
-    	char[] temp = new char[len];
-    	System.arraycopy(_saved_symbol_buf, 0, temp, 0, _saved_symbol_len);
-    	_saved_symbol_buf = temp;
+        int len;
+        for (len = _saved_symbol_buf.length; len < needed; len *= 2);
+        char[] temp = new char[len];
+        System.arraycopy(_saved_symbol_buf, 0, temp, 0, _saved_symbol_len);
+        _saved_symbol_buf = temp;
     }
     private final void saved_symbol_append(char c) {
-    	if (_saved_symbol_len >= _saved_symbol_buf.length) {
-    		saved_symbol_grow(_saved_symbol_len + 1);
-    	}
-    	_saved_symbol_buf[_saved_symbol_len++] = c;
+        if (_saved_symbol_len >= _saved_symbol_buf.length) {
+            saved_symbol_grow(_saved_symbol_len + 1);
+        }
+        _saved_symbol_buf[_saved_symbol_len++] = c;
     }
     */
 
     int startValueAsString() {
-    	int pos = _r.position();
+        int pos = _r.position();
         _saved_symbol.setLength(0);
-    	//_saved_symbol_len = 0;
+        //_saved_symbol_len = 0;
         return pos;
     }
     void continueValueAsString(int start, int end) {
-    	int lookahead = IonTextTokenizer.EMPTY_PEEKAHEAD;
+        int lookahead = IonTextTokenizer.EMPTY_PEEKAHEAD;
         _r.setPosition(start);
         //if (_saved_symbol_len + end - start > _saved_symbol_buf.length) {
-        //	saved_symbol_grow(_saved_symbol_len + end - start);
+        //    saved_symbol_grow(_saved_symbol_len + end - start);
         //}
         try {
             while (lookahead != IonTextTokenizer.EMPTY_PEEKAHEAD || _r.position() < end) {
@@ -1696,7 +1686,7 @@ loop:   for (;;) {
         }
         catch (IOException e){
             throw new IonTextReader.IonParsingException(e
-            		, " getting string value in tokenizer"+input_position());
+                    , " getting string value in tokenizer"+input_position());
         }
     }
 
@@ -1808,27 +1798,27 @@ loop:   for (;;) {
 
     String closeValueAsString(int pos) {
         String value = _saved_symbol.toString();
-    	//String value = new String(_saved_symbol_buf, 0, _saved_symbol_len);
+        //String value = new String(_saved_symbol_buf, 0, _saved_symbol_len);
         _r.setPosition(pos);
         return value;
     }
 
     void append_character(int unicodeScalar) {
-    	int c2 = 0;
-    	if (unicodeScalar >= 0x10000) {
-    	    c2 = IonConstants.makeLowSurrogate(unicodeScalar);
-    	    unicodeScalar = IonConstants.makeHighSurrogate(unicodeScalar);
-    	}
-    	_saved_symbol.append((char)unicodeScalar);
-    	//saved_symbol_append((char)unicodeScalar);
+        int c2 = 0;
+        if (unicodeScalar >= 0x10000) {
+            c2 = IonConstants.makeLowSurrogate(unicodeScalar);
+            unicodeScalar = IonConstants.makeHighSurrogate(unicodeScalar);
+        }
+        _saved_symbol.append((char)unicodeScalar);
+        //saved_symbol_append((char)unicodeScalar);
 
-    	// this odd construct is in place to prepare for converting _saved_symbol
-    	// to a locally managed character array instead of the more expensive
-    	// stringbuffer
-    	if (c2 != 0) {
-    	    _saved_symbol.append((char)c2);
-    	    //saved_symbol_append((char)c2);
-    	}
+        // this odd construct is in place to prepare for converting _saved_symbol
+        // to a locally managed character array instead of the more expensive
+        // stringbuffer
+        if (c2 != 0) {
+            _saved_symbol.append((char)c2);
+            //saved_symbol_append((char)c2);
+        }
     }
 
     int currentToken() {
@@ -1838,7 +1828,7 @@ loop:   for (;;) {
     int keyword(int start_word, int end_word)
     {
         if (start_word >= end_word) {
-        	throw new IonTextReader.IonParsingException("start past end getting keyword (internal error)"+input_position());
+            throw new IonTextReader.IonParsingException("start past end getting keyword (internal error)"+input_position());
         }
         int c = _r.getByte(start_word);
         int len = end_word - start_word; // +1 but we build that into the constants below

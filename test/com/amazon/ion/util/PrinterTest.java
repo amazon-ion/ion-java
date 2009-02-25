@@ -86,9 +86,9 @@ public class PrinterTest
         checkRendering("an::'+'::'\\0'::null", value);
 
         myPrinter.setPrintSymbolAsString(true);
-        checkRendering("\"an\"::\"+\"::\"\\0\"::null", value);
+        checkRendering("an::'+'::'\\0'::null", value);
         myPrinter.setPrintStringAsJson(true);
-        checkRendering("\"an\"::\"+\"::\"\\u0000\"::null", value);
+        checkRendering("an::'+'::'\\0'::null", value);
         myPrinter.setPrintSymbolAsString(false);
         myPrinter.setPrintStringAsJson(false);
 
@@ -98,11 +98,11 @@ public class PrinterTest
 
         IonSexp s = system().newEmptySexp();
         s.add(value);
-        checkRendering("(an::+::'\\0'::null)", s);
+        checkRendering("(an::'+'::'\\0'::null)", s);
         myPrinter.setPrintSymbolAsString(true);
-        checkRendering("(\"an\"::\"+\"::\"\\0\"::null)", s);
+        checkRendering("(an::'+'::'\\0'::null)", s);
         myPrinter.setPrintStringAsJson(true);
-        checkRendering("(\"an\"::\"+\"::\"\\u0000\"::null)", s);
+        checkRendering("(an::'+'::'\\0'::null)", s);
     }
 
 
@@ -204,7 +204,7 @@ public class PrinterTest
                    text.endsWith(" a b c"));
 
         // We shouldn't jnject a local table if its not needed.
-        String data = "$ion_1_0 2 + [2,'+']";
+        String data = "$ion_1_0 2 '+' [2,'+']";
         dg = loader().load(data);
         checkRendering(data, dg);
     }
@@ -418,13 +418,13 @@ public class PrinterTest
         checkRendering("{}", value);
 
         value.addTypeAnnotation("an");
-        checkRendering("\"an\"::{}", value);
+        checkRendering("an::{}", value);
 
         value.addTypeAnnotation("\u0007");
         value.put("A\u0000", system().newInt(12));
-        checkRendering("\"an\"::\"\\a\"::{\"A\\0\":12}", value);
+        checkRendering("an::'\\a'::{\"A\\0\":12}", value);
         myPrinter.setPrintStringAsJson(true);
-        checkRendering("\"an\"::\"\\u0007\"::{\"A\\u0000\":12}", value);
+        checkRendering("an::'\\a'::{\"A\\u0000\":12}", value);
     }
 
 

@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -25,6 +23,7 @@ import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.impl.Base64Encoder.BinaryStream;
 import com.amazon.ion.impl.IonTokenReader.Type.timeinfo;
+import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -1522,7 +1521,7 @@ public final class IonTextReader
             if (parser._scanner.lookahead(1) == IonTextTokenizer.TOKEN_DOUBLE_COLON) {
                 parser.readAnnotations();
             }
-            return State_read_plain_value_sexp;
+            return State_read_plain_value;
         }
     }
     static class Lookahead_read_annotated_value_identifier_literal extends Matches {
@@ -1535,13 +1534,13 @@ public final class IonTextReader
             if (parser._scanner.lookahead(1) == IonTextTokenizer.TOKEN_DOUBLE_COLON) {
                 parser.readAnnotations();
             }
-            return State_read_plain_value_sexp;
+            return State_read_plain_value;
         }
     }
     static class Lookahead_read_annotated_value extends Matches {
         @Override
         State transition_method(IonTextReader parser) {
-            return State_read_plain_value_sexp;
+            return State_read_plain_value;
         }
     }
     static Matches[] state_read_annotated_value_matches = {
@@ -1760,7 +1759,7 @@ public final class IonTextReader
         State transition_method(IonTextReader parser) {
             int start;
             int lookahead_char = parser._scanner.peek_char();
-            if (parser._scanner.isOperatorCharacter(lookahead_char)) {
+            if (IonTextUtils.isOperatorPart(lookahead_char)) {
                 start = parser._scanner.getStart();
                 parser.consumeToken(IonTextTokenizer.TOKEN_DOT);
                 int token = parser._scanner.lookahead(0);

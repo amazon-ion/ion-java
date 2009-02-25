@@ -113,12 +113,12 @@ public class IonParser
 
             do {
                 // get the first token
-                next(true);
+                next(false /* not in sexp */);
                 if (this._t == IonTokenReader.Type.eof) {
                     break;
                 }
                 // we are an annotated value here
-                parseAnnotatedValue(true);
+                parseAnnotatedValue(false /* not in sexp */);
 
                 //  FIXME need symtab logic here!!!
 
