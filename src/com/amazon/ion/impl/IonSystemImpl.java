@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -115,32 +113,34 @@ public class IonSystemImpl
     public UnifiedSymbolTable newLocalSymbolTable(SymbolTable... imports)
     {
         if (imports == null || imports.length == 0)
-    {
-        UnifiedSymbolTable st = new UnifiedSymbolTable(mySystemSymbols);
-        st.setSystem(this);
-        return st;
-    }
+        {
+            UnifiedSymbolTable st = new UnifiedSymbolTable(mySystemSymbols);
+            st.setSystem(this);
+            return st;
+        }
 
-        int i = 0;
         SymbolTable systemTable;
         if (imports[0].isSystemTable())
-    {
+        {
             systemTable = imports[0];
-            i++;
+
+            if (imports.length != 0)
+            {
+                SymbolTable[] others = new SymbolTable[imports.length - 1];
+                System.arraycopy(imports, 1, others, 0, imports.length - 1);
+                imports = others;
+            }
+            else
+            {
+                imports = null;
+            }
         }
         else
         {
             systemTable = mySystemSymbols;
         }
 
-        UnifiedSymbolTable st = new UnifiedSymbolTable(systemTable);
-
-        while (i < imports.length)
-    {
-            UnifiedSymbolTable symbolTable = (UnifiedSymbolTable) imports[i++];
-            st.addImportedTable(symbolTable, symbolTable.getMaxId());
-        }
-
+        UnifiedSymbolTable st = new UnifiedSymbolTable(systemTable, imports);
         st.setSystem(this); // XXX
         return st;
     }

@@ -1027,6 +1027,10 @@ int tmp;
             throw new RuntimeException("This shouldn't happen", e);
         }
     }
+
+    // TODO we probably need to lock down the symtab so it doesn't change while
+    // we're in the midst of writing it.
+
     int writeSymbolTable(SimpleByteBuffer.SimpleByteWriter out) throws IOException
     {
         final UnifiedSymbolTable symtab = (UnifiedSymbolTable) this._symbol_table;
@@ -1058,6 +1062,7 @@ int tmp;
         //while (syms.hasNext()) {
         //    UnifiedSymbolTable.Symbol s = syms.next();
 
+        // TODO this is pretty awful encapsulation breakage.
         UnifiedSymbolTable.Symbol[] syms = symtab._symbols;
         for (int ii=symtab.getImportedMaxId()+1; ii<=symtab.getMaxId(); ii++) {
             UnifiedSymbolTable.Symbol s = syms[ii];
