@@ -286,17 +286,42 @@ public interface IonWriter
      */
     public void writeFloat(double value) throws IOException;
 
+    /**
+     * writes a BigDecimal value as an IonDecimal.  Ion uses an
+     * arbitrarily long sign/value and an arbitartily long signed
+     * exponent to write the value. This preserves
+     * all of the BigDecimal digits, the number of
+     * significant digits.  However java.math.BigDecimal cannot represent
+     * negative zero, use writeDecimalNegativeZero() or
+     * writeDecimal(BigDecimal value, boolean isNegativeZero) instead
+     * if you require a negative zero.
+     * @param value BigDecimal to write
+     */
+    public void writeDecimal(BigDecimal value) throws IOException;
+
+    /**
+     * writes a special value as decimal.  Currently IonDecimal only
+     * supports the special value of negative zero value.  The 
+     * java.math.BigDecimal class does not support the value negative 
+     * zero.  This method allows us to emit this value when it
+     * is necessary.
+     */
+    public void writeDecimalSpecialValue(IonNumber.Classification classification) throws IOException;
 
     /**
      * writes a BigDecimal value as an IonDecimal.  Ion uses an
      * arbitrarily long sign/value and an arbitartily long signed
      * exponent to write the value. This preserves
      * all of the BigDecimal digits, the number of
-     * significant digits and -0.0.
+     * significant digits.  Since java.math.BigDecimal cannot represent
+     * negative zero this method allows the caller to specify that
+     * this value is a negative zero.  If isNegativeZero is true and
+     * the value is not numerically equal to zero this will
+     * throw an IllegalArgumentException.
      * @param value BigDecimal to write
+     * @param isNegativeZero boolean true if the value is zero and the special case of negative zero, false otherwise
      */
-    public void writeDecimal(BigDecimal value) throws IOException;
-
+    public void writeDecimal(BigDecimal value, IonNumber.Classification classification) throws IOException;
 
     /**
      *

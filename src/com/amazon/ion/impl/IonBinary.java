@@ -8,6 +8,7 @@ import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_1_0;
 import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
 
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonNumber;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnexpectedEofException;
@@ -291,23 +292,34 @@ public class IonBinary
         return len;
     }
 
-    public static int lenVarInt8(BigInteger bi)
+    public static int lenVarInt8(BigInteger bi, boolean force_zero_writes)
     {
-        if (bi.compareTo(BigInteger.ZERO) < 0)
-        {
-            // TODO avoid negate call? (maybe slow)
-            bi = bi.negate();
-
-            // Here's why its hard to avoid negate:
-//          assert (new BigInteger("-2").bitLength()) == 1;
-            // We need 2 bits to represent the magnitude.
-        }
-
-        int bitCount = bi.bitLength() + 1;   // One more bit to hold the sign
-
-        int byteCount = (bitCount + 7) / 8;
-        return byteCount;
-    }
+		int len = bi.bitLength();
+		int bytelen = 0;
+		switch (bi.signum()) {
+		case 0:
+			bytelen = force_zero_writes ? 1 : 0;
+			break;
+		case 1:
+			bytelen = ((len-1) / 8) + 1;
+			if (bytelen*8 == len) {
+				// we're right at the boundary, that is we need very
+				// bit to represent the value.  So we need one more byte
+				// to hold the sign (which doesn't fit in this case)
+				bytelen++;
+			}
+			break;
+		case -1:
+			bytelen = (len / 8) + 1;
+			if (bytelen*8 < len + 2) {
+				// we're close enough to a byte boundary that the 2 complement
+				// length may be a full byte shorter than the signed magnitude length
+				bytelen = lenVarInt8(bi.negate(), force_zero_writes);
+			}
+			break;
+		}
+		return bytelen;
+	}
 
 
     // TODO maybe add lenVarInt7(int) to micro-optimize, or?
@@ -414,29 +426,39 @@ public class IonBinary
         // always 8-bytes for IEEE-754 64-bit
         return _ib_FLOAT64_LEN;
     }
+    
+    public static boolean isNibbleZero(BigDecimal bd, IonNumber.Classification classification) 
+    {
+    	if (IonNumber.Classification.NEGATIVE_ZERO.equals(classification)) return false;
+    	if (bd.signum() != 0) return false;
+    	int scale = bd.scale();
+    	return (scale == 0);
+    }
 
     /**
      * @param bd must not be null.
      */
-    public static int lenIonDecimal(BigDecimal bd) {
-        int len = 0;
-        // first check for the 0d0 special case
-        if (!BigDecimal.ZERO.equals(bd)) {
-            // otherwise this is very expensive (or so I'd bet)
-            BigInteger mantissa = bd.unscaledValue();
-            int mantissaByteCount = lenVarInt8(mantissa);
+    public static int lenIonDecimal(BigDecimal bd, IonNumber.Classification classification) {
 
-            // We really need the length of the exponent (-scale) but in our
-            // representation the length is the same regardless of sign.
-            int scale = bd.scale();
-            len = lenVarInt7(scale);
+        // first check for the special cases of null
+        // and 0.0 which are encoded in the nibble
+        if (bd == null) return 0;
+        if (isNibbleZero(bd, classification)) return 0;
 
-            // Exponent is always at least one byte.
-            if (len == 0) len = 1;
+        // otherwise do this the hard way
+        BigInteger mantissa = bd.unscaledValue();
+        boolean neg_zero = IonNumber.Classification.NEGATIVE_ZERO.equals(classification);
+        int mantissaByteCount = lenVarInt8(mantissa, neg_zero); // negative zero force the zero to be written, positive zero does not
 
-            len += mantissaByteCount;
-        }
-        return len;
+        // We really need the length of the exponent (-scale) but in our
+        // representation the length is the same regardless of sign.
+        int scale = bd.scale();
+        int exponentByteCount = lenVarInt7(scale);
+
+        // Exponent is always at least one byte.
+        if (exponentByteCount == 0) exponentByteCount = 1;
+
+        return exponentByteCount + mantissaByteCount;
     }
 
 
@@ -454,7 +476,7 @@ public class IonBinary
     	int len = 0;
     	switch (di.getPrecision()) {
     	case FRACTION:
-    	    len += IonBinary.lenIonDecimal(di.getFractionalSecond());
+    	    len += IonBinary.lenIonDecimal(di.getFractionalSecond(), IonNumber.Classification.NEGATIVE_ZERO);
     	case SECOND:
     	    len++; // len of seconds < 60
     	case MINUTE:
@@ -611,10 +633,10 @@ public class IonBinary
         }
         return len + _ib_TOKEN_LEN;
     }
-    public static int lenIonDecimalWithTypeDesc(BigDecimal v) {
+    public static int lenIonDecimalWithTypeDesc(BigDecimal v, IonNumber.Classification classification) {
         int len = 0;
         if (v != null) {
-            int vlen = lenIonDecimal(v);
+            int vlen = lenIonDecimal(v, classification);
             len += vlen;
             len += lenLenFieldWithOptionalNibble(vlen);
         }
@@ -1258,9 +1280,10 @@ done:       for (;;) {
             long dBits = readVarUInt8LongValue(len);
             return Double.longBitsToDouble(dBits);
         }
-        public BigDecimal readDecimalValue(int len) throws IOException
+        public void readDecimalValue(IonDecimalImpl iondecimal, int len) throws IOException
         {
             BigDecimal bd;
+            int        signum = 1;
 
             // we only write out the '0' value as the nibble 0
             if (len == 0) {
@@ -1278,14 +1301,13 @@ done:       for (;;) {
                     byte[] bits = new byte[bitlen];
                     this.read(bits, 0, bitlen);
 
-                    int signum = 1;
                     if (bits[0] < 0)
                     {
                         // value is negative, clear the sign
                         bits[0] &= 0x7F;
                         signum = -1;
                     }
-                    value = new BigInteger(signum, bits);
+                    value = new BigInteger(1, bits);  // we create the positive because we'll convert to negative when setting the iondecimal
                 }
                 else {
                     value = BigInteger.ZERO;
@@ -1295,7 +1317,20 @@ done:       for (;;) {
                 int scale = -exponent;
                 bd = new BigDecimal(value, scale, MathContext.DECIMAL128);
             }
-            return bd;
+
+            // handle the negative zero case here as a "side effect" of negating the value in general
+            if (signum == -1) {
+            	if (bd.signum() == 0) {
+            		iondecimal.setValue(bd, IonNumber.Classification.NEGATIVE_ZERO);
+            	}
+            	else {
+            		iondecimal.setValue(bd.negate());
+            	}
+            }
+            else {
+            	iondecimal.setValue(bd);
+            }
+            return;
         }
 
         public Timestamp readTimestampValue(int len) throws IOException
@@ -1338,8 +1373,10 @@ done:       for (;;) {
 
                         remaining = end - position();
                         if (remaining > 0) {
+                        	IonDecimalImpl dec = new IonDecimalImpl(null);
                             // now we read in our actual "milliseconds since the epoch"
-                            frac = this.readDecimalValue(remaining);
+                        	this.readDecimalValue(dec, remaining);
+                            frac = dec.bigDecimalValue();
                             p = Precision.FRACTION;
                         }
                     }
@@ -2416,81 +2453,119 @@ done:       for (;;) {
                    	returnlen += this.writeVarUInt7Value(di.getZSecond(), true);
                 	if (precision == Timestamp.Precision.FRACTION) {
                 		// and, finally, any fractional component that is known
-                		returnlen += this.writeDecimalContent(di.getZFractionalSecond());
+                		returnlen += this.writeDecimalContent(di.getZFractionalSecond(), IonNumber.Classification.NEGATIVE_ZERO);
                 	}
             	}
         	}
             return returnlen;
         }
 
-
-        public int writeDecimalWithTD(BigDecimal bd) throws IOException
+        public int writeDecimalWithTD(BigDecimal bd, IonNumber.Classification classification) throws IOException
         {
             int returnlen;
+
             // we only write out the '0' value as the nibble 0
             if (bd == null) {
                 returnlen =
                     this.writeByte(IonDecimalImpl.NULL_DECIMAL_TYPEDESC);
             }
-            else if (BigDecimal.ZERO.equals(bd)) {
+            else if (isNibbleZero(bd, classification)) {
                 returnlen =
                     this.writeByte(IonDecimalImpl.ZERO_DECIMAL_TYPEDESC);
             }
             else {
                 // otherwise we to it the hard way ....
-                int len = IonBinary.lenIonDecimal(bd);
+                int len = IonBinary.lenIonDecimal(bd, classification);
 
-                // FIXME: this assumes len < 14!
-                assert len < IonConstants.lnIsVarLen;
-                returnlen = this.writeByte(
-                        IonConstants.makeTypeDescriptor(
-                            IonConstants.tidDecimal
-                          , len
-                        )
-                      );
-                int wroteDecimalLen = writeDecimalContent(bd);
+                if (len < IonConstants.lnIsVarLen) {
+                	returnlen = this.writeByte(
+                			IonConstants.makeTypeDescriptor(
+                					IonConstants.tidDecimal
+                					, len
+                			)
+                      	);
+                }
+                else {
+                	returnlen = this.writeByte(
+                			IonConstants.makeTypeDescriptor(
+                					IonConstants.tidDecimal
+                					, IonConstants.lnIsVarLen
+                			)
+                      	);
+                	this.writeVarInt7Value(len, false);
+                }
+                int wroteDecimalLen = writeDecimalContent(bd, classification);
                 assert wroteDecimalLen == len;
                 returnlen += wroteDecimalLen;
             }
             return returnlen;
         }
 
+        private static byte[] negativeZeroBitArray = new byte[] { (byte)0x80 };
+        private static byte[] positiveZeroBitArray = new byte[0];
+        
         // also used by writeDate()
-        public int writeDecimalContent(BigDecimal bd) throws IOException
+        public int writeDecimalContent(BigDecimal bd, IonNumber.Classification classification) throws IOException
         {
             int returnlen = 0;
-            // we only write out the '0' value as the nibble 0
-            if (bd != null && !BigDecimal.ZERO.equals(bd)) {
-                // otherwise we do it the hard way ....
-                BigInteger mantissa = bd.unscaledValue();
+            
+            // check for null and 0.0 which are encoded in the
+            // nibble
+            if (bd == null) return 0;
+            
+            if (isNibbleZero(bd, classification)) return 0;
+            
+            // otherwise we do it the hard way ....
+            BigInteger mantissa = bd.unscaledValue();
 
-                boolean isNegative = (mantissa.compareTo(BigInteger.ZERO) < 0);
-                if (isNegative) {
-                    mantissa = mantissa.negate();
-                }
-
-                byte[] bits  = mantissa.toByteArray();
-                int    scale = bd.scale();
-
-                // Ion stores exponent, BigDecimal uses the negation "scale"
-                int exponent = -scale;
-                returnlen += this.writeVarInt7Value(exponent, true);
-
-                // If the first bit is set, we can't use it for the sign,
-                // and we need to write an extra byte to hold it.
-                boolean needExtraByteForSign = ((bits[0] & 0x80) != 0);
-                if (needExtraByteForSign)
-                {
-                    this.write(isNegative ? 0x80 : 0x00);
-                    returnlen++;
-                }
-                else if (isNegative)
-                {
-                    bits[0] |= 0x80;
-                }
-                this.write(bits, 0, bits.length);
-                returnlen += bits.length;
+            byte[] bits;
+            boolean isNegative;
+            boolean needExtraByteForSign;
+            switch (mantissa.signum()) {
+            default:
+            	throw new IllegalStateException("mantissa signum out of range");
+            case 0:
+            	if (IonNumber.Classification.NEGATIVE_ZERO.equals(classification)) {
+            		bits = negativeZeroBitArray;
+            	}
+            	else {
+            		bits = positiveZeroBitArray;
+            	}
+            	isNegative = false;  // NOTE: we're lieing about this, since the negative zero bit array has the sign bit set already
+            	needExtraByteForSign = false;
+            	break;
+            case -1:
+            	bits = mantissa.negate().toByteArray();
+            	needExtraByteForSign = ((bits[0] & 0x80) != 0);
+            	isNegative = true;
+            	break;
+            case 1:
+            	bits = mantissa.toByteArray();
+            	needExtraByteForSign = ((bits[0] & 0x80) != 0);
+            	isNegative = false;
+            	break;
             }
+            
+
+            // Ion stores exponent, BigDecimal uses the negation "scale"
+            int exponent = -bd.scale();
+            returnlen += this.writeVarInt7Value(exponent, true);
+
+            // If the first bit is set, we can't use it for the sign,
+            // and we need to write an extra byte to hold it.
+            if (needExtraByteForSign)
+            {
+                this.write(isNegative ? 0x80 : 0x00);
+                returnlen++;
+            }
+            else if (isNegative) {
+            	// note that bits must always have at least 1 byte for negative values
+            	// since negative zero is handled specially
+            	bits[0] |= 0x80;
+            }
+            this.write(bits, 0, bits.length);
+            returnlen += bits.length;
+
             return returnlen;
         }
 

@@ -8,6 +8,7 @@ import static com.amazon.ion.impl.IonConstants.tidList;
 import static com.amazon.ion.impl.IonConstants.tidSexp;
 import static com.amazon.ion.impl.IonConstants.tidStruct;
 
+import com.amazon.ion.IonNumber;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
@@ -403,11 +404,22 @@ public final class IonTextWriter
         closeValue();
     }
 
-    public void writeDecimal(BigDecimal value)
+    public void writeDecimal(BigDecimal value, IonNumber.Classification classification)
         throws IOException
     {
+    	boolean is_negative_zero = IonNumber.Classification.NEGATIVE_ZERO.equals(classification);
+
+    	if (is_negative_zero) {
+    		if (value == null || value.signum() != 0) throw new IllegalArgumentException("the value must be zero to write a negative zero");
+    	}
+
         startValue();
         BigInteger unscaled = value.unscaledValue();
+        
+        if (is_negative_zero) {
+        	assert value.signum() == 0;
+        	_output.append('-');
+        }
 
         _output.append(unscaled.toString());
         _output.append('d');

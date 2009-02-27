@@ -202,7 +202,7 @@ public class IonTokenReader
                 return this;
             case constNegInt:
             case constPosInt:
-                if (tr.numberType == NT_HEX) {
+                if (NumberType.NT_HEX.equals(tr.numberType)) {
                     tr.intValue = Long.parseLong(s, 16);
                     // In hex case we've discarded the prefix [+-]?0x so
                     // reconstruct the sign
@@ -307,11 +307,14 @@ public class IonTokenReader
     }
 
     // easy to use number types
-    private static final int NT_POSINT  = 1;
-    private static final int NT_HEX     = 2; // pos or neg
-    private static final int NT_NEGINT  = 3;
-    private static final int NT_DECIMAL = 4;
-    private static final int NT_FLOAT   = 5;
+    static enum NumberType {
+    	NT_POSINT,
+    	NT_NEGINT,
+    	NT_HEX, // pos or neg
+    	NT_FLOAT,
+    	NT_DECIMAL,
+    	NT_DECIMAL_NEGATIVE_ZERO
+    }
 
     /**
      * Magic "character" to represent an escape sequence with an empty expansion.
@@ -372,10 +375,10 @@ public class IonTokenReader
     public Double           doubleValue;
     public Long             intValue;
 
-    public Timestamp      dateValue;
+    public Timestamp        dateValue;
     public BigDecimal       decimalValue;
-
-    public int              numberType;
+    public boolean          isNegative;
+    public NumberType       numberType;
 
     public IonTokenReader(final Reader r) {
         this.in = new IonCharacterReader( r );
@@ -416,6 +419,8 @@ public class IonTokenReader
         intValue = null;
         dateValue = null;
         decimalValue = null;
+        isNegative = false;
+        numberType = null;
         t = null;
         value.setLength(0);
     }
@@ -1262,18 +1267,21 @@ sizedloop:
             value.append((char)c);
             c = this.read();
             t = Type.constNegInt;
-            this.numberType = NT_NEGINT;
+            this.numberType = NumberType.NT_NEGINT;
+            this.isNegative = true;
             break;
         case '+':
             // we eat the plus sign, but remember we saw one
             explicitPlusSign = true;
             c = this.read();
             t = Type.constPosInt;
-            this.numberType = NT_POSINT;
+            this.isNegative = false;
+            this.numberType = NumberType.NT_POSINT;
             break;
         default:
             t = Type.constPosInt;
-            this.numberType = NT_POSINT;
+            this.numberType = NumberType.NT_POSINT;
+            this.isNegative = false;
             break;
         }
 
@@ -1290,7 +1298,7 @@ sizedloop:
             if (!isZero) {
                 throw new IonException("badly formed number encountered at " + position());
             }
-            this.numberType = NT_HEX;
+            this.numberType = NumberType.NT_HEX;
             // We don't need to append the char because we're going to wipe
             // the value anyway to accumulate just the hex digits.
             return scanHexNumber();
@@ -1298,21 +1306,21 @@ sizedloop:
         case 'd':
         case 'D':
             t = Type.constDecimal;
-            this.numberType = NT_DECIMAL;
+            this.numberType = NumberType.NT_DECIMAL;
             value.append((char)c);
             break;
         case 'e':
         case 'E':
             t = Type.constFloat;
-            this.numberType = NT_FLOAT;
+            this.numberType = NumberType.NT_FLOAT;
             value.append((char)c);
             break;
         default:
             if (!isDigit(c, 10)) {
                 checkAndUnreadNumericStopper(c);
-                if (isZero && this.numberType == NT_NEGINT) {
+                if (isZero && NumberType.NT_NEGINT.equals(this.numberType)) {
                     t = Type.constPosInt;
-                    this.numberType = NT_POSINT;
+                    this.numberType = NumberType.NT_POSINT;
                 }
                 return t;
             }
@@ -1322,7 +1330,9 @@ sizedloop:
         }
 
         // see if see can continue find leading digits
-        if (numberType == NT_POSINT || numberType == NT_NEGINT) {
+        if (NumberType.NT_NEGINT.equals(numberType)
+         || NumberType.NT_POSINT.equals(numberType)
+        ) {
             // We've now scanned at least two digits.
             // read in the remaining whole number digits
             for (;;) {
@@ -1341,7 +1351,7 @@ sizedloop:
                     throw new IonException(position() + ": Invalid leading zero on numeric");
                 }
                 t = Type.constDecimal;
-                this.numberType = NT_DECIMAL;
+                this.numberType = NumberType.NT_DECIMAL;
                 value.append((char)c);
                 break;
             case 'e':
@@ -1350,11 +1360,11 @@ sizedloop:
                     throw new IonException(position() + ": Invalid leading zero on numeric");
                 }
                 t = Type.constFloat;
-                this.numberType = NT_FLOAT;
+                this.numberType = NumberType.NT_FLOAT;
                 value.append((char)c);
                 break;
             case '-':
-                if (this.numberType == NT_POSINT && !explicitPlusSign) {
+                if (NumberType.NT_POSINT.equals(this.numberType) && !explicitPlusSign) {
                     return scanTimestamp(c);
                 }
                 // otherwise fall through to "all other" processing
@@ -1365,9 +1375,9 @@ sizedloop:
                 if (leadingZero && !isZero) {
                     throw new IonException(position() + ": Invalid leading zero on numeric");
                 }
-                if (isZero && this.numberType == NT_NEGINT) {
+                if (isZero && NumberType.NT_NEGINT.equals(this.numberType)) {
                     t = Type.constPosInt;
-                    this.numberType = NT_POSINT;
+                    this.numberType = NumberType.NT_POSINT;
                 }
                 return t;
             }
@@ -1376,7 +1386,7 @@ sizedloop:
         // now we must have just decimal or float
         // if it's decimal we ended on a DOT, so get the trailing
         // (fractional) digits
-        if (this.numberType == NT_DECIMAL) {
+        if (NumberType.NT_DECIMAL.equals(this.numberType)) {
             for (;;) {
                 c = this.read();
                 if (!isDigit(c, 10)) break;
@@ -1393,14 +1403,14 @@ sizedloop:
             case 'E':
                 // this is the only viable option now
                 t = Type.constFloat;
-                this.numberType = NT_FLOAT;
+                this.numberType = NumberType.NT_FLOAT;
                 value.append((char)c);
                 break;
             case 'd':
             case 'D':
                 // this is the only viable option now
                 assert t == Type.constDecimal;
-                assert this.numberType == NT_DECIMAL;
+                assert NumberType.NT_DECIMAL.equals(this.numberType);
                 value.append((char)c);
                 break;
             default:

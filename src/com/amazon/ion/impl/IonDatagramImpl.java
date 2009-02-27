@@ -783,7 +783,7 @@ public final class IonDatagramImpl
                     priorIsLocalSymtab = _system.valueIsLocalSymbolTable(ichild);
                 }
 
-                // PASS TWO
+                // PASS TWO - insert any needed symbol tables (if they aren't in the buffer)
                 for (int ii=0; ii<_userContents.size(); ii++)
                 {
                     IonValueImpl ichild = (IonValueImpl)_userContents.get(ii);
@@ -841,7 +841,10 @@ public final class IonDatagramImpl
                 }
             }
 
+            // now that we've fixed up all the system values we can
+            // actually update the buffer itself
             updateBuffer2(_buffer.writer(0), 0, 0);
+            
             // cas 22 apr 2008: was ...
             //updateBuffer2(_buffer.writer(BINARY_VERSION_MARKER_SIZE),
             //              BINARY_VERSION_MARKER_SIZE,
@@ -905,7 +908,7 @@ public final class IonDatagramImpl
         if (_contents != null)
         {
             int ii = 0;
-            IonValueImpl child = (IonValueImpl) _contents.get(ii);
+            IonValueImpl child;
 
             while (ii < _contents.size())
             {

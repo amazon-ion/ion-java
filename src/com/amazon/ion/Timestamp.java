@@ -393,20 +393,6 @@ public final class Timestamp
     }
 
     /**
-     *  Creates a new Timestamp whose value is set to the passed in
-     *  Calendar object. The time value is treated as accurate to
-     *  milliseconds.
-     *  @param cal the java.util.Calendar representation of the time
-     */
-    private Timestamp(Calendar cal, Integer offset)
-    {
-        // jonker 2009-02-23 Made this private due to unclear specs
-        // If the given offset differs from that in the calendar, what
-        // conversions do we do?
-        set_fields_from_calendar(cal, offset);
-    }
-
-    /**
      * Creates a Timestamp at the specified UTC point in time.
      * @param millis must not be {@code null}.
      * @param localOffset may be {@code null} to represent unknown local

@@ -2,12 +2,14 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonNumber;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import java.io.IOException;
+import java.math.BigDecimal;
 
 /**
  *  Base type for Ion writers.  This handles the writeIonEvents and default
@@ -269,6 +271,23 @@ public abstract class IonBaseWriter
             writeBool(values[ii]);
         }
         stepOut();
+    }
+    
+    public void writeDecimal(BigDecimal value) throws IOException
+    {
+    	writeDecimal(value, IonNumber.Classification.NORMAL);
+    }
+
+    public void writeDecimalSpecialValue(IonNumber.Classification classification) throws IOException
+    {
+    	switch(classification) {
+    	case NEGATIVE_ZERO:
+    		writeDecimal(BigDecimal.ZERO, classification);
+    		break;
+   		default:
+   			throw new IllegalArgumentException("classification for IonDecimal special values may only be NEGATIVE_ZERO");
+    			
+    	}
     }
 
     public void writeFloatList(float[] values)

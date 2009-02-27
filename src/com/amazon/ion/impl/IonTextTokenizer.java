@@ -87,6 +87,10 @@ static final boolean _debug = false;
     public static final int KEYWORD_LIST      = 13;
     public static final int KEYWORD_SEXP      = 14;
     public static final int KEYWORD_STRUCT    = 15;
+    public static final int KEYWORD_NAN       = 16;
+    public static final int KEYWORD_INF       = 17;
+    public static final int KEYWORD_PLUS_INF  = 18;
+    public static final int KEYWORD_MINUS_INF = 19;
 
     public static String getTokenName(int t) {
         switch (t) {
@@ -977,6 +981,55 @@ loop:   for (;;) {
 
         return IonTextTokenizer.TOKEN_SYMBOL2;
     }
+    
+    private final boolean is_inf_closing_character(int c) {
+    	switch (c) {
+        case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
+        case 'g': case 'h': case 'j': case 'i': case 'k': case 'l':
+        case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
+        case 's': case 't': case 'u': case 'v': case 'w': case 'x':
+        case 'y': case 'z':
+        case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
+        case 'G': case 'H': case 'J': case 'I': case 'K': case 'L':
+        case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R':
+        case 'S': case 'T': case 'U': case 'V': case 'W': case 'X':
+        case 'Y': case 'Z':
+        case '$': case '_':
+        case '0': case '1': case '2': case '3': case '4':
+        case '5': case '6': case '7': case '8': case '9':
+        	return false;
+    	default:
+    		return true;
+    	}
+    }
+    
+    private final boolean read_symbol_extended_peek_inf() throws IOException
+    {
+    	int c = this.read_char();
+    	if (c == 'i') {
+    		c = this.read_char();
+        	if (c == 'n') {
+        		c = this.read_char();
+            	if (c == 'f') {
+                	c = this.read_char();
+                	if (is_inf_closing_character(c)) {
+                		this.unread_char(c);
+                		return true; 
+                	}
+                	else {
+                		this.unread_char(c);
+                	}
+                	c = 'f';
+            	}
+            	this.unread_char(c);
+            	c = 'n';
+        	}
+        	this.unread_char(c);
+        	c = 'i';
+    	}
+    	this.unread_char(c);
+    	return false;
+    }
 
     private final int read_symbol_extended(int c) throws IOException
     {
@@ -987,39 +1040,48 @@ loop:   for (;;) {
         //saved_symbol_append((char)c);
         start = currentCharStart();
         setNextStart(start);
-
-loop:   for (;;) {
-            c = this.read_char();
-            switch (c) {
-            //case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
-            //case 'g': case 'h': case 'j': case 'i': case 'k': case 'l':
-            //case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
-            //case 's': case 't': case 'u': case 'v': case 'w': case 'x':
-            //case 'y': case 'z':
-            //case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
-            //case 'G': case 'H': case 'J': case 'I': case 'K': case 'L':
-            //case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R':
-            //case 'S': case 'T': case 'U': case 'V': case 'W': case 'X':
-            //case 'Y': case 'Z':
-            //case '$': case '_':
-            //case '.': case '+': case '-':
-            //case '0': case '1': case '2': case '3': case '4':
-            //case '5': case '6': case '7': case '8': case '9':
-            //case '~': case '`': case '!': case '@': case '#':
-            //case '%': case '^': case '&': case '*':
-            //case '=': case ';': case '?':
-            //case '/': case '>': case '<': case '|': case '\\':
-
-            case '.': case '+': case '-': case '/':
-            case '<': case '>': case '*': case '=': case '^': case '&': case '|':
-            case '~': case ';': case '!': case '?': case '@': case '%': case '`':
-                _saved_symbol.append((char)c);
-                //saved_symbol_append((char)c);
-                break;
-            default:
-                this.unread_char(c);
-                break loop;
-            }
+        
+        // lookahead for +inf and -inf
+        if ((c == '+' || c == '-')
+         && read_symbol_extended_peek_inf()) // this will consume the inf if it succeeds 
+        {
+        	_saved_symbol.append("inf");
+        }
+        else {
+        	// if it's not +/- inf then we'll just read the characters normally
+loop:   	for (;;) {
+	            c = this.read_char();
+	            switch (c) {
+	            //case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
+	            //case 'g': case 'h': case 'j': case 'i': case 'k': case 'l':
+	            //case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
+	            //case 's': case 't': case 'u': case 'v': case 'w': case 'x':
+	            //case 'y': case 'z':
+	            //case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
+	            //case 'G': case 'H': case 'J': case 'I': case 'K': case 'L':
+	            //case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R':
+	            //case 'S': case 'T': case 'U': case 'V': case 'W': case 'X':
+	            //case 'Y': case 'Z':
+	            //case '$': case '_':
+	            //case '.': case '+': case '-':
+	            //case '0': case '1': case '2': case '3': case '4':
+	            //case '5': case '6': case '7': case '8': case '9':
+	            //case '~': case '`': case '!': case '@': case '#':
+	            //case '%': case '^': case '&': case '*':
+	            //case '=': case ';': case '?':
+	            //case '/': case '>': case '<': case '|': case '\\':
+	
+	            case '.': case '+': case '-': case '/':
+	            case '<': case '>': case '*': case '=': case '^': case '&': case '|':
+	            case '~': case ';': case '!': case '?': case '@': case '%': case '`':
+	                _saved_symbol.append((char)c);
+	                //saved_symbol_append((char)c);
+	                break;
+	            default:
+	                this.unread_char(c);
+	                break loop;
+	            }
+	        }
         }
         end = nextCharStart();  // we don't want the character that bumped us out but we "unread" it already
         setNextEnd(end);
@@ -1892,10 +1954,13 @@ loop:   for (;;) {
             return -1;
         case 'i':
             if (len == 3) {
-                if (_r.getByte(start_word+1) == 'n'
-                 && _r.getByte(start_word+2) == 't'
-                ) {
-                    return KEYWORD_INT;
+                if (_r.getByte(start_word+1) == 'n') {
+                	if (_r.getByte(start_word+2) == 't') {
+                		return KEYWORD_INT;
+                	}
+                	else if (_r.getByte(start_word+2) == 'f') {
+                		return KEYWORD_INF;
+                	}
                 }
             }
             return -1;
@@ -1917,6 +1982,13 @@ loop:   for (;;) {
                 ) {
                     return KEYWORD_NULL;
                 }
+            }
+            else if (len == 3) {
+                if (_r.getByte(start_word+1) == 'a'
+                    && _r.getByte(start_word+2) == 'n'
+                   ) {
+                       return KEYWORD_NAN;
+                   }
             }
             return -1;
         case 's':
