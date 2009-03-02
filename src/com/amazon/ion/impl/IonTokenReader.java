@@ -120,7 +120,7 @@ public class IonTokenReader
             	Timestamp t = null;
                 s = s.trim(); // TODO why is this necessary?
                 try {
-                    t = Timestamp.parse(s);  // TODO should Timestamp just throw an IonException?
+                    t = Timestamp.valueOf(s);  // TODO should Timestamp just throw an IonException?
                 }
                 catch (IllegalArgumentException e) {
                     throw new IonException(e);

@@ -147,8 +147,8 @@ public class TimestampTest
         assertEquals(expectedText, actual.toString());
         assertEquals(expectedText, actual.timestampValue().toString());
 
-        Timestamp ts1 = Timestamp.parse(expectedText);
-        Timestamp ts2 = Timestamp.parse(ionText);
+        Timestamp ts1 = Timestamp.valueOf(expectedText);
+        Timestamp ts2 = Timestamp.valueOf(ionText);
 
         assertEquals(ts1, ts2);
         assertEquals(ts1, actual.timestampValue());

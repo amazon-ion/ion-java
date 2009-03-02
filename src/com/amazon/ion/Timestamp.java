@@ -448,7 +448,7 @@ public final class Timestamp
      * @param image CharSequence
      * @throws IllegalArgumentException if the string is not a valid timestamp image
      */
-    public static Timestamp parse(CharSequence image) {
+    public static Timestamp valueOf(CharSequence image) {
         final String NULL_TIMESTAMP_IMAGE = "null.timestamp";
         final int    LEN_OF_NULL_IMAGE    = 13;
         final int    END_OF_DATE          = 10;
