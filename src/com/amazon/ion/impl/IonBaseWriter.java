@@ -272,21 +272,21 @@ public abstract class IonBaseWriter
         }
         stepOut();
     }
-    
+
     public void writeDecimal(BigDecimal value) throws IOException
     {
     	writeDecimal(value, IonNumber.Classification.NORMAL);
     }
 
-    public void writeDecimalSpecialValue(IonNumber.Classification classification) throws IOException
+    public void writeDecimal(IonNumber.Classification classification)
+        throws IOException
     {
     	switch(classification) {
     	case NEGATIVE_ZERO:
-    		writeDecimal(BigDecimal.ZERO, classification);
-    		break;
-   		default:
-   			throw new IllegalArgumentException("classification for IonDecimal special values may only be NEGATIVE_ZERO");
-    			
+    	    writeDecimal(BigDecimal.ZERO, classification);
+    	    break;
+    	default:
+    	    throw new IllegalArgumentException("classification for IonDecimal special values may only be NEGATIVE_ZERO");
     	}
     }
 

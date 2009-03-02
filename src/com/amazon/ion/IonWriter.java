@@ -301,12 +301,13 @@ public interface IonWriter
 
     /**
      * writes a special value as decimal.  Currently IonDecimal only
-     * supports the special value of negative zero value.  The 
-     * java.math.BigDecimal class does not support the value negative 
+     * supports the special value of negative zero value.  The
+     * java.math.BigDecimal class does not support the value negative
      * zero.  This method allows us to emit this value when it
      * is necessary.
      */
-    public void writeDecimalSpecialValue(IonNumber.Classification classification) throws IOException;
+    public void writeDecimal(IonNumber.Classification classification)
+        throws IOException;
 
     /**
      * writes a BigDecimal value as an IonDecimal.  Ion uses an
@@ -319,9 +320,13 @@ public interface IonWriter
      * the value is not numerically equal to zero this will
      * throw an IllegalArgumentException.
      * @param value BigDecimal to write
-     * @param isNegativeZero boolean true if the value is zero and the special case of negative zero, false otherwise
+     * @param classification the kind of special value to write.
+     * Currently only {@link IonNumber.Classification#NEGATIVE_ZERO}
+     * is supported.
      */
-    public void writeDecimal(BigDecimal value, IonNumber.Classification classification) throws IOException;
+    public void writeDecimal(BigDecimal value,
+                             IonNumber.Classification classification)
+        throws IOException;
 
     /**
      *

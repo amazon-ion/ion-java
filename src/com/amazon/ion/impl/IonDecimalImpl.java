@@ -196,7 +196,7 @@ public final class IonDecimalImpl
      * Gets the number classification of this value. IonDecimal
      * values may only be NORMAL or NEGATIVE_ZERO.
      */
-    public IonNumber.Classification classification()
+    public IonNumber.Classification getClassification()
     {
     	return this._classification;
     }
