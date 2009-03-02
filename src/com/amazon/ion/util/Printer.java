@@ -2,6 +2,8 @@
 
 package com.amazon.ion.util;
 
+import static com.amazon.ion.IonNumber.Classification.NEGATIVE_ZERO;
+
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonClob;
@@ -630,6 +632,15 @@ public class Printer
             {
                 BigDecimal decimal = value.bigDecimalValue();
                 BigInteger unscaled = decimal.unscaledValue();
+
+                // for the various forms of negative zero we have to
+                // write the sign ourselves, since neither BigInteger
+                // nor BigDecimal recognize negative zero, but Ion does.
+                if (decimal.signum() == 0
+                    && value.getClassification() == NEGATIVE_ZERO)
+                {
+                	myOut.append('-');
+                }
 
                 myOut.append(unscaled.toString());
                 myOut.append(myOptions.decimalAsFloat ? 'e' : 'd');

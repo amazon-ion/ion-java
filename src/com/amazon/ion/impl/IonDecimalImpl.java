@@ -6,6 +6,7 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.IonDecimal;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonNumber;
 import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ValueVisitor;
@@ -27,8 +28,23 @@ public final class IonDecimalImpl
     static final int ZERO_DECIMAL_TYPEDESC =
         IonConstants.makeTypeDescriptor(IonConstants.tidDecimal,
                                         IonConstants.lnNumericZero);
+    
+    public static boolean isNegativeZero(float value)
+    {
+    	if (value != 0) return false;
+    	if ((Float.floatToRawIntBits(value) & 0x80000000) == 0) return false; // test the sign bit
+    	return true;
+    }
 
-    private BigDecimal _decimal_value;
+    public static boolean isNegativeZero(double value)
+    {
+    	if (value != 0) return false;
+    	if ((Double.doubleToLongBits(value) & 0x8000000000000000L) == 0) return false;
+    	return true;
+    }
+
+    private IonNumber.Classification _classification;
+    private BigDecimal 				 _decimal_value;
 
     /**
      * Constructs a <code>null.decimal</code> element.
@@ -37,6 +53,7 @@ public final class IonDecimalImpl
     {
         super(system, NULL_DECIMAL_TYPEDESC);
         _hasNativeValue = true; // Since this is null
+        _classification = Classification.NORMAL;
     }
 
     public IonDecimalImpl(IonSystemImpl system, BigDecimal value)
@@ -44,6 +61,7 @@ public final class IonDecimalImpl
         super(system, NULL_DECIMAL_TYPEDESC);
         _decimal_value = value;
         _hasNativeValue = true;
+        _classification = Classification.NORMAL;
         assert isDirty();
     }
 
@@ -53,6 +71,7 @@ public final class IonDecimalImpl
     public IonDecimalImpl(IonSystemImpl system, int typeDesc)
     {
         super(system, typeDesc);
+        _classification = Classification.NORMAL;
         assert pos_getType() == IonConstants.tidDecimal;
     }
 
@@ -71,11 +90,10 @@ public final class IonDecimalImpl
 
         makeReady();
         clone.copyAnnotationsFrom(this);
-        clone.setValue(this._decimal_value);
+        clone.setValue(this._decimal_value,  this._classification);
 
         return clone;
     }
-
 
 
     public IonType getType()
@@ -89,7 +107,15 @@ public final class IonDecimalImpl
     {
         makeReady();
         if (_decimal_value == null) throw new NullValueException();
-        return _decimal_value.floatValue();
+        float f;
+        if (Classification.NEGATIVE_ZERO.equals(_classification)) {
+        	assert _decimal_value.signum() == 0;
+        	f = (float)-0.0;
+        }
+        else {
+        	 f = _decimal_value.floatValue();
+        }
+        return f;
     }
 
     public double doubleValue()
@@ -97,7 +123,15 @@ public final class IonDecimalImpl
     {
         makeReady();
         if (_decimal_value == null) throw new NullValueException();
-        return _decimal_value.doubleValue();
+        double d;
+        if (Classification.NEGATIVE_ZERO.equals(_classification)) {
+        	assert _decimal_value.signum() == 0;
+        	d = -0.0;
+        }
+        else {
+        	 d = _decimal_value.doubleValue();
+        }
+        return d;
     }
 
     @Deprecated
@@ -118,23 +152,55 @@ public final class IonDecimalImpl
     public void setValue(float value)
     {
         // base setValue will check for the lock
-        setValue(new BigDecimal(value));
+    	Classification c = isNegativeZero(value) ? Classification.NEGATIVE_ZERO : Classification.NORMAL;
+        setValue(new BigDecimal(value),  c);
     }
 
     public void setValue(double value)
     {
         // base setValue will check for the lock
-        setValue(new BigDecimal(value));
+    	Classification c = isNegativeZero(value) ? Classification.NEGATIVE_ZERO : Classification.NORMAL;
+        setValue(new BigDecimal(value), c);
     }
-
+    
     public void setValue(BigDecimal value)
     {
+        // base setValue will check for the lock
+    	setValue(value, Classification.NORMAL);
+    }
+    
+    public void setValueSpecial(IonNumber.Classification valueClassification)
+    {
+    	setValue(BigDecimal.ZERO, valueClassification);
+    }
+    public void setValue(BigDecimal value, IonNumber.Classification valueClassification)
+    {
         checkForLock();
+        switch (valueClassification)
+        {
+        case NORMAL:
+        	break;
+        case NEGATIVE_ZERO:
+        	if (value.signum() != 0) throw new IllegalArgumentException("to be a negative zero the value must be zero");
+        	break;
+        default:
+        	throw new IllegalArgumentException("IonDecimal values may only be NORMAL or NEGATIVE_ZERO");
+        }
         _decimal_value = value;
+        _classification = valueClassification;
         _hasNativeValue = true;
         setDirty();
     }
-
+    
+    /**
+     * Gets the number classification of this value. IonDecimal
+     * values may only be NORMAL or NEGATIVE_ZERO.
+     */
+    public IonNumber.Classification getClassification()
+    {
+    	return this._classification;
+    }
+    
     @Override
     public synchronized boolean isNullValue()
     {
@@ -146,10 +212,8 @@ public final class IonDecimalImpl
     protected int getNativeValueLength()
     {
         assert _hasNativeValue == true;
-        if (_decimal_value == null) return 0;
-        return IonBinary.lenIonDecimal(_decimal_value);
+        return IonBinary.lenIonDecimal(_decimal_value, _classification);
     }
-
 
     @Override
     protected int computeLowNibble(int valuelen)
@@ -160,15 +224,12 @@ public final class IonDecimalImpl
         if (_decimal_value == null) {
             ln = IonConstants.lnIsNullAtom;
         }
-        else if (_decimal_value.equals(BigDecimal.ZERO)) {
-            ln = IonConstants.lnNumericZero;
-        }
         else {
             ln = getNativeValueLength();
             if (ln > IonConstants.lnIsVarLen) {
-                // and we get == for free, that is when len is 14
-                // then it will fill in the VarLen anyway, but for
-                // greater ... we have to be explicit
+                // we get ln==VarLen for free, that is when len is 14 then 
+            	// it will fill in the VarLen anyway, but for a length that 
+            	// is greater ... we have to be explicit about VarLen
                 ln = IonConstants.lnIsVarLen;
             }
         }
@@ -195,6 +256,7 @@ public final class IonDecimalImpl
             throw new IonException("invalid type desc encountered for value");
         }
 
+        _classification = IonNumber.Classification.NORMAL;
         int ln = this.pos_getLowNibble();
         switch ((0xf & ln)) {
         case IonConstants.lnIsNullAtom:
@@ -207,7 +269,11 @@ public final class IonDecimalImpl
             ln = reader.readVarUInt7IntValue();
             // fall through to default:
         default:
-            _decimal_value = reader.readDecimalValue(ln);
+            reader.readDecimalValue(this,ln);
+        	// readDecimalValue calls back into setValue with calls setDirty()
+        	// but materializing doesn't dirty the value - but no friend classes
+        	// and no struct's - so we have this hack instead :(
+        	super.setClean(); 
             break;
         }
 
@@ -220,7 +286,7 @@ public final class IonDecimalImpl
         assert valueLen == this.getNakedValueLength();
         assert valueLen > 0;
 
-        int wlen = writer.writeDecimalContent(_decimal_value);
+        int wlen = writer.writeDecimalContent(_decimal_value, _classification);
         assert wlen == valueLen;
 
         return;

@@ -1721,6 +1721,12 @@ public final class IonTextReader
             else if (keyword == IonTextTokenizer.KEYWORD_FALSE) {
                 parser.makeValue(IonType.BOOL, IonTextTokenizer.TOKEN_SYMBOL1);
             }
+            else if (keyword == IonTextTokenizer.KEYWORD_INF) {
+            	parser.makeValue(IonType.FLOAT, IonTextTokenizer.TOKEN_SYMBOL1); 
+            }
+            else if (keyword == IonTextTokenizer.KEYWORD_NAN) {
+            	parser.makeValue(IonType.FLOAT, IonTextTokenizer.TOKEN_SYMBOL1);
+            }
             else if (keyword == IonTextTokenizer.KEYWORD_NULL) {
                 parser._scanner.consumeToken();
                 return State_read_null;
@@ -1747,7 +1753,18 @@ public final class IonTextReader
         }
         @Override
         State transition_method(IonTextReader parser) {
-            parser.makeValue(IonType.SYMBOL, IonTextTokenizer.TOKEN_SYMBOL3);
+        	// +inf and -inf are extended identifiers (SYMBOL3's)
+        	String s = parser._scanner.getValueAsString();
+        	IonType value_type = IonType.SYMBOL;
+        	if (s.length() == 4) {
+        		if ("+inf".equals(s)) {
+        			value_type = IonType.FLOAT;
+        		}
+        		else if ("-inf".equals(s)) {
+        			value_type = IonType.FLOAT;
+        		}
+        	}
+        	parser.makeValue(value_type, IonTextTokenizer.TOKEN_SYMBOL3);
             return parser.pop_parser_state();
         }
     }

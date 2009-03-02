@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonNumber;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
@@ -601,7 +602,9 @@ loop:   for (;;) {
         case constDecimal:
             {
                 BigDecimal bd = this._in.decimalValue;
-                this._out.writer().writeDecimalWithTD(bd);
+                boolean negative_zero = (bd != null && bd.signum() == 0 && this._in.isNegative);
+                IonNumber.Classification c = negative_zero ? IonNumber.Classification.NEGATIVE_ZERO : IonNumber.Classification.NORMAL;
+                this._out.writer().writeDecimalWithTD(bd, c);
             }
             break;
         case constTime:

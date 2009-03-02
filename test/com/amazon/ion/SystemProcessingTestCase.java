@@ -507,4 +507,32 @@ public abstract class SystemProcessingTestCase
         assertEquals(ION_1_0, st.getIonVersionId());
         checkEof();
     }
+
+    // TODO test injected symtabs's symtab
+    public void XXXtestSymtabOnInjectedSymtab()
+        throws Exception
+    {
+        String text = "local";
+
+        prepare(text);
+        startSystemIteration();
+
+        nextValue();
+        checkSymbol(ION_1_0, SystemSymbolTable.ION_1_0_SID);
+        SymbolTable st = currentSymtab();
+        assertTrue(st.isSystemTable());
+        assertEquals(ION_1_0, st.getSystemId());
+
+        nextValue();
+        checkType(IonType.STRUCT);
+        assertSame(st, currentSymtab());
+
+        nextValue();
+        checkSymbol("local", ION_1_0_MAX_ID + 1);
+        SymbolTable local = currentSymtab();
+        assertTrue(local.isLocalTable());
+        assertSame(st, local.getSystemSymbolTable());
+
+        checkEof();
+    }
 }

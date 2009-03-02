@@ -7,6 +7,7 @@ import static com.amazon.ion.impl.IonConstants.tidSexp;
 import static com.amazon.ion.impl.IonConstants.tidStruct;
 
 import com.amazon.ion.IonBinaryWriter;
+import com.amazon.ion.IonNumber;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
@@ -381,15 +382,22 @@ public final class IonBinaryWriterImpl
         len = _writer.writeFloatValue(value);
         patch(1 + len);
     }
-    public void writeDecimal(BigDecimal value) throws IOException
+    
+    public void writeDecimal(BigDecimal value, IonNumber.Classification classification) throws IOException
     {
+    	if (IonNumber.Classification.NEGATIVE_ZERO.equals(classification)) {
+    		if (value == null || value.signum() != 0) {
+	    		throw new IllegalArgumentException("the value must be zero to write a negative zero");
+    		}
+    	}
+
         if (value == null) {
             writeNull(IonType.DECIMAL);
             return;
         }
 
         int patch_len = 1;
-        int len = IonBinary.lenIonDecimal(value);
+        int len = IonBinary.lenIonDecimal(value, classification);
         int ln = len;
         if (len >= IonConstants.lnIsVarLen) {
             ln = IonConstants.lnIsVarLen;
@@ -402,7 +410,7 @@ public final class IonBinaryWriterImpl
         if (len >= IonConstants.lnIsVarLen) {
             _writer.writeVarUInt7Value(len, true);
         }
-        patch_len += _writer.writeDecimalContent(value);
+        patch_len += _writer.writeDecimalContent(value, classification);
         patch(patch_len);
     }
 
@@ -1027,6 +1035,10 @@ int tmp;
             throw new RuntimeException("This shouldn't happen", e);
         }
     }
+
+    // TODO we probably need to lock down the symtab so it doesn't change while
+    // we're in the midst of writing it.
+
     int writeSymbolTable(SimpleByteBuffer.SimpleByteWriter out) throws IOException
     {
         final UnifiedSymbolTable symtab = (UnifiedSymbolTable) this._symbol_table;
@@ -1058,6 +1070,7 @@ int tmp;
         //while (syms.hasNext()) {
         //    UnifiedSymbolTable.Symbol s = syms.next();
 
+        // TODO this is pretty awful encapsulation breakage.
         UnifiedSymbolTable.Symbol[] syms = symtab._symbols;
         for (int ii=symtab.getImportedMaxId()+1; ii<=symtab.getMaxId(); ii++) {
             UnifiedSymbolTable.Symbol s = syms[ii];

@@ -12,6 +12,7 @@ import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonDecimal;
 import com.amazon.ion.IonFloat;
+import com.amazon.ion.IonNumber;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
@@ -280,11 +281,11 @@ public final class IonTreeWriter
         append(v);
     }
 
-    public void writeDecimal(BigDecimal value)
+    public void writeDecimal(BigDecimal value, IonNumber.Classification classification)
         throws IOException
     {
         IonDecimal v = _sys.newNullDecimal();
-        v.setValue(value);
+        v.setValue(value, classification);
         append(v);
     }
 
