@@ -44,7 +44,7 @@ public class GoodIonTests
                 // Check the encoding of text to binary.
                 treeReader = system().newReader(datagram);
 
-                byte[] encoded = datagram.toBytes();
+                byte[] encoded = datagram.getBytes();
                 IonReader binaryReader = system().newReader(encoded);
 
                 ReaderCompare.compare(treeReader, binaryReader);
@@ -85,10 +85,10 @@ public class GoodIonTests
     {
         return new String[]
         {
-            "annotationQuotedFalse.ion",
-            "annotationQuotedNull.ion",
-            "annotationQuotedTrue.ion",
-            "floatSpecials.ion",
+            //"annotationQuotedFalse.ion",
+            //"annotationQuotedNull.ion",
+            //"annotationQuotedTrue.ion",
+            //"floatSpecials.ion",
         };
     }
 }
