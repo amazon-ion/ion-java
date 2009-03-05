@@ -2361,6 +2361,8 @@ public final class IonTextReader
             case IonTextTokenizer.KEYWORD_TRUE:
             case IonTextTokenizer.KEYWORD_FALSE:
             case IonTextTokenizer.KEYWORD_NULL:
+            case IonTextTokenizer.KEYWORD_INF:
+            case IonTextTokenizer.KEYWORD_NAN:
                 parser.error();
             default:
                 break;

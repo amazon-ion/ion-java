@@ -50,15 +50,15 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
     {
         return new String[]
         {
-            "annotationQuotedFalse.ion",
-            "annotationQuotedNan.ion",
-            "annotationQuotedNull.ion",
-            "annotationQuotedTrue.ion",
-            "fieldNameQuotedFalse.ion",
-            "fieldNameQuotedNan.ion",
-            "fieldNameQuotedNull.ion",
-            "fieldNameQuotedTrue.ion",
-            "floatSpecials.ion",
+            // "annotationQuotedFalse.ion",
+        	// "annotationQuotedNan.ion",
+            // "annotationQuotedNull.ion",
+            // "annotationQuotedTrue.ion",
+            // "fieldNameQuotedFalse.ion",
+            // "fieldNameQuotedNan.ion",
+            // "fieldNameQuotedNull.ion",
+            // "fieldNameQuotedTrue.ion",
+            // "floatSpecials.ion",
         };
     }
 
@@ -169,7 +169,7 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
 
         private byte[] makeBinary(IonDatagram datagram)
         {
-            return datagram.toBytes();
+            return datagram.getBytes();
         }
 
         private IonDatagram makeTree(byte[] buffer)
@@ -440,7 +440,7 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
             roundTripBufferResults pass2bin = roundTripBuffer("P2: binary",pass1.binary);
             roundTripBufferResults pass2text = roundTripBuffer("P3: utf8", pass1.utf8_buf);
             roundTripBufferResults pass2pretty = roundTripBuffer("P3: utf8", pass1.utf8_pretty);
-            if (pass2bin == pass2text) {
+            if (pass2bin == pass2text && pass2pretty == pass2pretty) {
                 // mostly to force these to be used (pass2*)
                 throw new RuntimeException("boy this is odd");
             }
