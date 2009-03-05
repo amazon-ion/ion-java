@@ -109,7 +109,7 @@ public class TimestampTest
         Timestamp ts = new Timestamp(expectedYear, expectedMonth, expectedDay);
         checkFields(expectedYear, expectedMonth, expectedDay, 0, 0, 0, null,
                     UNKNOWN_OFFSET, ts);
-        assertEquals(Precision.DATE, ts.getPrecision());
+        assertEquals(Precision.DAY, ts.getPrecision());
         assertEquals(expectedText, ts.toString());
 
         checkTime(expectedYear, expectedMonth, expectedDay,

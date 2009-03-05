@@ -377,15 +377,19 @@ static final boolean _debug = false;
         if (_token_lookahead_current == _token_lookahead_size) _token_lookahead_current = 0;
     }
     final int queueCount() {
+    	int count;
         if (_token_lookahead_current == _token_lookahead_next_available) {
-            return 0;
+            count = 0;
         }
         else if (_token_lookahead_current < _token_lookahead_next_available) {
-            return _token_lookahead_next_available - _token_lookahead_current;
+        	count = _token_lookahead_next_available - _token_lookahead_current;
         }
-        // when next has wrapped and current hasn't adding size restores the
-        // "natural" order (so to speak)
-        return _token_lookahead_next_available + _token_lookahead_size - _token_lookahead_current;
+        else {
+        	// when next has wrapped and current hasn't adding size restores the
+        	// "natural" order (so to speak)
+        	count = _token_lookahead_next_available + _token_lookahead_size - _token_lookahead_current;
+        }
+        return count;
     }
     final int queuePosition(int lookahead) {
         if (lookahead >= queueCount()) return IonTextTokenizer.TOKEN_EOF;
@@ -468,7 +472,10 @@ static final boolean _debug = false;
         }
     }
     public final int lob_lookahead() {
-        assert queueCount() == 0;
+    	boolean queue_is_empty = (queueCount() == 0);
+    	if (!queue_is_empty) {
+    		assert queueCount() == 0;
+    	}
 
         int c;
         try {
@@ -1034,6 +1041,8 @@ loop:   for (;;) {
     private final int read_symbol_extended(int c) throws IOException
     {
         int start, end;
+        int token_type = IonTextTokenizer.TOKEN_SYMBOL3;
+        
         _saved_symbol.setLength(0);
         _saved_symbol.append((char)c);
         //_saved_symbol_len = 0;
@@ -1046,6 +1055,7 @@ loop:   for (;;) {
          && read_symbol_extended_peek_inf()) // this will consume the inf if it succeeds 
         {
         	_saved_symbol.append("inf");
+        	token_type = IonTextTokenizer.TOKEN_FLOAT;
         }
         else {
         	// if it's not +/- inf then we'll just read the characters normally
@@ -1087,7 +1097,7 @@ loop:   	for (;;) {
         setNextEnd(end);
         _has_marked_symbol = true;
         _has_saved_symbol = true;
-        return IonTextTokenizer.TOKEN_SYMBOL3;
+        return token_type;
     }
     private final int read_escaped_char() throws IOException
     {
@@ -2046,6 +2056,173 @@ loop:   for (;;) {
                  && _r.getByte(start_word+6) == 'a'
                  && _r.getByte(start_word+7) == 'm'
                  && _r.getByte(start_word+8) == 'p'
+                ) {
+                    return KEYWORD_TIMESTAMP;
+                }
+            }
+            return -1;
+        default:
+            return -1;
+        }
+    }
+    
+    // TODO - add the interface CharSequence to IonTextBufferedStream and delegate across these two routines
+    static public int keyword(CharSequence word, int start_word, int end_word)
+    {
+        int c = word.charAt(start_word);
+        int len = end_word - start_word; // +1 but we build that into the constants below
+        switch (c) {
+        case 'b':
+            if (len == 4) {
+                if (word.charAt(start_word+1) == 'o'
+                 && word.charAt(start_word+2) == 'o'
+                 && word.charAt(start_word+3) == 'l'
+                ) {
+                    return KEYWORD_BOOL;
+                }
+                if (word.charAt(start_word+1) == 'l'
+                 && word.charAt(start_word+2) == 'o'
+                 && word.charAt(start_word+3) == 'b'
+                ) {
+                    return KEYWORD_BLOB;
+                }
+            }
+            return -1;
+        case 'c':
+            if (len == 4) {
+                if (word.charAt(start_word+1) == 'l'
+                 && word.charAt(start_word+2) == 'o'
+                 && word.charAt(start_word+3) == 'b'
+                ) {
+                    return KEYWORD_CLOB;
+                }
+            }
+            return -1;
+        case 'd':
+            if (len == 7) {
+                if (word.charAt(start_word+1) == 'e'
+                 && word.charAt(start_word+2) == 'c'
+                 && word.charAt(start_word+3) == 'i'
+                 && word.charAt(start_word+4) == 'm'
+                 && word.charAt(start_word+5) == 'a'
+                 && word.charAt(start_word+6) == 'l'
+                ) {
+                    return KEYWORD_DECIMAL;
+                }
+            }
+            return -1;
+        case 'f':
+            if (len == 5) {
+                if (word.charAt(start_word+1) == 'a'
+                 && word.charAt(start_word+2) == 'l'
+                 && word.charAt(start_word+3) == 's'
+                 && word.charAt(start_word+4) == 'e'
+                ) {
+                    return KEYWORD_FALSE;
+                }
+                if (word.charAt(start_word+1) == 'l'
+                 && word.charAt(start_word+2) == 'o'
+                 && word.charAt(start_word+3) == 'a'
+                 && word.charAt(start_word+4) == 't'
+                ) {
+                    return KEYWORD_FLOAT;
+                }
+            }
+            return -1;
+        case 'i':
+            if (len == 3) {
+                if (word.charAt(start_word+1) == 'n') {
+                	if (word.charAt(start_word+2) == 't') {
+                		return KEYWORD_INT;
+                	}
+                	else if (word.charAt(start_word+2) == 'f') {
+                		return KEYWORD_INF;
+                	}
+                }
+            }
+            return -1;
+        case 'l':
+            if (len == 4) {
+                if (word.charAt(start_word+1) == 'i'
+                 && word.charAt(start_word+2) == 's'
+                 && word.charAt(start_word+3) == 't'
+                ) {
+                    return KEYWORD_LIST;
+                }
+            }
+            return -1;
+        case 'n':
+            if (len == 4) {
+                if (word.charAt(start_word+1) == 'u'
+                 && word.charAt(start_word+2) == 'l'
+                 && word.charAt(start_word+3) == 'l'
+                ) {
+                    return KEYWORD_NULL;
+                }
+            }
+            else if (len == 3) {
+                if (word.charAt(start_word+1) == 'a'
+                    && word.charAt(start_word+2) == 'n'
+                   ) {
+                       return KEYWORD_NAN;
+                   }
+            }
+            return -1;
+        case 's':
+            if (len == 4) {
+                if (word.charAt(start_word+1) == 'e'
+                 && word.charAt(start_word+2) == 'x'
+                 && word.charAt(start_word+3) == 'p'
+                ) {
+                    return KEYWORD_SEXP;
+                }
+            }
+            else if (len == 6) {
+                if (word.charAt(start_word+1) == 't'
+                 && word.charAt(start_word+2) == 'r'
+                ) {
+                    if (word.charAt(start_word+3) == 'i'
+                     && word.charAt(start_word+4) == 'n'
+                     && word.charAt(start_word+5) == 'g'
+                    ) {
+                        return KEYWORD_STRING;
+                    }
+                    if (word.charAt(start_word+3) == 'u'
+                     && word.charAt(start_word+4) == 'c'
+                     && word.charAt(start_word+5) == 't'
+                    ) {
+                        return KEYWORD_STRUCT;
+                    }
+                    return -1;
+                }
+                if (word.charAt(start_word+1) == 'y'
+                 && word.charAt(start_word+2) == 'm'
+                 && word.charAt(start_word+3) == 'b'
+                 && word.charAt(start_word+4) == 'o'
+                 && word.charAt(start_word+5) == 'l'
+                ) {
+                    return KEYWORD_SYMBOL;
+                }
+            }
+            return -1;
+        case 't':
+            if (len == 4) {
+                if (word.charAt(start_word+1) == 'r'
+                 && word.charAt(start_word+2) == 'u'
+                 && word.charAt(start_word+3) == 'e'
+                ) {
+                    return KEYWORD_TRUE;
+                }
+            }
+            else if (len == 9) {
+                if (word.charAt(start_word+1) == 'i'
+                 && word.charAt(start_word+2) == 'm'
+                 && word.charAt(start_word+3) == 'e'
+                 && word.charAt(start_word+4) == 's'
+                 && word.charAt(start_word+5) == 't'
+                 && word.charAt(start_word+6) == 'a'
+                 && word.charAt(start_word+7) == 'm'
+                 && word.charAt(start_word+8) == 'p'
                 ) {
                     return KEYWORD_TIMESTAMP;
                 }

@@ -783,7 +783,23 @@ public final class IonTextReader
     {
         switch (_value_type) {
             case FLOAT:
-                double d = Double.parseDouble(_scanner.getValueAsString(_value_start, _value_end));
+            	String image = _scanner.getValueAsString(_value_start, _value_end);
+            	// check for special values
+            	switch (image.charAt(0)) {
+            	case 'n': //  nan ??
+            		if ("nan".equals(image)) return Double.NaN;
+            		break;
+            	case '+': // +inf ?
+            		if ("+inf".equals(image)) return Double.POSITIVE_INFINITY;
+            		break;
+            	case 'i': //  inf ?
+            		if ("inf".equals(image)) return Double.POSITIVE_INFINITY;
+            		break;
+            	case '-': // -inf ??
+            		if ("-inf".equals(image))  return Double.NEGATIVE_INFINITY;
+            		break;
+            	}
+                double d = Double.parseDouble(image);
                 return d;
             case DECIMAL:
                 BigDecimal bd = bigDecimalValue();
@@ -854,6 +870,8 @@ public final class IonTextReader
         else {
             value = _scanner.getValueAsString(_value_start, _value_end);
         }
+        
+        // for symbols we need to populate the symbol table and get a sid assigned
         if (_value_type.equals(IonType.SYMBOL)) {
             assert ! this._is_null;
 
@@ -1259,20 +1277,27 @@ public final class IonTextReader
 
     void readAnnotations()
     {
-        while ((  _scanner.lookahead(0) == IonTextTokenizer.TOKEN_SYMBOL1
-               || _scanner.lookahead(0) == IonTextTokenizer.TOKEN_SYMBOL2
+    	int token = _scanner.lookahead(0);
+        while ((  token == IonTextTokenizer.TOKEN_SYMBOL1
+               || token == IonTextTokenizer.TOKEN_SYMBOL2
                )
               && _scanner.lookahead(1) == IonTextTokenizer.TOKEN_DOUBLE_COLON
-            ) {
+        ) {
             int kw = _scanner.keyword(_scanner.getStart(), _scanner.getEnd());
             switch (kw) {
             case IonTextTokenizer.KEYWORD_FALSE:
             case IonTextTokenizer.KEYWORD_TRUE:
             case IonTextTokenizer.KEYWORD_NULL:
-                String reason =
-                    "Cannot use unquoted keyword " +
-                    _scanner.getValueAsString() + " as annotation";
-                error(reason);
+            case IonTextTokenizer.KEYWORD_INF:
+            case IonTextTokenizer.KEYWORD_NAN:
+            	if (token != IonTextTokenizer.TOKEN_SYMBOL2) {
+            		// keywords are ok if they're quoted
+                    String reason =
+                        "Cannot use unquoted keyword " +
+                        _scanner.getValueAsString() + " as annotation";
+                    error(reason);
+            	}
+                break;
             default:
                 break;
             }
@@ -1280,6 +1305,7 @@ public final class IonTextReader
 
             consumeToken(IonTextTokenizer.TOKEN_DOUBLE_COLON);
             appendAnnotation(name);
+            token = _scanner.lookahead(0);
         }
     }
 
@@ -1715,24 +1741,21 @@ public final class IonTextReader
             int start = parser._scanner.getStart();
             int end = parser._scanner.getEnd();
             int keyword = parser._scanner.keyword(start, end);
-            if (keyword == IonTextTokenizer.KEYWORD_TRUE) {
+            switch (keyword) {
+            case IonTextTokenizer.KEYWORD_TRUE:
+            case IonTextTokenizer.KEYWORD_FALSE:
                 parser.makeValue(IonType.BOOL, IonTextTokenizer.TOKEN_SYMBOL1);
-            }
-            else if (keyword == IonTextTokenizer.KEYWORD_FALSE) {
-                parser.makeValue(IonType.BOOL, IonTextTokenizer.TOKEN_SYMBOL1);
-            }
-            else if (keyword == IonTextTokenizer.KEYWORD_INF) {
+                break;
+            case IonTextTokenizer.KEYWORD_INF:
+            case IonTextTokenizer.KEYWORD_NAN:
             	parser.makeValue(IonType.FLOAT, IonTextTokenizer.TOKEN_SYMBOL1); 
-            }
-            else if (keyword == IonTextTokenizer.KEYWORD_NAN) {
-            	parser.makeValue(IonType.FLOAT, IonTextTokenizer.TOKEN_SYMBOL1);
-            }
-            else if (keyword == IonTextTokenizer.KEYWORD_NULL) {
+            	break;
+            case IonTextTokenizer.KEYWORD_NULL:
                 parser._scanner.consumeToken();
                 return State_read_null;
-            }
-            else {
+            default:
                 parser.makeValue(IonType.SYMBOL, IonTextTokenizer.TOKEN_SYMBOL1);
+            	break;
             }
             return parser.pop_parser_state();
         }
@@ -1743,27 +1766,47 @@ public final class IonTextReader
         }
         @Override
         State transition_method(IonTextReader parser) {
+        	String s = parser._scanner.getValueAsString();
+            if (s.length() < 1) {
+            	throw new IonException("symbols must not be empty");
+            }
             parser.makeValue(IonType.SYMBOL, IonTextTokenizer.TOKEN_SYMBOL2);
             return parser.pop_parser_state();
         }
     }
-    static class Lookahead_read_plain_value_identifier_extended extends Matches {
-        Lookahead_read_plain_value_identifier_extended() {
+
+    static class Lookahead_read_plain_value_sexp_identifier_extended extends Matches {
+    	Lookahead_read_plain_value_sexp_identifier_extended() {
             match_token = IonTextTokenizer.TOKEN_SYMBOL3;
         }
         @Override
         State transition_method(IonTextReader parser) {
         	// +inf and -inf are extended identifiers (SYMBOL3's)
         	String s = parser._scanner.getValueAsString();
-        	IonType value_type = IonType.SYMBOL;
-        	if (s.length() == 4) {
+        	IonType value_type = null;
+        	switch (s.length()) {
+        	case 0:
+        		throw new IonException("symbols must not be empty");
+        	case 4:
         		if ("+inf".equals(s)) {
         			value_type = IonType.FLOAT;
         		}
         		else if ("-inf".equals(s)) {
         			value_type = IonType.FLOAT;
         		}
+        		break;
+        	case 3:
+        		if ("nan".equals(s)) {
+        			value_type = IonType.FLOAT;
+        		}
+        		else if ("inf".equals(s)) {
+        			value_type = IonType.FLOAT;
+        		}
+        		break;
+    		default:
+    			break;
         	}
+        	if (value_type == null) parser.error(); 
         	parser.makeValue(value_type, IonTextTokenizer.TOKEN_SYMBOL3);
             return parser.pop_parser_state();
         }
@@ -1798,6 +1841,7 @@ public final class IonTextReader
         }
         @Override
         State transition_method(IonTextReader parser) {
+        	
             parser.makeValue(IonType.SYMBOL, IonTextTokenizer.TOKEN_COMMA);
             return parser.pop_parser_state();
         }
@@ -1932,9 +1976,9 @@ public final class IonTextReader
         new Lookahead_read_plain_value_timestamp(),
         new Lookahead_read_plain_value_identifier(),
         new Lookahead_read_plain_value_identifier_literal(),
-        new Lookahead_read_plain_value_identifier_extended(),
+        new Lookahead_read_plain_value_sexp_identifier_extended(),
         new Lookahead_read_plain_value_dot_as_identifier_extended(),
-        // new Lookahead_read_plain_value_comma_as_identifier_extended(),
+        // we don't allow comma's here: new Lookahead_read_plain_value_comma_as_identifier_extended(),
         new Lookahead_read_plain_value_string_literal(),
         new Lookahead_read_plain_value_string_literal2(),
         new Lookahead_read_plain_value_string_literal_extended(),
@@ -2064,7 +2108,8 @@ public final class IonTextReader
         State transition_method(IonTextReader parser) {
             parser.clearAnnotationList();
             parser.clearFieldname();
-            if ( parser._scanner.lookahead(1) == IonTextTokenizer.TOKEN_DOUBLE_COLON )
+            assert parser._scanner.lookahead(0) == IonTextTokenizer.TOKEN_SYMBOL1;
+            if (parser._scanner.lookahead(1) == IonTextTokenizer.TOKEN_DOUBLE_COLON )
             {
                 parser.readAnnotations();
             }
@@ -2082,6 +2127,7 @@ public final class IonTextReader
         State transition_method(IonTextReader parser) {
             parser.clearAnnotationList();
             parser.clearFieldname();
+            assert parser._scanner.lookahead(0) == IonTextTokenizer.TOKEN_SYMBOL2;
             if ( parser._scanner.lookahead(1) == IonTextTokenizer.TOKEN_DOUBLE_COLON ) {
                 parser.readAnnotations();
             }

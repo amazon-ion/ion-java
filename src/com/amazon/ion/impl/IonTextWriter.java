@@ -627,6 +627,7 @@ public final class IonTextWriter
                 return escapeSymbolHelper(value, ii);
             }
         }
+        if (IonTextTokenizer.keyword(value, 0, value.length()) != -1) return escapeSymbolHelper(value, value.length() - 1); 
         return value;
     }
     CharSequence escapeSymbolHelper(String value, int firstNonAscii) {
