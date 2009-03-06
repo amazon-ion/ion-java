@@ -162,7 +162,7 @@ public abstract class IonTextBufferedStream extends InputStream
         {
         	int c; 
     		if (_pos >= _end) return -1;
-    		c = _buffer[_pos++];
+    		c = (((int)_buffer[_pos++]) & 0xFF);  // trim sign extension bits
             return c; 
         }
 

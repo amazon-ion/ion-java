@@ -47,18 +47,18 @@ static final boolean _debug = false;
     public static final int TOKEN_TIMESTAMP =   5;
     public static final int TOKEN_BLOB      =   6;
 
-    public static final int TOKEN_SYMBOL1 =  TOKEN_BLOB + 1; //  7 java identifier
-    public static final int TOKEN_SYMBOL2 =  TOKEN_BLOB + 2; //  8 single quoted string
-    public static final int TOKEN_SYMBOL3 =  TOKEN_BLOB + 3; //  9 operator sequence for sexp
-    public static final int TOKEN_STRING1 =  TOKEN_BLOB + 4; // 10 string in double quotes (") some > 255
-    public static final int TOKEN_STRING2 =  TOKEN_BLOB + 5; // 11 part of a string in triple quotes (''') some > 255
-    public static final int TOKEN_STRING3 =  TOKEN_BLOB + 6; // 12 string in double quotes (") all <= 255
-    public static final int TOKEN_STRING4 =  TOKEN_BLOB + 7; // 13 part of a string in triple quotes (''') all chars <= 255
+    public static final int TOKEN_SYMBOL_BASIC      =  TOKEN_BLOB + 1; //  7 java identifier
+    public static final int TOKEN_SYMBOL_QUOTED     =  TOKEN_BLOB + 2; //  8 single quoted string
+    public static final int TOKEN_SYMBOL_OPERATOR   =  TOKEN_BLOB + 3; //  9 operator sequence for sexp
+    public static final int TOKEN_STRING_UTF8       =  TOKEN_BLOB + 4; // 10 string in double quotes (") some > 255
+    public static final int TOKEN_STRING_UTF8_LONG  =  TOKEN_BLOB + 5; // 11 part of a string in triple quotes (''') some > 255
+    public static final int TOKEN_STRING_CLOB       =  TOKEN_BLOB + 6; // 12 string in double quotes (") all <= 255, no "\u0000" or "\U00000000"
+    public static final int TOKEN_STRING_CLOB_LONG  =  TOKEN_BLOB + 7; // 13 part of a string in triple quotes (''') all chars <= 255, no "\u0000" or "\U00000000"
 
-    public static final int TOKEN_DOT          = TOKEN_STRING4 + 1;   // 14
-    public static final int TOKEN_COMMA        = TOKEN_STRING4 + 2;   // 15
-    public static final int TOKEN_COLON        = TOKEN_STRING4 + 3;   // 16
-    public static final int TOKEN_DOUBLE_COLON = TOKEN_STRING4 + 4;   // 17
+    public static final int TOKEN_DOT          = TOKEN_STRING_CLOB_LONG + 1;   // 14
+    public static final int TOKEN_COMMA        = TOKEN_STRING_CLOB_LONG + 2;   // 15
+    public static final int TOKEN_COLON        = TOKEN_STRING_CLOB_LONG + 3;   // 16
+    public static final int TOKEN_DOUBLE_COLON = TOKEN_STRING_CLOB_LONG + 4;   // 17
 
     public static final int TOKEN_OPEN_PAREN   = TOKEN_DOUBLE_COLON + 1;   // 18
     public static final int TOKEN_CLOSE_PAREN  = TOKEN_DOUBLE_COLON + 2;   // 19
@@ -94,35 +94,35 @@ static final boolean _debug = false;
 
     public static String getTokenName(int t) {
         switch (t) {
-        case TOKEN_ERROR:     return "TOKEN_ERROR";
-        case TOKEN_EOF:       return "TOKEN_EOF";
+        case TOKEN_ERROR:              return "TOKEN_ERROR";
+        case TOKEN_EOF:                return "TOKEN_EOF";
 
-        case TOKEN_INT:       return "TOKEN_INT";
-        case TOKEN_HEX:       return "TOKEN_HEX";
-        case TOKEN_DECIMAL:   return "TOKEN_DECIMAL";
-        case TOKEN_FLOAT:     return "TOKEN_FLOAT";
-        case TOKEN_TIMESTAMP: return "TOKEN_TIMESTAMP";
-        case TOKEN_BLOB:      return "TOKEN_BLOB";
+        case TOKEN_INT:                return "TOKEN_INT";
+        case TOKEN_HEX:                return "TOKEN_HEX";
+        case TOKEN_DECIMAL:            return "TOKEN_DECIMAL";
+        case TOKEN_FLOAT:              return "TOKEN_FLOAT";
+        case TOKEN_TIMESTAMP:          return "TOKEN_TIMESTAMP";
+        case TOKEN_BLOB:               return "TOKEN_BLOB";
 
-        case TOKEN_SYMBOL1: return "TOKEN_SYMBOL1";
-        case TOKEN_SYMBOL2: return "TOKEN_SYMBOL2";
-        case TOKEN_SYMBOL3: return "TOKEN_SYMBOL3";
-        case TOKEN_STRING1: return "TOKEN_STRING1";
-        case TOKEN_STRING2: return "TOKEN_STRING2";
-        case TOKEN_STRING3: return "TOKEN_STRING3";
-        case TOKEN_STRING4: return "TOKEN_STRING4";
+        case TOKEN_SYMBOL_BASIC:       return "TOKEN_SYMBOL_BASIC";
+        case TOKEN_SYMBOL_QUOTED:      return "TOKEN_SYMBOL_QUOTED";
+        case TOKEN_SYMBOL_OPERATOR:    return "TOKEN_SYMBOL_OPERATOR";
+        case TOKEN_STRING_UTF8:        return "TOKEN_STRING_UTF8";
+        case TOKEN_STRING_UTF8_LONG:   return "TOKEN_STRING_UTF8_LONG";
+        case TOKEN_STRING_CLOB:        return "TOKEN_STRING_CLOB";
+        case TOKEN_STRING_CLOB_LONG:   return "TOKEN_STRING_CLOB_LONG";
 
-        case TOKEN_DOT:          return "TOKEN_DOT";
-        case TOKEN_COMMA:          return "TOKEN_COMMA";
-        case TOKEN_COLON:          return "TOKEN_COLON";
-        case TOKEN_DOUBLE_COLON: return "TOKEN_DOUBLE_COLON";
+        case TOKEN_DOT:                return "TOKEN_DOT";
+        case TOKEN_COMMA:              return "TOKEN_COMMA";
+        case TOKEN_COLON:              return "TOKEN_COLON";
+        case TOKEN_DOUBLE_COLON:       return "TOKEN_DOUBLE_COLON";
 
-        case TOKEN_OPEN_PAREN:   return "TOKEN_OPEN_PAREN";
-        case TOKEN_CLOSE_PAREN:  return "TOKEN_CLOSE_PAREN";
-        case TOKEN_OPEN_BRACE:   return "TOKEN_OPEN_BRACE";
-        case TOKEN_CLOSE_BRACE:  return "TOKEN_CLOSE_BRACE";
-        case TOKEN_OPEN_SQUARE:  return "TOKEN_OPEN_SQUARE";
-        case TOKEN_CLOSE_SQUARE: return "TOKEN_CLOSE_SQUARE";
+        case TOKEN_OPEN_PAREN:         return "TOKEN_OPEN_PAREN";
+        case TOKEN_CLOSE_PAREN:        return "TOKEN_CLOSE_PAREN";
+        case TOKEN_OPEN_BRACE:         return "TOKEN_OPEN_BRACE";
+        case TOKEN_CLOSE_BRACE:        return "TOKEN_CLOSE_BRACE";
+        case TOKEN_OPEN_SQUARE:        return "TOKEN_OPEN_SQUARE";
+        case TOKEN_CLOSE_SQUARE:       return "TOKEN_CLOSE_SQUARE";
 
         case TOKEN_OPEN_DOUBLE_BRACE:  return "TOKEN_OPEN_DOUBLE_BRACE";
         case TOKEN_CLOSE_DOUBLE_BRACE: return "TOKEN_CLOSE_DOUBLE_BRACE";
@@ -949,7 +949,7 @@ loop:   for (;;) {
         setNextEnd(end);
         _has_marked_symbol = true;
         _has_saved_symbol = true;
-        return IonTextTokenizer.TOKEN_SYMBOL1;
+        return IonTextTokenizer.TOKEN_SYMBOL_BASIC;
     }
     private final int read_quoted_symbol(int c) throws IOException
     {
@@ -962,7 +962,7 @@ loop:   for (;;) {
                 return read_quoted_long_string();
             }
             this.unread_char(c);
-            return IonTextTokenizer.TOKEN_SYMBOL2;
+            return IonTextTokenizer.TOKEN_SYMBOL_QUOTED;
         }
 
         // the position should always be correct here
@@ -980,13 +980,14 @@ loop:   for (;;) {
                     _has_marked_symbol = true;
                     break loop;
                 case '\\':
-                    c = read_escaped_char();
+                	c = this.read_char();
+                    c = read_escaped_char(c);
                     break;
             }
             c = this.read_char();
         }
 
-        return IonTextTokenizer.TOKEN_SYMBOL2;
+        return IonTextTokenizer.TOKEN_SYMBOL_QUOTED;
     }
     
     private final boolean is_inf_closing_character(int c) {
@@ -1041,7 +1042,7 @@ loop:   for (;;) {
     private final int read_symbol_extended(int c) throws IOException
     {
         int start, end;
-        int token_type = IonTextTokenizer.TOKEN_SYMBOL3;
+        int token_type = IonTextTokenizer.TOKEN_SYMBOL_OPERATOR;
         
         _saved_symbol.setLength(0);
         _saved_symbol.append((char)c);
@@ -1099,9 +1100,8 @@ loop:   	for (;;) {
         _has_saved_symbol = true;
         return token_type;
     }
-    private final int read_escaped_char() throws IOException
+    private final int read_escaped_char(int c) throws IOException
     {
-        int c = this.read_char();
         switch (c) {
         case '0':
             //    \u0000  \0  alert NUL
@@ -1213,7 +1213,11 @@ loop:   	for (;;) {
             case -1:   unexpected_eof();
             case '\n': bad_token();
             case '\\':
-                c = read_escaped_char();
+            	c = this.read_char();
+            	if (c == 'u' || c == 'U') {
+            		has_big_char = true;
+            	}
+                c = read_escaped_char(c);
                 break;
             }
             if (c > 255) has_big_char = true;
@@ -1222,7 +1226,7 @@ loop:   	for (;;) {
         setNextEnd(end);
         _has_marked_symbol = true;
 
-        return has_big_char ? IonTextTokenizer.TOKEN_STRING1 : IonTextTokenizer.TOKEN_STRING3;
+        return has_big_char ? IonTextTokenizer.TOKEN_STRING_UTF8 : IonTextTokenizer.TOKEN_STRING_CLOB;
     }
     private final int read_quoted_long_string( ) throws IOException
     {
@@ -1253,14 +1257,18 @@ loop:   for (;;) {
                 this.unread_char(c);
                 break;
             case '\\':
-                c = read_escaped_char();
+            	c = this.read_char();
+            	if (c == 'u' || c == 'U') {
+            		has_big_char = true;
+            	}
+                c = read_escaped_char(c);
                 break;
             }
             if (c > 255) has_big_char = true;
         }
         _has_marked_symbol = true;
 
-        return has_big_char ? IonTextTokenizer.TOKEN_STRING2 : IonTextTokenizer.TOKEN_STRING4;
+        return has_big_char ? IonTextTokenizer.TOKEN_STRING_UTF8_LONG : IonTextTokenizer.TOKEN_STRING_CLOB_LONG;
     }
 
     private final int read_number(int c) throws IOException
@@ -1566,7 +1574,11 @@ loop:   for (;;) {
         for (;;) {
             c = read_char();
             if (c < 0
-                || (c < isHexDigit.length && !isHexDigit[c])) {
+            || 
+                c >= isHexDigit.length 
+            || 
+                !isHexDigit[c]
+            ) {
                 break;
             }
         }
@@ -1712,9 +1724,6 @@ loop:   for (;;) {
     void continueValueAsString(int start, int end) {
         int lookahead = IonTextTokenizer.EMPTY_PEEKAHEAD;
         _r.setPosition(start);
-        //if (_saved_symbol_len + end - start > _saved_symbol_buf.length) {
-        //    saved_symbol_grow(_saved_symbol_len + end - start);
-        //}
         try {
             while (lookahead != IonTextTokenizer.EMPTY_PEEKAHEAD || _r.position() < end) {
                 int c;
@@ -1740,7 +1749,8 @@ loop:   for (;;) {
                     c = '\n';
                 }
                 else if (c == '\\') {
-                    c = read_escaped_char_in_string();
+                	c = _r.read();
+                    c = read_escaped_char_in_string(c);
                     if (c == EMPTY_ESCAPE_SEQUENCE) continue;
                     if (IonConstants.isSurrogate(c)) {
                         bad_character();
@@ -1762,9 +1772,8 @@ loop:   for (;;) {
         }
     }
 
-    private final int read_escaped_char_in_string() throws IOException
+    private final int read_escaped_char_in_string(int c) throws IOException
     {
-        int c = _r.read();
         switch (c) {
         case '0':
             //    \u0000  \0  alert NUL

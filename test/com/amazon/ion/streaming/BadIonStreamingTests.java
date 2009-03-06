@@ -129,12 +129,12 @@ public class BadIonStreamingTests extends DirectoryTestSuite {
         return new String[]
         {
             // "annotationNan.ion",
-            "clob_U0000003F.ion",
-            "clob_U00000080.ion",
-            "clob_u0020.ion",
-            "clob_u00FF.ion",
+            // "clob_U0000003F.ion",
+            // "clob_U00000080.ion",
+            // "clob_u0020.ion",
+            // "clob_u00FF.ion",
             // "fieldNameNan.ion",
-            "hexWithTerminatingUtf8.ion",
+            // "hexWithTerminatingUtf8.ion",
             // "symbolEmptyWithCRLF.ion",
             // "symbolEmptyWithLF.ion",
             // "symbolEmptyWithLFLF.ion",

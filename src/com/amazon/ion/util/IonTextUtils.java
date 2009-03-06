@@ -485,7 +485,9 @@ public class IonTextUtils
     {
         String s = Integer.toHexString(c);
         out.append("\\x");
-        out.append(ZERO_PADDING[2-s.length()]);
+        if (s.length() < 2) {
+        	out.append(ZERO_PADDING[2-s.length()]);
+        }
         out.append(s);
     }
 

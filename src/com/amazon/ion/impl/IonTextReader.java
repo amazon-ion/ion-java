@@ -1278,8 +1278,8 @@ public final class IonTextReader
     void readAnnotations()
     {
     	int token = _scanner.lookahead(0);
-        while ((  token == IonTextTokenizer.TOKEN_SYMBOL1
-               || token == IonTextTokenizer.TOKEN_SYMBOL2
+        while ((  token == IonTextTokenizer.TOKEN_SYMBOL_BASIC
+               || token == IonTextTokenizer.TOKEN_SYMBOL_QUOTED
                )
               && _scanner.lookahead(1) == IonTextTokenizer.TOKEN_DOUBLE_COLON
         ) {
@@ -1290,7 +1290,7 @@ public final class IonTextReader
             case IonTextTokenizer.KEYWORD_NULL:
             case IonTextTokenizer.KEYWORD_INF:
             case IonTextTokenizer.KEYWORD_NAN:
-            	if (token != IonTextTokenizer.TOKEN_SYMBOL2) {
+            	if (token != IonTextTokenizer.TOKEN_SYMBOL_QUOTED) {
             		// keywords are ok if they're quoted
                     String reason =
                         "Cannot use unquoted keyword " +
@@ -1369,13 +1369,13 @@ public final class IonTextReader
         //public static final int TOKEN_STRING3 = string in double quotes (") all <= 255
         //public static final int TOKEN_STRING4 = part of a string in triple quotes (''') all chars <= 255
         switch (token) {
-        case IonTextTokenizer.TOKEN_STRING1:
-            assert (_value_token == IonTextTokenizer.TOKEN_STRING1 || _value_token == IonTextTokenizer.TOKEN_STRING3);
-            _value_token = IonTextTokenizer.TOKEN_STRING1;
+        case IonTextTokenizer.TOKEN_STRING_UTF8:
+            assert (_value_token == IonTextTokenizer.TOKEN_STRING_UTF8 || _value_token == IonTextTokenizer.TOKEN_STRING_CLOB);
+            _value_token = IonTextTokenizer.TOKEN_STRING_UTF8;
             break;
-        case IonTextTokenizer.TOKEN_STRING2:
-            assert (_value_token == IonTextTokenizer.TOKEN_STRING2 || _value_token == IonTextTokenizer.TOKEN_STRING4);
-            _value_token = IonTextTokenizer.TOKEN_STRING2;
+        case IonTextTokenizer.TOKEN_STRING_UTF8_LONG:
+            assert (_value_token == IonTextTokenizer.TOKEN_STRING_UTF8_LONG || _value_token == IonTextTokenizer.TOKEN_STRING_CLOB_LONG);
+            _value_token = IonTextTokenizer.TOKEN_STRING_UTF8_LONG;
             break;
         default:
             break;
@@ -1539,7 +1539,7 @@ public final class IonTextReader
 //    }
     static class Lookahead_read_annotated_value_identifier extends Matches {
         Lookahead_read_annotated_value_identifier() {
-            match_token = IonTextTokenizer.TOKEN_SYMBOL1;
+            match_token = IonTextTokenizer.TOKEN_SYMBOL_BASIC;
         }
         @Override
         State transition_method(IonTextReader parser) {
@@ -1552,7 +1552,7 @@ public final class IonTextReader
     }
     static class Lookahead_read_annotated_value_identifier_literal extends Matches {
         Lookahead_read_annotated_value_identifier_literal () {
-            match_token = IonTextTokenizer.TOKEN_SYMBOL2;
+            match_token = IonTextTokenizer.TOKEN_SYMBOL_QUOTED;
         }
         @Override
         State transition_method(IonTextReader parser) {
@@ -1734,7 +1734,7 @@ public final class IonTextReader
     }
     static class Lookahead_read_plain_value_identifier extends Matches {
         Lookahead_read_plain_value_identifier() {
-            match_token = IonTextTokenizer.TOKEN_SYMBOL1;
+            match_token = IonTextTokenizer.TOKEN_SYMBOL_BASIC;
         }
         @Override
         State transition_method(IonTextReader parser) {
@@ -1744,17 +1744,17 @@ public final class IonTextReader
             switch (keyword) {
             case IonTextTokenizer.KEYWORD_TRUE:
             case IonTextTokenizer.KEYWORD_FALSE:
-                parser.makeValue(IonType.BOOL, IonTextTokenizer.TOKEN_SYMBOL1);
+                parser.makeValue(IonType.BOOL, IonTextTokenizer.TOKEN_SYMBOL_BASIC);
                 break;
             case IonTextTokenizer.KEYWORD_INF:
             case IonTextTokenizer.KEYWORD_NAN:
-            	parser.makeValue(IonType.FLOAT, IonTextTokenizer.TOKEN_SYMBOL1); 
+            	parser.makeValue(IonType.FLOAT, IonTextTokenizer.TOKEN_SYMBOL_BASIC); 
             	break;
             case IonTextTokenizer.KEYWORD_NULL:
                 parser._scanner.consumeToken();
                 return State_read_null;
             default:
-                parser.makeValue(IonType.SYMBOL, IonTextTokenizer.TOKEN_SYMBOL1);
+                parser.makeValue(IonType.SYMBOL, IonTextTokenizer.TOKEN_SYMBOL_BASIC);
             	break;
             }
             return parser.pop_parser_state();
@@ -1762,7 +1762,7 @@ public final class IonTextReader
     }
     static class Lookahead_read_plain_value_identifier_literal extends Matches {
         Lookahead_read_plain_value_identifier_literal() {
-            match_token = IonTextTokenizer.TOKEN_SYMBOL2;
+            match_token = IonTextTokenizer.TOKEN_SYMBOL_QUOTED;
         }
         @Override
         State transition_method(IonTextReader parser) {
@@ -1770,14 +1770,14 @@ public final class IonTextReader
             if (s.length() < 1) {
             	throw new IonException("symbols must not be empty");
             }
-            parser.makeValue(IonType.SYMBOL, IonTextTokenizer.TOKEN_SYMBOL2);
+            parser.makeValue(IonType.SYMBOL, IonTextTokenizer.TOKEN_SYMBOL_QUOTED);
             return parser.pop_parser_state();
         }
     }
 
     static class Lookahead_read_plain_value_sexp_identifier_extended extends Matches {
     	Lookahead_read_plain_value_sexp_identifier_extended() {
-            match_token = IonTextTokenizer.TOKEN_SYMBOL3;
+            match_token = IonTextTokenizer.TOKEN_SYMBOL_OPERATOR;
         }
         @Override
         State transition_method(IonTextReader parser) {
@@ -1807,7 +1807,7 @@ public final class IonTextReader
     			break;
         	}
         	if (value_type == null) parser.error(); 
-        	parser.makeValue(value_type, IonTextTokenizer.TOKEN_SYMBOL3);
+        	parser.makeValue(value_type, IonTextTokenizer.TOKEN_SYMBOL_OPERATOR);
             return parser.pop_parser_state();
         }
     }
@@ -1823,14 +1823,14 @@ public final class IonTextReader
                 start = parser._scanner.getStart();
                 parser.consumeToken(IonTextTokenizer.TOKEN_DOT);
                 int token = parser._scanner.lookahead(0);
-                if (token != IonTextTokenizer.TOKEN_SYMBOL3) {
+                if (token != IonTextTokenizer.TOKEN_SYMBOL_OPERATOR) {
                     parser.error();
                 }
                 parser._scanner.setNextStart(start); // back up and grab the '.' that started all this
                 parser.makeValue(IonType.SYMBOL, IonTextTokenizer.TOKEN_DOT);
             }
             else {
-                parser.makeValue(IonType.SYMBOL, IonTextTokenizer.TOKEN_SYMBOL3);
+                parser.makeValue(IonType.SYMBOL, IonTextTokenizer.TOKEN_SYMBOL_OPERATOR);
             }
             return parser.pop_parser_state();
         }
@@ -1848,22 +1848,22 @@ public final class IonTextReader
     }
     static class Lookahead_read_plain_value_string_literal extends Matches {
         Lookahead_read_plain_value_string_literal() {
-            match_token = IonTextTokenizer.TOKEN_STRING1;
+            match_token = IonTextTokenizer.TOKEN_STRING_UTF8;
         }
         @Override
         State transition_method(IonTextReader parser) {
-            parser.makeValue(IonType.STRING, IonTextTokenizer.TOKEN_STRING1);
+            parser.makeValue(IonType.STRING, IonTextTokenizer.TOKEN_STRING_UTF8);
             return parser.pop_parser_state();
         }
     }
     static class Lookahead_read_plain_value_string_literal2 extends Lookahead_read_plain_value_string_literal {
         Lookahead_read_plain_value_string_literal2() {
-            match_token = IonTextTokenizer.TOKEN_STRING3;
+            match_token = IonTextTokenizer.TOKEN_STRING_CLOB;
         }
     }
     static class Lookahead_read_plain_value_string_literal_extended extends Matches {
         Lookahead_read_plain_value_string_literal_extended() {
-            match_token = IonTextTokenizer.TOKEN_STRING2;
+            match_token = IonTextTokenizer.TOKEN_STRING_UTF8_LONG;
         }
         @Override
         State transition_method(IonTextReader parser) {
@@ -1871,8 +1871,8 @@ public final class IonTextReader
             int token;
             for (;;) {
                 token = parser._scanner.lookahead(0);
-                if (token != IonTextTokenizer.TOKEN_STRING2
-                 && token != IonTextTokenizer.TOKEN_STRING4
+                if (token != IonTextTokenizer.TOKEN_STRING_UTF8_LONG
+                 && token != IonTextTokenizer.TOKEN_STRING_CLOB_LONG
                 ) {
                     break;
                 }
@@ -1884,7 +1884,7 @@ public final class IonTextReader
     }
     static class Lookahead_read_plain_value_string_literal_extended2 extends Lookahead_read_plain_value_string_literal_extended {
         Lookahead_read_plain_value_string_literal_extended2() {
-            match_token = IonTextTokenizer.TOKEN_STRING4;
+            match_token = IonTextTokenizer.TOKEN_STRING_CLOB_LONG;
         }
     }
     static class Lookahead_read_plain_value_lob extends Matches {
@@ -1896,23 +1896,21 @@ public final class IonTextReader
             parser.consumeToken(IonTextTokenizer.TOKEN_OPEN_DOUBLE_BRACE);
             int lookahead_char = parser._scanner.lob_lookahead();
 
-            // if (parser._scanner.lookahead(0) == IonTextTokenizer.TOKEN_STRING1 ) { // or parser.peek() == '"'
             if (lookahead_char == '"') {
-                if (parser._scanner.lookahead(0) != IonTextTokenizer.TOKEN_STRING3) {
+                if (parser._scanner.lookahead(0) != IonTextTokenizer.TOKEN_STRING_CLOB) {
                     parser.error();
                 }
-                parser.makeValue(IonType.CLOB, IonTextTokenizer.TOKEN_STRING3);
+                parser.makeValue(IonType.CLOB, IonTextTokenizer.TOKEN_STRING_CLOB);
             }
-            //else if (parser._scanner.lookahead(0) == IonTextTokenizer.TOKEN_STRING4 ) { // or parser.peek() == '\''
             else if (lookahead_char == '\'') {
                 int token = parser._scanner.lookahead(0);
-                if (token != IonTextTokenizer.TOKEN_STRING4) {
+                if (token != IonTextTokenizer.TOKEN_STRING_CLOB_LONG) {
                     parser.error();
                 }
                 parser.openValue(IonType.CLOB, token);
                 for (;;) {
                     token = parser._scanner.lookahead(0);
-                    if (token != IonTextTokenizer.TOKEN_STRING4) break;
+                    if (token != IonTextTokenizer.TOKEN_STRING_CLOB_LONG) break;
                     parser.appendValue(token);
                 }
                 parser.closeValue(IonType.CLOB);
@@ -2028,7 +2026,7 @@ public final class IonTextReader
         @Override
         State transition_method(IonTextReader parser) {
             parser.consumeToken(IonTextTokenizer.TOKEN_DOT);
-            if (parser._scanner.lookahead(0) != IonTextTokenizer.TOKEN_SYMBOL1) {
+            if (parser._scanner.lookahead(0) != IonTextTokenizer.TOKEN_SYMBOL_BASIC) {
                 parser.error();
             }
             int start = parser._scanner.getStart();
@@ -2052,7 +2050,7 @@ public final class IonTextReader
                 default:
                     parser.error();
             }
-            parser.consumeToken(IonTextTokenizer.TOKEN_SYMBOL1);
+            parser.consumeToken(IonTextTokenizer.TOKEN_SYMBOL_BASIC);
             return parser.pop_parser_state();
         }
     }
@@ -2102,13 +2100,13 @@ public final class IonTextReader
 //    }
     static class Lookahead_read_sexp_value_identifier extends Matches {
         Lookahead_read_sexp_value_identifier() {
-            match_token = IonTextTokenizer.TOKEN_SYMBOL1;
+            match_token = IonTextTokenizer.TOKEN_SYMBOL_BASIC;
         }
         @Override
         State transition_method(IonTextReader parser) {
             parser.clearAnnotationList();
             parser.clearFieldname();
-            assert parser._scanner.lookahead(0) == IonTextTokenizer.TOKEN_SYMBOL1;
+            assert parser._scanner.lookahead(0) == IonTextTokenizer.TOKEN_SYMBOL_BASIC;
             if (parser._scanner.lookahead(1) == IonTextTokenizer.TOKEN_DOUBLE_COLON )
             {
                 parser.readAnnotations();
@@ -2121,13 +2119,13 @@ public final class IonTextReader
     }
     static class Lookahead_read_sexp_value_identifier_literal extends Matches {
         Lookahead_read_sexp_value_identifier_literal() {
-            match_token = IonTextTokenizer.TOKEN_SYMBOL2;
+            match_token = IonTextTokenizer.TOKEN_SYMBOL_QUOTED;
         }
         @Override
         State transition_method(IonTextReader parser) {
             parser.clearAnnotationList();
             parser.clearFieldname();
-            assert parser._scanner.lookahead(0) == IonTextTokenizer.TOKEN_SYMBOL2;
+            assert parser._scanner.lookahead(0) == IonTextTokenizer.TOKEN_SYMBOL_QUOTED;
             if ( parser._scanner.lookahead(1) == IonTextTokenizer.TOKEN_DOUBLE_COLON ) {
                 parser.readAnnotations();
             }
@@ -2140,13 +2138,13 @@ public final class IonTextReader
     }
     static class Lookahead_read_sexp_value_extended_identifier extends Matches {
         Lookahead_read_sexp_value_extended_identifier() {
-            match_token = IonTextTokenizer.TOKEN_SYMBOL3;
+            match_token = IonTextTokenizer.TOKEN_SYMBOL_OPERATOR;
         }
         @Override
         State transition_method(IonTextReader parser) {
             parser.clearAnnotationList();
             parser.clearFieldname();
-            parser.makeValue(IonType.SYMBOL, IonTextTokenizer.TOKEN_SYMBOL3);
+            parser.makeValue(IonType.SYMBOL, IonTextTokenizer.TOKEN_SYMBOL_OPERATOR);
             return State_read_sexp_value;
         }
     }
@@ -2236,7 +2234,7 @@ public final class IonTextReader
     }
     static class Lookahead_read_list_value_identifier extends Matches {
         Lookahead_read_list_value_identifier() {
-            match_token = IonTextTokenizer.TOKEN_SYMBOL1;
+            match_token = IonTextTokenizer.TOKEN_SYMBOL_BASIC;
         }
         @Override
         State transition_method(IonTextReader parser){
@@ -2252,7 +2250,7 @@ public final class IonTextReader
     }
     static class Lookahead_read_list_value_identifier_literal extends Matches {
         Lookahead_read_list_value_identifier_literal() {
-            match_token = IonTextTokenizer.TOKEN_SYMBOL2;
+            match_token = IonTextTokenizer.TOKEN_SYMBOL_QUOTED;
         }
         @Override
         State transition_method(IonTextReader parser){
@@ -2350,7 +2348,7 @@ public final class IonTextReader
 //    }
     static class Lookahead_read_struct_value_identifier extends Matches {
         Lookahead_read_struct_value_identifier() {
-            match_token = IonTextTokenizer.TOKEN_SYMBOL1;
+            match_token = IonTextTokenizer.TOKEN_SYMBOL_BASIC;
         }
         @Override
         State transition_method(IonTextReader parser) {
@@ -2377,7 +2375,7 @@ public final class IonTextReader
     }
     static class Lookahead_read_struct_value_identifier_literal extends Matches {
         Lookahead_read_struct_value_identifier_literal() {
-            match_token = IonTextTokenizer.TOKEN_SYMBOL2;
+            match_token = IonTextTokenizer.TOKEN_SYMBOL_QUOTED;
         }
         @Override
         State transition_method(IonTextReader parser) {
@@ -2391,17 +2389,17 @@ public final class IonTextReader
     }
     static class Lookahead_read_struct_value_string_literal extends Lookahead_read_struct_value_identifier_literal {
         Lookahead_read_struct_value_string_literal() {
-            match_token = IonTextTokenizer.TOKEN_STRING1;
+            match_token = IonTextTokenizer.TOKEN_STRING_UTF8;
         }
     }
     static class Lookahead_read_struct_value_string_literal2 extends Lookahead_read_struct_value_identifier_literal {
         Lookahead_read_struct_value_string_literal2() {
-            match_token = IonTextTokenizer.TOKEN_STRING3;
+            match_token = IonTextTokenizer.TOKEN_STRING_CLOB;
         }
     }
     static class Lookahead_read_struct_value_string_literal_extended extends Matches {
         Lookahead_read_struct_value_string_literal_extended() {
-            match_token = IonTextTokenizer.TOKEN_STRING2;
+            match_token = IonTextTokenizer.TOKEN_STRING_UTF8_LONG;
         }
         @Override
         State transition_method(IonTextReader parser){
@@ -2412,8 +2410,8 @@ public final class IonTextReader
             int token;
             for (;;) {
                 token = parser._scanner.lookahead(0);
-                if (token != IonTextTokenizer.TOKEN_STRING2
-                 && token != IonTextTokenizer.TOKEN_STRING4
+                if (token != IonTextTokenizer.TOKEN_STRING_UTF8_LONG
+                 && token != IonTextTokenizer.TOKEN_STRING_CLOB_LONG
                 ) {
                     break;
                 }
@@ -2426,7 +2424,7 @@ public final class IonTextReader
     }
     static class Lookahead_read_struct_value_string_literal_extended2 extends Lookahead_read_struct_value_string_literal_extended {
         Lookahead_read_struct_value_string_literal_extended2() {
-            match_token = IonTextTokenizer.TOKEN_STRING4;
+            match_token = IonTextTokenizer.TOKEN_STRING_CLOB_LONG;
         }
     }
     static class Lookahead_read_struct_value_close_brace extends Matches {
@@ -2515,7 +2513,7 @@ public final class IonTextReader
 //    }
     static class Lookahead_read_struct_member_identifier extends Matches {
         Lookahead_read_struct_member_identifier() {
-            match_token = IonTextTokenizer.TOKEN_SYMBOL1;
+            match_token = IonTextTokenizer.TOKEN_SYMBOL_BASIC;
         }
         @Override
         State transition_method(IonTextReader parser){
@@ -2530,7 +2528,7 @@ public final class IonTextReader
     }
     static class Lookahead_read_struct_member_identifier_literal extends Matches {
         Lookahead_read_struct_member_identifier_literal() {
-            match_token = IonTextTokenizer.TOKEN_SYMBOL2;
+            match_token = IonTextTokenizer.TOKEN_SYMBOL_QUOTED;
         }
         @Override
         State transition_method(IonTextReader parser){
