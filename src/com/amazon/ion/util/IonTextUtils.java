@@ -579,6 +579,10 @@ public class IonTextUtils
         {
             return "null.string";
         }
+        if (text.length() == 0)
+        {
+            return "\"\"";
+        }
 
         StringBuilder builder = new StringBuilder(text.length() + 2);
         try
