@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -28,7 +26,7 @@ public class DatagramBytesSystemProcessingTest
     {
         IonLoader loader = loader();
         IonDatagram datagram = loader.load(text);
-        myBytes = datagram.toBytes();
+        myBytes = datagram.getBytes();
     }
 
     @Override

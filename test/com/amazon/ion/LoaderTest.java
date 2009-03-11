@@ -246,7 +246,7 @@ public class LoaderTest
 
     public void checkReloading(IonDatagram dg)
     {
-        byte[] binary = dg.toBytes();
+        byte[] binary = dg.getBytes();
 
         IonDatagram dg2 = loader().load(binary);
         assertEquals(1, dg2.size());
@@ -266,7 +266,7 @@ public class LoaderTest
         IonDatagram dg = sys.newLoader().load(image);
         assertEquals(v1.toString(), dg.get(0).toString());
 
-        byte[] bytes = dg.toBytes();
+        byte[] bytes = dg.getBytes();
 
         IonValue v2 = sys.singleValue(bytes);
         assertEquals(v1.toString(), v2.toString());
@@ -286,13 +286,6 @@ public class LoaderTest
         catch (IonException ie) { /* ok */ }
     }
 
-    public void testDeepMaterialize()
-        throws Exception
-    {
-        File testdataFile = getTestdataFile("good/structs.ion");
-        IonDatagram dg = loader().load(testdataFile);
-        dg.deepMaterialize();
-    }
 
 final static boolean _debug_long_test = false;
 

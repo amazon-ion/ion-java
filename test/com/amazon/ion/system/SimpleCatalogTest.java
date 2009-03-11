@@ -136,8 +136,8 @@ public class SimpleCatalogTest
         }
         IonDatagram dg = sys.newDatagram(i_map);
 
-        byte[] bytes = dg.toBytes();
+        byte[] bytes = dg.getBytes();
         IonValue v2 = sys.singleValue(bytes);
-
+        assertNotNull(v2);
     }
 }

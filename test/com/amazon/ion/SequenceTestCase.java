@@ -262,7 +262,7 @@ public abstract class SequenceTestCase
         s.add(v2);
         v2.addTypeAnnotation("foo");
 
-        v1.deepMaterialize();
+        forceMaterialization(v1);
 
         IonDatagram dg = system().newDatagram(s);
         byte[] buf = dg.getBytes();

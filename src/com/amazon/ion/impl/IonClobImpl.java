@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -84,7 +82,7 @@ public final class IonClobImpl
         makeReady();
 
         // TODO use Charset directly.
-        byte[] bytes = newBytes();
+        byte[] bytes = getBytes();
         if (bytes == null) return null;
 
         try

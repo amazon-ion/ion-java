@@ -60,8 +60,8 @@ public final class Timestamp
 
         return precision_flags;
     }
-   
-    static public boolean precisionIncludes(int precision_flags, Precision isIncluded) 
+
+    static public boolean precisionIncludes(int precision_flags, Precision isIncluded)
     {
         switch (isIncluded) {
         case FRACTION:  return (precision_flags & BIT_FLAG_FRACTION) != 0;
@@ -267,7 +267,7 @@ public final class Timestamp
                 this._minute = cal.get(Calendar.MINUTE);
             case MONTH:
             	this._day = cal.get(Calendar.DAY_OF_MONTH);
-            case DAY:	
+            case DAY:
                 this._month = cal.get(Calendar.MONTH) + 1; // calendar months are 0 based, timestamp months are 1 based
             case YEAR:
                 this._year = cal.get(Calendar.YEAR);
@@ -480,10 +480,10 @@ public final class Timestamp
 
     /**
      * Creates a new Timestamp instance whose value is the UTC time
-     * specified by the passed in UTC milliseconds from epoc value after
-     * adjust of any localOffset that may be included.  The new Timestamps
+     * specified by the passed in UTC milliseconds from epoch value after
+     * adjust of any localOffset that may be included.  The new value's
      * precision will be set to be milliseconds.
-     * @param date must not be {@code null}.
+     *
      * @param localOffset may be {@code null} to represent unknown local
      * offset.
      */
@@ -531,7 +531,7 @@ public final class Timestamp
             }
             throw new IllegalArgumentException("invalid timestamp image");
         }
-        
+
         int year  = 1;
         int month = 1;
         int day   = 1;
@@ -550,13 +550,13 @@ public final class Timestamp
             pos = END_OF_YEAR;
             precision = Precision.YEAR;
             year  = read_digits(image, 0, 4, -1);
-            
+
             if (length <= END_OF_MONTH || image.charAt(END_OF_MONTH) == 'T') break;
             if (image.charAt(END_OF_MONTH) != '-') throw new IllegalArgumentException("invalid timestamp image");
             pos = END_OF_MONTH;
             precision = Precision.MONTH;
 	        month = read_digits(image, 5, 2, -1);
-	        
+
 	        if (length < END_OF_DAY) break;
 	        if (length > END_OF_DAY && image.charAt(END_OF_DAY) != 'T') break;
 	        pos = END_OF_DAY;

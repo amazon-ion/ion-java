@@ -70,21 +70,22 @@ public interface IonDecimal
     public void setValue(BigDecimal value);
 
     /**
-     * Sets the value of this element.  The <code>java.math.BigDecimal</code> class
+     * Sets the value of this element.  The {@link java.math.BigDecimal} class
      * does not support the IEEE negative zero value.  This method allows
      * you to force the sign bit onto a BigDecimal zero value so that
-     * the IonDecimal correctly represents the negative zero value.  If
-     * <code>Classification.NEGATIVE_ZERO</code> is true a non-zero BigDecimal value will result
-     * in an IllegalArgumentException being thrown.
-     * Only <code>Classification.NEGATIVE_ZERO</code> and <code>Classification.NORMAL</code> are
-     * valid for IonDecimal values other Classifications will result in an
-     * IllegalArgumentException being thrown.
+     * the IonDecimal correctly represents the negative zero value.
      *
      * @param value the new value of this decimal;
      * may be <code>null</code> to make this <code>null.decimal</code>.
-     * @param <code>valueClassification</code> when <code>Classification.NEGATIVE_ZERO</code> will force the value zero to be the special negative zero.
+     * @param classification forces the value into the given state.
+     *
+     * @throws IllegalArgumentException
+     * if {@code classification} is {@link IonNumber.Classification#NEGATIVE_ZERO}
+     * and {@code value} is non-zero, or if {@code classification} is anything
+     * other than {@link IonNumber.Classification#NORMAL} or
+     * {@link IonNumber.Classification#NEGATIVE_ZERO}.
      */
-    public void setValue(BigDecimal value, IonNumber.Classification valueClassification);
-    
+    public void setValue(BigDecimal value, Classification classification);
+
     public IonDecimal clone();
 }

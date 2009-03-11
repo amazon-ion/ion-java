@@ -263,7 +263,7 @@ public class SymbolTableTest
         assertSame(importedTable, imported[0]);
 
         // Check that the encoded table has max_id on import
-        byte[] binary = dg.toBytes();
+        byte[] binary = dg.getBytes();
         dg = loader().load(binary);
         IonStruct symtabStruct = (IonStruct) dg.systemGet(1);
         IonList imports = (IonList) symtabStruct.get("imports");

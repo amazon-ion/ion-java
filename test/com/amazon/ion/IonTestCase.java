@@ -142,7 +142,8 @@ public abstract class IonTestCase
     {
         IonDatagram dg = loader().load(ionFile);
 
-        dg.deepMaterialize(); // Flush out any encoding problems in the data.
+        // Flush out any encoding problems in the data.
+        forceMaterialization(dg);
 
         return dg;
     }
@@ -159,16 +160,17 @@ public abstract class IonTestCase
     public IonDatagram readTestFile(String fileName)
         throws Exception
     {
+        // TODO replace this with loadFile below
         File file = getTestdataFile(fileName);
-        return readIonText(file);
+        return loader().load(file);
     }
 
 
     public IonDatagram loadFile(String filename)
         throws IOException
     {
-        File text = getTestdataFile(filename);
-        return loader().load(text);
+        File file = getTestdataFile(filename);
+        return load(file);
     }
 
     public IonDatagram load(File ionFile)
@@ -176,11 +178,17 @@ public abstract class IonTestCase
     {
         IonDatagram dg = loader().load(ionFile);
 
-        dg.deepMaterialize(); // Flush out any encoding problems in the data.
+        // Flush out any encoding problems in the data.
+        forceMaterialization(dg);
 
         return dg;
     }
 
+    @SuppressWarnings("deprecation")
+    public void forceMaterialization(IonValue value)
+    {
+        value.deepMaterialize();
+    }
 
     // ========================================================================
     // Fixture Helpers
@@ -232,7 +240,7 @@ public abstract class IonTestCase
      */
     public IonDatagram reload(IonDatagram dg)
     {
-        byte[] bytes = dg.toBytes();
+        byte[] bytes = dg.getBytes();
         checkBinaryHeader(bytes);
 
         IonDatagram dg1 = loader().load(bytes);
@@ -246,7 +254,7 @@ public abstract class IonTestCase
     public IonValue reload(IonValue value)
     {
         IonDatagram dg = system().newDatagram(value);
-        byte[] bytes = dg.toBytes();
+        byte[] bytes = dg.getBytes();
         checkBinaryHeader(bytes);
 
         dg = loader().load(bytes);
@@ -379,7 +387,7 @@ public abstract class IonTestCase
     public byte[] encode(String ionText)
     {
         IonDatagram dg = loader().load(ionText);  // Keep here for breakpoint
-        return dg.toBytes();
+        return dg.getBytes();
     }
 
     public void assertEscape(char expected, char escapedChar)
@@ -640,8 +648,8 @@ public abstract class IonTestCase
                     public void visit(IonBlob expected) throws Exception
                     {
                         assertEquals("blob data",
-                                     expected.newBytes(),
-                                     ((IonBlob)found).newBytes());
+                                     expected.getBytes(),
+                                     ((IonBlob)found).getBytes());
                     }
 
                     public void visit(IonBool expected) throws Exception
@@ -654,8 +662,8 @@ public abstract class IonTestCase
                     public void visit(IonClob expected) throws Exception
                     {
                         assertEquals("clob data",
-                                     expected.newBytes(),
-                                     ((IonClob)found).newBytes());
+                                     expected.getBytes(),
+                                     ((IonClob)found).getBytes());
                     }
 
                     /**

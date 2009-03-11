@@ -110,7 +110,7 @@ public class MiscStreamingTests
     	assertSame("tree and string iterator should have the same size",
     	           tree_count, string_count);
 
-    	byte[] buf = dg.toBytes();
+    	byte[] buf = dg.getBytes();
     	it = system().newReader(buf);
 
     	t = it.next();
@@ -160,7 +160,7 @@ public class MiscStreamingTests
 
     	// finally get the byte array from the tree, make a
     	// binary iterator and check its annotation handling
-    	byte[] buf = dg.toBytes();
+    	byte[] buf = dg.getBytes();
     	it = system().newReader(buf);
     	t = it.next();
     	assertSame( "should be a struct", t, IonType.STRUCT );

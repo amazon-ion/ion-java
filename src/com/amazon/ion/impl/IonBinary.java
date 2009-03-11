@@ -426,8 +426,8 @@ public class IonBinary
         // always 8-bytes for IEEE-754 64-bit
         return _ib_FLOAT64_LEN;
     }
-    
-    public static boolean isNibbleZero(BigDecimal bd, IonNumber.Classification classification) 
+
+    public static boolean isNibbleZero(BigDecimal bd, IonNumber.Classification classification)
     {
     	if (IonNumber.Classification.NEGATIVE_ZERO.equals(classification)) return false;
     	if (bd.signum() != 0) return false;
@@ -1365,17 +1365,17 @@ done:       for (;;) {
             	if (position() < end) {
 	            	month = readVarUInt7IntValue();
 	                p = Precision.MONTH; // our lowest significant option
-	                
+
 	            	if (position() < end) {
 	            	day   = readVarUInt7IntValue();
 	                p = Precision.DAY; // our lowest significant option
-	
+
 		                // now we look for hours and minutes
 		                if (position() < end) {
 		                    hour   = readVarUInt7IntValue();
 		                    minute = readVarUInt7IntValue();
 		                    p = Precision.MINUTE;
-		
+
 		                    if (position() < end) {
 		                    	second = readVarUInt7IntValue();
 		                        p = Precision.SECOND;
@@ -1792,7 +1792,6 @@ done:       for (;;) {
         * @param r
         * @throws IOException
         */
-        @SuppressWarnings("deprecation")
         public void appendToLongValue(int terminator
                                      ,boolean longstring
                                      ,boolean onlyByteSizedCharacters
@@ -2424,14 +2423,14 @@ done:       for (;;) {
             }
             return returnlen;
         }
-        
+
         public int writeTimestamp(Timestamp di)
             throws IOException
         {
             if (di == null) return 0;
             int returnlen = 0;
             int precision_flags = Timestamp.getPrecisionAsBitFlags(di.getPrecision());
-            
+
         	Integer offset = di.getLocalOffset();
         	if (offset == null) {
                 // TODO don't use magic numbers!
@@ -2512,18 +2511,18 @@ done:       for (;;) {
 
         private static byte[] negativeZeroBitArray = new byte[] { (byte)0x80 };
         private static byte[] positiveZeroBitArray = new byte[0];
-        
+
         // also used by writeDate()
         public int writeDecimalContent(BigDecimal bd, IonNumber.Classification classification) throws IOException
         {
             int returnlen = 0;
-            
+
             // check for null and 0.0 which are encoded in the
             // nibble
             if (bd == null) return 0;
-            
+
             if (isNibbleZero(bd, classification)) return 0;
-            
+
             // otherwise we do it the hard way ....
             BigInteger mantissa = bd.unscaledValue();
 
@@ -2554,7 +2553,7 @@ done:       for (;;) {
             	isNegative = false;
             	break;
             }
-            
+
 
             // Ion stores exponent, BigDecimal uses the negation "scale"
             int exponent = -bd.scale();

@@ -55,6 +55,7 @@ public class TextTest
     }
 
 
+    @SuppressWarnings("deprecation")
     private void unquotedAnywhere(String symbol)
     {
         assertEquals(IonTextUtils.SymbolVariant.IDENTIFIER,
@@ -66,6 +67,7 @@ public class TextTest
         assertFalse(Text.symbolNeedsQuoting(symbol, true));
     }
 
+    @SuppressWarnings("deprecation")
     private void quotedEverywhere(String symbol)
     {
         assertEquals(IonTextUtils.SymbolVariant.QUOTED,
@@ -77,6 +79,7 @@ public class TextTest
         assertTrue(Text.symbolNeedsQuoting(symbol, true));
     }
 
+    @SuppressWarnings("deprecation")
     private void unquotedInSexp(String symbol)
     {
         assertEquals(IonTextUtils.SymbolVariant.OPERATOR,
