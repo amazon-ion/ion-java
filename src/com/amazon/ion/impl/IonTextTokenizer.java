@@ -989,7 +989,7 @@ loop:   for (;;) {
 
         return IonTextTokenizer.TOKEN_SYMBOL_QUOTED;
     }
-    
+
     private final boolean is_inf_closing_character(int c) {
     	switch (c) {
         case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
@@ -1010,30 +1010,28 @@ loop:   for (;;) {
     		return true;
     	}
     }
-    
+
     private final boolean read_symbol_extended_peek_inf() throws IOException
     {
     	int c = this.read_char();
     	if (c == 'i') {
-    		c = this.read_char();
-        	if (c == 'n') {
-        		c = this.read_char();
-            	if (c == 'f') {
-                	c = this.read_char();
-                	if (is_inf_closing_character(c)) {
-                		this.unread_char(c);
-                		return true; 
-                	}
-                	else {
-                		this.unread_char(c);
-                	}
-                	c = 'f';
-            	}
-            	this.unread_char(c);
-            	c = 'n';
-        	}
-        	this.unread_char(c);
-        	c = 'i';
+    	    c = this.read_char();
+    	    if (c == 'n') {
+    	        c = this.read_char();
+    	        if (c == 'f') {
+    	            c = this.read_char();
+    	            if (is_inf_closing_character(c)) {
+    	                this.unread_char(c);
+    	                return true;
+    	            }
+    	            this.unread_char(c);
+    	            c = 'f';
+    	        }
+    	        this.unread_char(c);
+    	        c = 'n';
+    	    }
+    	    this.unread_char(c);
+    	    c = 'i';
     	}
     	this.unread_char(c);
     	return false;
@@ -1043,20 +1041,20 @@ loop:   for (;;) {
     {
         int start, end;
         int token_type = IonTextTokenizer.TOKEN_SYMBOL_OPERATOR;
-        
+
         _saved_symbol.setLength(0);
         _saved_symbol.append((char)c);
         //_saved_symbol_len = 0;
         //saved_symbol_append((char)c);
         start = currentCharStart();
         setNextStart(start);
-        
+
         // lookahead for +inf and -inf
         if ((c == '+' || c == '-')
-         && read_symbol_extended_peek_inf()) // this will consume the inf if it succeeds 
+         && read_symbol_extended_peek_inf()) // this will consume the inf if it succeeds
         {
-        	_saved_symbol.append("inf");
-        	token_type = IonTextTokenizer.TOKEN_FLOAT;
+            _saved_symbol.append("inf");
+            token_type = IonTextTokenizer.TOKEN_FLOAT;
         }
         else {
         	// if it's not +/- inf then we'll just read the characters normally
@@ -1081,7 +1079,7 @@ loop:   	for (;;) {
 	            //case '%': case '^': case '&': case '*':
 	            //case '=': case ';': case '?':
 	            //case '/': case '>': case '<': case '|': case '\\':
-	
+
 	            case '.': case '+': case '-': case '/':
 	            case '<': case '>': case '*': case '=': case '^': case '&': case '|':
 	            case '~': case ';': case '!': case '?': case '@': case '%': case '`':
@@ -1259,7 +1257,7 @@ loop:   for (;;) {
             case '\\':
             	c = this.read_char();
             	if (c == 'u' || c == 'U') {
-            		has_big_char = true;
+            	    has_big_char = true;
             	}
                 c = read_escaped_char(c);
                 break;
@@ -1574,9 +1572,9 @@ loop:   for (;;) {
         for (;;) {
             c = read_char();
             if (c < 0
-            || 
-                c >= isHexDigit.length 
-            || 
+            ||
+                c >= isHexDigit.length
+            ||
                 !isHexDigit[c]
             ) {
                 break;
@@ -2074,7 +2072,7 @@ loop:   for (;;) {
             return -1;
         }
     }
-    
+
     // TODO - add the interface CharSequence to IonTextBufferedStream and delegate across these two routines
     static public int keyword(CharSequence word, int start_word, int end_word)
     {
