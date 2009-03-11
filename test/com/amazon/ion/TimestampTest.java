@@ -342,6 +342,7 @@ public class TimestampTest
     public void testPrecision()
     {
         checkCanonicalText("2007-08-28");
+        checkCanonicalText("2007-08-28T16:37Z");
         checkCanonicalText("2007-08-28T16:37:24Z");
         checkCanonicalText("2007-08-28T16:37:24.0Z");
         checkCanonicalText("2007-08-28T16:37:24.00Z");
@@ -468,7 +469,7 @@ public class TimestampTest
 
         for (IonValue value : values)
         {
-        	count++;
+            count++;
             String v = value.toString();
             assertTrue(value instanceof IonTimestamp || v.equals("just some crap that can't be"));
         }

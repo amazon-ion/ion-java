@@ -4,6 +4,7 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.IonNumber.Classification;
 import java.math.BigDecimal;
 
 
@@ -131,15 +132,37 @@ public class DecimalTest
 
         value = (IonDecimal) oneValue("-123d-1");
         assertEquals(-12.3D, value.doubleValue());
+    }
 
-        value = (IonDecimal) oneValue("-0.");
-        // Yes, Java double can handle -0.0!
-        // FIXME correct impl of decimal negative zeros.
-//        assertEquals(Double.parseDouble("-0."), value.doubleValue());
+    public void testNegativeZero()
+    {
+        // Yes, Java floating point types can handle -0.0!
+        final float  floatNegZero  = Float.parseFloat("-0.");
+        final double doubleNegZero = Double.parseDouble("-0.");
 
+        IonDecimal value = (IonDecimal) oneValue("-0.");
+        assertEquals(floatNegZero,  value.floatValue());
+        assertEquals(doubleNegZero, value.doubleValue());
+        assertEquals(Classification.NEGATIVE_ZERO, value.getClassification());
+
+        // But BigDecimal cannot. :(
         BigDecimal dec = value.bigDecimalValue();
         checkDecimal(0, 0, dec);
-//        assertEquals(-1, dec.signum());
+        assertEquals(0, dec.signum());
+
+        IonDecimal value2 = (IonDecimal) oneValue("-0d2");
+//        assertFalse(value2.equals(value));
+        assertEquals(floatNegZero,  value2.floatValue());
+        assertEquals(doubleNegZero, value2.doubleValue());
+        assertEquals(Classification.NEGATIVE_ZERO, value2.getClassification());
+        checkDecimal(0, -2, value2.bigDecimalValue());
+
+        value2 = (IonDecimal) oneValue("-0d1");
+//        assertFalse(value2.equals(value));
+        assertEquals(floatNegZero,  value2.floatValue());
+        assertEquals(doubleNegZero, value2.doubleValue());
+        assertEquals(Classification.NEGATIVE_ZERO, value2.getClassification());
+        checkDecimal(0, -1, value2.bigDecimalValue());
     }
 
     public void checkDecimal(int unscaled, int scale, BigDecimal actual)
