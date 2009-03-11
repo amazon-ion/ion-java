@@ -269,7 +269,7 @@ public class StringTest
     public void testReadStringsFromSuite()
         throws Exception
     {
-        Iterable<IonValue> values = readTestFile("good/strings.ion");
+        Iterable<IonValue> values = loadTestFile("good/strings.ion");
         // File is a sequence of many string values.
 
         for (IonValue value : values)

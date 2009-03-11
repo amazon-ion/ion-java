@@ -462,7 +462,7 @@ public class TimestampTest
     public void testTimestampsFromSuite()
         throws Exception
     {
-        Iterable<IonValue> values = readTestFile("good/timestamps.ion");
+        Iterable<IonValue> values = loadTestFile("good/timestamps.ion");
         // File is a sequence of many timestamp values.
 
         int count = 0;

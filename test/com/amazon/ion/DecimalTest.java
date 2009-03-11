@@ -176,7 +176,7 @@ public class DecimalTest
     public void testBinaryDecimals()
         throws Exception
     {
-        IonDatagram dg = loadFile("good/decimalOneDotZero.10n");
+        IonDatagram dg = loadTestFile("good/decimalOneDotZero.10n");
         assertEquals(1, dg.size());
 
         IonDecimal value = (IonDecimal) dg.get(0);
@@ -184,7 +184,7 @@ public class DecimalTest
         checkDecimal(10, 1, dec);
         assertEquals(1,  dec.intValue());
 
-        dg = loadFile("good/decimalNegativeOneDotZero.10n");
+        dg = loadTestFile("good/decimalNegativeOneDotZero.10n");
         assertEquals(1, dg.size());
 
         value = (IonDecimal) dg.get(0);

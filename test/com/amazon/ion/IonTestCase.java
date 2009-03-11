@@ -112,7 +112,9 @@ public abstract class IonTestCase
     }
 
     /**
-     * Gets a {@link File} relative to the <code>testdata</code> tree.
+     * Gets a {@link File} contained in the test data suite.
+     *
+     * @param path is relative to the {@code testdata} directory.
      */
     public static File getTestdataFile(String path)
     {
@@ -122,54 +124,19 @@ public abstract class IonTestCase
         return new File(testDataDir, path);
     }
 
-
-    /**
-     * @deprecated Use {@link #load(File)};
-     */
-    @Deprecated
-    protected IonDatagram readIonText(File textFile)
-        throws Exception
-    {
-        return loader().load(textFile);
-    }
-
-    /**
-     * @deprecated Use {@link #load(File)};
-     */
-    @Deprecated
-    protected IonDatagram readIonBinary(File ionFile)
-        throws Exception
-    {
-        IonDatagram dg = loader().load(ionFile);
-
-        // Flush out any encoding problems in the data.
-        forceMaterialization(dg);
-
-        return dg;
-    }
-
-
     /**
      * Reads the content of an Ion file contained in the test data suite.
      *
-     * @param fileName is a path relative to the test data root.
+     * @param path is relative to the {@code testdata} directory.
+     *
      * @throws FileNotFoundException
      * @throws UnsupportedEncodingException
      * @throws IOException
      */
-    public IonDatagram readTestFile(String fileName)
-        throws Exception
-    {
-        // TODO replace this with loadFile below
-        File file = getTestdataFile(fileName);
-        return loader().load(file);
-    }
-
-
-    public IonDatagram loadFile(String filename)
+    public IonDatagram loadTestFile(String path)
         throws IOException
     {
-        File file = getTestdataFile(filename);
+        File file = getTestdataFile(path);
         return load(file);
     }
 

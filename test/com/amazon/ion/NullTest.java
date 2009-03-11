@@ -43,7 +43,7 @@ public class NullTest
     public void testAllNulls()
         throws Exception
     {
-        IonDatagram values = readTestFile("good/allNulls.ion");
+        IonDatagram values = loadTestFile("good/allNulls.ion");
         // File contains a list of all the null values.
 
         assertEquals(1, values.size());
@@ -62,7 +62,7 @@ public class NullTest
     public void testNonNulls()
         throws Exception
     {
-        IonDatagram values = readTestFile("good/nonNulls.ion");
+        IonDatagram values = loadTestFile("good/nonNulls.ion");
         // File contains a list of non-null values.
 
         for (IonValue value : values)
