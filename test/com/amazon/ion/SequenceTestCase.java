@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -267,7 +265,7 @@ public abstract class SequenceTestCase
         v1.deepMaterialize();
 
         IonDatagram dg = system().newDatagram(s);
-        byte[] buf = dg.toBytes();
+        byte[] buf = dg.getBytes();
         assertNotNull("there should be a buffer", buf);
     }
 
@@ -287,4 +285,18 @@ public abstract class SequenceTestCase
         s.remove(v1);
     }
 
+
+    public void testAddFactory()
+    {
+        IonSequence s = makeEmpty();
+
+        IonInt i = s.add().newInt(23);
+        checkInt(23, i);
+        assertSame(i, s.get(0));
+
+        IonString str = s.add().newString("g");
+        assertEquals(2, s.size());
+        checkString("g", str);
+        assertSame(str, s.get(1));
+    }
 }

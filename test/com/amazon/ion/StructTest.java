@@ -710,4 +710,35 @@ public class StructTest
 
 //    	System.out.println(dg2.toString());
     }
+
+
+    public void testPutFactory()
+    {
+        IonStruct s = system().newNullStruct();
+
+        IonInt i = s.put("f").newInt(23);
+        checkInt(23, i);
+        assertSame(i, s.get("f"));
+
+        IonString str = s.put("f").newString("g");
+        checkString("g", str);
+        assertSame(str, s.get("f"));
+    }
+
+
+    public void testAddFactory()
+    {
+        IonStruct s = system().newNullStruct();
+
+        IonInt i = s.add("f").newInt(23);
+        checkInt(23, i);
+        assertSame(i, s.get("f"));
+
+        IonString str = s.add("f").newString("g");
+        checkString("g", str);
+        assertEquals(2, s.size());
+
+        IonValue f = s.get("f");
+        assertTrue((f == i) || (f == str));
+    }
 }

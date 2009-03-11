@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
+/* Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -42,6 +42,19 @@ public interface IonSequence
 
 
     /**
+     * Provides a factory that when invoked constructs a new value and
+     * {@code add}s it to this sequence.
+     * <p>
+     * These two lines are equivalent:
+     * <pre>
+     *    seq.add().newInt(3);
+     *    seq.add(seq.getSystem().newInt(3));
+     * </pre>
+     */
+    public ValueFactory add();
+
+
+    /**
      * Inserts a child value at the specified position in this sequence.
      * If <code>this.isNullValue()</code>, then it becomes a single-element
      * sequence.
@@ -59,6 +72,22 @@ public interface IonSequence
      */
     public void add(int index, IonValue child)
         throws ContainedValueException, NullPointerException;
+
+
+    /**
+     * Provides a factory that when invoked constructs a new value and
+     * {@code add}s it to this sequence at the specified position.
+     * <p>
+     * These two lines are equivalent:
+     * <pre>
+     *    seq.add(12).newInt(3);
+     *    seq.add(12, seq.getSystem().newInt(3));
+     * </pre>
+     * <p>
+     * The given {@code index} is validated when the factory's creation method
+     * is invoked, not when this method is invoked.
+     */
+    public ValueFactory add(int index);
 
 
     /**

@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -9,6 +7,7 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.ValueFactory;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonBinary.Reader;
@@ -177,6 +176,18 @@ public final class IonStructImpl
         }
     }
 
+    public ValueFactory put(final String fieldName)
+    {
+        return new CurriedValueFactory(_system)
+        {
+            @Override
+            void handle(IonValue newValue)
+            {
+                put(fieldName, newValue);
+            }
+        };
+    }
+
 
     public void add(String fieldName, IonValue value)
     {
@@ -193,6 +204,18 @@ public final class IonStructImpl
         // This should be true because we've validated that its not contained.
         assert value.getFieldName() == null;
         concrete.setFieldName(fieldName);
+    }
+
+    public ValueFactory add(final String fieldName)
+    {
+        return new CurriedValueFactory(_system)
+        {
+            @Override
+            void handle(IonValue newValue)
+            {
+                add(fieldName, newValue);
+            }
+        };
     }
 
 

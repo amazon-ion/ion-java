@@ -31,6 +31,14 @@ public interface IonDatagram
     public void add(int index, IonValue element)
         throws ContainedValueException, NullPointerException;
 
+    /**
+     * This inherited method is not yet supported by datagrams.
+     *
+     * @throws UnsupportedOperationException at every call.
+     */
+    public ValueFactory add(int index)
+        throws ContainedValueException, NullPointerException;
+
 
     /**
      * Returns {@code false} at all times, since datagrams cannot be null.

@@ -13,6 +13,7 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
+import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import java.io.IOException;
@@ -403,6 +404,13 @@ public final class IonDatagramImpl
 
     @Override
     public void add(int index, IonValue element)
+        throws ContainedValueException, NullPointerException
+    {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ValueFactory add(int index)
         throws ContainedValueException, NullPointerException
     {
         throw new UnsupportedOperationException();
@@ -844,7 +852,7 @@ public final class IonDatagramImpl
             // now that we've fixed up all the system values we can
             // actually update the buffer itself
             updateBuffer2(_buffer.writer(0), 0, 0);
-            
+
             // cas 22 apr 2008: was ...
             //updateBuffer2(_buffer.writer(BINARY_VERSION_MARKER_SIZE),
             //              BINARY_VERSION_MARKER_SIZE,
