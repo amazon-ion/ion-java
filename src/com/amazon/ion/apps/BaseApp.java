@@ -77,34 +77,41 @@ abstract class BaseApp
 
     //=========================================================================
 
-    // TODO get rid of this
-    public void doMain(String action, String[] args)
+
+    public void doMain(String[] args)
     {
-        if (args.length == 0)
+        int firstFileIndex = processOptions(args);
+
+        int fileCount = args.length - firstFileIndex;
+        String[] files = new String[fileCount];
+        System.arraycopy(args, firstFileIndex, files, 0, fileCount);
+
+        if (optionsAreValid(files))
         {
-            processStdIn();
-        }
-        else
-        {
-            processFiles(args);
+            processFiles(files);
         }
     }
 
+
+    protected int processOptions(String[] args)
+    {
+        return 0;
+    }
+
+    protected boolean optionsAreValid(String[] filePaths)
+    {
+        return true;
+    }
 
     protected void processFiles(String[] filePaths)
     {
-        processFiles(filePaths, 0);
-    }
-
-    protected void processFiles(String[] filePaths, int startingIndex)
-    {
-        if (startingIndex == 0)
+        if (filePaths.length == 0)
         {
             processStdIn();
         }
         else
         {
-            for (int i = startingIndex; i < filePaths.length; i++)
+            for (int i = 0; i < filePaths.length; i++)
             {
                 String filePath = filePaths[i];
                 processFile(filePath);
@@ -160,7 +167,7 @@ abstract class BaseApp
 		System.err.println(e.getMessage());
             }
     }
-    
+
     protected void process(File file)
         throws IOException, IonException
     {
@@ -193,10 +200,10 @@ abstract class BaseApp
         File catalogFile = new File(catalogPath);
         try
         {
-            // The loader will automatically add all shared symtabs into the
-            // catalog
             IonDatagram dg = loader.load(catalogFile);
-
+            // FIXME must deserialize symtabs from the file
+            // In the past the loader would automatically add all shared
+            // symtabs into the catalog, but that's no longer true
         }
         catch (Exception e)
         {

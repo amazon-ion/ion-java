@@ -43,19 +43,13 @@ public class EncodeApp
     //=========================================================================
 
 
-    public void doMain(String[] args)
-    {
-        int firstFileIndex = processOptions(args);
-	processFiles(args, firstFileIndex);
-    }
-
-
     /**
      *
      * @param args
      * @return the next index to process
      */
-    private int processOptions(String[] args)
+    @Override
+    protected int processOptions(String[] args)
     {
         ArrayList<SymbolTable> imports = new ArrayList<SymbolTable>();
 
