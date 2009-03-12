@@ -198,7 +198,7 @@ public class IntTest
     public void testIntsFromSuite()
         throws Exception
     {
-        IonDatagram values = readTestFile("good/integer_values.ion");
+        IonDatagram values = loadTestFile("good/integer_values.ion");
         // File is a sequence of many timestamp values.
 
         for (IonValue value : values)

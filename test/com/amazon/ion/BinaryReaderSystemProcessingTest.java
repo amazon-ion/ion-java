@@ -25,7 +25,7 @@ public class BinaryReaderSystemProcessingTest
     {
         IonLoader loader = loader();
         IonDatagram datagram = loader.load(text);
-        myBytes = datagram.toBytes();
+        myBytes = datagram.getBytes();
     }
 
     @Override

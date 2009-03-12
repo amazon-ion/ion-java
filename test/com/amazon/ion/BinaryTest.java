@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -70,7 +68,7 @@ public class BinaryTest extends IonTestCase
     private static byte[] ionBytes(IonValue val)
     {
         IonDatagram dg = sys.newDatagram(val);
-        return dg.toBytes();
+        return dg.getBytes();
     }
 
     /** Dumps byte arrays to hex strings */

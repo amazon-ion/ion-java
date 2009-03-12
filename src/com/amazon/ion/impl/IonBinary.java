@@ -426,8 +426,8 @@ public class IonBinary
         // always 8-bytes for IEEE-754 64-bit
         return _ib_FLOAT64_LEN;
     }
-    
-    public static boolean isNibbleZero(BigDecimal bd, IonNumber.Classification classification) 
+
+    public static boolean isNibbleZero(BigDecimal bd, IonNumber.Classification classification)
     {
     	if (IonNumber.Classification.NEGATIVE_ZERO.equals(classification)) return false;
     	if (bd.signum() != 0) return false;
@@ -481,9 +481,12 @@ public class IonBinary
     	    len++; // len of seconds < 60
     	case MINUTE:
     	    len += 2; // len of hour and minutes (both < 127)
-    	case DATE:
-    	    len += IonBinary.lenVarUInt7(di.getZYear());
-    	    len += 2; // len of month and day (both < 127)
+    	case DAY:
+    		len += 1; // len of month and day (both < 127)
+    	case MONTH:
+    		len += 1; // len of month and day (both < 127)
+    	case YEAR:
+    		len += IonBinary.lenVarUInt7(di.getZYear());
      	}
     	Integer offset = di.getLocalOffset();
     	if (offset == null) {
@@ -1357,28 +1360,36 @@ done:       for (;;) {
                 // year is from 0001 to 9999
                 // or 0x1 to 0x270F or 14 bits - 1 or 2 bytes
             	year  = readVarUInt7IntValue();
-            	month = readVarUInt7IntValue();
-            	day   = readVarUInt7IntValue();
-                p = Precision.DATE; // our lowest significant option
+                p = Precision.YEAR; // our lowest significant option
 
-                // now we look for hours and minutes
-                if (position() < end) {
-                    hour   = readVarUInt7IntValue();
-                    minute = readVarUInt7IntValue();
-                    p = Precision.MINUTE;
+            	if (position() < end) {
+	            	month = readVarUInt7IntValue();
+	                p = Precision.MONTH; // our lowest significant option
 
-                    if (position() < end) {
-                    	second = readVarUInt7IntValue();
-                        p = Precision.SECOND;
+	            	if (position() < end) {
+	            	day   = readVarUInt7IntValue();
+	                p = Precision.DAY; // our lowest significant option
 
-                        remaining = end - position();
-                        if (remaining > 0) {
-                        	IonDecimalImpl dec = new IonDecimalImpl(null);
-                            // now we read in our actual "milliseconds since the epoch"
-                        	this.readDecimalValue(dec, remaining);
-                            frac = dec.bigDecimalValue();
-                            p = Precision.FRACTION;
-                        }
+		                // now we look for hours and minutes
+		                if (position() < end) {
+		                    hour   = readVarUInt7IntValue();
+		                    minute = readVarUInt7IntValue();
+		                    p = Precision.MINUTE;
+
+		                    if (position() < end) {
+		                    	second = readVarUInt7IntValue();
+		                        p = Precision.SECOND;
+
+		                        remaining = end - position();
+		                        if (remaining > 0) {
+		                        	IonDecimalImpl dec = new IonDecimalImpl(null);
+		                            // now we read in our actual "milliseconds since the epoch"
+		                        	this.readDecimalValue(dec, remaining);
+		                            frac = dec.bigDecimalValue();
+		                            p = Precision.FRACTION;
+		                        }
+		                    }
+	                    }
                     }
                 }
             }
@@ -1781,7 +1792,6 @@ done:       for (;;) {
         * @param r
         * @throws IOException
         */
-        @SuppressWarnings("deprecation")
         public void appendToLongValue(int terminator
                                      ,boolean longstring
                                      ,boolean onlyByteSizedCharacters
@@ -2418,9 +2428,8 @@ done:       for (;;) {
             throws IOException
         {
             if (di == null) return 0;
-
             int returnlen = 0;
-            Timestamp.Precision precision = di.getPrecision();
+            int precision_flags = Timestamp.getPrecisionAsBitFlags(di.getPrecision());
 
         	Integer offset = di.getLocalOffset();
         	if (offset == null) {
@@ -2434,28 +2443,27 @@ done:       for (;;) {
 
         	// now the date - year, month, day as varUint7's
         	// if we have a non-null value we have at least the date
-        	returnlen += this.writeVarUInt7Value(di.getZYear(), true);
-        	returnlen += this.writeVarUInt7Value(di.getZMonth(), true);
-        	returnlen += this.writeVarUInt7Value(di.getZDay(), true);
-        	// how much more do we have?
-        	if (precision == Timestamp.Precision.MINUTE
-             || precision == Timestamp.Precision.SECOND
-             || precision == Timestamp.Precision.FRACTION
-             ) {
-        		// now hours and minutes
-            	returnlen += this.writeVarUInt7Value(di.getZHour(), true);
-            	returnlen += this.writeVarUInt7Value(di.getZMinute(), true);
+        	if (Timestamp.precisionIncludes(precision_flags, Precision.YEAR)) {
+        		returnlen += this.writeVarUInt7Value(di.getZYear(), true);
+        	}
+        	if (Timestamp.precisionIncludes(precision_flags, Precision.MONTH)) {
+        		returnlen += this.writeVarUInt7Value(di.getZMonth(), true);
+        	}
+        	if (Timestamp.precisionIncludes(precision_flags, Precision.DAY)) {
+        		returnlen += this.writeVarUInt7Value(di.getZDay(), true);
+        	}
 
-            	if (precision == Timestamp.Precision.SECOND
-                 || precision == Timestamp.Precision.FRACTION
-             	) {
-               		// seconds
-                   	returnlen += this.writeVarUInt7Value(di.getZSecond(), true);
-                	if (precision == Timestamp.Precision.FRACTION) {
-                		// and, finally, any fractional component that is known
-                		returnlen += this.writeDecimalContent(di.getZFractionalSecond(), IonNumber.Classification.NEGATIVE_ZERO);
-                	}
-            	}
+        	// now the time portion
+        	if (Timestamp.precisionIncludes(precision_flags, Precision.MINUTE)) {
+        		returnlen += this.writeVarUInt7Value(di.getZHour(), true);
+        		returnlen += this.writeVarUInt7Value(di.getZMinute(), true);
+        	}
+        	if (Timestamp.precisionIncludes(precision_flags, Precision.SECOND)) {
+        		returnlen += this.writeVarUInt7Value(di.getZSecond(), true);
+        	}
+        	if (Timestamp.precisionIncludes(precision_flags, Precision.FRACTION)) {
+                // and, finally, any fractional component that is known
+        		returnlen += this.writeDecimalContent(di.getZFractionalSecond(), IonNumber.Classification.NEGATIVE_ZERO);
         	}
             return returnlen;
         }
@@ -2503,18 +2511,18 @@ done:       for (;;) {
 
         private static byte[] negativeZeroBitArray = new byte[] { (byte)0x80 };
         private static byte[] positiveZeroBitArray = new byte[0];
-        
+
         // also used by writeDate()
         public int writeDecimalContent(BigDecimal bd, IonNumber.Classification classification) throws IOException
         {
             int returnlen = 0;
-            
+
             // check for null and 0.0 which are encoded in the
             // nibble
             if (bd == null) return 0;
-            
+
             if (isNibbleZero(bd, classification)) return 0;
-            
+
             // otherwise we do it the hard way ....
             BigInteger mantissa = bd.unscaledValue();
 
@@ -2545,7 +2553,7 @@ done:       for (;;) {
             	isNegative = false;
             	break;
             }
-            
+
 
             // Ion stores exponent, BigDecimal uses the negation "scale"
             int exponent = -bd.scale();

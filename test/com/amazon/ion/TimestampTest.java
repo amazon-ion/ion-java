@@ -109,7 +109,7 @@ public class TimestampTest
         Timestamp ts = new Timestamp(expectedYear, expectedMonth, expectedDay);
         checkFields(expectedYear, expectedMonth, expectedDay, 0, 0, 0, null,
                     UNKNOWN_OFFSET, ts);
-        assertEquals(Precision.DATE, ts.getPrecision());
+        assertEquals(Precision.DAY, ts.getPrecision());
         assertEquals(expectedText, ts.toString());
 
         checkTime(expectedYear, expectedMonth, expectedDay,
@@ -342,6 +342,7 @@ public class TimestampTest
     public void testPrecision()
     {
         checkCanonicalText("2007-08-28");
+        checkCanonicalText("2007-08-28T16:37Z");
         checkCanonicalText("2007-08-28T16:37:24Z");
         checkCanonicalText("2007-08-28T16:37:24.0Z");
         checkCanonicalText("2007-08-28T16:37:24.00Z");
@@ -461,14 +462,14 @@ public class TimestampTest
     public void testTimestampsFromSuite()
         throws Exception
     {
-        Iterable<IonValue> values = readTestFile("good/timestamps.ion");
+        Iterable<IonValue> values = loadTestFile("good/timestamps.ion");
         // File is a sequence of many timestamp values.
 
         int count = 0;
 
         for (IonValue value : values)
         {
-        	count++;
+            count++;
             String v = value.toString();
             assertTrue(value instanceof IonTimestamp || v.equals("just some crap that can't be"));
         }

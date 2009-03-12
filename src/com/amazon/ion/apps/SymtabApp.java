@@ -51,56 +51,8 @@ public class SymtabApp
 
     //=========================================================================
 
-    public void doMain(String[] args)
-    {
-        int firstFileIndex = processOptions(args);
-
-        if (mySymtabName == null)
-        {
-            throw new RuntimeException("Must provide --name");
-        }
-        // TODO verify that we don't import the same name.
-
-        if (mySymtabVersion == 0)
-        {
-            mySymtabVersion = 1;
-        }
-
-
-        if (firstFileIndex == args.length)
-        {
-            System.err.println("Must provide list of files to provide symbols");
-        }
-        else
-        {
-            processFiles(args, firstFileIndex);
-        }
-
-
-        SymbolTable[] importArray = new SymbolTable[myImports.size()];
-        myImports.toArray(importArray);
-
-        SymbolTable mySymtab =
-            mySystem.newSharedSymbolTable(mySymtabName,
-                                          mySymtabVersion,
-                                          mySymbols.iterator(),
-                                          importArray);
-
-        IonWriter w = mySystem.newTextWriter(System.out);
-        try
-        {
-            // TODO ensure IVM is printed
-            mySymtab.writeTo(w);
-            System.out.println();
-        }
-        catch (IOException e)
-        {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-    }
-
-    private int processOptions(String[] args)
+    @Override
+    protected int processOptions(String[] args)
     {
         for (int i = 0; i < args.length; i++)
         {
@@ -165,6 +117,59 @@ public class SymtabApp
         }
 
         return args.length;
+    }
+
+
+    @Override
+    protected boolean optionsAreValid(String[] filePaths)
+    {
+        if (mySymtabName == null)
+        {
+            throw new RuntimeException("Must provide --name");
+        }
+        // TODO verify that we don't import the same name.
+
+        if (mySymtabVersion == 0)
+        {
+            mySymtabVersion = 1;
+        }
+
+        if (filePaths.length == 0)
+        {
+            System.err.println("Must provide list of files to provide symbols");
+            return false;
+        }
+
+        return true;
+    }
+
+
+    @Override
+    public void processFiles(String[] filePaths)
+    {
+        super.processFiles(filePaths);
+
+        SymbolTable[] importArray = new SymbolTable[myImports.size()];
+        myImports.toArray(importArray);
+
+        SymbolTable mySymtab =
+            mySystem.newSharedSymbolTable(mySymtabName,
+                                          mySymtabVersion,
+                                          mySymbols.iterator(),
+                                          importArray);
+
+        IonWriter w = mySystem.newTextWriter(System.out);
+        try
+        {
+            // TODO ensure IVM is printed
+            mySymtab.writeTo(w);
+            System.out.println();
+        }
+        catch (IOException e)
+        {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
 
 

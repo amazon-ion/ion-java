@@ -1514,9 +1514,18 @@ endofdate:
             if (c == 'T') {
     check4timezone:
                 for (;;) {
+                	// attach the 'T' to the value we're collecting
                     value.append((char)c);
+                    
+                    // we're going to "watch" how many digits we read in the hours
+                    // field.  It's 0 that's actually ok, since we can end at the
+                    // 'T' we just read
+                    int length_before_reading_hours = value.length();
                     // so read the hours
                     c = readDigits(2, "hours");
+                	if (length_before_reading_hours == value.length()) {
+                		break check4timezone;
+                	}
                     if (c != ':') {
                         throw new IonException("invalid timestamp, expecting hours at " + this.position());
                     }

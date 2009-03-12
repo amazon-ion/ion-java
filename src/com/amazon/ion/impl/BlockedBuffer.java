@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -381,27 +379,26 @@ static final boolean test_with_no_version_checking = false;
     {
     	bbBlock block;
     	int     ii;
-    	
+
     	if ((hi - lo) <= 3) {
-    		for (ii=lo; ii<hi; ii++) {
-                block = this._blocks.get(ii);
-                if (pos > block._offset + block._limit) continue;
-                if (block.containsForRead(pos)) {
-                    return block;
-                }
-                if (block._offset >= pos) break;
-    		}
-    		return this._blocks.get(ii - 1);		// this will always be > 0
+    	    for (ii=lo; ii<hi; ii++) {
+    	        block = this._blocks.get(ii);
+    	        if (pos > block._offset + block._limit) continue;
+    	        if (block.containsForRead(pos)) {
+    	            return block;
+    	        }
+    	        if (block._offset >= pos) break;
+    	    }
+    	    return this._blocks.get(ii - 1);	// this will always be > 0
     	}
     	int mid = (hi + lo) / 2;
     	block = this._blocks.get(mid);
     	assert block != null;
     	if (block._offset > pos) {
-    		return findBlockHelper(pos, lo, mid);
+    	    return findBlockHelper(pos, lo, mid);
     	}
-    	else {
-    		return findBlockHelper(pos, mid, hi);
-    	}
+
+    	return findBlockHelper(pos, mid, hi);
     }
 
     /**
@@ -428,20 +425,20 @@ static final boolean test_with_no_version_checking = false;
             }
         }
         boolean at_eof = (pos == this._buf_limit);
-        
+
         if (at_eof) {
             // if this is the last block actually in use
             // and we're looking for the eof position then
             // we can check for the "last byte not quite
             // written yet" case, which is fine
-        	bbBlock block = this._blocks.get(this._next_block_position - 1);
-        	if (block.containsForWrite(pos)) return block;
+            bbBlock block = this._blocks.get(this._next_block_position - 1);
+            if (block.containsForWrite(pos)) return block;
         }
         else {
             bbBlock block = this.findBlockHelper(pos, 0, this._next_block_position);
             return block;
         }
-        
+
         throw new BlockedBufferException("valid position can't be found!");
     }
         /**
@@ -458,36 +455,36 @@ static final boolean test_with_no_version_checking = false;
             throw new BlockedBufferException("writes must be contiguous");
         }
         assert _validate();
-        
+
         if (curr != null && curr.hasRoomToWrite(pos, 1) == true) {
-        	if (curr._offset + curr._limit == pos && curr._idx < this._next_block_position) {
-        		bbBlock b = this._blocks.get(curr._idx + 1);
-        		if (b.containsForWrite(pos)) {
-        			curr = b;
-        		}
-        	}
-        	return curr;
+            if (curr._offset + curr._limit == pos && curr._idx < this._next_block_position) {
+                bbBlock b = this._blocks.get(curr._idx + 1);
+                if (b.containsForWrite(pos)) {
+                    curr = b;
+                }
+            }
+            return curr;
         }
 
         // we're not going to write into curr, so find out the right block
         bbBlock block;
         if (pos == this._buf_limit) {
-        	// if we're at the limit the only possible (existing) block
-        	// will be the very last block - shortcut to optimize append
-        	assert this._next_block_position > 0;
-        	block = this._blocks.get(this._next_block_position - 1);
+            // if we're at the limit the only possible (existing) block
+            // will be the very last block - shortcut to optimize append
+            assert this._next_block_position > 0;
+            block = this._blocks.get(this._next_block_position - 1);
         }
         else if (curr != null && pos == curr._offset + curr._limit) {
-        	// if our current position is exactly at the end (and we already know
-        	// we can't write into this block if we can write at all we'll have
-        	// to write into the next block (inner blocks can't be 0 bytes long)
-        	block = this._blocks.get(curr._idx + 1);
+            // if our current position is exactly at the end (and we already know
+            // we can't write into this block if we can write at all we'll have
+            // to write into the next block (inner blocks can't be 0 bytes long)
+            block = this._blocks.get(curr._idx + 1);
         }
         else {
             // since we're not at the limit and we don't have a current block
             // we'll go find the block in the list (this is an abnormal case)
-        	// since append if usual for writing
-        	block = findBlockHelper(pos, 0, this._next_block_position);
+            // since append if usual for writing
+            block = findBlockHelper(pos, 0, this._next_block_position);
         }
         assert block != null;
         assert block.containsForWrite(pos);
@@ -497,13 +494,13 @@ static final boolean test_with_no_version_checking = false;
             return block;
         }
 
-        // at this point, we can't use _curr in any event so we can just 
-        // move on to the next block since findHelper will have returned 
+        // at this point, we can't use _curr in any event so we can just
+        // move on to the next block since findHelper will have returned
         // either the right block (which it didn't) or the one just in
         // front of the right block - so let's see if there is an allocated
         // block just following this
         if (block._idx < this._next_block_position - 1) {
-        	block = this._blocks.get(block._idx + 1);
+            block = this._blocks.get(block._idx + 1);
             return block;
         }
 
@@ -544,7 +541,7 @@ static final boolean test_with_no_version_checking = false;
         if (neededSpace <= 0) {
             // we have all the space we need in the current block
             // DEBUG: amountMoved =
-                insertInCurrOnly(caller, version, curr, pos, len);
+            insertInCurrOnly(caller, version, curr, pos, len);
         }
         else {
             // we'll need at least some additional space beyond the curr
@@ -561,7 +558,7 @@ static final boolean test_with_no_version_checking = false;
             ) {
                 // with the addition of the free space in the following block we have enough
                 // DEBUG: amountMoved =
-                    insertInCurrAndNext(caller, version, curr, pos, len, next);
+                insertInCurrAndNext(caller, version, curr, pos, len, next);
             }
             else {
 
@@ -592,15 +589,14 @@ static final boolean test_with_no_version_checking = false;
 
                     // now pretend we just have the "push into the next block" case
                     // DEBUG: amountMoved =
-                        insertInCurrAndNext(caller, version, curr, pos, len, newblock);
-
+                    insertInCurrAndNext(caller, version, curr, pos, len, newblock);
                 }
                 else {
                     // and last we have the case of having to insert more than 1 block
                     // which means all of the trailing bytes in _curr move into the last
                     // block
                     // DEBUG: amountMoved =
-                        insertAsManyBlocksAsNeeded(caller, version, curr, pos, len, newblock);
+                    insertAsManyBlocksAsNeeded(caller, version, curr, pos, len, newblock);
                 }
             }
         }
@@ -910,7 +906,7 @@ static final boolean test_with_no_version_checking = false;
         // we'll even adjust the offset of the first block (if it's the last as well)
         adjustOffsets(startingIdx, -len, -removedBlocks);
         notifyRemove(pos, len);
-        
+
         // DEBUG: int shouldBe = 0;
         // DEBUG: int is = currBlock._offset;
         // DEBUG: if (currBlock._idx > 0) {
@@ -933,7 +929,7 @@ static final boolean test_with_no_version_checking = false;
         boolean err = false;
 
         _validate_count++;
-        
+
         if ((_validate_count % 128) != 0) return true;
 
         // you can change the 0 below (in from of the -2) to be the validation counter
@@ -1748,7 +1744,7 @@ static final boolean test_with_no_version_checking = false;
             _buf.insert(this, _version, _curr, _pos, len);
             _write(b, off, len);
             _version = _buf.end_mutate(this);
-       }
+        }
         /**
          * Inserts space and writes len bytes from the specified
          * byte array starting at in the user array at offset off
@@ -1760,7 +1756,7 @@ static final boolean test_with_no_version_checking = false;
             _buf.start_mutate(this, _version);
             _curr = _buf.remove(this, _version, _curr, _pos, len);
             _version = _buf.end_mutate(this);
-       }
+        }
         /**
          * trucates the buffer at the current location after this
          * call the last previously written or read byte will be

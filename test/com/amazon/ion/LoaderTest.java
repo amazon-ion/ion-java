@@ -72,7 +72,7 @@ public class LoaderTest
     {
         try
         {
-            loadFile("good/no such file");
+            loadTestFile("good/no such file");
             fail("expected FileNotFoundException");
         }
         catch (FileNotFoundException e) { }
@@ -81,30 +81,30 @@ public class LoaderTest
     public void testLoadingBlankTextFiles()
         throws Exception
     {
-        IonDatagram contents = loadFile("good/blank.ion");
+        IonDatagram contents = loadTestFile("good/blank.ion");
         assertEquals(0, contents.size());
 
-        contents = loadFile("good/empty.ion");
+        contents = loadTestFile("good/empty.ion");
         assertEquals(0, contents.size());
     }
 
     public void testLoadingSimpleFile()
         throws Exception
     {
-        IonDatagram contents = loadFile("good/one.ion");
+        IonDatagram contents = loadTestFile("good/one.ion");
         assertEquals(1, contents.size());
         IonInt one = (IonInt) contents.get(0);
         assertEquals(1, one.intValue());
         assertSame(contents, one.getContainer());
 
-        contents = loadFile("good/allNulls.ion");
+        contents = loadTestFile("good/allNulls.ion");
         assertEquals(1, contents.size());
         IonList nullsList = (IonList) contents.get(0);
         assertEquals(14, nullsList.size());
         assertSame(contents, nullsList.getContainer());
 
         // Load some binary.
-        contents = loadFile("good/null.10n");
+        contents = loadTestFile("good/null.10n");
         assertEquals(1, contents.size());
         IonNull nullValue = (IonNull) contents.get(0);
         assertNotNull(nullValue);
@@ -153,7 +153,7 @@ public class LoaderTest
     public void testClone()
         throws Exception
     {
-        IonDatagram contents = loadFile("good/one.ion");
+        IonDatagram contents = loadTestFile("good/one.ion");
         IonValue one = contents.get(0);
         assertEquals(contents, one.getContainer());
 
@@ -246,7 +246,7 @@ public class LoaderTest
 
     public void checkReloading(IonDatagram dg)
     {
-        byte[] binary = dg.toBytes();
+        byte[] binary = dg.getBytes();
 
         IonDatagram dg2 = loader().load(binary);
         assertEquals(1, dg2.size());
@@ -266,7 +266,7 @@ public class LoaderTest
         IonDatagram dg = sys.newLoader().load(image);
         assertEquals(v1.toString(), dg.get(0).toString());
 
-        byte[] bytes = dg.toBytes();
+        byte[] bytes = dg.getBytes();
 
         IonValue v2 = sys.singleValue(bytes);
         assertEquals(v1.toString(), v2.toString());
@@ -286,13 +286,6 @@ public class LoaderTest
         catch (IonException ie) { /* ok */ }
     }
 
-    public void testDeepMaterialize()
-        throws Exception
-    {
-        File testdataFile = getTestdataFile("good/structs.ion");
-        IonDatagram dg = loader().load(testdataFile);
-        dg.deepMaterialize();
-    }
 
 final static boolean _debug_long_test = false;
 

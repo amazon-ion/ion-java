@@ -8,6 +8,7 @@ import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.ValueFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -117,6 +118,19 @@ public abstract class IonSequenceImpl
         super.add(element);
     }
 
+    public ValueFactory add()
+    {
+        return new CurriedValueFactory(_system)
+        {
+            @Override
+            void handle(IonValue newValue)
+            {
+                add(newValue);
+            }
+        };
+    }
+
+
     @Override
     // Increasing visibility
     public void add(int index, IonValue element)
@@ -124,6 +138,18 @@ public abstract class IonSequenceImpl
     {
         // super.add will check for the lock
         super.add(index, element);
+    }
+
+    public ValueFactory add(final int index)
+    {
+        return new CurriedValueFactory(_system)
+        {
+            @Override
+            void handle(IonValue newValue)
+            {
+                add(index, newValue);
+            }
+        };
     }
 
 

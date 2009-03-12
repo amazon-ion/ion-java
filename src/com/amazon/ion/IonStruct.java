@@ -71,6 +71,24 @@ public interface IonStruct
 
 
     /**
+     * Provides a factory that when invoked constructs a new value and
+     * {@code put}s it into this struct using the given {@code fieldName}.
+     * <p>
+     * These two lines are equivalent:
+     * <pre>
+     *    str.put("f").newInt(3);
+     *    str.put("f", str.getSystem().newInt(3));
+     * </pre>
+     *
+     * @throws NullPointerException
+     *   if {@code fieldName} is <code>null</code>.
+     * @throws IllegalArgumentException
+     *   if {@code fieldName} is empty.
+     */
+    public ValueFactory put(String fieldName);
+
+
+    /**
      * Adds a new field to this struct.
      * If this is <code>null.struct</code>, then it becomes a single-field
      * struct.
@@ -91,6 +109,24 @@ public interface IonStruct
      */
     public void add(String fieldName, IonValue child)
         throws ContainedValueException;
+
+
+    /**
+     * Provides a factory that when invoked constructs a new value and
+     * {@code add}s it to this struct using the given {@code fieldName}.
+     * <p>
+     * These two lines are equivalent:
+     * <pre>
+     *    str.add("f").newInt(3);
+     *    str.add("f", str.getSystem().newInt(3));
+     * </pre>
+     *
+     * @throws NullPointerException
+     *   if {@code fieldName} is <code>null</code>.
+     * @throws IllegalArgumentException
+     *   if {@code fieldName} is empty.
+     */
+    public ValueFactory add(String fieldName);
 
 
     /**

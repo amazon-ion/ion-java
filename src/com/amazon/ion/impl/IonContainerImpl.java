@@ -567,7 +567,9 @@ abstract public class IonContainerImpl
 
         if (child instanceof IonDatagram)
         {
-            throw new IllegalArgumentException();
+            String message =
+                "IonDatagram can not be inserted into another IonContainer.";
+            throw new IllegalArgumentException(message);
         }
     }
 

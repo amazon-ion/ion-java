@@ -36,7 +36,7 @@ public class DatagramTest
         throws Exception
     {
         IonDatagram datagram0 = myLoader.load(text);
-        byte[] bytes = datagram0.toBytes();
+        byte[] bytes = datagram0.getBytes();
         checkBinaryHeader(bytes);
         IonDatagram datagram1 = myLoader.load(bytes);
         return datagram1;
@@ -98,7 +98,7 @@ public class DatagramTest
         checkSymbol("swamp", datagram0.get(0));
         assertSame(datagram0, datagram0.get(0).getContainer());
 
-        byte[] bytes = datagram0.toBytes();
+        byte[] bytes = datagram0.getBytes();
         checkBinaryHeader(bytes);
 
         IonDatagram datagram1 = myLoader.load(bytes);
@@ -133,7 +133,7 @@ public class DatagramTest
         IonInt i =
             (IonInt)system().clone(myLoader.load("-12345 a").get(0));
         struct.put("a", i);
-        datagram0.toBytes();
+        datagram0.getBytes();
         IonValue a = struct.get("a");
         struct.remove(a);
         int ival = -65;
@@ -142,12 +142,12 @@ public class DatagramTest
         struct.put("a", i);
         checkInt(ival, struct.get("a"));
 
-        byte[] bytes = datagram0.toBytes();
+        byte[] bytes = datagram0.getBytes();
 
         IonDatagram datagram1 = myLoader.load(bytes);
         assertEquals(1, datagram1.size());
         checkInt(ival, ((IonStruct)(datagram1.get(0))).get("a"));
-        bytes = datagram1.toBytes();
+        bytes = datagram1.getBytes();
         String s = datagram1.toString();
         s = ""+s;
     }
@@ -175,7 +175,7 @@ public class DatagramTest
 
         for (int ival = -1000; ival <= 1000; ival++) {
             i.setValue(ival);
-            byte[] bytes = dg.toBytes();
+            byte[] bytes = dg.getBytes();
             checkBinaryHeader(bytes);
         }
     }
@@ -200,7 +200,7 @@ public class DatagramTest
         throws Exception
     {
         IonDatagram dg = myLoader.load("hello '''hi''' 23 [a,b]");
-        byte[] bytes1 = dg.toBytes();
+        byte[] bytes1 = dg.getBytes();
         final int size = dg.byteSize();
 
         assertEquals(size, bytes1.length);
@@ -250,7 +250,7 @@ public class DatagramTest
         IonList v = system.newNullList();
 
         IonDatagram dg = system.newDatagram(v);
-        dg.toBytes();
+        dg.getBytes();
     }
 
     public void testEncodingSymbolInList()
@@ -262,7 +262,7 @@ public class DatagramTest
         v.add(sym);
 
         IonDatagram dg = system.newDatagram(v);
-        dg.toBytes();
+        dg.getBytes();
     }
 
     public void testEncodingSymbolInStruct()
@@ -276,7 +276,7 @@ public class DatagramTest
         struct1.add("g", sym);
 
         IonDatagram dg = system.newDatagram(struct1);
-        dg.toBytes();
+        dg.getBytes();
     }
 
     public void testEncodingStructInStruct()
@@ -295,7 +295,7 @@ public class DatagramTest
         struct2.add("g", sym);
 
         IonDatagram dg = system.newDatagram(struct1);
-        dg.toBytes();
+        dg.getBytes();
     }
 
 
@@ -387,7 +387,7 @@ public class DatagramTest
         dg.add(system().newSymbol("localSym"));
 
 
-        byte[] bytes = dg.toBytes();
+        byte[] bytes = dg.getBytes();
         dg = loader().load(bytes);
         // TODO dg is dirty at this point... why? It's freshly loaded!
 
@@ -412,8 +412,8 @@ public class DatagramTest
         IonDatagram dg1 = loader().load("one 1 [1.0]");
         IonDatagram dg2 = system().clone(dg1);
 
-        byte[] bytes1 = dg1.toBytes();
-        byte[] bytes2 = dg2.toBytes();
+        byte[] bytes1 = dg1.getBytes();
+        byte[] bytes2 = dg2.getBytes();
 
         assertArrayEquals(bytes1, bytes2);
     }

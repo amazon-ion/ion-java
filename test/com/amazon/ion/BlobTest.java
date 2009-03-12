@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -18,7 +16,7 @@ public class BlobTest
         assertSame(IonType.BLOB, value.getType());
         assertTrue(value.isNullValue());
         assertNull(value.newInputStream());
-        assertNull(value.newBytes());
+        assertNull(value.getBytes());
 
         try
         {
@@ -32,7 +30,7 @@ public class BlobTest
         StringBuilder buf = new StringBuilder();
         try
         {
-            value.appendBase64(buf);
+            value.printBase64(buf);
             fail("expected NullValueException");
         }
         catch (NullValueException e) { /* ok */ }
@@ -46,7 +44,7 @@ public class BlobTest
     {
         assertSame(IonType.BLOB, value.getType());
 
-        byte[] bytes = value.newBytes();
+        byte[] bytes = value.getBytes();
         assertNotSame(expectedBytes, bytes);
         assertEquals(expectedBytes.length, bytes.length);
 
@@ -67,7 +65,7 @@ public class BlobTest
     {
         assertSame(IonType.BLOB, value.getType());
 
-        byte[] bytes = value.newBytes();
+        byte[] bytes = value.getBytes();
         assertEquals(expectedBytes.length, bytes.length);
 
         InputStream in = value.newInputStream();
@@ -96,7 +94,7 @@ public class BlobTest
         checkBlob(expectedBytes, value);
 
         StringBuilder buf = new StringBuilder();
-        value.appendBase64(buf);
+        value.printBase64(buf);
         assertEquals(base64, buf.toString());
     }
 
@@ -152,11 +150,11 @@ public class BlobTest
         InputStream in = value.newInputStream();
         assertEquals("should be at EOF", -1, in.read());
 
-        byte[] bytes = value.newBytes();
+        byte[] bytes = value.getBytes();
         assertEquals(0, bytes.length);
 
         StringBuilder buf = new StringBuilder();
-        value.appendBase64(buf);
+        value.printBase64(buf);
         assertEquals(0, buf.length());
     }
 

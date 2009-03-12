@@ -14,12 +14,9 @@ public class BadIonTests
     private static class BadIonTestCase
         extends FileTestCase
     {
-        private final boolean myFileIsBinary;
-
-        public BadIonTestCase(File ionFile, boolean binary)
+        public BadIonTestCase(File ionFile)
         {
             super(ionFile);
-            myFileIsBinary = binary;
         }
 
         @Override
@@ -28,14 +25,7 @@ public class BadIonTests
         {
             try
             {
-                if (myFileIsBinary)
-                {
-                    readIonBinary(myTestFile);
-                }
-                else
-                {
-                    readIonText(myTestFile);
-                }
+                load(myTestFile);
                 fail("Expected IonException parsing "
                      + myTestFile.getAbsolutePath());
             }
@@ -59,15 +49,6 @@ public class BadIonTests
     @Override
     protected BadIonTestCase makeTest(File ionFile)
     {
-        String fileName = ionFile.getName();
-        if (fileName.endsWith(".ion"))
-        {
-            return new BadIonTestCase(ionFile, false);
-        }
-        else if (fileName.endsWith(".10n"))
-        {
-            return new BadIonTestCase(ionFile, true);
-        }
-        return null;
+        return new BadIonTestCase(ionFile);
     }
 }

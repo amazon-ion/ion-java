@@ -39,10 +39,10 @@ public class GoodIonStreamingTests extends DirectoryTestSuite {
     {
         return new String[]
         {
-            "annotationQuotedFalse.ion",
-            "annotationQuotedNull.ion",
-            "annotationQuotedTrue.ion",
-            "floatSpecials.ion",
+//            "annotationQuotedFalse.ion",
+//            "annotationQuotedNull.ion",
+//            "annotationQuotedTrue.ion",
+//            "floatSpecials.ion",
         };
     }
 
