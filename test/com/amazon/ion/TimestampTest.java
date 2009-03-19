@@ -483,4 +483,39 @@ public class TimestampTest
 //        testSimpleClone("2008-07-11");  // FIXME Date doesn't round-trip
         testSimpleClone("2008-07-11T14:49:26.000-07:00");
     }
+
+    public void testMonthBoundaries()
+    {
+        // This traps a bug in leap-year calculation
+        parse(   "2007-02-28T00:00Z"); // not leap year
+        badValue("2007-02-29T00:00Z");
+
+        parse(   "2008-02-29T00:00Z"); // leap year
+        badValue("2008-02-30T00:00Z");
+
+        parse(   "2009-01-31T00:00Z");
+        badValue("2009-01-32T00:00Z");
+        parse(   "2009-02-28T00:00Z");
+        badValue("2009-02-29T00:00Z");
+        parse(   "2009-03-31T00:00Z");
+        badValue("2009-03-32T00:00Z");
+        parse(   "2009-04-30T00:00Z");
+        badValue("2009-04-31T00:00Z");
+        parse(   "2009-05-31T00:00Z");
+        badValue("2009-05-32T00:00Z");
+        parse(   "2009-06-30T00:00Z");
+        badValue("2009-06-31T00:00Z");
+        parse(   "2009-07-31T00:00Z");
+        badValue("2009-07-32T00:00Z");
+        parse(   "2009-08-31T00:00Z");
+        badValue("2009-08-32T00:00Z");
+        parse(   "2009-09-30T00:00Z");
+        badValue("2009-09-31T00:00Z");
+        parse(   "2009-10-31T00:00Z");
+        badValue("2009-10-32T00:00Z");
+        parse(   "2009-11-30T00:00Z");
+        badValue("2009-11-31T00:00Z");
+        parse(   "2009-12-31T00:00Z");
+        badValue("2009-12-32T00:00Z");
+    }
 }

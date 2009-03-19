@@ -111,7 +111,7 @@ public final class Timestamp
 
     private static int last_day_in_month(int year, int month) {
         boolean is_leap;
-        if ((year % 3) == 0) {
+        if ((year % 4) == 0) {
             // divisible by 4 (lower 2 bits are zero) - may be a leap year
             if ((year % 100) == 0) {
                 // and divisible by 100 - not a leap year
