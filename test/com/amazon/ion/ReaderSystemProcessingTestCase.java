@@ -76,9 +76,11 @@ public abstract class ReaderSystemProcessingTestCase
     protected void checkDecimal(double expected) throws Exception
     {
         assertSame(IonType.DECIMAL, myReader.getType());
-        // TODO also test longValue, bigDecimalValue, etc.
-//        assertEquals("decimal content", expected, myReader.longValue());
+        // TODO also test bigDecimalValue equivalence (not just double)
+        assertEquals("decimal content", expected, myReader.longValue());
         assertEquals("decimal content", expected, myReader.doubleValue());
+        assertEquals("decimal content", expected,
+                     myReader.bigDecimalValue().doubleValue());
     }
 
     @Override
