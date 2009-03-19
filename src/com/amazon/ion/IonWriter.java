@@ -2,6 +2,7 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.util.IonStreamUtils;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
@@ -241,19 +242,28 @@ public interface IonWriter
     /**
      * writes a signed 8 bit value, a Java byte, as an IonInt.
      * @param value signed int to write
+     *
+     * @deprecated Use {@link #writeInt(long)}.
      */
+    @Deprecated
     public void writeInt(byte value) throws IOException;
 
     /**
      * writes a signed 16 bit value, a Java short, as an IonInt.
      * @param value signed int to write
+     *
+     * @deprecated Use {@link #writeInt(long)}.
      */
+    @Deprecated
     public void writeInt(short value) throws IOException;
 
     /**
      * writes a signed 32 bit value, a Java int, as an IonInt.
      * @param value signed int to write
+     *
+     * @deprecated Use {@link #writeInt(long)}.
      */
+    @Deprecated
     public void writeInt(int value) throws IOException;
 
     /**
@@ -262,7 +272,7 @@ public interface IonWriter
      */
     public void writeInt(long value) throws IOException;
 
-    // TODO add writeInt(BigInteger)
+    // TODO add writeInt(Number)
 
 
     /**
@@ -272,7 +282,10 @@ public interface IonWriter
      * is simply a convienience method which casts the float
      * up to a double on output.
      * @param value float to write
+     *
+     * @deprecated Use {@link #writeFloat(double)}.
      */
+    @Deprecated
     public void writeFloat(float value) throws IOException;
 
     /**
@@ -329,6 +342,7 @@ public interface IonWriter
         throws IOException;
 
     /**
+     * Writes a timestamp value.
      *
      * @param value may be null to represent {@code null.timestamp}.
      */
@@ -340,7 +354,10 @@ public interface IonWriter
      * unknown timezone offset (a z value).
      * @param value java.util Date holding the UTC timestamp;
      * may be null to represent {@code null.timestamp}.
+     *
+     * @deprecated Use {@link #writeTimestamp(Timestamp)}.
      */
+    @Deprecated
     public void writeTimestampUTC(Date value) throws IOException;
 
     /**
@@ -352,7 +369,10 @@ public interface IonWriter
      * @param value java.util Date holding the UTC timestamp;
      * may be null to represent {@code null.timestamp}.
      * @param localOffset minutes from UTC where the value was authored
+     *
+     * @deprecated Use {@link #writeTimestamp(Timestamp)}.
      */
+    @Deprecated
     public void writeTimestamp(Date value, Integer localOffset)
         throws IOException;
 
@@ -425,7 +445,10 @@ public interface IonWriter
      * just a convienience, but for the binary writer it can be
      * optimized internally.
      * @param values boolean values to populate the list with
+     *
+     * @deprecated Moved to {@link IonStreamUtils}.
      */
+    @Deprecated
     public void writeBoolList(boolean[] values) throws IOException;
 
     /**
@@ -435,7 +458,10 @@ public interface IonWriter
      * just a convienience, but for the binary writer it can be
      * optimized internally.
      * @param values signed byte values to populate the lists int's with
+     *
+     * @deprecated Moved to {@link IonStreamUtils}.
      */
+    @Deprecated
     public void writeIntList(byte[] values) throws IOException;
 
     /**
@@ -445,7 +471,10 @@ public interface IonWriter
      * just a convienience, but for the binary writer it can be
      * optimized internally.
      * @param values signed short values to populate the lists int's with
+     *
+     * @deprecated Moved to {@link IonStreamUtils}.
      */
+    @Deprecated
     public void writeIntList(short[] values) throws IOException;
 
     /**
@@ -455,7 +484,10 @@ public interface IonWriter
      * just a convienience, but for the binary writer it can be
      * optimized internally.
      * @param values signed int values to populate the lists int's with
+     *
+     * @deprecated Moved to {@link IonStreamUtils}.
      */
+    @Deprecated
     public void writeIntList(int[] values) throws IOException;
 
     /**
@@ -465,7 +497,10 @@ public interface IonWriter
      * just a convienience, but for the binary writer it can be
      * optimized internally.
      * @param values signed long values to populate the lists int's with
+     *
+     * @deprecated Moved to {@link IonStreamUtils}.
      */
+    @Deprecated
     public void writeIntList(long[] values) throws IOException;
 
     /**
@@ -477,7 +512,10 @@ public interface IonWriter
      * is a 64 bit float this is a helper that simply casts
      * the passed in floats to double before writing them.
      * @param values 32 bit float values to populate the lists IonFloat's with
+     *
+     * @deprecated Moved to {@link IonStreamUtils}.
      */
+    @Deprecated
     public void writeFloatList(float[] values) throws IOException;
 
     /**
@@ -487,7 +525,10 @@ public interface IonWriter
      * just a convienience, but for the binary writer it can be
      * optimized internally.
      * @param values 64 bit float values to populate the lists IonFloat's with
+     *
+     * @deprecated Moved to {@link IonStreamUtils}.
      */
+    @Deprecated
     public void writeFloatList(double[] values) throws IOException;
 
     /**
@@ -497,6 +538,9 @@ public interface IonWriter
      * just a convienience, but for the binary writer it can be
      * optimized internally.
      * @param values Java String to populate the lists IonString's from
+     *
+     * @deprecated Moved to {@link IonStreamUtils}.
      */
+    @Deprecated
     public void writeStringList(String[] values) throws IOException;
 }
