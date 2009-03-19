@@ -274,8 +274,11 @@ public class TimestampTest
     public void testBadDates()
     {
         badValue("1969-");
+        badValue("1969t");
         badValue("1696-02");
         badValue("1969-02-");
+        badValue("1969-02t");
+        badValue("1969-02-23t");
         badValue("1969-02-23t00:00Z");      // bad separator
         badValue("1969-02-23T00:00z");      // bad TZD
     }
@@ -341,6 +344,8 @@ public class TimestampTest
 
     public void testPrecision()
     {
+//        checkCanonicalText("2007T");         FIXME JIRA ION-44
+//        checkCanonicalText("2007-08T");      FIXME JIRA ION-44
         checkCanonicalText("2007-08-28");
         checkCanonicalText("2007-08-28T16:37Z");
         checkCanonicalText("2007-08-28T16:37:24Z");
@@ -480,8 +485,14 @@ public class TimestampTest
         throws Exception
     {
         testSimpleClone("null.timestamp");
-//        testSimpleClone("2008-07-11");  // FIXME Date doesn't round-trip
+//        testSimpleClone("2008T");         FIXME JIRA ION-44
+//        testSimpleClone("2008-07T");      FIXME JIRA ION-44
+        testSimpleClone("2008-07-11");
+        testSimpleClone("2008-07-11T14:49-12:34");
+        testSimpleClone("2008-07-11T14:49:26+08:00");
+        testSimpleClone("2008-07-11T14:49:26.00-07:00");
         testSimpleClone("2008-07-11T14:49:26.000-07:00");
+        testSimpleClone("2008-07-11T14:49:26.01000-07:00");
     }
 
     public void testMonthBoundaries()
