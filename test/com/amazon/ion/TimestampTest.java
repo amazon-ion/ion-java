@@ -353,6 +353,12 @@ public class TimestampTest
         checkCanonicalText("2007-08-28T16:37:24.00Z");
         checkCanonicalText("2007-08-28T16:37:24.000Z");
         checkCanonicalText("2007-08-28T16:37:24.0000Z");
+
+
+//        checkTime(1969, 01, 01, 0, 0, 0, null, null, "1969T");
+//        checkTime(1969, 02, 01, 0, 0, 0, null, null, "1969-02T");
+//        checkTime(1969, 02, 03, 0, 0, 0, null, null, "1969-02-03T");
+        checkTime(1969, 02, 03, 0, 0, 0, null, null, "1969-02-03");
     }
 
 
@@ -528,5 +534,42 @@ public class TimestampTest
         badValue("2009-11-31T00:00Z");
         parse(   "2009-12-31T00:00Z");
         badValue("2009-12-32T00:00Z");
+    }
+
+    public void testNewTimestampFromCalendar()
+    {
+        Calendar cal = makeUtcCalendar();
+        cal.clear();
+        cal.set(Calendar.YEAR, 2009);
+        assertFalse(cal.isSet(Calendar.MONTH));
+
+        Timestamp ts = new Timestamp(cal);
+        assertEquals(Timestamp.Precision.YEAR, ts.getPrecision());
+        assertEquals(2009, ts.getYear());
+        assertEquals(1, ts.getMonth());
+        assertEquals(1, ts.getDay());
+        assertEquals(0, ts.getLocalOffset().intValue());
+
+        cal.clear();
+        cal.set(Calendar.YEAR, 2009);
+        cal.set(Calendar.MONTH, 2);
+        assertFalse(cal.isSet(Calendar.HOUR_OF_DAY));
+
+        ts = new Timestamp(cal);
+        assertEquals(Timestamp.Precision.MONTH, ts.getPrecision());
+        assertEquals(2009, ts.getYear());
+        assertEquals(3, ts.getMonth());
+        assertEquals(1, ts.getDay());
+        assertEquals(0, ts.getLocalOffset().intValue());
+
+        cal.clear();
+        cal.set(2009, 2, 18);
+        assertFalse(cal.isSet(Calendar.HOUR_OF_DAY));
+
+        ts = new Timestamp(cal);
+        assertEquals(Timestamp.Precision.DAY, ts.getPrecision());
+        assertEquals(2009, ts.getYear());
+        assertEquals(3, ts.getMonth());
+        assertEquals(18, ts.getDay());
     }
 }

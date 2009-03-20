@@ -20,6 +20,31 @@ import java.util.Date;
  * precision defines which fields have been included.  Only common break
  * points in the values are supported.  Any unspecified values are treated
  * as 0 (aka midnight, beginning of the new day).
+ *
+ * <h4>Equality and Comparison</h4>
+ *
+ * As with {@link IonValue} classes, the {@link #equals} methods on this class
+ * performs a strict equivalence that observes the precision of each timestamp.
+ * This means that it's possible to have two {@link Timestamp} instances that
+ * represent the same point in time but are not equivalent.
+ * <p>
+ * On the other hand, the {@link #compareTo} methods perform timeline
+ * comparison, ignoring precision. Thus the <em>natural comparison method</em>
+ * of this class is <em>not consistent with equals</em>. See the documentation
+ * of {@link Comparable} for further discussion.
+ * <p>
+ * To illustrate this distinction, consider the following timestamps. None are
+ * {@link #equals} to each other, but any pair will return a zero result from
+ * {@link #compareTo}.
+ * <ul>
+ *   <li>{@code 2009T}</li>
+ *   <li>{@code 2009-01T}</li>
+ *   <li>{@code 2009-01-01T}</li>
+ *   <li>{@code 2009-01-01T00:00Z}</li>
+ *   <li>{@code 2009-01-01T00:00.0Z}</li>
+ *   <li>{@code 2009-01-01T00:00.00Z}</li>
+ *   <li>{@code 2009-01-01T00:00.000Z} <em>etc.</em></li>
+ * </ul>
  */
 
 public final class Timestamp
@@ -37,43 +62,44 @@ public final class Timestamp
     	FRACTION
     }
 
-    private static final int BIT_FLAG_YEAR      = 0x01;
-    private static final int BIT_FLAG_MONTH     = 0x02;
-    private static final int BIT_FLAG_DAY       = 0x04;
-    private static final int BIT_FLAG_MINUTE    = 0x08;
-    private static final int BIT_FLAG_SECOND    = 0x10;
-    private static final int BIT_FLAG_FRACTION  = 0x20;
-
-    static public int getPrecisionAsBitFlags(Precision p) {
-        int precision_flags = 0;
-
-        // fall through each case - by design - to accumulate all necessary bits
-        switch (p) {
-        default:        throw new IllegalStateException("unrecognized precision"+p);
-        case FRACTION:  precision_flags |= BIT_FLAG_FRACTION;
-        case SECOND:    precision_flags |= BIT_FLAG_SECOND;
-        case MINUTE:    precision_flags |= BIT_FLAG_MINUTE;
-        case DAY:       precision_flags |= BIT_FLAG_DAY;
-        case MONTH:     precision_flags |= BIT_FLAG_MONTH;
-        case YEAR:      precision_flags |= BIT_FLAG_YEAR;
-        }
-
-        return precision_flags;
-    }
-
-    static public boolean precisionIncludes(int precision_flags, Precision isIncluded)
-    {
-        switch (isIncluded) {
-        case FRACTION:  return (precision_flags & BIT_FLAG_FRACTION) != 0;
-        case SECOND:    return (precision_flags & BIT_FLAG_SECOND) != 0;
-        case MINUTE:    return (precision_flags & BIT_FLAG_MINUTE) != 0;
-        case DAY:       return (precision_flags & BIT_FLAG_DAY) != 0;
-        case MONTH:     return (precision_flags & BIT_FLAG_MONTH) != 0;
-        case YEAR:      return (precision_flags & BIT_FLAG_YEAR) != 0;
-        default:        break;
-        }
-    	throw new IllegalStateException("unrecognized precision"+isIncluded);
-    }
+//    private static final int BIT_FLAG_YEAR      = 0x01;
+//    private static final int BIT_FLAG_MONTH     = 0x02;
+//    private static final int BIT_FLAG_DAY       = 0x04;
+//    private static final int BIT_FLAG_MINUTE    = 0x08;
+//    private static final int BIT_FLAG_SECOND    = 0x10;
+//    private static final int BIT_FLAG_FRACTION  = 0x20;
+//
+//
+//    static public int getPrecisionAsBitFlags(Precision p) {
+//        int precision_flags = 0;
+//
+//        // fall through each case - by design - to accumulate all necessary bits
+//        switch (p) {
+//        default:        throw new IllegalStateException("unrecognized precision"+p);
+//        case FRACTION:  precision_flags |= BIT_FLAG_FRACTION;
+//        case SECOND:    precision_flags |= BIT_FLAG_SECOND;
+//        case MINUTE:    precision_flags |= BIT_FLAG_MINUTE;
+//        case DAY:       precision_flags |= BIT_FLAG_DAY;
+//        case MONTH:     precision_flags |= BIT_FLAG_MONTH;
+//        case YEAR:      precision_flags |= BIT_FLAG_YEAR;
+//        }
+//
+//        return precision_flags;
+//    }
+//
+//    static public boolean precisionIncludes(int precision_flags, Precision isIncluded)
+//    {
+//        switch (isIncluded) {
+//        case FRACTION:  return (precision_flags & BIT_FLAG_FRACTION) != 0;
+//        case SECOND:    return (precision_flags & BIT_FLAG_SECOND) != 0;
+//        case MINUTE:    return (precision_flags & BIT_FLAG_MINUTE) != 0;
+//        case DAY:       return (precision_flags & BIT_FLAG_DAY) != 0;
+//        case MONTH:     return (precision_flags & BIT_FLAG_MONTH) != 0;
+//        case YEAR:      return (precision_flags & BIT_FLAG_YEAR) != 0;
+//        default:        break;
+//        }
+//    	throw new IllegalStateException("unrecognized precision"+isIncluded);
+//    }
 
     /**
      * The precision of this value.  This encodes the precision that the
@@ -91,8 +117,8 @@ public final class Timestamp
      * these in a non-null Timestamp.
      */
     private int 	_year;
-    private int 	_month;
-    private int 	_day;
+    private int 	_month = 1; // Initialized to valid default
+    private int 	_day   = 1; // Initialized to valid default
     private int 	_hour;
     private int 	_minute;
     private int 	_second;
@@ -104,7 +130,7 @@ public final class Timestamp
      */
     private Integer 	_offset;
 
-    						//jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec
+                                                //jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec
                                                 // the first 0 is to make these arrays 1 based (since month values are 1-12)
     private static int[] _Leap_days_in_month   = { 0,  31,  29,  31,  30,  31,  30,  31,  31,  30,  31,  30,  31 };
     private static int[] _Normal_days_in_month = { 0,  31,  28,  31,  30,  31,  30,  31,  31,  30,  31,  30,  31 };
@@ -211,7 +237,7 @@ public final class Timestamp
         dec_ms = dec_ms.movePointLeft(3); // set value to milliseconds
         this._fraction = dec_ms;
     }
-    private void set_fields_from_calendar(Calendar cal, Integer offset)
+    private void set_fields_from_calendar(Calendar cal)
     {
         if (cal.isSet(Calendar.MILLISECOND)) {
             this._precision = Precision.FRACTION;
@@ -220,7 +246,7 @@ public final class Timestamp
              this._precision = Precision.SECOND;
         }
         else if (cal.isSet(Calendar.HOUR_OF_DAY) || cal.isSet(Calendar.MINUTE)) {
-        	this._precision = Precision.MINUTE;
+            this._precision = Precision.MINUTE;
         }
         else if (cal.isSet(Calendar.DAY_OF_MONTH)) {
             this._precision = Precision.DAY;
@@ -232,15 +258,16 @@ public final class Timestamp
             this._precision = Precision.YEAR;
         }
         else {
-        	throw new IllegalArgumentException("unset Calendar is not valid for set");
+            throw new IllegalArgumentException("unset Calendar is not valid for set");
         }
 
-        clone_from_calendar_fields(this._precision, cal);
+        copy_from_calendar_fields(this._precision, cal);
+        // TODO why doesn't this happen in copy_from_calendar_fields ?
         if (this._precision == Precision.FRACTION) {
             BigDecimal millis = new BigDecimal(cal.get(Calendar.MILLISECOND));
             this._fraction = millis.movePointRight(3); // make these actually 1/1000's of a second
         }
-        this._offset = offset;
+        this._offset = cal.get(Calendar.ZONE_OFFSET);
     }
 
     /**
@@ -253,21 +280,22 @@ public final class Timestamp
      * @param p the precision which control which fields are copied
      * @param cal the source calendar value
      */
-    private void clone_from_calendar_fields(Precision p, Calendar cal) {
+    private void copy_from_calendar_fields(Precision p, Calendar cal) {
         int offset = 0;
         if (cal.isSet(Calendar.ZONE_OFFSET)) {
             offset = cal.get(Calendar.ZONE_OFFSET) / 1000*60; // convert to minutes from milliseconds
         }
+        assert this._day == 1;
         switch (p) {
-            case SECOND:
             case FRACTION:
+            case SECOND:
                 this._second = cal.get(Calendar.SECOND);
             case MINUTE:
                 this._hour = cal.get(Calendar.HOUR_OF_DAY);
                 this._minute = cal.get(Calendar.MINUTE);
-            case MONTH:
-            	this._day = cal.get(Calendar.DAY_OF_MONTH);
             case DAY:
+            	this._day = cal.get(Calendar.DAY_OF_MONTH);
+            case MONTH:
                 this._month = cal.get(Calendar.MONTH) + 1; // calendar months are 0 based, timestamp months are 1 based
             case YEAR:
                 this._year = cal.get(Calendar.YEAR);
@@ -309,8 +337,8 @@ public final class Timestamp
     	int end_of_month = last_day_in_month(zyear, zmonth);
     	if (zday < 1 || zday > end_of_month) throw new IllegalArgumentException("day is between 1 and "+end_of_month+" inclusive");
         this._precision = Precision.DAY;
-        this._day = zday;  // days are base 1 (as you'd expect)sdfsd
-        this._month = zmonth;   // months are base 0 (which is surprising)
+        this._day = zday;  // days are base 1 (as you'd expect)
+        this._month = zmonth;
         this._year = zyear;
         validate_fields();
         this._offset = UNKNOWN_OFFSET;
@@ -328,7 +356,7 @@ public final class Timestamp
         this._minute = minute;
         this._hour = hour;
         this._day = day;  // days are base 1 (as you'd expect)
-        this._month = month;   // months are base 0 (which is surprising)
+        this._month = month;
         this._year = year;
 
         validate_fields();
@@ -349,7 +377,7 @@ public final class Timestamp
         this._minute = minute;
         this._hour = hour;
         this._day = day;  // days are base 1 (as you'd expect)
-        this._month = month;   // months are base 0 (which is surprising)
+        this._month = month;
         this._year = year;
 
         validate_fields();
@@ -371,7 +399,7 @@ public final class Timestamp
         this._minute = minute;
         this._hour = hour;
         this._day = day;  // days are base 1 (as you'd expect)
-        this._month = month;   // months are base 0 (which is surprising)
+        this._month = month;
         this._year = year;
 
         validate_fields();
@@ -396,7 +424,7 @@ public final class Timestamp
         this._precision = p;
         switch (p) {
         default:
-        	throw new IllegalArgumentException("invalid Precision passed to constructor");
+            throw new IllegalArgumentException("invalid Precision passed to constructor");
         case FRACTION:
             this._fraction = frac;
         case SECOND:
@@ -405,11 +433,11 @@ public final class Timestamp
             this._minute = zminute;
             this._hour = zhour;
         case DAY:
-        	this._day = zday;  // days are base 1 (as you'd expect)
+            this._day = zday;  // days are base 1 (as you'd expect)
         case MONTH:
-            this._month = zmonth;   // months are base 0 (which is surprising)
+            this._month = zmonth;
         case YEAR:
-        	this._year = zyear;
+            this._year = zyear;
         }
         validate_fields();
         this._offset = offset;
@@ -445,7 +473,7 @@ public final class Timestamp
      */
     public Timestamp(Calendar cal)
     {
-    	set_fields_from_calendar(cal, cal.get(Calendar.ZONE_OFFSET));
+    	set_fields_from_calendar(cal);
     }
 
     /**
@@ -1228,87 +1256,122 @@ public final class Timestamp
     }
 
     /**
-     * Compares this Timestamp with a passed in value.  If the time represented by 'this' is
-     * less than the time represened by 'arg' -1 is returned. If greater +1. And if the times
-     * are equivalent 0 is returns.  Note that a 0 return is not same as the two values being
-     * equal as the timezones of the two values may be different.  As long as the corresponding
-     * UTC time is the same compareTo returns 0.
+     * Performs a timeline comparison of the instant represented by two
+     * Timestamps.
+     * If the instant represented by this object precedes that of {@code t},
+     * then {@code -1} is returned.
+     * If {@code t} precedes this object then {@code 1} is returned.
+     * If the timestamps represent the same instance on the timeline, then
+     * {@code 0} is returned.
+     * Note that a {@code 0} result does not imply that the two values are
+     * {@link #equals}, as the timezones or precision of the two values may be
+     * different.
      *
-     * @param arg second timestamp to compare 'this' to
-     * @return a negative integer, zero, or a positive integer as this object is less than, equal to, or greater than the object arg.
-     * @throws ClassCastException - if the specified arg's type prevents it from being compared to this Timestamp.
+     * @param t second timestamp to compare 'this' to
+     * @return a negative integer, zero, or a positive integer as this object
+     * is less than, equal to, or greater than the specified object.
+     *
+     * @throws ClassCastException if {@code t} is not a {@link Timestamp}.
+     * @throws NullPointerException if {@code t} is null.
      */
-    public int compareTo(Object arg) {
-        if (!(arg instanceof Timestamp)) throw new ClassCastException();
-        return this.compareTo((Timestamp)arg);
+    public int compareTo(Object t) {
+        return this.compareTo((Timestamp)t);
     }
 
     /**
-     * Compares this Timestamp with a passed in value.  If the time represented by 'this' is
-     * less than the time represened by 'arg' -1 is returned. If greater +1. And if the times
-     * are equivalent 0 is returns.  Note that a 0 return is not same as the two values being
-     * equal as the timezones of the two values may be different.  As long as the corresponding
-     * UTC time is the same compareTo returns 0.
+     * Performs a timeline comparison of the instant represented by two
+     * Timestamps.
+     * If the instant represented by this object precedes that of {@code t},
+     * then {@code -1} is returned.
+     * If {@code t} precedes this object then {@code 1} is returned.
+     * If the timestamps represent the same instance on the timeline, then
+     * {@code 0} is returned.
+     * Note that a {@code 0} result does not imply that the two values are
+     * {@link #equals}, as the timezones or precision of the two values may be
+     * different.
      *
-     * @param arg second timestamp to compare 'this' to
-     * @return a negative integer, zero, or a positive integer as this object is less than, equal to, or greater than the object arg.
-     * @throws ClassCastException - if the specified arg's type prevents it from being compared to this Timestamp.
+     * @param t second timestamp to compare 'this' to
+     * @return a negative integer, zero, or a positive integer as this object
+     * is less than, equal to, or greater than the specified object.
+     *
+     * @throws NullPointerException if {@code t} is null.
      */
-    public int compareTo(Timestamp arg)
+    public int compareTo(Timestamp t)
     {
         long this_millis = this.getMillis();
-        long arg_millis = arg.getMillis();
+        long arg_millis = t.getMillis();
         if (this_millis != arg_millis) {
             return (this_millis < arg_millis) ? -1 : 1;
         }
 
-        BigDecimal this_fraction = ((this._fraction == null) ? BigDecimal.ZERO : this._fraction);
-        BigDecimal arg_fraction =  (( arg._fraction == null) ? BigDecimal.ZERO :  arg._fraction);
+        BigDecimal this_fraction =
+            ((this._fraction == null) ? BigDecimal.ZERO : this._fraction);
+        BigDecimal arg_fraction =
+            (( t._fraction == null) ? BigDecimal.ZERO :  t._fraction);
         return this_fraction.compareTo(arg_fraction);
     }
 
+
+    /**
+     * Compares this {@link Timestamp} to the specified Object.
+     * The result is {@code true} if and only if the parameter is a
+     * {@link Timestamp} object that represents the same point in time and has
+     * the same precision as this object.
+     * <p>
+     * Use the {@link #compareTo(Object)} method to compare only the point in
+     * time.
+     */
     @Override
-    public boolean equals(Object obj)
+    public boolean equals(Object t)
     {
-    	if (!(obj instanceof Timestamp)) return false;
-    	return equals((Timestamp)obj);
+    	if (!(t instanceof Timestamp)) return false;
+    	return equals((Timestamp)t);
     }
 
-    public boolean equals(Timestamp other)
+    /**
+     * Compares this {@link Timestamp} to another.
+     * The result is {@code true} if and only if the parameter
+     * represents the same point in time and has
+     * the same precision as this object.
+     * <p>
+     * Use the {@link #compareTo(Timestamp)} method to compare only the point
+     * in time.
+     */
+    public boolean equals(Timestamp t)
     {
-        if (this == other) return true;
-        if (other == null) return false;
+        if (this == t) return true;
+        if (t == null) return false;
 
         // if the precisions are not the same the values are not
-        if (this._precision != other._precision) return false;
+        if (this._precision != t._precision) return false;
 
         // if the local offset are not the same the values are not
         if (this._offset == null) {
-            if (other._offset != null)  return false;
+            if (t._offset != null)  return false;
         }
         else {
-            if (other._offset == null) return false;
+            if (t._offset == null) return false;
         }
 
         // so now we check the actual time value
         long this_millis = this.getMillis();
-        long other_millis = other.getMillis();
+        long other_millis = t.getMillis();
         if (this_millis != other_millis) return false;
 
         // and if we have a local offset, check the value here
         if (this._offset != null) {
-            if (this._offset.intValue() != other._offset.intValue()) return false;
+            if (this._offset.intValue() != t._offset.intValue()) return false;
         }
 
         // we only look at the fraction if we know that it's actually there
         if (this._precision == Precision.FRACTION) {
             if (this._fraction == null) {
-                if (other._fraction != null) return false;
+                if (t._fraction != null) return false;
             }
             else {
-                if (other._fraction == null) return false;
+                if (t._fraction == null) return false;
             }
-            if (!this._fraction.equals(other._fraction)) return false;
+            if (!this._fraction.equals(t._fraction)) return false;
         }
         return true;
     }
