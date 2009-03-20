@@ -14,9 +14,8 @@ public class IonTextUtils
 
     public enum SymbolVariant { IDENTIFIER, OPERATOR, QUOTED }
 
-    private enum EscapeMode { ION, JSON }
+    private enum EscapeMode { JSON, ION_SYMBOL, ION_STRING, ION_LONG_STRING }
 
-    private static final int ANY_SURROUNDING_QUOTES = -2;
 
     private static final boolean[] IDENTIFIER_START_CHAR_FLAGS;
     private static final boolean[] IDENTIFIER_FOLLOW_CHAR_FLAGS;
@@ -233,7 +232,10 @@ public class IonTextUtils
         if (! isIdentifierKeyword(symbol))
         {
             char c = symbol.charAt(0);
-            // FIXME do we need to handle surrogates?
+            // Surrogates are neither identifierStart nor operatorPart, so the
+            // first one we hit will fall through and return true.
+            // TODO test that
+
             if (!quoteOperators && isOperatorPart(c))
             {
                 for (int ii = 0; ii < length; ii++) {
@@ -250,7 +252,7 @@ public class IonTextUtils
             {
                 for (int ii = 0; ii < length; ii++) {
                     c = symbol.charAt(ii);
-                    if (needsEscapeForAsciiPrinting(c, '\'')
+                    if ((c == '\'' || c < 32 || c > 126)
                         || !isIdentifierPart(c))
                     {
                         return true;
@@ -291,13 +293,15 @@ public class IonTextUtils
         }
 
         char c = symbol.charAt(0);
-        // FIXME do we need to handle surrogates?
+        // Surrogates are neither identifierStart nor operatorPart, so the
+        // first one we hit will fall through and return QUOTED.
+        // TODO test that
 
         if (isIdentifierStart(c))
         {
             for (int ii = 0; ii < length; ii++) {
                 c = symbol.charAt(ii);
-                if (needsEscapeForAsciiPrinting(c, '\'')
+                if ((c == '\'' || c < 32 || c > 126)
                     || !isIdentifierPart(c))
                 {
                     return SymbolVariant.QUOTED;
@@ -327,31 +331,6 @@ public class IonTextUtils
 
 
     /**
-     * Determines whether a single character (Unicode code point) needs an
-     * escape sequence for printing within an Ion text value.
-     *
-     * @param codePoint a Unicode code point.
-     * @param surroundingQuoteChar must be either {@code '\''}, {@code '\"'},
-     * or {@link #ANY_SURROUNDING_QUOTES}.
-     *
-     * @return {@code true} if the character needs to be escaped.
-     */
-    private static boolean needsEscapeForAsciiPrinting(int codePoint,
-                                                       int surroundingQuoteChar)
-    {
-        switch (codePoint) {
-        case '\"':
-            return (surroundingQuoteChar == '\"');
-        case '\'':
-            return (surroundingQuoteChar == '\'');
-        case '\\':
-            return true;
-        default:
-            return (codePoint < 32 || codePoint > 126);
-        }
-    }
-
-    /**
      * Prints a single Unicode code point for use in an ASCII-safe Ion string.
      *
      * @param out the stream to receive the data.
@@ -360,7 +339,7 @@ public class IonTextUtils
     public static void printStringCodePoint(Appendable out, int codePoint)
         throws IOException
     {
-        printCodePoint(out, codePoint, '\"', EscapeMode.ION);
+        printCodePoint(out, codePoint, EscapeMode.ION_STRING);
     }
 
     /**
@@ -372,7 +351,7 @@ public class IonTextUtils
     public static void printSymbolCodePoint(Appendable out, int codePoint)
         throws IOException
     {
-        printCodePoint(out, codePoint, '\'', EscapeMode.ION);
+        printCodePoint(out, codePoint, EscapeMode.ION_SYMBOL);
     }
 
     /**
@@ -386,24 +365,28 @@ public class IonTextUtils
         throws IOException
     {
         // JSON only allows double-quote strings.
-        printCodePoint(out, codePoint, '"', EscapeMode.JSON);
+        printCodePoint(out, codePoint, EscapeMode.JSON);
     }
 
 
-    private static void printCodePoint(Appendable out, int c, int quote,
-                                       EscapeMode mode)
+    private static void printCodePoint(Appendable out, int c, EscapeMode mode)
         throws IOException
     {
         // JSON only allows uHHHH numeric escapes.
         switch (c) {
             case 0:
-                out.append(mode == EscapeMode.ION ? "\\0" : "\\u0000");
+                out.append(mode == EscapeMode.JSON ? "\\u0000" : "\\0");
                 return;
             case '\t':
                 out.append("\\t");
                 return;
             case '\n':
-                out.append("\\n");
+                if (mode == EscapeMode.ION_LONG_STRING) {
+                    out.append('\n');
+                }
+                else {
+                    out.append("\\n");
+                }
                 return;
             case '\r':
                 out.append("\\r");
@@ -415,19 +398,21 @@ public class IonTextUtils
                 out.append("\\b");
                 return;
             case '\u0007':
-                out.append(mode == EscapeMode.ION ? "\\a" : "\\u0007");
+                out.append(mode == EscapeMode.JSON ? "\\u0007" : "\\a");
                 return;
             case '\u000B':
                 out.append("\\v");
                 return;
             case '\"':
-                if (quote == c || quote == ANY_SURROUNDING_QUOTES) {
+                if (mode == EscapeMode.JSON || mode == EscapeMode.ION_STRING) {
                     out.append("\\\"");
                     return;
                 }
                 break;
             case '\'':
-                if (quote == c || quote == ANY_SURROUNDING_QUOTES) {
+                if (mode == EscapeMode.ION_SYMBOL ||
+                    mode == EscapeMode.ION_LONG_STRING)
+                {
                     out.append("\\\'");
                     return;
                 }
@@ -462,8 +447,7 @@ public class IonTextUtils
             printCodePointAsFourHexDigits(out, c);
         }
         else {
-            // FIXME JSON doesn't support eight-digit \U syntax!
-            // https://issue-tracking.amazon.com/browse/ION-33
+            // FIXME JIRA ION-33 - JSON doesn't support eight-digit \U syntax!
             printCodePointAsEightHexDigits(out, c);
         }
     }
@@ -516,7 +500,7 @@ public class IonTextUtils
      * If the {@code text} is null, this prints {@code null.string}.
      *
      * @param out the stream to receive the data.
-     * @param text the text to print, may be {@code null}.
+     * @param text the text to print; may be {@code null}.
      *
      * @throws IOException if the {@link Appendable} throws an exception.
      * @throws IllegalArgumentException
@@ -532,7 +516,7 @@ public class IonTextUtils
         else
         {
             out.append('"');
-            printChars(out, text, '"', EscapeMode.ION);
+            printCodePoints(out, text, EscapeMode.ION_STRING);
             out.append('"');
         }
     }
@@ -543,7 +527,7 @@ public class IonTextUtils
      * If the {@code text} is null, this prints {@code null}.
      *
      * @param out the stream to receive the JSON data.
-     * @param text the text to print, may be {@code null}.
+     * @param text the text to print; may be {@code null}.
      *
      * @throws IOException if the {@link Appendable} throws an exception.
      * @throws IllegalArgumentException
@@ -559,7 +543,7 @@ public class IonTextUtils
         else
         {
             out.append('"');
-            printChars(out, text, '"', EscapeMode.JSON);
+            printCodePoints(out, text, EscapeMode.JSON);
             out.append('"');
         }
     }
@@ -598,6 +582,65 @@ public class IonTextUtils
         }
         return builder.toString();
     }
+
+
+    /**
+     * Builds a String denoting an ASCII-encoded Ion "long string",
+     * including surrounding triple-quotes.
+     * If the {@code text} is null, this returns {@code "null.string"}.
+     *
+     * @param text the text to print; may be {@code null}.
+     *
+     * @throws IllegalArgumentException
+     *     if the text contains invalid UTF-16 surrogates.
+     */
+    public static String printLongString(CharSequence text)
+    {
+        if (text == null) return "null.string";
+
+        if (text.length() == 0) return "''''''";
+
+        StringBuilder builder = new StringBuilder(text.length() + 6);
+        try
+        {
+            printLongString(builder, text);
+        }
+        catch (IOException e)
+        {
+            // Shouldn't happen
+            throw new Error(e);
+        }
+        return builder.toString();
+    }
+
+
+    /**
+     * Prints characters as an ASCII-encoded Ion "long string",
+     * including surrounding triple-quotes.
+     * If the {@code text} is null, this prints {@code null.string}.
+     *
+     * @param out the stream to receive the data.
+     * @param text the text to print; may be {@code null}.
+     *
+     * @throws IOException if the {@link Appendable} throws an exception.
+     * @throws IllegalArgumentException
+     *     if the text contains invalid UTF-16 surrogates.
+     */
+    public static void printLongString(Appendable out, CharSequence text)
+        throws IOException
+    {
+        if (text == null)
+        {
+            out.append("null.string");
+        }
+        else
+        {
+            out.append("'''");
+            printCodePoints(out, text, EscapeMode.ION_LONG_STRING);
+            out.append("'''");
+        }
+    }
+
 
     /**
      * Builds a String denoting an ASCII-encoded Ion string,
@@ -703,7 +746,7 @@ public class IonTextUtils
         else
         {
             out.append('\'');
-            printChars(out, text, '\'', EscapeMode.ION);
+            printCodePoints(out, text, EscapeMode.ION_SYMBOL);
             out.append('\'');
         }
     }
@@ -743,8 +786,8 @@ public class IonTextUtils
      * @throws IllegalArgumentException
      *     if the text contains invalid UTF-16 surrogates.
      */
-    private static void printChars(Appendable out, CharSequence text,
-                                   int surroundingQuoteChar, EscapeMode mode)
+    private static void printCodePoints(Appendable out, CharSequence text,
+                                        EscapeMode mode)
         throws IOException
     {
         int len = text.length();
@@ -775,7 +818,7 @@ public class IonTextUtils
                 throw new IllegalArgumentException(message);
             }
 
-            printCodePoint(out, c, surroundingQuoteChar, mode);
+            printCodePoint(out, c, mode);
         }
     }
 

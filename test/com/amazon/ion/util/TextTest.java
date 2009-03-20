@@ -54,6 +54,43 @@ public class TextTest
         quotedEverywhere(":a");
     }
 
+    public void testPrintLongString()
+        throws Exception
+    {
+        final String LQ = "'''";
+
+        checkLongString("null.string", null);
+        checkLongString(LQ + LQ, "");
+        checkLongString(LQ + "a" + LQ, "a");
+        checkLongString(LQ + "a\n" + LQ, "a\n");
+
+        // Tricky escapes
+        checkLongString(LQ + "\\0\\a\n" + LQ, "\u0000\u0007\n");
+        checkLongString(LQ + "1\\r\n2" + LQ, "1\r\n2");
+
+        // Now the big ones
+        checkLongString(LQ + "\\'" + LQ, "'");
+        checkLongString(LQ + "\\'\\'" + LQ, "''");
+        checkLongString(LQ + "\\'\\'\\'" + LQ, "'''");
+
+        // TODO minimize escaping of single-quotes
+//        checkLongString(LQ + "a'b" + LQ, "a'b");
+    }
+
+    private void checkLongString(String expected, String value)
+        throws Exception
+    {
+        String rendered = IonTextUtils.printLongString(value);
+        assertEquals(expected, rendered);
+        checkString(value, oneValue(rendered));
+
+        StringBuilder buf = new StringBuilder();
+        IonTextUtils.printLongString(buf, value);
+        rendered = buf.toString();
+        assertEquals(expected, rendered);
+        checkString(value, oneValue(rendered));
+    }
+
 
     @SuppressWarnings("deprecation")
     private void unquotedAnywhere(String symbol)
