@@ -274,8 +274,11 @@ public class TimestampTest
     public void testBadDates()
     {
         badValue("1969-");
+        badValue("1969t");
         badValue("1696-02");
         badValue("1969-02-");
+        badValue("1969-02t");
+        badValue("1969-02-23t");
         badValue("1969-02-23t00:00Z");      // bad separator
         badValue("1969-02-23T00:00z");      // bad TZD
     }
@@ -341,6 +344,8 @@ public class TimestampTest
 
     public void testPrecision()
     {
+//        checkCanonicalText("2007T");         FIXME JIRA ION-44
+//        checkCanonicalText("2007-08T");      FIXME JIRA ION-44
         checkCanonicalText("2007-08-28");
         checkCanonicalText("2007-08-28T16:37Z");
         checkCanonicalText("2007-08-28T16:37:24Z");
@@ -348,6 +353,12 @@ public class TimestampTest
         checkCanonicalText("2007-08-28T16:37:24.00Z");
         checkCanonicalText("2007-08-28T16:37:24.000Z");
         checkCanonicalText("2007-08-28T16:37:24.0000Z");
+
+
+//        checkTime(1969, 01, 01, 0, 0, 0, null, null, "1969T");
+//        checkTime(1969, 02, 01, 0, 0, 0, null, null, "1969-02T");
+//        checkTime(1969, 02, 03, 0, 0, 0, null, null, "1969-02-03T");
+        checkTime(1969, 02, 03, 0, 0, 0, null, null, "1969-02-03");
     }
 
 
@@ -480,8 +491,14 @@ public class TimestampTest
         throws Exception
     {
         testSimpleClone("null.timestamp");
-//        testSimpleClone("2008-07-11");  // FIXME Date doesn't round-trip
+//        testSimpleClone("2008T");         FIXME JIRA ION-44
+//        testSimpleClone("2008-07T");      FIXME JIRA ION-44
+        testSimpleClone("2008-07-11");
+        testSimpleClone("2008-07-11T14:49-12:34");
+        testSimpleClone("2008-07-11T14:49:26+08:00");
+        testSimpleClone("2008-07-11T14:49:26.00-07:00");
         testSimpleClone("2008-07-11T14:49:26.000-07:00");
+        testSimpleClone("2008-07-11T14:49:26.01000-07:00");
     }
 
     public void testMonthBoundaries()
@@ -517,5 +534,42 @@ public class TimestampTest
         badValue("2009-11-31T00:00Z");
         parse(   "2009-12-31T00:00Z");
         badValue("2009-12-32T00:00Z");
+    }
+
+    public void testNewTimestampFromCalendar()
+    {
+        Calendar cal = makeUtcCalendar();
+        cal.clear();
+        cal.set(Calendar.YEAR, 2009);
+        assertFalse(cal.isSet(Calendar.MONTH));
+
+        Timestamp ts = new Timestamp(cal);
+        assertEquals(Timestamp.Precision.YEAR, ts.getPrecision());
+        assertEquals(2009, ts.getYear());
+        assertEquals(1, ts.getMonth());
+        assertEquals(1, ts.getDay());
+        assertEquals(0, ts.getLocalOffset().intValue());
+
+        cal.clear();
+        cal.set(Calendar.YEAR, 2009);
+        cal.set(Calendar.MONTH, 2);
+        assertFalse(cal.isSet(Calendar.HOUR_OF_DAY));
+
+        ts = new Timestamp(cal);
+        assertEquals(Timestamp.Precision.MONTH, ts.getPrecision());
+        assertEquals(2009, ts.getYear());
+        assertEquals(3, ts.getMonth());
+        assertEquals(1, ts.getDay());
+        assertEquals(0, ts.getLocalOffset().intValue());
+
+        cal.clear();
+        cal.set(2009, 2, 18);
+        assertFalse(cal.isSet(Calendar.HOUR_OF_DAY));
+
+        ts = new Timestamp(cal);
+        assertEquals(Timestamp.Precision.DAY, ts.getPrecision());
+        assertEquals(2009, ts.getYear());
+        assertEquals(3, ts.getMonth());
+        assertEquals(18, ts.getDay());
     }
 }

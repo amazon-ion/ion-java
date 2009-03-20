@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -10,6 +8,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.ValueVisitor;
+import com.amazon.ion.Timestamp.Precision;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
@@ -22,6 +21,46 @@ public final class IonTimestampImpl
     implements IonTimestamp
 {
     public final static Integer UTC_OFFSET = Timestamp.UTC_OFFSET;
+
+    private static final int BIT_FLAG_YEAR      = 0x01;
+    private static final int BIT_FLAG_MONTH     = 0x02;
+    private static final int BIT_FLAG_DAY       = 0x04;
+    private static final int BIT_FLAG_MINUTE    = 0x08;
+    private static final int BIT_FLAG_SECOND    = 0x10;
+    private static final int BIT_FLAG_FRACTION  = 0x20;
+
+    static public int getPrecisionAsBitFlags(Precision p) {
+        int precision_flags = 0;
+
+        // fall through each case - by design - to accumulate all necessary bits
+        switch (p) {
+        default:        throw new IllegalStateException("unrecognized precision"+p);
+        case FRACTION:  precision_flags |= BIT_FLAG_FRACTION;
+        case SECOND:    precision_flags |= BIT_FLAG_SECOND;
+        case MINUTE:    precision_flags |= BIT_FLAG_MINUTE;
+        case DAY:       precision_flags |= BIT_FLAG_DAY;
+        case MONTH:     precision_flags |= BIT_FLAG_MONTH;
+        case YEAR:      precision_flags |= BIT_FLAG_YEAR;
+        }
+
+        return precision_flags;
+    }
+
+    static public boolean precisionIncludes(int precision_flags,
+                                            Precision isIncluded)
+    {
+        switch (isIncluded) {
+        case FRACTION:  return (precision_flags & BIT_FLAG_FRACTION) != 0;
+        case SECOND:    return (precision_flags & BIT_FLAG_SECOND) != 0;
+        case MINUTE:    return (precision_flags & BIT_FLAG_MINUTE) != 0;
+        case DAY:       return (precision_flags & BIT_FLAG_DAY) != 0;
+        case MONTH:     return (precision_flags & BIT_FLAG_MONTH) != 0;
+        case YEAR:      return (precision_flags & BIT_FLAG_YEAR) != 0;
+        default:        break;
+        }
+        throw new IllegalStateException("unrecognized precision"+isIncluded);
+    }
+
 
     static final int NULL_TIMESTAMP_TYPEDESC =
         IonConstants.makeTypeDescriptor(IonConstants.tidTimestamp,

@@ -413,11 +413,11 @@ public abstract class SystemProcessingTestCase
         testString("\uffff", ionData);
 
         ionData = "\"\\" + "U0001d110\""; // Carefully avoid Java escape
-//        testString("\ud834\udd10", ionData); // FIXME enable test case
+//        testString("\ud834\udd10", ionData); // FIXME JIRA ION-8
 
         // The largest legal code point
         ionData = "\"\\" + "U0010ffff\""; // Carefully avoid Java escape
-//        testString("\udbff\udfff", ionData); // FIXME enable test case
+//        testString("\udbff\udfff", ionData); // FIXME JIRA ION-8
     }
 
 
@@ -477,7 +477,7 @@ public abstract class SystemProcessingTestCase
         checkEof();
     }
 
-    public void XXXtestSpecialFloats() // FIXME enable test case
+    public void testSpecialFloats()
         throws Exception
     {
         startIteration("nan +inf -inf");

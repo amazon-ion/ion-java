@@ -1,11 +1,10 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_1_0;
 import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
+import static com.amazon.ion.impl.IonTimestampImpl.precisionIncludes;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonNumber;
@@ -2429,7 +2428,8 @@ done:       for (;;) {
         {
             if (di == null) return 0;
             int returnlen = 0;
-            int precision_flags = Timestamp.getPrecisionAsBitFlags(di.getPrecision());
+            int precision_flags =
+                IonTimestampImpl.getPrecisionAsBitFlags(di.getPrecision());
 
         	Integer offset = di.getLocalOffset();
         	if (offset == null) {
@@ -2443,25 +2443,25 @@ done:       for (;;) {
 
         	// now the date - year, month, day as varUint7's
         	// if we have a non-null value we have at least the date
-        	if (Timestamp.precisionIncludes(precision_flags, Precision.YEAR)) {
+        	if (precisionIncludes(precision_flags, Precision.YEAR)) {
         		returnlen += this.writeVarUInt7Value(di.getZYear(), true);
         	}
-        	if (Timestamp.precisionIncludes(precision_flags, Precision.MONTH)) {
+        	if (precisionIncludes(precision_flags, Precision.MONTH)) {
         		returnlen += this.writeVarUInt7Value(di.getZMonth(), true);
         	}
-        	if (Timestamp.precisionIncludes(precision_flags, Precision.DAY)) {
+        	if (precisionIncludes(precision_flags, Precision.DAY)) {
         		returnlen += this.writeVarUInt7Value(di.getZDay(), true);
         	}
 
         	// now the time portion
-        	if (Timestamp.precisionIncludes(precision_flags, Precision.MINUTE)) {
+        	if (precisionIncludes(precision_flags, Precision.MINUTE)) {
         		returnlen += this.writeVarUInt7Value(di.getZHour(), true);
         		returnlen += this.writeVarUInt7Value(di.getZMinute(), true);
         	}
-        	if (Timestamp.precisionIncludes(precision_flags, Precision.SECOND)) {
+        	if (precisionIncludes(precision_flags, Precision.SECOND)) {
         		returnlen += this.writeVarUInt7Value(di.getZSecond(), true);
         	}
-        	if (Timestamp.precisionIncludes(precision_flags, Precision.FRACTION)) {
+        	if (precisionIncludes(precision_flags, Precision.FRACTION)) {
                 // and, finally, any fractional component that is known
         		returnlen += this.writeDecimalContent(di.getZFractionalSecond(), IonNumber.Classification.NEGATIVE_ZERO);
         	}

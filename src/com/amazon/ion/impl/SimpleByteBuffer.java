@@ -1,8 +1,8 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
+
+import static com.amazon.ion.impl.IonTimestampImpl.precisionIncludes;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.Timestamp;
@@ -494,27 +494,27 @@ done:       for (;;) {
                 // or 0x1 to 0x270F or 14 bits - 1 or 2 bytes
             	year  = readVarUInt();
                 p = Precision.YEAR; // our lowest significant option
-            	
+
                 // now we look for hours and minutes
                 if (position() < end) {
 	            	month = readVarUInt();
 	                p = Precision.MONTH;
-	            	
+
 	                // now we look for hours and minutes
 	                if (position() < end) {
 		            	day   = readVarUInt();
 		                p = Precision.DAY; // our lowest significant option
-		
+
 		                // now we look for hours and minutes
 		                if (position() < end) {
 		                    hour   = readVarUInt();
 		                    minute = readVarUInt();
 		                    p = Precision.MINUTE;
-		
+
 		                    if (position() < end) {
 		                    	second = readVarUInt();
 		                        p = Precision.SECOND;
-		
+
 		                        remaining = end - position();
 		                        if (remaining > 0) {
 		                            // now we read in our actual "milliseconds since the epoch"
@@ -1031,7 +1031,8 @@ done:       for (;;) {
             if (di == null) return 0;
 
             int returnlen = 0;
-            int precision_flags = Timestamp.getPrecisionAsBitFlags(di.getPrecision());
+            int precision_flags =
+                IonTimestampImpl.getPrecisionAsBitFlags(di.getPrecision());
 
             Integer offset = di.getLocalOffset();
             if (offset == null) {
@@ -1046,25 +1047,25 @@ done:       for (;;) {
 
             // now the date - year, month, day as varUint7's
             // if we have a non-null value we have at least the date
-            if (Timestamp.precisionIncludes(precision_flags, Precision.YEAR)) {
+            if (precisionIncludes(precision_flags, Precision.YEAR)) {
             	returnlen += this.writeVarUInt(di.getZYear(), true);
             }
-            if (Timestamp.precisionIncludes(precision_flags, Precision.MONTH)) {
+            if (precisionIncludes(precision_flags, Precision.MONTH)) {
             	returnlen += this.writeVarUInt(di.getZMonth(), true);
             }
-            if (Timestamp.precisionIncludes(precision_flags, Precision.DAY)) {
+            if (precisionIncludes(precision_flags, Precision.DAY)) {
             	returnlen += this.writeVarUInt(di.getZDay(), true);
             }
 
             // now the time part
-            if (Timestamp.precisionIncludes(precision_flags, Precision.MINUTE)) {
+            if (precisionIncludes(precision_flags, Precision.MINUTE)) {
                 returnlen += this.writeVarUInt(di.getZHour(), true);
                 returnlen += this.writeVarUInt(di.getZMinute(), true);
             }
-            if (Timestamp.precisionIncludes(precision_flags, Precision.SECOND)) {
+            if (precisionIncludes(precision_flags, Precision.SECOND)) {
             	returnlen += this.writeVarUInt(di.getZSecond(), true);
             }
-            if (Timestamp.precisionIncludes(precision_flags, Precision.FRACTION)) {
+            if (precisionIncludes(precision_flags, Precision.FRACTION)) {
                 // and, finally, any fractional component that is known
                 returnlen += this.writeDecimal(di.getZFractionalSecond());
             }
