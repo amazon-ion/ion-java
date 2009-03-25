@@ -572,42 +572,58 @@ public final class Timestamp
         // fake label to turn goto's into a break so Java is happy :) enjoy
         do {
         	// otherwise we expect yyyy-mm-ddThh:mm:ss.ssss+hh:mm
-            if (length < END_OF_YEAR) {
-        		throw new IllegalArgumentException("invalid timestamp image");
+            if (length < END_OF_YEAR + 1) {  // +1 for the "T"
+        		throw new IllegalArgumentException("invalid timestamp image: way too short (must be at least yyyyT)");
         	}
             pos = END_OF_YEAR;
             precision = Precision.YEAR;
-            year  = read_digits(image, 0, 4, -1);
+            year  = read_digits(image, 0, 4, -1, "invalid timestamp image: year field ");
 
-            if (length <= END_OF_MONTH || image.charAt(END_OF_MONTH) == 'T') break;
-            if (image.charAt(END_OF_MONTH) != '-') throw new IllegalArgumentException("invalid timestamp image");
+            char c = image.charAt(END_OF_YEAR);
+            if (c == 'T') break;
+            if (c != '-') {
+            	throw new IllegalArgumentException("invalid timestamp image: bad year month separator: '"+c+"'");
+            }
+            if (length < END_OF_MONTH + 1) {  // +1 for the "T"
+        		throw new IllegalArgumentException("invalid timestamp image: year month form is too short (must be yyyy-mmT)");
+        	}
             pos = END_OF_MONTH;
             precision = Precision.MONTH;
-	        month = read_digits(image, 5, 2, -1);
+	        month = read_digits(image, END_OF_YEAR + 1, 2, -1, "invalid timestamp image: month field ");
 
-	        if (length < END_OF_DAY) break;
-	        if (length > END_OF_DAY && image.charAt(END_OF_DAY) != 'T') break;
+	        c = image.charAt(END_OF_MONTH);
+	        if (c == 'T') break;
+	        if (c != '-') {
+            	throw new IllegalArgumentException("invalid timestamp image: bad month day separator: '"+c+"'");
+            }
+	        if (length < END_OF_DAY) {
+        		throw new IllegalArgumentException("invalid timestamp image: too short for yyyy-mm-dd");
+        	}
 	        pos = END_OF_DAY;
 	        precision = Precision.DAY;
-	        day   = read_digits(image, 8, 2, -1);
+	        day   = read_digits(image, END_OF_MONTH + 1, 2, -1, "invalid timestamp image: day field ");
 	        if (length == END_OF_DAY) break;
-	        if (length == END_OF_DAY + 1 && image.charAt(END_OF_DAY) == 'T') break;
+	        c = image.charAt(END_OF_DAY);
+	        if (c != 'T') {
+        		throw new IllegalArgumentException("invalid timestamp image: invalid day separator: '"+c+"'");
+        	}
+	        if (length == END_OF_DAY + 1) break;
 
         	// now lets see if we have a time value
             if (length < END_OF_MINUTES) {
-                throw new IllegalArgumentException("invalid timestamp image");
+                throw new IllegalArgumentException("invalid timestamp image: too short for yyyy-mm-ddThh:mm");
             }
-            hour   = read_digits(image, 11, 2, ':');
-            minute = read_digits(image, 14, 2, -1);
+            hour   = read_digits(image, 11, 2, ':', "invalid timestamp image: hour field ");
+            minute = read_digits(image, 14, 2, -1, "invalid timestamp image: minute field ");
             pos = END_OF_MINUTES;
             precision = Precision.MINUTE;
 
             // we may have seconds
             if (length <= END_OF_MINUTES || image.charAt(END_OF_MINUTES) != ':') break;
             if (length < END_OF_SECONDS) {
-                throw new IllegalArgumentException("invalid timestamp image");
+                throw new IllegalArgumentException("invalid timestamp imagetoo short for yyyy-mm-ddThh:mm:ss");
             }
-            seconds = read_digits(image, 17, 2, -1);
+            seconds = read_digits(image, 17, 2, -1, "invalid timestamp image: seconds field ");
             pos = END_OF_SECONDS;
             precision = Precision.SECOND;
 
@@ -632,15 +648,15 @@ public final class Timestamp
         }
         else if (timezone_start == '+' || timezone_start == '-') {
             if (length < pos + 5) {
-                throw new IllegalArgumentException("invalid timestamp image");
+                throw new IllegalArgumentException("invalid timestamp image: timezone too short");
             }
             // +/- hh:mm
             pos++;
-            temp = read_digits(image, pos, 2, ':');
+            temp = read_digits(image, pos, 2, ':', "invalid timestamp image: offset hours field ");
             pos += 3;
-            temp = temp * 60 + read_digits(image, pos, 2, -1);
+            temp = temp * 60 + read_digits(image, pos, 2, -1, "invalid timestamp image: offset mintues field ");
             pos += 2;
-            if (temp >= 24*60) throw new IllegalArgumentException("invalid timezone offset");
+            if (temp >= 24*60) throw new IllegalArgumentException("invalid timezone offset: timezone offset must not be more than 1 day");
             if (timezone_start == '-') {
                 temp = -temp;
             }
@@ -659,11 +675,11 @@ public final class Timestamp
         	case DAY:
         		break;
     		default:
-                throw new IllegalArgumentException("missing timezone offset");
+                throw new IllegalArgumentException("invalid timezone offset: missing timezone offset");
             }
             offset = null;
         }
-        if (image.length() > pos && !isValidFollowChar(image.charAt(pos + 1))) {
+        if (image.length() > (pos + 1) && !isValidFollowChar(image.charAt(pos + 1))) {
             throw new IllegalArgumentException("invalid excess characters encountered");
         }
 
@@ -677,23 +693,23 @@ public final class Timestamp
         return ts;
     }
 
-    private static int read_digits(CharSequence in, int start, int length, int terminator) {
+    private static int read_digits(CharSequence in, int start, int length, int terminator, String msg) {
         int ii, value = 0;
         int end = start + length;
 
         if (in.length() < end) {
-            throw new IllegalArgumentException("invalid Timestamp");
+            throw new IllegalArgumentException(msg+" too short");
         }
 
         for (ii=start; ii<end; ii++) {
             char c = in.charAt(ii);
-            if (!Character.isDigit(c)) throw new IllegalArgumentException("invalid character '"+c+"' in timestamp");
+            if (!Character.isDigit(c)) throw new IllegalArgumentException(msg+" has an invalid character: '"+c+"' encountered");
             value *= 10;
             value += c - '0';
         }
         if (terminator != -1) {
             if (ii >= in.length() || in.charAt(ii) != terminator) {
-                throw new IllegalArgumentException("invalid timestamp, '"+terminator+"' expected");
+                throw new IllegalArgumentException(msg+" has a bad terminator character: '"+terminator+"' expected");
             }
         }
         return value;
@@ -1156,10 +1172,24 @@ public final class Timestamp
         // so we have a real value - we'll start with the date portion
         // which we always have
         print_digits(out, adjusted._year, 4);
+        if (adjusted._precision == Precision.YEAR) {
+        	out.append("T");
+        	return;
+        }
+        
         out.append("-");
         print_digits(out, adjusted._month, 2);  // convert calendar months to a base 1 value
+        if (adjusted._precision == Precision.MONTH) {
+        	out.append("T");
+        	return;
+        }
+        
         out.append("-");
         print_digits(out, adjusted._day, 2);
+        if (adjusted._precision == Precision.DAY && adjusted._offset == null) {
+        	// out.append("T");
+        	return;
+        }
 
         // see if we have some time
         if (adjusted._precision == Precision.MINUTE
@@ -1203,14 +1233,7 @@ public final class Timestamp
             }
         }
         else {
-        	switch (adjusted._precision) {
-        	case YEAR:
-        	case MONTH:
-        	case DAY:
-        		break;
-        	default:
-                out.append("-00:00");
-            }
+            out.append("-00:00");
         }
     }
     private static void print_digits(Appendable out, int value, int length)
