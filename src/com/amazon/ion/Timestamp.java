@@ -2,6 +2,8 @@
 
 package com.amazon.ion;
 
+import static com.amazon.ion.util.IonTextUtils.printCodePointAsString;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Calendar;
@@ -571,10 +573,10 @@ public final class Timestamp
 
         // fake label to turn goto's into a break so Java is happy :) enjoy
         do {
-        	// otherwise we expect yyyy-mm-ddThh:mm:ss.ssss+hh:mm
+            // otherwise we expect yyyy-mm-ddThh:mm:ss.ssss+hh:mm
             if (length < END_OF_YEAR + 1) {  // +1 for the "T"
-        		throw new IllegalArgumentException("invalid timestamp image: way too short (must be at least yyyyT)");
-        	}
+                throw new IllegalArgumentException("invalid timestamp image: way too short (must be at least yyyyT)");
+            }
             pos = END_OF_YEAR;
             precision = Precision.YEAR;
             year  = read_digits(image, 0, 4, -1, "invalid timestamp image: year field ");
@@ -582,32 +584,32 @@ public final class Timestamp
             char c = image.charAt(END_OF_YEAR);
             if (c == 'T') break;
             if (c != '-') {
-            	throw new IllegalArgumentException("invalid timestamp image: bad year month separator: '"+c+"'");
+            	throw new IllegalArgumentException("invalid timestamp: expected \"-\" between year and month, found " + printCodePointAsString(c));
             }
             if (length < END_OF_MONTH + 1) {  // +1 for the "T"
-        		throw new IllegalArgumentException("invalid timestamp image: year month form is too short (must be yyyy-mmT)");
-        	}
+                throw new IllegalArgumentException("invalid timestamp image: year month form is too short (must be yyyy-mmT)");
+            }
             pos = END_OF_MONTH;
             precision = Precision.MONTH;
-	        month = read_digits(image, END_OF_YEAR + 1, 2, -1, "invalid timestamp image: month field ");
+            month = read_digits(image, END_OF_YEAR + 1, 2, -1, "invalid timestamp image: month field ");
 
-	        c = image.charAt(END_OF_MONTH);
-	        if (c == 'T') break;
-	        if (c != '-') {
-            	throw new IllegalArgumentException("invalid timestamp image: bad month day separator: '"+c+"'");
+            c = image.charAt(END_OF_MONTH);
+            if (c == 'T') break;
+            if (c != '-') {
+                throw new IllegalArgumentException("invalid timestamp: expected \"-\" between month and day, found " + printCodePointAsString(c));
             }
-	        if (length < END_OF_DAY) {
-        		throw new IllegalArgumentException("invalid timestamp image: too short for yyyy-mm-dd");
-        	}
-	        pos = END_OF_DAY;
-	        precision = Precision.DAY;
-	        day   = read_digits(image, END_OF_MONTH + 1, 2, -1, "invalid timestamp image: day field ");
-	        if (length == END_OF_DAY) break;
-	        c = image.charAt(END_OF_DAY);
-	        if (c != 'T') {
-        		throw new IllegalArgumentException("invalid timestamp image: invalid day separator: '"+c+"'");
-        	}
-	        if (length == END_OF_DAY + 1) break;
+            if (length < END_OF_DAY) {
+                throw new IllegalArgumentException("invalid timestamp image: too short for yyyy-mm-dd");
+            }
+            pos = END_OF_DAY;
+            precision = Precision.DAY;
+            day   = read_digits(image, END_OF_MONTH + 1, 2, -1, "invalid timestamp image: day field");
+            if (length == END_OF_DAY) break;
+            c = image.charAt(END_OF_DAY);
+            if (c != 'T') {
+                throw new IllegalArgumentException("invalid timestamp: expected \"T\" after day, found " + printCodePointAsString(c));
+            }
+            if (length == END_OF_DAY + 1) break;
 
         	// now lets see if we have a time value
             if (length < END_OF_MINUTES) {
@@ -669,13 +671,13 @@ public final class Timestamp
             }
         }
         else {
-        	switch (precision) {
-        	case YEAR:
-        	case MONTH:
-        	case DAY:
-        		break;
-    		default:
-                throw new IllegalArgumentException("invalid timezone offset: missing timezone offset");
+            switch (precision) {
+                case YEAR:
+                case MONTH:
+                case DAY:
+                    break;
+                default:
+                    throw new IllegalArgumentException("invalid timezone offset: missing timezone offset");
             }
             offset = null;
         }
@@ -1176,14 +1178,14 @@ public final class Timestamp
         	out.append("T");
         	return;
         }
-        
+
         out.append("-");
         print_digits(out, adjusted._month, 2);  // convert calendar months to a base 1 value
         if (adjusted._precision == Precision.MONTH) {
         	out.append("T");
         	return;
         }
-        
+
         out.append("-");
         print_digits(out, adjusted._day, 2);
         if (adjusted._precision == Precision.DAY && adjusted._offset == null) {
