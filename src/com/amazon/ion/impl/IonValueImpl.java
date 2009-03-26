@@ -968,15 +968,13 @@ public abstract class IonValueImpl
         assert reader.position() == this.pos_getOffsetAtValueTD();
 
         // and convert them to strings
-        if (sids != null) {
-            int len = sids.length;
-            this._annotations = new String[len];
-            SymbolTable symtab = getSymbolTable();
-            assert symtab != null || len < 1 ;
-            for (int ii=0; ii<len; ii++) {
-                int id = sids[ii];
-                this._annotations[ii] = symtab.findSymbol(id);
-            }
+        int len = sids.length;
+        this._annotations = new String[len];
+        SymbolTable symtab = getSymbolTable();
+        assert symtab != null || len < 1 ;
+        for (int ii=0; ii<len; ii++) {
+            int id = sids[ii];
+            this._annotations[ii] = symtab.findSymbol(id);
         }
     }
 
@@ -1093,8 +1091,9 @@ public abstract class IonValueImpl
     public int getAnnotationOverheadLength(int valueLen) {
         int len = 0;
         String[] annotationStrings = this.getTypeAnnotations();
+        assert annotationStrings != null;
 
-        if (annotationStrings != EMPTY_ANNOTATIONS)
+        if (annotationStrings.length != 0)
         {
             len = getAnnotationLength();
 
