@@ -30,7 +30,7 @@ public final class IonIntImpl
         IonConstants.makeTypeDescriptor(IonConstants.tidPosInt,
                                         IonConstants.lnNumericZero);
 
-    static private final Long ZERO_LONG = new Long(0);
+    static private final Long ZERO_LONG = Long.valueOf(0);
 
     // FIXME We can't handle Long.MIN_VALUE at encoding time.
     static private final BigInteger MIN_VALUE =
@@ -124,13 +124,13 @@ public final class IonIntImpl
     public void setValue(int value)
     {
         checkForLock();
-        doSetValue(new Long(value));
+        doSetValue(Long.valueOf(value));
     }
 
     public void setValue(long value)
     {
         checkForLock();
-    	doSetValue(new Long(value));
+    	doSetValue(Long.valueOf(value));
     }
 
     public void setValue(Number value)
@@ -155,7 +155,7 @@ public final class IonIntImpl
                     throw new IonException(message);
                 }
             }
-            doSetValue(new Long(value.longValue()));
+            doSetValue(Long.valueOf(value.longValue()));
         }
     }
 
@@ -259,7 +259,7 @@ public final class IonIntImpl
             if (type == IonConstants.tidNegInt) {
                 l = - l;
             }
-            _int_value = new Long(l);
+            _int_value = Long.valueOf(l);
             break;
         }
 
