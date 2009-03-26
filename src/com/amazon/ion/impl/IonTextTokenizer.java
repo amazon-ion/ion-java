@@ -377,17 +377,17 @@ static final boolean _debug = false;
         if (_token_lookahead_current == _token_lookahead_size) _token_lookahead_current = 0;
     }
     final int queueCount() {
-    	int count;
+        int count;
         if (_token_lookahead_current == _token_lookahead_next_available) {
             count = 0;
         }
         else if (_token_lookahead_current < _token_lookahead_next_available) {
-        	count = _token_lookahead_next_available - _token_lookahead_current;
+            count = _token_lookahead_next_available - _token_lookahead_current;
         }
         else {
-        	// when next has wrapped and current hasn't adding size restores the
-        	// "natural" order (so to speak)
-        	count = _token_lookahead_next_available + _token_lookahead_size - _token_lookahead_current;
+            // when next has wrapped and current hasn't adding size restores the
+            // "natural" order (so to speak)
+            count = _token_lookahead_next_available + _token_lookahead_size - _token_lookahead_current;
         }
         return count;
     }
@@ -472,10 +472,10 @@ static final boolean _debug = false;
         }
     }
     public final int lob_lookahead() {
-    	boolean queue_is_empty = (queueCount() == 0);
-    	if (!queue_is_empty) {
-    		assert queueCount() == 0;
-    	}
+        boolean queue_is_empty = (queueCount() == 0);
+        if (!queue_is_empty) {
+            assert queueCount() == 0;
+        }
 
         int c;
         try {
@@ -980,7 +980,7 @@ loop:   for (;;) {
                     _has_marked_symbol = true;
                     break loop;
                 case '\\':
-                	c = this.read_char();
+                    c = this.read_char();
                     c = read_escaped_char(c);
                     break;
             }
@@ -991,7 +991,7 @@ loop:   for (;;) {
     }
 
     private final boolean is_inf_closing_character(int c) {
-    	switch (c) {
+        switch (c) {
         case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         case 'g': case 'h': case 'j': case 'i': case 'k': case 'l':
         case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
@@ -1005,36 +1005,36 @@ loop:   for (;;) {
         case '$': case '_':
         case '0': case '1': case '2': case '3': case '4':
         case '5': case '6': case '7': case '8': case '9':
-        	return false;
-    	default:
-    		return true;
-    	}
+            return false;
+        default:
+            return true;
+        }
     }
 
     private final boolean read_symbol_extended_peek_inf() throws IOException
     {
-    	int c = this.read_char();
-    	if (c == 'i') {
-    	    c = this.read_char();
-    	    if (c == 'n') {
-    	        c = this.read_char();
-    	        if (c == 'f') {
-    	            c = this.read_char();
-    	            if (is_inf_closing_character(c)) {
-    	                this.unread_char(c);
-    	                return true;
-    	            }
-    	            this.unread_char(c);
-    	            c = 'f';
-    	        }
-    	        this.unread_char(c);
-    	        c = 'n';
-    	    }
-    	    this.unread_char(c);
-    	    c = 'i';
-    	}
-    	this.unread_char(c);
-    	return false;
+        int c = this.read_char();
+        if (c == 'i') {
+            c = this.read_char();
+            if (c == 'n') {
+                c = this.read_char();
+                if (c == 'f') {
+                    c = this.read_char();
+                    if (is_inf_closing_character(c)) {
+                        this.unread_char(c);
+                        return true;
+                    }
+                    this.unread_char(c);
+                    c = 'f';
+                }
+                this.unread_char(c);
+                c = 'n';
+            }
+            this.unread_char(c);
+            c = 'i';
+        }
+        this.unread_char(c);
+        return false;
     }
 
     private final int read_symbol_extended(int c) throws IOException
@@ -1057,40 +1057,40 @@ loop:   for (;;) {
             token_type = IonTextTokenizer.TOKEN_FLOAT;
         }
         else {
-        	// if it's not +/- inf then we'll just read the characters normally
-loop:   	for (;;) {
-	            c = this.read_char();
-	            switch (c) {
-	            //case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
-	            //case 'g': case 'h': case 'j': case 'i': case 'k': case 'l':
-	            //case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
-	            //case 's': case 't': case 'u': case 'v': case 'w': case 'x':
-	            //case 'y': case 'z':
-	            //case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
-	            //case 'G': case 'H': case 'J': case 'I': case 'K': case 'L':
-	            //case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R':
-	            //case 'S': case 'T': case 'U': case 'V': case 'W': case 'X':
-	            //case 'Y': case 'Z':
-	            //case '$': case '_':
-	            //case '.': case '+': case '-':
-	            //case '0': case '1': case '2': case '3': case '4':
-	            //case '5': case '6': case '7': case '8': case '9':
-	            //case '~': case '`': case '!': case '@': case '#':
-	            //case '%': case '^': case '&': case '*':
-	            //case '=': case ';': case '?':
-	            //case '/': case '>': case '<': case '|': case '\\':
+            // if it's not +/- inf then we'll just read the characters normally
+loop:       for (;;) {
+                c = this.read_char();
+                switch (c) {
+                //case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
+                //case 'g': case 'h': case 'j': case 'i': case 'k': case 'l':
+                //case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
+                //case 's': case 't': case 'u': case 'v': case 'w': case 'x':
+                //case 'y': case 'z':
+                //case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
+                //case 'G': case 'H': case 'J': case 'I': case 'K': case 'L':
+                //case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R':
+                //case 'S': case 'T': case 'U': case 'V': case 'W': case 'X':
+                //case 'Y': case 'Z':
+                //case '$': case '_':
+                //case '.': case '+': case '-':
+                //case '0': case '1': case '2': case '3': case '4':
+                //case '5': case '6': case '7': case '8': case '9':
+                //case '~': case '`': case '!': case '@': case '#':
+                //case '%': case '^': case '&': case '*':
+                //case '=': case ';': case '?':
+                //case '/': case '>': case '<': case '|': case '\\':
 
-	            case '.': case '+': case '-': case '/':
-	            case '<': case '>': case '*': case '=': case '^': case '&': case '|':
-	            case '~': case ';': case '!': case '?': case '@': case '%': case '`':
-	                _saved_symbol.append((char)c);
-	                //saved_symbol_append((char)c);
-	                break;
-	            default:
-	                this.unread_char(c);
-	                break loop;
-	            }
-	        }
+                case '.': case '+': case '-': case '/':
+                case '<': case '>': case '*': case '=': case '^': case '&': case '|':
+                case '~': case ';': case '!': case '?': case '@': case '%': case '`':
+                    _saved_symbol.append((char)c);
+                    //saved_symbol_append((char)c);
+                    break;
+                default:
+                    this.unread_char(c);
+                    break loop;
+                }
+            }
         }
         end = nextCharStart();  // we don't want the character that bumped us out but we "unread" it already
         setNextEnd(end);
@@ -1211,10 +1211,10 @@ loop:   	for (;;) {
             case -1:   unexpected_eof();
             case '\n': bad_token();
             case '\\':
-            	c = this.read_char();
-            	if (c == 'u' || c == 'U') {
-            		has_big_char = true;
-            	}
+                c = this.read_char();
+                if (c == 'u' || c == 'U') {
+                    has_big_char = true;
+                }
                 c = read_escaped_char(c);
                 break;
             }
@@ -1255,10 +1255,10 @@ loop:   for (;;) {
                 this.unread_char(c);
                 break;
             case '\\':
-            	c = this.read_char();
-            	if (c == 'u' || c == 'U') {
-            	    has_big_char = true;
-            	}
+                c = this.read_char();
+                if (c == 'u' || c == 'U') {
+                    has_big_char = true;
+                }
                 c = read_escaped_char(c);
                 break;
             }
@@ -1338,12 +1338,12 @@ loop:   for (;;) {
             }
             t = IonTextTokenizer.TOKEN_DECIMAL;
         }
-        else if (c == '-') {
+        else if (c == '-' || c == 'T') {
             // this better be a timestamp and it starts with a 4 digit
             // year followed by a dash and no leading sign
             if (has_sign) bad_token();
             if (currentCharStart() - start != 4) bad_token();
-            t = read_timestamp(read_timestamp_get_year(start));
+            t = read_timestamp(c, read_timestamp_get_year(start));
             return t;
         }
         else {
@@ -1424,126 +1424,93 @@ loop:   for (;;) {
         }
         return is_leap;
     }
-    final int read_timestamp(int year) throws IOException
+    final int read_timestamp(int c, int year) throws IOException
     {
-        int c, c1, c2;
+        int c1, c2;
         int end;
 
-        // read month
-        c1 = read_char();
-        if (!Character.isDigit(c1)) bad_token();
-        c2 = read_char();
-        if (!Character.isDigit(c1)) bad_token();
-        int month = (c1 - '0') * 10 + (c2 - '0');
-        if (month < 1 || month > 12) bad_token();
-
-        c = read_char();
-        if (c != '-') bad_token();
-
-        // read day
-        c1 = read_char();
-        if (!Character.isDigit(c1)) bad_token();
-        c2 = read_char();
-        if (!Character.isDigit(c1)) bad_token();
-        c = read_char();
-
-        /// now we validate the month values
-        switch (c1) {
-        case '0':
-            if (c2 < '1' || c2 > '9') bad_token();
-            break;
-        case '1':
-            if (c2 < '0' || c2 > '9') bad_token();
-            break;
-        case '2':
-            if (c2 < '0' || c2 > '9') bad_token();
-            // I guess we do try to figure out leap years here
-            if (c2 == '9' && month == 2 && !read_timestamp_is_leap_year(year)) bad_token();
-            break;
-        case '3':
-            if (month == 2) bad_token();
-            if (c2 > '1') bad_token();
-            if (c2 == '0') break;
-            // c2 == '1'
-            switch (month) {
-            case  2: // feb
-            case  4: // apr
-            case  6: // jun
-            case  9: // sept
-            case 11: // nov
-                bad_token();
-            default:
-                break;
+endofdate:
+        for (;;) // Just to create label we can "goto"
+        {
+            if (c == 'T') {
+                c = read_char(); // because we'll unread it before we return
+                break endofdate;
             }
-            break;
-        default:
-            bad_token();
-        }
+            assert c == '-';
 
-        // look for the 't', otherwise we're done (and happy about it)
-        if (c == 'T') {
-
-            // hour
+            // read month
             c1 = read_char();
-            if (!Character.isDigit(c1)) bad_token();
+            if (!Character.isDigit(c1)) bad_token(c1);
             c2 = read_char();
-            if (!Character.isDigit(c2)) bad_token();
-            int tmp = (c1 - '0')*10 + (c2 - '0');
-            if (tmp < 0 || tmp > 23) bad_token();
-            c = read_char();
-            if (c != ':') bad_token();
+            if (!Character.isDigit(c2)) bad_token(c2);
+            int month = (c1 - '0') * 10 + (c2 - '0');
+            if (month < 1 || month > 12) bad_token();
 
-            // minutes
-            c1 = read_char();
-            if (!Character.isDigit(c1)) bad_token();
-            c2 = read_char();
-            if (!Character.isDigit(c2)) bad_token();
-            tmp = (c1 - '0')*10 + (c2 - '0');
-            if (tmp < 0 || tmp > 59) bad_token();
             c = read_char();
-            if (c == ':') {
-                // seconds are optional
-                // and first we'll have the whole seconds
+            if (c == 'T') {
+                c = read_char(); // because we'll unread it before we return
+                break endofdate;
+            }
+            if (c != '-') bad_token(c);
+
+            // read day
+            c1 = read_char();
+            if (!Character.isDigit(c1)) bad_token(c1);
+            c2 = read_char();
+            if (!Character.isDigit(c2)) bad_token(c2);
+            c = read_char();
+
+            /// now we validate the day values
+            switch (c1) {
+                case '0':
+                    if (c2 < '1' || c2 > '9') bad_token(c2);
+                    break;
+                case '1':
+                    if (c2 < '0' || c2 > '9') bad_token(c2);
+                    break;
+                case '2':
+                    if (c2 < '0' || c2 > '9') bad_token(c2);
+                    // I guess we do try to figure out leap years here
+                    if (c2 == '9' && month == 2 && !read_timestamp_is_leap_year(year)) bad_token();
+                    break;
+                case '3':
+                    if (month == 2) bad_token(c1);
+                    if (c2 > '1') bad_token(c2);
+                    if (c2 == '0') break;
+                    // c2 == '1'
+                    switch (month) {
+                        case  2: // feb
+                        case  4: // apr
+                        case  6: // jun
+                        case  9: // sept
+                        case 11: // nov
+                            bad_token(c2);
+                        default:
+                            break;
+                    }
+                    break;
+                default:
+                    bad_token(c1);
+            }
+
+            // look for the 'T', otherwise we're done (and happy about it)
+            if (c == 'T') {
+
+                // hour
                 c1 = read_char();
-                if (!Character.isDigit(c1)) bad_token();
-                c2 = read_char();
-                if (!Character.isDigit(c2)) bad_token();
-                tmp = (c1 - '0')*10 + (c2 - '0');
-                if (tmp < 0 || tmp > 59) bad_token();
-                c = read_char();
-                if (c == '.') {
-                    // then the optional fractional seconds
-                    do {
-                        c = read_char();
-                    } while (Character.isDigit(c));
+                if (!Character.isDigit(c1)) {
+                    // This should be a normal stopper or EOF
+                    c = c1;
+                    break endofdate;
                 }
-            }
-
-            // since we have a time, we have to have a timezone of some sort
-
-            // the timezone offset starts with a '+' '-' 'Z' or 'z'
-            if (c == 'z' || c == 'Z') {
-                c = read_char(); // read ahead since we'll check for a valid ending in a bit
-            }
-            else  if (c != '+' && c != '-') {
-                // some sort of offset is required with a time value
-                // if it wasn't a 'z' (above) then it has to be a +/- hours { : minutes }
-                bad_token();
-            }
-            else {
-                // then ... hours of time offset
-                c1 = read_char();
-                if (!Character.isDigit(c1)) bad_token();
                 c2 = read_char();
                 if (!Character.isDigit(c2)) bad_token();
-                tmp = (c1 - '0')*10 + (c2 - '0');
+                int tmp = (c1 - '0')*10 + (c2 - '0');
                 if (tmp < 0 || tmp > 23) bad_token();
                 c = read_char();
-                if (c != ':') {
-                    // those hours need their minutesif it wasn't a 'z' (above) then it has to be a +/- hours { : minutes }
-                    bad_token();
-                }
-                // and finally the *not* optional minutes of time offset
+                if (c != ':') bad_token();
+
+                // minutes
                 c1 = read_char();
                 if (!Character.isDigit(c1)) bad_token();
                 c2 = read_char();
@@ -1551,8 +1518,62 @@ loop:   for (;;) {
                 tmp = (c1 - '0')*10 + (c2 - '0');
                 if (tmp < 0 || tmp > 59) bad_token();
                 c = read_char();
+                if (c == ':') {
+                    // seconds are optional
+                    // and first we'll have the whole seconds
+                    c1 = read_char();
+                    if (!Character.isDigit(c1)) bad_token();
+                    c2 = read_char();
+                    if (!Character.isDigit(c2)) bad_token();
+                    tmp = (c1 - '0')*10 + (c2 - '0');
+                    if (tmp < 0 || tmp > 59) bad_token();
+                    c = read_char();
+                    if (c == '.') {
+                        // then the optional fractional seconds
+                        do {
+                            c = read_char();
+                        } while (Character.isDigit(c));
+                    }
+                }
+
+                // since we have a time, we have to have a timezone of some sort
+
+                // the timezone offset starts with a '+' '-' 'Z' or 'z'
+                if (c == 'z' || c == 'Z') {
+                    c = read_char(); // read ahead since we'll check for a valid ending in a bit
+                }
+                else  if (c != '+' && c != '-') {
+                    // some sort of offset is required with a time value
+                    // if it wasn't a 'z' (above) then it has to be a +/- hours { : minutes }
+                    bad_token();
+                }
+                else {
+                    // then ... hours of time offset
+                    c1 = read_char();
+                    if (!Character.isDigit(c1)) bad_token();
+                    c2 = read_char();
+                    if (!Character.isDigit(c2)) bad_token();
+                    tmp = (c1 - '0')*10 + (c2 - '0');
+                    if (tmp < 0 || tmp > 23) bad_token();
+                    c = read_char();
+                    if (c != ':') {
+                        // those hours need their minutesif it wasn't a 'z' (above) then it has to be a +/- hours { : minutes }
+                        bad_token();
+                    }
+                    // and finally the *not* optional minutes of time offset
+                    c1 = read_char();
+                    if (!Character.isDigit(c1)) bad_token();
+                    c2 = read_char();
+                    if (!Character.isDigit(c2)) bad_token();
+                    tmp = (c1 - '0')*10 + (c2 - '0');
+                    if (tmp < 0 || tmp > 59) bad_token();
+                    c = read_char();
+                }
             }
+
+            break endofdate; // lest we loop forever
         }
+
         // make sure we ended on a reasonable "note"
         if (!isValueTerminatingCharacter(c)) bad_token();
 
@@ -1617,7 +1638,7 @@ loop:   for (;;) {
     private final void bad_token(int c)
     {
         String charStr = printCodePointAsString(c);
-        throw new IonTextReader.IonParsingException("a bad character " + charStr + " was encountered in a token"+input_position());
+        throw new IonTextReader.IonParsingException("a bad character " + charStr + " was encountered"+input_position());
     }
     /*
     public final static class xxxBufferedStream extends InputStream
@@ -1747,7 +1768,7 @@ loop:   for (;;) {
                     c = '\n';
                 }
                 else if (c == '\\') {
-                	c = _r.read();
+                    c = _r.read();
                     c = read_escaped_char_in_string(c);
                     if (c == EMPTY_ESCAPE_SEQUENCE) continue;
                     if (IonConstants.isSurrogate(c)) {
@@ -1972,12 +1993,12 @@ loop:   for (;;) {
         case 'i':
             if (len == 3) {
                 if (_r.getByte(start_word+1) == 'n') {
-                	if (_r.getByte(start_word+2) == 't') {
-                		return KEYWORD_INT;
-                	}
-                	else if (_r.getByte(start_word+2) == 'f') {
-                		return KEYWORD_INF;
-                	}
+                    if (_r.getByte(start_word+2) == 't') {
+                        return KEYWORD_INT;
+                    }
+                    else if (_r.getByte(start_word+2) == 'f') {
+                        return KEYWORD_INF;
+                    }
                 }
             }
             return -1;
@@ -2139,12 +2160,12 @@ loop:   for (;;) {
         case 'i':
             if (len == 3) {
                 if (word.charAt(start_word+1) == 'n') {
-                	if (word.charAt(start_word+2) == 't') {
-                		return KEYWORD_INT;
-                	}
-                	else if (word.charAt(start_word+2) == 'f') {
-                		return KEYWORD_INF;
-                	}
+                    if (word.charAt(start_word+2) == 't') {
+                        return KEYWORD_INT;
+                    }
+                    else if (word.charAt(start_word+2) == 'f') {
+                        return KEYWORD_INF;
+                    }
                 }
             }
             return -1;
