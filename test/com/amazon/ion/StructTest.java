@@ -212,7 +212,7 @@ public class StructTest
         IonStruct value = (IonStruct) oneValue("{}");
         assertSame(IonType.STRUCT, value.getType());
         assertFalse(value.isNullValue());
-        assertNull("annotation should be null", value.getTypeAnnotations());
+        assertArrayEquals(new String[0], value.getTypeAnnotations());
         assertEquals(0, value.size());
         assertTrue(value.isEmpty());
         assertFalse(value.iterator().hasNext());

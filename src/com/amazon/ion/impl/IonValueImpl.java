@@ -25,7 +25,8 @@ import java.io.IOException;
 public abstract class IonValueImpl
     implements IonValue
 {
-
+    private static final String[] EMPTY_ANNOTATIONS = new String[0];
+    
     /**
      * We could multiplex this with member id, but it adds way more complexity
      * than it saves space.
@@ -592,7 +593,7 @@ public abstract class IonValueImpl
         // have a list) then there is no annotations
         makeReady();
 
-        return this._annotations;
+        return this._annotations == null ? EMPTY_ANNOTATIONS : this._annotations;
     }
 
     public void clearTypeAnnotations()
@@ -966,13 +967,15 @@ public abstract class IonValueImpl
         assert reader.position() == this.pos_getOffsetAtValueTD();
 
         // and convert them to strings
-        int len = sids.length;
-        this._annotations = new String[len];
-        SymbolTable symtab = getSymbolTable();
-        assert symtab != null || len < 1 ;
-        for (int ii=0; ii<len; ii++) {
-            int id = sids[ii];
-            this._annotations[ii] = symtab.findSymbol(id);
+        if (sids != null) {
+            int len = sids.length;
+            this._annotations = new String[len];
+            SymbolTable symtab = getSymbolTable();
+            assert symtab != null || len < 1 ;
+            for (int ii=0; ii<len; ii++) {
+                int id = sids[ii];
+                this._annotations[ii] = symtab.findSymbol(id);
+            }
         }
     }
 
@@ -1090,7 +1093,7 @@ public abstract class IonValueImpl
         int len = 0;
         String[] annotationStrings = this.getTypeAnnotations();
 
-        if (annotationStrings != null)
+        if (annotationStrings != EMPTY_ANNOTATIONS)
         {
             len = getAnnotationLength();
 

@@ -169,7 +169,7 @@ public interface IonValue
 
     /**
      * Gets the user type annotations attached to this value
-     * as strings, or <code>null</code> if there are none.
+     * as strings.  This will return an empty array if there are no annotations.
      * @deprecated Use {@link #getTypeAnnotations()} instead.
      */
     @Deprecated
@@ -178,7 +178,7 @@ public interface IonValue
 
     /**
      * Gets the user type annotations attached to this value
-     * as strings, or <code>null</code> if there are none.
+     * as strings.  This will return an empty array if there are no annotations.
      */
     public String[] getTypeAnnotations();
 

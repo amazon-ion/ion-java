@@ -79,7 +79,7 @@ public class DecimalTest
         IonDecimal value = (IonDecimal) oneValue("1.0");
         assertSame(IonType.DECIMAL, value.getType());
         assertFalse(value.isNullValue());
-        assertNull(value.getTypeAnnotations());
+        assertArrayEquals(new String[0], value.getTypeAnnotations());
         assertEquals(1.0F, value.floatValue());
         assertEquals(1.0D, value.doubleValue());
 
