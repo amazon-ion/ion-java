@@ -80,14 +80,14 @@ public class IntTest
         IonInt value = (IonInt) oneValue("-1");
         assertSame(IonType.INT, value.getType());
         assertFalse(value.isNullValue());
-        assertNull(value.getTypeAnnotations());
+        assertArrayEquals(new String[0], value.getTypeAnnotations());
         assertEquals(-1, value.intValue());
         assertEquals(-1L, value.longValue());
 
         value = (IonInt)oneValue("-1999");
         assertSame(IonType.INT, value.getType());
         assertFalse(value.isNullValue());
-        assertNull(value.getTypeAnnotations());
+        assertArrayEquals(new String[0], value.getTypeAnnotations());
         assertEquals(-1999, value.intValue());
         assertEquals(-1999L, value.longValue());
         value.toString();
@@ -98,7 +98,7 @@ public class IntTest
     {
         IonInt value = (IonInt) oneValue("1");
         assertFalse(value.isNullValue());
-        assertNull(value.getTypeAnnotations());
+        assertArrayEquals(new String[0], value.getTypeAnnotations());
         assertEquals(1, value.intValue());
         assertEquals(1L, value.longValue());
 
@@ -114,7 +114,7 @@ public class IntTest
 
         value = (IonInt) oneValue("" + Integer.MIN_VALUE);
         assertFalse(value.isNullValue());
-        assertNull(value.getTypeAnnotations());
+        assertArrayEquals(new String[0], value.getTypeAnnotations());
         assertEquals(Integer.MIN_VALUE, value.intValue());
     }
 
@@ -168,7 +168,7 @@ public class IntTest
     {
         IonInt value = (IonInt) oneValue(String.valueOf(A_LONG_INT));
         assertFalse(value.isNullValue());
-        assertNull(value.getTypeAnnotations());
+        assertArrayEquals(new String[0], value.getTypeAnnotations());
         assertEquals(A_LONG_INT, value.longValue());
 
         value = (IonInt) oneValue("a::" + Long.MAX_VALUE);

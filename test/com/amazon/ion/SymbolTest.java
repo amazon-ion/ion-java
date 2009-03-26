@@ -66,7 +66,7 @@ public class SymbolTest
     {
         IonSymbol value = (IonSymbol) oneValue("null.symbol");
         checkNullSymbol(value);
-        assertNull(value.getTypeAnnotations());
+        assertArrayEquals(new String[0], value.getTypeAnnotations());
         modifySymbol(value);
 
         value = (IonSymbol) oneValue("a::null.symbol");

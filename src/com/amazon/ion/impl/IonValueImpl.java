@@ -25,7 +25,8 @@ import java.io.IOException;
 public abstract class IonValueImpl
     implements IonValue
 {
-
+    private static final String[] EMPTY_ANNOTATIONS = new String[0];
+    
     /**
      * We could multiplex this with member id, but it adds way more complexity
      * than it saves space.
@@ -226,7 +227,8 @@ public abstract class IonValueImpl
         // this instance to be "ready" (i.e. it will call
         // MakeReady()) which we'll want.
         String[] a = source.getTypeAnnotations();
-        _annotations = a; // and we don't care if it's null or not
+        // underlying code relies on null for empty
+        _annotations = a.length == 0 ? null : a;
     }
 
     /**
@@ -592,7 +594,7 @@ public abstract class IonValueImpl
         // have a list) then there is no annotations
         makeReady();
 
-        return this._annotations;
+        return this._annotations == null ? EMPTY_ANNOTATIONS : this._annotations;
     }
 
     public void clearTypeAnnotations()
@@ -1089,8 +1091,9 @@ public abstract class IonValueImpl
     public int getAnnotationOverheadLength(int valueLen) {
         int len = 0;
         String[] annotationStrings = this.getTypeAnnotations();
+        assert annotationStrings != null;
 
-        if (annotationStrings != null)
+        if (annotationStrings.length != 0)
         {
             len = getAnnotationLength();
 

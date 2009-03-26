@@ -130,9 +130,9 @@ public class BlobTest
     {
         IonBlob value = (IonBlob) oneValue("null.blob");
         checkNullBlob(value);
-        assertNull(value.getTypeAnnotations());
+        assertArrayEquals(new String[0], value.getTypeAnnotations());
         modifyBlob(value);
-        assertNull(value.getTypeAnnotations());
+        assertArrayEquals(new String[0], value.getTypeAnnotations());
 
         value = (IonBlob) oneValue("a::null.blob");
         checkNullBlob(value);
