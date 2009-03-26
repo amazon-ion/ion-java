@@ -227,7 +227,8 @@ public abstract class IonValueImpl
         // this instance to be "ready" (i.e. it will call
         // MakeReady()) which we'll want.
         String[] a = source.getTypeAnnotations();
-        _annotations = a; // and we don't care if it's null or not
+        // underlying code relies on null for empty
+        _annotations = a.length == 0 ? null : a;
     }
 
     /**
