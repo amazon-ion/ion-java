@@ -103,9 +103,8 @@ public class TimestampTest
     }
 
     private void checkTime(int expectedYear, int expectedMonth, int expectedDay,
-                           String ionText)
+                           String expectedText, String ionText)
     {
-        String expectedText = ionText;
         Timestamp ts = new Timestamp(expectedYear, expectedMonth, expectedDay);
         checkFields(expectedYear, expectedMonth, expectedDay, 0, 0, 0, null,
                     UNKNOWN_OFFSET, ts);
@@ -115,6 +114,14 @@ public class TimestampTest
         checkTime(expectedYear, expectedMonth, expectedDay,
                   0, 0, 0, null,
                   UNKNOWN_OFFSET, expectedText, ionText);
+    }
+
+    private void checkTime(int expectedYear, int expectedMonth, int expectedDay,
+                           String ionText)
+    {
+        String expectedText = ionText;
+        checkTime(expectedYear, expectedMonth, expectedDay, expectedText,
+                  ionText);
     }
 
 
@@ -148,7 +155,7 @@ public class TimestampTest
         assertEquals(expectedText, actual.timestampValue().toString());
 
         Timestamp ts1 = Timestamp.valueOf(expectedText);
-        Timestamp ts2 = Timestamp.valueOf(ionText);
+        Timestamp ts2 = Timestamp.valueOf(ionText.trim());
 
         assertEquals(ts1, ts2);
         assertEquals(ts1, actual.timestampValue());
@@ -281,6 +288,8 @@ public class TimestampTest
         badValue("1969-02-23t");
         badValue("1969-02-23t00:00Z");      // bad separator
         badValue("1969-02-23T00:00z");      // bad TZD
+
+        badValue("1969-1x-23");
     }
 
     public void testDateWithSlashes()
@@ -298,8 +307,12 @@ public class TimestampTest
 
     public void testBareDate()
     {
-        checkTime(1969, 02, 23,
-                  "1969-02-23");
+        checkTime(1969, 02, 23, "1969-02-23");
+        checkTime(1969, 02, 23, "1969-02-23", "1969-02-23T");
+
+        // Check following character
+        checkTime(1969, 02, 23, "1969-02-23", "1969-02-23 ");
+        checkTime(1969, 02, 23, "1969-02-23", "1969-02-23T ");
     }
 
     public void testDateWithMinutes()
@@ -344,8 +357,8 @@ public class TimestampTest
 
     public void testPrecision()
     {
-//        checkCanonicalText("2007T");         FIXME JIRA ION-44
-//        checkCanonicalText("2007-08T");      FIXME JIRA ION-44
+        checkCanonicalText("2007T");
+        checkCanonicalText("2007-08T");
         checkCanonicalText("2007-08-28");
         checkCanonicalText("2007-08-28T16:37Z");
         checkCanonicalText("2007-08-28T16:37:24Z");
@@ -355,9 +368,9 @@ public class TimestampTest
         checkCanonicalText("2007-08-28T16:37:24.0000Z");
 
 
-//        checkTime(1969, 01, 01, 0, 0, 0, null, null, "1969T");
-//        checkTime(1969, 02, 01, 0, 0, 0, null, null, "1969-02T");
-//        checkTime(1969, 02, 03, 0, 0, 0, null, null, "1969-02-03T");
+        checkTime(1969, 01, 01, 0, 0, 0, null, null, "1969T");
+        checkTime(1969, 02, 01, 0, 0, 0, null, null, "1969-02T");
+        // we only get to pick 1 default output for a given precision: checkTime(1969, 02, 03, 0, 0, 0, null, null, "1969-02-03T");
         checkTime(1969, 02, 03, 0, 0, 0, null, null, "1969-02-03");
     }
 
@@ -491,8 +504,8 @@ public class TimestampTest
         throws Exception
     {
         testSimpleClone("null.timestamp");
-//        testSimpleClone("2008T");         FIXME JIRA ION-44
-//        testSimpleClone("2008-07T");      FIXME JIRA ION-44
+        testSimpleClone("2008T");
+        testSimpleClone("2008-07T");
         testSimpleClone("2008-07-11");
         testSimpleClone("2008-07-11T14:49-12:34");
         testSimpleClone("2008-07-11T14:49:26+08:00");

@@ -134,7 +134,7 @@ public class ClobTest
     {
         IonClob value = (IonClob) oneValue("null.clob");
         checkNullClob(value);
-        assertNull(value.getTypeAnnotations());
+        assertArrayEquals(new String[0], value.getTypeAnnotations());
 
         value = (IonClob) oneValue("a::null.clob");
         checkNullClob(value);

@@ -34,7 +34,7 @@ public class BoolTest
     {
         IonBool value = (IonBool) oneValue("null.bool");
         checkNullBool(value);
-        assertNull(value.getTypeAnnotations());
+        assertArrayEquals(new String[0], value.getTypeAnnotations());
         assertEquals("null.bool", value.toString());
 
         value = (IonBool) oneValue("a::null.bool");
@@ -48,13 +48,13 @@ public class BoolTest
     {
         IonBool value = (IonBool) oneValue("true");
         assertFalse(value.isNullValue());
-        assertNull(value.getTypeAnnotations());
+        assertArrayEquals(new String[0], value.getTypeAnnotations());
         assertTrue(value.booleanValue());
         assertEquals("true", value.toString());
 
         value = (IonBool) oneValue("false");
         assertFalse(value.isNullValue());
-        assertNull(value.getTypeAnnotations());
+        assertArrayEquals(new String[0], value.getTypeAnnotations());
         assertFalse(value.booleanValue());
         assertEquals("false", value.toString());
 

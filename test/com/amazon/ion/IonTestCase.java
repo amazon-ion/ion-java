@@ -2,6 +2,7 @@
 
 package com.amazon.ion;
 
+import java.util.Arrays;
 import com.amazon.ion.impl.IonSystemImpl;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.File;
@@ -356,7 +357,11 @@ public abstract class IonTestCase
         IonDatagram dg = loader().load(ionText);  // Keep here for breakpoint
         return dg.getBytes();
     }
-
+    
+    public static void assertArrayEquals(final Object[] expected, final Object[] actual) {
+        assertTrue(String.format("Expected array <%s> got <%s>", expected, actual), Arrays.equals(expected, actual));
+    }
+    
     public void assertEscape(char expected, char escapedChar)
     {
         String ionText = makeEscapedCharString(escapedChar);
@@ -594,14 +599,11 @@ public abstract class IonTestCase
 
         String[] found_annotations = found.getTypeAnnotations();
         String[] annotations = expected.getTypeAnnotations();
-        if (annotations == null || found_annotations == null) {
-            assertTrue(annotations == null && found_annotations == null);
-        }
-        else {
-            assertEquals(annotations.length, found_annotations.length);
-            for (String s : annotations) {
-                checkAnnotation(s, found);
-            }
+        assertNotNull(found_annotations);
+        assertNotNull(annotations);
+        assertEquals(annotations.length, found_annotations.length);
+        for (String s : annotations) {
+            checkAnnotation(s, found);
         }
 
         boolean expectNull = expected.isNullValue();
