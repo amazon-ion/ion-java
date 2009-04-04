@@ -9,6 +9,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -158,7 +159,7 @@ public class SymtabApp
                                           mySymbols.iterator(),
                                           importArray);
 
-        IonWriter w = mySystem.newTextWriter(System.out);
+        IonWriter w = mySystem.newTextWriter((OutputStream)System.out);
         try
         {
             // TODO ensure IVM is printed

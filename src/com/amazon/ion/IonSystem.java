@@ -370,10 +370,21 @@ public interface IonSystem
     public IonWriter newTextWriter(OutputStream out);
 
     /**
+     * Creates a new writer that will write text to the given output
+     * stream.
+     *
+     * @param out the stream that will receive Ion text data.
+     * Must not be null.
+     *
+     * @return a new {@link IonWriter} instance; not {@code null}.
+     */
+    public IonWriter newTextWriter(Appendable out);
+
+    /**
      * Creates a new writer that will write UTF-8 text to the given output
      * stream, using the given shared symbol tables as imports.
      * <p>
-     * The output stream will be start with an Ion Version Marker and a
+     * The output stream will start with an Ion Version Marker and a
      * local symbol table that uses the given {@code imports}.
      *
      * @param out the stream that will receive UTF-8 Ion text data.
@@ -385,6 +396,24 @@ public interface IonSystem
      * @throws IOException if its thrown by the output stream.
      */
     public IonWriter newTextWriter(OutputStream out, SymbolTable... imports)
+        throws IOException;
+
+    /**
+     * Creates a new writer that will write text to the given output
+     * stream, using the given shared symbol tables as imports.
+     * <p>
+     * The output stream will start with an Ion Version Marker and a
+     * local symbol table that uses the given {@code imports}.
+     *
+     * @param out the stream that will receive Ion text data.
+     * Must not be null.
+     * @param imports a sequence of shared symbol tables
+     *
+     * @return a new {@link IonWriter} instance; not {@code null}.
+     *
+     * @throws IOException if its thrown by the output stream.
+     */
+    public IonWriter newTextWriter(Appendable out, SymbolTable... imports)
         throws IOException;
 
     /**

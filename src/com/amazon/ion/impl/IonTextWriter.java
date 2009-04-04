@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion.impl;
@@ -39,12 +39,13 @@ import java.util.Date;
 public final class IonTextWriter
     extends IonBaseWriter
 {
+    private final String _lineSeparator = System.getProperty("line.separator");
+
     boolean      _pretty;
     boolean      _utf8_as_ascii;
-    PrintStream  _output;
+    final Appendable _output;
 
     BufferManager _manager;
-    OutputStream  _user_out;
 
     boolean     _in_struct;
     boolean     _pending_separator;
@@ -59,6 +60,9 @@ public final class IonTextWriter
     public IonTextWriter() {
         this(false, true);
     }
+    public IonTextWriter(Appendable out) {
+        this(out, false, true);
+    }
     public IonTextWriter(OutputStream out) {
         this(out, false, true);
     }
@@ -69,20 +73,21 @@ public final class IonTextWriter
         this(out, prettyPrint,true);
     }
     public IonTextWriter(boolean prettyPrint, boolean utf8AsAscii) {
-        _user_out = null;
         _manager = new BufferManager();
         _output = new PrintStream(_manager.openWriter());
         initFlags(prettyPrint, utf8AsAscii);
     }
     public IonTextWriter(OutputStream out, boolean prettyPrint, boolean utf8AsAscii) {
-        _user_out = out;
-        _manager = null;
-        if (out instanceof PrintStream) {
-            _output = (PrintStream)out;
+        if (out instanceof Appendable) {
+            _output = (Appendable)out;
         }
         else {
             _output = new PrintStream(out);
         }
+        initFlags(prettyPrint, utf8AsAscii);
+    }
+    public IonTextWriter(Appendable out, boolean prettyPrint, boolean utf8AsAscii) {
+        _output = out;
         initFlags(prettyPrint, utf8AsAscii);
     }
     void initFlags(boolean prettyPrint, boolean utf8AsAscii) {
@@ -184,15 +189,15 @@ public final class IonTextWriter
         if (_top == 0) return false;
         return _stack_pending_comma[_top - 1];
     }
-    void printLeadingWhiteSpace() {
+    void printLeadingWhiteSpace() throws IOException {
         for (int ii=0; ii<_top; ii++) {
             _output.append(' ');
             _output.append(' ');
         }
     }
-    void closeCollection(char closeChar) {
+    void closeCollection(char closeChar) throws IOException {
        if (_pretty) {
-           _output.println();
+           _output.append(_lineSeparator);
            printLeadingWhiteSpace();
        }
        _output.append(closeChar);
@@ -203,13 +208,12 @@ public final class IonTextWriter
             if (_pending_separator && _separator_character != '\n') {
                 _output.append((char)_separator_character);
             }
-            _output.println();
+            _output.append(_lineSeparator);
             printLeadingWhiteSpace();
         }
         else if (_pending_separator) {
             _output.append((char)_separator_character);
             // _output.append(',');
-
         }
 
         // write field name
@@ -218,6 +222,7 @@ public final class IonTextWriter
             if (name == null) {
                 throw new IllegalArgumentException("structure members require a field name");
             }
+            // TODO avoid intermediate CharSequence
             CharSequence escapedname = escapeSymbol(name);
             _output.append(escapedname);
             _output.append(':');
@@ -230,6 +235,7 @@ public final class IonTextWriter
             String[] annotations = super.get_annotations_as_strings();
             for (int ii=0; ii<annotation_count; ii++) {
                 String name = annotations[ii];
+                // TODO avoid intermediate CharSequence
                 CharSequence escapedname = escapeSymbol(name);
                 _output.append(escapedname);
                 _output.append(':');
@@ -415,7 +421,7 @@ public final class IonTextWriter
 
         startValue();
         BigInteger unscaled = value.unscaledValue();
-        
+
         if (is_negative_zero) {
         	assert value.signum() == 0;
         	_output.append('-');
@@ -428,7 +434,7 @@ public final class IonTextWriter
         closeValue();
     }
 
-// TODO - should this be removed? use writeTimestamp(long millis, ... ??
+    @Deprecated
     public void writeTimestamp(Date value, Integer localOffset)
         throws IOException
     {
@@ -437,6 +443,7 @@ public final class IonTextWriter
         writeTimestamp(ts);
     }
 
+    @Deprecated
     public void writeTimestampUTC(Date value)
         throws IOException
     {
@@ -466,6 +473,7 @@ public final class IonTextWriter
         closeValue();
     }
     CharSequence escapeString(String value) {
+        // Scan for anything that we may need to escape
         for (int ii=0; ii<value.length(); ii++) {
             char c = value.charAt(ii);
             switch (c) {
@@ -507,6 +515,7 @@ public final class IonTextWriter
             }
             else if (IonConstants.isHighSurrogate(c)) {
                 ii++;
+                // FIXME if at end of string, next line will fail
                 char c2 = value.charAt(ii);
                 if (ii >= value.length() || !IonConstants.isLowSurrogate(c2)) {
                     throw new IllegalArgumentException("string is not valid UTF-16");
@@ -557,6 +566,9 @@ public final class IonTextWriter
             appendUTF8Bytes(sb, uc);
         }
     }
+
+    // FIXME JIRA ION-52
+    // StringBuilder and Appendable accept UTF-16 code units, not bytes!
     void appendUTF8Bytes(StringBuilder sb, int c) {
         if (c <= 128) {
             throw new IllegalArgumentException("only non-ascii code points (characters) are accepted here");
@@ -627,7 +639,7 @@ public final class IonTextWriter
                 return escapeSymbolHelper(value, ii);
             }
         }
-        if (IonTextTokenizer.keyword(value, 0, value.length()) != -1) return escapeSymbolHelper(value, value.length() - 1); 
+        if (IonTextTokenizer.keyword(value, 0, value.length()) != -1) return escapeSymbolHelper(value, value.length() - 1);
         return value;
     }
     CharSequence escapeSymbolHelper(String value, int firstNonAscii) {
@@ -723,6 +735,7 @@ public final class IonTextWriter
                 _output.append(lowEscapeSequence(c));
             }
             else if (c == 128) {
+                // FIXME JIRA ION-53 \ u isn't valid clob syntax
                 _output.append('\\'+"u0100");
             }
             else {

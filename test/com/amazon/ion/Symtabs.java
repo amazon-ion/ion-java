@@ -4,10 +4,14 @@ package com.amazon.ion;
 
 import static com.amazon.ion.SystemSymbolTable.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertSame;
+import static junit.framework.Assert.assertTrue;
 
 import com.amazon.ion.impl.IonSystemImpl;
 import com.amazon.ion.system.SimpleCatalog;
 import com.amazon.ion.system.SystemFactory;
+import java.util.Arrays;
 
 /**
  *
@@ -107,5 +111,22 @@ public class Symtabs
         SymbolTable table = CATALOG.getTable(name, version);
         catalog.putTable(table);
         return table;
+    }
+
+    public static void assertEqualSymtabs(SymbolTable s1, SymbolTable s2)
+    {
+        assertEquals(s1.isLocalTable(), s2.isLocalTable());
+        assertEquals(s1.isSharedTable(), s2.isSharedTable());
+        assertEquals(s1.isSystemTable(), s2.isSystemTable());
+        assertEquals(s1.getName(),    s2.getName());
+        assertEquals(s1.getVersion(), s2.getVersion());
+        assertEquals(s1.getMaxId(),   s2.getMaxId());
+
+        assertSame(s1.getSystemSymbolTable(), s2.getSystemSymbolTable());
+        assertEquals(s1.getIonVersionId(), s2.getIonVersionId());
+        assertTrue(Arrays.equals(s1.getImportedTables(),
+                                 s2.getImportedTables()));
+        assertEquals(s1.getImportedMaxId(), s2.getImportedMaxId());
+        assertEquals(s1.getMaxId(), s2.getMaxId());
     }
 }
