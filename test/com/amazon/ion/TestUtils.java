@@ -49,8 +49,18 @@ public class TestUtils
         }
     }
 
+
     /**
-     * U+16110 MUSICAL SYMBOL FERMATA
+     * U+00A5 YEN SIGN
+     * UTF-8 (hex)      0xC2 0xA5 (c2a5)
+     * UTF-8 (binary)  11000010:10100101
+     * UTF-16 (hex)    0x00A5 (00a5)
+     * UTF-32 (hex)    0x000000A5 (00a5)
+     */
+    public static final String YEN_SIGN = "\u00a5";
+
+    /**
+     * U+1D110 MUSICAL SYMBOL FERMATA
      * <pre>
      * UTF-8 (hex)     0xF0 0x9D 0x84 0x90 (f09d8490)
      * UTF-8 (binary)  11110000:10011101:10000100:10010000

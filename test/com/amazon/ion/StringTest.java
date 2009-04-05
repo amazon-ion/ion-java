@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -12,7 +10,7 @@ import java.nio.charset.Charset;
 
 
 public class StringTest
-    extends IonTestCase
+    extends TextTestCase
 {
     private static final boolean _debug_output = false;
     public static void testDummy() {
@@ -64,6 +62,13 @@ public class StringTest
 
         value.setValue(null);
         checkNullString(value);
+    }
+
+
+    @Override
+    protected String wrap(String ionText)
+    {
+        return "\"" + ionText + "\"";
     }
 
 
@@ -177,51 +182,6 @@ public class StringTest
         assertEscape('\u000B', 'v');   // vertical tab
         assertEscape('\u003F', '?');   // question mark; thank you C++
         assertEscape('\'',     '\'');  // single quote
-    }
-
-    public void testUnicodeEscapes()
-    {
-        String ionData = "\"\\0\"";
-        IonString value = (IonString) oneValue(ionData);
-        assertEquals(1, value.stringValue().length());
-        assertEquals(ionData, value.toString());
-
-        ionData = "\"\\x01\"";
-        value = (IonString) oneValue(ionData);
-        assertEquals(1, value.stringValue().length());  // one code unit
-        assertEquals(ionData, value.toString());
-
-        // U+007F is a control character
-        ionData = "\"\\x7f\"";
-        value = (IonString) oneValue(ionData);
-        assertEquals(1, value.stringValue().length());  // one code unit
-        assertEquals(ionData, value.toString());
-
-        ionData = "\"\\xff\"";
-        value = (IonString) oneValue(ionData);
-        assertEquals(1, value.stringValue().length());  // one code unit
-        assertEquals(ionData, value.toString());
-
-        ionData = "\"\\" + "u0110\""; // Carefully avoid Java escape
-        value = (IonString) oneValue(ionData);
-        assertEquals(1, value.stringValue().length());  // one code unit
-        assertEquals(ionData, value.toString());
-
-        ionData = "\"\\" + "uffff\""; // Carefully avoid Java escape
-        value = (IonString) oneValue(ionData);
-        assertEquals(1, value.stringValue().length());  // one code unit
-        assertEquals(ionData, value.toString());
-
-        ionData = "\"\\" + "U0001d110\""; // Carefully avoid Java escape
-        value = (IonString) oneValue(ionData);
-        assertEquals(2, value.stringValue().length());  // two code units
-        assertEquals(ionData, value.toString());
-
-        // The largest legal code point
-        ionData = "\"\\" + "U0010ffff\""; // Carefully avoid Java escape
-        value = (IonString) oneValue(ionData);
-        assertEquals(2, value.stringValue().length());  // two code units
-        assertEquals(ionData, value.toString());
     }
 
 
