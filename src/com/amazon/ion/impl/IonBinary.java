@@ -13,6 +13,7 @@ import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.Timestamp.Precision;
 import com.amazon.ion.impl.IonConstants.HighNibble;
+import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PushbackReader;
@@ -502,6 +503,7 @@ public class IonBinary
 
     /**
      * @param v may be null.
+     * @throws IllegalArgumentException if the text contains bad UTF-16 data.
      */
     public static int lenIonString(String v)
     {
@@ -521,26 +523,39 @@ public class IonBinary
             if (IonConstants.isHighSurrogate(c)) {
                 ii++;
                 if (ii >= v.length()) {
-                    throw new IonException("invalid string, unpaired high surrogate character");
+                    String message =
+                        "Text ends with unmatched UTF-16 surrogate " +
+                        IonTextUtils.printCodePointAsString(c);
+                    throw new IllegalArgumentException(message);
                 }
                 int c2 = v.charAt(ii);
                 if (!IonConstants.isLowSurrogate(c2)) {
-                    throw new IonException("invalid string, unpaired low surrogate character");
+                    String message =
+                        "Text contains unmatched UTF-16 high surrogate " +
+                        IonTextUtils.printCodePointAsString(c) +
+                        " at index " + (ii-1);
+                    throw new IllegalArgumentException(message);
                 }
                 c = IonConstants.makeUnicodeScalar(c, c2);
             }
             else if (IonConstants.isLowSurrogate(c)) {
-                throw new IonException("invalid string, unpaired low surrogate character");
+                String message =
+                    "Text contains unmatched UTF-16 low surrogate " +
+                    IonTextUtils.printCodePointAsString(c) +
+                    " at index " + ii;
+                throw new IllegalArgumentException(message);
             }
 
             if (c > 0x10FFFF || (c > 0xD7FF && c < 0xE000)) {
-                throw new IonException("invalid string, illegal Unicode scalar (character) encountered");
+                // TODO how is this possible?
+                throw new IllegalArgumentException("invalid string, illegal Unicode scalar (character) encountered");
             }
 
             // and now figure out how long this "complicated" (non-ascii) character is
             int clen = lenUnicodeScalarAsUTF8(c);
             if (clen < 1) {
-                throw new IonException("invalid string, illegal Unicode scalar (character) encountered");
+                // TODO how is this possible?
+                throw new IllegalArgumentException("invalid string, illegal Unicode scalar (character) encountered");
             }
             len += clen;
         }

@@ -5,6 +5,7 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
 import static com.amazon.ion.Symtabs.GINGER_MAX_IDS;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
+import static com.amazon.ion.TestUtils.FERMATA;
 
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonTestCase;
@@ -19,6 +20,12 @@ import com.amazon.ion.Symtabs;
 public abstract class WriterTestCase
     extends IonTestCase
 {
+    protected IonWriter makeWriter()
+        throws Exception
+    {
+        return makeWriter((SymbolTable[])null);
+    }
+
     protected abstract IonWriter makeWriter(SymbolTable... imports)
         throws Exception;
 
@@ -93,4 +100,52 @@ public abstract class WriterTestCase
     }
 
     // TODO test stepOut() when at top-level
+
+    public void testWritingBadSurrogates()
+        throws Exception
+    {
+        String highFermata = FERMATA.substring(0, 1);
+        String lowFermata  = FERMATA.substring(1, 2);
+
+        testBadText(highFermata);
+        testBadText(lowFermata);
+        testBadText(highFermata + "x");
+    }
+
+    public void testWritingBadSymbol()
+        throws Exception
+    {
+        testBadSymbol("");
+    }
+
+    public void testBadText(String text)
+        throws Exception
+    {
+        testBadString(text);
+        testBadSymbol(text);
+    }
+
+    public void testBadString(String text)
+        throws Exception
+    {
+        IonWriter writer = makeWriter();
+        try
+        {
+            writer.writeString(text);
+            fail("expected exception");
+        }
+        catch (IllegalArgumentException e) { }
+    }
+
+    public void testBadSymbol(String text)
+        throws Exception
+    {
+        IonWriter writer = makeWriter();
+        try
+        {
+            writer.writeSymbol(text);
+            fail("expected exception");
+        }
+        catch (IllegalArgumentException e) { }
+    }
 }

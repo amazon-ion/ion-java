@@ -14,6 +14,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.Base64Encoder.TextStream;
 import com.amazon.ion.impl.IonBinary.BufferManager;
+import com.amazon.ion.util.IonTextUtils;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -515,16 +516,29 @@ public final class IonTextWriter
             }
             else if (IonConstants.isHighSurrogate(c)) {
                 ii++;
-                // FIXME if at end of string, next line will fail
+                if (ii >= value.length()) {
+                    String message =
+                        "Text ends with unmatched UTF-16 surrogate " +
+                        IonTextUtils.printCodePointAsString(c);
+                    throw new IllegalArgumentException(message);
+                }
                 char c2 = value.charAt(ii);
-                if (ii >= value.length() || !IonConstants.isLowSurrogate(c2)) {
-                    throw new IllegalArgumentException("string is not valid UTF-16");
+                if (!IonConstants.isLowSurrogate(c2)) {
+                    String message =
+                        "Text contains unmatched UTF-16 high surrogate " +
+                        IonTextUtils.printCodePointAsString(c) +
+                        " at index " + (ii-1);
+                    throw new IllegalArgumentException(message);
                 }
                 int uc = IonConstants.makeUnicodeScalar(c, c2);
                 appendUTF8Char(sb, uc);
             }
             else if (IonConstants.isLowSurrogate(c)) {
-                throw new IllegalArgumentException("string is not valid UTF-16");
+                String message =
+                    "Text contains unmatched UTF-16 low surrogate " +
+                    IonTextUtils.printCodePointAsString(c) +
+                    " at index " + ii;
+                throw new IllegalArgumentException(message);
             }
             else {
                 appendUTF8Char(sb, c);
@@ -669,15 +683,29 @@ public final class IonTextWriter
             }
             else if (IonConstants.isHighSurrogate(c)) {
                 ii++;
+                if (ii >= value.length()) {
+                    String message =
+                        "Text ends with unmatched UTF-16 surrogate " +
+                        IonTextUtils.printCodePointAsString(c);
+                    throw new IllegalArgumentException(message);
+                }
                 char c2 = value.charAt(ii);
-                if (ii >= value.length() || !IonConstants.isLowSurrogate(c2)) {
-                    throw new IllegalArgumentException("string is not valid UTF-16");
+                if (!IonConstants.isLowSurrogate(c2)) {
+                    String message =
+                        "Text contains unmatched UTF-16 high surrogate " +
+                        IonTextUtils.printCodePointAsString(c) +
+                        " at index " + (ii-1);
+                    throw new IllegalArgumentException(message);
                 }
                 int uc = IonConstants.makeUnicodeScalar(c, c2);
                 appendUTF8Char(sb, uc);
             }
             else if (IonConstants.isLowSurrogate(c)) {
-                throw new IllegalArgumentException("string is not valid UTF-16");
+                String message =
+                    "Text contains unmatched UTF-16 low surrogate " +
+                    IonTextUtils.printCodePointAsString(c) +
+                    " at index " + ii;
+                throw new IllegalArgumentException(message);
             }
             else {
                 appendUTF8Char(sb, c);
