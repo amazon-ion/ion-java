@@ -8,6 +8,7 @@ import static com.amazon.ion.impl.IonConstants.tidList;
 import static com.amazon.ion.impl.IonConstants.tidSexp;
 import static com.amazon.ion.impl.IonConstants.tidStruct;
 
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonNumber;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
@@ -19,6 +20,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.CharBuffer;
@@ -43,7 +45,7 @@ public final class IonTextWriter
     private final String _lineSeparator = System.getProperty("line.separator");
 
     boolean      _pretty;
-    boolean      _utf8_as_ascii;
+    boolean      _printAscii;
     final Appendable _output;
 
     BufferManager _manager;
@@ -61,39 +63,65 @@ public final class IonTextWriter
     public IonTextWriter() {
         this(false, true);
     }
+
+    /**
+     * Creates a non-pretty UTF-8 writer.
+     */
     public IonTextWriter(Appendable out) {
-        this(out, false, true);
+        this(out, false, false);
     }
+
+    /**
+     * Creates a non-pretty UTF-8 writer.
+     */
     public IonTextWriter(OutputStream out) {
-        this(out, false, true);
+        this(out, false, false);
     }
+
     public IonTextWriter(boolean prettyPrint) {
-        this(prettyPrint,true);
+        this(prettyPrint, true);  // FIXME should print UTF-8
     }
+
+    /**
+     * Creates a UTF-8 writer.
+     */
     public IonTextWriter(OutputStream out, boolean prettyPrint) {
-        this(out, prettyPrint,true);
+        this(out, prettyPrint, false);
     }
-    public IonTextWriter(boolean prettyPrint, boolean utf8AsAscii) {
+    public IonTextWriter(boolean prettyPrint, boolean printAscii) {
         _manager = new BufferManager();
-        _output = new PrintStream(_manager.openWriter());
-        initFlags(prettyPrint, utf8AsAscii);
+        _output = initStream(_manager.openWriter());
+        initFlags(prettyPrint, printAscii);
     }
-    public IonTextWriter(OutputStream out, boolean prettyPrint, boolean utf8AsAscii) {
+    public IonTextWriter(OutputStream out, boolean prettyPrint, boolean printAscii) {
         if (out instanceof Appendable) {
             _output = (Appendable)out;
         }
         else {
-            _output = new PrintStream(out);
+            _output = initStream(out);
         }
-        initFlags(prettyPrint, utf8AsAscii);
+        initFlags(prettyPrint, printAscii);
     }
-    public IonTextWriter(Appendable out, boolean prettyPrint, boolean utf8AsAscii) {
+    public IonTextWriter(Appendable out, boolean prettyPrint, boolean printAscii) {
         _output = out;
-        initFlags(prettyPrint, utf8AsAscii);
+        initFlags(prettyPrint, printAscii);
     }
-    void initFlags(boolean prettyPrint, boolean utf8AsAscii) {
+
+    private Appendable initStream(OutputStream out)
+    {
+        try
+        {
+            return new PrintStream(out, true, "UTF-8");
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            throw new IonException(e);
+        }
+    }
+
+    void initFlags(boolean prettyPrint, boolean printAscii) {
         _pretty = prettyPrint;
-        _utf8_as_ascii = utf8AsAscii;
+        _printAscii = printAscii;
         _separator_character = ' ';
     }
 
@@ -473,7 +501,9 @@ public final class IonTextWriter
         _output.append('"');
         closeValue();
     }
-    CharSequence escapeString(String value) {
+    CharSequence escapeString(String value)
+        throws IOException
+    {
         // Scan for anything that we may need to escape
         for (int ii=0; ii<value.length(); ii++) {
             char c = value.charAt(ii);
@@ -489,7 +519,9 @@ public final class IonTextWriter
         }
         return value;
     }
-    CharSequence escapeStringHelper(String value, int firstNonAscii) {
+    CharSequence escapeStringHelper(String value, int firstNonAscii)
+        throws IOException
+    {
         StringBuilder sb = new StringBuilder(value.length());
         for (int jj=0; jj<firstNonAscii; jj++) {
             sb.append(value.charAt(jj));
@@ -530,8 +562,15 @@ public final class IonTextWriter
                         " at index " + (ii-1);
                     throw new IllegalArgumentException(message);
                 }
-                int uc = IonConstants.makeUnicodeScalar(c, c2);
-                appendUTF8Char(sb, uc);
+                if (_printAscii) {
+                    int uc = IonConstants.makeUnicodeScalar(c, c2);
+                    printHighEscapeSequence(sb, uc);
+                }
+                else {
+                    // copy the two code units
+                    sb.append(c);
+                    sb.append(c2);
+                }
             }
             else if (IonConstants.isLowSurrogate(c)) {
                 String message =
@@ -541,11 +580,12 @@ public final class IonTextWriter
                 throw new IllegalArgumentException(message);
             }
             else {
-                appendUTF8Char(sb, c);
+                printBmpCodePoint(sb, c);
             }
         }
         return sb;
     }
+
     // escape sequences for character below ascii 32 (space)
     static final String [] LOW_ESCAPE_SEQUENCES = {
           "0",   "x01", "x02", "x03",
@@ -563,47 +603,31 @@ public final class IonTextWriter
         }
         return '\\'+LOW_ESCAPE_SEQUENCES[c];
     }
-    void appendUTF8Char(StringBuilder sb, int uc) {
-        String image;
-        if (this._utf8_as_ascii) {
-            image = Integer.toHexString(uc);
-            int len = image.length();
-            if (len <= 4) {
-                sb.append('\\'+"u0000", 0, 6 - len);
-            }
-            else {
-                sb.append('\\'+"U00000000", 0, 10 - len);
-            }
-            sb.append(image);
+
+    private static void printHighEscapeSequence(Appendable out, int codePoint)
+        throws IOException
+    {
+        String image = Integer.toHexString(codePoint);
+        int len = image.length();
+        if (len <= 4) {
+            out.append('\\'+"u0000", 0, 6 - len);
         }
         else {
-            appendUTF8Bytes(sb, uc);
+            out.append('\\'+"U00000000", 0, 10 - len);
         }
+        out.append(image);
     }
 
-    // FIXME JIRA ION-52
-    // StringBuilder and Appendable accept UTF-16 code units, not bytes!
-    void appendUTF8Bytes(StringBuilder sb, int c) {
-        if (c <= 128) {
-            throw new IllegalArgumentException("only non-ascii code points (characters) are accepted here");
-        }
-        else if ((c & (~0x7ff)) == 0) {
-            sb.append((char)( 0xff & (0xC0 | (c >> 6)) ));
-            sb.append((char)( 0xff & (0x80 | (c & 0x3F)) ));
-        }
-        else if ((c & (~0xffff)) == 0) {
-            sb.append((char)( 0xff & (0xE0 |  (c >> 12)) ));
-            sb.append((char)( 0xff & (0x80 | ((c >> 6) & 0x3F)) ));
-            sb.append((char)( 0xff & (0x80 |  (c & 0x3F)) ));
-        }
-        else if ((c & (~0x7ffff)) == 0) {
-            sb.append((char)( 0xff & (0xF0 |  (c >> 18)) ));
-            sb.append((char)( 0xff & (0x80 | ((c >> 12) & 0x3F)) ));
-            sb.append((char)( 0xff & (0x80 | ((c >> 6) & 0x3F)) ));
-            sb.append((char)( 0xff & (0x80 | (c & 0x3F)) ));
+    private void printBmpCodePoint(Appendable out, int codePoint)
+        throws IOException
+    {
+        assert codePoint <= 0xFFFF;
+
+        if (this._printAscii) {
+            printHighEscapeSequence(out, codePoint);
         }
         else {
-            throw new IllegalArgumentException("invalid character for UTF-8 output");
+            out.append((char) codePoint);
         }
     }
 
@@ -642,7 +666,12 @@ public final class IonTextWriter
         is_valid['$'] = true;
         return is_valid;
     }
-    CharSequence escapeSymbol(String value) {
+    CharSequence escapeSymbol(String value)
+        throws IOException
+    {
+        if (value.length() == 0) {
+            throw new IllegalArgumentException("Symbol text is empty");
+        }
         char c = value.charAt(0);
         if (c > 127 || !VALID_LEADING_SYMBOL_CHARACTERS[c]) {
             return escapeSymbolHelper(value, 0);
@@ -656,7 +685,9 @@ public final class IonTextWriter
         if (IonTextTokenizer.keyword(value, 0, value.length()) != -1) return escapeSymbolHelper(value, value.length() - 1);
         return value;
     }
-    CharSequence escapeSymbolHelper(String value, int firstNonAscii) {
+    CharSequence escapeSymbolHelper(String value, int firstNonAscii)
+        throws IOException
+    {
         StringBuilder sb = new StringBuilder(value.length());
         sb.append('\'');
         for (int jj=0; jj<firstNonAscii; jj++) {
@@ -697,8 +728,15 @@ public final class IonTextWriter
                         " at index " + (ii-1);
                     throw new IllegalArgumentException(message);
                 }
-                int uc = IonConstants.makeUnicodeScalar(c, c2);
-                appendUTF8Char(sb, uc);
+                if (_printAscii) {
+                    int uc = IonConstants.makeUnicodeScalar(c, c2);
+                    printHighEscapeSequence(sb, uc);
+                }
+                else {
+                    // copy the two code units
+                    sb.append(c);
+                    sb.append(c2);
+                }
             }
             else if (IonConstants.isLowSurrogate(c)) {
                 String message =
@@ -708,7 +746,7 @@ public final class IonTextWriter
                 throw new IllegalArgumentException(message);
             }
             else {
-                appendUTF8Char(sb, c);
+                printBmpCodePoint(sb, c);
             }
         }
         sb.append('\'');
@@ -763,8 +801,7 @@ public final class IonTextWriter
                 _output.append(lowEscapeSequence(c));
             }
             else if (c == 128) {
-                // FIXME JIRA ION-53 \ u isn't valid clob syntax
-                _output.append('\\'+"u0100");
+                _output.append("\\x80");
             }
             else {
                 switch (c) {
