@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc. All rights reserved.
- */
+// Copyright (c) 2007-20089 Amazon.com, Inc. All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -22,6 +20,10 @@ public abstract class IonSequenceImpl
     extends IonContainerImpl
     implements IonSequence
 {
+    /**
+     * A zero-length array.
+     */
+    protected static final IonValue[] EMPTY_VALUE_ARRAY = new IonValue[0];
 
     /**
      * Constructs a sequence backed by a binary buffer.
@@ -111,11 +113,21 @@ public abstract class IonSequenceImpl
 
     @Override
     // Increasing visibility
-    public void add(IonValue element)
+    public boolean add(IonValue element)
         throws ContainedValueException, NullPointerException
     {
         // super.add will check for the lock
-        super.add(element);
+        return super.add(element);
+    }
+
+    public boolean addAll(Collection<? extends IonValue> c)
+    {
+        boolean changed = false;
+        for (IonValue v : c)
+        {
+            changed = add(v) || changed;
+        }
+        return changed;
     }
 
     public ValueFactory add()
@@ -152,6 +164,46 @@ public abstract class IonSequenceImpl
         };
     }
 
+
+    public boolean contains(Object o)
+    {
+        makeReady();
+        if (o == null)
+        {
+            String message =
+                "Ion sequences cannot contain null references";
+            throw new NullPointerException(message);
+        }
+        if (_contents == null) return false;
+        return _contents.contains(o);
+    }
+
+    public boolean containsAll(Collection<?> c)
+    {
+        makeReady();
+        if (_contents == null) return (c.size() == 0);
+        return _contents.containsAll(c);
+    }
+
+    public IonValue[] toArray()
+    {
+        makeReady();
+        if (_contents == null || _contents.isEmpty()) return EMPTY_VALUE_ARRAY;
+
+        IonValue[] array = new IonValue[_contents.size()];
+        _contents.toArray(array);
+        return array;
+    }
+
+    public <T> T[] toArray(T[] a)
+    {
+        makeReady();
+        if (_contents == null) return a;
+        return _contents.toArray(a);
+    }
+
+
+    //=========================================================================
 
     @Override
     protected int computeLowNibble(int valuelen)

@@ -2,13 +2,15 @@
 
 package com.amazon.ion;
 
+import java.util.Collection;
+
 
 
 /**
  * Common functionality of Ion <code>list</code> and <code>sexp</code> types.
  */
 public interface IonSequence
-    extends IonContainer
+    extends IonContainer//, Collection<IonValue>
 {
     /**
      * Returns the element at the specified position in this sequence.
@@ -29,6 +31,8 @@ public interface IonSequence
      * sequence.
      *
      * @param child is the value to be appended to this sequence.
+     * @return {@code true} (as per the general contract of the
+     * {@link Collection#add} method).
      *
      * @throws NullPointerException
      *   if {@code child} is <code>null</code>.
@@ -37,7 +41,7 @@ public interface IonSequence
      * @throws IllegalArgumentException
      *   if {@code child} is an {@link IonDatagram}.
      */
-    public void add(IonValue child)
+    public boolean add(IonValue child)
         throws ContainedValueException, NullPointerException;
 
 
@@ -88,6 +92,23 @@ public interface IonSequence
      * is invoked, not when this method is invoked.
      */
     public ValueFactory add(int index);
+
+
+    /**
+     * Returns {@code true} if this sequence contains an equivalent value.
+     * More formally, returns {@code true} if and only if this sequence
+     * contains at least one element e such that {@code o.equals(e)}.
+     */
+    public boolean contains(Object o);
+
+
+    public IonValue[] toArray();
+
+
+    // TODO remove once this class is declared to extend List
+    public <T> T[] toArray(T[] a);
+    public boolean addAll(Collection<? extends IonValue> c);
+    public boolean containsAll(Collection<?> c);
 
 
     /**

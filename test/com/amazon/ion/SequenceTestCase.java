@@ -3,8 +3,10 @@
 package com.amazon.ion;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 
 
 
@@ -246,6 +248,167 @@ public abstract class SequenceTestCase
         seq.makeNull();
         assertNull("Removed value should have null container",
                    val.getContainer());
+    }
+
+    public void testAddAll()
+    {
+        IonSequence seq = makeNull();
+        List<IonValue> l = null;
+        try
+        {
+            seq.addAll(l);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+
+        seq = makeEmpty();
+        try
+        {
+            seq.addAll(l);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+
+        l = new ArrayList<IonValue>();
+
+        boolean changed = seq.addAll(l);
+        assertFalse(changed);
+
+        l.add(system().newNull());
+        changed = seq.addAll(l);
+        assertTrue(changed);
+        assertSame(l.get(0), seq.get(0));
+
+        try
+        {
+            seq.addAll(l);
+            fail("expected exception");
+        }
+        catch (ContainedValueException e) { }
+    }
+
+    public void testContains()
+    {
+        IonNull nullValue1 = system().newNull();
+        IonNull nullValue2 = system().newNull();
+
+        IonSequence seq = makeNull();
+        assertFalse(seq.contains(nullValue1));
+        try
+        {
+            seq.contains(null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+
+        seq = makeEmpty();
+        assertFalse(seq.contains(nullValue1));
+        try
+        {
+            seq.contains(null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+
+        seq.add(nullValue2);
+        assertTrue(seq.contains(nullValue1));
+        assertTrue(seq.contains(nullValue2));
+    }
+
+    public void testContainsAll()
+    {
+        IonNull nullValue1 = system().newNull();
+        IonNull nullValue2 = system().newNull();
+        IonInt  intValue1  = system().newInt(1);
+
+        List<Object> empty = new ArrayList<Object>();
+        List<Object> hasNull = Arrays.asList((Object)nullValue1);
+        List<Object> hasNullAndInt = Arrays.asList((Object)nullValue1,
+                                                   (Object)intValue1);
+
+        IonSequence seq = makeNull();
+        assertTrue(seq.containsAll(empty));
+        assertFalse(seq.containsAll(hasNull));
+        assertFalse(seq.containsAll(hasNullAndInt));
+        try
+        {
+            seq.containsAll(null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+
+        seq = makeEmpty();
+        assertTrue(seq.containsAll(empty));
+        assertFalse(seq.containsAll(hasNull));
+        assertFalse(seq.containsAll(hasNullAndInt));
+        try
+        {
+            seq.containsAll(null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+
+        seq.add(nullValue2);
+        assertTrue(seq.containsAll(empty));
+        assertTrue(seq.containsAll(hasNull));
+        assertFalse(seq.containsAll(hasNullAndInt));
+
+        seq.add(intValue1);
+        assertTrue(seq.containsAll(empty));
+        assertTrue(seq.containsAll(hasNull));
+        assertTrue(seq.containsAll(hasNullAndInt));
+    }
+
+
+    public void testToArray()
+    {
+        IonSequence seq = makeNull();
+        assertEquals(0, seq.toArray().length);
+
+        seq = makeEmpty();
+        assertEquals(0, seq.toArray().length);
+
+        seq.add().newNull();
+
+        IonValue[] array = seq.toArray();
+        checkArray(seq, array);
+
+        seq.add().newInt(2);
+        IonValue[] array2 = seq.toArray();
+        checkArray(seq, array2);
+
+        Object[] objArray = new Object[2];
+        assertSame(objArray, seq.toArray(objArray));
+        checkArray(seq, objArray);
+
+        seq.remove(seq.get(1));  // TODO remove(1)
+        assertSame(objArray, seq.toArray(objArray));
+        assertSame(seq.get(0), objArray[0]);
+        assertEquals(null, objArray[1]);
+
+        try
+        {
+            seq.toArray(null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+
+        Integer[] intArray = new Integer[0];
+        try
+        {
+            seq.toArray(intArray);
+            fail("expected exception");
+        }
+        catch (ArrayStoreException e) { }
+    }
+
+    public void checkArray(IonSequence expected, Object[] actual)
+    {
+        assertEquals(expected.size(), actual.length);
+        for (int i = 0; i < actual.length; i++)
+        {
+            assertSame(expected.get(i), actual[i]);
+        }
     }
 
     public void testAddOfClone()

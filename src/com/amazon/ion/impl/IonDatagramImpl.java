@@ -290,7 +290,7 @@ public final class IonDatagramImpl
     // FIXME need to make add more solid, maintain symbol tables etc.
 
     @Override
-    public void add(IonValue element)
+    public boolean add(IonValue element)
         throws ContainedValueException, NullPointerException
     {
         boolean isSystem = false;
@@ -307,6 +307,7 @@ public final class IonDatagramImpl
         int userPos = isSystem ? -1 : this._userContents.size();
         try {
             this.add( element, systemPos, userPos );
+            return true;
         } catch (IOException e) {
             throw new IonException(e);
         }
