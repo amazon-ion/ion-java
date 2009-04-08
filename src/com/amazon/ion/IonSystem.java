@@ -102,6 +102,13 @@ public interface IonSystem
      *   </li>
      * </ol>
      * Any duplicate symbol texts or null strings are ignored.
+     * <p>
+     * This method is intended for use by utilities that are defining new
+     * symbol tables for use by applications. The result will typically be
+     * added to an {@link IonCatalog} which is responsible for persistence.
+     * Shared symbol tables are serialized via
+     * {@link SymbolTable#writeTo(IonWriter)} and materialized via
+     * {@link #newSharedSymbolTable(IonReader)}.
      *
      * @param name the symbol table name, a non-empty string.
      * @param version at least one.
@@ -117,6 +124,15 @@ public interface IonSystem
                                             int version,
                                             Iterator<String> newSymbols,
                                             SymbolTable... imports);
+
+    /**
+     * Materializes a shared symbol table from its serialized form.
+     *
+     * @param reader must not be null.
+     *
+     * @return a new symbol table instance.
+     */
+    public SymbolTable newSharedSymbolTable(IonReader reader);
 
 
     /**
