@@ -300,6 +300,12 @@ public abstract class SequenceTestCase
             fail("expected exception");
         }
         catch (NullPointerException e) { }
+        try
+        {
+            seq.contains(new Integer(0));
+            fail("expected exception");
+        }
+        catch (ClassCastException e) { }
 
         seq = makeEmpty();
         assertFalse(seq.contains(nullValue1));
@@ -311,7 +317,7 @@ public abstract class SequenceTestCase
         catch (NullPointerException e) { }
 
         seq.add(nullValue2);
-        assertTrue(seq.contains(nullValue1));
+        assertFalse(seq.contains(nullValue1));
         assertTrue(seq.contains(nullValue2));
     }
 
@@ -322,41 +328,86 @@ public abstract class SequenceTestCase
         IonInt  intValue1  = system().newInt(1);
 
         List<Object> empty = new ArrayList<Object>();
-        List<Object> hasNull = Arrays.asList((Object)nullValue1);
-        List<Object> hasNullAndInt = Arrays.asList((Object)nullValue1,
-                                                   (Object)intValue1);
+        List<Object> hasJavaNull = Arrays.asList((Object)null);
+        List<Integer> hasJavaInt = Arrays.asList(new Integer(0));
+        List<Object> hasNull1 = Arrays.asList((Object)nullValue1);
+        List<Object> hasNull2AndInt = Arrays.asList((Object)intValue1,
+                                                    (Object)nullValue2);
 
         IonSequence seq = makeNull();
         assertTrue(seq.containsAll(empty));
-        assertFalse(seq.containsAll(hasNull));
-        assertFalse(seq.containsAll(hasNullAndInt));
+        assertFalse(seq.containsAll(hasNull1));
+        assertFalse(seq.containsAll(hasNull2AndInt));
         try
         {
             seq.containsAll(null);
             fail("expected exception");
         }
         catch (NullPointerException e) { }
+        try
+        {
+            seq.containsAll(hasJavaNull);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+        try
+        {
+            seq.containsAll(hasJavaInt);
+            fail("expected exception");
+        }
+        catch (ClassCastException e) { }
 
         seq = makeEmpty();
         assertTrue(seq.containsAll(empty));
-        assertFalse(seq.containsAll(hasNull));
-        assertFalse(seq.containsAll(hasNullAndInt));
+        assertFalse(seq.containsAll(hasNull1));
+        assertFalse(seq.containsAll(hasNull2AndInt));
         try
         {
             seq.containsAll(null);
             fail("expected exception");
         }
         catch (NullPointerException e) { }
+        try
+        {
+            seq.containsAll(hasJavaNull);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+        try
+        {
+            seq.containsAll(hasJavaInt);
+            fail("expected exception");
+        }
+        catch (ClassCastException e) { }
+
 
         seq.add(nullValue2);
         assertTrue(seq.containsAll(empty));
-        assertTrue(seq.containsAll(hasNull));
-        assertFalse(seq.containsAll(hasNullAndInt));
+        assertFalse(seq.containsAll(hasNull1));
+        assertFalse(seq.containsAll(hasNull2AndInt));
 
         seq.add(intValue1);
         assertTrue(seq.containsAll(empty));
-        assertTrue(seq.containsAll(hasNull));
-        assertTrue(seq.containsAll(hasNullAndInt));
+        assertFalse(seq.containsAll(hasNull1));
+        assertTrue(seq.containsAll(hasNull2AndInt));
+
+        seq.add(nullValue1);
+        assertTrue(seq.containsAll(empty));
+        assertTrue(seq.containsAll(hasNull1));
+        assertTrue(seq.containsAll(hasNull2AndInt));
+        try
+        {
+            seq.containsAll(hasJavaNull);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+        try
+        {
+            seq.containsAll(hasJavaInt);
+            fail("expected exception");
+        }
+        catch (ClassCastException e) { }
+
     }
 
 

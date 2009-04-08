@@ -167,23 +167,18 @@ public abstract class IonSequenceImpl
 
     public boolean contains(Object o)
     {
-        makeReady();
-        if (o == null)
-        {
-            String message =
-                "Ion sequences cannot contain null references";
-            throw new NullPointerException(message);
-        }
-        if (_contents == null) return false;
-        return _contents.contains(o);
+        return ((IonValue)o).getContainer() == this;
     }
 
     public boolean containsAll(Collection<?> c)
     {
-        makeReady();
-        if (_contents == null) return (c.size() == 0);
-        return _contents.containsAll(c);
+        for (Object o : c)
+        {
+            if (! contains(o)) return false;
+        }
+        return true;
     }
+
 
     public IonValue[] toArray()
     {

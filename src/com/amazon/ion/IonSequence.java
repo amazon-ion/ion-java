@@ -95,20 +95,47 @@ public interface IonSequence
 
 
     /**
-     * Returns {@code true} if this sequence contains an equivalent value.
-     * More formally, returns {@code true} if and only if this sequence
-     * contains at least one element e such that {@code o.equals(e)}.
+     * Determines whether this sequence contains the given instance.
+     * <p>
+     * <b>Due to the reference-equality-based semantics of Ion sequences,
+     * this method does not use {@link Object#equals} as specified by the
+     * contract of {@link java.util.Collection}. Instead it uses reference
+     * equality ({@code ==} operator) to find the given instance.</b>
+     *
+     * @returns {@code true} if {@code o} is an element of this sequence.
+     *
+     * @throws NullPointerException if {@code o} is {@code null}.
+     * @throws ClassCastException if {@code o} is not an {@link IonValue}.
      */
     public boolean contains(Object o);
 
 
+    /**
+     * Determines whether this sequence contains all of the given instances.
+     * <p>
+     * <b>Due to the reference-equality-based semantics of Ion sequences,
+     * this method does not use {@link Object#equals} as specified by the
+     * contract of {@link java.util.Collection}. Instead it uses reference
+     * equality ({@code ==} operator) to find the given instances.</b>
+     *
+     * @returns {@code true} if this sequence contains all of the elements of
+     * the given collection.
+     *
+     * @throws NullPointerException if {@code c} is {@code null}.
+     * @throws NullPointerException if {@code c} contains one or more
+     * {@code null} elements.
+     * @throws ClassCastException if {@code c} contains one or more elements
+     * that do not implement {@link IonValue}.
+     */
+    public boolean containsAll(Collection<?> c);
+
+    // Use inherited javadoc
     public IonValue[] toArray();
 
 
     // TODO remove once this class is declared to extend List
     public <T> T[] toArray(T[] a);
     public boolean addAll(Collection<? extends IonValue> c);
-    public boolean containsAll(Collection<?> c);
 
 
     /**
