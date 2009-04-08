@@ -805,20 +805,14 @@ loop:   for (;;) {
         else if ((c & (0x80 | 0x40 | 0x20)) == (0x80 | 0x40)) {
             // 2 byte unicode character >=128 and <= 0x7ff or <= 2047)
             // 110yyyyy 10zzzzzz
-            c2 = _r.read();
-            _char_length++;
-            if ((c2 & (0x80 | 0x40)) == 0x80) bad_character();
+            c2 = readFollowingUtf8CodeUnit();
             c = ((c & 0x1f) << 6) | (c2 & 0x3f);
         }
         else if ((c & (0x80 | 0x40 | 0x20 | 0x10)) == (0x80 | 0x40 | 0x20)) {
             // 3 byte unicode character >=2048 and <= 0xffff, <= 65535
             // 1110xxxx 10yyyyyy 10zzzzzz
-            c2 = _r.read();
-            _char_length++;
-            if ((c2 & (0x80 | 0x40)) == 0x80) bad_character();
-            int c3 = _r.read();
-            _char_length++;
-            if ((c3 & (0x80 | 0x40)) == 0x80) bad_character();
+            c2 = readFollowingUtf8CodeUnit();
+            int c3 = readFollowingUtf8CodeUnit();
             c = ((c & 0x0f) << 12) | ((c2 & 0x3f) << 6) | (c3 & 0x3f);
             if (c >= 0x10000) {
                 c2 = IonConstants.makeLowSurrogate(c);
@@ -829,15 +823,9 @@ loop:   for (;;) {
         else if ((c & (0x80 | 0x40 | 0x20 | 0x10 | 0x08)) == (0x80 | 0x40 | 0x20| 0x10)) {
             // 4 byte unicode character > 65535 (0xffff) and <= 2097151 <= 10xFFFFF
             // 11110www 10xxxxxx 10yyyyyy 10zzzzzz
-            c2 = _r.read();
-            _char_length++;
-            if ((c2 & (0x80 | 0x40)) == 0x80) bad_character();
-            int c3 = _r.read();
-            _char_length++;
-            if ((c3 & (0x80 | 0x40)) == 0x80) bad_character();
-            int c4 = _r.read();
-            _char_length++;
-            if ((c4 & (0x80 | 0x40)) == 0x80) bad_character();
+            c2 = readFollowingUtf8CodeUnit();
+            int c3 = readFollowingUtf8CodeUnit();
+            int c4 = readFollowingUtf8CodeUnit();
             c = ((c & 0x07) << 18) | ((c2 & 0x3f) << 12) | ((c3 & 0x3f) << 6) | (c4 & 0x3f);
             if (c >= 0x10000) {
                 c2 = IonConstants.makeLowSurrogate(c);
@@ -850,6 +838,15 @@ loop:   for (;;) {
             bad_character();
         }
         return c;
+    }
+
+    private final int readFollowingUtf8CodeUnit() throws IOException  {
+        int codeUnit = _r.read();
+        _char_length++;
+        if ((codeUnit & (0x80 | 0x40)) != 0x80) {
+            bad_character();
+        }
+        return codeUnit;
     }
 
     public boolean isReallyDoubleBrace()
