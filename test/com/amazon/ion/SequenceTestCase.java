@@ -724,4 +724,65 @@ public abstract class SequenceTestCase
         checkString("g", str);
         assertSame(str, s.get(1));
     }
+
+    public void testIndexOf()
+    {
+        IonSequence s = makeNull();
+        try {
+            s.indexOf(null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+        try {
+            s.indexOf(new Integer(0));
+            fail("expected exception");
+        }
+        catch (ClassCastException e) { }
+
+        IonNull nullValue1 = system().newNull();
+        IonNull nullValue2 = system().newNull();
+
+        assertEquals(-1, s.indexOf(nullValue1));
+
+        s.clear();
+        try {
+            s.indexOf(null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+        try {
+            s.indexOf(new Integer(0));
+            fail("expected exception");
+        }
+        catch (ClassCastException e) { }
+
+        assertEquals(-1, s.indexOf(nullValue1));
+
+        s.add(nullValue1);
+        assertEquals(0,  s.indexOf(nullValue1));
+        assertEquals(-1, s.indexOf(nullValue2));
+        try {
+            s.indexOf(null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+        try {
+            s.indexOf(new Integer(0));
+            fail("expected exception");
+        }
+        catch (ClassCastException e) { }
+
+
+        IonSequence s2 = makeEmpty();
+        s2.add(nullValue2);
+        assertEquals(0,  s2.indexOf(nullValue2));
+        assertEquals(-1, s.indexOf(nullValue2));
+        s2.remove(nullValue2);
+
+        s.add().newBlob(null);
+        s.add(nullValue2);
+        assertEquals(0, s.indexOf(nullValue1));
+        assertEquals(2, s.indexOf(nullValue2));
+
+    }
 }

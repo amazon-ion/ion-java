@@ -224,6 +224,14 @@ public abstract class IonSequenceImpl
     }
 
 
+    public int indexOf(Object o)
+    {
+        IonValueImpl v = (IonValueImpl) o;
+        if (this != v.getContainer()) return -1;
+        return v.getElementId();
+    }
+
+
     public IonValue[] toArray()
     {
         makeReady();
