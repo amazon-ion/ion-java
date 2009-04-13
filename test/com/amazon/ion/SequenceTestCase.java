@@ -192,7 +192,12 @@ public abstract class SequenceTestCase
         value.add(nullBool0);
 
         try {
-            value.remove(null);
+            value.remove((Object)null);
+            fail("Expected NullPointerException");
+        }
+        catch (NullPointerException e) { }
+        try {
+            value.remove((IonValue)null);
             fail("Expected NullPointerException");
         }
         catch (NullPointerException e) { }
@@ -204,6 +209,11 @@ public abstract class SequenceTestCase
         otherSeq.add(nullBool1);
 
         assertFalse(value.remove(nullBool1));
+
+        try {
+            value.remove(new Integer(1));
+        }
+        catch (ClassCastException e) { }
     }
 
     public void testNewSeqWithDatagram()
@@ -407,9 +417,210 @@ public abstract class SequenceTestCase
             fail("expected exception");
         }
         catch (ClassCastException e) { }
-
     }
 
+
+    public void testRemoveAll()
+    {
+        IonNull nullValue1 = system().newNull();
+        IonNull nullValue2 = system().newNull();
+        IonInt  intValue1  = system().newInt(1);
+
+        List<Object> empty = new ArrayList<Object>();
+        List<Object> hasJavaNull = Arrays.asList((Object)null);
+        List<Integer> hasJavaInt = Arrays.asList(new Integer(0));
+        List<Object> hasNull1 = Arrays.asList((Object)nullValue1);
+        List<Object> hasNull2AndInt = Arrays.asList((Object)intValue1,
+                                                    (Object)nullValue2);
+
+        IonSequence seq = makeNull();
+        assertFalse(seq.removeAll(empty));
+        assertFalse(seq.removeAll(hasNull1));
+        assertFalse(seq.removeAll(hasNull2AndInt));
+        try
+        {
+            seq.removeAll(null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+        try
+        {
+            seq.removeAll(hasJavaNull);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+        try
+        {
+            seq.removeAll(hasJavaInt);
+            fail("expected exception");
+        }
+        catch (ClassCastException e) { }
+
+        seq = makeEmpty();
+        assertFalse(seq.removeAll(empty));
+        assertFalse(seq.removeAll(hasNull1));
+        assertFalse(seq.removeAll(hasNull2AndInt));
+        try
+        {
+            seq.removeAll(null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+        try
+        {
+            seq.removeAll(hasJavaNull);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+        try
+        {
+            seq.removeAll(hasJavaInt);
+            fail("expected exception");
+        }
+        catch (ClassCastException e) { }
+
+
+        seq.add(nullValue2);
+        assertFalse(seq.removeAll(empty));
+        assertFalse(seq.removeAll(hasNull1));
+        assertTrue(seq.removeAll(hasNull2AndInt));
+        assertEquals(0, seq.size());
+
+        seq.add(nullValue2);
+        seq.add(intValue1);
+        assertFalse(seq.removeAll(empty));
+        assertFalse(seq.removeAll(hasNull1));
+        assertTrue(seq.removeAll(hasNull2AndInt));
+        assertEquals(0, seq.size());
+
+        seq.add(intValue1);
+        seq.add(nullValue1);
+        assertFalse(seq.removeAll(empty));
+        assertTrue(seq.removeAll(hasNull1));
+        assertNull(nullValue1.getContainer());
+        seq.add(nullValue2);
+        assertTrue(seq.removeAll(hasNull2AndInt));
+        assertEquals(0, seq.size());
+
+        seq.add(nullValue2);
+        seq.add(intValue1);
+        try
+        {
+            seq.removeAll(hasJavaNull);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+        try
+        {
+            seq.removeAll(hasJavaInt);
+            fail("expected exception");
+        }
+        catch (ClassCastException e) { }
+        assertTrue(seq.containsAll(hasNull2AndInt));
+    }
+
+    public void testRetainAll()
+    {
+        IonNull nullValue1 = system().newNull();
+        IonNull nullValue2 = system().newNull();
+        IonInt  intValue1  = system().newInt(1);
+
+        List<Object> empty = new ArrayList<Object>();
+        List<Object> hasJavaNull = Arrays.asList((Object)null);
+        List<Integer> hasJavaInt = Arrays.asList(new Integer(0));
+        List<Object> hasNull1 = Arrays.asList((Object)nullValue1);
+        List<Object> hasNull2AndInt = Arrays.asList((Object)intValue1,
+                                                    (Object)nullValue2);
+
+        IonSequence seq = makeNull();
+        assertFalse(seq.retainAll(empty));
+        assertFalse(seq.retainAll(hasNull1));
+        assertFalse(seq.retainAll(hasNull2AndInt));
+//        try
+//        {
+//            seq.retainAll(null);
+//            fail("expected exception");
+//        }
+//        catch (NullPointerException e) { }
+//        try
+//        {
+//            seq.retainAll(hasJavaNull);
+//            fail("expected exception");
+//        }
+//        catch (NullPointerException e) { }
+//        try
+//        {
+//            seq.retainAll(hasJavaInt);
+//            fail("expected exception");
+//        }
+//        catch (ClassCastException e) { }
+
+        seq = makeEmpty();
+        assertFalse(seq.retainAll(empty));
+        assertFalse(seq.retainAll(hasNull1));
+        assertFalse(seq.retainAll(hasNull2AndInt));
+//        try
+//        {
+//            seq.retainAll(null);
+//            fail("expected exception");
+//        }
+//        catch (NullPointerException e) { }
+//        try
+//        {
+//            seq.retainAll(hasJavaNull);
+//            fail("expected exception");
+//        }
+//        catch (NullPointerException e) { }
+//        try
+//        {
+//            seq.retainAll(hasJavaInt);
+//            fail("expected exception");
+//        }
+//        catch (ClassCastException e) { }
+
+        seq.add(nullValue2);
+        try
+        {
+            seq.retainAll(null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+        try
+        {
+            seq.retainAll(hasJavaNull);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+        try
+        {
+            seq.retainAll(hasJavaInt);
+            fail("expected exception");
+        }
+        catch (ClassCastException e) { }
+
+        assertFalse(seq.retainAll(hasNull2AndInt));
+        assertEquals(1, seq.size());
+        assertSame(seq, nullValue2.getContainer());
+
+        assertTrue(seq.retainAll(hasNull1));
+        assertSame(null, nullValue2.getContainer());
+
+        seq.add(intValue1);
+        assertFalse(seq.retainAll(hasNull2AndInt));
+        assertSame(seq, intValue1.getContainer());
+
+        seq.add(nullValue1);
+        assertTrue(seq.retainAll(empty));
+        assertEquals(0, seq.size());
+
+        seq.add(intValue1);
+        seq.add(nullValue1);
+        assertTrue(seq.retainAll(hasNull1));
+        assertEquals(1, seq.size());
+        assertSame(null, intValue1.getContainer());
+        assertFalse(seq.retainAll(hasNull1));
+        assertSame(seq, nullValue1.getContainer());
+    }
 
     public void testToArray()
     {

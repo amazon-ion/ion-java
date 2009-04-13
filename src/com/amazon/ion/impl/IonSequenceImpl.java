@@ -10,6 +10,7 @@ import com.amazon.ion.ValueFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 
 
@@ -162,6 +163,49 @@ public abstract class IonSequenceImpl
                 add(index, newValue);
             }
         };
+    }
+
+
+    public boolean remove(Object o)
+    {
+        return remove((IonValue) o);
+    }
+
+    public boolean removeAll(Collection<?> c)
+    {
+        boolean changed = false;
+        for (Object o : c)
+        {
+            changed = remove(o) || changed;
+        }
+        return changed;
+    }
+
+    public boolean retainAll(Collection<?> c)
+    {
+        makeReady();
+        if (_contents == null || _contents.isEmpty()) return false;
+
+        // TODO this method (and probably several others) needs optimization.
+        IdentityHashMap<IonValue, IonValue> keepers =
+            new IdentityHashMap<IonValue, IonValue>();
+        for (Object o : c)
+        {
+            IonValue v = (IonValue) o;
+            if (this == v.getContainer()) keepers.put(v, v);
+        }
+
+        boolean changed = false;
+        for (int i = _contents.size() - 1; i >= 0; i--)
+        {
+            IonValue v = _contents.get(i);
+            if (! keepers.containsKey(v))
+            {
+                remove(v);
+                changed = true;
+            }
+        }
+        return changed;
     }
 
 

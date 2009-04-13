@@ -10,7 +10,7 @@ import java.util.Collection;
  * Common functionality of Ion <code>list</code> and <code>sexp</code> types.
  */
 public interface IonSequence
-    extends IonContainer//, Collection<IonValue>
+    extends IonContainer, Collection<IonValue>
 {
     /**
      * Returns the element at the specified position in this sequence.
@@ -95,6 +95,64 @@ public interface IonSequence
 
 
     /**
+     * Removes a given {@link IonValue} from this sequence, if it is present.
+     * <p>
+     * <b>Due to the reference-equality-based semantics of Ion sequences,
+     * this method does not use {@link Object#equals} as specified by the
+     * contract of {@link java.util.Collection}. Instead it uses reference
+     * equality ({@code ==} operator) to find the given instance.</b>
+     *
+     * @returns {@code true} if this sequence changed as a result of the call.
+     *
+     * @throws NullPointerException if {@code o} is {@code null}.
+     * @throws ClassCastException if {@code o} is not an {@link IonValue}.
+     */
+    public boolean remove(Object o);
+
+
+    /**
+     * Removes all elements from this sequence that are also contained in the
+     * specified collection. After this call returns, this sequence will
+     * contain no elements in common with the specified collection.
+     * <p>
+     * <b>Due to the reference-equality-based semantics of Ion sequences,
+     * this method does not use {@link Object#equals} as specified by the
+     * contract of {@link java.util.Collection}. Instead it uses reference
+     * equality ({@code ==} operator) to find the given instance.</b>
+     *
+     * @returns {@code true} if this sequence changed as a result of the call.
+     *
+     * @throws NullPointerException if {@code c} is {@code null}.
+     * @throws NullPointerException if {@code c} contains one or more
+     * {@code null} elements.
+     * @throws ClassCastException if {@code c} contains one or more elements
+     * that do not implement {@link IonValue}.
+     */
+    public boolean removeAll(Collection<?> c);
+
+
+    /**
+     * Retains only the elements in this sequence that are also contained in
+     * the specified collection. In other words, removes from this sequence
+     * all of its elements that are not contained in the specified collection.
+     * <p>
+     * <b>Due to the reference-equality-based semantics of Ion sequences,
+     * this method does not use {@link Object#equals} as specified by the
+     * contract of {@link java.util.Collection}. Instead it uses reference
+     * equality ({@code ==} operator) to find the given instance.</b>
+     *
+     * @returns {@code true} if this sequence changed as a result of the call.
+     *
+     * @throws NullPointerException if {@code c} is {@code null}.
+     * @throws NullPointerException if {@code c} contains one or more
+     * {@code null} elements.
+     * @throws ClassCastException if {@code c} contains one or more elements
+     * that do not implement {@link IonValue}.
+     */
+    public boolean retainAll(Collection<?> c);
+
+
+    /**
      * Determines whether this sequence contains the given instance.
      * <p>
      * <b>Due to the reference-equality-based semantics of Ion sequences,
@@ -129,13 +187,8 @@ public interface IonSequence
      */
     public boolean containsAll(Collection<?> c);
 
-    // Use inherited javadoc
+    // Use inherited javadoc, this refines the return type.
     public IonValue[] toArray();
-
-
-    // TODO remove once this class is declared to extend List
-    public <T> T[] toArray(T[] a);
-    public boolean addAll(Collection<? extends IonValue> c);
 
 
     /**
