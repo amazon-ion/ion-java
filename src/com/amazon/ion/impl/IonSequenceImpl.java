@@ -183,8 +183,8 @@ public abstract class IonSequenceImpl
 
     public boolean retainAll(Collection<?> c)
     {
-        makeReady();
-        if (_contents == null || _contents.isEmpty()) return false;
+        ArrayList<IonValue> contents = userContents();
+        if (contents == null || contents.isEmpty()) return false;
 
         // TODO this method (and probably several others) needs optimization.
         IdentityHashMap<IonValue, IonValue> keepers =
@@ -196,9 +196,9 @@ public abstract class IonSequenceImpl
         }
 
         boolean changed = false;
-        for (int i = _contents.size() - 1; i >= 0; i--)
+        for (int i = contents.size() - 1; i >= 0; i--)
         {
-            IonValue v = _contents.get(i);
+            IonValue v = contents.get(i);
             if (! keepers.containsKey(v))
             {
                 remove(v);
@@ -234,23 +234,37 @@ public abstract class IonSequenceImpl
 
     public IonValue[] toArray()
     {
-        makeReady();
-        if (_contents == null || _contents.isEmpty()) return EMPTY_VALUE_ARRAY;
+        ArrayList<IonValue> contents = userContents();
+        if (contents == null || contents.isEmpty()) return EMPTY_VALUE_ARRAY;
 
-        IonValue[] array = new IonValue[_contents.size()];
-        _contents.toArray(array);
+        IonValue[] array = new IonValue[contents.size()];
+        contents.toArray(array);
         return array;
     }
 
     public <T> T[] toArray(T[] a)
     {
-        makeReady();
-        if (_contents == null) return a;
-        return _contents.toArray(a);
+        ArrayList<IonValue> contents = userContents();
+        if (contents == null)
+        {
+            if (a.length != 0)
+            {
+                // A surprising bit of spec.
+                a[0] = null;
+            }
+            return a;
+        }
+        return contents.toArray(a);
     }
 
 
     //=========================================================================
+
+    protected ArrayList<IonValue> userContents()
+    {
+        makeReady();
+        return _contents;
+    }
 
     @Override
     protected int computeLowNibble(int valuelen)

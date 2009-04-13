@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
+/* Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -9,7 +9,7 @@ import java.util.List;
 
 
 public class ListTest
-    extends SequenceTestCase
+    extends TrueSequenceTestCase
 {
     @Override
     protected IonList makeNull()
@@ -35,14 +35,9 @@ public class ListTest
         return system().newList(elements);
     }
 
-    @Override
-    protected String wrap(String v)
-    {
-        return "[" + v + "]";
-    }
 
     @Override
-    protected String wrap(String... children)
+    protected IonList wrapAndParse(String... children)
     {
         StringBuilder buf = new StringBuilder();
         buf.append('[');
@@ -55,7 +50,8 @@ public class ListTest
             }
         }
         buf.append(']');
-        return buf.toString();
+        String text = buf.toString();
+        return (IonList) system().singleValue(text);
     }
 
     @Override

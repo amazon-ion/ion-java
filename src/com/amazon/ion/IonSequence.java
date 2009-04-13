@@ -10,7 +10,7 @@ import java.util.Collection;
  * Common functionality of Ion <code>list</code> and <code>sexp</code> types.
  */
 public interface IonSequence
-    extends IonContainer//, Collection<IonValue>
+    extends IonContainer, Collection<IonValue>
 {
     /**
      * Returns the element at the specified position in this sequence.
@@ -198,6 +198,7 @@ public interface IonSequence
     // TODO temporary until we declare implements Collection
     public boolean addAll(Collection<? extends IonValue> c);
 
+    // TODO document that null sequence acts like empty
     public <T> T[] toArray(T[] a);
 
 
