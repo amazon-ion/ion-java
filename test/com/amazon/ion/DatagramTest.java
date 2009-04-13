@@ -10,14 +10,12 @@ import static com.amazon.ion.SystemSymbolTable.ION_1_0_SID;
 import com.amazon.ion.impl.IonSystemImpl;
 import com.amazon.ion.impl.IonValueImpl;
 import java.io.ByteArrayOutputStream;
+import java.util.Collection;
 import java.util.Iterator;
 
 
-/**
- *
- */
 public class DatagramTest
-    extends IonTestCase
+    extends SequenceTestCase
 {
     private IonLoader myLoader;
 
@@ -30,6 +28,64 @@ public class DatagramTest
         myLoader = loader();
     }
 
+
+    @Override
+    protected IonSequence makeEmpty()
+    {
+        return system().newDatagram();
+    }
+
+    @Override
+    protected IonSequence makeNull()
+    {
+        return null;
+    }
+
+    @Override
+    protected IonSequence newSequence(Collection<? extends IonValue> children)
+    {
+        IonDatagram dg = system().newDatagram();
+        dg.addAll(children);
+        return dg;
+    }
+
+    @Override
+    protected <T extends IonValue> IonSequence newSequence(T... elements)
+    {
+        IonDatagram dg = system().newDatagram();
+        for (int i = 0; i < elements.length; i++)
+        {
+            dg.add(elements[i]);
+        }
+        return dg;
+    }
+
+    @Override
+    protected IonDatagram wrapAndParse(String... children)
+    {
+        StringBuilder buf = new StringBuilder();
+        if (children != null)
+        {
+            for (String child : children)
+            {
+                buf.append(child);
+                buf.append(' ');
+            }
+        }
+        String text = buf.toString();
+        return loader().load(text);
+    }
+
+    @Override
+    protected IonContainer wrap(IonValue... children)
+    {
+        IonDatagram dg = system().newDatagram();
+        for (int i = 0; i < children.length; i++)
+        {
+            dg.add(children[i]);
+        }
+        return dg;
+    }
 
 
     public IonDatagram roundTrip(String text)
@@ -404,6 +460,21 @@ public class DatagramTest
         SymbolTable[] importedTables = symtab.getImportedTables();
         assertEquals(1, importedTables.length);
         assertSame(fred1, importedTables[0]);
+    }
+
+    public void testEmptyDatagram()
+    {
+        IonDatagram dg = loader().load("");
+//        testEmptySequence(dg); // FIXME implement add(int,v)
+        dg.add().newInt(1);
+        testClearContainer(dg);
+    }
+
+
+    @Override
+    public void testRemoveViaIteratorThenDirect()
+    {
+        // TODO implement remove on datagram iterator
     }
 
 
