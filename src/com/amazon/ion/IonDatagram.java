@@ -4,6 +4,7 @@ package com.amazon.ion;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Collection;
 import java.util.Iterator;
 
 
@@ -229,18 +230,20 @@ public interface IonDatagram
     public void addTypeAnnotation(String annotation);
 
     /**
-     * This inherited method is not yet supported by datagrams.
-     *
-     * @throws UnsupportedOperationException at every call.
-     */
-    public void clear();
-
-    /**
      * This inherited method is not supported by datagrams.
      *
      * @throws UnsupportedOperationException at every call.
      */
     public void makeNull();
+
+
+    /**
+     * This inherited method is not yet supported by datagrams.
+     *
+     * @throws UnsupportedOperationException at every call.
+     */
+    public boolean retainAll(Collection<?> c);
+
 
     public IonDatagram clone();
 }

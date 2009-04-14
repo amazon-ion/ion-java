@@ -278,6 +278,20 @@ final class UnifiedSymbolTable
         _ion_rep = (IonStructImpl) ionRep;
     }
 
+    /**
+     * Constructs a shared symbol table.
+     */
+    public UnifiedSymbolTable(IonReader reader)
+    {
+        this();
+
+        reader.next();
+        reader.stepIn();
+        readIonRep(SymbolTableType.SHARED, reader, null);
+
+        assert _name != null;
+    }
+
 
     /**
      * Constructs a local symbol table.

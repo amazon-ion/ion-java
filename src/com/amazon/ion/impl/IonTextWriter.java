@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion.impl;
@@ -8,16 +8,19 @@ import static com.amazon.ion.impl.IonConstants.tidList;
 import static com.amazon.ion.impl.IonConstants.tidSexp;
 import static com.amazon.ion.impl.IonConstants.tidStruct;
 
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonNumber;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.Base64Encoder.TextStream;
 import com.amazon.ion.impl.IonBinary.BufferManager;
+import com.amazon.ion.util.IonTextUtils;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.CharBuffer;
@@ -39,12 +42,13 @@ import java.util.Date;
 public final class IonTextWriter
     extends IonBaseWriter
 {
+    private final String _lineSeparator = System.getProperty("line.separator");
+
     boolean      _pretty;
-    boolean      _utf8_as_ascii;
-    PrintStream  _output;
+    boolean      _printAscii;
+    final Appendable _output;
 
     BufferManager _manager;
-    OutputStream  _user_out;
 
     boolean     _in_struct;
     boolean     _pending_separator;
@@ -59,35 +63,65 @@ public final class IonTextWriter
     public IonTextWriter() {
         this(false, true);
     }
+
+    /**
+     * Creates a non-pretty UTF-8 writer.
+     */
+    public IonTextWriter(Appendable out) {
+        this(out, false, false);
+    }
+
+    /**
+     * Creates a non-pretty UTF-8 writer.
+     */
     public IonTextWriter(OutputStream out) {
-        this(out, false, true);
+        this(out, false, false);
     }
+
     public IonTextWriter(boolean prettyPrint) {
-        this(prettyPrint,true);
+        this(prettyPrint, true);  // FIXME should print UTF-8
     }
+
+    /**
+     * Creates a UTF-8 writer.
+     */
     public IonTextWriter(OutputStream out, boolean prettyPrint) {
-        this(out, prettyPrint,true);
+        this(out, prettyPrint, false);
     }
-    public IonTextWriter(boolean prettyPrint, boolean utf8AsAscii) {
-        _user_out = null;
+    public IonTextWriter(boolean prettyPrint, boolean printAscii) {
         _manager = new BufferManager();
-        _output = new PrintStream(_manager.openWriter());
-        initFlags(prettyPrint, utf8AsAscii);
+        _output = initStream(_manager.openWriter());
+        initFlags(prettyPrint, printAscii);
     }
-    public IonTextWriter(OutputStream out, boolean prettyPrint, boolean utf8AsAscii) {
-        _user_out = out;
-        _manager = null;
-        if (out instanceof PrintStream) {
-            _output = (PrintStream)out;
+    public IonTextWriter(OutputStream out, boolean prettyPrint, boolean printAscii) {
+        if (out instanceof Appendable) {
+            _output = (Appendable)out;
         }
         else {
-            _output = new PrintStream(out);
+            _output = initStream(out);
         }
-        initFlags(prettyPrint, utf8AsAscii);
+        initFlags(prettyPrint, printAscii);
     }
-    void initFlags(boolean prettyPrint, boolean utf8AsAscii) {
+    public IonTextWriter(Appendable out, boolean prettyPrint, boolean printAscii) {
+        _output = out;
+        initFlags(prettyPrint, printAscii);
+    }
+
+    private Appendable initStream(OutputStream out)
+    {
+        try
+        {
+            return new PrintStream(out, true, "UTF-8");
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            throw new IonException(e);
+        }
+    }
+
+    void initFlags(boolean prettyPrint, boolean printAscii) {
         _pretty = prettyPrint;
-        _utf8_as_ascii = utf8AsAscii;
+        _printAscii = printAscii;
         _separator_character = ' ';
     }
 
@@ -184,15 +218,15 @@ public final class IonTextWriter
         if (_top == 0) return false;
         return _stack_pending_comma[_top - 1];
     }
-    void printLeadingWhiteSpace() {
+    void printLeadingWhiteSpace() throws IOException {
         for (int ii=0; ii<_top; ii++) {
             _output.append(' ');
             _output.append(' ');
         }
     }
-    void closeCollection(char closeChar) {
+    void closeCollection(char closeChar) throws IOException {
        if (_pretty) {
-           _output.println();
+           _output.append(_lineSeparator);
            printLeadingWhiteSpace();
        }
        _output.append(closeChar);
@@ -203,13 +237,12 @@ public final class IonTextWriter
             if (_pending_separator && _separator_character != '\n') {
                 _output.append((char)_separator_character);
             }
-            _output.println();
+            _output.append(_lineSeparator);
             printLeadingWhiteSpace();
         }
         else if (_pending_separator) {
             _output.append((char)_separator_character);
             // _output.append(',');
-
         }
 
         // write field name
@@ -218,6 +251,7 @@ public final class IonTextWriter
             if (name == null) {
                 throw new IllegalArgumentException("structure members require a field name");
             }
+            // TODO avoid intermediate CharSequence
             CharSequence escapedname = escapeSymbol(name);
             _output.append(escapedname);
             _output.append(':');
@@ -230,6 +264,7 @@ public final class IonTextWriter
             String[] annotations = super.get_annotations_as_strings();
             for (int ii=0; ii<annotation_count; ii++) {
                 String name = annotations[ii];
+                // TODO avoid intermediate CharSequence
                 CharSequence escapedname = escapeSymbol(name);
                 _output.append(escapedname);
                 _output.append(':');
@@ -415,7 +450,7 @@ public final class IonTextWriter
 
         startValue();
         BigInteger unscaled = value.unscaledValue();
-        
+
         if (is_negative_zero) {
         	assert value.signum() == 0;
         	_output.append('-');
@@ -428,7 +463,7 @@ public final class IonTextWriter
         closeValue();
     }
 
-// TODO - should this be removed? use writeTimestamp(long millis, ... ??
+    @Deprecated
     public void writeTimestamp(Date value, Integer localOffset)
         throws IOException
     {
@@ -437,6 +472,7 @@ public final class IonTextWriter
         writeTimestamp(ts);
     }
 
+    @Deprecated
     public void writeTimestampUTC(Date value)
         throws IOException
     {
@@ -465,7 +501,10 @@ public final class IonTextWriter
         _output.append('"');
         closeValue();
     }
-    CharSequence escapeString(String value) {
+    CharSequence escapeString(String value)
+        throws IOException
+    {
+        // Scan for anything that we may need to escape
         for (int ii=0; ii<value.length(); ii++) {
             char c = value.charAt(ii);
             switch (c) {
@@ -480,7 +519,9 @@ public final class IonTextWriter
         }
         return value;
     }
-    CharSequence escapeStringHelper(String value, int firstNonAscii) {
+    CharSequence escapeStringHelper(String value, int firstNonAscii)
+        throws IOException
+    {
         StringBuilder sb = new StringBuilder(value.length());
         for (int jj=0; jj<firstNonAscii; jj++) {
             sb.append(value.charAt(jj));
@@ -507,22 +548,44 @@ public final class IonTextWriter
             }
             else if (IonConstants.isHighSurrogate(c)) {
                 ii++;
-                char c2 = value.charAt(ii);
-                if (ii >= value.length() || !IonConstants.isLowSurrogate(c2)) {
-                    throw new IllegalArgumentException("string is not valid UTF-16");
+                if (ii >= value.length()) {
+                    String message =
+                        "Text ends with unmatched UTF-16 surrogate " +
+                        IonTextUtils.printCodePointAsString(c);
+                    throw new IllegalArgumentException(message);
                 }
-                int uc = IonConstants.makeUnicodeScalar(c, c2);
-                appendUTF8Char(sb, uc);
+                char c2 = value.charAt(ii);
+                if (!IonConstants.isLowSurrogate(c2)) {
+                    String message =
+                        "Text contains unmatched UTF-16 high surrogate " +
+                        IonTextUtils.printCodePointAsString(c) +
+                        " at index " + (ii-1);
+                    throw new IllegalArgumentException(message);
+                }
+                if (_printAscii) {
+                    int uc = IonConstants.makeUnicodeScalar(c, c2);
+                    printHighEscapeSequence(sb, uc);
+                }
+                else {
+                    // copy the two code units
+                    sb.append(c);
+                    sb.append(c2);
+                }
             }
             else if (IonConstants.isLowSurrogate(c)) {
-                throw new IllegalArgumentException("string is not valid UTF-16");
+                String message =
+                    "Text contains unmatched UTF-16 low surrogate " +
+                    IonTextUtils.printCodePointAsString(c) +
+                    " at index " + ii;
+                throw new IllegalArgumentException(message);
             }
             else {
-                appendUTF8Char(sb, c);
+                printBmpCodePoint(sb, c);
             }
         }
         return sb;
     }
+
     // escape sequences for character below ascii 32 (space)
     static final String [] LOW_ESCAPE_SEQUENCES = {
           "0",   "x01", "x02", "x03",
@@ -540,44 +603,31 @@ public final class IonTextWriter
         }
         return '\\'+LOW_ESCAPE_SEQUENCES[c];
     }
-    void appendUTF8Char(StringBuilder sb, int uc) {
-        String image;
-        if (this._utf8_as_ascii) {
-            image = Integer.toHexString(uc);
-            int len = image.length();
-            if (len <= 4) {
-                sb.append('\\'+"u0000", 0, 6 - len);
-            }
-            else {
-                sb.append('\\'+"U00000000", 0, 10 - len);
-            }
-            sb.append(image);
+
+    private static void printHighEscapeSequence(Appendable out, int codePoint)
+        throws IOException
+    {
+        String image = Integer.toHexString(codePoint);
+        int len = image.length();
+        if (len <= 4) {
+            out.append('\\'+"u0000", 0, 6 - len);
         }
         else {
-            appendUTF8Bytes(sb, uc);
+            out.append('\\'+"U00000000", 0, 10 - len);
         }
+        out.append(image);
     }
-    void appendUTF8Bytes(StringBuilder sb, int c) {
-        if (c <= 128) {
-            throw new IllegalArgumentException("only non-ascii code points (characters) are accepted here");
-        }
-        else if ((c & (~0x7ff)) == 0) {
-            sb.append((char)( 0xff & (0xC0 | (c >> 6)) ));
-            sb.append((char)( 0xff & (0x80 | (c & 0x3F)) ));
-        }
-        else if ((c & (~0xffff)) == 0) {
-            sb.append((char)( 0xff & (0xE0 |  (c >> 12)) ));
-            sb.append((char)( 0xff & (0x80 | ((c >> 6) & 0x3F)) ));
-            sb.append((char)( 0xff & (0x80 |  (c & 0x3F)) ));
-        }
-        else if ((c & (~0x7ffff)) == 0) {
-            sb.append((char)( 0xff & (0xF0 |  (c >> 18)) ));
-            sb.append((char)( 0xff & (0x80 | ((c >> 12) & 0x3F)) ));
-            sb.append((char)( 0xff & (0x80 | ((c >> 6) & 0x3F)) ));
-            sb.append((char)( 0xff & (0x80 | (c & 0x3F)) ));
+
+    private void printBmpCodePoint(Appendable out, int codePoint)
+        throws IOException
+    {
+        assert codePoint <= 0xFFFF;
+
+        if (this._printAscii) {
+            printHighEscapeSequence(out, codePoint);
         }
         else {
-            throw new IllegalArgumentException("invalid character for UTF-8 output");
+            out.append((char) codePoint);
         }
     }
 
@@ -616,7 +666,12 @@ public final class IonTextWriter
         is_valid['$'] = true;
         return is_valid;
     }
-    CharSequence escapeSymbol(String value) {
+    CharSequence escapeSymbol(String value)
+        throws IOException
+    {
+        if (value.length() == 0) {
+            throw new IllegalArgumentException("Symbol text is empty");
+        }
         char c = value.charAt(0);
         if (c > 127 || !VALID_LEADING_SYMBOL_CHARACTERS[c]) {
             return escapeSymbolHelper(value, 0);
@@ -627,10 +682,12 @@ public final class IonTextWriter
                 return escapeSymbolHelper(value, ii);
             }
         }
-        if (IonTextTokenizer.keyword(value, 0, value.length()) != -1) return escapeSymbolHelper(value, value.length() - 1); 
+        if (IonTextTokenizer.keyword(value, 0, value.length()) != -1) return escapeSymbolHelper(value, value.length() - 1);
         return value;
     }
-    CharSequence escapeSymbolHelper(String value, int firstNonAscii) {
+    CharSequence escapeSymbolHelper(String value, int firstNonAscii)
+        throws IOException
+    {
         StringBuilder sb = new StringBuilder(value.length());
         sb.append('\'');
         for (int jj=0; jj<firstNonAscii; jj++) {
@@ -657,18 +714,39 @@ public final class IonTextWriter
             }
             else if (IonConstants.isHighSurrogate(c)) {
                 ii++;
-                char c2 = value.charAt(ii);
-                if (ii >= value.length() || !IonConstants.isLowSurrogate(c2)) {
-                    throw new IllegalArgumentException("string is not valid UTF-16");
+                if (ii >= value.length()) {
+                    String message =
+                        "Text ends with unmatched UTF-16 surrogate " +
+                        IonTextUtils.printCodePointAsString(c);
+                    throw new IllegalArgumentException(message);
                 }
-                int uc = IonConstants.makeUnicodeScalar(c, c2);
-                appendUTF8Char(sb, uc);
+                char c2 = value.charAt(ii);
+                if (!IonConstants.isLowSurrogate(c2)) {
+                    String message =
+                        "Text contains unmatched UTF-16 high surrogate " +
+                        IonTextUtils.printCodePointAsString(c) +
+                        " at index " + (ii-1);
+                    throw new IllegalArgumentException(message);
+                }
+                if (_printAscii) {
+                    int uc = IonConstants.makeUnicodeScalar(c, c2);
+                    printHighEscapeSequence(sb, uc);
+                }
+                else {
+                    // copy the two code units
+                    sb.append(c);
+                    sb.append(c2);
+                }
             }
             else if (IonConstants.isLowSurrogate(c)) {
-                throw new IllegalArgumentException("string is not valid UTF-16");
+                String message =
+                    "Text contains unmatched UTF-16 low surrogate " +
+                    IonTextUtils.printCodePointAsString(c) +
+                    " at index " + ii;
+                throw new IllegalArgumentException(message);
             }
             else {
-                appendUTF8Char(sb, c);
+                printBmpCodePoint(sb, c);
             }
         }
         sb.append('\'');
@@ -723,7 +801,7 @@ public final class IonTextWriter
                 _output.append(lowEscapeSequence(c));
             }
             else if (c == 128) {
-                _output.append('\\'+"u0100");
+                _output.append("\\x80");
             }
             else {
                 switch (c) {

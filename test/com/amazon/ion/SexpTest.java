@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
+/* Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -9,7 +9,7 @@ import java.util.List;
 
 
 public class SexpTest
-    extends SequenceTestCase
+    extends TrueSequenceTestCase
 {
     @Override
     protected IonSexp makeNull()
@@ -35,14 +35,9 @@ public class SexpTest
         return system().newSexp(elements);
     }
 
-    @Override
-    protected String wrap(String v)
-    {
-        return "(" + v + ")";
-    }
 
     @Override
-    protected String wrap(String... children)
+    protected IonSexp wrapAndParse(String... children)
     {
         StringBuilder buf = new StringBuilder();
         buf.append('(');
@@ -55,7 +50,8 @@ public class SexpTest
             }
         }
         buf.append(')');
-        return buf.toString();
+        String text = buf.toString();
+        return (IonSexp) system().singleValue(text);
     }
 
     @Override

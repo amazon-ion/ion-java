@@ -388,17 +388,24 @@ public interface IonWriter
      * write value out as an IonSymbol value.  If the value is not
      * present in the symbol table it will be added to the symbol table.
      * @param value string symbol write
+     *
+     * @throws IllegalArgumentException if the value contains an invalid UTF-16
+     * surrogate pair.
      */
     public void writeSymbol(String value) throws IOException;
 
     /**
-     * writes the Java string value out as a IonString.  IonStrings are
+     * Writes a {@link java.lang.String} as an Ion string. Since Ion strings are
      * UTF-8 and Java Strings are Unicode 16.  As such the resulting
      * lengths may not match.  In addition some Java strings are not
      * valid as they may contain only one of the two needed surrogate
-     * charaters necesssary to define the Unicode code point to be
+     * code units necessary to define the Unicode code point to be
      * output, an exception will be raised if this case is encountered.
+     *
      * @param value Java String to be written
+     *
+     * @throws IllegalArgumentException if the value contains an invalid UTF-16
+     * surrogate pair.
      */
     public void writeString(String value) throws IOException;
 

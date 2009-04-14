@@ -701,8 +701,8 @@ public class IonTokenReader
                     c = readEscapedCharacter(this.in, false /*not clob*/);
                 }
                 if (c != EMPTY_ESCAPE_SEQUENCE) {
-                value.append((char)c);
-            }
+                    value.appendCodePoint(c);
+                }
             }
             if (c == -1) { // TODO throw UnexpectedEofException
                 throw new IonException("end encountered before closing quote '\\" + (char)endquote+ "'");
@@ -1027,7 +1027,7 @@ sizedloop:
             if (c == '\\') {
                 c = readEscapedCharacter(this.in, false /*not clob*/);
                 if (c != EMPTY_ESCAPE_SEQUENCE) {
-                    value.append((char)c);
+                    value.appendCodePoint(c);
                 }
             }
             else if (c == '\'' && isLongString) {
@@ -1495,7 +1495,7 @@ sizedloop:
     Type scanTimestamp(int c) throws IOException {
 
 endofdate:
-		for (;;) {  // fake for loop to create a label we can jump out of, 
+		for (;;) {  // fake for loop to create a label we can jump out of,
 					// because 4 or 5 levels of nested if's is just ugly
 
 	        // at this point we will have read leading digits and exactly 1 dash
@@ -1510,7 +1510,7 @@ endofdate:
 	    		// not a dash or a T after the year - so this is a bad value
 	            throw new IllegalStateException("invalid timestamp, expecting a dash here at " + this.position());
 	    	}
-	    	
+
 			// append the dash and then read the month field
 	        value.append((char)c); // so append it, because we haven't already
 	        c = readDigits(2, "month");
@@ -1524,18 +1524,18 @@ endofdate:
 	        	// if the month isn't followed by a dash or a T it's an invalid month
 	            throw new IonException("invalid timestamp, expecting month at " + this.position());
 	        }
-	        
+
 	        // append the dash and read the day (or day-of-month) field
 	        value.append((char)c);
 	        c = readDigits(2, "day of month");
 	        if (c == 'T') {
-	
+
 check4timezone:
 		        for (;;) { // another fake label/ for=goto
 
 		        	// attach the 'T' to the value we're collecting
 		            value.append((char)c);
-		            
+
 		            // we're going to "watch" how many digits we read in the hours
 		            // field.  It's 0 that's actually ok, since we can end at the
 		            // 'T' we just read
@@ -1571,7 +1571,7 @@ check4timezone:
 		            c = readDigits(32, "fractional seconds");
 		            break check4timezone;
 		        }//check4timezone
-		
+
 		        // now check to see if it's a timezone offset we're looking at
 		        if (c == '-' || c == '+') {
 		            value.append((char)c);
@@ -1588,7 +1588,7 @@ check4timezone:
 	        }
 	        break endofdate;
         }//endofdate
-    	
+
         checkAndUnreadNumericStopper(c);
 
         return Type.constTime;

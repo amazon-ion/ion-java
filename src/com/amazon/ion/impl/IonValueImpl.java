@@ -26,7 +26,7 @@ public abstract class IonValueImpl
     implements IonValue
 {
     private static final String[] EMPTY_ANNOTATIONS = new String[0];
-    
+
     /**
      * We could multiplex this with member id, but it adds way more complexity
      * than it saves space.
@@ -572,7 +572,12 @@ public abstract class IonValueImpl
         setDirty();
     }
 
-    public int getElementId() {
+
+    /**
+     * Gets the index of this value within its container.
+     * @return
+     */
+    int getElementId() {
         return this._elementid;
     }
 

@@ -512,7 +512,7 @@ abstract public class IonContainerImpl
      *   if {@code child} is an {@link IonDatagram}.
      * @throws ContainedValueException
      */
-    protected void add(IonValue child)
+    protected boolean add(IonValue child)
         throws NullPointerException, IllegalArgumentException,
         ContainedValueException
     {
@@ -525,6 +525,7 @@ abstract public class IonContainerImpl
         int size = (_contents == null ? 0 : _contents.size());
 
         add(size, child, true);
+        return true;
     }
 
     /**

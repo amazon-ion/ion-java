@@ -1,4 +1,4 @@
-<!-- Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. -->
+<!-- Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved. -->
 <html>
 <body>
 IonJava is the reference implementation of the
@@ -32,8 +32,8 @@ guaranteed to work</b>:
     IonSystem sys2 = SystemFactory.newSystem();
     
     IonList parent = sys1.newEmptyList();
-    IonInt  child  = sys1.newInt(23);
-    parent.add(child);
+    IonInt  child  = sys2.newInt(23);
+    parent.add(child); // NOT SUPPORTED
 </pre>
 
 Given any {@code IonValue} instance it is possible to retrieve the relevant
@@ -43,7 +43,7 @@ that you're using the correct system while modifying existing trees.
 
 <h1>Getting Data In</h1>
 
-This release defines two mechanisms for accepting Ion data:
+This release defines three mechanisms for accepting Ion data:
 <ul>
   <li>{@link com.amazon.ion.IonLoader IonLoader} loads an entire input stream
     into a single {@linkplain com.amazon.ion.IonDatagram datagram}.

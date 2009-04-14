@@ -13,12 +13,14 @@ import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
 import com.amazon.ion.system.SimpleCatalog;
@@ -651,6 +653,43 @@ public class SymbolTableTest
 
     //-------------------------------------------------------------------------
     // Shared symtab creation
+
+    public void testSystemNewSharedSymtab()
+        throws Exception
+    {
+        for (String symtab : Symtabs.FRED_SERIALIZED)
+        {
+            if (symtab != null) testSystemNewSharedSymtab(symtab);
+        }
+        for (String symtab : Symtabs.GINGER_SERIALIZED)
+        {
+            if (symtab != null) testSystemNewSharedSymtab(symtab);
+        }
+    }
+
+    public void testSystemNewSharedSymtab(String serializedSymbolTable)
+        throws IOException
+    {
+      IonReader reader = system().newReader(serializedSymbolTable);
+      SymbolTable stFromReader = system().newSharedSymbolTable(reader);
+      assertTrue(stFromReader.isSharedTable());
+
+      IonStruct struct = (IonStruct) oneValue(serializedSymbolTable);
+      SymbolTable stFromValue = system().newSharedSymbolTable(struct);
+      assertTrue(stFromValue.isSharedTable());
+
+      Symtabs.assertEqualSymtabs(stFromReader, stFromValue);
+
+      // Try a bit of round-trip action
+      StringBuilder buf = new StringBuilder();
+      IonWriter out = system().newTextWriter(buf);
+      stFromReader.writeTo(out);
+      reader = system().newReader(serializedSymbolTable);
+      stFromReader = system().newSharedSymbolTable(reader);
+
+      Symtabs.assertEqualSymtabs(stFromReader, stFromValue);
+    }
+
 
     public void testBasicSharedSymtabCreation()
     {

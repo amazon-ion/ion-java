@@ -3,20 +3,16 @@
 package com.amazon.ion;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 
 
 
 public abstract class SequenceTestCase
     extends ContainerTestCase
 {
-    /**
-     * @return a new null sequence.
-     */
-    @Override
-    protected abstract IonSequence makeNull();
-
     @Override
     protected abstract IonSequence makeEmpty();
 
@@ -33,11 +29,6 @@ public abstract class SequenceTestCase
         ((IonSequence) container).add(child);
     }
 
-
-    /**
-     * Wrap a single value with a sequence of the class under test.
-     */
-    protected abstract String wrap(String v);
 
     public void checkNullSequence(IonSequence value)
     {
@@ -174,23 +165,52 @@ public abstract class SequenceTestCase
 
     public void testBadAdds()
     {
-        IonSequence value = makeNull();
+        IonSequence value = makeEmpty();
+        testBadAdds(value);
 
+        value.add().newInt(3);
+        testBadAdds(value);
+    }
+
+    protected void testBadAdds(IonSequence s)
+    {
         try {
-            value.add(null);
-            fail("Expected NullPointerException");
+            s.add(null);
+            fail("Expected exception");
         }
         catch (NullPointerException e) { }
+
+        // TODO cast to Collection and add Object
+
+        IonSequence s2 = makeEmpty();
+        IonNull n = s2.add().newNull();
+        try {
+            s.add(n);
+            fail("Expected exception");
+        }
+        catch (ContainedValueException e) { }
     }
+
 
     public void testBadRemoves()
     {
-        IonSequence value = makeNull();
-        IonBool nullBool0 = system().newNullBool();
-        value.add(nullBool0);
+        IonSequence value = makeEmpty();
+        testBadRemoves(value);
+
+        value.add().newNullBool();
+        testBadRemoves(value);
+    }
+
+    protected void testBadRemoves(IonSequence value)
+    {
+        try {
+            value.remove((Object)null);
+            fail("Expected NullPointerException");
+        }
+        catch (NullPointerException e) { }
 
         try {
-            value.remove(null);
+            value.remove((IonValue)null);
             fail("Expected NullPointerException");
         }
         catch (NullPointerException e) { }
@@ -198,11 +218,17 @@ public abstract class SequenceTestCase
         IonBool nullBool1 = system().newNullBool();
         assertFalse(value.remove(nullBool1));
 
-        IonSequence otherSeq = makeNull();
+        IonSequence otherSeq = makeEmpty();
         otherSeq.add(nullBool1);
 
         assertFalse(value.remove(nullBool1));
+
+        try {
+            value.remove(new Integer(1));
+        }
+        catch (ClassCastException e) { }
     }
+
 
     public void testNewSeqWithDatagram()
     {
@@ -239,13 +265,338 @@ public abstract class SequenceTestCase
                    val.getContainer());
     }
 
-    public void testMakeNullRemovesChildsContainer()
+    public void testAddAll()
     {
-        IonValue val = system().newString("test");
-        IonSequence seq = newSequence(val);
-        seq.makeNull();
-        assertNull("Removed value should have null container",
-                   val.getContainer());
+        IonSequence seq = makeEmpty();
+        testAddAll(seq);
+    }
+
+    protected void testAddAll(IonSequence seq)
+    {
+        List<IonValue> l = null;
+        try
+        {
+            seq.addAll(l);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+
+        seq = makeEmpty();
+        try
+        {
+            seq.addAll(l);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+
+        l = new ArrayList<IonValue>();
+
+        boolean changed = seq.addAll(l);
+        assertFalse(changed);
+
+        l.add(system().newNull());
+        changed = seq.addAll(l);
+        assertTrue(changed);
+        assertSame(l.get(0), seq.get(0));
+
+        try
+        {
+            seq.addAll(l);
+            fail("expected exception");
+        }
+        catch (ContainedValueException e) { }
+    }
+
+    public void testContains()
+    {
+        IonNull nullValue1 = system().newNull();
+        IonNull nullValue2 = system().newNull();
+
+        IonSequence seq = makeEmpty();
+        assertFalse(seq.contains(nullValue1));
+        try
+        {
+            seq.contains(null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+
+        seq.add(nullValue2);
+        assertFalse(seq.contains(nullValue1));
+        assertTrue(seq.contains(nullValue2));
+    }
+
+    public void testContainsAll()
+    {
+        IonNull nullValue1 = system().newNull();
+        IonNull nullValue2 = system().newNull();
+        IonInt  intValue1  = system().newInt(1);
+
+        List<Object> empty = new ArrayList<Object>();
+        List<Object> hasJavaNull = Arrays.asList((Object)null);
+        List<Integer> hasJavaInt = Arrays.asList(new Integer(0));
+        List<Object> hasNull1 = Arrays.asList((Object)nullValue1);
+        List<Object> hasNull2AndInt = Arrays.asList((Object)intValue1,
+                                                    (Object)nullValue2);
+
+        IonSequence seq = makeEmpty();
+        assertTrue(seq.containsAll(empty));
+        assertFalse(seq.containsAll(hasNull1));
+        assertFalse(seq.containsAll(hasNull2AndInt));
+        try
+        {
+            seq.containsAll(null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+        try
+        {
+            seq.containsAll(hasJavaNull);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+        try
+        {
+            seq.containsAll(hasJavaInt);
+            fail("expected exception");
+        }
+        catch (ClassCastException e) { }
+
+
+        seq.add(nullValue2);
+        assertTrue(seq.containsAll(empty));
+        assertFalse(seq.containsAll(hasNull1));
+        assertFalse(seq.containsAll(hasNull2AndInt));
+
+        seq.add(intValue1);
+        assertTrue(seq.containsAll(empty));
+        assertFalse(seq.containsAll(hasNull1));
+        assertTrue(seq.containsAll(hasNull2AndInt));
+
+        seq.add(nullValue1);
+        assertTrue(seq.containsAll(empty));
+        assertTrue(seq.containsAll(hasNull1));
+        assertTrue(seq.containsAll(hasNull2AndInt));
+        try
+        {
+            seq.containsAll(hasJavaNull);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+        try
+        {
+            seq.containsAll(hasJavaInt);
+            fail("expected exception");
+        }
+        catch (ClassCastException e) { }
+    }
+
+
+    public void testRemoveAll()
+    {
+        IonNull nullValue1 = system().newNull();
+        IonNull nullValue2 = system().newNull();
+        IonInt  intValue1  = system().newInt(1);
+
+        List<Object> empty = new ArrayList<Object>();
+        List<Object> hasJavaNull = Arrays.asList((Object)null);
+        List<Integer> hasJavaInt = Arrays.asList(new Integer(0));
+        List<Object> hasNull1 = Arrays.asList((Object)nullValue1);
+        List<Object> hasNull2AndInt = Arrays.asList((Object)intValue1,
+                                                    (Object)nullValue2);
+
+        IonSequence seq = makeEmpty();
+        assertFalse(seq.removeAll(empty));
+        assertFalse(seq.removeAll(hasNull1));
+        assertFalse(seq.removeAll(hasNull2AndInt));
+        try
+        {
+            seq.removeAll(null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+        try
+        {
+            seq.removeAll(hasJavaNull);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+        try
+        {
+            seq.removeAll(hasJavaInt);
+            fail("expected exception");
+        }
+        catch (ClassCastException e) { }
+
+
+        seq.add(nullValue2);
+        assertFalse(seq.removeAll(empty));
+        assertFalse(seq.removeAll(hasNull1));
+        assertTrue(seq.removeAll(hasNull2AndInt));
+        assertEquals(0, seq.size());
+
+        seq.add(nullValue2);
+        seq.add(intValue1);
+        assertFalse(seq.removeAll(empty));
+        assertFalse(seq.removeAll(hasNull1));
+        assertTrue(seq.removeAll(hasNull2AndInt));
+        assertEquals(0, seq.size());
+
+        seq.add(intValue1);
+        seq.add(nullValue1);
+        assertFalse(seq.removeAll(empty));
+        assertTrue(seq.removeAll(hasNull1));
+        assertNull(nullValue1.getContainer());
+        seq.add(nullValue2);
+        assertTrue(seq.removeAll(hasNull2AndInt));
+        assertEquals(0, seq.size());
+
+        seq.add(nullValue2);
+        seq.add(intValue1);
+        try
+        {
+            seq.removeAll(hasJavaNull);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+        try
+        {
+            seq.removeAll(hasJavaInt);
+            fail("expected exception");
+        }
+        catch (ClassCastException e) { }
+        assertTrue(seq.containsAll(hasNull2AndInt));
+    }
+
+    public void testRetainAll()
+    {
+        IonNull nullValue1 = system().newNull();
+        IonNull nullValue2 = system().newNull();
+        IonInt  intValue1  = system().newInt(1);
+
+        List<Object> empty = new ArrayList<Object>();
+        List<Object> hasJavaNull = Arrays.asList((Object)null);
+        List<Integer> hasJavaInt = Arrays.asList(new Integer(0));
+        List<Object> hasNull1 = Arrays.asList((Object)nullValue1);
+        List<Object> hasNull2AndInt = Arrays.asList((Object)intValue1,
+                                                    (Object)nullValue2);
+
+        IonSequence seq = makeEmpty();
+        // FIXME implement IonDatagram.retainAll
+        if (seq.getType() == IonType.DATAGRAM) return;
+
+        assertFalse(seq.retainAll(empty));
+        assertFalse(seq.retainAll(hasNull1));
+        assertFalse(seq.retainAll(hasNull2AndInt));
+//        try
+//        {
+//            seq.retainAll(null);
+//            fail("expected exception");
+//        }
+//        catch (NullPointerException e) { }
+//        try
+//        {
+//            seq.retainAll(hasJavaNull);
+//            fail("expected exception");
+//        }
+//        catch (NullPointerException e) { }
+//        try
+//        {
+//            seq.retainAll(hasJavaInt);
+//            fail("expected exception");
+//        }
+//        catch (ClassCastException e) { }
+
+        seq.add(nullValue2);
+        try
+        {
+            seq.retainAll(null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+        try
+        {
+            seq.retainAll(hasJavaNull);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+        try
+        {
+            seq.retainAll(hasJavaInt);
+            fail("expected exception");
+        }
+        catch (ClassCastException e) { }
+
+        assertFalse(seq.retainAll(hasNull2AndInt));
+        assertEquals(1, seq.size());
+        assertSame(seq, nullValue2.getContainer());
+
+        assertTrue(seq.retainAll(hasNull1));
+        assertSame(null, nullValue2.getContainer());
+
+        seq.add(intValue1);
+        assertFalse(seq.retainAll(hasNull2AndInt));
+        assertSame(seq, intValue1.getContainer());
+
+        seq.add(nullValue1);
+        assertTrue(seq.retainAll(empty));
+        assertEquals(0, seq.size());
+
+        seq.add(intValue1);
+        seq.add(nullValue1);
+        assertTrue(seq.retainAll(hasNull1));
+        assertEquals(1, seq.size());
+        assertSame(null, intValue1.getContainer());
+        assertFalse(seq.retainAll(hasNull1));
+        assertSame(seq, nullValue1.getContainer());
+    }
+
+    public void testToArray()
+    {
+        IonSequence seq = makeEmpty();
+        assertEquals(0, seq.toArray().length);
+
+        seq.add().newNull();
+
+        IonValue[] array = seq.toArray();
+        checkArray(seq, array);
+
+        seq.add().newInt(2);
+        IonValue[] array2 = seq.toArray();
+        checkArray(seq, array2);
+
+        Object[] objArray = new Object[2];
+        assertSame(objArray, seq.toArray(objArray));
+        checkArray(seq, objArray);
+
+        seq.remove(seq.get(1));  // TODO remove(1)
+        assertSame(objArray, seq.toArray(objArray));
+        assertSame(seq.get(0), objArray[0]);
+        assertEquals(null, objArray[1]);
+
+        try
+        {
+            seq.toArray(null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+
+        Integer[] intArray = new Integer[0];
+        try
+        {
+            seq.toArray(intArray);
+            fail("expected exception");
+        }
+        catch (ArrayStoreException e) { }
+    }
+
+    public void checkArray(IonSequence expected, Object[] actual)
+    {
+        assertEquals(expected.size(), actual.length);
+        for (int i = 0; i < actual.length; i++)
+        {
+            assertSame(expected.get(i), actual[i]);
+        }
     }
 
     public void testAddOfClone()
@@ -264,9 +615,12 @@ public abstract class SequenceTestCase
 
         forceMaterialization(v1);
 
-        IonDatagram dg = system().newDatagram(s);
-        byte[] buf = dg.getBytes();
-        assertNotNull("there should be a buffer", buf);
+        if (s.getType() != IonType.DATAGRAM)
+        {
+            IonDatagram dg = system().newDatagram(s);
+            byte[] buf = dg.getBytes();
+            assertNotNull("there should be a buffer", buf);
+        }
     }
 
     public void testRemoveViaIteratorThenDirect()
@@ -298,5 +652,52 @@ public abstract class SequenceTestCase
         assertEquals(2, s.size());
         checkString("g", str);
         assertSame(str, s.get(1));
+    }
+
+    public void testIndexOf()
+    {
+        IonNull nullValue1 = system().newNull();
+        IonNull nullValue2 = system().newNull();
+
+        IonSequence s = makeEmpty();
+        try {
+            s.indexOf(null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+        try {
+            s.indexOf(new Integer(0));
+            fail("expected exception");
+        }
+        catch (ClassCastException e) { }
+
+        assertEquals(-1, s.indexOf(nullValue1));
+
+        s.add(nullValue1);
+        assertEquals(0,  s.indexOf(nullValue1));
+        assertEquals(-1, s.indexOf(nullValue2));
+        try {
+            s.indexOf(null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+        try {
+            s.indexOf(new Integer(0));
+            fail("expected exception");
+        }
+        catch (ClassCastException e) { }
+
+
+        IonSequence s2 = makeEmpty();
+        s2.add(nullValue2);
+        assertEquals(0,  s2.indexOf(nullValue2));
+        assertEquals(-1, s.indexOf(nullValue2));
+        s2.remove(nullValue2);
+
+        s.add().newBlob(null);
+        s.add(nullValue2);
+        assertEquals(0, s.indexOf(nullValue1));
+        assertEquals(2, s.indexOf(nullValue2));
+
     }
 }
