@@ -8,6 +8,7 @@ import static com.amazon.ion.util.Equivalence.ionEquals;
 
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.NullValueException;
@@ -575,9 +576,11 @@ public abstract class IonValueImpl
 
     /**
      * Gets the index of this value within its container.
-     * @return
+     * @return zero if this is not within a container.
+     * @deprecated Use {@link IonSequence#indexOf(Object)}
      */
-    int getElementId() {
+    @Deprecated
+    public int getElementId() {
         return this._elementid;
     }
 
