@@ -10,7 +10,8 @@ This document describes all classes intended for public consumption, limited to
 the packages {@link com.amazon.ion}, {@link com.amazon.ion.system}, and
 {@link com.amazon.ion.util}.  The distribution includes other implementation
 packages not documented here (<em>e.g.</em> {@code com.amazon.ion.impl});
-your use of those packages is not supported, so <b>don't use them!</b>
+your use of those packages is not supported, so do us both a favor and
+<b>don't use them!</b>
 
 
 <h1>Start at IonSystem</h1>
@@ -37,8 +38,15 @@ guaranteed to work</b>:
 </pre>
 
 Given any {@code IonValue} instance it is possible to retrieve the relevant
-system via {@link IonValue#getSystem()}. This is generally the best way ensure
+system via {@link com.amazon.ion.IonValue#getSystem()}. 
+This is generally the best way ensure
 that you're using the correct system while modifying existing trees.
+You can also use the "Curried" insertion methods to add new values to
+collections:
+<pre>
+    struct.put("f").newInt(3);
+    list.add().newString("demo");
+</pre>
 
 
 <h1>Getting Data In</h1>

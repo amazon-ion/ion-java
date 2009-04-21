@@ -7,7 +7,7 @@ import java.io.IOException;
 
 
 /**
- * Utility methods for working with Ion text.
+ * Utility methods for working with Ion's text-oriented data types.
  */
 public class IonTextUtils
 {
