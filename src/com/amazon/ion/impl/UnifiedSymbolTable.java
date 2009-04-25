@@ -152,6 +152,8 @@ final class UnifiedSymbolTable
         }
     }
 
+    private static final Symbol[] NO_SYMBOLS = new Symbol[0];
+
     private String                  _name;
     private int                     _version;
     private UnifiedSymbolTable      _system_symbols;
@@ -164,7 +166,14 @@ final class UnifiedSymbolTable
      * Can't be private (yet) since its used by the binary writer.
      */
     Symbol[]                _symbols;
-    private int                     _max_id;
+
+    /**
+     * The maximum symbol ID covered by this table.
+     * It may be smaller or larger than the {@link #_symbols} array!
+     * In particular, if this is a dummy table created for an unknown import,
+     * then _symbols will be zero-length but _max_id will be positive.
+     */
+    private int _max_id;
 
     /**
      * The largest sid allocated to imported symbols.
@@ -186,7 +195,7 @@ final class UnifiedSymbolTable
         _system_symbols = null;
         _imports = null;
         _import_count = 0;
-        _symbols = new Symbol[10];
+        _symbols = NO_SYMBOLS;
         _max_id = 0;
         _has_user_symbols = false;
         _id_map = new HashMap<String, Integer>(10);
@@ -195,6 +204,7 @@ final class UnifiedSymbolTable
     public UnifiedSymbolTable(String[] systemSymbolNames)
     {
         this();
+        _symbols = new Symbol[systemSymbolNames.length];
         for (int ii=0; ii<systemSymbolNames.length; ii++) {
             defineSymbol(new Symbol(systemSymbolNames[ii], ii+1, this));
         }
@@ -466,19 +476,22 @@ final class UnifiedSymbolTable
 
     public synchronized String findKnownSymbol(int id)
     {
-        String name = null;
-        if (id < 1) {
-            throw new IllegalArgumentException("symbol id's are greater than 0");
+        if (_system_symbols != null
+            && _system_symbols != this
+            && id <= _system_symbols.getMaxId())
+        {
+            return _system_symbols.findKnownSymbol(id);
         }
-        if (id <= _max_id) {
-            if (_system_symbols != null && _system_symbols != this && id <= _system_symbols.getMaxId()) {
-                name = _system_symbols.findKnownSymbol(id);
-            }
-            if (name == null) {
-                Symbol sym = _symbols[id];
-                if (sym != null) {
-                    name = sym.name;
-                }
+
+        if (id < 1) {
+            throw new IllegalArgumentException("symbol IDs are greater than 0");
+        }
+
+        String name = null;
+        if (id < _symbols.length) {
+            Symbol sym = _symbols[id];
+            if (sym != null) {
+                name = sym.name;
             }
         }
         return name;
@@ -523,9 +536,6 @@ final class UnifiedSymbolTable
 
     public synchronized String findSymbol(int id)
     {
-        if (id < 1) {
-            throw new IllegalArgumentException("symbol id's are greater than 0");
-        }
         String name = findKnownSymbol(id);
         if (name == null) {
             name = unknownSymbolName(id);
@@ -680,27 +690,27 @@ final class UnifiedSymbolTable
     private void importSymbols(UnifiedSymbolTable newTable, int sidOffset,
                                int declaredMaxId)
     {
-        // Always use the declaredMaxId so sid computations are the same even
-        // when the imported table cannot be found or when we only have an
-        // older version that's missing some symbols.
+        int actualMaxId = newTable.getMaxId();
+        assert actualMaxId >= 0;
+
+        // Always use the declaredMaxId (if declared) so sid computations are
+        // the same even when the imported table cannot be found or when we
+        // only have an older version that's missing some symbols.
 
         if (declaredMaxId < 0) {
-            declaredMaxId = newTable.getMaxId();
-            assert declaredMaxId >= 0;
+            declaredMaxId = actualMaxId;
         }
 
-        int priorMaxId = _max_id;
+        final int priorMaxId = _max_id; // defineSymbol() changes _max_id
 
-        assert newTable._max_id < newTable._symbols.length;
-        assert newTable._symbols[0] == null;
-
-        int limitId = Math.min(newTable._max_id, declaredMaxId);
+        int limitId = Math.min(actualMaxId, declaredMaxId);
         for (int ii = 1; ii <= limitId; ii++) {
-            Symbol sym = newTable._symbols[ii];
-            if (sym == null) continue;
-            assert sym.sid == ii;
-            int sid = ii + sidOffset;
-            defineSymbol(new Symbol(sym.name, sid, newTable));
+            String name = newTable.findKnownSymbol(ii);
+            if (name != null)
+            {
+                int sid = ii + sidOffset;
+                defineSymbol(new Symbol(name, sid, newTable));
+            }
         }
 
         int newMaxId = priorMaxId + declaredMaxId;
@@ -785,12 +795,15 @@ final class UnifiedSymbolTable
     private IonStructImpl makeIonRepresentation(IonSystem sys)
     {
         IonStructImpl ionRep = (IonStructImpl) sys.newEmptyStruct();
-        ionRep.addTypeAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE);
 
         if (this.isSharedTable()) {
             assert getVersion() > 0;
+            ionRep.addTypeAnnotation(UnifiedSymbolTable.ION_SHARED_SYMBOL_TABLE);
             ionRep.add(UnifiedSymbolTable.NAME, sys.newString(this.getName()));
             ionRep.add(UnifiedSymbolTable.VERSION, sys.newInt(this.getVersion()));
+        }
+        else {
+            ionRep.addTypeAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE);
         }
 
         SymbolTable[] imports = this.getImportedTables();

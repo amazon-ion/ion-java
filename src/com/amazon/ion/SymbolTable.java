@@ -151,6 +151,7 @@ public interface SymbolTable
 
 
     /**
+     * Gets the symbol ID associated with a given symbol name.
      *
      * @param name must not be null or empty.
      * @return the id of the requested symbol, or
@@ -160,21 +161,26 @@ public interface SymbolTable
 
 
     /**
-     * Gets a name for a symbol id, whether or not a definition is known.
-     * If the id is unknown then a generic name is returned.
+     * Gets a name for a symbol ID, whether or not a definition is known.
+     * If the ID is unknown then a generic name is returned; for example,
+     * {@code "$23"}.
      *
-     * @param id must be greater than zero.
+     * @param id the requested symbol ID.
      * @return not <code>null</code>.
+     *
+     * @throws IllegalArgumentException if {@code id < 1}.
      */
     public String findSymbol(int id);
 
 
     /**
-     * Gets a defined name for a symbol id.
+     * Gets a defined name for a symbol ID.
      *
-     * @param id must be greater than zero.
-     * @return the name associated with the symbol id, or <code>null</code> if
+     * @param id the requested symbol ID.
+     * @return the name associated with the symbol ID, or <code>null</code> if
      * the name is not known.
+     *
+     * @throws IllegalArgumentException if {@code id < 1}.
      */
     public String findKnownSymbol(int id);
 
