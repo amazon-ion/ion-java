@@ -288,6 +288,7 @@ final class UnifiedSymbolTable
         reader.next();
         reader.stepIn();
         readIonRep(SymbolTableType.SHARED, reader, null);
+	reader.stepOut();
 
         assert _name != null;
     }
