@@ -460,6 +460,30 @@ public class TimestampTest
     }
 
 
+    public void testEquivalence()
+    {
+        IonTimestamp t1 = (IonTimestamp) oneValue("2009-04-25T16:07:00Z");
+        IonTimestamp t2 = (IonTimestamp) oneValue("2009-04-25T15:06:00-01:01");
+        IonTimestamp t3 = (IonTimestamp) oneValue("2009-04-25T16:07:00.000Z");
+        IonTimestamp t4 = (IonTimestamp) oneValue("2009-04-25T16:07:00.0000Z");
+
+        assertEquals(t1, t1);
+        assertEquals(t1, t1.clone());
+
+        notEqualButSameTime(t1, t2);
+        notEqualButSameTime(t1, t3);
+        notEqualButSameTime(t2, t4);
+        notEqualButSameTime(t3, t4);
+    }
+
+    public void notEqualButSameTime(IonTimestamp t1, IonTimestamp t2)
+    {
+        assertFalse(t1.equals(t2));
+        assertFalse(t2.equals(t1));
+        assertEquals(0, t1.timestampValue().compareTo(t2.timestampValue()));
+        assertEquals(0, t1.timestampValue().compareTo(t2.timestampValue()));
+    }
+
     public void testBadSetLocalOffset()
     {
         IonTimestamp value = system().newNullTimestamp();
