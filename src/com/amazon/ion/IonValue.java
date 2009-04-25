@@ -246,6 +246,10 @@ public interface IonValue
      * In addition, read-only values are safe for simultaneous use
      * from multiple threads.  This may require materializing the Java
      * forms of the values.
+     * <p>
+     * After this method completes, any attempt to change the state of this
+     * instance, or of any contained value, will trigger a
+     * {@link ReadOnlyValueException}.
      *
      * @see #isReadOnly()
      */

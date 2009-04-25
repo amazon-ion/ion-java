@@ -67,7 +67,7 @@ public abstract class ContainerTestCase
             add(c, system().newNull());
             fail("expected exception");
         }
-        catch (IonException e) { } // TODO more specific exception
+        catch (ReadOnlyValueException e) { }
 
         assertTrue(c.isNullValue());
         assertTrue(c.isReadOnly());
@@ -85,7 +85,7 @@ public abstract class ContainerTestCase
             add(c, system().newNull());
             fail("expected exception");
         }
-        catch (IonException e) { } // TODO more specific exception
+        catch (ReadOnlyValueException e) { }
 
         assertTrue(c.isEmpty());
         assertTrue(c.isReadOnly());
@@ -106,21 +106,21 @@ public abstract class ContainerTestCase
             add(c, system().newNull());
             fail("expected exception");
         }
-        catch (IonException e) { } // TODO more specific exception
+        catch (ReadOnlyValueException e) { }
 
         try
         {
             c.remove(first);
             fail("expected exception");
         }
-        catch (IonException e) { } // TODO more specific exception
+        catch (ReadOnlyValueException e) { }
 
         try
         {
             ((IonString)first).setValue("changed");
             fail("expected exception");
         }
-        catch (IonException e) { } // TODO more specific exception
+        catch (ReadOnlyValueException e) { }
 
         assertEquals(3, c.size());
         assertTrue(c.isReadOnly());

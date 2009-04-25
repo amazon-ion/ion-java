@@ -12,6 +12,7 @@ import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.NullValueException;
+import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.impl.IonBinary.BufferManager;
@@ -494,9 +495,10 @@ public abstract class IonValueImpl
         return _isLocked;
     }
 
-    protected void checkForLock() {
-        if (!_isLocked) return;
-        throw new IonException("locked values cannot be modified");
+    protected final void checkForLock() {
+        if (_isLocked) {
+            throw new ReadOnlyValueException();
+        }
     }
 
     /**

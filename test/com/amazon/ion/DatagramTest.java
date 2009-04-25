@@ -527,7 +527,7 @@ public class DatagramTest
             dg.add(two);
             fail("Expected exception for modifying read-only value");
         }
-        catch (IonException e) { }
+        catch (ReadOnlyValueException e) { }
         assertEquals(1, dg.size());
     }
 }
