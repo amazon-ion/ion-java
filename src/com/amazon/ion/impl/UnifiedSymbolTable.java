@@ -276,14 +276,7 @@ final class UnifiedSymbolTable
      */
     public UnifiedSymbolTable(IonStruct ionRep)
     {
-        this();
-
-        IonReader reader = new IonTreeReader(ionRep);
-        reader.next();
-        reader.stepIn();
-        readIonRep(SymbolTableType.SHARED, reader, null);
-
-        assert _name != null;
+        this(new IonTreeReader(ionRep));
 
         _ion_rep = (IonStructImpl) ionRep;
     }
@@ -298,7 +291,7 @@ final class UnifiedSymbolTable
         reader.next();
         reader.stepIn();
         readIonRep(SymbolTableType.SHARED, reader, null);
-	reader.stepOut();
+        reader.stepOut();
 
         assert _name != null;
     }
@@ -579,7 +572,8 @@ final class UnifiedSymbolTable
     /**
      * NOT SYNCHRONIZED! Call within constructor or from synched method.
      *
-     * TODO streamline: we no longer accept arbirtrary sid, its always max+1
+     * TODO streamline: we no longer accept arbirtrary sid, its always > max_id
+     * (After we remove {@link #defineSymbol(String, int)} at least)
      */
     private void defineSymbol(Symbol sym)
     {
@@ -617,13 +611,11 @@ final class UnifiedSymbolTable
             }
             else {
                 // Replace existing definition with higher sid
-                // TODO test this!
+                // TODO this will no longer be possible after removing
+                // defineString(String, int)
                 _symbols[priorSid] = null;
             }
         }
-
-        // FIXME lexicographic selection if sid is duplicated
-        // Be sure to only sort within one import!  We can
 
         if (sid > _max_id) _max_id = sid;
         if (sym.source == this) {
@@ -889,6 +881,11 @@ final class UnifiedSymbolTable
             if (reader.isNullValue()) continue;
 
             int fieldId = reader.getFieldId();
+
+            // TODO fall-back to text if getFieldId() returns < 1
+            // This could happen if we're reading from a user-implemented
+            // IonReader.
+
             switch (fieldId) {
             case UnifiedSymbolTable.VERSION_SID:
                 if (symtabType == SHARED && fieldType == IonType.INT) {
@@ -926,8 +923,6 @@ final class UnifiedSymbolTable
                 }
                 break;
             default:
-                // FIXME fail if field ID < 1
-//                if (fieldId < 1) throw new IllegalStateException();
                 break;
             }
         }

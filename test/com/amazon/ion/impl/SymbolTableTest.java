@@ -611,7 +611,7 @@ public class SymbolTableTest
         checkLocalTable(st);
         assertSame(systemTable, st.getSystemSymbolTable());
         assertEquals(systemTable.getMaxId(), st.getMaxId());
-        // TODO getImportMaxId
+        assertEquals(systemTable.getMaxId(), st.getImportedMaxId());
         assertEquals(0, st.getImportedTables().length);
     }
 
@@ -621,11 +621,12 @@ public class SymbolTableTest
         SymbolTable fred1 = Symtabs.CATALOG.getTable("fred", 1);
 
         SymbolTable st = system().newLocalSymbolTable(systemTable, fred1);
+        final int importedMaxId = systemTable.getMaxId() + fred1.getMaxId();
 
         checkLocalTable(st);
         assertSame(systemTable, st.getSystemSymbolTable());
-        assertEquals(systemTable.getMaxId() + fred1.getMaxId(), st.getMaxId());
-        // TODO getImportMaxId
+        assertEquals(importedMaxId, st.getMaxId());
+        assertEquals(importedMaxId, st.getImportedMaxId());
         assertEquals(1, st.getImportedTables().length);
         assertSame(fred1, st.getImportedTables()[0]);
 
