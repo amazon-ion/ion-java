@@ -289,7 +289,8 @@ public interface IonValue
 
     /**
      * Compares two Ion values for structural equality, which means that they
-     * represent the exact same semantics, including annotations.
+     * represent the exact same semantics, including annotations, numeric
+     * precision, and so on.
      *
      * @see com.amazon.ion.util.Equivalence
      *
