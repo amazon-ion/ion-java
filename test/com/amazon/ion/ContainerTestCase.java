@@ -246,4 +246,43 @@ public abstract class ContainerTestCase
         IonValue v = system().singleValue("1");
         add(c, v);
     }
+
+
+    public void testAddingReadOnlyChild()
+    {
+        IonContainer c = makeEmpty();
+
+        IonNull n = system().newNull();
+        n.makeReadOnly();
+
+        try
+        {
+            add(c, n);
+            fail("expected exception");
+        }
+        catch (ReadOnlyValueException e) { }
+
+        assertEquals(null, n.getContainer());
+        assertTrue(c.isEmpty());
+    }
+
+    public void testRemovingReadOnlyChild()
+    {
+        IonContainer c = makeEmpty();
+
+        IonNull n = system().newNull();
+        add(c, n);
+
+        n.makeReadOnly();
+
+        try
+        {
+            c.remove(n);
+            fail("expected exception");
+        }
+        catch (ReadOnlyValueException e) { }
+
+        assertSame(c, n.getContainer());
+        assertSame(n, c.iterator().next());
+    }
 }

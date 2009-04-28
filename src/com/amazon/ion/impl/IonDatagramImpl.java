@@ -136,6 +136,8 @@ public final class IonDatagramImpl
     protected void copyFrom(IonContainerImpl source)
         throws NullPointerException, IllegalArgumentException, IOException
     {
+        // FIXME this method is unused, since our clone() does its own thing.
+
         // first copy the annotations and such, which
         // will materialize the value as needed.
         // This will materialize the field name and
@@ -496,8 +498,8 @@ public final class IonDatagramImpl
             IonValue child = i.next();
             if (child == element) // Yes, instance identity.
             {
-                i.remove();
                 super.remove(element);
+                i.remove();
                 return true;
             }
         }
@@ -744,7 +746,11 @@ public final class IonDatagramImpl
     }
 
 
-    private int updateBuffer() throws IonException
+    /**
+     * FIXME this can modify state, even when read-only
+     * I'm not confident that synchronization is sufficient.
+     */
+    private synchronized int updateBuffer() throws IonException
     {
         int oldSize = 0;
 

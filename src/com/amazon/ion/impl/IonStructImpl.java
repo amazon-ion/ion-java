@@ -7,8 +7,8 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.ValueFactory;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonBinary.Reader;
 import java.io.IOException;
@@ -146,8 +146,8 @@ public final class IonStructImpl
                     IonValue child = _contents.get(i);
                     if (fieldName.equals(child.getFieldName()))
                     {
-                        _contents.remove(i);
                         ((IonValueImpl)child).detachFromContainer();
+                        _contents.remove(i);
                         lowestRemovedIndex = i;
                     }
                 }
