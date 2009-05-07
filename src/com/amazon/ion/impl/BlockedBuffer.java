@@ -1653,32 +1653,57 @@ static final boolean test_with_no_version_checking = false;
             }
         }
         /**
-         * Writes len bytes from the specified byte array starting
-         * at in the user array at offset off to the current position
-         * in this output stream.
+         * Writes bytes from the specified byte stream from its current
+         * stream position to the end of the stream.  Writing the bytes
+         * to the current position in this output stream.
          * @throws IOException
          */
         public final void write(InputStream bytestream) throws IOException
         {
             if (_buf == null) throw new IOException("stream is closed");
             _buf.start_mutate(this, _version);
-            _write(bytestream);
+            _write(bytestream, -1);
             _version = _buf.end_mutate(this);
         }
-        private final void _write(InputStream bytestream) throws IOException
+        /**
+         * Writes bytes from the specified byte stream from its current
+         * stream position up to length bytes from the stream.  Writing the 
+         * bytes to the current position in this output stream.
+         * @throws IOException
+         */
+        public final void write(InputStream bytestream, int len) throws IOException
+        {
+            if (_buf == null) throw new IOException("stream is closed");
+            _buf.start_mutate(this, _version);
+            _write(bytestream, len);
+            _version = _buf.end_mutate(this);
+        }
+        /**
+         * helper to write data.  This does not check input arguments.
+         * @param bytestream source of the data
+         * @param len number of bytes to read from the input stream, -1 for all
+         * @throws IOException
+         */
+        private final void _write(InputStream bytestream, int len) throws IOException
         {
             int written = 0;
+            boolean read_all = (len == -1);
+            
             for (;;)
             {
                 int writeInThisBlock = bytesAvailableToWriteInCurr(_pos);
                 assert writeInThisBlock >= 0;
 
-                int len = bytestream.read(_curr._buffer, _blockPosition, writeInThisBlock);
-                if (len == -1) break;
-                if (len == 0) continue;  // can this really happen?
+                int to_read = read_all ? writeInThisBlock : len;
+                if (to_read > writeInThisBlock) {
+                    to_read = writeInThisBlock;
+                }
+                int len_read = bytestream.read(_curr._buffer, _blockPosition, writeInThisBlock);
+                if (len_read == -1) break;
+                if (len_read == 0) continue;  // can this really happen?
 
-                _pos += len;
-                _blockPosition += len;
+                _pos += len_read;
+                _blockPosition += len_read;
                 if (_blockPosition > _curr._limit) {
                     _curr._limit = _blockPosition;
                     if (_pos > _buf._buf_limit) _buf._buf_limit = _pos;
@@ -1687,13 +1712,17 @@ static final boolean test_with_no_version_checking = false;
                     assert _pos <= _buf._buf_limit;
                 }
 
-                if (len == writeInThisBlock) {
+                if (len_read == writeInThisBlock) {
                     _curr = _buf.findBlockForWrite(this, _version, _curr, _pos);
                     _blockPosition = 0;
-                    assert _curr._offset == _pos || written < len;
+                    assert _curr._offset == _pos || written < len_read;
                 }
                 else {
-                    assert len < writeInThisBlock;
+                    assert len_read < writeInThisBlock;
+                }
+                if (!read_all) {
+                    len -= len_read;
+                    if (len < 1) break;
                 }
             }
         }
