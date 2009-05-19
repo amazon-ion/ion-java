@@ -64,8 +64,8 @@ public class IonSystemImpl
     private final UnifiedSymbolTable mySystemSymbols =
         UnifiedSymbolTable.getSystemSymbolTableInstance();
 
-    private IonCatalog myCatalog;
-    private IonLoader  myLoader = new LoaderImpl(this);
+    private IonCatalog  myCatalog;
+    private IonLoader   myLoader = new LoaderImpl(this);
 
 
     public IonSystemImpl()
@@ -583,6 +583,12 @@ public class IonSystemImpl
     {
         BufferManager buffer = new BufferManager(ionBinary);
         return new SystemReader(this, buffer);
+    }
+
+    public SystemReader newPagedBinarySystemReader(InputStream ionBinary)
+        throws IOException
+    {
+        return new SystemReader(this, ionBinary);
     }
 
     //-------------------------------------------------------------------------
