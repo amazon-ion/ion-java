@@ -5,7 +5,7 @@ package com.amazon.ion;
 
 
 public class SymbolTest
-    extends IonTestCase
+    extends TextTestCase
 {
     public static void checkNullSymbol(IonSymbol value)
     {
@@ -47,6 +47,14 @@ public class SymbolTest
 
         value.setValue(null);
         checkNullSymbol(value);
+    }
+
+
+
+    @Override
+    protected String wrap(String ionText)
+    {
+        return "'" + ionText + "'";
     }
 
 

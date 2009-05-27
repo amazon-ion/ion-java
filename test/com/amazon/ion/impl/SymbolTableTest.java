@@ -13,12 +13,14 @@ import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
 import com.amazon.ion.system.SimpleCatalog;
@@ -26,6 +28,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -278,27 +281,40 @@ public class SymbolTableTest
 
     public void testLocalTableWithMissingImport()
     {
+        // Use a big symtab to get beyond any default allocation within the
+        // dummy symtab.  This was done to trap a bug in UnifiedSymbolTable.
+        ArrayList<String> syms = new ArrayList<String>();
+        int maxId = 50;
+        for (int i = 1; i <= maxId; i++)
+        {
+            syms.add("S" + i);
+        }
+
+        SymbolTable table =
+            system().newSharedSymbolTable("T", 1, syms.iterator());
+
+        SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
+        catalog.putTable(table);
+
         final int import1id = ION_1_0_MAX_ID + 1;
         final int import2id = ION_1_0_MAX_ID + 2;
 
-        final int local1id = ION_1_0_MAX_ID + IMPORTED_1_MAX_ID + 1;
+        final int local1id = ION_1_0_MAX_ID + maxId + 1;
         final int local2id = local1id + 1;
 
-        SymbolTable importedTable = registerImportedV1();
 
         String text =
             LocalSymbolTablePrefix +
             "{" +
             "  symbols:[ \"local1\", \"local2\" ]," +
-            "  imports:[{name:\"imported\", version:1," +
-            "            max_id:" + IMPORTED_1_MAX_ID + "}]," +
+            "  imports:[{name:'''T''', version:1," +
+            "            max_id:" + maxId + "}]," +
             "}\n" +
-            "local1 local2 'imported 1' 'imported 2'";
+            "local1 local2 S1 S2";
         byte[] binary = encode(text);
 
         // Remove the imported table before decoding the binary.
-        SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
-        assertSame(importedTable, catalog.removeTable("imported", 1));
+        assertSame(table, catalog.removeTable("T", 1));
 
         IonDatagram dg = loader().load(binary);
         checkSymbol("local1", local1id, dg.get(0));
@@ -309,14 +325,14 @@ public class SymbolTableTest
         SymbolTable st = dg.get(3).getSymbolTable();
         checkLocalTable(st);
 
-        SymbolTable dummy = findImportedTable(st, "imported");
+        SymbolTable dummy = findImportedTable(st, "T");
         assertEquals(1, dummy.getVersion());
-        assertEquals(IMPORTED_1_MAX_ID, dummy.getMaxId());
-        assertEquals(-1, dummy.findSymbol("imported 1"));
-        assertEquals(-1, dummy.findSymbol("imported 2"));
+        assertEquals(maxId, dummy.getMaxId());
+        assertEquals(-1, dummy.findSymbol("S1"));
+        assertEquals(-1, dummy.findSymbol("S2"));
 
-        assertEquals(-1, st.findSymbol("imported 1"));
-        assertEquals(-1, st.findSymbol("imported 2"));
+        assertEquals(-1, st.findSymbol("S1"));
+        assertEquals(-1, st.findSymbol("S2"));
         assertEquals(-1, st.findSymbol("unknown"));
     }
 
@@ -595,7 +611,7 @@ public class SymbolTableTest
         checkLocalTable(st);
         assertSame(systemTable, st.getSystemSymbolTable());
         assertEquals(systemTable.getMaxId(), st.getMaxId());
-        // TODO getImportMaxId
+        assertEquals(systemTable.getMaxId(), st.getImportedMaxId());
         assertEquals(0, st.getImportedTables().length);
     }
 
@@ -605,11 +621,12 @@ public class SymbolTableTest
         SymbolTable fred1 = Symtabs.CATALOG.getTable("fred", 1);
 
         SymbolTable st = system().newLocalSymbolTable(systemTable, fred1);
+        final int importedMaxId = systemTable.getMaxId() + fred1.getMaxId();
 
         checkLocalTable(st);
         assertSame(systemTable, st.getSystemSymbolTable());
-        assertEquals(systemTable.getMaxId() + fred1.getMaxId(), st.getMaxId());
-        // TODO getImportMaxId
+        assertEquals(importedMaxId, st.getMaxId());
+        assertEquals(importedMaxId, st.getImportedMaxId());
         assertEquals(1, st.getImportedTables().length);
         assertSame(fred1, st.getImportedTables()[0]);
 
@@ -651,6 +668,43 @@ public class SymbolTableTest
 
     //-------------------------------------------------------------------------
     // Shared symtab creation
+
+    public void testSystemNewSharedSymtab()
+        throws Exception
+    {
+        for (String symtab : Symtabs.FRED_SERIALIZED)
+        {
+            if (symtab != null) testSystemNewSharedSymtab(symtab);
+        }
+        for (String symtab : Symtabs.GINGER_SERIALIZED)
+        {
+            if (symtab != null) testSystemNewSharedSymtab(symtab);
+        }
+    }
+
+    public void testSystemNewSharedSymtab(String serializedSymbolTable)
+        throws IOException
+    {
+      IonReader reader = system().newReader(serializedSymbolTable);
+      SymbolTable stFromReader = system().newSharedSymbolTable(reader);
+      assertTrue(stFromReader.isSharedTable());
+
+      IonStruct struct = (IonStruct) oneValue(serializedSymbolTable);
+      SymbolTable stFromValue = system().newSharedSymbolTable(struct);
+      assertTrue(stFromValue.isSharedTable());
+
+      Symtabs.assertEqualSymtabs(stFromReader, stFromValue);
+
+      // Try a bit of round-trip action
+      StringBuilder buf = new StringBuilder();
+      IonWriter out = system().newTextWriter(buf);
+      stFromReader.writeTo(out);
+      reader = system().newReader(buf.toString());
+      SymbolTable reloaded = system().newSharedSymbolTable(reader);
+
+      Symtabs.assertEqualSymtabs(stFromReader, reloaded);
+    }
+
 
     public void testBasicSharedSymtabCreation()
     {

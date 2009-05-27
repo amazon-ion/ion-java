@@ -1,5 +1,6 @@
 // Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
+import com.amazon.ion.AnnotationEscapesTest;
 import com.amazon.ion.BadIonTests;
 import com.amazon.ion.BinaryTest;
 import com.amazon.ion.BlobTest;
@@ -8,14 +9,17 @@ import com.amazon.ion.ClobTest;
 import com.amazon.ion.DatagramTest;
 import com.amazon.ion.DecimalTest;
 import com.amazon.ion.EquivsTests;
+import com.amazon.ion.FieldNameEscapesTest;
 import com.amazon.ion.FloatTest;
 import com.amazon.ion.GoodIonTests;
 import com.amazon.ion.IntTest;
 import com.amazon.ion.ListTest;
 import com.amazon.ion.LoaderTest;
+import com.amazon.ion.LongStringTest;
 import com.amazon.ion.NullTest;
 import com.amazon.ion.RoundTripTests;
 import com.amazon.ion.SexpTest;
+import com.amazon.ion.StringFieldNameEscapesTest;
 import com.amazon.ion.StringTest;
 import com.amazon.ion.StructTest;
 import com.amazon.ion.SymbolTest;
@@ -75,9 +79,14 @@ public class AllTests
         suite.addTestSuite(NullTest.class);
         suite.addTestSuite(SexpTest.class);
         suite.addTestSuite(StringTest.class);
+        suite.addTestSuite(LongStringTest.class);
         suite.addTestSuite(StructTest.class);
         suite.addTestSuite(SymbolTest.class);
         suite.addTestSuite(TimestampTest.class);
+
+        suite.addTestSuite(AnnotationEscapesTest.class);
+        suite.addTestSuite(FieldNameEscapesTest.class);
+        suite.addTestSuite(StringFieldNameEscapesTest.class);
 
         // binary format tests
         suite.addTestSuite(BinaryTest.class);

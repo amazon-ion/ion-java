@@ -2,7 +2,6 @@
 
 package com.amazon.ion;
 
-import java.util.Arrays;
 import com.amazon.ion.impl.IonSystemImpl;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.File;
@@ -10,6 +9,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
@@ -234,8 +234,8 @@ public abstract class IonTestCase
 
     public SymbolTable loadSharedSymtab(String serializedSymbolTable)
     {
-        IonStruct st = (IonStruct) oneValue(serializedSymbolTable);
-        SymbolTable shared = system().newSharedSymbolTable(st);
+        IonReader reader = system().newReader(serializedSymbolTable);
+        SymbolTable shared = system().newSharedSymbolTable(reader);
         assertTrue(shared.isSharedTable());
         return shared;
     }
@@ -357,11 +357,11 @@ public abstract class IonTestCase
         IonDatagram dg = loader().load(ionText);  // Keep here for breakpoint
         return dg.getBytes();
     }
-    
+
     public static void assertArrayEquals(final Object[] expected, final Object[] actual) {
         assertTrue(String.format("Expected array <%s> got <%s>", expected, actual), Arrays.equals(expected, actual));
     }
-    
+
     public void assertEscape(char expected, char escapedChar)
     {
         String ionText = makeEscapedCharString(escapedChar);

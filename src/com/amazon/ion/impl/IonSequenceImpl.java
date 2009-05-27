@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc. All rights reserved.
- */
+// Copyright (c) 2007-20089 Amazon.com, Inc. All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -12,6 +10,7 @@ import com.amazon.ion.ValueFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 
 
@@ -22,6 +21,10 @@ public abstract class IonSequenceImpl
     extends IonContainerImpl
     implements IonSequence
 {
+    /**
+     * A zero-length array.
+     */
+    protected static final IonValue[] EMPTY_VALUE_ARRAY = new IonValue[0];
 
     /**
      * Constructs a sequence backed by a binary buffer.
@@ -111,11 +114,21 @@ public abstract class IonSequenceImpl
 
     @Override
     // Increasing visibility
-    public void add(IonValue element)
+    public boolean add(IonValue element)
         throws ContainedValueException, NullPointerException
     {
         // super.add will check for the lock
-        super.add(element);
+        return super.add(element);
+    }
+
+    public boolean addAll(Collection<? extends IonValue> c)
+    {
+        boolean changed = false;
+        for (IonValue v : c)
+        {
+            changed = add(v) || changed;
+        }
+        return changed;
     }
 
     public ValueFactory add()
@@ -152,6 +165,106 @@ public abstract class IonSequenceImpl
         };
     }
 
+
+    public boolean remove(Object o)
+    {
+        return remove((IonValue) o);
+    }
+
+    public boolean removeAll(Collection<?> c)
+    {
+        boolean changed = false;
+        for (Object o : c)
+        {
+            changed = remove(o) || changed;
+        }
+        return changed;
+    }
+
+    public boolean retainAll(Collection<?> c)
+    {
+        ArrayList<IonValue> contents = userContents();
+        if (contents == null || contents.isEmpty()) return false;
+
+        // TODO this method (and probably several others) needs optimization.
+        IdentityHashMap<IonValue, IonValue> keepers =
+            new IdentityHashMap<IonValue, IonValue>();
+        for (Object o : c)
+        {
+            IonValue v = (IonValue) o;
+            if (this == v.getContainer()) keepers.put(v, v);
+        }
+
+        boolean changed = false;
+        for (int i = contents.size() - 1; i >= 0; i--)
+        {
+            IonValue v = contents.get(i);
+            if (! keepers.containsKey(v))
+            {
+                remove(v);
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+
+    public boolean contains(Object o)
+    {
+        return ((IonValue)o).getContainer() == this;
+    }
+
+    public boolean containsAll(Collection<?> c)
+    {
+        for (Object o : c)
+        {
+            if (! contains(o)) return false;
+        }
+        return true;
+    }
+
+
+    public int indexOf(Object o)
+    {
+        IonValueImpl v = (IonValueImpl) o;
+        if (this != v.getContainer()) return -1;
+        return v.getElementId();
+    }
+
+
+    public IonValue[] toArray()
+    {
+        ArrayList<IonValue> contents = userContents();
+        if (contents == null || contents.isEmpty()) return EMPTY_VALUE_ARRAY;
+
+        IonValue[] array = new IonValue[contents.size()];
+        contents.toArray(array);
+        return array;
+    }
+
+    public <T> T[] toArray(T[] a)
+    {
+        ArrayList<IonValue> contents = userContents();
+        if (contents == null)
+        {
+            if (a.length != 0)
+            {
+                // A surprising bit of spec.
+                a[0] = null;
+            }
+            return a;
+        }
+        return contents.toArray(a);
+    }
+
+
+    //=========================================================================
+
+    protected ArrayList<IonValue> userContents()
+    {
+        makeReady();
+        return _contents;
+    }
 
     @Override
     protected int computeLowNibble(int valuelen)

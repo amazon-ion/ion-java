@@ -1,11 +1,7 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
-import com.amazon.ion.IonReader;
-import com.amazon.ion.IonType;
 import junit.framework.Assert;
 
 /**
@@ -52,5 +48,31 @@ public class TestUtils
             }
         }
     }
+
+
+    /**
+     * U+00A5 YEN SIGN
+     * UTF-8 (hex)      0xC2 0xA5 (c2a5)
+     * UTF-8 (binary)  11000010:10100101
+     * UTF-16 (hex)    0x00A5 (00a5)
+     * UTF-32 (hex)    0x000000A5 (00a5)
+     */
+    public static final String YEN_SIGN = "\u00a5";
+
+    /**
+     * U+1D110 MUSICAL SYMBOL FERMATA
+     * <pre>
+     * UTF-8 (hex)     0xF0 0x9D 0x84 0x90 (f09d8490)
+     * UTF-8 (binary)  11110000:10011101:10000100:10010000
+     * UTF-16 (hex)    0xD834 0xDD10 (d834dd10)
+     * UTF-32 (hex)    0x0001D110 (1d110)
+     * </pre>
+     */
+    public static final String FERMATA = "\ud834\udd10";
+
+    public static final byte[] FERMATA_UTF8 =
+    {
+        (byte) 0xF0, (byte) 0x9D, (byte) 0x84, (byte) 0x90
+    };
 
 }

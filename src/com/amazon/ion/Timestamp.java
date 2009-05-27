@@ -56,12 +56,12 @@ public final class Timestamp
     public final static Integer UTC_OFFSET = new Integer(0);
 
     public static enum Precision {
-    	YEAR,
-    	MONTH,
-    	DAY,
-    	MINUTE,
-    	SECOND,
-    	FRACTION
+        YEAR,
+        MONTH,
+        DAY,
+        MINUTE,
+        SECOND,
+        FRACTION
     }
 
 //    private static final int BIT_FLAG_YEAR      = 0x01;
@@ -100,7 +100,7 @@ public final class Timestamp
 //        case YEAR:      return (precision_flags & BIT_FLAG_YEAR) != 0;
 //        default:        break;
 //        }
-//    	throw new IllegalStateException("unrecognized precision"+isIncluded);
+//        throw new IllegalStateException("unrecognized precision"+isIncluded);
 //    }
 
     /**
@@ -111,26 +111,26 @@ public final class Timestamp
      * of the seconds is controlled by the BigDecimal fraction.
      * This member also encodes whether or not the value is null.
      */
-    private Precision 	_precision;
+    private Precision     _precision;
 
     /**
      * These keep the basic struct values for the timestamp.
      * _month and _day are 1 based (0 is an invalid value for
      * these in a non-null Timestamp.
      */
-    private int 	_year;
-    private int 	_month = 1; // Initialized to valid default
-    private int 	_day   = 1; // Initialized to valid default
-    private int 	_hour;
-    private int 	_minute;
-    private int 	_second;
-    private BigDecimal 	_fraction;  // fractional seconds, this will be between >= 0 and < 1
+    private int     _year;
+    private int     _month = 1; // Initialized to valid default
+    private int     _day   = 1; // Initialized to valid default
+    private int     _hour;
+    private int     _minute;
+    private int     _second;
+    private BigDecimal     _fraction;  // fractional seconds, this will be between >= 0 and < 1
 
     /**
      * Minutes offset from UTC; zero means UTC proper,
      * <code>null</code> means that the offset is unknown.
      */
-    private Integer 	_offset;
+    private Integer     _offset;
 
                                                 //jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec
                                                 // the first 0 is to make these arrays 1 based (since month values are 1-12)
@@ -296,7 +296,7 @@ public final class Timestamp
                 this._hour = cal.get(Calendar.HOUR_OF_DAY);
                 this._minute = cal.get(Calendar.MINUTE);
             case DAY:
-            	this._day = cal.get(Calendar.DAY_OF_MONTH);
+                this._day = cal.get(Calendar.DAY_OF_MONTH);
             case MONTH:
                 this._month = cal.get(Calendar.MONTH) + 1; // calendar months are 0 based, timestamp months are 1 based
             case YEAR:
@@ -334,10 +334,10 @@ public final class Timestamp
      */
     public Timestamp(int zyear, int zmonth, int zday)
     {
-    	if (zyear < 1 || zyear > 9999) throw new IllegalArgumentException("year is between 1 and 9999 inclusive");
-    	if (zmonth < 1 || zmonth > 12) throw new IllegalArgumentException("month is between 1 and 12 inclusive");
-    	int end_of_month = last_day_in_month(zyear, zmonth);
-    	if (zday < 1 || zday > end_of_month) throw new IllegalArgumentException("day is between 1 and "+end_of_month+" inclusive");
+        if (zyear < 1 || zyear > 9999) throw new IllegalArgumentException("year is between 1 and 9999 inclusive");
+        if (zmonth < 1 || zmonth > 12) throw new IllegalArgumentException("month is between 1 and 12 inclusive");
+        int end_of_month = last_day_in_month(zyear, zmonth);
+        if (zday < 1 || zday > end_of_month) throw new IllegalArgumentException("day is between 1 and "+end_of_month+" inclusive");
         this._precision = Precision.DAY;
         this._day = zday;  // days are base 1 (as you'd expect)
         this._month = zmonth;
@@ -475,7 +475,7 @@ public final class Timestamp
      */
     public Timestamp(Calendar cal)
     {
-    	set_fields_from_calendar(cal);
+        set_fields_from_calendar(cal);
     }
 
     /**
@@ -584,7 +584,7 @@ public final class Timestamp
             char c = image.charAt(END_OF_YEAR);
             if (c == 'T') break;
             if (c != '-') {
-            	throw new IllegalArgumentException("invalid timestamp: expected \"-\" between year and month, found " + printCodePointAsString(c));
+                throw new IllegalArgumentException("invalid timestamp: expected \"-\" between year and month, found " + printCodePointAsString(c));
             }
             if (length < END_OF_MONTH + 1) {  // +1 for the "T"
                 throw new IllegalArgumentException("invalid timestamp image: year month form is too short (must be yyyy-mmT)");
@@ -611,7 +611,7 @@ public final class Timestamp
             }
             if (length == END_OF_DAY + 1) break;
 
-        	// now lets see if we have a time value
+            // now lets see if we have a time value
             if (length < END_OF_MINUTES) {
                 throw new IllegalArgumentException("invalid timestamp image: too short for yyyy-mm-ddThh:mm");
             }
@@ -718,24 +718,24 @@ public final class Timestamp
     }
 
     private static boolean isValidFollowChar(char c) {
-    	switch (c) {
-    	default:
-    	    return false;
-    	case '{':
-    	case '}':
-    	case '[':
-    	case ']':
-    	case '(':
-    	case ')':
-    	case ',':
-    	case '\"':
-    	case '\'':
-    	case '\\':
-    	case '\t':
-    	case '\n':
-    	case '\r':
-    	    return true;
-    	}
+        switch (c) {
+        default:
+            return false;
+        case '{':
+        case '}':
+        case '[':
+        case ']':
+        case '(':
+        case ')':
+        case ',':
+        case '\"':
+        case '\'':
+        case '\\':
+        case '\t':
+        case '\n':
+        case '\r':
+            return true;
+        }
     }
 
     @Override
@@ -791,13 +791,13 @@ public final class Timestamp
     @SuppressWarnings("deprecation")
     public Date dateValue()
     {
-    	//                                        month is 0 based for Date
-    	long millis = Date.UTC(this._year - 1900, this._month - 1, this._day, this._hour, this._minute, this._second);
-    	if (this._precision == Precision.FRACTION) {
-    	    int frac = this._fraction.movePointRight(3).intValue();
-    	    millis += frac;
-    	}
-    	Date d = new Date(millis);
+        //                                        month is 0 based for Date
+        long millis = Date.UTC(this._year - 1900, this._month - 1, this._day, this._hour, this._minute, this._second);
+        if (this._precision == Precision.FRACTION) {
+            int frac = this._fraction.movePointRight(3).intValue();
+            millis += frac;
+        }
+        Date d = new Date(millis);
         return d;
     }
 
@@ -815,11 +815,11 @@ public final class Timestamp
     @SuppressWarnings("deprecation")
     public long getMillis()
     {
-    	long millis = Date.UTC(this._year - 1900, this._month - 1, this._day, this._hour, this._minute, this._second);
-    	if (this._precision == Precision.FRACTION) {
-    	    int frac = this._fraction.movePointRight(3).intValue();
-    	    millis += frac;
-    	}
+        long millis = Date.UTC(this._year - 1900, this._month - 1, this._day, this._hour, this._minute, this._second);
+        if (this._precision == Precision.FRACTION) {
+            int frac = this._fraction.movePointRight(3).intValue();
+            millis += frac;
+        }
         return millis;
 
     }
@@ -837,24 +837,24 @@ public final class Timestamp
     @SuppressWarnings("deprecation")
     public BigDecimal getDecimalMillis()
     {
-    	long       millis;
-    	BigDecimal dec;
+        long       millis;
+        BigDecimal dec;
 
-    	switch (this._precision) {
-    	case YEAR:
-    	case MONTH:
-    	case DAY:
-    	case MINUTE:
-    	case SECOND:
-    	    millis = Date.UTC(this._year - 1900, this._month - 1, this._day, this._hour, this._minute, this._second);
-    	    return new BigDecimal(millis);
-    	case FRACTION:
-    	    millis = Date.UTC(this._year - 1900, this._month - 1, this._day, this._hour, this._minute, this._second);
-    	    dec = new BigDecimal(millis);
-    	    dec = dec.add(this._fraction.movePointRight(3));
-    	    return dec;
-    	}
-    	throw new IllegalArgumentException();
+        switch (this._precision) {
+        case YEAR:
+        case MONTH:
+        case DAY:
+        case MINUTE:
+        case SECOND:
+            millis = Date.UTC(this._year - 1900, this._month - 1, this._day, this._hour, this._minute, this._second);
+            return new BigDecimal(millis);
+        case FRACTION:
+            millis = Date.UTC(this._year - 1900, this._month - 1, this._day, this._hour, this._minute, this._second);
+            dec = new BigDecimal(millis);
+            dec = dec.add(this._fraction.movePointRight(3));
+            return dec;
+        }
+        throw new IllegalArgumentException();
     }
 
 
@@ -864,7 +864,7 @@ public final class Timestamp
      */
     public Precision getPrecision()
     {
-    	return this._precision;
+        return this._precision;
     }
 
     /**
@@ -890,28 +890,28 @@ public final class Timestamp
      */
     public int getYear()
     {
-    	Timestamp adjusted = this;
+        Timestamp adjusted = this;
 
-    	if (this._offset != null) {
-    	    int offset = this._offset.intValue();
-    	    boolean needs_adjustment = false;
-    	    if (offset < 0) {
-    	        // look for the only case the year might roll over forward
-    	        if (this._month == 12 && this._day == 31) {
-    	            needs_adjustment = true;
-    	        }
-    	    }
-    	    else {
-    	        // look for the only case the year might roll over forward
-    	        if (this._month == 1 && this._day == 1) {
-    	            needs_adjustment = true;
-    	        }
-    	    }
-    	    if (needs_adjustment) {
-    	        adjusted = make_localtime();
-    	    }
-    	}
-    	return adjusted._year;
+        if (this._offset != null) {
+            int offset = this._offset.intValue();
+            boolean needs_adjustment = false;
+            if (offset < 0) {
+                // look for the only case the year might roll over forward
+                if (this._month == 12 && this._day == 31) {
+                    needs_adjustment = true;
+                }
+            }
+            else {
+                // look for the only case the year might roll over forward
+                if (this._month == 1 && this._day == 1) {
+                    needs_adjustment = true;
+                }
+            }
+            if (needs_adjustment) {
+                adjusted = make_localtime();
+            }
+        }
+        return adjusted._year;
     }
 
     /**
@@ -920,28 +920,28 @@ public final class Timestamp
      */
     public int getMonth()
     {
-    	Timestamp adjusted = this;
+        Timestamp adjusted = this;
 
-    	if (this._offset != null) {
-    	    int offset = this._offset.intValue();
-    	    boolean needs_adjustment = false;
-    	    if (offset < 0) {
-    	        // look for the only case the year might roll over forward
-    	        if (this._day == Timestamp.last_day_in_month(this._year, this._month)) {
-    	            needs_adjustment = true;
-    	        }
-    	    }
-    	    else {
-    	        // look for the only case the year might roll over forward
-    	        if (this._day == 1) {
-    	            needs_adjustment = true;
-    	        }
-    	    }
-    	    if (needs_adjustment) {
-    	        adjusted = make_localtime();
-    	    }
-    	}
-    	return adjusted._month;
+        if (this._offset != null) {
+            int offset = this._offset.intValue();
+            boolean needs_adjustment = false;
+            if (offset < 0) {
+                // look for the only case the year might roll over forward
+                if (this._day == Timestamp.last_day_in_month(this._year, this._month)) {
+                    needs_adjustment = true;
+                }
+            }
+            else {
+                // look for the only case the year might roll over forward
+                if (this._day == 1) {
+                    needs_adjustment = true;
+                }
+            }
+            if (needs_adjustment) {
+                adjusted = make_localtime();
+            }
+        }
+        return adjusted._month;
     }
 
     /**
@@ -950,13 +950,13 @@ public final class Timestamp
      */
     public int getDay()
     {
-    	Timestamp adjusted = this;
-    	if (this._offset != null) {
-    	    if (this._offset.intValue() != 0) {
-    	        adjusted = make_localtime();
-    	    }
-    	}
-    	return adjusted._day;
+        Timestamp adjusted = this;
+        if (this._offset != null) {
+            if (this._offset.intValue() != 0) {
+                adjusted = make_localtime();
+            }
+        }
+        return adjusted._day;
     }
 
     /**
@@ -965,13 +965,13 @@ public final class Timestamp
      */
     public int getHour()
     {
-    	Timestamp adjusted = this;
-    	if (this._offset != null) {
-    	    if (this._offset.intValue() != 0) {
-    	        adjusted = make_localtime();
-    	    }
-    	}
-    	return adjusted._hour;
+        Timestamp adjusted = this;
+        if (this._offset != null) {
+            if (this._offset.intValue() != 0) {
+                adjusted = make_localtime();
+            }
+        }
+        return adjusted._hour;
     }
 
     /**
@@ -980,13 +980,13 @@ public final class Timestamp
      */
     public int getMinute()
     {
-    	Timestamp adjusted = this;
-    	if (this._offset != null) {
-    	    if (this._offset.intValue() != 0) {
-    	        adjusted = make_localtime();
-    	    }
-    	}
-    	return adjusted._minute;
+        Timestamp adjusted = this;
+        if (this._offset != null) {
+            if (this._offset.intValue() != 0) {
+                adjusted = make_localtime();
+            }
+        }
+        return adjusted._minute;
     }
 
     /**
@@ -995,7 +995,7 @@ public final class Timestamp
      */
     public int getSecond()
     {
-    	return this._second;
+        return this._second;
     }
 
     /**
@@ -1014,7 +1014,7 @@ public final class Timestamp
      */
     public int getZYear()
     {
-    	return this._year;
+        return this._year;
     }
 
     /**
@@ -1025,7 +1025,7 @@ public final class Timestamp
      */
     public int getZMonth()
     {
-    	return this._month;
+        return this._month;
     }
 
     /**
@@ -1034,7 +1034,7 @@ public final class Timestamp
      */
     public int getZDay()
     {
-    	return this._day;
+        return this._day;
     }
 
     /**
@@ -1043,7 +1043,7 @@ public final class Timestamp
      */
     public int getZHour()
     {
-    	return this._hour;
+        return this._hour;
     }
 
     /**
@@ -1052,7 +1052,7 @@ public final class Timestamp
      */
     public int getZMinute()
     {
-    	return this._minute;
+        return this._minute;
     }
 
     /**
@@ -1061,7 +1061,7 @@ public final class Timestamp
      */
     public int getZSecond()
     {
-    	return this._second;
+        return this._second;
     }
 
     /**
@@ -1071,7 +1071,7 @@ public final class Timestamp
      */
     public BigDecimal getZFractionalSecond()
     {
-    	return this._fraction;
+        return this._fraction;
     }
 
     @Override
@@ -1124,14 +1124,14 @@ public final class Timestamp
         // we have to make a copy to preserve the "immutable" contract
         // on Timestamp and we don't want someone reading the calendar
         // member while we've shifted it around.
-    	Timestamp adjusted = this;
+        Timestamp adjusted = this;
 
-    	// Adjust UTC time back to local time
-    	if (this._offset != null) {
-    	    if (this._offset.intValue() != 0) {
-    	        adjusted = make_localtime();
-    	    }
-    	}
+        // Adjust UTC time back to local time
+        if (this._offset != null) {
+            if (this._offset.intValue() != 0) {
+                adjusted = make_localtime();
+            }
+        }
 
         print(out, adjusted);
     }
@@ -1148,9 +1148,9 @@ public final class Timestamp
     public void printZ(Appendable out)
         throws IOException
     {
-    	Timestamp ztime = this.clone();
-    	ztime._offset = null;
-    	ztime.print(out);
+        Timestamp ztime = this.clone();
+        ztime._offset = null;
+        ztime.print(out);
     }
 
     /**
@@ -1175,22 +1175,22 @@ public final class Timestamp
         // which we always have
         print_digits(out, adjusted._year, 4);
         if (adjusted._precision == Precision.YEAR) {
-        	out.append("T");
-        	return;
+            out.append("T");
+            return;
         }
 
         out.append("-");
         print_digits(out, adjusted._month, 2);  // convert calendar months to a base 1 value
         if (adjusted._precision == Precision.MONTH) {
-        	out.append("T");
-        	return;
+            out.append("T");
+            return;
         }
 
         out.append("-");
         print_digits(out, adjusted._day, 2);
         if (adjusted._precision == Precision.DAY && adjusted._offset == null) {
-        	// out.append("T");
-        	return;
+            // out.append("T");
+            return;
         }
 
         // see if we have some time
@@ -1257,13 +1257,13 @@ public final class Timestamp
         }
     }
     private static void print_fractional_digits(Appendable out, BigDecimal value)
-    	throws IOException
+        throws IOException
     {
-    	String temp = value.toPlainString(); // crude, but it works
-    	if (temp.charAt(0) == '0') { // this should always be true
-    	    temp = temp.substring(1);
-    	}
-    	out.append(temp);
+        String temp = value.toPlainString(); // crude, but it works
+        if (temp.charAt(0) == '0') { // this should always be true
+            temp = temp.substring(1);
+        }
+        out.append(temp);
     }
 
     // TODO - check this and see if we're really getting decent values out of this
@@ -1309,7 +1309,7 @@ public final class Timestamp
      * If the instant represented by this object precedes that of {@code t},
      * then {@code -1} is returned.
      * If {@code t} precedes this object then {@code 1} is returned.
-     * If the timestamps represent the same instance on the timeline, then
+     * If the timestamps represent the same instant on the timeline, then
      * {@code 0} is returned.
      * Note that a {@code 0} result does not imply that the two values are
      * {@link #equals}, as the timezones or precision of the two values may be
@@ -1323,11 +1323,14 @@ public final class Timestamp
      */
     public int compareTo(Timestamp t)
     {
+        // Test at millisecond precision first.
         long this_millis = this.getMillis();
         long arg_millis = t.getMillis();
         if (this_millis != arg_millis) {
             return (this_millis < arg_millis) ? -1 : 1;
         }
+
+        // Values are equivalent at millisecond precision, so compare fraction
 
         BigDecimal this_fraction =
             ((this._fraction == null) ? BigDecimal.ZERO : this._fraction);
@@ -1349,8 +1352,8 @@ public final class Timestamp
     @Override
     public boolean equals(Object t)
     {
-    	if (!(t instanceof Timestamp)) return false;
-    	return equals((Timestamp)t);
+        if (!(t instanceof Timestamp)) return false;
+        return equals((Timestamp)t);
     }
 
     /**

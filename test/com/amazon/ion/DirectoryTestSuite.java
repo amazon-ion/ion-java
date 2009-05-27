@@ -23,11 +23,13 @@ public abstract class DirectoryTestSuite
         setName(getClass().getName());
 
         File goodFilesDir = IonTestCase.getTestdataFile(testdataDir);
+
         String[] fileNames = goodFilesDir.list();
         if (fileNames == null)
         {
             String message =
-                "testdataDir is not a directory: " + testdataDir;
+                "testdataDir is not a directory: "
+                + goodFilesDir.getAbsolutePath();
             throw new IllegalArgumentException(message);
         }
 

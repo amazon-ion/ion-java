@@ -280,4 +280,13 @@ public class LoaderImpl
         SystemReader systemReader = mySystem.newBinarySystemReader(ionBinary);
         return new IonDatagramImpl(mySystem, systemReader);
     }
+    
+    @Deprecated
+    public IonDatagramImpl loadPagedBinary(InputStream ionBinary)
+        throws IOException
+    {
+        SystemReader systemReader = mySystem.newPagedBinarySystemReader(ionBinary);
+        return new IonDatagramImpl(mySystem, systemReader);
+    }
+    
 }

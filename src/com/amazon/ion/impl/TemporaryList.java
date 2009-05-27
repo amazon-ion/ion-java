@@ -58,10 +58,11 @@ public class TemporaryList
 
 
     @Override
-    public void add(IonValue v) {
+    public boolean add(IonValue v) {
         checkForLock();
         validateNewChild(v);
         add(size(), v, false);
+        return true;
     }
 
     @Override

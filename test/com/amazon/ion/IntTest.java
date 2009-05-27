@@ -219,21 +219,21 @@ public class IntTest
             v.setValue(2);
             fail("Expected exception for modifying read-only value");
         }
-        catch (IonException e) { }
+        catch (ReadOnlyValueException e) { }
         assertEquals(1, v.intValue());
 
         try {
             v.setValue(2L);
             fail("Expected exception for modifying read-only value");
         }
-        catch (IonException e) { }
+        catch (ReadOnlyValueException e) { }
         assertEquals(1, v.intValue());
 
         try {
             v.setValue(new Long(2));
             fail("Expected exception for modifying read-only value");
         }
-        catch (IonException e) { }
+        catch (ReadOnlyValueException e) { }
         assertEquals(1, v.intValue());
     }
 }

@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.apps;
 
@@ -73,6 +71,7 @@ public class PrintApp
                                                + path);
                 }
             }
+            // TODO --help
             else
             {
                 // this arg is not an option, we're done here

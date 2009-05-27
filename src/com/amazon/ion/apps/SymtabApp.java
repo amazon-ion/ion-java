@@ -9,6 +9,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -158,7 +159,7 @@ public class SymtabApp
                                           mySymbols.iterator(),
                                           importArray);
 
-        IonWriter w = mySystem.newTextWriter(System.out);
+        IonWriter w = mySystem.newTextWriter((OutputStream)System.out);
         try
         {
             // TODO ensure IVM is printed
@@ -184,16 +185,8 @@ public class SymtabApp
 //            System.err.println("Next: " + type);
 //            System.err.println("isInStruct=" + reader.isInStruct());
 
-//            if (reader.isInStruct())
-            {
-                String fieldName = reader.getFieldName();
-
-                if (fieldName != null)
-                {
-//                    System.err.println("Adding field name: " + fieldName);
-                    mySymbols.add(fieldName);
-                }
-            }
+            String fieldName = reader.getFieldName();
+            intern(fieldName);
 
             internAnnotations(reader);
 
@@ -201,10 +194,7 @@ public class SymtabApp
                 case SYMBOL:
                 {
                     String text = reader.stringValue();
-                    if (text != null)
-                    {
-                        mySymbols.add(text);
-                    }
+                    intern(text);
                     break;
                 }
                 case LIST:
@@ -237,7 +227,16 @@ public class SymtabApp
         while (i.hasNext())
         {
             String ann = i.next();
-            mySymbols.add(ann);
+            intern(ann);
+        }
+    }
+
+    private void intern(String text)
+    {
+        if (text != null)
+        {
+            if (text.equals("$ion") || text.startsWith("$ion_")) return;
+            mySymbols.add(text);
         }
     }
 }

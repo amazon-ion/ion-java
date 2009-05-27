@@ -512,7 +512,7 @@ abstract public class IonContainerImpl
      *   if {@code child} is an {@link IonDatagram}.
      * @throws ContainedValueException
      */
-    protected void add(IonValue child)
+    protected boolean add(IonValue child)
         throws NullPointerException, IllegalArgumentException,
         ContainedValueException
     {
@@ -525,6 +525,7 @@ abstract public class IonContainerImpl
         int size = (_contents == null ? 0 : _contents.size());
 
         add(size, child, true);
+        return true;
     }
 
     /**
@@ -591,6 +592,7 @@ abstract public class IonContainerImpl
         throws ContainedValueException, NullPointerException
     {
         final IonValueImpl concrete = ((IonValueImpl) element);
+        concrete.checkForLock();
 
         // TODO: try to reuse the byte array if it is present
         // and the symbol tables are compatible or
@@ -599,7 +601,7 @@ abstract public class IonContainerImpl
         // otherwise clear the buffer and re-init the positions
         //byte[] bytes = null;
         //if (
-        // 	&& concrete._buffer != null
+        //    && concrete._buffer != null
         //    && !concrete.isDirty()
         //    && concrete.getSymbolTable().isCompatible(this.getSymbolTable()))
         //{
@@ -699,8 +701,8 @@ abstract public class IonContainerImpl
         if (child == concrete) // Yes, instance identity.
         {
             try {
-                _contents.remove(pos);
                 concrete.detachFromContainer();
+                _contents.remove(pos);
                 updateElementIds(pos);
                 this.setDirty();
             }

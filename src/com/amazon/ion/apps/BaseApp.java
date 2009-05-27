@@ -3,9 +3,7 @@
 package com.amazon.ion.apps;
 
 import com.amazon.ion.IonCatalog;
-import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.SymbolTable;
@@ -23,8 +21,8 @@ import java.io.InputStream;
  */
 abstract class BaseApp
 {
-    protected IonCatalog myCatalog = new SimpleCatalog();
-    protected IonSystem  mySystem  = SystemFactory.newSystem(myCatalog);
+    protected SimpleCatalog myCatalog = new SimpleCatalog();
+    protected IonSystem mySystem = SystemFactory.newSystem(myCatalog);
 
 
     //=========================================================================
@@ -191,19 +189,26 @@ abstract class BaseApp
     }
 
 
-
-
     protected void loadCatalog(String catalogPath)
     {
         System.err.println("Loading catalog from " + catalogPath);
-        IonLoader loader = mySystem.newLoader();
         File catalogFile = new File(catalogPath);
         try
         {
-            IonDatagram dg = loader.load(catalogFile);
-            // FIXME must deserialize symtabs from the file
-            // In the past the loader would automatically add all shared
-            // symtabs into the catalog, but that's no longer true
+            FileInputStream fis = new FileInputStream(catalogFile);
+            try
+            {
+                IonReader reader = mySystem.newReader(fis);
+                while (reader.hasNext())
+                {
+                    SymbolTable symtab = mySystem.newSharedSymbolTable(reader);
+                    myCatalog.putTable(symtab);
+                }
+            }
+            finally
+            {
+                fis.close();
+            }
         }
         catch (Exception e)
         {

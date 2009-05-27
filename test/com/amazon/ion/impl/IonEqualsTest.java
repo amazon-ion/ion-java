@@ -2,6 +2,7 @@ package com.amazon.ion.impl;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonValue;
@@ -168,19 +169,20 @@ public class IonEqualsTest {
 
     @Test
     public void testTimeStamp2() {
-        assertIonEq(ion("2007-10-10"), ion("2007-10-10T00:00:00.0000-00:00"));
+        assertNotIonEq(ion("2007-10-10"),
+                       ion("2007-10-10T00:00:00.0000-00:00"));
     }
 
     @Test
     public void testTimeStamp3() {
         assertIonEq(ion("1950-01-01T07:30:23Z"),
-                ion("1950-01-01T07:30:23+00:00"));
+                    ion("1950-01-01T07:30:23+00:00"));
     }
 
     @Test
     public void testTimeStamp4() {
-        assertIonEq(ion("1950-01-01T07:30:23.01Z"),
-                ion("1950-01-01T07:30:23.010Z"));
+        assertNotIonEq(ion("1950-01-01T07:30:23.01Z"),
+                       ion("1950-01-01T07:30:23.010Z"));
     }
 
     @Test

@@ -107,21 +107,21 @@ public class BoolTest
             v.setValue(false);
             fail("Expected exception for modifying read-only value");
         }
-        catch (IonException e) { }
+        catch (ReadOnlyValueException e) { }
         assertTrue(v.booleanValue());
 
         try {
             v.setValue(Boolean.FALSE);
             fail("Expected exception for modifying read-only value");
         }
-        catch (IonException e) { }
+        catch (ReadOnlyValueException e) { }
         assertTrue(v.booleanValue());
 
         try {
             v.setValue((Boolean) null);
             fail("Expected exception for modifying read-only value");
         }
-        catch (IonException e) { }
+        catch (ReadOnlyValueException e) { }
         assertTrue(v.booleanValue());
     }
 }

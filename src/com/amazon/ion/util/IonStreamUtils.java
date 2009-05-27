@@ -9,8 +9,8 @@ import com.amazon.ion.impl.IonBinaryWriterImpl;
 import java.io.IOException;
 
 /**
- * Utility methods for working with the Ion streaming APIs, {@link IonReader}
- * and {@link IonWriter}.
+ * Utility methods for working with the Ion streaming interfaces,
+ * {@link IonReader} and {@link IonWriter}.
  */
 public class IonStreamUtils
 {

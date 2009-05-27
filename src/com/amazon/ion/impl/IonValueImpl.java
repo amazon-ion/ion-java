@@ -8,9 +8,11 @@ import static com.amazon.ion.util.Equivalence.ionEquals;
 
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.NullValueException;
+import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.impl.IonBinary.BufferManager;
@@ -26,14 +28,17 @@ public abstract class IonValueImpl
     implements IonValue
 {
     private static final String[] EMPTY_ANNOTATIONS = new String[0];
-    
+
     /**
      * We could multiplex this with member id, but it adds way more complexity
      * than it saves space.
+     * <p>
+     * WARNING: This member can change even when the value is read-only, since
+     * the container may be mutable and have values added or removed.
      */
-    int         _elementid;
+    protected int _elementid;
     private String _fieldName;
-    String[]    _annotations;
+    private String[] _annotations;
 
     //
     //      | td w vlen | value |
@@ -54,7 +59,7 @@ public abstract class IonValueImpl
     //             ^ [+ len(mid)]   value_content_start ^
     //                                               next_start ^
     //
-    protected int _fieldSid;        // field symbol id in buffer
+    private int _fieldSid;        // field symbol id in buffer
 
     /**
      * The actual TD byte of the value.
@@ -133,7 +138,7 @@ public abstract class IonValueImpl
      */
     protected boolean    _isLocked;
 
-    boolean              _isSystemValue;
+    protected boolean    _isSystemValue;
 
     /**
      * This is the containing value, if there is one.  The container
@@ -493,9 +498,10 @@ public abstract class IonValueImpl
         return _isLocked;
     }
 
-    protected void checkForLock() {
-        if (!_isLocked) return;
-        throw new IonException("locked values cannot be modified");
+    protected final void checkForLock() {
+        if (_isLocked) {
+            throw new ReadOnlyValueException();
+        }
     }
 
     /**
@@ -572,6 +578,13 @@ public abstract class IonValueImpl
         setDirty();
     }
 
+
+    /**
+     * Gets the index of this value within its container.
+     * @return zero if this is not within a container.
+     * @deprecated Use {@link IonSequence#indexOf(Object)}
+     */
+    @Deprecated
     public int getElementId() {
         return this._elementid;
     }
@@ -1014,6 +1027,8 @@ public abstract class IonValueImpl
      */
     protected final void detachFromContainer() throws IOException
     {
+        checkForLock();
+
         // TODO this should really copy the buffer to avoid materialization.
         // Note: that forces extraction and reconstruction of the local symtab.
         detachFromBuffer();
@@ -1026,7 +1041,7 @@ public abstract class IonValueImpl
         _elementid = 0;
     }
 
-    void setFieldName(String name) {
+    protected void setFieldName(String name) {
         assert this._fieldName == null;
 
         // First materialize, because we're gonna mark ourselves dirty.

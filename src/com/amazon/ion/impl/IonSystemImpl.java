@@ -64,8 +64,8 @@ public class IonSystemImpl
     private final UnifiedSymbolTable mySystemSymbols =
         UnifiedSymbolTable.getSystemSymbolTableInstance();
 
-    private IonCatalog myCatalog;
-    private IonLoader  myLoader = new LoaderImpl(this);
+    private IonCatalog  myCatalog;
+    private IonLoader   myLoader = new LoaderImpl(this);
 
 
     public IonSystemImpl()
@@ -152,6 +152,11 @@ public class IonSystemImpl
         return st;
     }
 
+    public UnifiedSymbolTable newSharedSymbolTable(IonReader reader)
+    {
+        UnifiedSymbolTable st = new UnifiedSymbolTable(reader);
+        return st;
+    }
 
     public UnifiedSymbolTable newSharedSymbolTable(String name,
                                                    int version,
@@ -460,7 +465,21 @@ public class IonSystemImpl
         return new IonTextWriter(out);
     }
 
+    public IonWriter newTextWriter(Appendable out)
+    {
+        return new IonTextWriter(out, false, true);
+    }
+
     public IonWriter newTextWriter(OutputStream out, SymbolTable... imports)
+        throws IOException
+    {
+        UnifiedSymbolTable lst = newLocalSymbolTable(imports);
+        IonTextWriter writer = new IonTextWriter(out);
+        writer.setSymbolTable(lst);
+        return writer;
+    }
+
+    public IonWriter newTextWriter(Appendable out, SymbolTable... imports)
         throws IOException
     {
         UnifiedSymbolTable lst = newLocalSymbolTable(imports);
@@ -564,6 +583,12 @@ public class IonSystemImpl
     {
         BufferManager buffer = new BufferManager(ionBinary);
         return new SystemReader(this, buffer);
+    }
+
+    public SystemReader newPagedBinarySystemReader(InputStream ionBinary)
+        throws IOException
+    {
+        return new SystemReader(this, ionBinary);
     }
 
     //-------------------------------------------------------------------------

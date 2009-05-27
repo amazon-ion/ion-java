@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
+/* Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -19,9 +19,9 @@ public abstract class ContainerTestCase
     protected abstract void add(IonContainer container, IonValue child);
 
     /**
-     * Creates Ion text of a container, using given fragments of Ion text.
+     * Creates a container, using given fragments of Ion text.
      */
-    protected abstract String wrap(String... children);
+    protected abstract IonContainer wrapAndParse(String... children);
 
     /**
      * Creates a container holding given values.
@@ -56,6 +56,8 @@ public abstract class ContainerTestCase
     public void testNullMakeReadOnly()
     {
         IonContainer c = makeNull();
+        if (c == null) return; // Hack for datagram
+
         c.makeReadOnly();
         assertTrue(c.isNullValue());
         assertTrue(c.isReadOnly());
@@ -65,7 +67,7 @@ public abstract class ContainerTestCase
             add(c, system().newNull());
             fail("expected exception");
         }
-        catch (IonException e) { } // TODO more specific exception
+        catch (ReadOnlyValueException e) { }
 
         assertTrue(c.isNullValue());
         assertTrue(c.isReadOnly());
@@ -83,7 +85,7 @@ public abstract class ContainerTestCase
             add(c, system().newNull());
             fail("expected exception");
         }
-        catch (IonException e) { } // TODO more specific exception
+        catch (ReadOnlyValueException e) { }
 
         assertTrue(c.isEmpty());
         assertTrue(c.isReadOnly());
@@ -104,21 +106,21 @@ public abstract class ContainerTestCase
             add(c, system().newNull());
             fail("expected exception");
         }
-        catch (IonException e) { } // TODO more specific exception
+        catch (ReadOnlyValueException e) { }
 
         try
         {
             c.remove(first);
             fail("expected exception");
         }
-        catch (IonException e) { } // TODO more specific exception
+        catch (ReadOnlyValueException e) { }
 
         try
         {
             ((IonString)first).setValue("changed");
             fail("expected exception");
         }
-        catch (IonException e) { } // TODO more specific exception
+        catch (ReadOnlyValueException e) { }
 
         assertEquals(3, c.size());
         assertTrue(c.isReadOnly());
@@ -183,6 +185,8 @@ public abstract class ContainerTestCase
         assertFalse(c.remove(n));
         assertTrue(c.isEmpty());
 
+        if (c instanceof IonDatagram) return;
+
         c.makeNull();
         assertFalse(c.remove(n));
     }
@@ -190,8 +194,9 @@ public abstract class ContainerTestCase
 
     public void testDetachHasDifferentSymtab()
     {
-        IonContainer list = (IonContainer)
-            oneValue(wrap("sym1", "[sym2]", "{f:sym3}", "a::3"));
+        IonContainer list = wrapAndParse("sym1", "[sym2]", "{f:sym3}", "a::3");
+        if (list instanceof IonDatagram) return;
+
         SymbolTable topSymtab = list.getSymbolTable();
         assertNotNull(topSymtab);
 
@@ -237,9 +242,47 @@ public abstract class ContainerTestCase
      */
     public void testUnmaterializedInsert()
     {
-        String emptyText = wrap((String[])null);
-        IonContainer c = (IonContainer) system().singleValue(emptyText);
+        IonContainer c = wrapAndParse((String[])null);
         IonValue v = system().singleValue("1");
         add(c, v);
+    }
+
+
+    public void testAddingReadOnlyChild()
+    {
+        IonContainer c = makeEmpty();
+
+        IonNull n = system().newNull();
+        n.makeReadOnly();
+
+        try
+        {
+            add(c, n);
+            fail("expected exception");
+        }
+        catch (ReadOnlyValueException e) { }
+
+        assertEquals(null, n.getContainer());
+        assertTrue(c.isEmpty());
+    }
+
+    public void testRemovingReadOnlyChild()
+    {
+        IonContainer c = makeEmpty();
+
+        IonNull n = system().newNull();
+        add(c, n);
+
+        n.makeReadOnly();
+
+        try
+        {
+            c.remove(n);
+            fail("expected exception");
+        }
+        catch (ReadOnlyValueException e) { }
+
+        assertSame(c, n.getContainer());
+        assertSame(n, c.iterator().next());
     }
 }

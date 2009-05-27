@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 
 /**
@@ -135,6 +136,8 @@ public final class IonDatagramImpl
     protected void copyFrom(IonContainerImpl source)
         throws NullPointerException, IllegalArgumentException, IOException
     {
+        // FIXME this method is unused, since our clone() does its own thing.
+
         // first copy the annotations and such, which
         // will materialize the value as needed.
         // This will materialize the field name and
@@ -276,6 +279,13 @@ public final class IonDatagramImpl
     }
 
 
+    @Override
+    protected ArrayList<IonValue> userContents()
+    {
+        makeReady();
+        return _userContents;
+    }
+
     private IonSymbolImpl makeIonVersionMarker()
     {
         IonSymbolImpl ivm =
@@ -290,7 +300,7 @@ public final class IonDatagramImpl
     // FIXME need to make add more solid, maintain symbol tables etc.
 
     @Override
-    public void add(IonValue element)
+    public boolean add(IonValue element)
         throws ContainedValueException, NullPointerException
     {
         boolean isSystem = false;
@@ -307,6 +317,7 @@ public final class IonDatagramImpl
         int userPos = isSystem ? -1 : this._userContents.size();
         try {
             this.add( element, systemPos, userPos );
+            return true;
         } catch (IOException e) {
             throw new IonException(e);
         }
@@ -447,9 +458,8 @@ public final class IonDatagramImpl
     @Override
     public void clear()
     {
-        // TODO implement datagram clear
-        throw new UnsupportedOperationException();
-
+        super.clear();
+        _userContents.clear();
     }
 
     @Override
@@ -460,9 +470,27 @@ public final class IonDatagramImpl
 
 
     @Override
+    public int indexOf(Object o)
+    {
+        IonValueImpl v = (IonValueImpl) o;
+        if (this != v.getContainer()) return -1;
+
+        // elementId is index in system _contents
+        int i = Math.min(v.getElementId(), _userContents.size() - 1);
+        for (; i >= 0; i--)
+        {
+            if (_userContents.get(i) == v) return i;
+        }
+        throw new RuntimeException("Inconsistent state in datagram.");
+    }
+
+
+    @Override
     public boolean remove(IonValue element) throws NullValueException
     {
         checkForLock();
+
+        if (element.getContainer() != this) return false;
 
         // TODO may leave dead symbol tables (and/or symbols) in the datagram
         for (Iterator<IonValue> i = _userContents.iterator(); i.hasNext();)
@@ -470,13 +498,21 @@ public final class IonDatagramImpl
             IonValue child = i.next();
             if (child == element) // Yes, instance identity.
             {
-                i.remove();
                 super.remove(element);
+                i.remove();
                 return true;
             }
         }
         return false;
     }
+
+
+    @Override
+    public boolean retainAll(Collection<?> c)
+    {
+        throw new UnsupportedOperationException();
+    }
+
 
     @Override
     public int size() throws NullValueException
@@ -710,7 +746,11 @@ public final class IonDatagramImpl
     }
 
 
-    private int updateBuffer() throws IonException
+    /**
+     * FIXME this can modify state, even when read-only
+     * I'm not confident that synchronization is sufficient.
+     */
+    private synchronized int updateBuffer() throws IonException
     {
         int oldSize = 0;
 

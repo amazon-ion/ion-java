@@ -71,6 +71,9 @@ public abstract class SystemProcessingTestCase
     protected abstract void checkFloat(double expected)
         throws Exception;
 
+    /**
+     * @param expected is the canonical form of the timestamp
+     */
     protected abstract void checkTimestamp(String expected)
         throws Exception;
 
@@ -474,6 +477,23 @@ public abstract class SystemProcessingTestCase
         checkSymbol("+");
         nextValue();
         checkTimestamp("2009-02-18");
+        checkEof();
+    }
+
+    public void testShortTimestamps()
+        throws Exception
+    {
+        String text = "2007T 2007-04T 2007-04-25 2007-04-25T";
+
+        startIteration(text);
+        nextValue();
+        checkTimestamp("2007T");
+        nextValue();
+        checkTimestamp("2007-04T");
+        nextValue();
+        checkTimestamp("2007-04-25");
+        nextValue();
+        checkTimestamp("2007-04-25");
         checkEof();
     }
 
