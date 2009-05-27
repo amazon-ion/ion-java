@@ -65,17 +65,18 @@ public class IonSystemImpl
         UnifiedSymbolTable.getSystemSymbolTableInstance();
 
     private IonCatalog  myCatalog;
-    private IonLoader   myLoader = new LoaderImpl(this, myCatalog);
+    private IonLoader   myLoader;
 
 
     public IonSystemImpl()
     {
-        myCatalog = new SimpleCatalog();
+        this(new SimpleCatalog());
     }
 
     public IonSystemImpl(IonCatalog catalog)
     {
         myCatalog = catalog;
+        myLoader = new LoaderImpl(this, myCatalog);
     }
 
 
