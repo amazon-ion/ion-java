@@ -65,7 +65,7 @@ public class IonSystemImpl
         UnifiedSymbolTable.getSystemSymbolTableInstance();
 
     private IonCatalog  myCatalog;
-    private IonLoader   myLoader = new LoaderImpl(this);
+    private IonLoader   myLoader = new LoaderImpl(this, myCatalog);
 
 
     public IonSystemImpl()
@@ -200,7 +200,7 @@ public class IonSystemImpl
             try
             {
                 IonDatagramImpl dg =
-                    new IonDatagramImpl(this, (IonReader) null);
+                    new IonDatagramImpl(this, this.getCatalog(), (IonReader) null);
                 // Force symtab preparation  FIXME should not be necessary
                 dg.byteSize();
                 return dg;
@@ -212,7 +212,7 @@ public class IonSystemImpl
             }
         }
 
-        return new IonDatagramImpl(this);
+        return new IonDatagramImpl(this, this.getCatalog());
     }
 
     public IonDatagram newDatagram(IonValue initialChild)
@@ -268,7 +268,12 @@ public class IonSystemImpl
 
     public IonLoader newLoader()
     {
-        return new LoaderImpl(this);
+        return new LoaderImpl(this, myCatalog);
+    }
+    
+    public IonLoader newLoader(IonCatalog catalog)
+    {
+        return new LoaderImpl(this, catalog);
     }
 
     public synchronized IonLoader getLoader()
@@ -1164,7 +1169,7 @@ public class IonSystemImpl
             byte[] data = ((IonDatagram)value).getBytes();
 
             // TODO This can probably be optimized further.
-            return (T) new IonDatagramImpl(this, data);
+            return (T) new IonDatagramImpl(this, this.getCatalog(), data);
         }
 
         StringBuilder buffer = new StringBuilder();

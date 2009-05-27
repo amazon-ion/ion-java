@@ -41,18 +41,4 @@ public interface IonCatalog
      * this method returns {@code null}.
      */
     public SymbolTable getTable(String name, int version);
-
-
-    /**
-     * Adds a symbol table to this catalog.  This interface does not define the
-     * behavior of this method if this catalog already contains a table with
-     * the same name and version.
-     *
-     * @param sharedTable must be shared but not a system table.
-     *
-     * @deprecated The Ion libraries do not need to insert symbol tables, so
-     * this method is being removed.
-     */
-    @Deprecated
-    public void putTable(SymbolTable sharedTable);
 }
