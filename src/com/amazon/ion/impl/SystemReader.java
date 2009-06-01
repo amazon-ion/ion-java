@@ -41,7 +41,7 @@ public class SystemReader
 
     /**
      * Open a SystemReader over a string as the data source.  A Java
-     * String is, necessarily, text input (as distinct from binary data). 
+     * String is, necessarily, text input (as distinct from binary data).
 
      * @throws NullPointerException if any parameter is null.
      */
@@ -51,8 +51,8 @@ public class SystemReader
 
     /**
      * Open a SystemReader over a character data source.  Character
-     * data is necessarily text input (as distinct from binary data). 
-     * 
+     * data is necessarily text input (as distinct from binary data).
+     *
      * @throws NullPointerException if any parameter is null.
      */
     public SystemReader(IonSystemImpl system,
@@ -66,8 +66,8 @@ public class SystemReader
 
     /**
      * Open a SystemReader over a character data source.  Character
-     * data is necessarily text input (as distinct from binary data). 
-     * 
+     * data is necessarily text input (as distinct from binary data).
+     *
      * @param initialSymboltable must be local, not shared.
      * @throws NullPointerException if any parameter is null.
      */
@@ -93,7 +93,7 @@ public class SystemReader
      * initializes a SystemReader to read character input
      * data, which means, implicitly, the underlying data
      * is character data.
-     * 
+     *
      * @throws NullPointerException if input is null.
      */
     private void initialize(Reader input, int limit) {
@@ -105,23 +105,22 @@ public class SystemReader
 
     /**
      * Open a SystemReader over a BufferManager, which necessarily
-     * holds a Ion binary datagram. 
-     * 
+     * holds a Ion binary datagram.
+     *
      * @throws NullPointerException if any parameter is null.
      */
     public SystemReader(IonSystemImpl system, BufferManager buffer)
     {
         this(system, system.getCatalog(), buffer);
     }
-    
+
 
     /**
      * Creates a new system reader using a specific catalog, reading data from
      * the start of a buffer.
-     * 
+     *
      * This only supports reading from a binary source.  The BufferManager
      * on input implies a buffer with binary Ion in it.
-     * @throws IOException 
      *
      * @throws NullPointerException if any parameter is null.
      */
@@ -165,7 +164,7 @@ public class SystemReader
         this(system, system.getCatalog(), stream);
     }
 
-    
+
     /**
      * Creates a new system reader using a specific catalog, reading data from
      * a Java InputStream.
@@ -193,7 +192,7 @@ public class SystemReader
         } catch (IOException e) {
             throw new IonException("initializing SystemReader", e);
         }
-        
+
         IonBinary.verifyBinaryVersionMarker(reader);
 
         _system = system;
@@ -203,16 +202,16 @@ public class SystemReader
         // but we can't yet replace it with a local symtab on-demand.
         _currentSymbolTable = system.newLocalSymbolTable();
         _buffer_offset = reader.position();
-        
+
         return;
     }
-    
+
     /**
      * loadBuffer reads from the associated input stream (this._stream)
      * at least enough so that length bytes are loaded in this SystemReaders
      * buffer.  It will try to read READ_AHEAD_LENGTH bytes so that we
      * don't get called on every byte (or some such nonesense).
-     * 
+     *
      * This will position the reader to the _buffer_offset and may well
      * reset _buffer_offset there is "used" data in the buffer (which it
      * determines by whether _buffer_offset has passed it by already - if
@@ -222,34 +221,36 @@ public class SystemReader
     private static final int READ_AHEAD_MAX_PEEK_REQUIRED = IonBinary._ib_VAR_INT64_LEN_MAX + 1; // type desc byte + 64 bits 7 at a time
     private void loadBuffer(int length) throws IOException
     {
-        int buffer_length = _buffer._buf.size();
-        int required = length - buffer_length;
-        
         // we should only be loading the buffer if we're
         // reading from an input stream incrementally
         assert(this._stream != null);
-        
+
+        int buffer_length = _buffer._buf.size();
+        // FIXME shouldn't this account for _buffer_offset ?
+        int required = length - buffer_length;
+
         // first see if we need any more bytes at all
         if (required < 1) return;
-        
+
         // if we're going to read ahead, try to read enough
         // to make it all worthwhile (like a block - even
         // a modest sized one is worthwhile)
         if (length < READ_AHEAD_LENGTH) {
             length = READ_AHEAD_LENGTH;
+            // FIXME again, what about _buffer_offset?
             required = length - buffer_length;
         }
-        
+
         // we'll use this to both remove any data we no longer
         // care about, and to write in the new data we need
         // to satisfy this request
         IonBinary.Writer writer = _buffer.writer(0);
 
-        // before loading more data in, first we remove any 
+        // before loading more data in, first we remove any
         // already used cruft
         if (_buffer_offset < buffer_length) {
             writer.remove(_buffer_offset);
-            buffer_length -= _buffer_offset; 
+            buffer_length -= _buffer_offset;
             _buffer_offset = 0;
         }
 
@@ -263,19 +264,19 @@ public class SystemReader
 
         assert(writer.position() == _buffer_offset);
         writer.write(_stream, required);
-        
+
         _buffer.reader().sync();
         _buffer.reader().setPosition(_buffer_offset);
-        
+
         return;
     }
     /**
      * this peeks ahead in the binary input stream and
      * reads the length (if it can).  It returns -1 if
-     * it hits end of file immediately or throws an error 
+     * it hits end of file immediately or throws an error
      * if it can't read at least the values length.
      * it then backs up in the buffer.
-     * @throws IOException 
+     * @throws IOException
      *
      */
     private int peekLength() throws IOException
@@ -286,7 +287,7 @@ public class SystemReader
         // reading from an input stream incrementally
         assert(_stream != null);
 
-        // but if we have to read ahead, load Buffer will 
+        // but if we have to read ahead, load Buffer will
         // read enough to make it worthwhile and if it
         // doesn't need to ... it won't
         loadBuffer(READ_AHEAD_MAX_PEEK_REQUIRED);
@@ -299,7 +300,7 @@ public class SystemReader
             len = -1;
         }
         else if (b == (0xff & (int)BINARY_VERSION_MARKER_1_0[0])){
-            // back up and see if we can read a whole 
+            // back up and see if we can read a whole
             _buffer._reader.setPosition(_buffer_offset);
             IonBinary.verifyBinaryVersionMarker(_buffer._reader);
             len = BINARY_VERSION_MARKER_SIZE;
@@ -310,10 +311,10 @@ public class SystemReader
             len = _buffer._reader.readLength(hn, ln);
         }
         _buffer._reader.setPosition(_buffer_offset);
-        
+
         return len;
     }
-    
+
     /**
      * returns the IonSystem that this reader is using as its system context
      * @return system associated with this reader
@@ -376,7 +377,7 @@ public class SystemReader
             // buffer for us, since we might have over-read on the last value
             // and we have a partial loaded - we'll check that out by looking
             // at the length
-            
+
             int len;
             try {
                 len = peekLength();
@@ -389,13 +390,13 @@ public class SystemReader
             } catch (IOException e) {
                 throw new IonException(e);
             }
-            
+
         }
         else if (buffer.buffer().size() <= _buffer_offset) {
             // if the buffer has run out of data then we need to refill it
             // this happens when we're parsing text (if we were reading
-            // binary either the data would be loaded or we're at eof) 
-            
+            // binary either the data would be loaded or we're at eof)
+
             // we used up the buffer we've seen so far ...
             // so parse another value out of the input
             if (_parser != null) {
@@ -418,7 +419,7 @@ public class SystemReader
                 _at_eof = true;
             }
         }
-        
+
         // now that we've got a value in the buffer (well we have one if we're not at eof)
         if (!_at_eof) {
             // there is some sort a value, we'll get it and check it out
@@ -507,15 +508,15 @@ public class SystemReader
     }
 
     public void resetBuffer() {
-    	if (this._buffer_offset > BINARY_VERSION_MARKER_SIZE) {
-    	    this._buffer_offset = BINARY_VERSION_MARKER_SIZE;
-    	    try {
+        if (this._buffer_offset > BINARY_VERSION_MARKER_SIZE) {
+            this._buffer_offset = BINARY_VERSION_MARKER_SIZE;
+            try {
                 _buffer.writer(BINARY_VERSION_MARKER_SIZE).truncate();
             }
             catch (IOException e) {
                 throw new IonException(e);
             }
-    	}
+        }
     }
 
     public void close()
