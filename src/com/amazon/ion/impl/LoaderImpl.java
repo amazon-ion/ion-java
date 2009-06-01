@@ -240,7 +240,7 @@ public class LoaderImpl
             }
 
             SystemReader systemReader =
-                mySystem.newBinarySystemReader(pushback);
+                mySystem.newBinarySystemReader(myCatalog, pushback);
             return new IonDatagramImpl(mySystem, myCatalog, systemReader);
         }
 
@@ -279,7 +279,7 @@ public class LoaderImpl
     public IonDatagramImpl loadBinary(InputStream ionBinary)
         throws IOException
     {
-        SystemReader systemReader = mySystem.newBinarySystemReader(ionBinary);
+        SystemReader systemReader = mySystem.newBinarySystemReader(myCatalog, ionBinary);
         return new IonDatagramImpl(mySystem, myCatalog, systemReader);
     }
     
@@ -287,7 +287,7 @@ public class LoaderImpl
     public IonDatagramImpl loadPagedBinary(InputStream ionBinary)
         throws IOException
     {
-        SystemReader systemReader = mySystem.newPagedBinarySystemReader(ionBinary);
+        SystemReader systemReader = mySystem.newPagedBinarySystemReader(myCatalog, ionBinary);
         return new IonDatagramImpl(mySystem, myCatalog, systemReader);
     }
     

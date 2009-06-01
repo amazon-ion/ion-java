@@ -185,7 +185,7 @@ public interface IonSystem
     public IonLoader newLoader();
 
     /**
-     * Constructs a new loader instance bound the given catalog.
+     * Constructs a new loader instance using the given catalog.
      * 
      * @see #newLoader()
      */

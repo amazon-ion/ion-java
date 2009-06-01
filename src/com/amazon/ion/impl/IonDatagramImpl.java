@@ -2,8 +2,8 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonCatalog;
 import com.amazon.ion.ContainedValueException;
+import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
@@ -84,7 +84,7 @@ public final class IonDatagramImpl
      */
     public IonDatagramImpl(IonSystemImpl system, IonCatalog catalog, byte[] ionData)
     {
-        this(system, catalog, system.newLegacySystemReader(ionData));
+        this(system, catalog, system.newLegacySystemReader(catalog, ionData));
     }
 
 
@@ -96,7 +96,7 @@ public final class IonDatagramImpl
      */
     public IonDatagramImpl(IonSystemImpl system, IonCatalog catalog, BufferManager buffer)
     {
-        this(system, catalog, new SystemReader(system, buffer));
+        this(system, catalog, new SystemReader(system, catalog, buffer));
     }
 
 

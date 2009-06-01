@@ -102,19 +102,6 @@ public class SystemReader
         _buffer = _parser.getByteBuffer();
     }
 
-
-    /**
-     * Open a SystemReader over a BufferManager, which necessarily
-     * holds a Ion binary datagram. 
-     * 
-     * @throws NullPointerException if any parameter is null.
-     */
-    public SystemReader(IonSystemImpl system, BufferManager buffer)
-    {
-        this(system, system.getCatalog(), buffer);
-    }
-    
-
     /**
      * Creates a new system reader using a specific catalog, reading data from
      * the start of a buffer.
@@ -154,17 +141,6 @@ public class SystemReader
         _buffer = buffer;
         _buffer_offset = reader.position();
     }
-
-    /**
-     * Creates a new system reader over the passed in byte source
-     * over the users system context
-     * @param system context for IonValues
-     * @param stream users byte source
-     */
-    public SystemReader(IonSystemImpl system, InputStream stream) {
-        this(system, system.getCatalog(), stream);
-    }
-
     
     /**
      * Creates a new system reader using a specific catalog, reading data from

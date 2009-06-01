@@ -2,8 +2,10 @@
 
 package com.amazon.ion;
 
+import java.util.Arrays;
 import com.amazon.ion.impl.IonSystemImpl;
 import com.amazon.ion.impl.UserReader;
+import com.amazon.ion.system.SimpleCatalog;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -285,7 +287,20 @@ public class LoaderTest
         }
         catch (IonException ie) { /* ok */ }
     }
-
+    
+    public void testCatalogOnLoader() throws Exception {
+        IonSystem sys = new IonSystemImpl(Symtabs.CATALOG);
+        IonDatagram dg = sys.newDatagram(Symtabs.CATALOG.getTable("fred", 1));
+        dg.add().newSymbol("fred_1");
+        byte[] raw = dg.getBytes();
+        assertEquals("fred_1", ((IonSymbol) sys.newLoader().load(raw).get(0)).stringValue());
+        
+        // let's make an interesting catalog that has
+        // a different v1 fred symtab
+        IonMutableCatalog newCatalog = new SimpleCatalog();
+        newCatalog.putTable(sys.newSharedSymbolTable("fred", 1, Arrays.asList("barney_1").iterator()));
+        assertEquals("barney_1", ((IonSymbol) sys.newLoader(newCatalog).load(raw).get(0)).stringValue());
+    }
 
 final static boolean _debug_long_test = false;
 
