@@ -1698,7 +1698,7 @@ static final boolean test_with_no_version_checking = false;
                 if (to_read > writeInThisBlock) {
                     to_read = writeInThisBlock;
                 }
-                int len_read = bytestream.read(_curr._buffer, _blockPosition, writeInThisBlock);
+                int len_read = bytestream.read(_curr._buffer, _blockPosition, to_read);
                 if (len_read == -1) break;
                 if (len_read == 0) continue;  // can this really happen?
 

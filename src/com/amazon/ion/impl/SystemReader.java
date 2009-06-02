@@ -226,7 +226,10 @@ public class SystemReader
         assert(this._stream != null);
 
         int buffer_length = _buffer._buf.size();
-        // FIXME shouldn't this account for _buffer_offset ?
+        // shouldn't this account for _buffer_offset ?
+        // no, the data before _buffer_offset has been
+        // "used up" already (and we'll discard it by
+        // copying over it a little lower down).
         int required = length - buffer_length;
 
         // first see if we need any more bytes at all
@@ -237,7 +240,8 @@ public class SystemReader
         // a modest sized one is worthwhile)
         if (length < READ_AHEAD_LENGTH) {
             length = READ_AHEAD_LENGTH;
-            // FIXME again, what about _buffer_offset?
+            // again, what about _buffer_offset?
+            // _buffer_offset will be at 0 as we leave
             required = length - buffer_length;
         }
 
