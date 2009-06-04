@@ -225,12 +225,8 @@ public class SystemReader
         // reading from an input stream incrementally
         assert(this._stream != null);
 
-        int buffer_length = _buffer._buf.size();
-        // shouldn't this account for _buffer_offset ?
-        // no, the data before _buffer_offset has been
-        // "used up" already (and we'll discard it by
-        // copying over it a little lower down).
-        int required = length - buffer_length;
+        int buffer_length = _buffer.buffer().size();
+        int required = length - buffer_length - _buffer_offset;
 
         // first see if we need any more bytes at all
         if (required < 1) return;
@@ -240,9 +236,7 @@ public class SystemReader
         // a modest sized one is worthwhile)
         if (length < READ_AHEAD_LENGTH) {
             length = READ_AHEAD_LENGTH;
-            // again, what about _buffer_offset?
-            // _buffer_offset will be at 0 as we leave
-            required = length - buffer_length;
+            required = length - buffer_length - _buffer_offset;
         }
 
         // we'll use this to both remove any data we no longer
@@ -255,18 +249,27 @@ public class SystemReader
         if (_buffer_offset < buffer_length) {
             writer.remove(_buffer_offset);
             buffer_length -= _buffer_offset;
-            _buffer_offset = 0;
         }
+        else {
+            // remove is smart enough so that when the pos is
+            // 0 and the length to remove is the entire buffer
+            // it is equivalent to truncate
+            writer.remove(buffer_length);
+            buffer_length = 0;
+            
+        }
+        // once we've cleared out the cruft we'll be reading at offset 0 again
+        _buffer_offset = 0;
 
         // now we read in some data from the input stream
         // we'll try to read data in in reasonable sized chunks
         // (like a blocks worth)
-        int room_in_block = writer._curr.blockCapacity() - buffer_length;
+        writer.setPosition(buffer_length);
+        int room_in_block = writer._curr.bytesAvailableToWrite(0); //         // .blockCapacity() - buffer_length;
         if (required < room_in_block) {
             required = room_in_block;
         }
 
-        assert(writer.position() == _buffer_offset);
         writer.write(_stream, required);
 
         _buffer.reader().sync();
@@ -295,7 +298,9 @@ public class SystemReader
         // read enough to make it worthwhile and if it
         // doesn't need to ... it won't
         loadBuffer(READ_AHEAD_MAX_PEEK_REQUIRED);
-        assert(_buffer.reader().position() == _buffer_offset);
+        
+        _buffer.reader().sync();
+        _buffer.reader().setPosition(_buffer_offset);
 
         // read 1 byte (we should have at least that much)
         int b = _buffer._reader.read();
@@ -303,7 +308,7 @@ public class SystemReader
             // we really did run out of data
             len = -1;
         }
-        else if (b == (0xff & (int)BINARY_VERSION_MARKER_1_0[0])){
+        else if (b == (0xff & BINARY_VERSION_MARKER_1_0[0])){
             // back up and see if we can read a whole
             _buffer._reader.setPosition(_buffer_offset);
             IonBinary.verifyBinaryVersionMarker(_buffer._reader);
