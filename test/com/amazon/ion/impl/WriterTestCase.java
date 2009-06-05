@@ -220,7 +220,7 @@ public abstract class WriterTestCase
     }
 
     public void testWritingDeepNestedList() throws Exception {
-        // XXX Exercise ION-60 bug
+        // JIRA ION-60
         IonDatagram dg = loader().load("[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]");
         IonWriter writer = makeWriter();
         writer.writeValue(dg);
