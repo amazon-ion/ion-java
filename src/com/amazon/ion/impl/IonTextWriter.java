@@ -179,11 +179,11 @@ public final class IonTextWriter
         int[] temp1 = new int[newlen];
         boolean[] temp2 = new boolean[newlen];
         boolean[] temp3 = new boolean[newlen];
-        System.arraycopy(_stack_parent_type, 0, temp1, 0, _top - 1);
+        System.arraycopy(_stack_parent_type, 0, temp1, 0, _top);
         _stack_parent_type = temp1;
-        System.arraycopy(_stack_in_struct, 0, temp2, 0, _top - 1);
+        System.arraycopy(_stack_in_struct, 0, temp2, 0, _top);
         _stack_in_struct = temp2;
-        System.arraycopy(_stack_pending_comma, 0, temp3, 0, _top - 1);
+        System.arraycopy(_stack_pending_comma, 0, temp3, 0, _top);
         _stack_pending_comma = temp3;
     }
     int pop() {
