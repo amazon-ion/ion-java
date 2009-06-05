@@ -2,9 +2,10 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.Symtabs.*;
-import static com.amazon.ion.SystemSymbolTable.*;
-import static com.amazon.ion.TestUtils.*;
+import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
+import static com.amazon.ion.Symtabs.GINGER_MAX_IDS;
+import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
+import static com.amazon.ion.TestUtils.FERMATA;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonDatagram;
