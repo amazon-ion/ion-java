@@ -2,11 +2,9 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
-import static com.amazon.ion.Symtabs.GINGER_MAX_IDS;
-import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
-import static com.amazon.ion.TestUtils.FERMATA;
-
+import static com.amazon.ion.Symtabs.*;
+import static com.amazon.ion.SystemSymbolTable.*;
+import static com.amazon.ion.TestUtils.*;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonDatagram;
@@ -220,6 +218,13 @@ public abstract class WriterTestCase
         assertEqualBytes(data, 20, 30, lob.getBytes());
     }
 
+    public void testWritingDeepNestedList() throws Exception {
+        // XXX Exercise ION-60 bug
+        IonDatagram dg = loader().load("[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]");
+        IonWriter writer = makeWriter();
+        writer.writeValue(dg);
+    }
+    
     public void assertEqualBytes(byte[] expected, int start, int limit,
                                  byte[] actual)
     {
