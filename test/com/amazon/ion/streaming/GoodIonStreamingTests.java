@@ -1,3 +1,5 @@
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+
 package com.amazon.ion.streaming;
 
 import com.amazon.ion.DirectoryTestSuite;
@@ -22,7 +24,7 @@ public class GoodIonStreamingTests extends DirectoryTestSuite {
 
     public GoodIonStreamingTests()
     {
-        super("good");
+        super("good", "equivs");
     }
 
     @Override
@@ -37,12 +39,11 @@ public class GoodIonStreamingTests extends DirectoryTestSuite {
     @Override
     protected String[] getFilesToSkip()
     {
+        // TODO JIRA ION-8 fix Unicode bugs and enable test cases
         return new String[]
         {
-//            "annotationQuotedFalse.ion",
-//            "annotationQuotedNull.ion",
-//            "annotationQuotedTrue.ion",
-//            "floatSpecials.ion",
+            "equivs/stringU0001D11E.ion",
+            "equivs/symbols.ion",
         };
     }
 
@@ -63,7 +64,6 @@ public class GoodIonStreamingTests extends DirectoryTestSuite {
         }
 
         void iterateIon(File myTestFile) {
-            IonReader it;
             int len = (int)myTestFile.length();
             byte[] buf = new byte[len];
 
@@ -78,8 +78,9 @@ public class GoodIonStreamingTests extends DirectoryTestSuite {
             } catch (IOException ioe) {
                 throw new RuntimeException(ioe);
             }
-            it = system().newReader(buf);
-            readEverything(it);
+
+            IonReader reader = system().newReader(buf);
+            readEverything(reader);
         }
 
         void readEverything(IonReader it) {
