@@ -219,24 +219,26 @@ public class SystemReader
      */
     private static final int READ_AHEAD_LENGTH = 4096;
     private static final int READ_AHEAD_MAX_PEEK_REQUIRED = IonBinary._ib_VAR_INT64_LEN_MAX + 1; // type desc byte + 64 bits 7 at a time
-    private void loadBuffer(int length) throws IOException
+    private void loadBuffer(int bytes_requested) throws IOException
     {
         // we should only be loading the buffer if we're
         // reading from an input stream incrementally
         assert(this._stream != null);
 
         int buffer_length = _buffer.buffer().size();
-        int required = length - buffer_length - _buffer_offset;
+        assert _buffer_offset <= buffer_length;
+
+        int bytes_to_load = bytes_requested - (buffer_length - _buffer_offset);
 
         // first see if we need any more bytes at all
-        if (required < 1) return;
+        if (bytes_to_load < 1) return;
 
         // if we're going to read ahead, try to read enough
         // to make it all worthwhile (like a block - even
         // a modest sized one is worthwhile)
-        if (length < READ_AHEAD_LENGTH) {
-            length = READ_AHEAD_LENGTH;
-            required = length - buffer_length - _buffer_offset;
+        if (bytes_requested < READ_AHEAD_LENGTH) {
+            bytes_requested = READ_AHEAD_LENGTH;
+            bytes_to_load = bytes_requested - (buffer_length - _buffer_offset);
         }
 
         // we'll use this to both remove any data we no longer
@@ -246,18 +248,12 @@ public class SystemReader
 
         // before loading more data in, first we remove any
         // already used cruft
-        if (_buffer_offset < buffer_length) {
-            writer.remove(_buffer_offset);
-            buffer_length -= _buffer_offset;
-        }
-        else {
-            // remove is smart enough so that when the pos is
-            // 0 and the length to remove is the entire buffer
-            // it is equivalent to truncate
-            writer.remove(buffer_length);
-            buffer_length = 0;
-            
-        }
+        // remove is smart enough so that when the pos is
+        // 0 and the length to remove is the entire buffer
+        // it is equivalent to truncate
+        writer.remove(_buffer_offset);
+        buffer_length -= _buffer_offset;
+
         // once we've cleared out the cruft we'll be reading at offset 0 again
         _buffer_offset = 0;
 
@@ -266,16 +262,16 @@ public class SystemReader
         // (like a blocks worth)
         writer.setPosition(buffer_length);
         int room_in_block = writer._curr.bytesAvailableToWrite(0); //         // .blockCapacity() - buffer_length;
-        if (required < room_in_block) {
-            required = room_in_block;
+        if (bytes_to_load < room_in_block) {
+            bytes_to_load = room_in_block;
+            // FIXME but now we may load too few bytes
+            // if block size < bytes_required
         }
 
-        writer.write(_stream, required);
+        writer.write(_stream, bytes_to_load);
 
         _buffer.reader().sync();
         _buffer.reader().setPosition(_buffer_offset);
-
-        return;
     }
     /**
      * this peeks ahead in the binary input stream and
@@ -298,7 +294,7 @@ public class SystemReader
         // read enough to make it worthwhile and if it
         // doesn't need to ... it won't
         loadBuffer(READ_AHEAD_MAX_PEEK_REQUIRED);
-        
+
         _buffer.reader().sync();
         _buffer.reader().setPosition(_buffer_offset);
 
@@ -373,6 +369,8 @@ public class SystemReader
     private IonValue prefetch()
     {
         assert !_at_eof && _next == null;
+
+        assert _buffer_offset <= _buffer.buffer().size();
 
         BufferManager buffer = _buffer;
         // just to make the other code easier to read, and write
