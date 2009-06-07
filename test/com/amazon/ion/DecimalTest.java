@@ -134,6 +134,53 @@ public class DecimalTest
         assertEquals(-12.3D, value.doubleValue());
     }
 
+    public void testPrinting()
+    {
+        testPrinting("0d0", "0.");
+        testPrinting("0D0", "0.");
+        testPrinting("0.",  "0.");
+
+        testPrinting("1.0",  "1.0");
+        testPrinting("1.00", "1.00");
+        testPrinting("10.0", "10.0");
+        testPrinting("10.0d1",  "100.");
+        testPrinting("10.0d-1", "1.00");
+        testPrinting("100d-2",  "1.00");
+        testPrinting("100d2",   "100d2");
+        testPrinting("100d0",   "100.");
+
+        testPrinting("123d3",  "123d3");
+        testPrinting("123d1",  "123d1");
+        testPrinting("123d0",  "123.");
+        testPrinting("123d-1", "12.3");
+        testPrinting("123d-2", "1.23");
+        testPrinting("123d-3", "1.23d-1");
+        testPrinting("123d-4", "1.23d-2");
+
+        testPrinting("-123d3",  "-123d3");
+        testPrinting("-123d1",  "-123d1");
+        testPrinting("-123d0",  "-123.");
+        testPrinting("-123d-1", "-12.3");
+        testPrinting("-123d-2", "-1.23");
+        testPrinting("-123d-3", "-1.23d-1");
+        testPrinting("-123d-4", "-1.23d-2");
+
+        // Zeros are a bit trickier
+//        testPrinting("0.0", "0.0");
+//        testPrinting("0.00", "0.00");
+        testPrinting("0d1",   "0d1");
+        testPrinting("0d-1",  "0d-1");
+        testPrinting("0d2",   "0d2");
+        testPrinting("0d-2",  "0d-2"); // should be 0.00 or 0.0d-1 ?
+    }
+
+    public void testPrinting(String input, String output)
+    {
+        IonDecimal value = (IonDecimal) oneValue(input);
+        assertEquals(output, value.toString());
+    }
+
+
     public void testNegativeZero()
     {
         // Yes, Java floating point types can handle -0.0!

@@ -633,18 +633,76 @@ public class Printer
                 BigDecimal decimal = value.bigDecimalValue();
                 BigInteger unscaled = decimal.unscaledValue();
 
-                // for the various forms of negative zero we have to
-                // write the sign ourselves, since neither BigInteger
-                // nor BigDecimal recognize negative zero, but Ion does.
-                if (decimal.signum() == 0
-                    && value.getClassification() == NEGATIVE_ZERO)
+                int signum = decimal.signum();
+                if (signum < 0)
                 {
-                	myOut.append('-');
+                    myOut.append('-');
+                    unscaled = unscaled.negate();
+                }
+                else if (signum == 0
+                         && value.getClassification() == NEGATIVE_ZERO)
+                {
+                    // for the various forms of negative zero we have to
+                    // write the sign ourselves, since neither BigInteger
+                    // nor BigDecimal recognize negative zero, but Ion does.
+                    myOut.append('-');
                 }
 
-                myOut.append(unscaled.toString());
-                myOut.append(myOptions.decimalAsFloat ? 'e' : 'd');
-                myOut.append(Integer.toString(-decimal.scale()));
+
+                final String unscaledText = unscaled.toString();
+                final int significantDigits = unscaledText.length();
+
+                final int scale = decimal.scale();
+                final int exponent = -scale;
+
+                if (myOptions.decimalAsFloat)
+                {
+                    myOut.append(unscaledText);
+                    myOut.append('e');
+                    myOut.append(Integer.toString(exponent));
+                }
+                else if (exponent == 0)
+                {
+                    myOut.append(unscaledText);
+                    myOut.append('.');
+                }
+                else if (0 < scale)
+                {
+                    int wholeDigits;
+                    int remainingScale;
+                    if (significantDigits > scale)
+                    {
+                        wholeDigits = significantDigits - scale;
+                        remainingScale = 0;
+                    }
+                    else
+                    {
+                        wholeDigits = 1;
+                        remainingScale = scale - significantDigits + 1;
+                    }
+
+                    myOut.append(unscaledText, 0, wholeDigits);
+                    if (wholeDigits < significantDigits)
+                    {
+                        myOut.append('.');
+                        myOut.append(unscaledText, wholeDigits,
+                                     significantDigits);
+                    }
+
+                    if (remainingScale != 0)
+                    {
+                        myOut.append("d-");
+                        myOut.append(Integer.toString(remainingScale));
+                    }
+                }
+                else // (exponent > 0)
+                {
+                    // We cannot move the decimal point to the right, adding
+                    // rightmost zeros, because that would alter the precision.
+                    myOut.append(unscaledText);
+                    myOut.append('d');
+                    myOut.append(Integer.toString(exponent));
+                }
             }
         }
 

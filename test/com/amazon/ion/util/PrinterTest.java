@@ -217,16 +217,16 @@ public class PrinterTest
         checkRendering("null.decimal", value);
 
         value.setValue(-123);
-        checkRendering("-123d0", value);
+        checkRendering("-123.", value);
 
         value.setValue(456);
-        checkRendering("456d0", value);
+        checkRendering("456.", value);
 
         value.setValue(0);
-        checkRendering("0d0", value);
+        checkRendering("0.", value);
 
         value.addTypeAnnotation("an");
-        checkRendering("an::0d0", value);
+        checkRendering("an::0.", value);
 
         value = (IonDecimal) oneValue("0d42");
         checkRendering("0d42", value);
@@ -238,7 +238,7 @@ public class PrinterTest
         checkRendering("0d-42", value);
 
         value = (IonDecimal) oneValue("100d-1");
-        checkRendering("100d-1", value);
+        checkRendering("10.0", value);
 
         value = (IonDecimal) oneValue("100d3");
         checkRendering("100d3", value);
