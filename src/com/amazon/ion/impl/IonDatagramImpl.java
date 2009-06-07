@@ -2,6 +2,8 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
+
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
@@ -22,6 +24,7 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.ListIterator;
 
 /**
  *
@@ -33,14 +36,6 @@ public final class IonDatagramImpl
     static private final int DATAGRAM_TYPEDESC  =
         IonConstants.makeTypeDescriptor(IonConstants.tidSexp,
                                         IonConstants.lnIsEmptyContainer);
-
-    private final static String[] EMPTY_STRING_ARRAY = new String[0];
-
-   // CAS symtab: moved _system to IonValueImpl
-   // /**
-   //  * The system that created this datagram.
-   //  */
-   // private IonSystem _system;
 
     /**
      * Used while constructing, then set to null.
@@ -445,14 +440,22 @@ public final class IonDatagramImpl
     {
         // TODO implement remove on UserDatagram.iterator()
         // Tricky bit is properly removing from both user and system contents.
-        return new IonContainerIterator(_userContents.iterator(), false);
+        return new IonContainerIterator(_userContents.listIterator(), true);
+    }
+
+    @Override
+    public ListIterator<IonValue> listIterator() throws NullValueException
+    {
+        // TODO implement remove, add, set on UserDatagram.listIterator()
+        // Tricky bit is properly updating both user and system contents.
+        return new IonContainerIterator(_userContents.listIterator(), true);
     }
 
     public Iterator<IonValue> systemIterator()
     {
         // Disable remove... what if a system value is removed?
         // What if a system value is removed?
-        return new IonContainerIterator(_contents.iterator(), false);
+        return new IonContainerIterator(_contents.listIterator(), true);
     }
 
     @Override

@@ -3,6 +3,8 @@
 package com.amazon.ion;
 
 import java.util.Collection;
+import java.util.Iterator;
+import java.util.ListIterator;
 
 
 
@@ -197,6 +199,26 @@ public interface IonSequence
 
     // TODO temporary until we declare implements Collection
     public boolean addAll(Collection<? extends IonValue> c);
+
+    // TODO temporary until we declare implements List
+//    public boolean addAll(int index, Collection<? extends IonValue> c); // OPTIONAL
+//    public int lastIndexOf(Object o);
+
+    /**
+     * Returns a list iterator of the elements in this sequence (in proper
+     * order).
+     * <p>
+     * The result does not support {@link ListIterator#add(Object)} or
+     * {@link ListIterator#set(Object)}.
+     * If this sequence {@link #isReadOnly()} then it also does not support
+     * {@link Iterator#remove()}.
+     */
+    public ListIterator<IonValue> listIterator();
+//    public ListIterator<IonValue> listIterator(int index);
+
+//    public IonValue remove(int index); // OPTIONAL
+//    public IonValue set(int index, IonValue element); // OPTIONAL
+//    public List<IonValue> subList(int fromIndex, int toIndex);
 
     // TODO document that null sequence acts like empty
     public <T> T[] toArray(T[] a);

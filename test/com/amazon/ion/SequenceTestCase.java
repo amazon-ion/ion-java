@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 
 
 
@@ -123,6 +124,12 @@ public abstract class SequenceTestCase
         assertEquals(0, value.size());
         assertFalse(value.iterator().hasNext());
         assertTrue(value.isEmpty());
+
+        ListIterator<IonValue> i = value.listIterator();
+        assertFalse(i.hasNext());
+        assertFalse(i.hasPrevious());
+        assertEquals(0,  i.nextIndex());
+        assertEquals(-1, i.previousIndex());
 
         try
         {
