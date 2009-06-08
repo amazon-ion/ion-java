@@ -378,7 +378,7 @@ public class IonSystemImpl
             binaryData = IonImplUtils.streamIsIonBinary(pushback);
             if (binaryData)
             {
-                systemReader = newPagedBinarySystemReader(pushback);
+                systemReader = newPagedBinarySystemReader(getCatalog(), pushback);
             }
             else
             {
