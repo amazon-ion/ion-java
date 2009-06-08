@@ -447,8 +447,12 @@ public class IonTextUtils
             printCodePointAsFourHexDigits(out, c);
         }
         else {
-            // FIXME JIRA ION-33 - JSON doesn't support eight-digit \U syntax!
-            printCodePointAsEightHexDigits(out, c);
+            if (mode == EscapeMode.JSON) {
+                printCodePointAsSurrogatePairHexDigits(out, c);
+            }
+            else {
+                printCodePointAsEightHexDigits(out, c);
+            }
         }
     }
 
@@ -491,6 +495,14 @@ public class IonTextUtils
         out.append("\\U");
         out.append(ZERO_PADDING[8-s.length()]);
         out.append(s);
+    }
+    
+    private static void printCodePointAsSurrogatePairHexDigits(Appendable out, int c)
+        throws IOException
+    {
+        for (final char unit : Character.toChars(c)) {
+            printCodePointAsFourHexDigits(out, unit);
+        }
     }
 
 
