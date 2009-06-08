@@ -527,4 +527,28 @@ public class PrinterTest
 
         // TODO test printTimestampAsMillis
     }
+    
+    public void testJsonEscapeNonBmp() throws Exception {
+        // JIRA ION-33
+        // JIRA ION-64
+        final byte[] literal = new StringBuilder()
+            .append("'''")
+            .append('\uDAF7')
+            .append('\uDE56')
+            .append("'''")
+            .toString()
+            .getBytes("UTF-8")
+            ;
+        
+        final IonDatagram dg = loader().load(literal);
+        final StringBuilder out = new StringBuilder();
+        final Printer json = new Printer();
+        json.setJsonMode();
+        json.print(dg.get(0), out);
+        
+        assertEquals(
+            "\"\\uDAF7\\uDE56\"".toLowerCase(),
+            out.toString().toLowerCase()
+        );
+    }
 }
