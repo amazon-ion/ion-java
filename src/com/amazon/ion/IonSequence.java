@@ -214,7 +214,24 @@ public interface IonSequence
      * {@link Iterator#remove()}.
      */
     public ListIterator<IonValue> listIterator();
-//    public ListIterator<IonValue> listIterator(int index);
+
+    /**
+     * Returns a list iterator of the elements in this sequence (in proper
+     * order), starting at the specified position in this sequence.
+     * <p>
+     * The result does not support {@link ListIterator#add(Object)} or
+     * {@link ListIterator#set(Object)}.
+     * If this sequence {@link #isReadOnly()} then it also does not support
+     * {@link Iterator#remove()}.
+     *
+     * @param index
+     * index of first element to be returned from the list iterator (by a call
+     * to the {@code next} method).
+     *
+     * @throws IndexOutOfBoundsException
+     * if the index is out of range (index < 0 || index > size()).
+     */
+    public ListIterator<IonValue> listIterator(int index);
 
 //    public IonValue remove(int index); // OPTIONAL
 //    public IonValue set(int index, IonValue element); // OPTIONAL

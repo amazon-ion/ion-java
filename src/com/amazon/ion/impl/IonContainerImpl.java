@@ -716,21 +716,27 @@ abstract public class IonContainerImpl
         throw new AssertionError("element's index is not correct");
     }
 
-    public Iterator<IonValue> iterator()
+    public final Iterator<IonValue> iterator()
     {
-        return listIterator();
+        return listIterator(0);
+    }
+
+    public final ListIterator<IonValue> listIterator()
+    {
+        return listIterator(0);
     }
 
     @SuppressWarnings("unchecked")
-    public ListIterator<IonValue> listIterator()
+    public ListIterator<IonValue> listIterator(int index)
     {
         if (isNullValue())
         {
+            if (index != 0) throw new IndexOutOfBoundsException();
             return (ListIterator<IonValue>) IonImplUtils.EMPTY_ITERATOR;
         }
 
         makeReady();
-        return new IonContainerIterator(_contents.listIterator(),
+        return new IonContainerIterator(_contents.listIterator(index),
                                         isReadOnly());
     }
 

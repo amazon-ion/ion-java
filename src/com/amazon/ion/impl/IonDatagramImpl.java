@@ -435,26 +435,20 @@ public final class IonDatagramImpl
         return super.get(index);
     }
 
-    @Override
-    public Iterator<IonValue> iterator() throws NullValueException
-    {
-        // TODO implement remove on UserDatagram.iterator()
-        // Tricky bit is properly removing from both user and system contents.
-        return new IonContainerIterator(_userContents.listIterator(), true);
-    }
 
     @Override
-    public ListIterator<IonValue> listIterator() throws NullValueException
+    public ListIterator<IonValue> listIterator(int index)
     {
         // TODO implement remove, add, set on UserDatagram.listIterator()
         // Tricky bit is properly updating both user and system contents.
-        return new IonContainerIterator(_userContents.listIterator(), true);
+        return new IonContainerIterator(_userContents.listIterator(index),
+                                        true);
     }
 
-    public Iterator<IonValue> systemIterator()
+    public ListIterator<IonValue> systemIterator()
     {
-        // Disable remove... what if a system value is removed?
-        // What if a system value is removed?
+        // Modification is disabled.
+        // What if a system value is removed or inserted?
         return new IonContainerIterator(_contents.listIterator(), true);
     }
 
