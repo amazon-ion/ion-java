@@ -204,9 +204,17 @@ public class PrinterTest
                    text.endsWith(" a b c"));
 
         // We shouldn't jnject a local table if its not needed.
-        String data = "$ion_1_0 2 '+' [2,'+']";
-        dg = loader().load(data);
+        String data = "2 '+' [2,'+']";
+        String dataWithIvm = ION_1_0 + ' ' + data;
+        dg = loader().load(dataWithIvm);
+        checkRendering(dataWithIvm, dg);
+
+        myPrinter.setSkipSystemValues(true);
         checkRendering(data, dg);
+
+        myPrinter.setSkipSystemValues(false);
+        myPrinter.setJsonMode();
+        checkRendering("2 \"+\" [2,\"+\"]", dg);
     }
 
 

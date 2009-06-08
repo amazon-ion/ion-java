@@ -61,7 +61,7 @@ public class Printer
         public boolean timestampAsString;
         public boolean timestampAsMillis;
         public boolean untypedNulls;
-//      public boolean skipSystemValues = true;
+        public boolean skipSystemValues;
 
 
         @Override
@@ -105,17 +105,44 @@ public class Printer
 
 
     /**
-     * Sets whether this printer ignores (<em>i.e.</em>, doesn't print)
-     * annotations.  By default, this is <code>false</code>.
+     * Indicates whether this printer skips (<em>i.e.</em>, doesn't print)
+     * system IDs and local symbol tables.
+     * By default, this property is <code>false</code>.
+     */
+    public synchronized boolean getSkipSystemValues()
+    {
+        return myOptions.skipSystemValues;
+    }
+
+    /**
+     * Sets whether this printer skips (<em>i.e.</em>, doesn't print)
+     * system IDs and local symbol tables.
+     * By default, this property is <code>false</code>.
+     */
+    public synchronized void setSkipSystemValues(boolean skip)
+    {
+        myOptions.skipSystemValues = skip;
+    }
+
+
+    /**
+     * Indicates whether this printer skips (<em>i.e.</em>, doesn't print)
+     * annotations.
+     * By default, this property is <code>false</code>.
      */
     public synchronized boolean getSkipAnnotations()
     {
         return myOptions.skipAnnotations;
     }
 
-    public synchronized void setSkipAnnotations(boolean ignore)
+    /**
+     * Sets whether this printer skips (<em>i.e.</em>, doesn't print)
+     * annotations.
+     * By default, this property is <code>false</code>.
+     */
+    public synchronized void setSkipAnnotations(boolean skip)
     {
-        myOptions.skipAnnotations = ignore;
+        myOptions.skipAnnotations = skip;
     }
 
 
@@ -262,6 +289,7 @@ public class Printer
      *   <li>{@link Options#clobAsString}</li> is {@code true}
      *   <li>{@link Options#decimalAsFloat}</li> is {@code true}
      *   <li>{@link Options#skipAnnotations}</li> is {@code true}
+     *   <li>{@link Options#skipSystemValues}</li> is {@code true}
      *   <li>{@link Options#sexpAsList}</li> is {@code true}
      *   <li>{@link Options#stringAsJson}</li> is {@code true}
      *   <li>{@link Options#symbolAsString}</li> is {@code true}
@@ -277,6 +305,7 @@ public class Printer
         myOptions.clobAsString      = true;
         myOptions.decimalAsFloat    = true;
         myOptions.skipAnnotations   = true;
+        myOptions.skipSystemValues  = true;
         myOptions.sexpAsList        = true;
         myOptions.stringAsJson      = true;
         myOptions.symbolAsString    = true;
@@ -420,7 +449,6 @@ public class Printer
                 {
                     for (String ann : anns) {
                         IonTextUtils.printSymbol(myOut, ann);
-//                        writeSymbol(ann);
                         myOut.append("::");
                     }
                 }
@@ -605,7 +633,9 @@ public class Printer
         public void visit(IonDatagram value) throws IOException, Exception
         {
             boolean hitOne = false;
-            Iterator<IonValue> i = value.systemIterator();
+            Iterator<IonValue> i = (myOptions.skipSystemValues
+                                       ? value.iterator()
+                                       : value.systemIterator());
             while (i.hasNext())
             {
                 if (hitOne)
