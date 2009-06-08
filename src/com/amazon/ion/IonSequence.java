@@ -189,8 +189,35 @@ public interface IonSequence
      */
     public boolean containsAll(Collection<?> c);
 
-
+    /**
+     * Returns the index in the sequence of the specified element,
+     * or -1 if this sequence doesn't contain the element.
+     * <p>
+     * <b>Due to the reference-equality-based semantics of Ion sequences,
+     * this method does not use {@link Object#equals} as specified by the
+     * contract of {@link java.util.List}. Instead it uses reference
+     * equality ({@code ==} operator) to find the instance.</b>
+     *
+     * @param o the element to search for.
+     * @return the index in this sequence of the element,
+     * or -1 if this sequence doesn't contain the element.
+     */
     public int indexOf(Object o);
+
+    /**
+     * Returns the index in the sequence of the specified element,
+     * or -1 if this sequence doesn't contain the element.
+     * <p>
+     * <b>Due to the reference-equality-based semantics of Ion sequences,
+     * this method does not use {@link Object#equals} as specified by the
+     * contract of {@link java.util.List}. Instead it uses reference
+     * equality ({@code ==} operator) to find the instance.</b>
+     *
+     * @param o the element to search for.
+     * @return the index in this sequence of the element,
+     * or -1 if this sequence doesn't contain the element.
+     */
+    public int lastIndexOf(Object o);
 
 
     // Use inherited javadoc, this refines the return type.
@@ -202,7 +229,6 @@ public interface IonSequence
 
     // TODO temporary until we declare implements List
 //    public boolean addAll(int index, Collection<? extends IonValue> c); // OPTIONAL
-//    public int lastIndexOf(Object o);
 
     /**
      * Returns a list iterator of the elements in this sequence (in proper
