@@ -212,9 +212,13 @@ public class PrinterTest
         myPrinter.setSkipSystemValues(true);
         checkRendering(data, dg);
 
+        myPrinter.setPrintDatagramAsList(true);
+        checkRendering("[2,'+',[2,'+']]", dg);
+
+        myPrinter.setPrintDatagramAsList(false);
         myPrinter.setSkipSystemValues(false);
         myPrinter.setJsonMode();
-        checkRendering("2 \"+\" [2,\"+\"]", dg);
+        checkRendering("[2,\"+\",[2,\"+\"]]", dg);
     }
 
 

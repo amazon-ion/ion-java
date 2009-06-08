@@ -53,15 +53,16 @@ public class Printer
     {
         public boolean blobAsString;
         public boolean clobAsString;
+        public boolean datagramAsList;
         public boolean decimalAsFloat;
-        public boolean skipAnnotations;
         public boolean sexpAsList;
+        public boolean skipAnnotations;
+        public boolean skipSystemValues;
         public boolean stringAsJson;
         public boolean symbolAsString;
         public boolean timestampAsString;
         public boolean timestampAsMillis;
         public boolean untypedNulls;
-        public boolean skipSystemValues;
 
 
         @Override
@@ -177,6 +178,25 @@ public class Printer
 
 
     /**
+     * Indicates whether this printer renders datagrams as lists.
+     * By default, this property is <code>false</code>.
+     */
+    public synchronized boolean getPrintDatagramAsList()
+    {
+        return myOptions.datagramAsList;
+    }
+
+    /**
+     * Sets whether this printer renders datagrams as lists.
+     * By default, this property is <code>false</code>.
+     */
+    public synchronized void setPrintDatagramAsList(boolean datagramAsList)
+    {
+        myOptions.datagramAsList = datagramAsList;
+    }
+
+
+    /**
      * Sets whether this printer renders decimals as floats, thus using 'e'
      * notation for all real values.
      * By default, this is <code>false</code>.
@@ -287,10 +307,11 @@ public class Printer
      * <ul>
      *   <li>{@link Options#blobAsString}</li> is {@code true}
      *   <li>{@link Options#clobAsString}</li> is {@code true}
+     *   <li>{@link Options#datagramAsList}</li> is {@code true}
      *   <li>{@link Options#decimalAsFloat}</li> is {@code true}
+     *   <li>{@link Options#sexpAsList}</li> is {@code true}
      *   <li>{@link Options#skipAnnotations}</li> is {@code true}
      *   <li>{@link Options#skipSystemValues}</li> is {@code true}
-     *   <li>{@link Options#sexpAsList}</li> is {@code true}
      *   <li>{@link Options#stringAsJson}</li> is {@code true}
      *   <li>{@link Options#symbolAsString}</li> is {@code true}
      *   <li>{@link Options#timestampAsString}</li> is {@code false}
@@ -303,10 +324,11 @@ public class Printer
     {
         myOptions.blobAsString      = true;
         myOptions.clobAsString      = true;
+        myOptions.datagramAsList    = true;
         myOptions.decimalAsFloat    = true;
+        myOptions.sexpAsList        = true;
         myOptions.skipAnnotations   = true;
         myOptions.skipSystemValues  = true;
-        myOptions.sexpAsList        = true;
         myOptions.stringAsJson      = true;
         myOptions.symbolAsString    = true;
         myOptions.timestampAsString = false;
@@ -632,20 +654,32 @@ public class Printer
         @Override
         public void visit(IonDatagram value) throws IOException, Exception
         {
-            boolean hitOne = false;
             Iterator<IonValue> i = (myOptions.skipSystemValues
                                        ? value.iterator()
                                        : value.systemIterator());
+
+            final boolean asList = myOptions.datagramAsList;
+            if (asList)
+            {
+                myOut.append('[');
+            }
+
+            boolean hitOne = false;
             while (i.hasNext())
             {
                 if (hitOne)
                 {
-                    myOut.append(' ');
+                    myOut.append(asList  ?  ','  :  ' ');
                 }
                 hitOne = true;
 
                 IonValue child = i.next();
                 writeChild(child, true);
+            }
+
+            if (asList)
+            {
+                myOut.append(']');
             }
         }
 
