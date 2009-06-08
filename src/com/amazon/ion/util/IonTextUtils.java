@@ -448,6 +448,17 @@ public class IonTextUtils
         }
         else {
             if (mode == EscapeMode.JSON) {
+                // JSON does not have a \Uxxxxyyyy escape, surrogates
+                // must be used as per RFC-4627
+                // 
+                // http://www.ietf.org/rfc/rfc4627.txt
+                // [...]
+                //   To escape an extended character that is not in the Basic Multilingual
+                //   Plane, the character is represented as a twelve-character sequence,
+                //   encoding the UTF-16 surrogate pair.  So, for example, a string
+                //   containing only the G clef character (U+1D11E) may be represented as
+                //   "\uD834\uDD1E".
+                // [...]
                 printCodePointAsSurrogatePairHexDigits(out, c);
             }
             else {
