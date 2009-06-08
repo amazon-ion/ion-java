@@ -231,6 +231,11 @@ public abstract class IonSequenceImpl
         return v.getElementId();
     }
 
+    public final int lastIndexOf(Object o)
+    {
+        return indexOf(o);
+    }
+
 
     public IonValue[] toArray()
     {

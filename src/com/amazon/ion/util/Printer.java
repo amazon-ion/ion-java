@@ -53,15 +53,16 @@ public class Printer
     {
         public boolean blobAsString;
         public boolean clobAsString;
+        public boolean datagramAsList;
         public boolean decimalAsFloat;
-        public boolean skipAnnotations;
         public boolean sexpAsList;
+        public boolean skipAnnotations;
+        public boolean skipSystemValues;
         public boolean stringAsJson;
         public boolean symbolAsString;
         public boolean timestampAsString;
         public boolean timestampAsMillis;
         public boolean untypedNulls;
-//      public boolean skipSystemValues = true;
 
 
         @Override
@@ -105,17 +106,44 @@ public class Printer
 
 
     /**
-     * Sets whether this printer ignores (<em>i.e.</em>, doesn't print)
-     * annotations.  By default, this is <code>false</code>.
+     * Indicates whether this printer skips (<em>i.e.</em>, doesn't print)
+     * system IDs and local symbol tables.
+     * By default, this property is <code>false</code>.
+     */
+    public synchronized boolean getSkipSystemValues()
+    {
+        return myOptions.skipSystemValues;
+    }
+
+    /**
+     * Sets whether this printer skips (<em>i.e.</em>, doesn't print)
+     * system IDs and local symbol tables.
+     * By default, this property is <code>false</code>.
+     */
+    public synchronized void setSkipSystemValues(boolean skip)
+    {
+        myOptions.skipSystemValues = skip;
+    }
+
+
+    /**
+     * Indicates whether this printer skips (<em>i.e.</em>, doesn't print)
+     * annotations.
+     * By default, this property is <code>false</code>.
      */
     public synchronized boolean getSkipAnnotations()
     {
         return myOptions.skipAnnotations;
     }
 
-    public synchronized void setSkipAnnotations(boolean ignore)
+    /**
+     * Sets whether this printer skips (<em>i.e.</em>, doesn't print)
+     * annotations.
+     * By default, this property is <code>false</code>.
+     */
+    public synchronized void setSkipAnnotations(boolean skip)
     {
-        myOptions.skipAnnotations = ignore;
+        myOptions.skipAnnotations = skip;
     }
 
 
@@ -146,6 +174,25 @@ public class Printer
     public synchronized void setPrintClobAsString(boolean clobAsString)
     {
         myOptions.clobAsString = clobAsString;
+    }
+
+
+    /**
+     * Indicates whether this printer renders datagrams as lists.
+     * By default, this property is <code>false</code>.
+     */
+    public synchronized boolean getPrintDatagramAsList()
+    {
+        return myOptions.datagramAsList;
+    }
+
+    /**
+     * Sets whether this printer renders datagrams as lists.
+     * By default, this property is <code>false</code>.
+     */
+    public synchronized void setPrintDatagramAsList(boolean datagramAsList)
+    {
+        myOptions.datagramAsList = datagramAsList;
     }
 
 
@@ -260,9 +307,11 @@ public class Printer
      * <ul>
      *   <li>{@link Options#blobAsString}</li> is {@code true}
      *   <li>{@link Options#clobAsString}</li> is {@code true}
+     *   <li>{@link Options#datagramAsList}</li> is {@code true}
      *   <li>{@link Options#decimalAsFloat}</li> is {@code true}
-     *   <li>{@link Options#skipAnnotations}</li> is {@code true}
      *   <li>{@link Options#sexpAsList}</li> is {@code true}
+     *   <li>{@link Options#skipAnnotations}</li> is {@code true}
+     *   <li>{@link Options#skipSystemValues}</li> is {@code true}
      *   <li>{@link Options#stringAsJson}</li> is {@code true}
      *   <li>{@link Options#symbolAsString}</li> is {@code true}
      *   <li>{@link Options#timestampAsString}</li> is {@code false}
@@ -275,9 +324,11 @@ public class Printer
     {
         myOptions.blobAsString      = true;
         myOptions.clobAsString      = true;
+        myOptions.datagramAsList    = true;
         myOptions.decimalAsFloat    = true;
-        myOptions.skipAnnotations   = true;
         myOptions.sexpAsList        = true;
+        myOptions.skipAnnotations   = true;
+        myOptions.skipSystemValues  = true;
         myOptions.stringAsJson      = true;
         myOptions.symbolAsString    = true;
         myOptions.timestampAsString = false;
@@ -420,7 +471,6 @@ public class Printer
                 {
                     for (String ann : anns) {
                         IonTextUtils.printSymbol(myOut, ann);
-//                        writeSymbol(ann);
                         myOut.append("::");
                     }
                 }
@@ -604,18 +654,32 @@ public class Printer
         @Override
         public void visit(IonDatagram value) throws IOException, Exception
         {
+            Iterator<IonValue> i = (myOptions.skipSystemValues
+                                       ? value.iterator()
+                                       : value.systemIterator());
+
+            final boolean asList = myOptions.datagramAsList;
+            if (asList)
+            {
+                myOut.append('[');
+            }
+
             boolean hitOne = false;
-            Iterator<IonValue> i = value.systemIterator();
             while (i.hasNext())
             {
                 if (hitOne)
                 {
-                    myOut.append(' ');
+                    myOut.append(asList  ?  ','  :  ' ');
                 }
                 hitOne = true;
 
                 IonValue child = i.next();
                 writeChild(child, true);
+            }
+
+            if (asList)
+            {
+                myOut.append(']');
             }
         }
 
@@ -633,18 +697,76 @@ public class Printer
                 BigDecimal decimal = value.bigDecimalValue();
                 BigInteger unscaled = decimal.unscaledValue();
 
-                // for the various forms of negative zero we have to
-                // write the sign ourselves, since neither BigInteger
-                // nor BigDecimal recognize negative zero, but Ion does.
-                if (decimal.signum() == 0
-                    && value.getClassification() == NEGATIVE_ZERO)
+                int signum = decimal.signum();
+                if (signum < 0)
                 {
-                	myOut.append('-');
+                    myOut.append('-');
+                    unscaled = unscaled.negate();
+                }
+                else if (signum == 0
+                         && value.getClassification() == NEGATIVE_ZERO)
+                {
+                    // for the various forms of negative zero we have to
+                    // write the sign ourselves, since neither BigInteger
+                    // nor BigDecimal recognize negative zero, but Ion does.
+                    myOut.append('-');
                 }
 
-                myOut.append(unscaled.toString());
-                myOut.append(myOptions.decimalAsFloat ? 'e' : 'd');
-                myOut.append(Integer.toString(-decimal.scale()));
+
+                final String unscaledText = unscaled.toString();
+                final int significantDigits = unscaledText.length();
+
+                final int scale = decimal.scale();
+                final int exponent = -scale;
+
+                if (myOptions.decimalAsFloat)
+                {
+                    myOut.append(unscaledText);
+                    myOut.append('e');
+                    myOut.append(Integer.toString(exponent));
+                }
+                else if (exponent == 0)
+                {
+                    myOut.append(unscaledText);
+                    myOut.append('.');
+                }
+                else if (0 < scale)
+                {
+                    int wholeDigits;
+                    int remainingScale;
+                    if (significantDigits > scale)
+                    {
+                        wholeDigits = significantDigits - scale;
+                        remainingScale = 0;
+                    }
+                    else
+                    {
+                        wholeDigits = 1;
+                        remainingScale = scale - significantDigits + 1;
+                    }
+
+                    myOut.append(unscaledText, 0, wholeDigits);
+                    if (wholeDigits < significantDigits)
+                    {
+                        myOut.append('.');
+                        myOut.append(unscaledText, wholeDigits,
+                                     significantDigits);
+                    }
+
+                    if (remainingScale != 0)
+                    {
+                        myOut.append("d-");
+                        myOut.append(Integer.toString(remainingScale));
+                    }
+                }
+                else // (exponent > 0)
+                {
+                    // We cannot move the decimal point to the right, adding
+                    // rightmost zeros, because that would alter the precision.
+                    myOut.append(unscaledText);
+                    myOut.append('d');
+                    myOut.append(Integer.toString(exponent));
+                }
             }
         }
 

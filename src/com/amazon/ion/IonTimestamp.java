@@ -66,6 +66,12 @@ public interface IonTimestamp
     public BigDecimal getDecimalMillis();
 
 
+    /**
+     * Sets the value of this {@code timestamp}.
+     *
+     * @param timestamp may be {@code null} to cause this to be
+     * {@code null.timestamp}.
+     */
     public void setValue(Timestamp timestamp);
 
     public void setValue(BigDecimal millis, Integer localOffset);

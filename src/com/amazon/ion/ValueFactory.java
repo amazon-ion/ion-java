@@ -462,7 +462,9 @@ public interface ValueFactory
 
 
     /**
-     * Constructs a new <code>timestamp</code> instance with the given value.
+     * Constructs a new {@code timestamp} instance with the given value.
+     *
+     * @param value may be {@code null} to make {@code null.timestamp}.
      */
     public IonTimestamp newTimestamp(Timestamp value);
 }

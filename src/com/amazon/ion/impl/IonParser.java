@@ -474,7 +474,9 @@ loop:   for (;;) {
             case tComma:
                 break;
             default:
-                throw new IonException("expected ',' or '}' in struct at " + this._in.position());
+                throw new IonException("expected ',' or '}' but found '" +
+                                       _t.getImage() + "' in struct at " +
+                                       this._in.position());
             }
 
             // we're past that comma

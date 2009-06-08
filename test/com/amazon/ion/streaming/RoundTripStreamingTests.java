@@ -32,7 +32,7 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
 
     public RoundTripStreamingTests()
     {
-        super("good");
+        super("good", "equivs");
     }
 
     @Override
@@ -48,17 +48,14 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
     @Override
     protected String[] getFilesToSkip()
     {
+        // TODO JIRA ION-8 fix Unicode bugs and enable test cases
         return new String[]
         {
-            // "annotationQuotedFalse.ion",
-        	// "annotationQuotedNan.ion",
-            // "annotationQuotedNull.ion",
-            // "annotationQuotedTrue.ion",
-            // "fieldNameQuotedFalse.ion",
-            // "fieldNameQuotedNan.ion",
-            // "fieldNameQuotedNull.ion",
-            // "fieldNameQuotedTrue.ion",
-            // "floatSpecials.ion",
+             "equivs/stringU0001D11E.ion",
+             "equivs/stringU0120.ion",
+             "equivs/stringU2021.ion",
+             "equivs/symbols.ion",
+             "equivs/textNewlines.ion",
         };
     }
 
@@ -70,13 +67,13 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
         private StringBuilder myBuilder;
         private byte[]        myBuffer;
 
-        public StreamingRoundTripTest(File ionText)
+        public StreamingRoundTripTest(File ionFile)
         {
-            super(ionText);
+            super(ionFile);
 
             FileInputStream in;
             BufferedInputStream bin;
-            long len = ionText.length();
+            long len = ionFile.length();
             if (len < 0 || len > Integer.MAX_VALUE) throw new IllegalArgumentException("file too long for test");
             myBuffer = new byte[(int)len];
             try {

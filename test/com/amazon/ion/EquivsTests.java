@@ -83,7 +83,7 @@ public class EquivsTests
     {
         return new String[]
         {
-            "symbols.ion",
+            "equivs/symbols.ion",
         };
     }
 }

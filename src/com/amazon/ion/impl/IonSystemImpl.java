@@ -43,6 +43,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.PushbackInputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
@@ -305,6 +306,17 @@ public class IonSystemImpl
         return userReader;
     }
 
+    /**
+     * FIXME Can't yet add this to public API, unclear how to do buffer recycling
+     * since that's currently done by the UserReader.
+     */
+    protected SystemReader systemIterate(Reader reader)
+    {
+        return new SystemReader(this,
+                                getCatalog(),
+                                newLocalSymbolTable(),
+                                reader);
+    }
 
     public Iterator<IonValue> iterate(String ionText)
     {
@@ -340,6 +352,54 @@ public class IonSystemImpl
         return userReader;
     }
 
+
+    public Iterator<IonValue> iterate(InputStream ionData)
+    {
+        return iterate(ionData, false);
+    }
+
+    /**
+     * FIXME If data is text, the resulting reader will NOT flush the buffer
+     * and will accumulate memory!
+     * See comment on systemIterate(Reader) before adding to public APIs!
+     */
+    public Iterator<IonValue> systemIterate(InputStream ionData)
+    {
+        return iterate(ionData, true);
+    }
+
+    private Iterator<IonValue> iterate(InputStream ionData, boolean system)
+    {
+        SystemReader systemReader;
+        boolean binaryData;
+        try
+        {
+            PushbackInputStream pushback = new PushbackInputStream(ionData, 8);
+            binaryData = IonImplUtils.streamIsIonBinary(pushback);
+            if (binaryData)
+            {
+                systemReader = newPagedBinarySystemReader(pushback);
+            }
+            else
+            {
+                Reader reader = new InputStreamReader(pushback, "UTF-8");
+                systemReader = systemIterate(reader);
+            }
+        }
+        catch (IOException e)
+        {
+            throw new IonException(e);
+        }
+
+        if (system) return systemReader;
+
+        UserReader userReader = new UserReader(systemReader);
+        if (!binaryData)
+        {
+            userReader.setBufferToRecycle();
+        }
+        return userReader;
+    }
 
     //=========================================================================
     // IonReader creation

@@ -641,7 +641,7 @@ public class StructTest
         testSimpleClone("{f:{{}}}");           // blob
         testSimpleClone("{f:true}");           // bool
         testSimpleClone("{f:{{\"\"}}}");       // clob
-        testSimpleClone("{f:1d0}");            // decimal
+        testSimpleClone("{f:1.}");             // decimal
         testSimpleClone("{f:1e0}");            // float
         testSimpleClone("{f:1}");              // int
         testSimpleClone("{f:[]}");             // list

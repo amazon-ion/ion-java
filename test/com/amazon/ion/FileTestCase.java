@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -19,7 +17,13 @@ public abstract class FileTestCase
 
     public FileTestCase(File testFile)
     {
-        super(testFile.getName());
+        this(testFile.getParentFile().getName() + '/' + testFile.getName(),
+             testFile);
+    }
+
+    public FileTestCase(String testName, File testFile)
+    {
+        super(testName);
         myTestFile = testFile;
     }
 

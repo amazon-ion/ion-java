@@ -533,7 +533,12 @@ public final class IonBinaryReader
             int vlen = read_length(typedesc);   // we have to read past the overall value length first
             int alen = _reader.readVarUInt();   // now we have the length of the annotations themselves
             int aend = _reader.position() + alen;
-// FIXME what if loadLocalSymbolTableIfStruct returns false? why keep looping?
+            // this is reading the annotations the preceed this value
+            // until it finds a symbol table annotation or runs out of
+            // annotations - while there should be only 1 annotation
+            // that isn't a requirement.
+            // loadLocalSymbolTableIfStruct will check to see if the
+            // value is a struct or not
             while (_reader.position() < aend && !is_symbol_table) {
                 int a = _reader.readVarUInt();
                 if (a == SystemSymbolTable.ION_SYMBOL_TABLE_SID) {

@@ -16,6 +16,8 @@ public class SystemProcessingTests
             new TestSuite("SystemProcessingTests");
 
         suite.addTestSuite(IteratorSystemProcessingTest.class);
+        suite.addTestSuite(BinaryStreamIteratorSystemProcessingTest.class);
+        suite.addTestSuite(TextStreamIteratorSystemProcessingTest.class);
         suite.addTestSuite(LoadTextBytesSystemProcessingTest.class);
         suite.addTestSuite(LoadTextStreamSystemProcessingTest.class);
         suite.addTestSuite(LoadBinaryBytesSystemProcessingTest.class);

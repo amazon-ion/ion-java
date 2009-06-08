@@ -2,6 +2,8 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
+
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
@@ -23,6 +25,7 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.ListIterator;
 
 /**
  *
@@ -34,8 +37,6 @@ public final class IonDatagramImpl
     static private final int DATAGRAM_TYPEDESC  =
         IonConstants.makeTypeDescriptor(IonConstants.tidSexp,
                                         IonConstants.lnIsEmptyContainer);
-
-    private final static String[] EMPTY_STRING_ARRAY = new String[0];
 
     /** The catalog for symbol table resolution. */
     private final IonCatalog _catalog;
@@ -443,19 +444,21 @@ public final class IonDatagramImpl
         return super.get(index);
     }
 
+
     @Override
-    public Iterator<IonValue> iterator() throws NullValueException
+    public ListIterator<IonValue> listIterator(int index)
     {
-        // TODO implement remove on UserDatagram.iterator()
-        // Tricky bit is properly removing from both user and system contents.
-        return new IonContainerIterator(_userContents.iterator(), false);
+        // TODO implement remove, add, set on UserDatagram.listIterator()
+        // Tricky bit is properly updating both user and system contents.
+        return new IonContainerIterator(_userContents.listIterator(index),
+                                        true);
     }
 
-    public Iterator<IonValue> systemIterator()
+    public ListIterator<IonValue> systemIterator()
     {
-        // Disable remove... what if a system value is removed?
-        // What if a system value is removed?
-        return new IonContainerIterator(_contents.iterator(), false);
+        // Modification is disabled.
+        // What if a system value is removed or inserted?
+        return new IonContainerIterator(_contents.listIterator(), true);
     }
 
     @Override

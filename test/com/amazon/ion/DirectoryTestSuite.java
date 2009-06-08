@@ -6,6 +6,7 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import junit.framework.Test;
+import junit.framework.TestCase;
 import junit.framework.TestSuite;
 
 /**
@@ -16,42 +17,46 @@ public abstract class DirectoryTestSuite
     extends TestSuite
 {
 
-    public DirectoryTestSuite(String testdataDir)
+    public DirectoryTestSuite(String... testdataDirs)
     {
         super();
 
         setName(getClass().getName());
 
-        File goodFilesDir = IonTestCase.getTestdataFile(testdataDir);
-
-        String[] fileNames = goodFilesDir.list();
-        if (fileNames == null)
-        {
-            String message =
-                "testdataDir is not a directory: "
-                + goodFilesDir.getAbsolutePath();
-            throw new IllegalArgumentException(message);
-        }
-
         List<String> skip = Arrays.asList(getFilesToSkip());
 
-        // Sort the fileNames so they are listed in order.
-        Arrays.sort(fileNames);
-        for (String fileName : fileNames)
+        for (String testdataDir : testdataDirs)
         {
-            if (skip.contains(fileName))
+            File dir = IonTestCase.getTestdataFile(testdataDir);
+
+            String[] fileNames = dir.list();
+            if (fileNames == null)
             {
-                System.err.println("WARNING: " + getName()
-                                   + " skipping " + fileName);
-                continue;
+                String message =
+                    "testdataDir is not a directory: "
+                    + dir.getAbsolutePath();
+                throw new IllegalArgumentException(message);
             }
 
-            File testFile = new File(goodFilesDir, fileName);
-
-            Test test = makeTest(testFile);
-            if (test != null)
+            // Sort the fileNames so they are listed in order.
+            Arrays.sort(fileNames);
+            for (String fileName : fileNames)
             {
-                addTest(test);
+
+                File testFile = new File(dir, fileName);
+
+                Test test = makeTest(testFile);
+                if (test != null)
+                {
+                    String testName = ((TestCase)test).getName();
+                    if (skip.contains(testName))
+                    {
+                        System.err.println("WARNING: " + getName()
+                                           + " skipping " + testName);
+                        continue;
+                    }
+                    addTest(test);
+                }
             }
         }
     }

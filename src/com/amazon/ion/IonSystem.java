@@ -237,6 +237,27 @@ public interface IonSystem
 
 
     /**
+     * Creates an iterator over a stream of Ion data,
+     * detecting whether it's text or binary data.
+     * Values returned by the iterator have no container.
+     * <p>
+     * The iterator will automatically consume Ion system IDs and local symbol
+     * tables; they will not be returned by the iterator.
+     * <p>
+     * This method is suitable for use over unbounded streams with a reasonable
+     * schema.
+     *
+     * @param ionData a stream of Ion data.  The caller is responsible for
+     * closing the InputStream after iteration is complete.
+     *
+     * @return a new iterator instance.
+     *
+     * @throws NullPointerException if <code>ionData</code> is null.
+     */
+    public Iterator<IonValue> iterate(InputStream ionData);
+
+
+    /**
      * Creates an iterator over a string containing Ion text data.
      * Values returned by the iterator have no container.
      * <p>
