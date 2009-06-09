@@ -1,5 +1,6 @@
 // Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
+import com.amazon.ion.SurrogateEscapeTest;
 import com.amazon.ion.AnnotationEscapesTest;
 import com.amazon.ion.BadIonTests;
 import com.amazon.ion.BinaryTest;
@@ -87,6 +88,7 @@ public class AllTests
         suite.addTestSuite(AnnotationEscapesTest.class);
         suite.addTestSuite(FieldNameEscapesTest.class);
         suite.addTestSuite(StringFieldNameEscapesTest.class);
+        suite.addTestSuite(SurrogateEscapeTest.class);
 
         // binary format tests
         suite.addTestSuite(BinaryTest.class);
