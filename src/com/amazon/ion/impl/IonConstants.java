@@ -32,7 +32,7 @@ public class IonConstants
     public static final int high_surrogate_value = 0xD800;
     public static final int low_surrogate_value = 0xDC00;
     public static final int surrogate_mask = 0xFFFFFC00; // 0x3f << 10; or the top 6 bits is the marker the low 10 is the 1/2 character
-    public static final int surrogate_value_mask = ~0xFC00; // 0x3f << 10; or the top 6 bits is the marker the low 10 is the 1/2 character
+    public static final int surrogate_value_mask = ~0xFFFFFC00; // 0x3f << 10; or the top 6 bits is the marker the low 10 is the 1/2 character
     public static final int surrogate_utf32_offset = 0x10000;
     public static final int surrogate_utf32_shift = 10;
     
