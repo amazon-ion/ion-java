@@ -95,7 +95,7 @@ public class IonParser
     public void parse(SymbolTable symboltable
                     , int startPosition
                     , boolean writeMagicCookie
-                    , int consume)
+                    , long consume)
     {
         assert symboltable.isLocalTable();
         this._symboltable = symboltable;

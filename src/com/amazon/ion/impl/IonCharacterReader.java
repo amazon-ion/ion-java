@@ -37,10 +37,10 @@ public class IonCharacterReader extends PushbackReader {
      */
     public static final int BUFFER_PADDING = 1;
 
-    private int m_consumed;
-    private int m_line;
-    private int m_column;
-    private int m_size;
+    private long m_consumed;
+    private int  m_line;
+    private int  m_column;
+    private int  m_size;
 
     // our offset stack--really, for efficiency this should
     // be a linked list of primitive ints to avoid boxing costs
@@ -92,7 +92,7 @@ public class IonCharacterReader extends PushbackReader {
      *
      * @return The logical number of consumed characters.
      */
-    public final int getConsumedAmount() {
+    public final long getConsumedAmount() {
         return m_consumed;
     }
 
