@@ -2,6 +2,7 @@
 
 package com.amazon.ion;
 
+import java.io.UnsupportedEncodingException;
 import junit.framework.Assert;
 
 /**
@@ -49,6 +50,22 @@ public class TestUtils
         }
     }
 
+
+    public static String hexDump(final String str)
+    {
+        try {
+            final byte[] utf16Bytes = str.getBytes("UTF-16BE");
+            StringBuilder buf = new StringBuilder(utf16Bytes.length * 4);
+            for (byte b : utf16Bytes) {
+                buf.append(Integer.toString(0x00FF & b, 16));
+                buf.append(' ');
+            }
+            return buf.toString();
+        }
+        catch (final UnsupportedEncodingException e) {
+            throw new IllegalArgumentException(e);
+        }
+    }
 
     /**
      * U+00A5 YEN SIGN
