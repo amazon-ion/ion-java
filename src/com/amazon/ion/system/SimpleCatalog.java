@@ -4,6 +4,7 @@
 
 package com.amazon.ion.system;
 
+import com.amazon.ion.IonMutableCatalog;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.SymbolTable;
 import java.util.ArrayList;
@@ -18,7 +19,7 @@ import java.util.TreeMap;
  * automatic removal of entries.
  */
 public class SimpleCatalog
-    implements IonCatalog, Iterable<SymbolTable>
+    implements IonMutableCatalog, Iterable<SymbolTable>
 {
     /*  CAVEATS AND LIMITATIONS
      *

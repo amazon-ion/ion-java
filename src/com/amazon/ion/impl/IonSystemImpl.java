@@ -66,17 +66,18 @@ public class IonSystemImpl
         UnifiedSymbolTable.getSystemSymbolTableInstance();
 
     private IonCatalog  myCatalog;
-    private IonLoader   myLoader = new LoaderImpl(this);
+    private IonLoader   myLoader;
 
 
     public IonSystemImpl()
     {
-        myCatalog = new SimpleCatalog();
+        this(new SimpleCatalog());
     }
 
     public IonSystemImpl(IonCatalog catalog)
     {
         myCatalog = catalog;
+        myLoader = new LoaderImpl(this, myCatalog);
     }
 
 
@@ -201,7 +202,7 @@ public class IonSystemImpl
             try
             {
                 IonDatagramImpl dg =
-                    new IonDatagramImpl(this, (IonReader) null);
+                    new IonDatagramImpl(this, this.getCatalog(), (IonReader) null);
                 // Force symtab preparation  FIXME should not be necessary
                 dg.byteSize();
                 return dg;
@@ -213,7 +214,7 @@ public class IonSystemImpl
             }
         }
 
-        return new IonDatagramImpl(this);
+        return new IonDatagramImpl(this, this.getCatalog());
     }
 
     public IonDatagram newDatagram(IonValue initialChild)
@@ -269,7 +270,12 @@ public class IonSystemImpl
 
     public IonLoader newLoader()
     {
-        return new LoaderImpl(this);
+        return new LoaderImpl(this, myCatalog);
+    }
+    
+    public IonLoader newLoader(IonCatalog catalog)
+    {
+        return new LoaderImpl(this, catalog);
     }
 
     public synchronized IonLoader getLoader()
@@ -340,7 +346,7 @@ public class IonSystemImpl
 
     public Iterator<IonValue> iterate(byte[] ionData)
     {
-        SystemReader systemReader = newLegacySystemReader(ionData);
+        SystemReader systemReader = newLegacySystemReader(getCatalog(), ionData);
         UserReader userReader = new UserReader(systemReader);
         // Don't use buffer-clearing!
         return userReader;
@@ -372,7 +378,7 @@ public class IonSystemImpl
             binaryData = IonImplUtils.streamIsIonBinary(pushback);
             if (binaryData)
             {
-                systemReader = newPagedBinarySystemReader(pushback);
+                systemReader = newPagedBinarySystemReader(getCatalog(), pushback);
             }
             else
             {
@@ -574,23 +580,24 @@ public class IonSystemImpl
     /**
      * Creates a new reader, wrapping an array of text or binary data.
      *
+     * @param catalog The catalog to use.
      * @param ionData may be (UTF-8) text or binary.
      * <em>This method assumes ownership of the array</em> and may modify it at
      * will.
      *
      * @throws NullPointerException if <code>ionData</code> is null.
      */
-    public SystemReader newLegacySystemReader(byte[] ionData)
+    public SystemReader newLegacySystemReader(IonCatalog catalog, byte[] ionData)
     {
         boolean isBinary =
             IonBinary.matchBinaryVersionMarker(ionData);
 
         SystemReader sysReader;
         if (isBinary) {
-            sysReader = newBinarySystemReader(ionData);
+            sysReader = newBinarySystemReader(catalog, ionData);
         }
         else {
-            sysReader = newTextSystemReader(ionData);
+            sysReader = newTextSystemReader(catalog, ionData);
         }
 
         return sysReader;
@@ -600,30 +607,32 @@ public class IonSystemImpl
     /**
      * Creates a new reader, wrapping an array of binary data.
      *
+     * @param catalog the catalog to use.
      * @param ionBinary must be Ion binary data, not text.
      * <em>This method assumes ownership of the array</em> and may modify it at
      * will.
      *
      * @throws NullPointerException if <code>ionBinary</code> is null.
      */
-    private SystemReader newBinarySystemReader(byte[] ionBinary)
+    private SystemReader newBinarySystemReader(IonCatalog catalog, byte[] ionBinary)
     {
         BlockedBuffer bb = new BlockedBuffer(ionBinary);
         BufferManager buffer = new BufferManager(bb);
-        return new SystemReader(this, buffer);
+        return new SystemReader(this, catalog, buffer);
     }
 
 
     /**
      * Creates a new reader, wrapping bytes holding UTF-8 text.
      *
+     * @param catalog the catalog to use.
      * @param ionText must be UTF-8 encoded Ion text data, not binary.
      * <em>This method assumes ownership of the array</em> and may modify it at
      * will.
      *
      * @throws NullPointerException if <code>ionText</code> is null.
      */
-    private SystemReader newTextSystemReader(byte[] ionText)
+    private SystemReader newTextSystemReader(IonCatalog catalog, byte[] ionText)
     {
         ByteArrayInputStream stream = new ByteArrayInputStream(ionText);
         Reader reader;
@@ -634,21 +643,21 @@ public class IonSystemImpl
             throw new IonException(e);
         }
 
-        return new SystemReader(this, getCatalog(), reader);
+        return new SystemReader(this, catalog, reader);
     }
 
 
-    public SystemReader newBinarySystemReader(InputStream ionBinary)
+    public SystemReader newBinarySystemReader(IonCatalog catalog, InputStream ionBinary)
         throws IOException
     {
         BufferManager buffer = new BufferManager(ionBinary);
-        return new SystemReader(this, buffer);
+        return new SystemReader(this, catalog, buffer);
     }
 
-    public SystemReader newPagedBinarySystemReader(InputStream ionBinary)
+    public SystemReader newPagedBinarySystemReader(IonCatalog catalog, InputStream ionBinary)
         throws IOException
     {
-        return new SystemReader(this, ionBinary);
+        return new SystemReader(this, catalog, ionBinary);
     }
 
     //-------------------------------------------------------------------------
@@ -1224,7 +1233,7 @@ public class IonSystemImpl
             byte[] data = ((IonDatagram)value).getBytes();
 
             // TODO This can probably be optimized further.
-            return (T) new IonDatagramImpl(this, data);
+            return (T) new IonDatagramImpl(this, this.getCatalog(), data);
         }
 
         StringBuilder buffer = new StringBuilder();

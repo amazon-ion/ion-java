@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
@@ -27,11 +28,12 @@ public class LoaderImpl
     static final boolean USE_NEW_READERS = false;
 
     private final IonSystemImpl mySystem;
+    private final IonCatalog    myCatalog;
 
-
-    public LoaderImpl(IonSystemImpl system)
+    public LoaderImpl(IonSystemImpl system, IonCatalog catalog)
     {
         mySystem = system;
+        myCatalog = catalog;
     }
 
 
@@ -101,7 +103,7 @@ public class LoaderImpl
             IonTextReader textReader = mySystem.newSystemReader(ionText);
             try
             {
-                IonDatagramImpl dg = new IonDatagramImpl(mySystem, textReader);
+                IonDatagramImpl dg = new IonDatagramImpl(mySystem, myCatalog, textReader);
                 return dg;
             }
             catch (IOException e)
@@ -148,7 +150,7 @@ public class LoaderImpl
     public IonDatagramImpl load(Reader ionText, SymbolTable symbolTable)
         throws IonException, IOException
     {
-        return new IonDatagramImpl(mySystem, symbolTable, ionText);
+        return new IonDatagramImpl(mySystem, myCatalog, symbolTable, ionText);
     }
 
 
@@ -157,7 +159,7 @@ public class LoaderImpl
                                 LocalSymbolTable symbolTable)
         throws IonException, IOException
     {
-        return new IonDatagramImpl(mySystem, symbolTable, ionText);
+        return new IonDatagramImpl(mySystem, myCatalog, symbolTable, ionText);
     }
 
 
@@ -166,7 +168,7 @@ public class LoaderImpl
                                     LocalSymbolTable symbolTable)
         throws IonException, IOException
     {
-        return new IonDatagramImpl(mySystem, symbolTable, ionText);
+        return new IonDatagramImpl(mySystem, myCatalog, symbolTable, ionText);
     }
 
 
@@ -178,7 +180,7 @@ public class LoaderImpl
             IonReader reader = mySystem.newSystemReader(ionText);
             try
             {
-                IonDatagramImpl dg = new IonDatagramImpl(mySystem, reader);
+                IonDatagramImpl dg = new IonDatagramImpl(mySystem, myCatalog, reader);
                 return dg;
             }
             catch (IOException e)
@@ -186,7 +188,7 @@ public class LoaderImpl
                 throw new IonException(e);
             }
         }
-        return new IonDatagramImpl(mySystem, ionText);
+        return new IonDatagramImpl(mySystem, myCatalog, ionText);
     }
 
 
@@ -204,7 +206,7 @@ public class LoaderImpl
                 assert reader instanceof IonTextReader;
                 try
                 {
-                    IonDatagramImpl dg = new IonDatagramImpl(mySystem, reader);
+                    IonDatagramImpl dg = new IonDatagramImpl(mySystem, myCatalog, reader);
                     // Force symtab preparation  FIXME should not be necessary
                     dg.byteSize();
                     return dg;
@@ -218,7 +220,7 @@ public class LoaderImpl
             // TODO refactor this path to eliminate SystemReader
         }
 
-        return new IonDatagramImpl(mySystem, ionData);
+        return new IonDatagramImpl(mySystem, myCatalog, ionData);
     }
 
 
@@ -238,7 +240,7 @@ public class LoaderImpl
             }
 
             SystemReader systemReader =
-                mySystem.newBinarySystemReader(pushback);
+                mySystem.newBinarySystemReader(myCatalog, pushback);
             return new IonDatagramImpl(mySystem, systemReader);
         }
 
@@ -249,7 +251,7 @@ public class LoaderImpl
             assert reader instanceof IonTextReader;
             try
             {
-                IonDatagramImpl dg = new IonDatagramImpl(mySystem, reader);
+                IonDatagramImpl dg = new IonDatagramImpl(mySystem, myCatalog, reader);
                 // Force symtab preparation  FIXME should not be necessary
                 dg.byteSize();
                 return dg;
@@ -277,7 +279,7 @@ public class LoaderImpl
     public IonDatagramImpl loadBinary(InputStream ionBinary)
         throws IOException
     {
-        SystemReader systemReader = mySystem.newBinarySystemReader(ionBinary);
+        SystemReader systemReader = mySystem.newBinarySystemReader(myCatalog, ionBinary);
         return new IonDatagramImpl(mySystem, systemReader);
     }
     
@@ -285,7 +287,7 @@ public class LoaderImpl
     public IonDatagramImpl loadPagedBinary(InputStream ionBinary)
         throws IOException
     {
-        SystemReader systemReader = mySystem.newPagedBinarySystemReader(ionBinary);
+        SystemReader systemReader = mySystem.newPagedBinarySystemReader(myCatalog, ionBinary);
         return new IonDatagramImpl(mySystem, systemReader);
     }
     

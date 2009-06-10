@@ -3,8 +3,8 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
-
 import com.amazon.ion.ContainedValueException;
+import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
@@ -36,7 +36,10 @@ public final class IonDatagramImpl
     static private final int DATAGRAM_TYPEDESC  =
         IonConstants.makeTypeDescriptor(IonConstants.tidSexp,
                                         IonConstants.lnIsEmptyContainer);
-
+    
+    /** Underlying catalog */
+    private final IonCatalog _catalog;
+    
     /**
      * Used while constructing, then set to null.
      */
@@ -46,7 +49,6 @@ public final class IonDatagramImpl
      * Superset of {@link #_contents}; contains only user values.
      */
     private ArrayList<IonValue> _userContents;
-
 
     private static BufferManager make_empty_buffer()
     {
@@ -65,8 +67,8 @@ public final class IonDatagramImpl
 
     //=========================================================================
 
-    public IonDatagramImpl(IonSystemImpl system) {
-        this(system, make_empty_buffer());
+    public IonDatagramImpl(IonSystemImpl system, IonCatalog catalog) {
+        this(system, catalog, make_empty_buffer());
     }
 
 
@@ -80,9 +82,9 @@ public final class IonDatagramImpl
      * @throws NullPointerException if any parameter is null.
      * @throws IonException if there's a syntax error in the Ion content.
      */
-    public IonDatagramImpl(IonSystemImpl system, byte[] ionData)
+    public IonDatagramImpl(IonSystemImpl system, IonCatalog catalog, byte[] ionData)
     {
-        this(system, system.newLegacySystemReader(ionData));
+        this(system, system.newLegacySystemReader(catalog, ionData));
     }
 
 
@@ -92,15 +94,16 @@ public final class IonDatagramImpl
      *
      * @throws NullPointerException if any parameter is null.
      */
-    public IonDatagramImpl(IonSystemImpl system, BufferManager buffer)
+    public IonDatagramImpl(IonSystemImpl system, IonCatalog catalog, BufferManager buffer)
     {
-        this(system, new SystemReader(system, buffer));
+        this(system, new SystemReader(system, catalog, buffer));
     }
 
 
-    public IonDatagramImpl(IonSystemImpl system, Reader ionText)
+    public IonDatagramImpl(IonSystemImpl system, IonCatalog catalog, Reader ionText)
     {
         this(system
+            ,catalog
             ,system.newLocalSymbolTable()
             ,ionText);
     }
@@ -111,7 +114,7 @@ public final class IonDatagramImpl
     {
         byte[] data = this.getBytes();
 
-        IonDatagramImpl clone = new IonDatagramImpl(this._system, data);
+        IonDatagramImpl clone = new IonDatagramImpl(this._system, _catalog, data);
 
         return clone;
     }
@@ -191,15 +194,16 @@ public final class IonDatagramImpl
      * @throws NullPointerException if any parameter is null.
      */
     public IonDatagramImpl(IonSystemImpl system,
+                           IonCatalog catalog,
                            SymbolTable initialSymbolTable,
                            Reader ionText)
     {
         this(system,
              new SystemReader(system,
-                              system.getCatalog(),
+                              catalog,
                               initialSymbolTable, ionText));
     }
-
+    
     /**
      * Workhorse constructor this does the actual work.
      *
@@ -215,6 +219,7 @@ public final class IonDatagramImpl
         _userContents = new ArrayList<IonValue>();
 
         // This is only used during construction.
+        _catalog = rawStream.getCatalog();
         _rawStream = rawStream;
         _buffer = _rawStream.getBuffer();
 
@@ -243,15 +248,16 @@ public final class IonDatagramImpl
         // TODO this touches privates (testBinaryDataWithNegInt)
         _next_start = _buffer.buffer().size();
     }
-
+    
     /**
      * @param ionData must be in system mode
      */
-    public IonDatagramImpl(IonSystemImpl system, IonReader ionData)
+    public IonDatagramImpl(IonSystemImpl system, IonCatalog catalog, IonReader ionData)
         throws IOException
     {
         super(system, DATAGRAM_TYPEDESC, false);
 
+        _catalog = catalog;
         _userContents = new ArrayList<IonValue>();
         _buffer = new BufferManager();
 
@@ -379,7 +385,7 @@ public final class IonDatagramImpl
 //                if (false) {
                 IonStruct symtabStruct = (IonStruct) v;
                 symtab = new UnifiedSymbolTable(symtabStruct,
-                                                _system.getCatalog());
+                                                _catalog);
 //                }
 //                else {
 //                    symtab = v.getSymbolTable();
@@ -806,7 +812,7 @@ public final class IonDatagramImpl
                         {
                             currentSymtab =
                                 new UnifiedSymbolTable((IonStruct) _contents.get(ii - 1),
-                                                       _system.getCatalog());
+                                                       _catalog);
                         }
                         else if (currentSymtab.isSystemTable())
                         {

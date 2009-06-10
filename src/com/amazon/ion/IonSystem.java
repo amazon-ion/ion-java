@@ -179,13 +179,17 @@ public interface IonSystem
      */
     public IonDatagram newDatagram(SymbolTable... imports);
 
-
-
     /**
-     * Constructs a new loader instance.
+     * Constructs a new loader instance using the system catalog.
      */
     public IonLoader newLoader();
 
+    /**
+     * Constructs a new loader instance using the given catalog.
+     * 
+     * @see #newLoader()
+     */
+    public IonLoader newLoader(IonCatalog catalog);
 
     /**
      * Gets the default system loader.  Applications may replace this loader
