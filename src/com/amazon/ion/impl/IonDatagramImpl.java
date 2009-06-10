@@ -3,7 +3,6 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
-
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
@@ -37,9 +36,6 @@ public final class IonDatagramImpl
     static private final int DATAGRAM_TYPEDESC  =
         IonConstants.makeTypeDescriptor(IonConstants.tidSexp,
                                         IonConstants.lnIsEmptyContainer);
-
-    /** The catalog for symbol table resolution. */
-    private final IonCatalog _catalog;
     
     /**
      * Used while constructing, then set to null.
@@ -115,7 +111,7 @@ public final class IonDatagramImpl
     {
         byte[] data = this.getBytes();
 
-        IonDatagramImpl clone = new IonDatagramImpl(this._system, this._catalog, data);
+        IonDatagramImpl clone = new IonDatagramImpl(this._system, _rawStream.getCatalog(), data);
 
         return clone;
     }
@@ -219,7 +215,6 @@ public final class IonDatagramImpl
 
         assert system == rawStream.getSystem();
 
-        _catalog = catalog;
         _userContents = new ArrayList<IonValue>();
 
         // This is only used during construction.
@@ -260,7 +255,6 @@ public final class IonDatagramImpl
     {
         super(system, DATAGRAM_TYPEDESC, false);
 
-        _catalog = catalog;
         _userContents = new ArrayList<IonValue>();
         _buffer = new BufferManager();
 
@@ -388,7 +382,7 @@ public final class IonDatagramImpl
 //                if (false) {
                 IonStruct symtabStruct = (IonStruct) v;
                 symtab = new UnifiedSymbolTable(symtabStruct,
-                                                _catalog);
+                                                _rawStream.getCatalog());
 //                }
 //                else {
 //                    symtab = v.getSymbolTable();
@@ -815,7 +809,7 @@ public final class IonDatagramImpl
                         {
                             currentSymtab =
                                 new UnifiedSymbolTable((IonStruct) _contents.get(ii - 1),
-                                                       _catalog);
+                                                       _rawStream.getCatalog());
                         }
                         else if (currentSymtab.isSystemTable())
                         {

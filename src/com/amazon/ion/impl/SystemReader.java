@@ -303,6 +303,11 @@ public class SystemReader
     public IonSystemImpl getSystem() {
         return _system;
     }
+    
+    /** Returns the catalog being used by this reader. */
+    public IonCatalog getCatalog() {
+        return _catalog;
+    }
 
     public SymbolTable getLocalSymbolTable() {
         return _currentSymbolTable;
