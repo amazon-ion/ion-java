@@ -241,7 +241,7 @@ public class LoaderImpl
 
             SystemReader systemReader =
                 mySystem.newBinarySystemReader(myCatalog, pushback);
-            return new IonDatagramImpl(mySystem, myCatalog, systemReader);
+            return new IonDatagramImpl(mySystem, systemReader);
         }
 
         // Input is text
@@ -280,7 +280,7 @@ public class LoaderImpl
         throws IOException
     {
         SystemReader systemReader = mySystem.newBinarySystemReader(myCatalog, ionBinary);
-        return new IonDatagramImpl(mySystem, myCatalog, systemReader);
+        return new IonDatagramImpl(mySystem, systemReader);
     }
     
     @Deprecated
@@ -288,7 +288,7 @@ public class LoaderImpl
         throws IOException
     {
         SystemReader systemReader = mySystem.newPagedBinarySystemReader(myCatalog, ionBinary);
-        return new IonDatagramImpl(mySystem, myCatalog, systemReader);
+        return new IonDatagramImpl(mySystem, systemReader);
     }
     
 }

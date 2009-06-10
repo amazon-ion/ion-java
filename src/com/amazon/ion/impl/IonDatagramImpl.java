@@ -37,6 +37,9 @@ public final class IonDatagramImpl
         IonConstants.makeTypeDescriptor(IonConstants.tidSexp,
                                         IonConstants.lnIsEmptyContainer);
     
+    /** Underlying catalog */
+    private final IonCatalog _catalog;
+    
     /**
      * Used while constructing, then set to null.
      */
@@ -81,7 +84,7 @@ public final class IonDatagramImpl
      */
     public IonDatagramImpl(IonSystemImpl system, IonCatalog catalog, byte[] ionData)
     {
-        this(system, catalog, system.newLegacySystemReader(catalog, ionData));
+        this(system, system.newLegacySystemReader(catalog, ionData));
     }
 
 
@@ -93,7 +96,7 @@ public final class IonDatagramImpl
      */
     public IonDatagramImpl(IonSystemImpl system, IonCatalog catalog, BufferManager buffer)
     {
-        this(system, catalog, new SystemReader(system, catalog, buffer));
+        this(system, new SystemReader(system, catalog, buffer));
     }
 
 
@@ -111,7 +114,7 @@ public final class IonDatagramImpl
     {
         byte[] data = this.getBytes();
 
-        IonDatagramImpl clone = new IonDatagramImpl(this._system, _rawStream.getCatalog(), data);
+        IonDatagramImpl clone = new IonDatagramImpl(this._system, _catalog, data);
 
         return clone;
     }
@@ -196,7 +199,6 @@ public final class IonDatagramImpl
                            Reader ionText)
     {
         this(system,
-             catalog,
              new SystemReader(system,
                               catalog,
                               initialSymbolTable, ionText));
@@ -208,7 +210,6 @@ public final class IonDatagramImpl
      * @throws NullPointerException if any parameter is null.
      */
     IonDatagramImpl(IonSystemImpl system,
-                    IonCatalog catalog,
                     SystemReader rawStream)
     {
         super(system, DATAGRAM_TYPEDESC, true);
@@ -218,6 +219,7 @@ public final class IonDatagramImpl
         _userContents = new ArrayList<IonValue>();
 
         // This is only used during construction.
+        _catalog = rawStream.getCatalog();
         _rawStream = rawStream;
         _buffer = _rawStream.getBuffer();
 
@@ -255,6 +257,7 @@ public final class IonDatagramImpl
     {
         super(system, DATAGRAM_TYPEDESC, false);
 
+        _catalog = catalog;
         _userContents = new ArrayList<IonValue>();
         _buffer = new BufferManager();
 
@@ -382,7 +385,7 @@ public final class IonDatagramImpl
 //                if (false) {
                 IonStruct symtabStruct = (IonStruct) v;
                 symtab = new UnifiedSymbolTable(symtabStruct,
-                                                _rawStream.getCatalog());
+                                                _catalog);
 //                }
 //                else {
 //                    symtab = v.getSymbolTable();
@@ -809,7 +812,7 @@ public final class IonDatagramImpl
                         {
                             currentSymtab =
                                 new UnifiedSymbolTable((IonStruct) _contents.get(ii - 1),
-                                                       _rawStream.getCatalog());
+                                                       _catalog);
                         }
                         else if (currentSymtab.isSystemTable())
                         {
