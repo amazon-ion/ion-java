@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.ListIterator;
 
 
 /**
@@ -108,11 +109,13 @@ public interface IonDatagram
     /**
      * Iterate all values in the datagram, including the otherwise-hidden
      * system values.
-     * This iterator does not support the {@link Iterator#remove()}
+     * This iterator does not support the modification methods
+     * {@link Iterator#remove()}, {@link ListIterator#add(Object)}, or
+     * {@link ListIterator#set(Object)}.
      * operation.
      * @return not <code>null</code>.
      */
-    public Iterator<IonValue> systemIterator();
+    public ListIterator<IonValue> systemIterator();
 
 
     /**

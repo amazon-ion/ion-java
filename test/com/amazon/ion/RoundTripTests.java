@@ -147,21 +147,21 @@ public class RoundTripTests
 
     private final static String ivm = "$ion_1_0";
     static boolean compareRenderedTextImages(String s1, String s2) {
-    	assert (s1 != null);
-    	assert (s2 != null);
+        assert (s1 != null);
+        assert (s2 != null);
 
-    	if (s1 == s2) return true;
-    	if (s1.equals(s2)) return true;
+        if (s1 == s2) return true;
+        if (s1.equals(s2)) return true;
 
-    	if (!s1.startsWith(ivm)) {
-    		s1 = ivm + " " + s1;
-    	}
-		if (!s2.startsWith(ivm)) {
-			s2 = ivm + " " + s2;
-		}
-		// TODO the next step is, if they are still not the same, then
-		//      convert them to binary and back to string and compare again
-    	return s1.equals(s2);
+        if (!s1.startsWith(ivm)) {
+            s1 = ivm + " " + s1;
+        }
+        if (!s2.startsWith(ivm)) {
+            s2 = ivm + " " + s2;
+        }
+        // TODO the next step is, if they are still not the same, then
+        //      convert them to binary and back to string and compare again
+        return s1.equals(s2);
     }
 
 
@@ -173,7 +173,7 @@ public class RoundTripTests
 
     public RoundTripTests()
     {
-        super("good");
+        super("good", "equivs");
     }
 
 
@@ -186,5 +186,14 @@ public class RoundTripTests
             return new RoundTripTest(ionFile);
         }
         return null;
+    }
+
+    @Override
+    protected String[] getFilesToSkip()
+    {
+        return new String[]
+        {
+             "equivs/symbols.ion",
+        };
     }
 }

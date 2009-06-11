@@ -2,7 +2,9 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
 import com.amazon.ion.ContainedValueException;
+import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
@@ -22,6 +24,7 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.ListIterator;
 
 /**
  *
@@ -33,15 +36,10 @@ public final class IonDatagramImpl
     static private final int DATAGRAM_TYPEDESC  =
         IonConstants.makeTypeDescriptor(IonConstants.tidSexp,
                                         IonConstants.lnIsEmptyContainer);
-
-    private final static String[] EMPTY_STRING_ARRAY = new String[0];
-
-   // CAS symtab: moved _system to IonValueImpl
-   // /**
-   //  * The system that created this datagram.
-   //  */
-   // private IonSystem _system;
-
+    
+    /** Underlying catalog */
+    private final IonCatalog _catalog;
+    
     /**
      * Used while constructing, then set to null.
      */
@@ -51,7 +49,6 @@ public final class IonDatagramImpl
      * Superset of {@link #_contents}; contains only user values.
      */
     private ArrayList<IonValue> _userContents;
-
 
     private static BufferManager make_empty_buffer()
     {
@@ -70,8 +67,8 @@ public final class IonDatagramImpl
 
     //=========================================================================
 
-    public IonDatagramImpl(IonSystemImpl system) {
-        this(system, make_empty_buffer());
+    public IonDatagramImpl(IonSystemImpl system, IonCatalog catalog) {
+        this(system, catalog, make_empty_buffer());
     }
 
 
@@ -85,9 +82,9 @@ public final class IonDatagramImpl
      * @throws NullPointerException if any parameter is null.
      * @throws IonException if there's a syntax error in the Ion content.
      */
-    public IonDatagramImpl(IonSystemImpl system, byte[] ionData)
+    public IonDatagramImpl(IonSystemImpl system, IonCatalog catalog, byte[] ionData)
     {
-        this(system, system.newLegacySystemReader(ionData));
+        this(system, system.newLegacySystemReader(catalog, ionData));
     }
 
 
@@ -97,15 +94,16 @@ public final class IonDatagramImpl
      *
      * @throws NullPointerException if any parameter is null.
      */
-    public IonDatagramImpl(IonSystemImpl system, BufferManager buffer)
+    public IonDatagramImpl(IonSystemImpl system, IonCatalog catalog, BufferManager buffer)
     {
-        this(system, new SystemReader(system, buffer));
+        this(system, new SystemReader(system, catalog, buffer));
     }
 
 
-    public IonDatagramImpl(IonSystemImpl system, Reader ionText)
+    public IonDatagramImpl(IonSystemImpl system, IonCatalog catalog, Reader ionText)
     {
         this(system
+            ,catalog
             ,system.newLocalSymbolTable()
             ,ionText);
     }
@@ -116,7 +114,7 @@ public final class IonDatagramImpl
     {
         byte[] data = this.getBytes();
 
-        IonDatagramImpl clone = new IonDatagramImpl(this._system, data);
+        IonDatagramImpl clone = new IonDatagramImpl(this._system, _catalog, data);
 
         return clone;
     }
@@ -136,6 +134,8 @@ public final class IonDatagramImpl
     protected void copyFrom(IonContainerImpl source)
         throws NullPointerException, IllegalArgumentException, IOException
     {
+        // FIXME this method is unused, since our clone() does its own thing.
+
         // first copy the annotations and such, which
         // will materialize the value as needed.
         // This will materialize the field name and
@@ -194,15 +194,16 @@ public final class IonDatagramImpl
      * @throws NullPointerException if any parameter is null.
      */
     public IonDatagramImpl(IonSystemImpl system,
+                           IonCatalog catalog,
                            SymbolTable initialSymbolTable,
                            Reader ionText)
     {
         this(system,
              new SystemReader(system,
-                              system.getCatalog(),
+                              catalog,
                               initialSymbolTable, ionText));
     }
-
+    
     /**
      * Workhorse constructor this does the actual work.
      *
@@ -218,6 +219,7 @@ public final class IonDatagramImpl
         _userContents = new ArrayList<IonValue>();
 
         // This is only used during construction.
+        _catalog = rawStream.getCatalog();
         _rawStream = rawStream;
         _buffer = _rawStream.getBuffer();
 
@@ -246,15 +248,16 @@ public final class IonDatagramImpl
         // TODO this touches privates (testBinaryDataWithNegInt)
         _next_start = _buffer.buffer().size();
     }
-
+    
     /**
      * @param ionData must be in system mode
      */
-    public IonDatagramImpl(IonSystemImpl system, IonReader ionData)
+    public IonDatagramImpl(IonSystemImpl system, IonCatalog catalog, IonReader ionData)
         throws IOException
     {
         super(system, DATAGRAM_TYPEDESC, false);
 
+        _catalog = catalog;
         _userContents = new ArrayList<IonValue>();
         _buffer = new BufferManager();
 
@@ -382,7 +385,7 @@ public final class IonDatagramImpl
 //                if (false) {
                 IonStruct symtabStruct = (IonStruct) v;
                 symtab = new UnifiedSymbolTable(symtabStruct,
-                                                _system.getCatalog());
+                                                _catalog);
 //                }
 //                else {
 //                    symtab = v.getSymbolTable();
@@ -438,19 +441,21 @@ public final class IonDatagramImpl
         return super.get(index);
     }
 
+
     @Override
-    public Iterator<IonValue> iterator() throws NullValueException
+    public ListIterator<IonValue> listIterator(int index)
     {
-        // TODO implement remove on UserDatagram.iterator()
-        // Tricky bit is properly removing from both user and system contents.
-        return new IonContainerIterator(_userContents.iterator(), false);
+        // TODO implement remove, add, set on UserDatagram.listIterator()
+        // Tricky bit is properly updating both user and system contents.
+        return new IonContainerIterator(_userContents.listIterator(index),
+                                        true);
     }
 
-    public Iterator<IonValue> systemIterator()
+    public ListIterator<IonValue> systemIterator()
     {
-        // Disable remove... what if a system value is removed?
-        // What if a system value is removed?
-        return new IonContainerIterator(_contents.iterator(), false);
+        // Modification is disabled.
+        // What if a system value is removed or inserted?
+        return new IonContainerIterator(_contents.listIterator(), true);
     }
 
     @Override
@@ -496,8 +501,8 @@ public final class IonDatagramImpl
             IonValue child = i.next();
             if (child == element) // Yes, instance identity.
             {
-                i.remove();
                 super.remove(element);
+                i.remove();
                 return true;
             }
         }
@@ -744,7 +749,11 @@ public final class IonDatagramImpl
     }
 
 
-    private int updateBuffer() throws IonException
+    /**
+     * FIXME this can modify state, even when read-only
+     * I'm not confident that synchronization is sufficient.
+     */
+    private synchronized int updateBuffer() throws IonException
     {
         int oldSize = 0;
 
@@ -803,7 +812,7 @@ public final class IonDatagramImpl
                         {
                             currentSymtab =
                                 new UnifiedSymbolTable((IonStruct) _contents.get(ii - 1),
-                                                       _system.getCatalog());
+                                                       _catalog);
                         }
                         else if (currentSymtab.isSystemTable())
                         {

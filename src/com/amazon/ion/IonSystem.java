@@ -179,13 +179,17 @@ public interface IonSystem
      */
     public IonDatagram newDatagram(SymbolTable... imports);
 
-
-
     /**
-     * Constructs a new loader instance.
+     * Constructs a new loader instance using the system catalog.
      */
     public IonLoader newLoader();
 
+    /**
+     * Constructs a new loader instance using the given catalog.
+     * 
+     * @see #newLoader()
+     */
+    public IonLoader newLoader(IonCatalog catalog);
 
     /**
      * Gets the default system loader.  Applications may replace this loader
@@ -230,6 +234,27 @@ public interface IonSystem
      * @throws NullPointerException if <code>ionText</code> is null.
      */
     public Iterator<IonValue> iterate(Reader ionText);
+
+
+    /**
+     * Creates an iterator over a stream of Ion data,
+     * detecting whether it's text or binary data.
+     * Values returned by the iterator have no container.
+     * <p>
+     * The iterator will automatically consume Ion system IDs and local symbol
+     * tables; they will not be returned by the iterator.
+     * <p>
+     * This method is suitable for use over unbounded streams with a reasonable
+     * schema.
+     *
+     * @param ionData a stream of Ion data.  The caller is responsible for
+     * closing the InputStream after iteration is complete.
+     *
+     * @return a new iterator instance.
+     *
+     * @throws NullPointerException if <code>ionData</code> is null.
+     */
+    public Iterator<IonValue> iterate(InputStream ionData);
 
 
     /**

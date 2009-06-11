@@ -7,12 +7,17 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.NoSuchElementException;
 
 
 
 public abstract class SequenceTestCase
     extends ContainerTestCase
 {
+    @Override
+    protected abstract IonSequence makeNull();
+
     @Override
     protected abstract IonSequence makeEmpty();
 
@@ -22,6 +27,9 @@ public abstract class SequenceTestCase
     protected abstract
     <T extends IonValue> IonSequence newSequence(T... elements);
 
+    @Override
+    protected abstract
+    IonSequence wrapAndParse(String... children);
 
     @Override
     protected void add(IonContainer container, IonValue child)
@@ -123,6 +131,12 @@ public abstract class SequenceTestCase
         assertEquals(0, value.size());
         assertFalse(value.iterator().hasNext());
         assertTrue(value.isEmpty());
+
+        ListIterator<IonValue> i = value.listIterator();
+        assertFalse(i.hasNext());
+        assertFalse(i.hasPrevious());
+        assertEquals(0,  i.nextIndex());
+        assertEquals(-1, i.previousIndex());
 
         try
         {
@@ -698,6 +712,65 @@ public abstract class SequenceTestCase
         s.add(nullValue2);
         assertEquals(0, s.indexOf(nullValue1));
         assertEquals(2, s.indexOf(nullValue2));
+    }
 
+    public void testListIteratorAtIndex()
+    {
+        IonSequence s = makeNull(); // Null when testing datagram
+        if (s != null) checkEmptyIterator(s);
+
+        s = makeEmpty();
+        checkEmptyIterator(s);
+
+        s = wrapAndParse("0", "1", "2");
+
+        ListIterator<IonValue> i = s.listIterator(0);
+        assertSame(s.get(0), i.next());
+        assertSame(s.get(1), i.next());
+        assertSame(s.get(1), i.previous());
+        assertSame(s.get(1), i.next());
+        assertSame(s.get(2), i.next());
+        assertFalse(i.hasNext());
+
+        i = s.listIterator(1);
+        assertSame(s.get(1), i.next());
+        assertSame(s.get(1), i.previous());
+        assertSame(s.get(0), i.previous());
+        assertFalse(i.hasPrevious());
+
+        i = s.listIterator(2);
+        assertSame(s.get(2), i.next());
+        assertFalse(i.hasNext());
+
+        i = s.listIterator(3);
+        assertFalse(i.hasNext());
+        assertSame(s.get(2), i.previous());
+
+        try {
+            i = s.listIterator(4);
+            fail("expected exception");
+        }
+        catch (IndexOutOfBoundsException e) { }
+    }
+
+    private void checkEmptyIterator(IonSequence s)
+    {
+        try {
+            s.listIterator(1);
+            fail("expected exception");
+        }
+        catch (IndexOutOfBoundsException e) { }
+
+        ListIterator<IonValue> i = s.listIterator(0);
+        assertFalse(i.hasNext());
+        assertFalse(i.hasPrevious());
+        assertEquals(0, i.nextIndex());
+        assertEquals(-1, i.previousIndex());
+
+        try {
+            i.next();
+            fail("expected exception");
+        }
+        catch (NoSuchElementException e) { }
     }
 }

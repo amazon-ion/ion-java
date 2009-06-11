@@ -641,7 +641,7 @@ public class StructTest
         testSimpleClone("{f:{{}}}");           // blob
         testSimpleClone("{f:true}");           // bool
         testSimpleClone("{f:{{\"\"}}}");       // clob
-        testSimpleClone("{f:1d0}");            // decimal
+        testSimpleClone("{f:1.}");             // decimal
         testSimpleClone("{f:1e0}");            // float
         testSimpleClone("{f:1}");              // int
         testSimpleClone("{f:[]}");             // list
@@ -694,5 +694,29 @@ public class StructTest
 
         IonValue f = s.get("f");
         assertTrue((f == i) || (f == str));
+    }
+
+    public void testReplacingReadOnlyChild()
+    {
+        IonStruct c = system().newEmptyStruct();
+
+        IonNull n1 = system().newNull();
+        c.put("f", n1);
+        n1.makeReadOnly();
+
+        IonNull n2 = system().newNull();
+
+        try
+        {
+            c.put("f", n2);
+            fail("expected exception");
+        }
+        catch (ReadOnlyValueException e) { }
+
+        assertSame(n1, c.get("f"));
+        assertSame(c, n1.getContainer());
+        assertSame(n1, c.iterator().next());
+
+        assertEquals(null, n2.getContainer());
     }
 }

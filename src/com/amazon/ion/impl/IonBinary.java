@@ -32,8 +32,8 @@ public class IonBinary
     static boolean debugValidation = false;
 
     final static int _ib_TOKEN_LEN           =    1;
-    final static int _ib_VAR_INT32_LEN_MAX   =    5; // 31 bits (java limit) / 7 bits per byte = 5 bytes
-    final static int _ib_VAR_INT64_LEN_MAX   =   10; // 31 bits (java limit) / 7 bits per byte = 5 bytes
+    final static int _ib_VAR_INT32_LEN_MAX   =    5; // 31 bits (java limit) / 7 bits per byte =  5 bytes
+    final static int _ib_VAR_INT64_LEN_MAX   =   10; // 63 bits (java limit) / 7 bits per byte = 10 bytes
     final static int _ib_INT64_LEN_MAX       =    8;
     final static int _ib_FLOAT64_LEN         =    8;
 
@@ -71,8 +71,9 @@ public class IonBinary
     {
         try
         {
-            reader.sync();
-            reader.setPosition(0);
+            int pos = reader.position();
+            //reader.sync();
+            //reader.setPosition(0);
             byte[] bvm = new byte[BINARY_VERSION_MARKER_SIZE];
             int len = reader.read(bvm);
             if (len < BINARY_VERSION_MARKER_SIZE)
@@ -98,7 +99,8 @@ public class IonBinary
                 throw new IonException(buf.toString());
             }
 
-            reader.setPosition(0); // cas 19 apr 2008
+            //reader.setPosition(0); // cas 19 apr 2008
+            reader.setPosition(pos); // cas 5 may 2009 :)
         }
         catch (IOException e)
         {
@@ -143,6 +145,33 @@ public class IonBinary
             try
             {
                 _writer.write(bytestream);
+            }
+            catch (IOException e)
+            {
+                throw new IonException(e);
+            }
+        }
+
+        /**
+         * Creates a new buffer containing the entire content of an
+         * {@link InputStream}.
+         *
+         * @param bytestream a stream interface the byte image to buffer
+         *
+         * @throws IonException wrapping any {@link IOException}s thrown by the
+         * stream.
+         */
+        public BufferManager(InputStream bytestream, int len)
+        {
+            this(); // this will create a fresh buffer
+                    // as well as a reader and writer
+
+            // now we move the data from the input stream to the buffer
+            // more or less as fast as we can.  I am (perhaps foolishly)
+            // assuming the "available()" is a useful size.
+            try
+            {
+                _writer.write(bytestream, len);
             }
             catch (IOException e)
             {

@@ -28,7 +28,7 @@ public class NewDatagramIteratorSystemProcessingTest
         throws Exception
     {
         IonTextReader textReader = system().newSystemReader(myText);
-        IonDatagram datagram = new IonDatagramImpl(system(), textReader);
+        IonDatagram datagram = new IonDatagramImpl(system(), catalog(), textReader);
         // Force symtab preparation  FIXME should not be necessary
         datagram.byteSize();
 
@@ -40,7 +40,7 @@ public class NewDatagramIteratorSystemProcessingTest
         throws Exception
     {
         IonTextReader textReader = system().newSystemReader(myText);
-        IonDatagram datagram = new IonDatagramImpl(system(), textReader);
+        IonDatagram datagram = new IonDatagramImpl(system(), catalog(), textReader);
         // Force symtab preparation  FIXME should not be necessary
         datagram.byteSize();
 

@@ -17,6 +17,7 @@ import com.amazon.ion.impl.IonBinary.Writer;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.ListIterator;
 
 
 /**
@@ -592,6 +593,7 @@ abstract public class IonContainerImpl
         throws ContainedValueException, NullPointerException
     {
         final IonValueImpl concrete = ((IonValueImpl) element);
+        concrete.checkForLock();
 
         // TODO: try to reuse the byte array if it is present
         // and the symbol tables are compatible or
@@ -600,7 +602,7 @@ abstract public class IonContainerImpl
         // otherwise clear the buffer and re-init the positions
         //byte[] bytes = null;
         //if (
-        // 	&& concrete._buffer != null
+        //    && concrete._buffer != null
         //    && !concrete.isDirty()
         //    && concrete.getSymbolTable().isCompatible(this.getSymbolTable()))
         //{
@@ -700,8 +702,8 @@ abstract public class IonContainerImpl
         if (child == concrete) // Yes, instance identity.
         {
             try {
-                _contents.remove(pos);
                 concrete.detachFromContainer();
+                _contents.remove(pos);
                 updateElementIds(pos);
                 this.setDirty();
             }
@@ -714,37 +716,61 @@ abstract public class IonContainerImpl
         throw new AssertionError("element's index is not correct");
     }
 
+    public final Iterator<IonValue> iterator()
+    {
+        return listIterator(0);
+    }
+
+    public final ListIterator<IonValue> listIterator()
+    {
+        return listIterator(0);
+    }
+
     @SuppressWarnings("unchecked")
-    public Iterator<IonValue> iterator()
+    public ListIterator<IonValue> listIterator(int index)
     {
         if (isNullValue())
         {
-            return (Iterator<IonValue>) IonImplUtils.EMPTY_ITERATOR;
+            if (index != 0) throw new IndexOutOfBoundsException();
+            return (ListIterator<IonValue>) IonImplUtils.EMPTY_ITERATOR;
         }
 
         makeReady();
-        return new IonContainerIterator(_contents.iterator(), !isReadOnly());
+        return new IonContainerIterator(_contents.listIterator(index),
+                                        isReadOnly());
     }
 
     /** Encapsulates an iterator and implements a custom remove method */
     protected final class IonContainerIterator
-        implements Iterator<IonValue>
+        implements ListIterator<IonValue>
     {
-        private final Iterator<IonValue> it;
+        private final ListIterator<IonValue> it;
 
-        private final boolean allowRemove;
+        private final boolean readOnly;
 
         private IonValue current;
 
-        public IonContainerIterator(Iterator<IonValue> it, boolean allowRemove)
+        public IonContainerIterator(ListIterator<IonValue> it,
+                                    boolean readOnly)
         {
             this.it = it;
-            this.allowRemove = allowRemove;
+            this.readOnly = readOnly;
+        }
+
+
+        public void add(IonValue element)
+        {
+            throw new UnsupportedOperationException();
         }
 
         public boolean hasNext()
         {
             return it.hasNext();
+        }
+
+        public boolean hasPrevious()
+        {
+            return it.hasPrevious();
         }
 
         public IonValue next()
@@ -753,13 +779,29 @@ abstract public class IonContainerImpl
             return current;
         }
 
+        public int nextIndex()
+        {
+            return it.nextIndex();
+        }
+
+        public IonValue previous()
+        {
+            current = it.previous();
+            return current;
+        }
+
+        public int previousIndex()
+        {
+            return it.previousIndex();
+        }
+
         /**
          * Sets the container to dirty after calling {@link Iterator#remove()}
          * on the encapsulated iterator
          */
         public void remove()
         {
-            if (!allowRemove) {
+            if (readOnly) {
                 throw new UnsupportedOperationException();
             }
 
@@ -779,6 +821,11 @@ abstract public class IonContainerImpl
                 updateElementIds(concrete.getElementId());
                 setDirty();
             }
+        }
+
+        public void set(IonValue element)
+        {
+            throw new UnsupportedOperationException();
         }
     }
 }

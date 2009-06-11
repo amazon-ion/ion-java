@@ -16,6 +16,7 @@ import java.io.InputStream;
 import java.io.PushbackInputStream;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.ListIterator;
 import java.util.NoSuchElementException;
 
 /**
@@ -23,6 +24,9 @@ import java.util.NoSuchElementException;
  */
 final class IonImplUtils
 {
+    /** Just a zero-length String array, used to avoid allocation. */
+    public final static String[] EMPTY_STRING_ARRAY = new String[0];
+
     /**
      * TODO Jonker 2009-02-12: Actual lookahead limit is unclear to me!
      *
@@ -35,10 +39,19 @@ final class IonImplUtils
     public static final int MAX_LOOKAHEAD_UTF16 = 11;
 
 
-    public static final Iterator<?> EMPTY_ITERATOR = new Iterator() {
-        public boolean hasNext() { return false; }
-        public Object  next()    { throw new NoSuchElementException(); }
-        public void    remove()  { throw new IllegalStateException(); }
+    public static final ListIterator<?> EMPTY_ITERATOR = new ListIterator() {
+        public boolean hasNext()     { return false; }
+        public boolean hasPrevious() { return false; }
+
+        public Object  next()     { throw new NoSuchElementException(); }
+        public Object  previous() { throw new NoSuchElementException(); }
+        public void    remove()   { throw new IllegalStateException(); }
+
+        public int nextIndex()     { return  0; }
+        public int previousIndex() { return -1; }
+
+        public void add(Object o) { throw new UnsupportedOperationException(); }
+        public void set(Object o) { throw new UnsupportedOperationException(); }
     };
 
 

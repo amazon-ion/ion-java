@@ -384,7 +384,7 @@ public class IonTokenReader
         this.in = new IonCharacterReader( r );
     }
 
-    public int getConsumedAmount() {
+    public long getConsumedAmount() {
         return in.getConsumedAmount();
     }
 

@@ -67,7 +67,7 @@ public abstract class ContainerTestCase
             add(c, system().newNull());
             fail("expected exception");
         }
-        catch (IonException e) { } // TODO more specific exception
+        catch (ReadOnlyValueException e) { }
 
         assertTrue(c.isNullValue());
         assertTrue(c.isReadOnly());
@@ -85,7 +85,7 @@ public abstract class ContainerTestCase
             add(c, system().newNull());
             fail("expected exception");
         }
-        catch (IonException e) { } // TODO more specific exception
+        catch (ReadOnlyValueException e) { }
 
         assertTrue(c.isEmpty());
         assertTrue(c.isReadOnly());
@@ -106,21 +106,21 @@ public abstract class ContainerTestCase
             add(c, system().newNull());
             fail("expected exception");
         }
-        catch (IonException e) { } // TODO more specific exception
+        catch (ReadOnlyValueException e) { }
 
         try
         {
             c.remove(first);
             fail("expected exception");
         }
-        catch (IonException e) { } // TODO more specific exception
+        catch (ReadOnlyValueException e) { }
 
         try
         {
             ((IonString)first).setValue("changed");
             fail("expected exception");
         }
-        catch (IonException e) { } // TODO more specific exception
+        catch (ReadOnlyValueException e) { }
 
         assertEquals(3, c.size());
         assertTrue(c.isReadOnly());
@@ -246,5 +246,44 @@ public abstract class ContainerTestCase
         IonContainer c = wrapAndParse((String[])null);
         IonValue v = system().singleValue("1");
         add(c, v);
+    }
+
+
+    public void testAddingReadOnlyChild()
+    {
+        IonContainer c = makeEmpty();
+
+        IonNull n = system().newNull();
+        n.makeReadOnly();
+
+        try
+        {
+            add(c, n);
+            fail("expected exception");
+        }
+        catch (ReadOnlyValueException e) { }
+
+        assertEquals(null, n.getContainer());
+        assertTrue(c.isEmpty());
+    }
+
+    public void testRemovingReadOnlyChild()
+    {
+        IonContainer c = makeEmpty();
+
+        IonNull n = system().newNull();
+        add(c, n);
+
+        n.makeReadOnly();
+
+        try
+        {
+            c.remove(n);
+            fail("expected exception");
+        }
+        catch (ReadOnlyValueException e) { }
+
+        assertSame(c, n.getContainer());
+        assertSame(n, c.iterator().next());
     }
 }

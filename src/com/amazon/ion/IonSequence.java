@@ -3,6 +3,8 @@
 package com.amazon.ion;
 
 import java.util.Collection;
+import java.util.Iterator;
+import java.util.ListIterator;
 
 
 
@@ -187,8 +189,35 @@ public interface IonSequence
      */
     public boolean containsAll(Collection<?> c);
 
-
+    /**
+     * Returns the index in the sequence of the specified element,
+     * or -1 if this sequence doesn't contain the element.
+     * <p>
+     * <b>Due to the reference-equality-based semantics of Ion sequences,
+     * this method does not use {@link Object#equals} as specified by the
+     * contract of {@link java.util.List}. Instead it uses reference
+     * equality ({@code ==} operator) to find the instance.</b>
+     *
+     * @param o the element to search for.
+     * @return the index in this sequence of the element,
+     * or -1 if this sequence doesn't contain the element.
+     */
     public int indexOf(Object o);
+
+    /**
+     * Returns the index in the sequence of the specified element,
+     * or -1 if this sequence doesn't contain the element.
+     * <p>
+     * <b>Due to the reference-equality-based semantics of Ion sequences,
+     * this method does not use {@link Object#equals} as specified by the
+     * contract of {@link java.util.List}. Instead it uses reference
+     * equality ({@code ==} operator) to find the instance.</b>
+     *
+     * @param o the element to search for.
+     * @return the index in this sequence of the element,
+     * or -1 if this sequence doesn't contain the element.
+     */
+    public int lastIndexOf(Object o);
 
 
     // Use inherited javadoc, this refines the return type.
@@ -197,6 +226,42 @@ public interface IonSequence
 
     // TODO temporary until we declare implements Collection
     public boolean addAll(Collection<? extends IonValue> c);
+
+    // TODO temporary until we declare implements List
+//    public boolean addAll(int index, Collection<? extends IonValue> c); // OPTIONAL
+
+    /**
+     * Returns a list iterator of the elements in this sequence (in proper
+     * order).
+     * <p>
+     * The result does not support {@link ListIterator#add(Object)} or
+     * {@link ListIterator#set(Object)}.
+     * If this sequence {@link #isReadOnly()} then it also does not support
+     * {@link Iterator#remove()}.
+     */
+    public ListIterator<IonValue> listIterator();
+
+    /**
+     * Returns a list iterator of the elements in this sequence (in proper
+     * order), starting at the specified position in this sequence.
+     * <p>
+     * The result does not support {@link ListIterator#add(Object)} or
+     * {@link ListIterator#set(Object)}.
+     * If this sequence {@link #isReadOnly()} then it also does not support
+     * {@link Iterator#remove()}.
+     *
+     * @param index
+     * index of first element to be returned from the list iterator (by a call
+     * to the {@code next} method).
+     *
+     * @throws IndexOutOfBoundsException
+     * if the index is out of range (index < 0 || index > size()).
+     */
+    public ListIterator<IonValue> listIterator(int index);
+
+//    public IonValue remove(int index); // OPTIONAL
+//    public IonValue set(int index, IonValue element); // OPTIONAL
+//    public List<IonValue> subList(int fromIndex, int toIndex);
 
     // TODO document that null sequence acts like empty
     public <T> T[] toArray(T[] a);
