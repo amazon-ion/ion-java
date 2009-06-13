@@ -1787,7 +1787,7 @@ done:       for (;;) {
                         int c2 = chars.charAt(ii);
                         if ((c2 & IonConstants.surrogate_mask) != IonConstants.low_surrogate_value) {
                             throw new IonException("unmatched high surrogate character encountered, invalid utf-16");
-                        }
+                    }
                         c = IonConstants.makeUnicodeScalar(c, c2);
                     }
                     else if ((c & IonConstants.surrogate_mask) == IonConstants.low_surrogate_value) {
@@ -1853,7 +1853,7 @@ done:       for (;;) {
                 }
                 _validate();
             }
-            
+
             assert(terminator != '\\');
             for (;;) {
                 c = r.read();  // we put off the surrogate logic as long as possible (so not here)
@@ -1871,16 +1871,16 @@ done:       for (;;) {
                     if ((terminator != -1) && !longstring) {
                         throw new IonException("unexpected line terminator encountered in quoted string");
                     }
-                }
+                        }
                 else if (decodeEscapeSequences && c == '\\') {
                     // if this is an escape sequence we need to process it now
                     // since we allow a surrogate to be encoded using \ u (or \ U)
                     // encoding
-                    c = IonTokenReader.readEscapedCharacter(r, onlyByteSizedCharacters);
-                    if (c == IonTokenReader.EMPTY_ESCAPE_SEQUENCE) {
-                        continue;
+                        c = IonTokenReader.readEscapedCharacter(r, onlyByteSizedCharacters);
+                        if (c == IonTokenReader.EMPTY_ESCAPE_SEQUENCE) {
+                            continue;
+                        }
                     }
-                }
 
 
                 if (onlyByteSizedCharacters) {
@@ -1899,7 +1899,10 @@ done:       for (;;) {
                     // next segment of the long string is processed
                     if (_pending_high_surrogate != 0) {
                         if ((c & IonConstants.surrogate_mask) != IonConstants.low_surrogate_value) {
-                            throw new IonException("unmatched high surrogate character encountered, invalid utf-16");
+                            String message =
+                                "Text contains unmatched UTF-16 high surrogate " +
+                                IonTextUtils.printCodePointAsString(_pending_high_surrogate);
+                            throw new IonException(message);
                         }
                         c = IonConstants.makeUnicodeScalar(_pending_high_surrogate, c);
                         _pending_high_surrogate = 0;
@@ -1910,10 +1913,14 @@ done:       for (;;) {
                             if (longstring && isLongTerminator(terminator, r)) {
                                 // if it's a long string termination we'll hang onto the current c as the pending surrogate
                                 _pending_high_surrogate = c;
+                                c = terminator;
                                 break;
                             }
                             // otherwise this is an error
-                            throw new IonException("unmatched high surrogate character encountered, invalid utf-16");
+                            String message =
+                                "Text contains unmatched UTF-16 high surrogate " +
+                                IonTextUtils.printCodePointAsString(c);
+                            throw new IonException(message);
                         }
                         else if (c2 == -1) {
                             // eof is also an error - really two errors
@@ -1933,7 +1940,10 @@ done:       for (;;) {
                                     break;
                                 }
                                 // otherwise this is an error
-                                throw new IonException("unmatched high surrogate character encountered, invalid utf-16");
+                                String message =
+                                    "Text contains unmatched UTF-16 high surrogate " +
+                                    IonTextUtils.printCodePointAsString(c);
+                                throw new IonException(message);
                             }
                             else if (c2 == -1) {
                                 // eof is also an error - really two errors
@@ -1944,14 +1954,20 @@ done:       for (;;) {
                         if (_pending_high_surrogate != 0) {
                             break;
                         }
-                        
+
                         if ((c2 & IonConstants.surrogate_mask) != IonConstants.low_surrogate_value) {
-                            throw new IonException("unmatched high surrogate character encountered, invalid utf-16");
+                            String message =
+                                "Text contains unmatched UTF-16 high surrogate " +
+                                IonTextUtils.printCodePointAsString(c);
+                            throw new IonException(message);
                         }
                         c = IonConstants.makeUnicodeScalar(c, c2);
                     }
                     else if ((c & IonConstants.surrogate_mask) == IonConstants.low_surrogate_value) {
-                        throw new IonException("unmatched low surrogate character encountered, invalid utf-16");
+                        String message =
+                            "Text contains unmatched UTF-16 low surrogate " +
+                            IonTextUtils.printCodePointAsString(c);
+                        throw new IonException(message);
                     }
                     writeUnicodeScalarAsUTF8(c);
                 }
