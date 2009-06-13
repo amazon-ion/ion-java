@@ -7,6 +7,7 @@ import static com.amazon.ion.SystemSymbolTable.ION_1_0;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
 import static com.amazon.ion.TestUtils.FERMATA;
 
+import com.amazon.ion.impl.IonUTF8;
 import com.amazon.ion.impl.SymbolTableTest;
 import com.amazon.ion.system.SimpleCatalog;
 

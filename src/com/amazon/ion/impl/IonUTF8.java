@@ -1,7 +1,9 @@
 /*
  * Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
  */
-package com.amazon.ion;
+package com.amazon.ion.impl;
+
+import com.amazon.ion.IonException;
 
 /**
  * this class holds the various constants and helper functions Ion uses
