@@ -104,7 +104,7 @@ public interface IonSequence
      * contract of {@link java.util.Collection}. Instead it uses reference
      * equality ({@code ==} operator) to find the given instance.</b>
      *
-     * @returns {@code true} if this sequence changed as a result of the call.
+     * @return {@code true} if this sequence changed as a result of the call.
      *
      * @throws NullPointerException if {@code o} is {@code null}.
      * @throws ClassCastException if {@code o} is not an {@link IonValue}.
@@ -122,7 +122,7 @@ public interface IonSequence
      * contract of {@link java.util.Collection}. Instead it uses reference
      * equality ({@code ==} operator) to find the given instance.</b>
      *
-     * @returns {@code true} if this sequence changed as a result of the call.
+     * @return {@code true} if this sequence changed as a result of the call.
      *
      * @throws NullPointerException if {@code c} is {@code null}.
      * @throws NullPointerException if {@code c} contains one or more
@@ -143,7 +143,7 @@ public interface IonSequence
      * contract of {@link java.util.Collection}. Instead it uses reference
      * equality ({@code ==} operator) to find the given instance.</b>
      *
-     * @returns {@code true} if this sequence changed as a result of the call.
+     * @return {@code true} if this sequence changed as a result of the call.
      *
      * @throws NullPointerException if {@code c} is {@code null}.
      * @throws NullPointerException if {@code c} contains one or more
@@ -162,7 +162,7 @@ public interface IonSequence
      * contract of {@link java.util.Collection}. Instead it uses reference
      * equality ({@code ==} operator) to find the given instance.</b>
      *
-     * @returns {@code true} if {@code o} is an element of this sequence.
+     * @return {@code true} if {@code o} is an element of this sequence.
      *
      * @throws NullPointerException if {@code o} is {@code null}.
      * @throws ClassCastException if {@code o} is not an {@link IonValue}.
@@ -178,7 +178,7 @@ public interface IonSequence
      * contract of {@link java.util.Collection}. Instead it uses reference
      * equality ({@code ==} operator) to find the given instances.</b>
      *
-     * @returns {@code true} if this sequence contains all of the elements of
+     * @return {@code true} if this sequence contains all of the elements of
      * the given collection.
      *
      * @throws NullPointerException if {@code c} is {@code null}.
