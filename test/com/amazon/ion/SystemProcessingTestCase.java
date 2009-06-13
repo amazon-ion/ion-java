@@ -5,6 +5,7 @@ package com.amazon.ion;
 import static com.amazon.ion.Symtabs.LocalSymbolTablePrefix;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
+import static com.amazon.ion.TestUtils.FERMATA;
 
 import com.amazon.ion.impl.SymbolTableTest;
 import com.amazon.ion.system.SimpleCatalog;
@@ -82,6 +83,22 @@ public abstract class SystemProcessingTestCase
 
 
     //=========================================================================
+
+    public static byte[] convertUtf16UnitsToUtf8(String text)
+    {
+        byte[] data = new byte[4*text.length()];
+        int limit = 0;
+        for (int i = 0; i < text.length(); i++)
+        {
+            char c = text.charAt(i);
+            limit += IonUTF8.convertToUTF8Bytes(c, data, limit, data.length - limit);
+        }
+
+        byte[] result = new byte[limit];
+        System.arraycopy(data, 0, result, 0, limit);
+        return result;
+    }
+
 
     //=========================================================================
 
@@ -423,6 +440,33 @@ public abstract class SystemProcessingTestCase
 //        testString("\udbff\udfff", ionData); // FIXME JIRA ION-8
     }
 
+
+    public void testSurrogateGluing()
+        throws Exception
+    {
+        // Three ways to represent each surrogate:
+        //  1) The actual UTF-8 or UTF-16
+        //  2) The \ u 2-byte escape
+        //  3) The \ U 4-byte escape
+        String[] highs = { "\uD834", "\\" + "uD834", "\\" + "U0000D834" };
+        String[] lows  = { "\uDD10", "\\" + "uDD10", "\\" + "U0000DD10" };
+
+        for (int i = 0; i < highs.length; i++) {
+            String high = highs[i];
+            for (int j = 0; j < lows.length; j++) {
+                String low = lows[j];
+
+                String ionData = '"' + high + low + '"';
+                testString(FERMATA, "\"\\U0001d110\"", ionData);
+
+                ionData = "'''" + high + low + "'''";
+                testString(FERMATA, "\"\\U0001d110\"", ionData);
+
+                ionData = "'''" + high + "''' '''" + low + "'''";
+                testString(FERMATA, "\"\\U0001d110\"", ionData);
+            }
+        }
+    }
 
     public void testQuotesInLongStrings()
         throws Exception
