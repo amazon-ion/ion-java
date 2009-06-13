@@ -208,7 +208,7 @@ public interface IonWriter
     /**
      * Writes values from a reader until the end of the current container.
      * This method iterates until {@link IonReader#hasNext()} is {@code false}
-     * and does not {@line IonReader#stepOut() step out} to the container of
+     * and does not {@link IonReader#stepOut() step out} to the container of
      * the current cursor position.
      * <p>
      * This method also writes annotations and field names (if in a struct),

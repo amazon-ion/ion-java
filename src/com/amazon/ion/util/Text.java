@@ -673,7 +673,7 @@ public class Text
     }
 
     /**
-     * @deprecated  Use {@line #printAsIon(Appendable, int, int)}.
+     * @deprecated  Use {@link #printAsIon(Appendable, int, int)}.
      */
     @Deprecated
     public static String getEscapeString(int c, int surroundingQuoteChar) {
