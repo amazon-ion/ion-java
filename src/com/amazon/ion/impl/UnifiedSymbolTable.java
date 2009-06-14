@@ -188,7 +188,6 @@ final class UnifiedSymbolTable
     private IonStructImpl            _ion_rep;
     private IonList                  _ion_symbols_rep;
 
-
     private UnifiedSymbolTable() {
         _name = null;
         _version = 0;
@@ -868,7 +867,9 @@ final class UnifiedSymbolTable
                             IonReader reader,
                             IonCatalog catalog)
     {
-        assert reader.isInStruct();
+        if (!reader.isInStruct()) {
+            throw new IllegalArgumentException("symbol tables must be contained in structs");
+        }
 
         String name = null;
         int version = -1;
