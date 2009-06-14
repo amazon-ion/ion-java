@@ -364,10 +364,16 @@ public abstract class IonBaseWriter
         }
         return;
     }
-
+    protected final boolean has_empty_field_name()
+    {
+        if (_field_name_type == IonType.STRING) {
+            return (_field_name == null || _field_name.length() < 1);
+        }
+        return _field_name_sid < 1;
+    }
     public void writeValue(IonReader reader) throws IOException
     {
-        if (/* reader.isInStruct() && */ this.isInStruct()) {
+        if (/* reader.isInStruct() && */ this.isInStruct() && has_empty_field_name()) {
             String fieldname = reader.getFieldName();
             setFieldName(fieldname);
             if (_debug_on) System.out.print(":");

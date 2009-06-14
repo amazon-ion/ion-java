@@ -7,6 +7,7 @@ import static com.amazon.ion.impl.IonConstants.tidSexp;
 import static com.amazon.ion.impl.IonConstants.tidStruct;
 
 import com.amazon.ion.IonBinaryWriter;
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonNumber;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
@@ -150,6 +151,7 @@ public final class IonBinaryWriterImpl
         boolean in_struct = _patch_in_struct[_patch_stack[_top - 1]];
         return in_struct;
     }
+
     void startValue(int value_length) throws IOException
     {
         int patch_len = 0;
@@ -158,6 +160,9 @@ public final class IonBinaryWriterImpl
 
         // write field name
         if (_in_struct) {
+            if (has_empty_field_name()) {
+                throw new IonException("before writing a value you must set the field name");
+            }
             int sid = super.get_field_name_as_int();
             if (sid < 1) {
                 throw new IllegalStateException();
