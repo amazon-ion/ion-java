@@ -44,16 +44,4 @@ public class NewDatagramIteratorSystemProcessingTest
 
         return datagram.systemIterator();
     }
-
-
-    /**
-     * FIXME JIRA ION-8  remove override to enable test case
-     * This is only here to disable this test case
-     */
-    @Override
-    public void testSurrogateGluing()
-        throws Exception
-    {
-        System.err.println("Disabled test case NewDatagramIteratorSystemProcessingTest.testSurrogateGluing; jira:ION-8");
-    }
 }
