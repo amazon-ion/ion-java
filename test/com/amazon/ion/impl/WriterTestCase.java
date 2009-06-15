@@ -11,10 +11,12 @@ import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonLob;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonString;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonText;
+import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
@@ -40,6 +42,14 @@ public abstract class WriterTestCase
         byte[] bytes = outputByteArray();
         return loader().load(bytes);
     }
+
+    protected IonValue reloadSingleValue()
+        throws Exception
+    {
+        byte[] bytes = outputByteArray();
+        return system().singleValue(bytes);
+    }
+
 
     protected abstract IonWriter makeWriter(SymbolTable... imports)
         throws Exception;
@@ -225,5 +235,60 @@ public abstract class WriterTestCase
         IonDatagram dg = loader().load("[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]");
         IonWriter writer = makeWriter();
         writer.writeValue(dg);
+    }
+
+    // TODO test failure of getBytes before stepping all the way out
+
+    public void testWriteValueMissingFieldName()
+        throws Exception
+    {
+        IonReader ir = system().newReader("{a:{b:10}}");
+        IonWriter iw = makeWriter();
+        ir.next();
+        iw.stepIn(IonType.STRUCT);
+
+        // Missing call to setFieldName()
+        try {
+            iw.writeValue(ir);
+            fail("expected exception");
+        }
+        catch (IllegalStateException e) { }
+    }
+
+    public void testWriteValueCopiesFieldName()
+        throws Exception
+    {
+        String data = "{a:{b:10}}";
+        IonReader ir = system().newReader(data);
+        ir.next();
+        ir.stepIn();
+        ir.next();
+        // Reader is now positioned at field a
+
+        IonWriter iw = makeWriter();
+        iw.stepIn(IonType.STRUCT);
+        iw.writeValue(ir);
+        iw.stepOut();
+
+        assertEquals(data, reloadSingleValue().toString());
+    }
+
+    public void testWriteValueDifferentFieldName()
+        throws Exception
+    {
+        String data = "{a:{b:10}}";
+        IonReader ir = system().newReader(data);
+        ir.next();
+        ir.stepIn();
+        ir.next();
+        // Reader is now positioned at field a
+
+        IonWriter iw = makeWriter();
+        iw.stepIn(IonType.STRUCT);
+        iw.setFieldName("c");
+        iw.writeValue(ir);
+        iw.stepOut();
+
+        assertEquals("{c:{b:10}}", reloadSingleValue().toString());
     }
 }

@@ -18,6 +18,10 @@ import java.math.BigDecimal;
 public abstract class IonBaseWriter
     implements IonWriter
 {
+    protected static final String ERROR_MISSING_FIELD_NAME =
+        "IonWriter.setFieldName() must be called before writing a value into a struct.";
+
+
     private static final boolean _debug_on = false;
 
     /**
@@ -275,19 +279,19 @@ public abstract class IonBaseWriter
 
     public void writeDecimal(BigDecimal value) throws IOException
     {
-    	writeDecimal(value, IonNumber.Classification.NORMAL);
+        writeDecimal(value, IonNumber.Classification.NORMAL);
     }
 
     public void writeDecimal(IonNumber.Classification classification)
         throws IOException
     {
-    	switch(classification) {
-    	case NEGATIVE_ZERO:
-    	    writeDecimal(BigDecimal.ZERO, classification);
-    	    break;
-    	default:
-    	    throw new IllegalArgumentException("classification for IonDecimal special values may only be NEGATIVE_ZERO");
-    	}
+        switch(classification) {
+        case NEGATIVE_ZERO:
+            writeDecimal(BigDecimal.ZERO, classification);
+            break;
+        default:
+            throw new IllegalArgumentException("classification for IonDecimal special values may only be NEGATIVE_ZERO");
+        }
     }
 
     public void writeFloatList(float[] values)

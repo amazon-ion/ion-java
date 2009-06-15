@@ -7,7 +7,6 @@ import static com.amazon.ion.impl.IonConstants.tidSexp;
 import static com.amazon.ion.impl.IonConstants.tidStruct;
 
 import com.amazon.ion.IonBinaryWriter;
-import com.amazon.ion.IonException;
 import com.amazon.ion.IonNumber;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
@@ -161,10 +160,11 @@ public final class IonBinaryWriterImpl
         // write field name
         if (_in_struct) {
             if (has_empty_field_name()) {
-                throw new IonException("before writing a value you must set the field name");
+                throw new IllegalStateException(ERROR_MISSING_FIELD_NAME);
             }
             int sid = super.get_field_name_as_int();
             if (sid < 1) {
+                // FIXME this needs a message; what's really happened here?
                 throw new IllegalStateException();
             }
             patch_len += _writer.writeVarUInt7Value(sid, true);
@@ -387,14 +387,14 @@ public final class IonBinaryWriterImpl
         len = _writer.writeFloatValue(value);
         patch(1 + len);
     }
-    
+
     public void writeDecimal(BigDecimal value, IonNumber.Classification classification) throws IOException
     {
-    	if (IonNumber.Classification.NEGATIVE_ZERO.equals(classification)) {
-    		if (value == null || value.signum() != 0) {
-	    		throw new IllegalArgumentException("the value must be zero to write a negative zero");
-    		}
-    	}
+        if (IonNumber.Classification.NEGATIVE_ZERO.equals(classification)) {
+            if (value == null || value.signum() != 0) {
+                throw new IllegalArgumentException("the value must be zero to write a negative zero");
+            }
+        }
 
         if (value == null) {
             writeNull(IonType.DECIMAL);
