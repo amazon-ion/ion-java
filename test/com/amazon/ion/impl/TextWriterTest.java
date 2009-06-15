@@ -10,7 +10,7 @@ import java.io.ByteArrayOutputStream;
  *
  */
 public class TextWriterTest
-    extends WriterTestCase
+    extends IonWriterTestCase
 {
     private ByteArrayOutputStream myOutputStream;
 

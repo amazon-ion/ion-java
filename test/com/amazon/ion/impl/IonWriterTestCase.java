@@ -27,7 +27,7 @@ import java.util.Arrays;
 /**
  *
  */
-public abstract class WriterTestCase
+public abstract class IonWriterTestCase
     extends IonTestCase
 {
     protected IonWriter makeWriter()
