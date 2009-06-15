@@ -6,6 +6,7 @@ import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
 import static com.amazon.ion.Symtabs.GINGER_MAX_IDS;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
 import static com.amazon.ion.TestUtils.FERMATA;
+
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonDatagram;
@@ -224,14 +225,5 @@ public abstract class WriterTestCase
         IonDatagram dg = loader().load("[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]");
         IonWriter writer = makeWriter();
         writer.writeValue(dg);
-    }
-    
-    public void assertEqualBytes(byte[] expected, int start, int limit,
-                                 byte[] actual)
-    {
-        for (int i = start; i < limit; i++)
-        {
-            assertEquals(expected[i], actual[i - start]);
-        }
     }
 }
