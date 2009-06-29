@@ -120,7 +120,7 @@ public class Base64Encoder
     }
     public final static boolean isBase64Character(int c) {
     	if (c < 32 || c > 255) return false;
-    	return (URLSafe64CharToInt[c] > 0);
+    	return (URLSafe64CharToInt[c] >= 0);
     }
     public Base64Encoder() {}
 
