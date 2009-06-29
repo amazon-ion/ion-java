@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
+/* Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion.impl;
 
@@ -6,8 +6,6 @@ import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
-import com.amazon.ion.LocalSymbolTable;
-import com.amazon.ion.SymbolTable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -61,38 +59,8 @@ public class LoaderImpl
     }
 
 
-    /** @deprecated */
-    @Deprecated
-    public IonDatagramImpl loadTextFile(File ionFile)
-        throws IonException, IOException
-    {
-        return load(ionFile);
-    }
-
-    @Deprecated
-    public IonDatagramImpl loadText(File ionFile)
-        throws IonException, IOException
-    {
-        return load(ionFile);
-    }
-
-    @Deprecated
-    public IonDatagramImpl loadBinary(File ionFile)
-        throws IonException, IOException
-    {
-        return load(ionFile);
-    }
-
-
     //=========================================================================
     // Loading from String
-
-    @Deprecated
-    public IonDatagramImpl loadText(String ionText)
-        throws IonException
-    {
-        return load(ionText);
-    }
 
 
     public IonDatagramImpl load(String ionText)
@@ -138,39 +106,6 @@ public class LoaderImpl
 
     //=========================================================================
     // Loading from Reader
-
-    @Deprecated
-    public IonDatagramImpl loadText(Reader ionText)
-        throws IonException, IOException
-    {
-        return load(ionText);
-    }
-
-    @Deprecated
-    public IonDatagramImpl load(Reader ionText, SymbolTable symbolTable)
-        throws IonException, IOException
-    {
-        return new IonDatagramImpl(mySystem, myCatalog, symbolTable, ionText);
-    }
-
-
-    @Deprecated
-    public IonDatagramImpl load(Reader ionText,
-                                LocalSymbolTable symbolTable)
-        throws IonException, IOException
-    {
-        return new IonDatagramImpl(mySystem, myCatalog, symbolTable, ionText);
-    }
-
-
-    @Deprecated
-    public IonDatagramImpl loadText(Reader ionText,
-                                    LocalSymbolTable symbolTable)
-        throws IonException, IOException
-    {
-        return new IonDatagramImpl(mySystem, myCatalog, symbolTable, ionText);
-    }
-
 
     public IonDatagramImpl load(Reader ionText)
         throws IonException, IOException
@@ -265,30 +200,4 @@ public class LoaderImpl
         Reader reader = new InputStreamReader(pushback, "UTF-8");
         return load(reader);
     }
-
-
-    @Deprecated
-    public IonDatagramImpl loadText(InputStream ionText)
-        throws IOException
-    {
-        Reader reader = new InputStreamReader(ionText, "UTF-8");
-        return load(reader);
-    }
-
-    @Deprecated
-    public IonDatagramImpl loadBinary(InputStream ionBinary)
-        throws IOException
-    {
-        SystemReader systemReader = mySystem.newBinarySystemReader(myCatalog, ionBinary);
-        return new IonDatagramImpl(mySystem, systemReader);
-    }
-    
-    @Deprecated
-    public IonDatagramImpl loadPagedBinary(InputStream ionBinary)
-        throws IOException
-    {
-        SystemReader systemReader = mySystem.newPagedBinarySystemReader(myCatalog, ionBinary);
-        return new IonDatagramImpl(mySystem, systemReader);
-    }
-    
 }

@@ -10,7 +10,7 @@ import com.amazon.ion.SymbolTable;
  *
  */
 public class BinaryWriterTest
-    extends WriterTestCase
+    extends IonWriterTestCase
 {
     private IonBinaryWriter myWriter;
 

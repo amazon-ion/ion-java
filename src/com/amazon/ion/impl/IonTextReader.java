@@ -288,10 +288,11 @@ public final class IonTextReader
             case SEXP:
                 _current_depth++;
                 if (_debug) System.out.println("stepInto() new depth: "+this._current_depth);
-                return;
+                break;
             default:
                 throw new IllegalStateException();
         }
+        clearValue();
     }
 
     public void stepOut()
@@ -414,6 +415,11 @@ public final class IonTextReader
         return t;
     }
 
+    void clearValue() {
+        _lookahead_type = null;
+        clearAnnotationList();
+        clearFieldname();
+    }
     IonType lookahead() {
         _value_ready = false;
         _value_is_container = false;
@@ -845,6 +851,8 @@ public final class IonTextReader
 
     public String stringValue()
     {
+        int pending = 0;
+        
         switch (_value_type) {
             case STRING:
             case SYMBOL:
@@ -863,7 +871,10 @@ public final class IonTextReader
             for (int ii=0; ii<_extended_value_count; ii++) {
                 int start = this._extended_value_start[ii];
                 int end   = this._extended_value_end[ii];
-                _scanner.continueValueAsString(start, end);
+                pending = _scanner.continueValueAsString(start, end, pending);
+            }
+            if (pending != 0) {
+                _scanner.bad_character();
             }
             value = _scanner.closeValueAsString(pos);
         }
@@ -1189,25 +1200,23 @@ public final class IonTextReader
                 case 'x':
                     // a pair of hex digits
                     c = readDigit(16, true);
-                    if (c < 0) break;
                     c2 = c << 4; // high nibble
-                    c = readDigit(16, false);
-                    if (c < 0) break;
-                    return c2 + c; // high nibble + low nibble
+                    c = readDigit(16, true);
+                    c += c2;
+                    if (c < 0 || c > 255) invalid_escape(c);
+                    return c; // high nibble + lowest nibble
                 case 'u':
                     // exactly 4 hex digits
                     c = readDigit(16, true);
-                    if (c < 0) break;
                     c2 = c << 12; // highest nibble
                     c = readDigit(16, true);
-                    if (c < 0) break;
                     c2 += c << 8; // 2nd high nibble
                     c = readDigit(16, true);
-                    if (c < 0) break;
                     c2 += c << 4; // almost lowest nibble
                     c = readDigit(16, true);
-                    if (c < 0) break;
-                    return c2 + c; // high nibble + lowest nibble
+                    c += c2;
+                    if (c < 0 || c > 255) invalid_escape(c);
+                    return c; // high nibble + lowest nibble
                 case '0':
                     return 0;
                 case '\r':
@@ -1223,24 +1232,29 @@ public final class IonTextReader
                     }
                     break;
                 default:
-                    throw new IonParsingException("invalid escape sequence \"\\"
-                                           + (char) c2 + "\" [" + c2 + "]");
+                    invalid_escape(c2);
                 }
             }
             return c;
+        }
+        void invalid_escape(int c) {
+            throw new IonParsingException("invalid escape sequence \"\\"
+                                          + (char) c + "\" [" + c + "]");
+            
+        }
+        void unexpected_eof() {
+            throw new IonParsingException("unexpected eof encounter in escape sequence");
         }
         int readDigit(int radix, boolean isRequired) throws IOException
         {
             int c = _in.read();
             if (c < 0) {
+                if (isRequired) unexpected_eof();
                 return -1;
             }
 
             int c2 =  Character.digit(c, radix);
             if (c2 < 0) {
-                if (isRequired) {
-                    throw new IonParsingException("bad digit in escaped character '"+((char)c)+"'");
-                }
                 // if it's not a required digit, we just throw it back
                 //unread(c);
                 //return -1;

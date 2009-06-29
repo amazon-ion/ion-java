@@ -17,7 +17,8 @@ public class LoadTextBytesSystemProcessingTest
     protected void prepare(String text)
         throws Exception
     {
-        myBytes = text.getBytes("UTF-8");
+//        myBytes = text.getBytes("UTF-8");
+        myBytes = convertUtf16UnitsToUtf8(text);
     }
 
     @Override

@@ -249,7 +249,7 @@ public final class IonTextWriter
         if (_in_struct) {
             String name = super.get_field_name_as_string();
             if (name == null) {
-                throw new IllegalArgumentException("structure members require a field name");
+                throw new IllegalStateException(ERROR_MISSING_FIELD_NAME);
             }
             // TODO avoid intermediate CharSequence
             CharSequence escapedname = escapeSymbol(name);
@@ -442,18 +442,18 @@ public final class IonTextWriter
     public void writeDecimal(BigDecimal value, IonNumber.Classification classification)
         throws IOException
     {
-    	boolean is_negative_zero = IonNumber.Classification.NEGATIVE_ZERO.equals(classification);
+        boolean is_negative_zero = IonNumber.Classification.NEGATIVE_ZERO.equals(classification);
 
-    	if (is_negative_zero) {
-    		if (value == null || value.signum() != 0) throw new IllegalArgumentException("the value must be zero to write a negative zero");
-    	}
+        if (is_negative_zero) {
+            if (value == null || value.signum() != 0) throw new IllegalArgumentException("the value must be zero to write a negative zero");
+        }
 
         startValue();
         BigInteger unscaled = value.unscaledValue();
 
         if (is_negative_zero) {
-        	assert value.signum() == 0;
-        	_output.append('-');
+            assert value.signum() == 0;
+            _output.append('-');
         }
 
         _output.append(unscaled.toString());

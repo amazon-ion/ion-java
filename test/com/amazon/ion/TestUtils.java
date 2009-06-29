@@ -92,4 +92,15 @@ public class TestUtils
         (byte) 0xF0, (byte) 0x9D, (byte) 0x84, (byte) 0x90
     };
 
+    static
+    {
+        try
+        {
+            Assert.assertEquals(FERMATA, new String(FERMATA_UTF8, "UTF-8"));
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            throw new RuntimeException(e);
+        }
+    }
 }

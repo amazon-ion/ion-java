@@ -1748,6 +1748,10 @@ done:       for (;;) {
         }
 
         // TODO - this may have problems with unicode utf16/utf8 conversions
+        // note that this reads characters that have already had the escape
+        // sequence processed (so we don't want to do that a second time)
+        // the chars here were filled by the IonTokenReader which already
+        // de-escaped the escaped sequences from the input, so all chars are "real"
         public void appendToLongValue(CharSequence chars, boolean onlyByteSizedCharacters) throws IOException
         {
             if (debugValidation) _validate();
@@ -1773,20 +1777,18 @@ done:       for (;;) {
                     }
                     else if ((c & IonConstants.surrogate_mask) == IonConstants.high_surrogate_value) {
                         ii++;
-                        if (ii < len) {
-                            int c2 = chars.charAt(ii);
-                            if ((c2 & IonConstants.surrogate_mask) != IonConstants.low_surrogate_value) {
-                                throw new IonException("unmatched high surrogate character encountered, invalid utf-16");
-                            }
-                            c = IonConstants.makeUnicodeScalar(c, c2);
-                        }
-                        else {
+                        if (ii >= len) {
                             // a trailing high surrogate, we just remember it for later
                             // and (hopefully, and usually, the low surrogate will be
                             // appended shortly
                             _pending_high_surrogate = c;
                             break;
                         }
+                        int c2 = chars.charAt(ii);
+                        if ((c2 & IonConstants.surrogate_mask) != IonConstants.low_surrogate_value) {
+                            throw new IonException("unmatched high surrogate character encountered, invalid utf-16");
+                    }
+                        c = IonConstants.makeUnicodeScalar(c, c2);
                     }
                     else if ((c & IonConstants.surrogate_mask) == IonConstants.low_surrogate_value) {
                         throw new IonException("unmatched low surrogate character encountered, invalid utf-16");
@@ -1838,6 +1840,7 @@ done:       for (;;) {
         public void appendToLongValue(int terminator
                                      ,boolean longstring
                                      ,boolean onlyByteSizedCharacters
+                                     ,boolean decodeEscapeSequences
                                      ,PushbackReader r
                                      )
            throws IOException, UnexpectedEofException
@@ -1851,6 +1854,7 @@ done:       for (;;) {
                 _validate();
             }
 
+            assert(terminator != '\\');
             for (;;) {
                 c = r.read();  // we put off the surrogate logic as long as possible (so not here)
                 if (c == terminator) {
@@ -1862,49 +1866,108 @@ done:       for (;;) {
                 else if (c == -1) {
                     throw new UnexpectedEofException();
                 }
-                if (terminator != -1) {
+                else if (c == '\n' || c == '\r') {
                     // here we'll handle embedded new line detection and escaped characters
-                    if (!longstring && (c == '\n' || c == '\r')) {
+                    if ((terminator != -1) && !longstring) {
                         throw new IonException("unexpected line terminator encountered in quoted string");
                     }
-                    if (c == '\\') {
-                        // before we "unescape the character" here we have to check for a dangling
-                        // high surrogate since '\\' isn't a valid low surrogate and it'll be consumed
-                        // before we check surrogate handling belowe
-                        if (_pending_high_surrogate != 0) {
-                            throw new IonException("unmatched high surrogate encountered");
                         }
+                else if (decodeEscapeSequences && c == '\\') {
+                    // if this is an escape sequence we need to process it now
+                    // since we allow a surrogate to be encoded using \ u (or \ U)
+                    // encoding
                         c = IonTokenReader.readEscapedCharacter(r, onlyByteSizedCharacters);
-                        // for the slash followed by a real new line (ascii 10)
                         if (c == IonTokenReader.EMPTY_ESCAPE_SEQUENCE) {
                             continue;
                         }
-                        // EOF will have thrown UnexpectedEofException in readEscapedCharacter()
                     }
-                }
+
+
                 if (onlyByteSizedCharacters) {
+                    assert(_pending_high_surrogate == 0); // if it's byte sized only, then we shouldn't have a dangling surrogate
                     if ((c & (~0xff)) != 0) {
                         throw new IonException("escaped character value too large in clob (0 to 255 only)");
                     }
                     write((byte)(0xff & c));
                 }
                 else {
+                    // for larger characters we have to glue together surrogates, regardless
+                    // of how they were encoded.  If we have a high surrogate and go to peek
+                    // for the low surrogate and hit the end of a segment of a long string
+                    // (triple quoted multi-line string) we leave a dangling high surrogate
+                    // that will get picked up on the next call into this routine when the
+                    // next segment of the long string is processed
                     if (_pending_high_surrogate != 0) {
                         if ((c & IonConstants.surrogate_mask) != IonConstants.low_surrogate_value) {
-                            throw new IonException("unmatched high surrogate character encountered, invalid utf-16");
+                            String message =
+                                "Text contains unmatched UTF-16 high surrogate " +
+                                IonTextUtils.printCodePointAsString(_pending_high_surrogate);
+                            throw new IonException(message);
                         }
                         c = IonConstants.makeUnicodeScalar(_pending_high_surrogate, c);
                         _pending_high_surrogate = 0;
                     }
                     else if ((c & IonConstants.surrogate_mask) == IonConstants.high_surrogate_value) {
                         int c2 = r.read();
+                        if (c2 == terminator) {
+                            if (longstring && isLongTerminator(terminator, r)) {
+                                // if it's a long string termination we'll hang onto the current c as the pending surrogate
+                                _pending_high_surrogate = c;
+                                c = terminator;
+                                break;
+                            }
+                            // otherwise this is an error
+                            String message =
+                                "Text contains unmatched UTF-16 high surrogate " +
+                                IonTextUtils.printCodePointAsString(c);
+                            throw new IonException(message);
+                        }
+                        else if (c2 == -1) {
+                            // eof is also an error - really two errors
+                            throw new UnexpectedEofException();
+                        }
+                        //here we convert escape sequences into characters and continue until
+                        //we encounter a non-newline escape (typically immediately)
+                        while (decodeEscapeSequences && c2 == '\\') {
+                            c2 = IonTokenReader.readEscapedCharacter(r, onlyByteSizedCharacters);
+                            if (c2 != IonTokenReader.EMPTY_ESCAPE_SEQUENCE) break;
+                            c2 = r.read();
+                            if (c2 == terminator) {
+                                if (longstring && isLongTerminator(terminator, r)) {
+                                    // if it's a long string termination we'll hang onto the current c as the pending surrogate
+                                    _pending_high_surrogate = c;
+                                    c = c2; // we'll be checking this below
+                                    break;
+                                }
+                                // otherwise this is an error
+                                String message =
+                                    "Text contains unmatched UTF-16 high surrogate " +
+                                    IonTextUtils.printCodePointAsString(c);
+                                throw new IonException(message);
+                            }
+                            else if (c2 == -1) {
+                                // eof is also an error - really two errors
+                                throw new UnexpectedEofException();
+                            }
+                        }
+                        // check to see how we broke our of the while loop above, we may be "done"
+                        if (_pending_high_surrogate != 0) {
+                            break;
+                        }
+
                         if ((c2 & IonConstants.surrogate_mask) != IonConstants.low_surrogate_value) {
-                            throw new IonException("unmatched high surrogate character encountered, invalid utf-16");
+                            String message =
+                                "Text contains unmatched UTF-16 high surrogate " +
+                                IonTextUtils.printCodePointAsString(c);
+                            throw new IonException(message);
                         }
                         c = IonConstants.makeUnicodeScalar(c, c2);
                     }
                     else if ((c & IonConstants.surrogate_mask) == IonConstants.low_surrogate_value) {
-                        throw new IonException("unmatched low surrogate character encountered, invalid utf-16");
+                        String message =
+                            "Text contains unmatched UTF-16 low surrogate " +
+                            IonTextUtils.printCodePointAsString(c);
+                        throw new IonException(message);
                     }
                     writeUnicodeScalarAsUTF8(c);
                 }

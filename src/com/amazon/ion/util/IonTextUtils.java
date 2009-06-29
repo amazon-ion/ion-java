@@ -122,29 +122,19 @@ public class IonTextUtils
         return false;
     }
 
-
+    private static boolean is8bitValue(int v) {
+        return (v & ~0xff) == 0;
+    }
     public static boolean isIdentifierStart(int codePoint) {
-        if (codePoint < ' ' || codePoint > '~') {
-            return false;
-        }
-        // FIXME check array bounds
-        return IDENTIFIER_START_CHAR_FLAGS[codePoint];
+        return IDENTIFIER_START_CHAR_FLAGS[codePoint & 0xff] && is8bitValue(codePoint);
     }
 
     public static boolean isIdentifierPart(int codePoint) {
-        if (codePoint < ' ' || codePoint > '~') {
-            return false;
-        }
-        // FIXME check array bounds
-        return IDENTIFIER_FOLLOW_CHAR_FLAGS[codePoint];
+        return IDENTIFIER_FOLLOW_CHAR_FLAGS[codePoint & 0xff] && is8bitValue(codePoint);
     }
 
     public static boolean isOperatorPart(int codePoint) {
-        if (codePoint < ' ' || codePoint > '~') {
-            return false;
-        }
-        // FIXME check array bounds
-        return OPERATOR_CHAR_FLAGS[codePoint];
+        return OPERATOR_CHAR_FLAGS[codePoint & 0xff] && is8bitValue(codePoint);
     }
 
     /**

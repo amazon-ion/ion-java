@@ -119,7 +119,7 @@
            failureproperty="test.failure"
            dir="${basedir}"
            fork="true"
-           includeantruntime="true">
+           includeantruntime="false">
       <test name="${suite}" todir="${dir.output.logs}" outfile="TEST" />
 
       <!-- JUnit task adds the minimum Ant libs to make things work. -->
@@ -143,7 +143,7 @@
       </assertions>
 
       <!-- Log messages to the console. -->
-      <formatter type="plain" usefile="false" />
+      <formatter type="brief" usefile="false" />
 
       <!-- Long logs to file. -->
       <formatter type="xml" />

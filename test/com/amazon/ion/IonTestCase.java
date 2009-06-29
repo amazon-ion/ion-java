@@ -751,6 +751,15 @@ public abstract class IonTestCase
     }
 
 
+    public void assertEqualBytes(byte[] expected, int start, int limit,
+                                 byte[] actual)
+    {
+        for (int i = start; i < limit; i++)
+        {
+            assertEquals(expected[i], actual[i - start]);
+        }
+    }
+
     /**
      * Tests that some data parses, clones, and prints back to the same text.
      * @param input  Ion text data

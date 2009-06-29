@@ -790,25 +790,16 @@ loop:   for (;;) {
                 }
                 c = '\n';
             }
-            // not needed
-            //else if (c == '\n') {
-            //    c2 = _r.read();
-            //    if (c2 != '\r') {
-            //        _peek_ahead_char = c2;
-            //    }
-            //    else {
-            //        _char_length++;
-            //    }
-            //}
             return c;
         }
-        else if ((c & (0x80 | 0x40 | 0x20)) == (0x80 | 0x40)) {
+        switch(IonUTF8.getUTF8LengthFromFirstByte(c)) {
+        case 2:
             // 2 byte unicode character >=128 and <= 0x7ff or <= 2047)
             // 110yyyyy 10zzzzzz
             c2 = readFollowingUtf8CodeUnit();
             c = ((c & 0x1f) << 6) | (c2 & 0x3f);
-        }
-        else if ((c & (0x80 | 0x40 | 0x20 | 0x10)) == (0x80 | 0x40 | 0x20)) {
+            break;
+        case 3:
             // 3 byte unicode character >=2048 and <= 0xffff, <= 65535
             // 1110xxxx 10yyyyyy 10zzzzzz
             c2 = readFollowingUtf8CodeUnit();
@@ -819,12 +810,12 @@ loop:   for (;;) {
                 c  = IonConstants.makeHighSurrogate(c);
                 preread_char(c2); // we'll put the low order bits in the queue for later
             }
-        }
-        else if ((c & (0x80 | 0x40 | 0x20 | 0x10 | 0x08)) == (0x80 | 0x40 | 0x20| 0x10)) {
+            break;
+        case 4:
             // 4 byte unicode character > 65535 (0xffff) and <= 2097151 <= 10xFFFFF
             // 11110www 10xxxxxx 10yyyyyy 10zzzzzz
             c2 = readFollowingUtf8CodeUnit();
-            int c3 = readFollowingUtf8CodeUnit();
+            c3 = readFollowingUtf8CodeUnit();
             int c4 = readFollowingUtf8CodeUnit();
             c = ((c & 0x07) << 18) | ((c2 & 0x3f) << 12) | ((c3 & 0x3f) << 6) | (c4 & 0x3f);
             if (c >= 0x10000) {
@@ -832,8 +823,10 @@ loop:   for (;;) {
                 c  = IonConstants.makeHighSurrogate(c);
                 preread_char(c2); // we'll put the low order bits in the queue for later
             }
-        }
-        else if (c != -1) {
+        break;
+        default:
+            if (c == -1) break;
+            if (IonUTF8.isSurrogate(c)) break;
             // at this point anything except EOF is a bad UTF-8 character
             bad_character();
         }
@@ -843,7 +836,7 @@ loop:   for (;;) {
     private final int readFollowingUtf8CodeUnit() throws IOException  {
         int codeUnit = _r.read();
         _char_length++;
-        if ((codeUnit & (0x80 | 0x40)) != 0x80) {
+        if (!IonUTF8.isContinueByteUTF8(codeUnit)) {
             bad_character();
         }
         return codeUnit;
@@ -1189,9 +1182,9 @@ loop:       for (;;) {
             hexchar  = IonConstants.makeHighSurrogate(hexchar);
             preread_char(c2); // we'll put the low order bits in the queue for later
         }
-        else if (IonConstants.isSurrogate(hexchar)) {
-            bad_character();
-        }
+        //else if (IonConstants.isSurrogate(hexchar)) {
+        //    bad_character();
+        //}
         return hexchar;
     }
     private final int read_quoted_string(int c) throws IOException
@@ -1611,7 +1604,7 @@ endofdate:
     }
 
 
-    private final void bad_character()
+    protected final void bad_character()
     {
         throw new IonTextReader.IonParsingException("invalid UTF-8 sequence encountered"+input_position());
     }
@@ -1619,7 +1612,7 @@ endofdate:
     {
         throw new UnexpectedEofException(input_position());
     }
-    private final void bad_escape_sequence()
+    protected final void bad_escape_sequence()
     {
         throw new IonTextReader.IonParsingException("bad escape character encountered"+input_position());
     }
@@ -1637,57 +1630,6 @@ endofdate:
         String charStr = printCodePointAsString(c);
         throw new IonTextReader.IonParsingException("a bad character " + charStr + " was encountered"+input_position());
     }
-    /*
-    public final static class xxxBufferedStream extends InputStream
-    {
-        byte [] _buffer;
-        int     _len;
-        int     _pos;
-
-        public BufferedStream(byte[] buffer)
-        {
-            _buffer = buffer;
-            _pos = 0;
-            _len = buffer.length;
-        }
-
-        public final int getByte(int pos) {
-            if (pos < 0 || pos >= _len) return -1;
-            return _buffer[pos] & 0xff;
-        }
-
-        @Override
-        public final int read()
-            throws IOException
-        {
-            if (_pos >= _len) return -1;
-            return _buffer[_pos++];
-        }
-
-        @Override
-        public final int read(byte[] bytes, int offset, int len) throws IOException
-        {
-            int copied = 0;
-            if (offset < 0 || offset > _len) throw new IllegalArgumentException();
-            copied = len;
-            if (_pos + len > _len) copied = _len - _pos;
-            System.arraycopy(_buffer, _pos, bytes, offset, copied);
-            _pos += copied;
-            return copied;
-        }
-
-        public final int position() {
-            return _pos;
-        }
-
-        public final BufferedStream setPosition(int pos)
-        {
-            if (_pos < 0 || _pos > _len) throw new IllegalArgumentException();
-            _pos = pos;
-            return this;
-        }
-    }
-*/
 
     String consumeTokenAsString()
     {
@@ -1707,29 +1649,11 @@ endofdate:
     String getValueAsString(int start, int end)
     {
         int pos = startValueAsString();
-        continueValueAsString(start, end);
+        int pending = continueValueAsString(start, end, 0);
+        if (pending != 0) bad_character();
         String value = closeValueAsString(pos);
         return value;
     }
-
-
-    /*
-    private char[] _saved_symbol_buf = new char[32];
-    private int    _saved_symbol_len = 0;
-    private final void saved_symbol_grow(int needed) {
-        int len;
-        for (len = _saved_symbol_buf.length; len < needed; len *= 2);
-        char[] temp = new char[len];
-        System.arraycopy(_saved_symbol_buf, 0, temp, 0, _saved_symbol_len);
-        _saved_symbol_buf = temp;
-    }
-    private final void saved_symbol_append(char c) {
-        if (_saved_symbol_len >= _saved_symbol_buf.length) {
-            saved_symbol_grow(_saved_symbol_len + 1);
-        }
-        _saved_symbol_buf[_saved_symbol_len++] = c;
-    }
-    */
 
     int startValueAsString() {
         int pos = _r.position();
@@ -1737,8 +1661,24 @@ endofdate:
         //_saved_symbol_len = 0;
         return pos;
     }
-    void continueValueAsString(int start, int end) {
+    /**
+     * appends data from the input stream to the _saved_symbol StringBuilder.
+     * this decodes escape sequences and creates surrogate pairs for input
+     * values that need them and checks to see that surrogates are properly
+     * matched.
+     * This returns 0 if all the input was appended.  If the last char encountered
+     * was a high surrogate the high surrogate is returned.  The caller should
+     * pass this in on the next call.  When there is no more to append to the
+     * saved value if the high surrogate is non-zero the caller should throw
+     * and error using IonTextTokenizer.bad_character().
+     * @param start offset of the first char/byte to read
+     * @param end offset of the last char/byte to read
+     * @param pending_high_surrogate previous loose surrogate or 0 for initial call
+     * @return 0 or a high surrogate that hasn't been processed it should be passed in on the next call
+     */
+    int continueValueAsString(int start, int end, int pending_high_surrogate) {
         int lookahead = IonTextTokenizer.EMPTY_PEEKAHEAD;
+        
         _r.setPosition(start);
         try {
             while (lookahead != IonTextTokenizer.EMPTY_PEEKAHEAD || _r.position() < end) {
@@ -1750,7 +1690,9 @@ endofdate:
                     c = lookahead;
                     lookahead = IonTextTokenizer.EMPTY_PEEKAHEAD;
                 }
+                
                 if (c == '\n') {
+                    if (pending_high_surrogate != 0) bad_character();
                     c = (_r.position() < end) ? _r.read() : IonTextTokenizer.EMPTY_PEEKAHEAD;
                     if (c != '\r') {
                         lookahead = c;
@@ -1758,6 +1700,7 @@ endofdate:
                     c = '\n';
                 }
                 else if (c == '\r') {
+                    if (pending_high_surrogate != 0) bad_character();
                     c = (_r.position() < end) ? _r.read() : IonTextTokenizer.EMPTY_PEEKAHEAD;
                     if (c != '\n') {
                         lookahead = c;
@@ -1767,25 +1710,34 @@ endofdate:
                 else if (c == '\\') {
                     c = _r.read();
                     c = read_escaped_char_in_string(c);
-                    if (c == EMPTY_ESCAPE_SEQUENCE) continue;
-                    if (IonConstants.isSurrogate(c)) {
-                        bad_character();
-                    }
-                    else if (c >= 0x10000) {
-                        int c2 = IonConstants.makeLowSurrogate(c);
-                        c  = IonConstants.makeHighSurrogate(c);
-                        _saved_symbol.append((char)c2);
-                        //saved_symbol_append((char)c2);
-                    }
+                }
+                if (c == EMPTY_ESCAPE_SEQUENCE) continue;
+                
+                if (pending_high_surrogate != 0) {
+                    if (!IonConstants.isLowSurrogate(c)) bad_character();
+                    _saved_symbol.append((char)pending_high_surrogate);                    
+                    pending_high_surrogate = 0;
+                }
+                else if (IonConstants.isSurrogate(c)) {
+                    // this causes us to error on a loose low surrogate (one not
+                    // preceeded by a high surrogate - is that what we want?  FIXME:
+                    if (!IonConstants.isHighSurrogate(c)) bad_character();
+                    pending_high_surrogate = c;
+                    continue;
+                }
+                else if (c > 0xFFFF) {
+                    int c2 = IonConstants.makeLowSurrogate(c);
+                    c  = IonConstants.makeHighSurrogate(c);
+                    _saved_symbol.append((char)c2);
                 }
                 _saved_symbol.append((char)c);
-                //saved_symbol_append((char)c);
             }
         }
         catch (IOException e){
             throw new IonTextReader.IonParsingException(e
                     , " getting string value in tokenizer"+input_position());
         }
+        return pending_high_surrogate;
     }
 
     private final int read_escaped_char_in_string(int c) throws IOException

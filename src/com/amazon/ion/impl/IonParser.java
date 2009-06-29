@@ -303,7 +303,7 @@ public class IonParser
 
         // Read the rest of the string
         PushbackReader r = this._in.getPushbackReader();
-        this._out.writer().appendToLongValue('\"', false, onlyByteSizedCharacters, r);
+        this._out.writer().appendToLongValue('\"', false, onlyByteSizedCharacters, true, r);
 
         this._out.writer().patchLongHeader(hn, -1);
     }
@@ -322,7 +322,7 @@ public class IonParser
         // here we'll "let" the BufferBytes class handle the heavy lifting
         PushbackReader r = this._in.getPushbackReader();
         this._out.writer().startLongWrite(hn);
-        this._out.writer().appendToLongValue('\'', this._in.isLongString, onlyByteSizedCharacters, r);
+        this._out.writer().appendToLongValue('\'', this._in.isLongString, onlyByteSizedCharacters, true, r);
 
         // Concatenate any long-strings following this one.
         while (this._in.isLongString) {
@@ -347,7 +347,7 @@ public class IonParser
                 this._in.unread('\''); // and the first one as well
                 break;
             }
-            this._out.writer().appendToLongValue('\'', true, onlyByteSizedCharacters, r);
+            this._out.writer().appendToLongValue('\'', true, onlyByteSizedCharacters, true, r);
         }
         this._out.writer().patchLongHeader(hn, -1);
     }
@@ -678,7 +678,7 @@ loop:   for (;;) {
             int start = this._out.writer().position();
 
             _out.writer().startLongWrite(IonConstants.tidBlob);
-            _out.writer().appendToLongValue(-1, false, true, pbr);
+            _out.writer().appendToLongValue(-1, false, true, false, pbr);
 
             // we'll have exited from the reader either on trailing whitespace or
             // the first closing curly brace (the reader will consume the correct

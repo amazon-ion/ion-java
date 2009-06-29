@@ -1,6 +1,5 @@
 // Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
-import com.amazon.ion.SurrogateEscapeTest;
 import com.amazon.ion.AnnotationEscapesTest;
 import com.amazon.ion.BadIonTests;
 import com.amazon.ion.BinaryTest;
@@ -23,17 +22,17 @@ import com.amazon.ion.SexpTest;
 import com.amazon.ion.StringFieldNameEscapesTest;
 import com.amazon.ion.StringTest;
 import com.amazon.ion.StructTest;
+import com.amazon.ion.SurrogateEscapeTest;
 import com.amazon.ion.SymbolTest;
 import com.amazon.ion.SystemProcessingTests;
 import com.amazon.ion.TimestampTest;
-import com.amazon.ion.impl.BinaryWriterTest;
 import com.amazon.ion.impl.ByteBufferTest;
 import com.amazon.ion.impl.CharacterReaderTest;
 import com.amazon.ion.impl.IonEqualsTest;
+import com.amazon.ion.impl.IonWriterTests;
 import com.amazon.ion.impl.IterationTest;
 import com.amazon.ion.impl.ReaderTest;
 import com.amazon.ion.impl.SymbolTableTest;
-import com.amazon.ion.impl.TextWriterTest;
 import com.amazon.ion.impl.TreeReaderTest;
 import com.amazon.ion.streaming.BadIonStreamingTests;
 import com.amazon.ion.streaming.BinaryStreamingTest;
@@ -116,9 +115,10 @@ public class AllTests
         // easier to run that subset.
         suite.addTest(SystemProcessingTests.suite());
 
+        // Ditto for WriterTestCase
+        suite.addTest(IonWriterTests.suite());
+
         suite.addTestSuite(TreeReaderTest.class);
-        suite.addTestSuite(TextWriterTest.class);
-        suite.addTestSuite(BinaryWriterTest.class);
         suite.addTestSuite(MiscStreamingTests.class);
         suite.addTestSuite(BinaryStreamingTest.class);
         suite.addTest(new BadIonStreamingTests());
