@@ -525,6 +525,18 @@ public abstract class SystemProcessingTestCase
         checkEof();
     }
 
+    // JIRA ION-71
+    public void testTimestampWithRolloverOffset()
+        throws Exception
+    {
+        String text = "2009-10-01T00:00+01:00";
+        startIteration(text);
+        nextValue();
+        checkTimestamp("2009-10-01T00:00+01:00");
+        checkEof();
+    }
+
+
     public void testShortTimestamps()
         throws Exception
     {
