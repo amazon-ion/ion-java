@@ -192,7 +192,31 @@ public class SymbolTableTest
         value = scanner.next();
         checkSymbol("imported 1", import1id, value);
     }
+    
+    public IonStruct synthesizeSharedSymbolTableIon(final String name,
+                                                    final int version,
+                                                    final String... symbols) {
+        final IonStruct tableStruct = system().newEmptyStruct();
+        tableStruct.addTypeAnnotation("$ion_shared_symbol_table");
+        tableStruct.put("name").newString(name);
+        tableStruct.put("version").newInt(version);
 
+        final IonList symbolList = tableStruct.put("symbols").newEmptyList();
+        for (final String symbol : symbols) {
+            symbolList.add().newString(symbol);
+        }
+        return tableStruct;
+    }
+    
+    public void testDomSharedSymbolTable() {
+        // JIRA ION-72
+        final SymbolTable table = system().newSharedSymbolTable(
+            system().newReader(synthesizeSharedSymbolTableIon("foobar", 1, "hello"))
+        );
+        assertEquals("foobar", table.getName());
+        assertEquals(1, table.getVersion());
+        assertEquals(1, table.getMaxId());
+    }
 
     /**
      * Attempts to override system symbols are ignored.
