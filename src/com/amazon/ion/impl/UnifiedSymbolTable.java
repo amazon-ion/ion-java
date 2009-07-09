@@ -827,6 +827,7 @@ final class UnifiedSymbolTable
                 recordLocalSymbolInIonRep(sym);
             }
             _ion_rep = null;
+            _ion_symbols_rep = null;
         }
 
         return ionRep;
