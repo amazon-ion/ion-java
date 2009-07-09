@@ -451,10 +451,8 @@ public abstract class IonValueImpl
         {
             SymbolTable symtab = getSymbolTable();
             if (symtab == null) {
-                // TODO - or we could throw here
-                symtab = materializeSymbolTable();
+                return -1;
             }
-            assert symtab != null;
             _fieldSid = symtab.addSymbol(this._fieldName);
         }
         return this._fieldSid;
@@ -950,8 +948,8 @@ public abstract class IonValueImpl
                 // TODO - should this be here or can we put this off
                 //        even longer (until someone asks for the binary
                 //        buffer, for example)
-                _symboltable = _system.newLocalSymbolTable();
-                symtab = _symboltable;
+//                _symboltable = _system.newLocalSymbolTable();
+//                symtab = _symboltable;
             }
         }
         return symtab;

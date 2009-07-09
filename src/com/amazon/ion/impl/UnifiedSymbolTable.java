@@ -882,11 +882,21 @@ final class UnifiedSymbolTable
             if (reader.isNullValue()) continue;
 
             int fieldId = reader.getFieldId();
-
-            // TODO fall-back to text if getFieldId() returns < 1
-            // This could happen if we're reading from a user-implemented
-            // IonReader.
-
+            if (fieldId < 0) {
+                // this is a user defined reader or a pure DOM
+                // we fall back to text here
+                final String fieldName = reader.getFieldName();
+                if (VERSION.equals(fieldName)) {
+                    fieldId = VERSION_SID;
+                } else if (NAME.equals(fieldName)) {
+                    fieldId = NAME_SID;
+                } else if (SYMBOLS.equals(fieldName)) {
+                    fieldId = SYMBOLS_SID;
+                } else if (IMPORTS.equals(fieldName)) {
+                    fieldId = IMPORTS_SID;
+                }
+            }
+            
             switch (fieldId) {
             case UnifiedSymbolTable.VERSION_SID:
                 if (symtabType == SHARED && fieldType == IonType.INT) {
