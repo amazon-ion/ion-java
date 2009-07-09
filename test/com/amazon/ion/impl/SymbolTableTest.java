@@ -1034,6 +1034,19 @@ public class SymbolTableTest
         IonSexp v = oneSexp(text);
         checkSymbol(ION_1_0, v.get(0));
     }
+    
+    public IonList serialize(final SymbolTable table) throws IOException {
+        final IonList container = system().newEmptyList();
+        table.writeTo(system().newWriter(container));
+        return container;
+    }
+    
+    public void testDoubleWrite() throws IOException {
+        // JIRA ION-73
+        final SymbolTable table =
+            system().newSharedSymbolTable("foobar", 1, Arrays.asList("moo").iterator());
+        assertEquals(serialize(table), serialize(table));
+    }
 
 
     static byte[] openFileForBuffer(Object arg) {
