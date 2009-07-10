@@ -584,6 +584,14 @@ public abstract class SystemProcessingTestCase
         assertEquals(ION_1_0, st.getIonVersionId());
         checkEof();
     }
+    
+    public void testHighUnicodeDirectInBlob() {
+        try {
+            // JIRA ION-69
+            loader().load("{{\ufffd}}");
+            fail();
+        } catch (final IonException e) {/* expected */}
+    }
 
     // TODO test injected symtabs's symtab
     public void XXXtestSymtabOnInjectedSymtab()

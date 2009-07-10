@@ -41,6 +41,7 @@ package com.amazon.ion.impl;
  *
  */
 
+import com.amazon.ion.IonException;
 import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
 import java.io.InputStream;
@@ -119,7 +120,7 @@ public class Base64Encoder
     }
     public final static boolean isBase64Character(int c) {
     	if (c < 32 || c > 255) return false;
-    	return (URLSafe64CharToInt[c] > 0);
+    	return (URLSafe64CharToInt[c] >= 0);
     }
     public Base64Encoder() {}
 
@@ -165,6 +166,17 @@ public class Base64Encoder
         {
             return this._terminatingChar;
         }
+        
+        private int characterToBinary(final int c) throws IOException {
+            int result = -1;
+            if (c >= 0 && c < _chartobin.length) {
+                result = _chartobin[c]; 
+            }
+            if (result < 0) {
+                throw new IOException("invalid base64 character (" + c + ")");
+            }
+            return result;
+        }
 
         // Read a buffer from the input stream and prep the output stream
         private void loadNextBuffer() throws IOException
@@ -188,10 +200,8 @@ public class Base64Encoder
                     break;
                 }
                 if (IonTextUtils.isWhitespace(c)) continue;
-                cbin = this._chartobin[c];
-                if (cbin == -1) {
-                    throw new IOException("invalid base64 character (" + c + ")");
-                }
+                cbin = characterToBinary(c);
+                
                 this._buffer[inlen++] = (char)cbin;
             }
             if (inlen != 4) {
