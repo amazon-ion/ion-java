@@ -790,25 +790,16 @@ loop:   for (;;) {
                 }
                 c = '\n';
             }
-            // not needed
-            //else if (c == '\n') {
-            //    c2 = _r.read();
-            //    if (c2 != '\r') {
-            //        _peek_ahead_char = c2;
-            //    }
-            //    else {
-            //        _char_length++;
-            //    }
-            //}
             return c;
         }
-        else if ((c & (0x80 | 0x40 | 0x20)) == (0x80 | 0x40)) {
+        switch(IonUTF8.getUTF8LengthFromFirstByte(c)) {
+        case 2:
             // 2 byte unicode character >=128 and <= 0x7ff or <= 2047)
             // 110yyyyy 10zzzzzz
             c2 = readFollowingUtf8CodeUnit();
             c = ((c & 0x1f) << 6) | (c2 & 0x3f);
-        }
-        else if ((c & (0x80 | 0x40 | 0x20 | 0x10)) == (0x80 | 0x40 | 0x20)) {
+            break;
+        case 3:
             // 3 byte unicode character >=2048 and <= 0xffff, <= 65535
             // 1110xxxx 10yyyyyy 10zzzzzz
             c2 = readFollowingUtf8CodeUnit();
@@ -819,12 +810,12 @@ loop:   for (;;) {
                 c  = IonConstants.makeHighSurrogate(c);
                 preread_char(c2); // we'll put the low order bits in the queue for later
             }
-        }
-        else if ((c & (0x80 | 0x40 | 0x20 | 0x10 | 0x08)) == (0x80 | 0x40 | 0x20| 0x10)) {
+            break;
+        case 4:
             // 4 byte unicode character > 65535 (0xffff) and <= 2097151 <= 10xFFFFF
             // 11110www 10xxxxxx 10yyyyyy 10zzzzzz
             c2 = readFollowingUtf8CodeUnit();
-            int c3 = readFollowingUtf8CodeUnit();
+            c3 = readFollowingUtf8CodeUnit();
             int c4 = readFollowingUtf8CodeUnit();
             c = ((c & 0x07) << 18) | ((c2 & 0x3f) << 12) | ((c3 & 0x3f) << 6) | (c4 & 0x3f);
             if (c >= 0x10000) {
@@ -832,8 +823,10 @@ loop:   for (;;) {
                 c  = IonConstants.makeHighSurrogate(c);
                 preread_char(c2); // we'll put the low order bits in the queue for later
             }
-        }
-        else if (c != -1) {
+        break;
+        default:
+            if (c == -1) break;
+            if (IonUTF8.isSurrogate(c)) break;
             // at this point anything except EOF is a bad UTF-8 character
             bad_character();
         }
@@ -843,7 +836,7 @@ loop:   for (;;) {
     private final int readFollowingUtf8CodeUnit() throws IOException  {
         int codeUnit = _r.read();
         _char_length++;
-        if ((codeUnit & (0x80 | 0x40)) != 0x80) {
+        if (!IonUTF8.isContinueByteUTF8(codeUnit)) {
             bad_character();
         }
         return codeUnit;
@@ -1189,9 +1182,9 @@ loop:       for (;;) {
             hexchar  = IonConstants.makeHighSurrogate(hexchar);
             preread_char(c2); // we'll put the low order bits in the queue for later
         }
-        else if (IonConstants.isSurrogate(hexchar)) {
-            bad_character();
-        }
+        //else if (IonConstants.isSurrogate(hexchar)) {
+        //    bad_character();
+        //}
         return hexchar;
     }
     private final int read_quoted_string(int c) throws IOException

@@ -44,15 +44,4 @@ public class TextReaderSystemProcessingTest
         // but we won't know the right sid.
         checkSymbol(expected);
     }
-
-    /**
-     * FIXME JIRA ION-8  remove override to enable test case
-     * This is only here to disable this test case
-     */
-    @Override
-    public void testSurrogateGluing()
-        throws Exception
-    {
-        System.err.println("Disabled test case TextReaderSystemProcessingTest.testSurrogateGluing; jira:ION-8");
-    }
 }

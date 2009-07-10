@@ -288,10 +288,11 @@ public final class IonTextReader
             case SEXP:
                 _current_depth++;
                 if (_debug) System.out.println("stepInto() new depth: "+this._current_depth);
-                return;
+                break;
             default:
                 throw new IllegalStateException();
         }
+        clearValue();
     }
 
     public void stepOut()
@@ -414,6 +415,11 @@ public final class IonTextReader
         return t;
     }
 
+    void clearValue() {
+        _lookahead_type = null;
+        clearAnnotationList();
+        clearFieldname();
+    }
     IonType lookahead() {
         _value_ready = false;
         _value_is_container = false;

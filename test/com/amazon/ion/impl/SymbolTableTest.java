@@ -192,7 +192,31 @@ public class SymbolTableTest
         value = scanner.next();
         checkSymbol("imported 1", import1id, value);
     }
+    
+    public IonStruct synthesizeSharedSymbolTableIon(final String name,
+                                                    final int version,
+                                                    final String... symbols) {
+        final IonStruct tableStruct = system().newEmptyStruct();
+        tableStruct.addTypeAnnotation("$ion_shared_symbol_table");
+        tableStruct.put("name").newString(name);
+        tableStruct.put("version").newInt(version);
 
+        final IonList symbolList = tableStruct.put("symbols").newEmptyList();
+        for (final String symbol : symbols) {
+            symbolList.add().newString(symbol);
+        }
+        return tableStruct;
+    }
+    
+    public void testDomSharedSymbolTable() {
+        // JIRA ION-72
+        final SymbolTable table = system().newSharedSymbolTable(
+            system().newReader(synthesizeSharedSymbolTableIon("foobar", 1, "hello"))
+        );
+        assertEquals("foobar", table.getName());
+        assertEquals(1, table.getVersion());
+        assertEquals(1, table.getMaxId());
+    }
 
     /**
      * Attempts to override system symbols are ignored.
@@ -1009,6 +1033,19 @@ public class SymbolTableTest
         String text = "($ion_1_0)";
         IonSexp v = oneSexp(text);
         checkSymbol(ION_1_0, v.get(0));
+    }
+    
+    public IonList serialize(final SymbolTable table) throws IOException {
+        final IonList container = system().newEmptyList();
+        table.writeTo(system().newWriter(container));
+        return container;
+    }
+    
+    public void testDoubleWrite() throws IOException {
+        // JIRA ION-73
+        final SymbolTable table =
+            system().newSharedSymbolTable("foobar", 1, Arrays.asList("moo").iterator());
+        assertEquals(serialize(table), serialize(table));
     }
 
 

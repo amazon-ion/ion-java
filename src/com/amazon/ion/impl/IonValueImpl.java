@@ -451,10 +451,8 @@ public abstract class IonValueImpl
         {
             SymbolTable symtab = getSymbolTable();
             if (symtab == null) {
-                // TODO - or we could throw here
-                symtab = materializeSymbolTable();
+                return -1;
             }
-            assert symtab != null;
             _fieldSid = symtab.addSymbol(this._fieldName);
         }
         return this._fieldSid;
