@@ -185,12 +185,18 @@ public final class Timestamp
             _hour += 24;
             _day -= 1;
             if (_day >= 1) return;  // day is 1-31
-            _day += last_day_in_month(_year, _month);
+            // we can't do this until we've figured out the month and year: _day += last_day_in_month(_year, _month);
             _month -= 1;
-            if (_month >= 1) return;  // 1-12
+            if (_month >= 1) {
+                _day += last_day_in_month(_year, _month);  // now we know (when the year doesn't change
+                assert(_day == last_day_in_month(_year, _month));
+                return;  // 1-12
+            }
             _month += 12;
             _year -= 1;
             if (_year < 1) throw new IllegalArgumentException("year is less than 1");
+            _day += last_day_in_month(_year, _month);  // and now we know, even if the year did change
+            assert(_day == last_day_in_month(_year, _month));
         }
         else {
             _minute += min_offset;  // lower the minute value by adding a negative offset
@@ -203,9 +209,12 @@ public final class Timestamp
             _hour -= 24;
             _day += 1;
             if (_day <= last_day_in_month(_year, _month)) return;  // day is 1-31
-            _day -= last_day_in_month(_year, _month);
+            // we can't do this until we figure out the final month and year: _day -= last_day_in_month(_year, _month);
+            _day = 1; // this is always the case
             _month += 1;
-            if (_month <= 12) return;  // 1-12
+            if (_month <= 12) {
+                return;  // 1-12
+            }
             _month -= 12;
             _year += 1;
             if (_year > 9999) throw new IllegalArgumentException("year exceeds 9999");
