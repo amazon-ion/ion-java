@@ -166,6 +166,17 @@ public class Base64Encoder
         {
             return this._terminatingChar;
         }
+        
+        private int characterToBinary(final int c) throws IOException {
+            int result = -1;
+            if (c >= 0 && c < _chartobin.length) {
+                result = _chartobin[c]; 
+            }
+            if (result < 0) {
+                throw new IOException("invalid base64 character (" + c + ")");
+            }
+            return result;
+        }
 
         // Read a buffer from the input stream and prep the output stream
         private void loadNextBuffer() throws IOException
@@ -189,10 +200,7 @@ public class Base64Encoder
                     break;
                 }
                 if (IonTextUtils.isWhitespace(c)) continue;
-                if (!isBase64Character(c)) {
-                    throw new IOException("invalid base64 character (" + c + ")");
-                }
-                cbin = this._chartobin[c];
+                cbin = characterToBinary(c);
                 
                 this._buffer[inlen++] = (char)cbin;
             }
