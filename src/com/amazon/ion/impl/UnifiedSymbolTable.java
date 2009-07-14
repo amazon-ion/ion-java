@@ -42,7 +42,13 @@ import java.util.Iterator;
  *   then local names from the new max id
  *
  */
-final class UnifiedSymbolTable
+
+// FIXME: this should really be public, but while the next
+//        text reader is in the com.amazon.ion.temp block o
+//        code it has to be for me to see it in IonTextUserReader
+public final
+
+ class UnifiedSymbolTable
     implements SymbolTable
 {
 
@@ -329,6 +335,26 @@ final class UnifiedSymbolTable
         }
 
         share(name, version);
+    }
+
+    /**
+     * Loads a local symbol table from an IonReader and makes it ready
+     * for use.
+     * @param reader positioned after hasNext on a struct with a local symbol table annotation
+     * @param catalog user catalog
+     * @return local symbol table
+     */
+    public static synchronized UnifiedSymbolTable loadLocalSymbolTable(IonReader reader, IonCatalog catalog)
+    {
+        SymbolTable        system_symbols = reader.getSymbolTable().getSystemSymbolTable();
+        UnifiedSymbolTable symtab = new UnifiedSymbolTable(system_symbols);
+
+        reader.next();
+        reader.stepIn();
+        symtab.readIonRep(SymbolTableType.LOCAL, reader, catalog);
+        reader.stepOut();
+
+        return symtab;
     }
 
     // TODO get rid of this nasty static, it needs to come from the system.
@@ -897,7 +923,7 @@ final class UnifiedSymbolTable
                     fieldId = IMPORTS_SID;
                 }
             }
-            
+
             switch (fieldId) {
             case UnifiedSymbolTable.VERSION_SID:
                 if (symtabType == SHARED && fieldType == IonType.INT) {
