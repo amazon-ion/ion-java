@@ -25,10 +25,83 @@ public abstract class IonTextBufferedStream extends InputStream
     public static IonTextBufferedStream makeStream(String text) {
         return new StringStream(text);
     }
+    /*** FIXME: REMOVE OR FINISH
+    public static IonTextBufferedStream makeStream(InputStream stream) {
+        return new StreamStream(stream);
+    }
+    */
     public abstract int getByte(int pos);
     public abstract int position();
     public abstract IonTextBufferedStream setPosition(int pos);
+
+    /*** FIXME: REMOVE OR FINISH
+    static final class StreamStream extends IonTextBufferedStream
+    {
+        static final int DEFAULT_BUFFER_SIZE = (32*1024);
+        
+        InputStream _stream;
+        byte []     _buffer1;
+        byte []     _buffer2;
+        long        _file_pos1;
+        long        _file_pos2;
+        int         _len;
+        int         _pos;
+        
+        public StreamStream (InputStream stream) 
+        {
+            _stream = stream;
+            _buffer1 = new byte[DEFAULT_BUFFER_SIZE];
+            _buffer2 = new byte[DEFAULT_BUFFER_SIZE];
+            _pos = 0;
+            _file_pos1 = 0;
+            _file_pos2 = -1;
+            _len = load(_buffer1);
+        }
+        int load(byte[] buffer) {
+            
+        }
+        
+        @Override
+        public final int getByte(int pos) {
+            if (pos < 0 || pos >= _len) return -1;
+            return _buffer[pos] & 0xff;
+        }
     
+        @Override
+        public final int read()
+            throws IOException
+        {
+            if (_pos >= _len) return -1;
+            return _buffer[_pos++];
+        }
+        
+        @Override
+        public final int read(byte[] bytes, int offset, int len) throws IOException
+        {
+            int copied = 0;
+            if (offset < 0) throw new IllegalArgumentException();
+            copied = len;
+            if (_pos + len >= _len) copied = _len - _pos;
+            System.arraycopy(_buffer, _pos, bytes, offset, copied);
+            _pos += copied;
+            return copied;
+        }
+
+        @Override
+        public final int position() {
+            return _pos;
+        }
+       
+        @Override
+        public final SimpleBufferStream setPosition(int pos)
+        {
+            if (_pos < 0 || _pos > _len) throw new IllegalArgumentException();
+            _pos = pos;
+            return this;
+        }
+    }
+    */
+
     static final class SimpleBufferStream extends IonTextBufferedStream
     {
         byte [] _buffer;

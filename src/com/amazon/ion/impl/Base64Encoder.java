@@ -82,6 +82,11 @@ public class Base64Encoder
     final public static char  URLSafe64IntToCharTerminator = init64IntToCharTerminator(Base64Alphabet);
     final static int[] URLSafe64IntToChar = init64IntToChar(Base64Alphabet);
     final static int[] URLSafe64CharToInt = init64CharToInt(Base64Alphabet);
+
+    public final static int[] Base64EncodingIntToChar = init64IntToChar(Base64Alphabet);
+    public final static int[] Base64EncodingCharToInt = init64CharToInt(Base64Alphabet);
+    public final static char  Base64EncodingTerminator = init64IntToCharTerminator(Base64Alphabet);
+
     static private char init64IntToCharTerminator(EL[] els)
     {
         for (EL letter : els) {
@@ -105,7 +110,7 @@ public class Base64Encoder
     {
         int[] output = new int[256];
         for (int ii=0; ii<256; ii++) {
-            output[ii] = -1; // marke everything as invalid to start with
+            output[ii] = -1; // mark everything as invalid to start with
         }
         // mark the valid entries with a non -1 value is they're useful
         for (EL letter : els) {
@@ -166,7 +171,7 @@ public class Base64Encoder
         {
             return this._terminatingChar;
         }
-        
+
         private int characterToBinary(final int c) throws IOException {
             int result = -1;
             if (c >= 0 && c < _chartobin.length) {
