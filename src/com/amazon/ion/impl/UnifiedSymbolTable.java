@@ -628,18 +628,9 @@ public final
 
         _symbols[sid] = sym;
         Integer priorSid = _id_map.put(sym.name, sid);
-        if (priorSid != null) {
-            if (priorSid < sid) {
-                // Ignore this attempted re-definition
-                _id_map.put(sym.name, priorSid);
-                _symbols[sid] = null;
-            }
-            else {
-                // Replace existing definition with higher sid
-                // TODO this will no longer be possible after removing
-                // defineString(String, int)
-                _symbols[priorSid] = null;
-            }
+        if (priorSid != null && priorSid < sid) {
+            // Ignore this attempted re-definition
+            _id_map.put(sym.name, priorSid);
         }
 
         if (sid > _max_id) _max_id = sid;
