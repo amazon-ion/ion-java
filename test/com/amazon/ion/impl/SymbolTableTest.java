@@ -467,9 +467,9 @@ public class SymbolTableTest
         assertEquals(14, symbolTable.findSymbol("fred3"));
         assertEquals(15, symbolTable.findSymbol("fred4"));
 
-        // Gaps left by second copies of 'imported 1' and 'imported 2'
-        assertNull(symbolTable.findKnownSymbol(12));
-        assertNull(symbolTable.findKnownSymbol(13));
+        // JIRA ION-76, redundant symbols should retain identity
+        assertEquals("imported 1", symbolTable.findKnownSymbol(12));
+        assertEquals("imported 2", symbolTable.findKnownSymbol(13));
     }
 
 
