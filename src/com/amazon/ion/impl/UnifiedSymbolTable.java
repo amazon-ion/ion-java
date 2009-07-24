@@ -629,7 +629,7 @@ public final
         _symbols[sid] = sym;
         Integer priorSid = _id_map.put(sym.name, sid);
         if (priorSid != null && priorSid < sid) {
-            // Ignore this attempted re-definition
+            // roll-back this attempted re-definition
             _id_map.put(sym.name, priorSid);
         }
 
