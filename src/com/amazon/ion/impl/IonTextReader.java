@@ -159,7 +159,7 @@ public final class IonTextReader
         if (_parser_state_top >= _parser_state_stack.length) {
             int newlen = _parser_state_stack.length * 2;
             State[] temp = new State[newlen];
-            System.arraycopy(_parser_state_stack, 0, temp, 0, _parser_state_top);
+            System.arraycopy(_parser_state_stack, 0, temp, 0, _parser_state_stack.length);
             _parser_state_stack = temp;
         }
         _parser_state_stack[_parser_state_top++] = pendingState;
@@ -173,10 +173,21 @@ public final class IonTextReader
         if (_container_state_top >= _container_state_stack.length) {
             int newlen = _container_state_stack.length * 2;
             IonType[] temp = new IonType[newlen];
-            System.arraycopy(_container_state_stack, 0, temp, 0, _container_state_top);
+            System.arraycopy(_container_state_stack, 0, temp, 0, _container_state_stack.length);
             _container_state_stack = temp;
         }
         _container_state_stack[_container_state_top++] = newContainer;
+    }
+    IonType top_container_state() {
+        IonType t;
+        int idx = getDepth() - 1;
+        if (idx >= 0) {
+            t = _container_state_stack[idx];
+        }
+        else {
+            t = IonType.DATAGRAM;
+        }
+        return t;
     }
     IonType pop_container_state() {
         _container_state_top--;
@@ -492,7 +503,10 @@ public final class IonTextReader
     }
 
     void error() {
-        throw new IonParsingException("syntax error. parser in state " + _state.toString()+ _scanner.input_position());
+        String message = "syntax error. parser in state "
+                        + _state.toString()
+                        + _scanner.input_position();
+        throw new IonParsingException(message);
     }
 
     void error(String reason) {
@@ -686,7 +700,9 @@ public final class IonTextReader
 
     public boolean isInStruct()
     {
-        return _in_struct;
+        IonType t = top_container_state();
+        boolean in_struct = (t.equals(IonType.STRUCT));
+        return in_struct;
     }
 
     public boolean isNullValue()
@@ -852,7 +868,7 @@ public final class IonTextReader
     public String stringValue()
     {
         int pending = 0;
-        
+
         switch (_value_type) {
             case STRING:
             case SYMBOL:
@@ -1240,7 +1256,7 @@ public final class IonTextReader
         void invalid_escape(int c) {
             throw new IonParsingException("invalid escape sequence \"\\"
                                           + (char) c + "\" [" + c + "]");
-            
+
         }
         void unexpected_eof() {
             throw new IonParsingException("unexpected eof encounter in escape sequence");
@@ -2039,13 +2055,15 @@ public final class IonTextReader
         }
         @Override
         State transition_method(IonTextReader parser) {
-            parser.consumeToken(IonTextTokenizer.TOKEN_DOT);
-            if (parser._scanner.lookahead(0) != IonTextTokenizer.TOKEN_SYMBOL_BASIC) {
-                parser.error();
+            //parser.consumeToken(IonTextTokenizer.TOKEN_DOT);
+            if (parser._scanner.lookahead(1) != IonTextTokenizer.TOKEN_SYMBOL_BASIC) {
+                //parser.error();
+                return just_a_simple_null(parser);
             }
-            int start = parser._scanner.getStart();
-            int end   = parser._scanner.getEnd();
-            int keyword = parser._scanner.keyword(start, end);
+            //int start = parser._scanner.getStart();
+            //int end   = parser._scanner.getEnd();
+            int keyword; // = parser._scanner.keyword(parser._scanner._saved_symbol);
+            keyword = IonTokenConstsX.keyword(parser._scanner._saved_symbol, 0, parser._scanner._saved_symbol.length());
             switch (keyword) {
                 case IonTextTokenizer.KEYWORD_NULL:     parser.makeNullValue(IonType.NULL);     break;
                 case IonTextTokenizer.KEYWORD_BOOL:     parser.makeNullValue(IonType.BOOL);     break;
@@ -2063,8 +2081,14 @@ public final class IonTextReader
                     break;
                 default:
                     parser.error();
+                    //return just_a_simple_null(parser);
             }
+            parser.consumeToken(IonTextTokenizer.TOKEN_DOT);
             parser.consumeToken(IonTextTokenizer.TOKEN_SYMBOL_BASIC);
+            return parser.pop_parser_state();
+        }
+        private final State just_a_simple_null(IonTextReader parser) {
+            parser.makeNullValue(IonType.NULL);
             return parser.pop_parser_state();
         }
     }

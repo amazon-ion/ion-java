@@ -40,7 +40,14 @@ public class IonReaderTextUserX
     IonCatalog  _catalog;
     SymbolTable _symbols;
 
-
+    public IonReaderTextUserX(IonSystem system, char[] chars) {
+        super(chars);
+        initUserReader(system);
+    }
+    public IonReaderTextUserX(IonSystem system, char[] chars, int offset, int length) {
+        super(chars, offset, length);
+        initUserReader(system);
+    }
     public IonReaderTextUserX(IonSystem system, CharSequence chars) {
         super(chars);
         initUserReader(system);
@@ -116,7 +123,7 @@ public class IonReaderTextUserX
             // down in some other value - note that _value_type
             // will be null at eof and on as yet undetermined
             // numeric types (which are never system values)
-            if (_value_type != null && IonType.DATAGRAM.equals(getContainerType())) {
+            if (_value_type != null && !isNullValue() && IonType.DATAGRAM.equals(getContainerType())) {
                 switch (_value_type) {
                 case STRUCT:
                     if (_annotation_count > 0) {
@@ -211,7 +218,7 @@ public class IonReaderTextUserX
         return new IntIterator(ids);
     }
 
-    static final class IntIterator implements Iterator<Integer>
+    public static final class IntIterator implements Iterator<Integer>
     {
         static IntIterator EMPTY_ITERATOR = new IntIterator(null);
 
@@ -219,9 +226,14 @@ public class IonReaderTextUserX
         int   _length;
         int   _pos;
 
-        IntIterator(int[] values) {
+        public IntIterator(int[] values) {
             _values = values;
             _length = (values == null) ? 0 : values.length;
+        }
+        public IntIterator(int[] values, int offset, int len) {
+            _values = values;
+            _pos = offset;
+            _length = len;
         }
         public boolean hasNext() {
             return (_pos < _length);

@@ -778,7 +778,7 @@ loop:   for (;;) {
             _char_length = 0;
             return c;
         }
-        if (c < 128) {
+        if (IonTokenConstsX.is7bitValue(c)) {
             // this includes -1 (eof) and characters in the ascii char set
             if (c == '\r') {
                 c2 = _r.read();
@@ -823,9 +823,8 @@ loop:   for (;;) {
                 c  = IonConstants.makeHighSurrogate(c);
                 preread_char(c2); // we'll put the low order bits in the queue for later
             }
-        break;
+            break;
         default:
-            if (c == -1) break;
             if (IonUTF8.isSurrogate(c)) break;
             // at this point anything except EOF is a bad UTF-8 character
             bad_character();
@@ -1678,7 +1677,7 @@ endofdate:
      */
     int continueValueAsString(int start, int end, int pending_high_surrogate) {
         int lookahead = IonTextTokenizer.EMPTY_PEEKAHEAD;
-        
+
         _r.setPosition(start);
         try {
             while (lookahead != IonTextTokenizer.EMPTY_PEEKAHEAD || _r.position() < end) {
@@ -1690,14 +1689,15 @@ endofdate:
                     c = lookahead;
                     lookahead = IonTextTokenizer.EMPTY_PEEKAHEAD;
                 }
-                
+
                 if (c == '\n') {
                     if (pending_high_surrogate != 0) bad_character();
-                    c = (_r.position() < end) ? _r.read() : IonTextTokenizer.EMPTY_PEEKAHEAD;
-                    if (c != '\r') {
-                        lookahead = c;
-                    }
-                    c = '\n';
+                    // /n/r isn't something we normalize
+                    //c = (_r.position() < end) ? _r.read() : IonTextTokenizer.EMPTY_PEEKAHEAD;
+                    //if (c != '\r') {
+                    //    lookahead = c;
+                    //}
+                    //c = '\n';
                 }
                 else if (c == '\r') {
                     if (pending_high_surrogate != 0) bad_character();
@@ -1707,28 +1707,56 @@ endofdate:
                     }
                     c = '\n';
                 }
-                else if (c == '\\') {
-                    c = _r.read();
-                    c = read_escaped_char_in_string(c);
+                else if (IonTokenConstsX.is7bitValue(c)) {
+                    if (c == '\\') {
+                        c = _r.read();
+                        c = read_escaped_char_in_string(c);
+                    }
+                }
+                else if (IonTokenConstsX.is8bitValue(c)) {
+                    int len = IonUTF8.getUTF8LengthFromFirstByte(c);
+                    int c2, c3, c4;
+                    switch (len) {
+                    case 4:
+                        c2 = _r.read();
+                        c3 = _r.read();
+                        c4 = _r.read();
+                        c = IonUTF8.fourByteScalar(c, c2, c3, c4);
+                        break;
+                    case 3:
+                        c2 = _r.read();
+                        c3 = _r.read();
+                        c = IonUTF8.threeByteScalar(c, c2, c3);
+                        break;
+                    case 2:
+                        c2 = _r.read();
+                        c = IonUTF8.twoByteScalar(c, c2);
+                        break;
+                    case 1:
+                        break;
+                    default:
+                        bad_character();
+                    }
                 }
                 if (c == EMPTY_ESCAPE_SEQUENCE) continue;
-                
+
                 if (pending_high_surrogate != 0) {
                     if (!IonConstants.isLowSurrogate(c)) bad_character();
-                    _saved_symbol.append((char)pending_high_surrogate);                    
+                    _saved_symbol.append((char)pending_high_surrogate);
                     pending_high_surrogate = 0;
                 }
                 else if (IonConstants.isSurrogate(c)) {
                     // this causes us to error on a loose low surrogate (one not
-                    // preceeded by a high surrogate - is that what we want?  FIXME:
+                    // preceded by a high surrogate - is that what we want?  FIXME:
                     if (!IonConstants.isHighSurrogate(c)) bad_character();
                     pending_high_surrogate = c;
                     continue;
                 }
                 else if (c > 0xFFFF) {
-                    int c2 = IonConstants.makeLowSurrogate(c);
-                    c  = IonConstants.makeHighSurrogate(c);
-                    _saved_symbol.append((char)c2);
+                    int low = IonConstants.makeLowSurrogate(c);
+                    int high = IonConstants.makeHighSurrogate(c);
+                    _saved_symbol.append((char)high);
+                    c = low;
                 }
                 _saved_symbol.append((char)c);
             }

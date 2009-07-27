@@ -2,9 +2,8 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.impl.IonScalarConversionsX.CantConvertException;
-
 import com.amazon.ion.IonType;
+import com.amazon.ion.impl.IonScalarConversionsX.CantConvertException;
 
 
 /**
@@ -134,6 +133,9 @@ public class IonTokenConstsX
 
     public static final boolean is8bitValue(int v) {
         return (v & ~0xff) == 0;
+    }
+    public static final boolean is7bitValue(int v) {
+        return (v & ~0x7f) == 0;
     }
     public static final boolean isWhitespace(int c) {
         return (c == ' ' || c == '\t' || c == '\n' || c == '\r');
@@ -615,6 +617,145 @@ public class IonTokenConstsX
         }
     }
 
+    /*
+    KW_BIT_BLOB       = 0x0001;
+    KW_BIT_BOOL       = 0x0002;
+    KW_BIT_CLOB       = 0x0004;
+    KW_BIT_DECIMAL    = 0x0008;
+    KW_BIT_FLOAT      = 0x0010;
+    KW_BIT_INT        = 0x0020;
+    KW_BIT_LIST       = 0x0030;
+    KW_BIT_NULL       = 0x0080;
+    KW_BIT_SEXP       = 0x0100;
+    KW_BIT_STRING     = 0x0200;
+    KW_BIT_STRUCT     = 0x0400;
+    KW_BIT_SYMBOL     = 0x0800;
+    KW_BIT_TIMESTAMP  = 0x1000;
+    datagram is not included (since these are types that can appear as a null type)
+
+    A  1    F  6    N 11    T 16
+    B  2    G  7    O 12    U 17
+    C  3    I  8    P 13    X 18
+    D  4    L  9    R 14    Y 19
+    E  5    M 10    S 15
+
+    */
+    // this array is [pos][letter_idx] - if this letter is
+    // valid in this position then all the type names that
+    // contain the letter at that position are on.  Each
+    // keyword is assigned a bit value.
+    // however due to the double index expense the index
+    // is represented by a 1 dim int array and fn's used
+    // to access it (since inline-ing final static small methods
+    // is easy for the compiler)
+    static final int  TN_MAX_NAME_LENGTH = "TIMESTAMP".length() + 1; // so anything too long will be 0
+    static final int  TN_LETTER_MAX_IDX = 19;
+
+    static final int  KW_BIT_BLOB       = 0x0001;
+    static final int  KW_BIT_BOOL       = 0x0002;
+    static final int  KW_BIT_CLOB       = 0x0004;
+    static final int  KW_BIT_DECIMAL    = 0x0008;
+    static final int  KW_BIT_FLOAT      = 0x0010;
+    static final int  KW_BIT_INT        = 0x0020;
+    static final int  KW_BIT_LIST       = 0x0030;
+    static final int  KW_BIT_NULL       = 0x0080;
+    static final int  KW_BIT_SEXP       = 0x0100;
+    static final int  KW_BIT_STRING     = 0x0200;
+    static final int  KW_BIT_STRUCT     = 0x0400;
+    static final int  KW_BIT_SYMBOL     = 0x0800;
+    static final int  KW_BIT_TIMESTAMP  = 0x1000;
+    static final int  KW_ALL_BITS       = 0x1fff;
+
+    static final int[] typeNameBits = new int[] {
+        KW_BIT_BLOB,      KW_BIT_BOOL,    KW_BIT_CLOB,
+        KW_BIT_DECIMAL,   KW_BIT_FLOAT,   KW_BIT_INT,
+        KW_BIT_LIST,      KW_BIT_NULL,    KW_BIT_SEXP,
+        KW_BIT_STRING,    KW_BIT_STRUCT,  KW_BIT_SYMBOL,
+        KW_BIT_TIMESTAMP
+    };
+
+    static final String[] typeNameNames = new String[] {
+        "blob",           "bool",         "clob",
+        "decimal",        "float",        "int",
+        "list",           "null",         "sexp",
+        "string",         "struct",       "symbol",
+        "timestamp"
+    };
+    static final int[] typeNameKeyWordIds = new int[] {
+        KEYWORD_BLOB,     KEYWORD_BOOL,   KEYWORD_CLOB,
+        KEYWORD_DECIMAL,  KEYWORD_FLOAT,  KEYWORD_INT,
+        KEYWORD_LIST,     KEYWORD_NULL,   KEYWORD_SEXP,
+        KEYWORD_STRING,   KEYWORD_STRUCT, KEYWORD_SYMBOL,
+        KEYWORD_TIMESTAMP
+    };
+
+    static final int[] TypeNameBitIndex = makeTypeNameBitIndex();
+    static final int[] makeTypeNameBitIndex() {
+        int[] bits = new int[TN_MAX_NAME_LENGTH*TN_LETTER_MAX_IDX];
+        int   typename_bit;
+        for (int tt=0; tt<typeNameNames.length; tt++) {
+            String typename = typeNameNames[tt];
+            typename_bit = typeNameBits[tt];
+            for (int ii=0; ii<typename.length(); ii++) {
+                int c = typename.charAt(ii);
+                int l = typeNameLetterIdx(c);
+                assert(l > 0);
+                typename_set_bit(bits, ii, l, typename_bit);
+            }
+        }
+        return bits;
+    }
+    private final static void typename_set_bit(int[] bits, int ii, int l, int typename_bit)
+    {
+        // bits[ii][l]
+        int idx = (ii * TN_LETTER_MAX_IDX) + l - 1;
+        bits[idx] |= typename_bit;
+    }
+    public final static int typeNameLetterIdx(int c) {
+        switch(c) {
+        case 'a': return  1;
+        case 'b': return  2;
+        case 'c': return  3;
+        case 'd': return  4;
+        case 'e': return  5;
+        case 'f': return  6;
+        case 'g': return  7;
+        case 'i': return  8;
+        case 'l': return  9;
+        case 'm': return 10;
+        case 'n': return 11;
+        case 'o': return 12;
+        case 'p': return 13;
+        case 'r': return 14;
+        case 's': return 15;
+        case 't': return 16;
+        case 'u': return 17;
+        case 'x': return 18;
+        case 'y': return 19;
+        default:  return -1;
+        }
+    }
+    public final static int typeNamePossibilityMask(int pos, int letter_idx) {
+        int idx = (pos * TN_LETTER_MAX_IDX) + letter_idx - 1;
+        int mask = TypeNameBitIndex[idx];
+        return mask;
+    }
+    // this can be faster but it's pretty unusual to be called.
+    public final static int typeNameKeyWordFromMask(int possible_names, int length) {
+        int kw = KEYWORD_unrecognized;
+        if (possible_names != IonTokenConstsX.KW_ALL_BITS) {
+            for (int ii=0; ii<typeNameBits.length; ii++) {
+                int tb = typeNameBits[ii]; 
+                if (tb == possible_names) {
+                    if (typeNameNames[ii].length() == length) {
+                        kw = typeNameKeyWordIds[ii];
+                    }
+                    break;
+                }
+            }
+        }
+        return kw;
+    }
     public static final String getNullImage(IonType type)
     {
         String nullimage = null;

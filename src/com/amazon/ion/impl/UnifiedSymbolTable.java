@@ -426,7 +426,7 @@ public final
 
     public int getImportedMaxId()
     {
-        // Not synchonized since this member never changes after construction.
+        // Not synchronized since this member never changes after construction.
         return _import_max_id;
     }
 
@@ -437,13 +437,13 @@ public final
 
     public int getVersion()
     {
-        // Not synchonized since this member never changes after construction.
+        // Not synchronized since this member never changes after construction.
         return _version;
     }
 
     public String getName()
     {
-        // Not synchonized since this member never changes after construction.
+        // Not synchronized since this member never changes after construction.
         return _name;
     }
 
@@ -630,7 +630,7 @@ public final
         Integer priorSid = _id_map.put(sym.name, sid);
         if (priorSid != null && priorSid < sid) {
             // roll-back this attempted re-definition
-            _id_map.put(sym.name, priorSid);
+                _id_map.put(sym.name, priorSid);
         }
 
         if (sid > _max_id) _max_id = sid;

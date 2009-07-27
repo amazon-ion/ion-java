@@ -48,17 +48,36 @@ public class IonScalarConversionsX
 
     public static String getValueTypeName(int value_type) {
         switch (value_type) {
-        case AS_TYPE.null_value:       return "null_value";
-        case AS_TYPE.boolean_value:    return "boolean_value";
-        case AS_TYPE.int_value:        return "int_value";
-        case AS_TYPE.long_value:       return "long_value";
-        case AS_TYPE.bigInteger_value: return "bigInteger_value";
-        case AS_TYPE.bigDecimal_value: return "bigDecimal_value";
-        case AS_TYPE.double_value:     return "double_value";
-        case AS_TYPE.string_value:     return "string_value";
-        case AS_TYPE.date_value:       return "date_value";
-        case AS_TYPE.timestamp_value:  return "timestamp_value";
+        case AS_TYPE.null_value:       return "null";
+        case AS_TYPE.boolean_value:    return "boolean";
+        case AS_TYPE.int_value:        return "int";
+        case AS_TYPE.long_value:       return "long";
+        case AS_TYPE.bigInteger_value: return "bigInteger";
+        case AS_TYPE.bigDecimal_value: return "bigDecimal";
+        case AS_TYPE.double_value:     return "double";
+        case AS_TYPE.string_value:     return "string";
+        case AS_TYPE.date_value:       return "date";
+        case AS_TYPE.timestamp_value:  return "timestamp";
         default:                       return "<unrecognized conversion value type: "+Integer.toString(value_type)+">";
+        }
+    }
+    public static String get_value_type_name(int value_type) {
+        switch (value_type) {
+        case AS_TYPE.null_value:
+        case AS_TYPE.boolean_value:
+        case AS_TYPE.int_value:
+        case AS_TYPE.long_value:
+        case AS_TYPE.bigInteger_value:
+        case AS_TYPE.bigDecimal_value:
+        case AS_TYPE.double_value:
+        case AS_TYPE.string_value:
+        case AS_TYPE.date_value:
+        case AS_TYPE.timestamp_value:
+            return getValueTypeName(value_type)+"_value";
+        default:
+            return "<unrecognized conversion value type: "
+                   +Integer.toString(value_type)
+                   + ">";
         }
     }
 
@@ -362,15 +381,23 @@ public class IonScalarConversionsX
             return ((_types_set & AS_TYPE.idx_to_bit_mask(value_type)) != 0);
         }
         public final boolean hasNumericType() {
-            return (AS_TYPE.numeric_types & _types_set) != 0;
+            return ((AS_TYPE.numeric_types & _types_set) != 0);
+        }
+        public static final boolean isNumericType(int type_idx) {
+            int type_flag = AS_TYPE.idx_to_bit_mask(type_idx);
+            return ((AS_TYPE.numeric_types & type_flag) != 0);
         }
         public final boolean hasDatetimeType() {
-            return (AS_TYPE.datetime_types & _types_set) != 0;
+            return ((AS_TYPE.datetime_types & _types_set) != 0);
         }
         public final void setAuthoritativeType(int value_type) {
             if (_authoritative_type_idx == value_type) return;
             if (!hasValueOfType(value_type)) {
-                throw new ConversionException("you must set of cast the variant to have a value of type "+getValueTypeName(value_type));
+                String message = "you must set the "
+                               + getValueTypeName(value_type)
+                               + " value before you can set the authoritative type to "
+                               + getValueTypeName(value_type);
+                throw new IllegalStateException(message);
             }
         }
         public final void setValueToNull(IonType t) {

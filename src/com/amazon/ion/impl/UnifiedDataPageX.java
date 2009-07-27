@@ -12,10 +12,15 @@ public abstract class UnifiedDataPageX
 {
     public enum PageType { BYTES, CHARS }
 
-    protected int    _page_limit;  // offset of the last filled array element + 1
-    protected int    _base_offset; // reserves space for un-reading, or offset of the first valid array element
-    protected int    _unread_count;// number of chars the base has been adjusted due to unreading before the user data
-    protected long   _file_offset; // offset of the first byte of this buffer (_base_offset ignored) in the input stream
+    protected PageType  _page_type;
+    protected int       _page_limit;  // offset of the last filled array element + 1
+    protected int       _base_offset; // reserves space for un-reading, or offset of the first valid array element
+    protected int       _unread_count;// number of chars the base has been adjusted due to unreading before the user data
+    protected long      _file_offset; // offset of the first byte of this buffer (_base_offset ignored) in the input stream
+
+    protected byte[]    _bytes;
+    protected char[]    _characters;
+
 
     public static final UnifiedDataPageX makePage(byte[] bytes, int offset, int length) {
     	return new Bytes(bytes, offset, length);
@@ -39,12 +44,43 @@ public abstract class UnifiedDataPageX
 
     public abstract int      getValue(int pageOffset);
     public abstract void     putValue(int pageOffset, int c);
-    public abstract PageType getPageType();
-    public abstract char[]   getCharBuffer();
-    public abstract byte[]   getByteBuffer();
+    public final    PageType getPageType() { return _page_type; }
+    public final    char[]   getCharBuffer() { return _characters; }
+    public final    byte[]   getByteBuffer() { return _bytes; }
 
-    abstract int load(Reader reader, int start_offset, long file_position) throws IOException;
-    abstract int load(InputStream stream, int start_offset, long file_position) throws IOException;
+    private final boolean isBytes() {
+        return (_page_type == PageType.BYTES);
+    }
+
+    int load(Reader reader, int start_offset, long file_position) throws IOException
+    {
+        if (isBytes()) {
+            throw new UnsupportedOperationException("byte pages can't load characters");
+        }
+        int read = reader.read(_characters, start_offset, _characters.length - start_offset);
+        if (read > 0) {
+            _page_limit = start_offset + read;
+            _base_offset = start_offset;
+            _unread_count = 0;
+            setFilePosition(file_position, start_offset);
+        }
+        return read;
+    }
+
+    int load(InputStream stream, int start_offset, long file_position) throws IOException
+    {
+        if (!isBytes()) {
+            throw new UnsupportedOperationException("character pages can't load bytes");
+        }
+        int read = stream.read(_bytes, start_offset, _bytes.length - start_offset);
+        if (read > 0) {
+            _base_offset = start_offset;
+            _unread_count = 0;
+            _page_limit = start_offset + read;
+            setFilePosition(file_position, start_offset);
+        }
+        return read;
+    }
 
     public int getBufferLimit()    { return _page_limit; }
     public int getOriginalStartingOffset() { return _base_offset; }
@@ -59,7 +95,7 @@ public abstract class UnifiedDataPageX
 
     public final void setFilePosition(long fileOffset, int pos) {
         if (fileOffset < 0) {
-                throw new IllegalArgumentException();
+            throw new IllegalArgumentException();
         }
         _file_offset = fileOffset - pos;
         return;
@@ -111,37 +147,15 @@ public abstract class UnifiedDataPageX
      */
     static final class Bytes extends UnifiedDataPageX
     {
-        private byte[] _bytes;
-
         public Bytes(int size) {
+            _page_type   = PageType.BYTES;
             _bytes = new byte[size];
         }
         public Bytes(byte[] bytes, int offset, int len) {
+            _page_type   = PageType.BYTES;
             _bytes       = bytes;
             _base_offset = offset;
             _page_limit  = offset + len;
-        }
-
-        @Override
-        public PageType getPageType() { return PageType.BYTES; }
-        @Override
-        public char[] getCharBuffer() { throw new UnsupportedOperationException("a byte page doesn't have a character buffer"); }
-        @Override
-        public byte[] getByteBuffer() { return this._bytes; }
-
-        @Override
-        int load(Reader reader, int start_offset, long file_position) throws IOException {
-            throw new UnsupportedOperationException("byte pages can't load characters");
-        }
-
-        @Override
-        int load(InputStream stream, int start_offset, long file_position) throws IOException {
-            int read = stream.read(_bytes, start_offset, _bytes.length - start_offset);
-            _base_offset = start_offset;
-            _unread_count = 0;
-            _page_limit = start_offset + read;
-            setFilePosition(file_position, start_offset);
-            return read;
         }
 
         @Override
@@ -174,38 +188,15 @@ public abstract class UnifiedDataPageX
 
     static final class Chars extends UnifiedDataPageX
     {
-        private char[] _characters;
-
         public Chars(int size) {
+            _page_type   = PageType.CHARS;
             _characters = new char[size];
         }
         public Chars(char[] chars, int offset, int len) {
+            _page_type   = PageType.CHARS;
             _characters = chars;
             _base_offset = offset;
             _page_limit  = offset + len;
-        }
-
-        @Override
-        public PageType getPageType() { return PageType.CHARS; }
-        @Override
-        public char[] getCharBuffer() { return this._characters; }
-        @Override
-        public byte[] getByteBuffer() { throw new UnsupportedOperationException("a character page doesn't have a byte buffer"); }
-
-        @Override
-        int load(Reader reader, int start_offset, long file_position) throws IOException {
-            int read = reader.read(_characters, start_offset, _characters.length - start_offset);
-            _page_limit = start_offset + read;
-            _base_offset = start_offset;
-            _unread_count = 0;
-            setFilePosition(file_position, start_offset);
-            return read;
-        }
-
-        @Override
-        int load(InputStream stream, int start_offset, long file_position) throws IOException
-        {
-            throw new UnsupportedOperationException("character pages can't load bytes");
         }
 
         @Override

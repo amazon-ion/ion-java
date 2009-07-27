@@ -2,7 +2,6 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.impl.IonReaderTextRawTokensX.IonReaderTextTokenException;
 import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -10,9 +9,10 @@ import java.io.Reader;
 
 public abstract class UnifiedInputStreamX
 {
+    public  static final int     EOF = -1;
+
     private static final boolean _debug = false;
             static final int     UNREAD_LIMIT = 10;
-            static final int     EOF  = -1;
 
     static int DEFAULT_PAGE_SIZE;
     static {
@@ -29,13 +29,19 @@ public abstract class UnifiedInputStreamX
     //
     boolean                 _eof;
     boolean                 _is_byte_data;
+    boolean                 _is_stream;
 
     UnifiedInputBufferX      _buffer;
     int                     _max_char_value;
-    byte[]                  _bytes;
-    char[]                  _chars;
     int                     _pos;
     int                     _limit;
+
+    // only 1 of these will be filled in depending on whether this is a byte
+    // source or a character source
+    Reader                  _reader;
+    InputStream             _stream;
+    byte[]                  _bytes;
+    char[]                  _chars;
 
     UnifiedSavePointManagerX _save_points;
 
@@ -66,12 +72,10 @@ public abstract class UnifiedInputStreamX
     public static UnifiedInputStreamX makeStream(InputStream stream) throws IOException {
         return new FromByteStream(stream);
     }
-    abstract public InputStream getInputStream();
-    abstract public Reader      getReader();
-    abstract public byte[]      getByteArray();
-    abstract public char[]      getCharArray();
-    abstract public Integer     getOffset();
-    abstract public Integer     getLength();
+    public final InputStream getInputStream() { return _stream; }
+    public final Reader      getReader()      { return _reader; }
+    public final byte[]      getByteArray()   { return _bytes; }
+    public final char[]      getCharArray()   { return _chars; }
 
     private final void init() {
         // _state = UIS_STATE.STATE_READING;
@@ -149,13 +153,16 @@ public abstract class UnifiedInputStreamX
     public final void unread(int c)
     {
         if (c == -1) {
-            if (_limit < _pos) {
-                _limit = _pos;
-            }
             return;
         }
         else if (c < 0 || c > _max_char_value) {
             throw new IllegalArgumentException();
+        }
+        if (_eof) {
+            _eof = false;
+            if (_limit == -1) {
+                _limit = _pos;
+            }
         }
         _pos--;
         if (_pos >= 0) {
@@ -188,16 +195,97 @@ public abstract class UnifiedInputStreamX
         if (_eof) {
             return EOF;
         }
+        if (refill_helper()) {
+            return EOF;
+        }
 
+        int c = (is_byte_data()) ? (_bytes[_pos++] & 0xff) : _chars[_pos++];
+        return c;
+    }
+
+    private final boolean refill_helper() throws IOException
+    {
         _limit = refill();
         // done in refill: _pos = _buffer.getCurrentPage().getOriginalStartingOffset();
         if (_pos >= _limit) {
             _eof = true;
-            return EOF;
+            return true;
         }
-        int c = (is_byte_data()) ? (_bytes[_pos++] & 0xff) : _chars[_pos++];
+        return false;
+    }
 
-        return c;
+    public final void skip(int skipDistance) throws IOException
+    {
+        int remaining;
+
+        if (_pos <= _limit - skipDistance) {
+            _pos += skipDistance;
+            remaining = 0;
+        }
+        else {
+            remaining = skipDistance;
+            while (remaining > 0) {
+                int ready = _limit - _pos;
+                if (ready > remaining) {
+                    ready = remaining;
+                }
+                remaining -= ready;
+                if (remaining > 0) {
+                    if (refill_helper()) {
+                        break;
+                    }
+                }
+            }
+        }
+        if (remaining > 0) {
+            String message = "unexpected EOF encountered during skip of "
+                           + skipDistance
+                           + " at position "
+                           + getPosition();
+            throw new IOException(message);
+        }
+        return;
+    }
+    public final int read(byte[] dst, int offset, int length) throws IOException
+    {
+        if (!is_byte_data()) {
+            throw new IOException("byte read is not support over character sources");
+        }
+        int remaining = length;
+        while (remaining > 0 && !isEOF()) {
+            int ready = _limit - _pos;
+            if (ready > remaining) {
+                ready = remaining;
+            }
+            System.arraycopy(_bytes, _pos, dst, offset, ready);
+            _pos += ready;
+            offset += ready;
+            remaining -= ready;
+            if (_pos < _limit || refill_helper()) {
+                break;
+            }
+        }
+        return length - remaining;
+    }
+    public final int read(char[] dst, int offset, int length) throws IOException
+    {
+        if (is_byte_data()) {
+            throw new IOException("character read is not support over byte data sources");
+        }
+        int remaining = length;
+        while (remaining > 0 && !isEOF()) {
+            int ready = _limit - _pos;
+            if (ready > remaining) {
+                ready = remaining;
+            }
+            System.arraycopy(_chars, _pos, dst, offset, ready);
+            _pos += ready;
+            offset += ready;
+            if (refill_helper()) {
+                break;
+            }
+        }
+        return length - remaining;
     }
 
     public int readScalar() throws IOException
@@ -337,8 +425,23 @@ public abstract class UnifiedInputStreamX
         return _limit;
     }
 
-    protected abstract boolean can_fill_new_page();
-    protected abstract int load(UnifiedDataPageX curr, int start_pos, long file_position) throws IOException;
+    private final boolean can_fill_new_page() {
+        return _is_stream;
+    }
+
+    protected final int load(UnifiedDataPageX curr, int start_pos, long file_position) throws IOException
+    {
+        int read = 0;
+        if (can_fill_new_page()) {
+            if (is_byte_data()) {
+                read = curr.load(_stream, start_pos, file_position);
+            }
+            else {
+                read = curr.load(_reader, start_pos, file_position);
+            }
+        }
+        return read;
+    }
 
     //
     // specialized subclasses that provide an appropriate constructor
@@ -349,6 +452,7 @@ public abstract class UnifiedInputStreamX
         FromCharArray(CharSequence chars, int offset, int length)
         {
             _is_byte_data = false;
+            _is_stream = false;
             _buffer = UnifiedInputBufferX.makePageBuffer(chars, offset, length);
             UnifiedDataPageX curr = _buffer.getCurrentPage();
             make_page_current(curr, 0, offset, offset+length);
@@ -357,158 +461,49 @@ public abstract class UnifiedInputStreamX
         FromCharArray(char[] charArray, int offset, int length)
         {
             _is_byte_data = false;
+            _is_stream = false;
             _buffer = UnifiedInputBufferX.makePageBuffer(charArray, offset, length);
             UnifiedDataPageX curr = _buffer.getCurrentPage();
             make_page_current(curr, 0, offset, offset+length);
             super.init();
         }
-        @Override
-        public final InputStream getInputStream() { return null; }
-        @Override
-        public final Reader      getReader()      { return null; }
-        @Override
-        public final byte[]      getByteArray()   { return null; }
-        @Override
-        public final char[]      getCharArray()   { return _chars; }
-        @Override
-        public final Integer     getOffset()
-        {
-            int offset = _buffer.getCurrentPage().getOriginalStartingOffset();
-            int limit = _buffer.getCurrentPage().getBufferLimit();
-            return limit - offset;
-        }
-        @Override
-        public final Integer     getLength()
-        {
-            int offset = _buffer.getCurrentPage().getOriginalStartingOffset();
-            return offset;
-        }
-
-        @Override
-        protected final boolean can_fill_new_page() {
-            return false;
-        }
-
-        @Override
-        protected final int load(UnifiedDataPageX curr, int start_pos, long file_position) throws IOException
-        {
-            return 0;
-        }
     }
 
     private static class FromCharStream extends UnifiedInputStreamX
     {
-        Reader _reader;
-
         FromCharStream(Reader reader) throws IOException
         {
             _is_byte_data = false;
+            _is_stream = true;
             _reader = reader;
             _buffer = UnifiedInputBufferX.makePageBuffer(UnifiedInputBufferX.BufferType.CHARS, DEFAULT_PAGE_SIZE);
             super.init();
             _limit = refill();
         }
-        @Override
-        public final InputStream getInputStream() { return null; }
-        @Override
-        public final Reader      getReader()      { return _reader; }
-        @Override
-        public final byte[]      getByteArray()   { return null; }
-        @Override
-        public final char[]      getCharArray()   { return null; }
-        @Override
-        public final Integer     getOffset() { return null; }
-        @Override
-        public final Integer     getLength() { return null; }
-
-        @Override
-        protected final boolean can_fill_new_page() {
-            return true;
-        }
-
-        @Override
-        protected final int load(UnifiedDataPageX curr, int start_pos, long file_position) throws IOException
-        {
-            return curr.load(_reader, start_pos, file_position);
-        }
     }
-
     private static class FromByteArray extends UnifiedInputStreamX
     {
         FromByteArray(byte[] bytes, int offset, int length)
         {
             _is_byte_data = true;
+            _is_stream = false;
             _buffer = UnifiedInputBufferX.makePageBuffer(bytes, offset, length);
             UnifiedDataPageX curr = _buffer.getCurrentPage();
             make_page_current(curr, 0, offset, offset+length);
             super.init();
         }
-        @Override
-        public final InputStream getInputStream() { return null; }
-        @Override
-        public final Reader      getReader()      { return null; }
-        @Override
-        public final byte[]      getByteArray()   { return _bytes; }
-        @Override
-        public final char[]      getCharArray()   { return null; }
-        @Override
-        public final Integer     getOffset() {
-            int offset = _buffer.getCurrentPage().getOriginalStartingOffset();
-            int limit = _buffer.getCurrentPage().getBufferLimit();
-            return limit - offset;
-        }
-        @Override
-        public final Integer     getLength() {
-            int offset = _buffer.getCurrentPage().getOriginalStartingOffset();
-            return offset;
-        }
-
-        @Override
-        protected final boolean can_fill_new_page() {
-            return false;
-        }
-
-        @Override
-        protected final int load(UnifiedDataPageX curr, int start_pos, long file_position) throws IOException
-        {
-            return 0;
-        }
     }
 
     private static class FromByteStream extends UnifiedInputStreamX
     {
-        InputStream _stream;
-
         FromByteStream(InputStream stream) throws IOException
         {
             _is_byte_data = true;
+            _is_stream = true;
             _stream = stream;
             _buffer = UnifiedInputBufferX.makePageBuffer(UnifiedInputBufferX.BufferType.BYTES, DEFAULT_PAGE_SIZE);
             super.init();
             _limit = refill();
-        }
-        @Override
-        public final InputStream getInputStream() { return _stream; }
-        @Override
-        public final Reader      getReader()      { return null; }
-        @Override
-        public final byte[]      getByteArray()   { return null; }
-        @Override
-        public final char[]      getCharArray()   { return null; }
-        @Override
-        public final Integer     getOffset()      { return null; }
-        @Override
-        public final Integer     getLength()      { return null; }
-
-        @Override
-        protected final boolean can_fill_new_page() {
-            return true;
-        }
-
-        @Override
-        protected final int load(UnifiedDataPageX curr, int start_pos, long file_position) throws IOException
-        {
-            return curr.load(_stream, start_pos, file_position);
         }
     }
 }

@@ -37,7 +37,7 @@ public class IonUTF8 {
     private final static int UNICODE_CONTINUATION_BYTE_MASK    = 0x3F;       // 6 bits in each continuation char
 
     private final static int MAXIMUM_UTF16_1_CHAR_CODE_POINT   = 0x0000FFFF;
-    private final static int SURROGATE_OFFSET                  = 0x00100000;
+    private final static int SURROGATE_OFFSET                  = 0x00010000;
     private final static int SURROGATE_MASK                    = 0xFFFFFC00;  // 0b 1111 1100 0000 0000
     private final static int HIGH_SURROGATE                    = 0x0000D800;  // 0b 1101 1000 0000 0000
     private final static int LOW_SURROGATE                     = 0x0000DC00;  // 0b 1101 1100 0000 0000
@@ -111,7 +111,7 @@ public class IonUTF8 {
         if (isTwoByteUTF8(firstByte))   return 2;
         if (isThreeByteUTF8(firstByte)) return 3;
         if (isFourByteUTF8(firstByte))  return 4;
-        throw new InvalidUnicodeCodePoint();
+        return -1;
     }
 
     public final static byte getByte1Of2(int unicodeScalar) {

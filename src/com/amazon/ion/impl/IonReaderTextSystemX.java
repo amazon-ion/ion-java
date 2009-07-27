@@ -2,10 +2,6 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.impl.IonReaderTextRawTokensX.IonReaderTextTokenException;
-import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
-import com.amazon.ion.impl.IonScalarConversionsX.CantConvertException;
-
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonException;
@@ -18,6 +14,9 @@ import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.impl.IonReaderTextRawTokensX.IonReaderTextTokenException;
+import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
+import com.amazon.ion.impl.IonScalarConversionsX.CantConvertException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -44,6 +43,16 @@ public class IonReaderTextSystemX
 
     Iterator<String> EMPTY_ITERATOR = new StringIterator(null);
 
+    public IonReaderTextSystemX(char[] chars) {
+        UnifiedInputStreamX iis;
+        iis = UnifiedInputStreamX.makeStream(chars);
+        init(iis);
+    }
+    public IonReaderTextSystemX(char[] chars, int offset, int length) {
+        UnifiedInputStreamX iis;
+        iis = UnifiedInputStreamX.makeStream(chars, offset, length);
+        init(iis);
+    }
     public IonReaderTextSystemX(CharSequence chars) {
         UnifiedInputStreamX iis;
         iis = UnifiedInputStreamX.makeStream(chars);
@@ -332,15 +341,42 @@ public class IonReaderTextSystemX
         // this should only be called when it actually has to do some work
         assert !_v.hasValueOfType(value_type);
 
-        if (!_v.can_convert(value_type)) {
-            String message = "can't cast from "
-                +IonScalarConversionsX.getValueTypeName(_v.getAuthoritativeType())
-                +" to "
-                +IonScalarConversionsX.getValueTypeName(value_type);
-            throw new CantConvertException(message);
+        if (_v.isNull()) {
+            return;
         }
-        int fnid = _v.get_conversion_fnid(value_type);
-        _v.cast(fnid);
+
+        if (IonType.SYMBOL.equals(_value_type)) {
+            switch(value_type) {
+                case AS_TYPE.int_value:
+                    int sid = _v.getInt();
+                    String sym = getSymbolTable().findSymbol(sid);
+                    _v.setValue(sym);
+                    break;
+                case AS_TYPE.string_value:
+                    sym = _v.getString();
+                    sid = getSymbolTable().findSymbol(sym);
+                    _v.setValue(sid);
+                    break;
+                default:
+                {   String message = "can't cast symbol from "
+                        +IonScalarConversionsX.getValueTypeName(_v.getAuthoritativeType())
+                        +" to "
+                        +IonScalarConversionsX.getValueTypeName(value_type);
+                    throw new CantConvertException(message);
+                }
+            }
+        }
+        else {
+            if (!_v.can_convert(value_type)) {
+                String message = "can't cast from "
+                    +IonScalarConversionsX.getValueTypeName(_v.getAuthoritativeType())
+                    +" to "
+                    +IonScalarConversionsX.getValueTypeName(value_type);
+                throw new CantConvertException(message);
+            }
+            int fnid = _v.get_conversion_fnid(value_type);
+            _v.cast(fnid);
+        }
     }
 
     //
