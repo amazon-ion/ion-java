@@ -107,11 +107,18 @@ public final class IonTextWriter
         initFlags(prettyPrint, printAscii);
     }
 
-    private Appendable initStream(OutputStream out)
+    /**
+     * Wraps an {@link OutputStream} with a UTF-8 {@link PrintStream}.
+     *
+     * @param out must not be null.
+     * @return a new {@link PrintStream}.
+     */
+    private PrintStream initStream(OutputStream out)
     {
         try
         {
-            return new PrintStream(out, true, "UTF-8");
+            final boolean autoFlush = false;
+            return new PrintStream(out, autoFlush, "UTF-8");
         }
         catch (UnsupportedEncodingException e)
         {
