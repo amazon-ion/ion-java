@@ -221,4 +221,82 @@ public abstract class ReaderSystemProcessingTestCase
         assertEquals(IonType.INT, myReader.next());
     }
 
+    // JIRA ION-79 reported by Scott Barber
+    public void testDeepNesting()
+        throws Exception
+    {
+        String text =
+            "A::{data:B::{items:[C::{itemPromos:[D::{f4:['''12.5''']}]}]}}";
+        startIteration(text);
+
+        IonReader reader = myReader;
+        reader.hasNext();
+        reader.next();
+        assertEquals("A", reader.getTypeAnnotations()[0]);
+        reader.stepIn();
+        {
+            reader.hasNext();
+            reader.next();
+            assertEquals("B", reader.getTypeAnnotations()[0]);
+            reader.stepIn();
+            {
+                reader.next();
+                reader.stepIn(); // list
+                {
+                    reader.next();
+                    assertEquals("C", reader.getTypeAnnotations()[0]);
+                    reader.stepIn();
+                    {
+                        reader.next();
+                        reader.stepIn();
+                        { // list
+                            reader.next();
+                            assertEquals("D", reader.getTypeAnnotations()[0]);
+                            reader.stepIn();
+                            {
+                                reader.next();
+                                assertEquals("f4", reader.getFieldName());
+                                reader.stepIn();
+                                {
+                                    reader.next();
+                                    assertEquals("12.5", reader.stringValue());
+                                    assertFalse(reader.hasNext());
+                                }
+                                reader.stepOut();
+                                assertFalse(reader.hasNext());
+                            }
+                            reader.stepOut();
+                            boolean hasNext3 = reader.hasNext(); // FIXME this returns true, should return false (Text version does this correctly)
+//                            assertFalse(reader.hasNext()); // TODO uncomment
+                            try {
+                                reader.next();
+//                                fail("expected exception"); // TODO uncomment
+                            }
+                            catch (NoSuchElementException e) { }
+                            assertFalse(reader.hasNext());
+                        }
+                        reader.stepOut(); // FIXME fails here...
+                        assertFalse(reader.hasNext());
+                    }
+                    reader.stepOut(); //
+                    assertFalse(reader.hasNext());
+                }
+                reader.stepOut();
+                assertFalse(reader.hasNext());
+            }
+            reader.stepOut();
+            assertFalse(reader.hasNext());
+        }
+        reader.stepOut();
+        assertFalse(reader.hasNext());
+        assertEquals(0, reader.getDepth());
+        try {
+            reader.stepOut();
+            fail("expected exception");
+        }
+        catch (IllegalStateException e) {
+            // TODO compare to IonMessages.CANNOT_STEP_OUT
+            // Can't do that right now due to permissions
+        }
+    }
 }
