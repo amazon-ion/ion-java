@@ -94,7 +94,7 @@ public final class IonTreeWriter
 
     void popParent() {
         if (_parent_stack_top < 1) {
-            throw new IllegalStateException();
+            throw new IllegalStateException(IonMessages.CANNOT_STEP_OUT);
         }
         _parent_stack_top--;
         _current_parent = _parent_stack[_parent_stack_top];

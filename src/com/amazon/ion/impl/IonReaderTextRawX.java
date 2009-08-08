@@ -1074,7 +1074,7 @@ public abstract class IonReaderTextRawX
     public void stepOut()
     {
         if (getDepth() < 1) {
-            throw new IllegalStateException();
+            throw new IllegalStateException(IonMessages.CANNOT_STEP_OUT);
         }
         try {
             finish_value(null);

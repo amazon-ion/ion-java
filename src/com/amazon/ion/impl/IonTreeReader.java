@@ -130,7 +130,7 @@ public final class IonTreeReader
     public void stepOut()
     {
         if (this._top < 1) {
-            throw new IllegalStateException("not in a container");
+            throw new IllegalStateException(IonMessages.CANNOT_STEP_OUT);
         }
         pop();
     }

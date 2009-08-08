@@ -309,7 +309,7 @@ public final class IonTextReader
     public void stepOut()
     {
         if (_current_depth < 1) {
-            throw new IllegalStateException();
+            throw new IllegalStateException(IonMessages.CANNOT_STEP_OUT);
         }
         _current_depth--;
         if (_debug) System.out.println("stepOUT() new depth: "+this._current_depth);

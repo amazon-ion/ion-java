@@ -25,7 +25,6 @@ import com.amazon.ion.Timestamp;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
-import java.util.EmptyStackException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -684,7 +683,7 @@ public final class IonBinaryReader
     {
         if (_top < 1) {
             // if we didn't step in, we can't step out
-            throw new EmptyStackException();
+            throw new IllegalStateException(IonMessages.CANNOT_STEP_OUT);
         }
 
         int next_start;

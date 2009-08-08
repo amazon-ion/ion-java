@@ -310,6 +310,9 @@ public final class IonTextWriter
 
     public void stepOut() throws IOException
     {
+        if (_top < 1) {
+            throw new IllegalStateException(IonMessages.CANNOT_STEP_OUT);
+        }
         _pending_separator = topPendingComma();
         int tid = pop();
 

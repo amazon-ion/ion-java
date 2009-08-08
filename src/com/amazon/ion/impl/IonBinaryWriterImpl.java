@@ -267,6 +267,9 @@ public final class IonBinaryWriterImpl
 
     public void stepOut() throws IOException
     {
+        if (_top < 1) {
+            throw new IllegalStateException(IonMessages.CANNOT_STEP_OUT);
+        }
         pop();
         closeValue();
         _in_struct = this.topInStruct();
