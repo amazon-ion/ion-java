@@ -81,10 +81,11 @@ public final class IonTreeWriter
             }
             _current_parent = _sys.newDatagram(newParent);
         }
-        if (_parent_stack_top >= _parent_stack.length) {
-            int newlen = _parent_stack.length * 2;
+        int oldlen = _parent_stack.length;
+        if (_parent_stack_top >= oldlen) {
+            int newlen = oldlen * 2;
             IonContainer[] temp = new IonContainer[newlen];
-            System.arraycopy(_parent_stack, 0, temp, 0, _parent_stack_top);
+            System.arraycopy(_parent_stack, 0, temp, 0, oldlen);
             _parent_stack = temp;
         }
         _parent_stack[_parent_stack_top++] = _current_parent;
@@ -135,8 +136,6 @@ public final class IonTreeWriter
         }
     }
 
-
-
     public void stepIn(IonType containerType) throws IOException
     {
         IonContainer v;
@@ -152,7 +151,6 @@ public final class IonTreeWriter
         append(v);
         pushParent(v);
     }
-
 
     public void stepOut() throws IOException
     {
@@ -427,5 +425,5 @@ public final class IonTreeWriter
         int len = dg.getBytes(out);
         return len;
     }
-
 }
+

@@ -42,8 +42,8 @@ public class GoodIonStreamingTests extends DirectoryTestSuite {
         // TODO JIRA ION-8 fix Unicode bugs and enable test cases
         return new String[]
         {
-            "equivs/stringU0001D11E.ion",
-            "equivs/symbols.ion",
+            //"equivs/stringU0001D11E.ion",
+            //"equivs/symbols.ion",
         };
     }
 

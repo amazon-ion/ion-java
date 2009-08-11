@@ -49,17 +49,8 @@ public abstract class UnifiedInputBufferX
     public abstract BufferType getType();
     public abstract int maxValue();
 
-    //public final int getValue(long fileOffset) {
-    //    UnifiedDataPageX page = findPage(fileOffset);
-    //    if (page == null) throw new IllegalArgumentException();
-    //    int offset = (int)(fileOffset - page.getStartingFileOffset());
-    //    return page.getValue(offset);
-    //}
-
     public final void putCharAt(long fileOffset, int c) {
         if (c < 0 || c > maxValue()) throw new IllegalArgumentException("value ("+c+")is out of range (0 to "+maxValue()+")");
-
-        //UnifiedDataPageX page = findPage(fileOffset);
 
         // since we start at _curr the common case find the buffer immediately
         UnifiedDataPageX page = null;
@@ -145,10 +136,11 @@ public abstract class UnifiedInputBufferX
 
     protected final void setPage(int idx, UnifiedDataPageX curr, boolean recycleOldPage)
     {
-        if (idx >= _buffers.length) {
-            int len = _buffers.length * 2;
-            UnifiedDataPageX[] newbuf = new UnifiedDataPageX[len];
-            System.arraycopy(_buffers, 0, newbuf, 0, _buffers.length);
+        int oldlen = _buffers.length;
+        if (idx >= oldlen) {
+            int newlen = oldlen * 2;
+            UnifiedDataPageX[] newbuf = new UnifiedDataPageX[newlen];
+            System.arraycopy(_buffers, 0, newbuf, 0, oldlen);
             _buffers = newbuf;
         }
         UnifiedDataPageX prev = _buffers[idx];

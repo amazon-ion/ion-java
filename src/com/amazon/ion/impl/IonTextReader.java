@@ -44,36 +44,36 @@ public final class IonTextReader
     static final boolean _debug = false;
 
 
-    IonTextTokenizer    _scanner;
-    IonCatalog          _catalog;
-    SymbolTable  _current_symtab;
+    IonTextTokenizer _scanner;
+    IonCatalog       _catalog;
+    SymbolTable      _current_symtab;
 
-    boolean         _eof;
-    State           _state;
+    boolean          _eof;
+    State            _state;
 
-    final boolean   _is_returning_system_values;
+    final boolean    _is_returning_system_values;
 
-    boolean         _in_struct;
-    boolean         _skip_children;
+    boolean          _in_struct;
+    boolean          _skip_children;
 
-    boolean         _value_ready;
-    boolean         _value_is_container;
-    boolean         _is_null;
-    int             _value_token;  // used to distiguish int from hex int
-    IonType         _value_type;
-    String          _field_name;
-    int             _annotation_count;
-    String[]        _annotations = new String[10];
-    int             _value_start;
-    int             _value_end;
+    boolean          _value_ready;
+    boolean          _value_is_container;
+    boolean          _is_null;
+    int              _value_token;  // used to distiguish int from hex int
+    IonType          _value_type;
+    String           _field_name;
+    int              _annotation_count;
+    String[]         _annotations = new String[10];
+    int              _value_start;
+    int              _value_end;
 
     // local stack for the parser state machine
-    int             _parser_state_top;
-    State[]         _parser_state_stack = new State[10];
+    int              _parser_state_top;
+    State[]          _parser_state_stack = new State[10];
 
     //  local stack for stepInto() and stepOut()
-    int             _container_state_top;
-    IonType[]       _container_state_stack = new IonType[10];
+    int              _container_state_top;
+    IonType[]        _container_state_stack = new IonType[10];
 
     /**
      * a single depth save stack used by getContainerSize()
@@ -96,47 +96,54 @@ public final class IonTextReader
         this._scanner.restore_state();
     }
     void copy_state_to(IonTextReader other) {
-
-        other._annotation_count = this._annotation_count;
-        if (this._annotation_count > 0) {
-            if (other._annotations.length < this._annotations.length) {
-                other._annotations = new String[this._annotations.length];
+        int oldlen, newlen;
+        newlen = this._annotation_count;
+        other._annotation_count = newlen;
+        if (newlen > 0) {
+            oldlen = this._annotations.length;
+            if (newlen > oldlen) {
+                other._annotations = new String[newlen];
             }
-            System.arraycopy(this._annotations, 0, other._annotations, 0, this._annotation_count);
+            System.arraycopy(this._annotations, 0, other._annotations, 0, newlen);
         }
+
+        newlen = this._container_state_top + 1;  // top of 0 has 1 entry
         other._container_state_top = this._container_state_top;
-        if (other._container_state_stack.length < this._container_state_top) {
-            other._container_state_stack = new IonType[this._container_state_stack.length];
+        oldlen = other._container_state_stack.length;
+        if (newlen > oldlen) {
+            other._container_state_stack = new IonType[newlen];
         }
         System.arraycopy(this._container_state_stack,  0
                         ,other._container_state_stack, 0
-                        ,this._container_state_stack.length);
+                        ,newlen);
 
         other._lookahead_type = this._lookahead_type;
 
-        other._extended_value_count = this._extended_value_count;
-        if (this._extended_value_count > 0) {
-            if ( other._extended_value_end == null
-              || other._extended_value_end.length < this._extended_value_count
-            ) {
-                other._extended_value_end   = new int[this._extended_value_end.length];
-                other._extended_value_start = new int[this._extended_value_end.length];
+        newlen = this._extended_value_count;
+        other._extended_value_count = newlen;
+        if (newlen > 0) {
+            oldlen = (other._extended_value_end == null) ? 0 : other._extended_value_end.length;
+            newlen = this._extended_value_count;
+            if (newlen > oldlen) {
+                other._extended_value_end   = new int[newlen];
+                other._extended_value_start = new int[newlen];
             }
             System.arraycopy(this._extended_value_end, 0
                            , other._extended_value_end, 0
-                           , this._extended_value_end.length);
+                           , newlen);
             System.arraycopy(this._extended_value_start, 0
                            , other._extended_value_start, 0
-                           , this._extended_value_start.length);
+                           , newlen);
         }
 
+        newlen = this._parser_state_top + 1; // top of 0 has 1 entry
         other._parser_state_top = this._parser_state_top;
-        if (other._parser_state_stack.length < this._parser_state_top) {
-            other._parser_state_stack = new State[this._parser_state_top];
+        if (other._parser_state_stack.length < newlen) {
+            other._parser_state_stack = new State[newlen];
         }
         System.arraycopy(this._parser_state_stack, 0
                        , other._parser_state_stack, 0
-                       , this._parser_state_stack.length);
+                       , newlen);
 
         other._current_symtab = this._current_symtab;
 
@@ -156,10 +163,11 @@ public final class IonTextReader
 
 
     void push_parser_state(State pendingState) {
-        if (_parser_state_top >= _parser_state_stack.length) {
-            int newlen = _parser_state_stack.length * 2;
+        int oldlen = _parser_state_stack.length;
+        if (_parser_state_top >= oldlen) {
+            int newlen = oldlen * 2;
             State[] temp = new State[newlen];
-            System.arraycopy(_parser_state_stack, 0, temp, 0, _parser_state_stack.length);
+            System.arraycopy(_parser_state_stack, 0, temp, 0, oldlen);
             _parser_state_stack = temp;
         }
         _parser_state_stack[_parser_state_top++] = pendingState;
@@ -170,10 +178,11 @@ public final class IonTextReader
         return s;
     }
     void push_container_state(IonType newContainer) {
-        if (_container_state_top >= _container_state_stack.length) {
-            int newlen = _container_state_stack.length * 2;
+        int oldlen = _container_state_stack.length;
+        if (_container_state_top >= oldlen) {
+            int newlen = oldlen * 2;
             IonType[] temp = new IonType[newlen];
-            System.arraycopy(_container_state_stack, 0, temp, 0, _container_state_stack.length);
+            System.arraycopy(_container_state_stack, 0, temp, 0, oldlen);
             _container_state_stack = temp;
         }
         _container_state_stack[_container_state_top++] = newContainer;

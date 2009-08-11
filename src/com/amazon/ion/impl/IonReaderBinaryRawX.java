@@ -54,7 +54,6 @@ abstract public class IonReaderBinaryRawX implements IonReader
     State               _state;
 
     UnifiedInputStreamX _input;
- // FIXME: REMOVE: long                _local_end;
     int                 _local_remaining;
     boolean             _eof;
     boolean             _has_next_needed;
@@ -83,7 +82,6 @@ abstract public class IonReaderBinaryRawX implements IonReader
 
     protected final void init(UnifiedInputStreamX uis) {
         _input = uis;
-        // FIXME: REMOVE: _local_end = -1;
         _local_remaining = NO_LIMIT;
         _parent_tid = IonConstants.tidDATAGRAM;
         _value_field_id = UnifiedSymbolTable.UNKNOWN_SID;
@@ -104,11 +102,11 @@ abstract public class IonReaderBinaryRawX implements IonReader
 
     private final void push(int type, long position, int local_remaining)
     {
-        int size = _container_stack.length;
-        if ((_container_top + POS_STACK_STEP) > size) {
-            int new_size = size * 2;
-            long[] temp = new long[new_size];
-            System.arraycopy(_container_stack, 0, temp, 0, _container_top);
+        int oldlen = _container_stack.length;
+        if ((_container_top + POS_STACK_STEP) >= oldlen) {
+            int newlen = oldlen * 2;
+            long[] temp = new long[newlen];
+            System.arraycopy(_container_stack, 0, temp, 0, oldlen);
             _container_stack = temp;
         }
         _container_stack[_container_top + POS_OFFSET]  = position;
@@ -313,10 +311,11 @@ abstract public class IonReaderBinaryRawX implements IonReader
     }
     private final void load_annotation_append(int a)
     {
-        if (_annotation_count >= _annotation_ids.length) {
-            int new_count = _annotation_count * 2;
-            int[] temp = new int[new_count];
-            System.arraycopy(_annotation_ids, 0, temp, 0, _annotation_ids.length);
+        int oldlen = _annotation_ids.length;
+        if (_annotation_count >= oldlen) {
+            int newlen = oldlen * 2;
+            int[] temp = new int[newlen];
+            System.arraycopy(_annotation_ids, 0, temp, 0, oldlen);
             _annotation_ids = temp;
         }
         _annotation_ids[_annotation_count++] =  a;

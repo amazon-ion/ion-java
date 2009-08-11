@@ -47,9 +47,11 @@ public final class IonTreeReader
     private int      _top;
 
     void push() {
-        if (_top > (_stack.length - 2)) {
-            Object[] temp = new Object[_stack.length * 2];
-            System.arraycopy(_stack, 0, temp, 0, _top);
+        int oldlen = _stack.length;
+        if (_top + 1 >= oldlen) { // we're going to do a "+2" on top so we need extra space
+            int newlen = oldlen * 2;
+            Object[] temp = new Object[newlen];
+            System.arraycopy(_stack, 0, temp, 0, oldlen);
             _stack = temp;
         }
         _stack[_top++] = _parent;

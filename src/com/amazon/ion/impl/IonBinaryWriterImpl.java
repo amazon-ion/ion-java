@@ -41,14 +41,17 @@ public final class IonBinaryWriterImpl
     boolean     _in_struct;
     SymbolTable _system_symbols;
 
-    int    _patch_count = 0;
-    int [] _patch_lengths = new int[10];
-    int [] _patch_offsets = new int[10];
-    int [] _patch_types = new int[10];
-    boolean [] _patch_in_struct = new boolean[10];
 
+    private final static int DEFAULT_PATCH_COUNT = 10;
+    int    _patch_count = 0;
+    int [] _patch_lengths = new int[DEFAULT_PATCH_COUNT];
+    int [] _patch_offsets = new int[DEFAULT_PATCH_COUNT];
+    int [] _patch_types = new int[DEFAULT_PATCH_COUNT];
+    boolean [] _patch_in_struct = new boolean[DEFAULT_PATCH_COUNT];
+
+    private final static int DEFAULT_PATCH_DEPTH = 10;
     int    _top;
-    int [] _patch_stack = new int[10];
+    int [] _patch_stack = new int[DEFAULT_PATCH_DEPTH];
 
     /**
      * This method requires a symbol table because all binary data must
@@ -95,32 +98,34 @@ public final class IonBinaryWriterImpl
         _patch_count++;
     }
     void growStack() {
-        int newlen = _patch_stack.length * 2;
+        int oldlen = _patch_stack.length;
+        int newlen = oldlen * 2;
         int[] temp = new int[newlen];
-        System.arraycopy(_patch_stack, 0, temp, 0, _top - 1);
+        System.arraycopy(_patch_stack, 0, temp, 0, oldlen);
         _patch_stack = temp;
     }
     void growList() {
-        int newlen = _patch_lengths.length * 2; // _patch_list.length * 2;
+        int oldlen = _patch_lengths.length ;
+        int newlen = oldlen * 2; // _patch_list.length * 2;
         int[] temp1 = new int[newlen];
         int[] temp2 = new int[newlen];
         int[] temp3 = new int[newlen];
         boolean[] temp4 = new boolean[newlen];
 
-        System.arraycopy(_patch_lengths,   0, temp1, 0, _patch_count);
-        System.arraycopy(_patch_offsets,   0, temp2, 0, _patch_count);
-        System.arraycopy(_patch_types,     0, temp3, 0, _patch_count);
-        System.arraycopy(_patch_in_struct, 0, temp4, 0, _patch_count);
+        System.arraycopy(_patch_lengths,   0, temp1, 0, oldlen);
+        System.arraycopy(_patch_offsets,   0, temp2, 0, oldlen);
+        System.arraycopy(_patch_types,     0, temp3, 0, oldlen);
+        System.arraycopy(_patch_in_struct, 0, temp4, 0, oldlen);
 
         _patch_lengths   = temp1;
         _patch_offsets   = temp2;
         _patch_types     = temp3;
         _patch_in_struct = temp4;
-
     }
     void patch(int addedLength) {
         for (int ii = 0; ii < _top; ii++) {
-            _patch_lengths[_patch_stack[ii]] += addedLength;
+            int patch_id = _patch_stack[ii];
+            _patch_lengths[patch_id] += addedLength;
         }
     }
 

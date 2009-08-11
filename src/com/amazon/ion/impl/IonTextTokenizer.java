@@ -211,14 +211,14 @@ static final boolean _debug = false;
     static final int _offset_queue_size = 6; // 5 + 1, character lookahead + 1
     int              _char_lookahead_top = 0;
     int[]            _char_lookahead_stack = new int[_offset_queue_size - 1];
-    int[]         _char_lookahead_stack_char_length = new int[_offset_queue_size - 1];
+    int[]            _char_lookahead_stack_char_length = new int[_offset_queue_size - 1];
     int              _peek_ahead_char = EMPTY_PEEKAHEAD;
     int              _char_length = 0;
     int              _offset = 0;
     int              _line = 1;
     int              _offset_queue_head = 0;
-    int          _offset_queue_tail = 0;
-    int[]          _offset_queue = new int[_offset_queue_size];
+    int              _offset_queue_tail = 0;
+    int[]            _offset_queue = new int[_offset_queue_size];
 
     /**
      * calculates the first byte of the current character in the input buffer
@@ -276,8 +276,6 @@ static final boolean _debug = false;
         //}
 
         other._token = _token;
-        //other._start = _start;
-        //other._end   = _end;
 
         other._char_lookahead_top = this._char_lookahead_top;
         System.arraycopy(this._char_lookahead_stack, 0
@@ -306,8 +304,6 @@ static final boolean _debug = false;
         other._has_saved_symbol = this._has_saved_symbol;
         other._saved_symbol.setLength(0);
         other._saved_symbol.append(this._saved_symbol);
-        //other._saved_symbol_len = this._saved_symbol_len;
-        //System.arraycopy(this._saved_symbol_buf, 0, other._saved_symbol_buf, 0, other._saved_symbol_len);
 
         other._token_lookahead_current = this._token_lookahead_current;
         other._token_lookahead_next_available = this._token_lookahead_next_available;
@@ -342,10 +338,6 @@ static final boolean _debug = false;
         _saved_symbol.setLength(0);
         _line = 1;
         _offset = 0;
-        // _peek_ahead_char = -1;
-        //_saved_symbol_len = 0;
-        //_start = -1;
-        //_end = -1;
     }
     final void enqueueToken(int token) {
         int next = _token_lookahead_next_available;
@@ -358,14 +350,6 @@ static final boolean _debug = false;
         _token_lookahead_next_available = next;
 
     }
-    // this isn't actually needed, the next start and end values in the
-    // _token_lookahead_start (and end) arrays have already been set by
-    // setNextStart() and setNextEnd() calls
-    //final void enqueueToken(int token, int start, int end) {
-    //    setNextStart(start);
-    //    setNextEnd(end);
-    //    enqueueToken(token);
-    //}
     final void dequeueToken() {
         if (_token_lookahead_current == _token_lookahead_next_available) {
             throw new IonTextReader.IonParsingException("token queue empty (internal error) "+input_position());
@@ -905,8 +889,6 @@ loop:   for (;;) {
         int start, end;
         _saved_symbol.setLength(0);
         _saved_symbol.append((char)c);
-        //_saved_symbol_len = 0;
-        //saved_symbol_append((char)c);
         start = currentCharStart();
         setNextStart(start);
 
@@ -1033,8 +1015,6 @@ loop:   for (;;) {
 
         _saved_symbol.setLength(0);
         _saved_symbol.append((char)c);
-        //_saved_symbol_len = 0;
-        //saved_symbol_append((char)c);
         start = currentCharStart();
         setNextStart(start);
 
@@ -1617,8 +1597,12 @@ endofdate:
     }
     private final void bad_token_start(int c)
     {
-        // TODO improve error message, print the codepoint
-        throw new IonTextReader.IonParsingException("bad character ["+c+"] encountered where a token was supposed to start"+input_position());
+
+        String message = "bad character ["
+                        + printCodePointAsString(c)
+                        + "] encountered where a token was supposed to start"
+                        + input_position();
+        throw new IonTextReader.IonParsingException(message);
     }
     private final void bad_token()
     {
@@ -1875,7 +1859,6 @@ endofdate:
 
     String closeValueAsString(int pos) {
         String value = _saved_symbol.toString();
-        //String value = new String(_saved_symbol_buf, 0, _saved_symbol_len);
         _r.setPosition(pos);
         return value;
     }
@@ -1887,14 +1870,12 @@ endofdate:
             unicodeScalar = IonConstants.makeHighSurrogate(unicodeScalar);
         }
         _saved_symbol.append((char)unicodeScalar);
-        //saved_symbol_append((char)unicodeScalar);
 
         // this odd construct is in place to prepare for converting _saved_symbol
         // to a locally managed character array instead of the more expensive
         // stringbuffer
         if (c2 != 0) {
             _saved_symbol.append((char)c2);
-            //saved_symbol_append((char)c2);
         }
     }
 

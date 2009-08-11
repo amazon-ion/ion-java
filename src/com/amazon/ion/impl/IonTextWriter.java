@@ -182,15 +182,18 @@ public final class IonTextWriter
         _top++;
     }
     void growStack() {
-        int newlen = _stack_in_struct.length * 2;
+        int oldlen = _stack_in_struct.length;
+        int newlen = oldlen * 2;
         int[] temp1 = new int[newlen];
         boolean[] temp2 = new boolean[newlen];
         boolean[] temp3 = new boolean[newlen];
-        System.arraycopy(_stack_parent_type, 0, temp1, 0, _top);
+
+        System.arraycopy(_stack_parent_type, 0, temp1, 0, oldlen);
+        System.arraycopy(_stack_in_struct, 0, temp2, 0, oldlen);
+        System.arraycopy(_stack_pending_comma, 0, temp3, 0, oldlen);
+
         _stack_parent_type = temp1;
-        System.arraycopy(_stack_in_struct, 0, temp2, 0, _top);
         _stack_in_struct = temp2;
-        System.arraycopy(_stack_pending_comma, 0, temp3, 0, _top);
         _stack_pending_comma = temp3;
     }
     int pop() {
@@ -249,7 +252,6 @@ public final class IonTextWriter
         }
         else if (_pending_separator) {
             _output.append((char)_separator_character);
-            // _output.append(',');
         }
 
         // write field name
@@ -285,8 +287,6 @@ public final class IonTextWriter
         _pending_separator = true;
     }
 
-
-
     public void stepIn(IonType containerType) throws IOException
     {
         startValue();
@@ -306,7 +306,6 @@ public final class IonTextWriter
         _output.append(opener);
         _pending_separator = false;
     }
-
 
     public void stepOut() throws IOException
     {
@@ -330,8 +329,6 @@ public final class IonTextWriter
         _in_struct = topInStruct();
 
     }
-
-
 
     public void writeNull()
         throws IOException
@@ -881,10 +878,11 @@ public final class IonTextWriter
         r.setPosition(0); // just in case
 
         int len = r.writeTo((ByteWriter)out, buffer_length);
+        // FIXME: why is this comparing the same value?  Has this just been turned off?
         if (buffer_length != buffer_length) {
             throw new IllegalStateException("inconsistant buffer sizes encountered");
         }
         return len;
     }
-
 }
+

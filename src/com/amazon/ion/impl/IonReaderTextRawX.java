@@ -328,10 +328,11 @@ public abstract class IonReaderTextRawX
         _field_name = null;
     }
     private final void append_annotation(String name) {
-        if (_annotation_count >= _annotations.length) {
-            int newlen = _annotations.length * 2;
+        int oldlen = _annotations.length;
+        if (_annotation_count >= oldlen) {
+            int newlen = oldlen * 2;
             String[] temp = new String[newlen];
-            System.arraycopy(_annotations, 0, temp, 0, _annotation_count);
+            System.arraycopy(_annotations, 0, temp, 0, oldlen);
             _annotations = temp;
         }
         _annotations[_annotation_count++] = name;
@@ -980,10 +981,11 @@ public abstract class IonReaderTextRawX
 
     private final void push_container_state(IonType newContainer)
     {
-        if (_container_state_top >= _container_state_stack.length) {
-            int newlen = _container_state_stack.length * 2;
+        int oldlen = _container_state_stack.length;
+        if (_container_state_top >= oldlen) {
+            int newlen = oldlen * 2;
             IonType[] temp = new IonType[newlen];
-            System.arraycopy(_container_state_stack, 0, temp, 0, _container_state_stack.length);
+            System.arraycopy(_container_state_stack, 0, temp, 0, oldlen);
             _container_state_stack = temp;
         }
         set_container_flags(newContainer);

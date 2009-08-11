@@ -119,12 +119,12 @@ public final class IonBinaryReader
     int     _value_len;
 
     // local stack for stepInto() and stepOut()
-    int         _top;
-    int[]       _next_position_stack;
-    int[]       _parent_tid_stack;
-    int[]       _local_end_stack;
-    SymbolTable[] _symbol_stack;
-
+    private final static int DEFAULT_STACK_DEPTH = 10;
+    int           _top;
+    int[]         _next_position_stack = new int[DEFAULT_STACK_DEPTH];
+    int[]         _parent_tid_stack    = new int[DEFAULT_STACK_DEPTH];
+    int[]         _local_end_stack     = new int[DEFAULT_STACK_DEPTH];
+    SymbolTable[] _symbol_stack        = new SymbolTable[DEFAULT_STACK_DEPTH];
 
 
     public IonBinaryReader(byte[] buf, int start, int len,
@@ -635,7 +635,7 @@ public final class IonBinaryReader
         }
 
         // first make room, if we need to
-        if (_next_position_stack == null || _next_position_stack.length <= _top) {
+        if (_top >= _next_position_stack.length) {
             grow();
         }
 
@@ -647,7 +647,6 @@ public final class IonBinaryReader
         int next_start = _reader.position() + _value_len;
         _next_position_stack[_top] = next_start;
         _parent_tid_stack[_top] = _parent_tid;
-        // _in_struct_stack[_top] = _in_struct;
         _local_end_stack[_top] = _local_end;
         _symbol_stack[_top] = _current_symtab;
         _top++;
@@ -660,20 +659,19 @@ public final class IonBinaryReader
         _parent_tid = (_value_tid >> 4) & 0xf;
     }
     private void grow() {
-        int newlen = (_next_position_stack == null) ? 10 : (_next_position_stack.length * 2);
+        int oldlen = _next_position_stack.length;
+        int newlen =  oldlen * 2;
         int [] temp1 = new int[newlen];
         int [] temp2 = new int[newlen];
         int [] temp3 = new int[newlen];
         SymbolTable [] temp4 = new SymbolTable[newlen];
-        if (_top > 1) {
-            System.arraycopy(_next_position_stack, 0, temp1, 0, _top);
-            System.arraycopy(_parent_tid_stack, 0, temp2, 0, _top);
-            //System.arraycopy(_in_struct_stack, 0, temp2, 0, _top);
-            System.arraycopy(_local_end_stack, 0, temp3, 0, _top);
-            System.arraycopy(_symbol_stack, 0, temp4, 0, _top);
-        }
+
+        System.arraycopy(_next_position_stack, 0, temp1, 0, oldlen);
+        System.arraycopy(_parent_tid_stack, 0, temp2, 0, oldlen);
+        System.arraycopy(_local_end_stack, 0, temp3, 0, oldlen);
+        System.arraycopy(_symbol_stack, 0, temp4, 0, oldlen);
+
         _next_position_stack = temp1;
-        //_in_struct_stack = temp2;
         _parent_tid_stack = temp2;
         _local_end_stack = temp3;
         _symbol_stack = temp4;
@@ -690,11 +688,9 @@ public final class IonBinaryReader
 
         _top--;
         next_start = _next_position_stack[_top];
-        //_in_struct = _in_struct_stack[_top];
         _parent_tid = _parent_tid_stack[_top];
         _local_end = _local_end_stack[_top];
         _current_symtab   = _symbol_stack[_top];
-        // _expect_symbol_table = _;
 
         _reader.position(next_start);
         _state = S_BEFORE_TID;
