@@ -648,13 +648,14 @@ public abstract class IonValueImpl
         if (hasTypeAnnotation(annotation)) return;
 
         // allocate a larger array and copy if necessary
-        int len = (_annotations == null) ? 0 : _annotations.length;
-        String[] temp = new String[len + 1];
+        int oldlen = (_annotations == null) ? 0 : _annotations.length;
+        int newlen = oldlen + 1;
+        String[] temp = new String[newlen];
         if (_annotations != null) {
-            System.arraycopy(this._annotations, 0, temp, 0, len);
+            System.arraycopy(this._annotations, 0, temp, 0, oldlen);
         }
         // load the new sid
-        temp[len] = annotation;
+        temp[newlen - 1] = annotation;
         this._annotations = temp;
 
         setDirty();

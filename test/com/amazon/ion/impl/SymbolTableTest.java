@@ -8,6 +8,8 @@ import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.UnifiedSymbolTable.ION_SHARED_SYMBOL_TABLE;
+import com.amazon.ion.IonMutableCatalog;
+import com.amazon.ion.system.SystemFactory;
 
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
@@ -467,12 +469,34 @@ public class SymbolTableTest
         assertEquals(14, symbolTable.findSymbol("fred3"));
         assertEquals(15, symbolTable.findSymbol("fred4"));
 
-        // Gaps left by second copies of 'imported 1' and 'imported 2'
-        assertNull(symbolTable.findKnownSymbol(12));
-        assertNull(symbolTable.findKnownSymbol(13));
+        // JIRA ION-76, redundant symbols should retain identity
+        assertEquals("imported 1", symbolTable.findKnownSymbol(12));
+        assertEquals("imported 2", symbolTable.findKnownSymbol(13));
     }
 
-
+    // JIRA ION-75
+    public void XXXtestDupLocalSymbolOnDatagram() throws Exception {
+        final IonSystem ion1 = SystemFactory.newSystem(); 
+        final SymbolTable st = ion1.newSharedSymbolTable("foobar", 1, Arrays.asList("s1").iterator());
+        final IonMutableCatalog cat = new SimpleCatalog();
+        cat.putTable(st);
+        
+        // ION-75 has the datagram producing something like:
+        // $ion_1_0 $ion_symbol_table::{imports:[{name: "foobar", version: 1, max_id: 1}], symbols: ["s1", "l1"]} $11 $12
+        // local table should not have "s1", user values should be $10 $11
+        IonDatagram dg = ion1.newDatagram(st);
+        dg.add().newSymbol("s1");
+        dg.add().newSymbol("l1");
+        
+        final IonSystem ion2 = SystemFactory.newSystem(cat);
+        
+        dg = ion2.getLoader().load(dg.getBytes());
+        final IonSymbol sym1 = (IonSymbol) dg.get(0);
+        final IonSymbol sym2 = (IonSymbol) dg.get(1);
+        assertEquals(10, sym1.getSymbolId());
+        assertEquals(11, sym2.getSymbolId());
+    }
+    
 
     public void testMalformedImportsField()
     {

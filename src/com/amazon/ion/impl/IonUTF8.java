@@ -10,13 +10,13 @@ import com.amazon.ion.IonException;
  * to "understand" UTF-8 encoded input.  This may duplicate values that
  * are available in Java's Character class, but the goal is to fully
  * control and isolate the UTF-8 conversion here.
- * 
+ *
  * The helper functions are intended to avoid the various bit twiddling
  * errors that can easily occur when working with bits.  As these functions
  * are all static final methods, and very short, the Java compilers should
  * find them very easy to in-line.  (in previous testing I have observed
  * that the Sun JVM heavily in-lines such methods).
- * 
+ *
  * @author csuver
  * 21 April 2009
  *
@@ -35,13 +35,13 @@ public class IonUTF8 {
     private final static int UNICODE_THREE_BYTE_MASK           = 0x0F;       // 4 bits
     private final static int UNICODE_FOUR_BYTE_MASK            = 0x07;       // 3 bits
     private final static int UNICODE_CONTINUATION_BYTE_MASK    = 0x3F;       // 6 bits in each continuation char
-    
+
     private final static int MAXIMUM_UTF16_1_CHAR_CODE_POINT   = 0x0000FFFF;
-    private final static int SURROGATE_OFFSET                  = 0x00100000;
+    private final static int SURROGATE_OFFSET                  = 0x00010000;
     private final static int SURROGATE_MASK                    = 0xFFFFFC00;  // 0b 1111 1100 0000 0000
     private final static int HIGH_SURROGATE                    = 0x0000D800;  // 0b 1101 1000 0000 0000
     private final static int LOW_SURROGATE                     = 0x0000DC00;  // 0b 1101 1100 0000 0000
-    
+
     public final static boolean isHighSurrogate(int b) {
         return ((b & SURROGATE_MASK) == HIGH_SURROGATE);
     }
@@ -51,7 +51,7 @@ public class IonUTF8 {
     public final static boolean isSurrogate(int b) {
         return (b >= 0xD800 && b <= 0xDFFF);  // 55296 to 57343 or 2048 chars in all
     }
-    
+
     public final static boolean isOneByteUTF8(int b) {
         return ((b & 0x80) == 0);
     }
@@ -67,10 +67,10 @@ public class IonUTF8 {
     public final static boolean isContinueByteUTF8(int b) {
         return ((b & ~UNICODE_CONTINUATION_BYTE_MASK) == UNICODE_CONTINUATION_BYTE_HEADER);
     }
-    public final static boolean isStartByte(byte b) {
+    public final static boolean isStartByte(int b) {
         return isOneByteUTF8(b) || !isContinueByteUTF8(b);
     }
-              
+
     public final static char twoByteScalar(int b1, int b2) {
         int c = ((b1 & UNICODE_TWO_BYTE_MASK) << 6) | (b2 & UNICODE_CONTINUATION_BYTE_MASK);
         return (char)c;
@@ -108,10 +108,10 @@ public class IonUTF8 {
     public final static int getUTF8LengthFromFirstByte(int firstByte) {
         firstByte &= 0xff;
         if (isOneByteUTF8(firstByte))   return 1;
-        if (isTwoByteUTF8(firstByte))   return 2; 
-        if (isThreeByteUTF8(firstByte)) return 3; 
-        if (isFourByteUTF8(firstByte))  return 4; 
-        throw new InvalidUnicodeCodePoint();
+        if (isTwoByteUTF8(firstByte))   return 2;
+        if (isThreeByteUTF8(firstByte)) return 3;
+        if (isFourByteUTF8(firstByte))  return 4;
+        return -1;
     }
 
     public final static byte getByte1Of2(int unicodeScalar) {
@@ -152,32 +152,32 @@ public class IonUTF8 {
     }
     public final static int getAs4BytesReversed(int unicodeScalar) {
         int four_bytes;
-        
+
         //loop to write these bytes out:
         //bytes = getAs4Bytes(us)
         //do {
         //    write(bytes & 0xff);
         //    bytes = (bytes >>> 8);  // don't sign extend
         //} until (bytes == 0);
-        
+
         switch (getUTF8ByteCount(unicodeScalar)) {
         case 1:
             return unicodeScalar;
         case 2:
             four_bytes  = getByte1Of2(unicodeScalar);
             four_bytes |= getByte2Of2(unicodeScalar) << 8;
-            return four_bytes; 
+            return four_bytes;
         case 3:
             four_bytes  = getByte1Of3(unicodeScalar);
             four_bytes |= getByte2Of3(unicodeScalar) << 8;
             four_bytes |= getByte3Of3(unicodeScalar) << 16;
-            return four_bytes; 
+            return four_bytes;
         case 4:
             four_bytes  = getByte1Of4(unicodeScalar);
             four_bytes |= getByte2Of4(unicodeScalar) << 8;
             four_bytes |= getByte3Of4(unicodeScalar) << 16;
             four_bytes |= getByte4Of4(unicodeScalar) << 24;
-            return four_bytes; 
+            return four_bytes;
         }
         throw new InvalidUnicodeCodePoint();
     }
@@ -195,15 +195,15 @@ public class IonUTF8 {
      * @param maxLength maximum number of array elements to fill
      * @return number of bytes written to the output array
      */
-    public final static int convertToUTF8Bytes(int unicodeScalar, byte[] outputBytes, int offset, int maxLength) 
+    public final static int convertToUTF8Bytes(int unicodeScalar, byte[] outputBytes, int offset, int maxLength)
     {
         int dst = offset;
         int end = offset + maxLength;
-        
+
         switch (getUTF8ByteCount(unicodeScalar)) {
         case 1:
             if (dst >= end) throw new ArrayIndexOutOfBoundsException();
-            outputBytes[dst++] = (byte)(unicodeScalar & 0xff); 
+            outputBytes[dst++] = (byte)(unicodeScalar & 0xff);
             break;
         case 2:
             if (dst+1 >= end) throw new ArrayIndexOutOfBoundsException();
@@ -222,12 +222,45 @@ public class IonUTF8 {
             outputBytes[dst++] = getByte2Of4(unicodeScalar);
             outputBytes[dst++] = getByte3Of4(unicodeScalar);
             outputBytes[dst++] = getByte4Of4(unicodeScalar);
-            break; 
+            break;
         }
         return dst - offset;
     }
+    /**
+     * converts a unicode code point to a 0-3 bytes of UTF8
+     * encoded data and a length - note this doesn't pack
+     * a 1 byte character and it returns the start character.
+     * this is the unpacking routine
+     *  while (_utf8_pretch_byte_count > 0 && offset < limit) {
+     *    _utf8_pretch_byte_count--;
+     *    buffer[offset++] = (byte)((_utf8_pretch_bytes >> (_utf8_pretch_byte_count*8)) & 0xff);
+     *  }
+     */
+    public final static int packBytesAfter1(int unicodeScalar, int utf8Len)
+    {
+        int packed_chars;
 
-    public final static int getScalarFrom4BytesReversed(int utf8BytesReversed) 
+        switch (utf8Len) {
+        default:
+            throw new IllegalArgumentException("pack requires len > 1");
+        case 2:
+            packed_chars = getByte2Of2(unicodeScalar);
+            break;
+        case 3:
+            packed_chars  = getByte2Of3(unicodeScalar);
+            packed_chars |= getByte3Of3(unicodeScalar) << 8;
+            break;
+        case 4:
+            packed_chars = getByte2Of4(unicodeScalar);
+            packed_chars |= getByte3Of4(unicodeScalar) << 8;
+            packed_chars |= getByte4Of4(unicodeScalar) << 16;
+            break;
+        }
+        return packed_chars;
+
+    }
+
+    public final static int getScalarFrom4BytesReversed(int utf8BytesReversed)
     {
         //loop to read these bytes out:
         // int b4r = read();
@@ -244,14 +277,14 @@ public class IonUTF8 {
         case 2:
             c  = ((c & UNICODE_TWO_BYTE_MASK) << 6);
             c |= ((utf8BytesReversed >> 8) & UNICODE_CONTINUATION_BYTE_MASK);
-            return c; 
+            return c;
         case 3:
             c  = ((c & UNICODE_THREE_BYTE_MASK) << 12);
             c |= ((utf8BytesReversed >> 2) & (UNICODE_CONTINUATION_BYTE_MASK) << 6);
             c |= ((utf8BytesReversed >> 16) & UNICODE_CONTINUATION_BYTE_MASK);
-            return c; 
+            return c;
         case 4:
-            c  = ((c & UNICODE_FOUR_BYTE_MASK) << 18); 
+            c  = ((c & UNICODE_FOUR_BYTE_MASK) << 18);
             c |= (((utf8BytesReversed << 4) & (UNICODE_CONTINUATION_BYTE_MASK) << 12));
             c |= (((utf8BytesReversed >> 2) & (UNICODE_CONTINUATION_BYTE_MASK) << 6));
             c |= ((utf8BytesReversed >> 24) & UNICODE_CONTINUATION_BYTE_MASK);
@@ -281,7 +314,7 @@ public class IonUTF8 {
         int c = bytes[src++] & 0xff;
         int utf8length = getUTF8LengthFromFirstByte(c);
         if (src + utf8length > end) throw new ArrayIndexOutOfBoundsException();
-        
+
         return utf8length;
     }
     /**
@@ -299,7 +332,7 @@ public class IonUTF8 {
      * @param maxLength maximum number of bytes to consume from the array
      * @return Unicode scalar
      */
-    public final static int getScalarFromBytes(byte[] bytes, int offset, int maxLength) 
+    public final static int getScalarFromBytes(byte[] bytes, int offset, int maxLength)
     {
         int src = offset;
         int end = offset + maxLength;
@@ -315,20 +348,20 @@ public class IonUTF8 {
         case 2:
             c  = (c & UNICODE_TWO_BYTE_MASK);
             c |= ((bytes[src++] & 0xff) & UNICODE_CONTINUATION_BYTE_MASK);
-            break; 
+            break;
         case 3:
             c  = (c & UNICODE_THREE_BYTE_MASK);
             c |= ((bytes[src++] & 0xff) & UNICODE_CONTINUATION_BYTE_MASK);
             c |= ((bytes[src++] & 0xff) & UNICODE_CONTINUATION_BYTE_MASK);
-            break; 
+            break;
         case 4:
-            c  = (c & UNICODE_FOUR_BYTE_MASK); 
+            c  = (c & UNICODE_FOUR_BYTE_MASK);
             c |= ((bytes[src++] & 0xff) & UNICODE_CONTINUATION_BYTE_MASK);
             c |= ((bytes[src++] & 0xff) & UNICODE_CONTINUATION_BYTE_MASK);
             c |= ((bytes[src++] & 0xff) & UNICODE_CONTINUATION_BYTE_MASK);
             break;
         default:
-            throw new InvalidUnicodeCodePoint("code point is invalid: "+utf8length);                
+            throw new InvalidUnicodeCodePoint("code point is invalid: "+utf8length);
         }
         return c;
     }

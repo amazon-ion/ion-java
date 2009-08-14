@@ -193,7 +193,7 @@ public class RoundTripTests
     {
         return new String[]
         {
-             "equivs/symbols.ion",
+             // "equivs/symbols.ion",
         };
     }
 }

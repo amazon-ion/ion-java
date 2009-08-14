@@ -1380,6 +1380,7 @@ public final class Timestamp
         if (t == null) return false;
 
         // if the precisions are not the same the values are not
+        // precision doesn't matter WRT to equality
         if (this._precision != t._precision) return false;
 
         // if the local offset are not the same the values are not

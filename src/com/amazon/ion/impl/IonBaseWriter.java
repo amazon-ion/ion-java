@@ -34,10 +34,11 @@ public abstract class IonBaseWriter
     protected String      _field_name;
     protected int         _field_name_sid;
 
+    private static final int DEFAULT_ANNOTATION_COUNT = 10;
     protected IonType     _annotations_type;     // really ion type is only used for int, string or null (unknown)
     protected int         _annotation_count;
-    protected String[]    _annotations;
-    protected int[]       _annotation_sids = new int[10];
+    protected String[]    _annotations = new String[DEFAULT_ANNOTATION_COUNT];
+    protected int[]       _annotation_sids = new int[DEFAULT_ANNOTATION_COUNT];
 
 
     public SymbolTable getSymbolTable()
@@ -115,6 +116,7 @@ public abstract class IonBaseWriter
     protected void growAnnotations(int length) {
         int oldlen = (_annotations == null) ? 0 : _annotations.length;
         if (length < oldlen) return;
+
         int newlen = (_annotations == null) ? 10 : (_annotations.length * 2);
         if (length > newlen) {
             newlen = length;
@@ -123,12 +125,12 @@ public abstract class IonBaseWriter
         String[] temp1 = new String[newlen];
         int[]    temp2 = new int[newlen];
 
-        if (_annotation_count > 0) {
+        if (oldlen > 0) {
             if (_annotations_type == IonType.STRING) {
-                System.arraycopy(_annotations, 0, temp1, 0, _annotation_count);
+                System.arraycopy(_annotations, 0, temp1, 0, oldlen);
             }
             if (_annotations_type == IonType.INT) {
-                System.arraycopy(_annotation_sids, 0, temp2, 0, _annotation_count);
+                System.arraycopy(_annotation_sids, 0, temp2, 0, oldlen);
             }
         }
         _annotations = temp1;

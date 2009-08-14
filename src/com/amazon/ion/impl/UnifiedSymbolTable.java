@@ -42,7 +42,13 @@ import java.util.Iterator;
  *   then local names from the new max id
  *
  */
-final class UnifiedSymbolTable
+
+// FIXME: this should really be public, but while the next
+//        text reader is in the com.amazon.ion.temp block o
+//        code it has to be for me to see it in IonTextUserReader
+public final
+
+ class UnifiedSymbolTable
     implements SymbolTable
 {
 
@@ -331,6 +337,26 @@ final class UnifiedSymbolTable
         share(name, version);
     }
 
+    /**
+     * Loads a local symbol table from an IonReader and makes it ready
+     * for use.
+     * @param reader positioned after hasNext on a struct with a local symbol table annotation
+     * @param catalog user catalog
+     * @return local symbol table
+     */
+    public static synchronized UnifiedSymbolTable loadLocalSymbolTable(IonReader reader, IonCatalog catalog)
+    {
+        SymbolTable        system_symbols = reader.getSymbolTable().getSystemSymbolTable();
+        UnifiedSymbolTable symtab = new UnifiedSymbolTable(system_symbols);
+
+        reader.next();
+        reader.stepIn();
+        symtab.readIonRep(SymbolTableType.LOCAL, reader, catalog);
+        reader.stepOut();
+
+        return symtab;
+    }
+
     // TODO get rid of this nasty static, it needs to come from the system.
     public static UnifiedSymbolTable getSystemSymbolTableInstance()
     {
@@ -400,7 +426,7 @@ final class UnifiedSymbolTable
 
     public int getImportedMaxId()
     {
-        // Not synchonized since this member never changes after construction.
+        // Not synchronized since this member never changes after construction.
         return _import_max_id;
     }
 
@@ -411,13 +437,13 @@ final class UnifiedSymbolTable
 
     public int getVersion()
     {
-        // Not synchonized since this member never changes after construction.
+        // Not synchronized since this member never changes after construction.
         return _version;
     }
 
     public String getName()
     {
-        // Not synchonized since this member never changes after construction.
+        // Not synchronized since this member never changes after construction.
         return _name;
     }
 
@@ -602,18 +628,9 @@ final class UnifiedSymbolTable
 
         _symbols[sid] = sym;
         Integer priorSid = _id_map.put(sym.name, sid);
-        if (priorSid != null) {
-            if (priorSid < sid) {
-                // Ignore this attempted re-definition
+        if (priorSid != null && priorSid < sid) {
+            // roll-back this attempted re-definition
                 _id_map.put(sym.name, priorSid);
-                _symbols[sid] = null;
-            }
-            else {
-                // Replace existing definition with higher sid
-                // TODO this will no longer be possible after removing
-                // defineString(String, int)
-                _symbols[priorSid] = null;
-            }
         }
 
         if (sid > _max_id) _max_id = sid;
@@ -897,7 +914,7 @@ final class UnifiedSymbolTable
                     fieldId = IMPORTS_SID;
                 }
             }
-            
+
             switch (fieldId) {
             case UnifiedSymbolTable.VERSION_SID:
                 if (symtabType == SHARED && fieldType == IonType.INT) {
