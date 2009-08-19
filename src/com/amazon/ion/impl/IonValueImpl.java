@@ -469,10 +469,24 @@ public abstract class IonValueImpl
         if (_container == null) {
             return null;
         }
+
+        // TODO why is this here?  (See below as well)
+        // I think this is vestigial embedded value logic that's now wrong.
         if (_container._isSystemValue) {
             return _container.getContainer();
         }
         return _container;
+    }
+
+    public final boolean removeFromContainer()
+    {
+        // TODO how does this interact with the strange systemvalue note above?
+        IonContainer c = getContainer();
+        if (c == null) return false;
+
+        boolean removed = c.remove(this);
+        assert removed;
+        return true;
     }
 
 

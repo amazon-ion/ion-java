@@ -93,6 +93,12 @@ public interface IonValue
     extends Cloneable
 {
     /**
+     * A zero-length immutable {@code IonValue} array.
+     */
+    public static final IonValue[] EMPTY_ARRAY = new IonValue[0];
+
+
+    /**
      * Gets an enumeration value identifying the core Ion data type of this
      * object.
      *
@@ -165,6 +171,15 @@ public interface IonValue
      * or <code>null</code> if this is not part of one.
      */
     public IonContainer getContainer();
+
+
+    /**
+     * Removes this value from its container, if any.
+     *
+     * @returns true if this value was in a container before this method was
+     * called.
+     */
+    public boolean removeFromContainer();
 
 
     /**

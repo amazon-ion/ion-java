@@ -192,6 +192,27 @@ public abstract class ContainerTestCase
     }
 
 
+    public void testRemoveFromContainer()
+    {
+        IonValue n = system().newNull();
+        assertFalse(n.removeFromContainer());
+
+        IonValue m = system().newInt(2);
+        IonContainer c = wrap(n, m);
+
+        assertTrue(n.removeFromContainer());
+        assertEquals(null, n.getContainer());
+        assertEquals(null, n.getFieldName());
+
+        assertEquals(1, c.size());
+        assertSame(m, c.iterator().next());
+        assertTrue(m.removeFromContainer());
+        assertEquals(null, m.getContainer());
+        assertEquals(null, m.getFieldName());
+        assertEquals(0, c.size());
+    }
+
+
     public void testDetachHasDifferentSymtab()
     {
         IonContainer list = wrapAndParse("sym1", "[sym2]", "{f:sym3}", "a::3");
