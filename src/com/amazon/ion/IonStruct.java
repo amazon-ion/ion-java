@@ -130,10 +130,31 @@ public interface IonStruct
 
 
     /**
-     * Removes from this struct all fields with names in the given list.
+     * Removes a field by name, returning a value that was previously
+     * associated with the field, or {@code null} if this struct contained no
+     * such field.
+     * <p>
+     * Because Ion structs may have repeated fields, additional fields with the
+     * given name may still exist after this method returns.
+     * <p>
+     * If this struct is null ({@link #isNullValue()}) or empty,
+     * then this method returns null and has no effect.
      *
+     * @param fieldName must not be null or empty.
+     *
+     * @return previous value associated with the specifed field name, or
+     * {@code null} if there was no such field.
+     */
+    public IonValue remove(String fieldName);
+
+
+    /**
+     * Removes from this struct all fields with names in the given list.
      * If multiple fields with a given name exist in this struct,
      * they will all be removed.
+     * <p>
+     * If this struct is null ({@link #isNullValue()}) or empty,
+     * then this method returns {@code false} and has no effect.
      *
      * @param fieldNames the names of the fields to remove.
      *
@@ -149,6 +170,9 @@ public interface IonStruct
      * Retains only the fields in this struct that have one of the given names.
      * In other words, removes all fields with names that are not in
      * {@code fieldNames}.
+     * <p>
+     * If this struct is null ({@link #isNullValue()}) or empty,
+     * then this method returns {@code false} and has no effect.
      *
      * @param fieldNames the names of the fields to retain.
      *

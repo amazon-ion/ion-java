@@ -505,6 +505,59 @@ public class StructTest
         s.put("g", v2);
     }
 
+
+    public void testRemove()
+    {
+        IonStruct s = (IonStruct) oneValue("{a:1,b:2,b:3,c:4}");
+
+        IonValue v = s.remove("c");
+        checkInt(4, v);
+        assertEquals(3, s.size());
+        assertNull(s.get("c"));
+
+        v = s.remove("q");
+        assertNull(v);
+        assertEquals(3, s.size());
+        assertNull(s.get("q"));
+
+        v = s.remove("a");
+        checkInt(1, v);
+
+        v = s.remove("b");
+        assertTrue(v.getType() == IonType.INT);
+        assertEquals(1, s.size());
+        long leftoverB = ((IonInt)s.get("b")).longValue();
+        assertTrue(leftoverB == 2 || leftoverB == 3);
+
+        try {
+            s.remove((String) null);
+            fail("Expected NullPointerException");
+        }
+        catch (NullPointerException e) { }
+
+        s = system().newEmptyStruct();
+        assertNull(s.remove("something"));
+        assertTrue(s.isEmpty());
+        assertFalse(s.isNullValue());
+
+        s = system().newNullStruct();
+        assertNull(s.remove("something"));
+        assertTrue(s.isNullValue());
+    }
+
+    public void testRemoveOnReadOnlyStruct()
+    {
+        IonStruct s = (IonStruct) oneValue("{a:1}");
+        s.makeReadOnly();
+
+        try {
+            s.remove("a");
+            fail("expected exception");
+        }
+        catch (ReadOnlyValueException e) { }
+        checkInt(1, s.get("a"));
+    }
+
     public void testRemoveAll()
     {
         IonStruct s = (IonStruct) oneValue("{a:1,b:2,b:3,c:4,d:5}");
@@ -530,13 +583,35 @@ public class StructTest
         }
         catch (NullPointerException e) { }
 
-        // TODO clarify null.struct behavior
-//        s = system().newNullStruct();
-//        try {
-//            s.removeAll((String[]) null);
-//            fail("Expected NullPointerException");
-//        }
-//        catch (NullPointerException e) { }
+        try {
+            s.removeAll("1", null, "2");
+            fail("Expected NullPointerException");
+        }
+        catch (NullPointerException e) { }
+
+        s = system().newEmptyStruct();
+        changed = s.removeAll((String[]) null);
+        assertFalse(changed);
+        assertTrue(s.isEmpty());
+        assertFalse(s.isNullValue());
+
+        s = system().newNullStruct();
+        changed = s.removeAll((String[]) null);
+        assertFalse(changed);
+        assertTrue(s.isNullValue());
+    }
+
+    public void testRemoveAllOnReadOnlyStruct()
+    {
+        IonStruct s = (IonStruct) oneValue("{a:1}");
+        s.makeReadOnly();
+
+        try {
+            s.removeAll("a");
+            fail("expected exception");
+        }
+        catch (ReadOnlyValueException e) { }
+        checkInt(1, s.get("a"));
     }
 
     public void testRetainAll()
@@ -559,6 +634,42 @@ public class StructTest
         changed = s.retainAll("b", "a");
         assertTrue(changed);
         assertEquals(2, s.size());
+
+        try {
+            s.retainAll((String[]) null);
+            fail("Expected NullPointerException");
+        }
+        catch (NullPointerException e) { }
+
+        try {
+            s.retainAll("1", null, "2");
+            fail("Expected NullPointerException");
+        }
+        catch (NullPointerException e) { }
+
+        s = system().newEmptyStruct();
+        changed = s.retainAll("holla");
+        assertFalse(changed);
+        assertTrue(s.isEmpty());
+        assertFalse(s.isNullValue());
+
+        s = system().newNullStruct();
+        changed = s.removeAll("yo");
+        assertFalse(changed);
+        assertTrue(s.isNullValue());
+    }
+
+    public void testRetainAllOnReadOnlyStruct()
+    {
+        IonStruct s = (IonStruct) oneValue("{a:1}");
+        s.makeReadOnly();
+
+        try {
+            s.retainAll("X");
+            fail("expected exception");
+        }
+        catch (ReadOnlyValueException e) { }
+        checkInt(1, s.get("a"));
     }
 
     public void testRemoveViaIteratorThenDirect()

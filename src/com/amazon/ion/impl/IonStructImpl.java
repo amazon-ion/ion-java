@@ -218,6 +218,22 @@ public final class IonStructImpl
         };
     }
 
+    public IonValue remove(String fieldName)
+    {
+        checkForLock();
+
+        // TODO optimize
+        for (Iterator<IonValue> i = iterator(); i.hasNext();)
+        {
+            IonValue field = i.next();
+            if (fieldName.equals(field.getFieldName()))
+            {
+                i.remove();
+                return field;
+            }
+        }
+        return null;
+    }
 
     public boolean removeAll(String... fieldNames)
     {
