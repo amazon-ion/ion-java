@@ -97,6 +97,21 @@ public interface IonSequence
 
 
     /**
+     * Removes the element at the specified position.
+     * Shifts any subsequent elements to the left (subtracts one from their
+     * indices). Returns the element that was removed from the list.
+     *
+     * @param index the index of the elment to be removed.
+     *
+     * @return the element previously at the specified position.
+     *
+     * @throws IndexOutOfBoundsException if the index is out of range
+     * (index < 0 || index >= size()).
+     */
+    public IonValue remove(int index);
+
+
+    /**
      * Removes a given {@link IonValue} from this sequence, if it is present.
      * <p>
      * <b>Due to the reference-equality-based semantics of Ion sequences,
@@ -259,7 +274,6 @@ public interface IonSequence
      */
     public ListIterator<IonValue> listIterator(int index);
 
-//    public IonValue remove(int index); // OPTIONAL
 //    public IonValue set(int index, IonValue element); // OPTIONAL
 //    public List<IonValue> subList(int fromIndex, int toIndex);
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2007-20089 Amazon.com, Inc. All rights reserved.
+// Copyright (c) 2007-2009 Amazon.com, Inc. All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -24,7 +24,8 @@ public abstract class IonSequenceImpl
     /**
      * A zero-length array.
      */
-    protected static final IonValue[] EMPTY_VALUE_ARRAY = new IonValue[0];
+    protected static final IonValue[] EMPTY_VALUE_ARRAY = IonValue.EMPTY_ARRAY;
+    // TODO inline and remove this
 
     /**
      * Constructs a sequence backed by a binary buffer.
@@ -165,6 +166,14 @@ public abstract class IonSequenceImpl
         };
     }
 
+
+    public IonValue remove(int index)
+    {
+        // TODO optimize
+        IonValue v = get(index);
+        remove(v);
+        return v;
+    }
 
     public boolean remove(Object o)
     {

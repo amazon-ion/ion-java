@@ -406,6 +406,46 @@ public abstract class SequenceTestCase
     }
 
 
+    public void testRemoveByIndex()
+    {
+        IonSequence s = wrapAndParse("1", "2", "3");
+
+        try {
+            s.remove(-1);
+            fail("expected exception");
+        }
+        catch (IndexOutOfBoundsException e) { }
+
+        IonValue v = s.remove(1);
+        checkInt(2, v);
+        assertEquals(2, s.size());
+        checkInt(1, s.get(0));
+        checkInt(3, s.get(1));
+
+        try {
+            s.remove(2);
+            fail("expected exception");
+        }
+        catch (IndexOutOfBoundsException e) { }
+
+        v = s.remove(1);
+        checkInt(3, v);
+        assertEquals(1, s.size());
+        checkInt(1, s.get(0));
+    }
+
+    public void testRemoveByIndexOnReadOnly()
+    {
+        IonSequence s = wrapAndParse("1", "2", "3");
+        s.makeReadOnly();
+
+        try {
+            s.remove(0);
+            fail("expected exception");
+        }
+        catch (ReadOnlyValueException e) { }
+    }
+
     public void testRemoveAll()
     {
         IonNull nullValue1 = system().newNull();
