@@ -176,8 +176,8 @@ public interface IonValue
     /**
      * Removes this value from its container, if any.
      *
-     * @returns true if this value was in a container before this method was
-     * called.
+     * @return {@code true} if this value was in a container before this method
+     * was called.
      */
     public boolean removeFromContainer();
 
