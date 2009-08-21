@@ -558,14 +558,20 @@ done:       for (;;) {
             return new String(chars, 0, ii);
         }
 
-        public int readUnicodeScalar() throws IOException {
-            int c = -1, b;
+        public final int readUnicodeScalar() throws IOException {
+            int b;
 
             b = read();
             // ascii is all good, even -1 (eof)
-            if (b < 0x80) {
-                return b;
+            if (b >= 0x80) {
+                b = readUnicodeScalar_helper(b);
+
             }
+            return b;
+        }
+        private final  int readUnicodeScalar_helper(int b) throws IOException
+        {
+            int c = -1;
 
             // now we start gluing the multi-byte value together
             if ((b & 0xe0) == 0xc0) {

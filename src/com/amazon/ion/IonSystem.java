@@ -127,6 +127,9 @@ public interface IonSystem
 
     /**
      * Materializes a shared symbol table from its serialized form.
+     * This method expects the reader to be positioned before the struct.
+     * Which is to say the reader's next() method has not been called
+     * to position the reader on the symbol table struct.
      *
      * @param reader must not be null.
      *
@@ -134,6 +137,15 @@ public interface IonSystem
      */
     public SymbolTable newSharedSymbolTable(IonReader reader);
 
+    /**
+     * Materializes a shared symbol table from its serialized form.
+     *
+     * @param reader must not be null.
+     * @param alreadyOnStruct is true if the caller has aleady next-ed onto the struct, false if a next call is needed
+     *
+     * @return a new symbol table instance.
+     */
+    public SymbolTable newSharedSymbolTable(IonReader reader, boolean alreadyOnStruct);
 
     /**
      * Creates a new empty datagram.
@@ -186,7 +198,7 @@ public interface IonSystem
 
     /**
      * Constructs a new loader instance using the given catalog.
-     * 
+     *
      * @see #newLoader()
      */
     public IonLoader newLoader(IonCatalog catalog);

@@ -528,9 +528,12 @@ public final class IonTextReader
         // TODO do we really want only the system symtab in context?
         SymbolTable temp = _current_symtab;
         _current_symtab = _current_symtab.getSystemSymbolTable();
+
         this.stepIn();
+
         UnifiedSymbolTable table =
-            new UnifiedSymbolTable(_current_symtab, this, _catalog);
+            UnifiedSymbolTable.makeNewLocalSymbolTable(_current_symtab.getSystemSymbolTable(), _catalog, this);
+
         this.stepOut();
         _current_symtab = temp;
         return table;
@@ -545,7 +548,7 @@ public final class IonTextReader
     public SymbolTable getSymbolTable()
     {
         if (_current_symtab == null) {
-            _current_symtab = new UnifiedSymbolTable(UnifiedSymbolTable.getSystemSymbolTableInstance());
+            _current_symtab = UnifiedSymbolTable.makeNewLocalSymbolTable(1);
         }
         assert _current_symtab.isLocalTable() || _current_symtab.isSystemTable();
         return _current_symtab;
@@ -917,7 +920,7 @@ public final class IonTextReader
             int sid = syms.findSymbol(value);
             if (sid <= 0) {
                 if (syms.isSystemTable()) {
-                    _current_symtab = new UnifiedSymbolTable(syms);
+                    _current_symtab = UnifiedSymbolTable.makeNewLocalSymbolTable(syms);
                     syms = _current_symtab;
                 }
                 assert syms.isLocalTable();

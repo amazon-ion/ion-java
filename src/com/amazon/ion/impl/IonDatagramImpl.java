@@ -3,6 +3,7 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
+
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
@@ -36,10 +37,10 @@ public final class IonDatagramImpl
     static private final int DATAGRAM_TYPEDESC  =
         IonConstants.makeTypeDescriptor(IonConstants.tidSexp,
                                         IonConstants.lnIsEmptyContainer);
-    
+
     /** Underlying catalog */
     private final IonCatalog _catalog;
-    
+
     /**
      * Used while constructing, then set to null.
      */
@@ -203,7 +204,7 @@ public final class IonDatagramImpl
                               catalog,
                               initialSymbolTable, ionText));
     }
-    
+
     /**
      * Workhorse constructor this does the actual work.
      *
@@ -248,7 +249,7 @@ public final class IonDatagramImpl
         // TODO this touches privates (testBinaryDataWithNegInt)
         _next_start = _buffer.buffer().size();
     }
-    
+
     /**
      * @param ionData must be in system mode
      */
@@ -384,8 +385,11 @@ public final class IonDatagramImpl
 
 //                if (false) {
                 IonStruct symtabStruct = (IonStruct) v;
-                symtab = new UnifiedSymbolTable(symtabStruct,
-                                                _catalog);
+                symtab = UnifiedSymbolTable.makeNewLocalSymbolTable(
+                             _system.getSystemSymbolTable()
+                             , symtabStruct
+                             ,_catalog
+                         );
 //                }
 //                else {
 //                    symtab = v.getSymbolTable();
@@ -811,8 +815,11 @@ public final class IonDatagramImpl
                         if (priorIsLocalSymtab)
                         {
                             currentSymtab =
-                                new UnifiedSymbolTable((IonStruct) _contents.get(ii - 1),
-                                                       _catalog);
+                                UnifiedSymbolTable.makeNewLocalSymbolTable(
+                                    _system.getSystemSymbolTable()
+                                  , (IonStruct) _contents.get(ii - 1)
+                                  ,_catalog
+                                );
                         }
                         else if (currentSymtab.isSystemTable())
                         {

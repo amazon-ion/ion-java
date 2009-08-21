@@ -70,11 +70,11 @@ public class IonReaderBinaryUserX extends IonReaderBinarySystemX
                 for(int ii=0; ii<count; ii++) {
                     if (_annotation_ids[ii] == UnifiedSymbolTable.ION_SYMBOL_TABLE_SID) {
                         stepIn();
-                        UnifiedSymbolTable symtab = new
-                            UnifiedSymbolTable(_system.getSystemSymbolTable()
-                                               ,this
-                                               ,_system.getCatalog()
-                            );
+                        if (!hasNext()) {
+                            this.error_at("local symbol table with an empty struct encountered");
+                        }
+                        UnifiedSymbolTable symtab =
+                            UnifiedSymbolTable.makeNewLocalSymbolTable(_system, this, true);
                         stepOut();
                         _symbols = symtab;
                         _has_next_needed = true;

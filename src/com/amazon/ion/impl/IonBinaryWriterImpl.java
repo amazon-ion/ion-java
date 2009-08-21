@@ -1079,18 +1079,15 @@ int tmp;
         int symbol_list_content_len = 0;
         int symbol_list_len = 0;
 
-        //Iterator<UnifiedSymbolTable.Symbol> syms = super.getSymbolTableSymbols();
-        //while (syms.hasNext()) {
-        //    UnifiedSymbolTable.Symbol s = syms.next();
-
         // TODO this is pretty awful encapsulation breakage.
-        UnifiedSymbolTable.Symbol[] syms = symtab._symbols;
-        for (int ii=symtab.getImportedMaxId()+1; ii<=symtab.getMaxId(); ii++) {
-            UnifiedSymbolTable.Symbol s = syms[ii];
+        UnifiedSymbolTableSymbol[] syms = symtab._symbols;
+        // FIXME: remove: for (int ii=symtab.getImportedMaxId()+1; ii<=symtab.getMaxId(); ii++) {
+        for (int ii=0; ii<symtab.getLocalSymbolCount(); ii++) {
+            UnifiedSymbolTableSymbol s = syms[ii];
             if (s == null) continue;
             assert s.source == symtab;
 
-            symbol_list_content_len += s.td_len + s.name_len;
+            symbol_list_content_len += s.getTdLen() + s.getNameLen();
         }
         if (symbol_list_content_len > 0) {
             symbol_list_len = 2; // fldid + typedesc
@@ -1153,18 +1150,15 @@ int tmp;
         if (symbol_list_content_len > 0) {
             written_symbols_header_len += out.writeVarUInt(UnifiedSymbolTable.SYMBOLS_SID, 1, true);
             written_symbols_header_len += out.writeTypeDescWithLength2(IonConstants.tidList, symbol_list_content_len);
-            //syms = super.getSymbolTableSymbols();
-            //while (syms.hasNext()) {
-            //    UnifiedSymbolTable.Symbol s = syms.next();
-            for (int ii=symtab.getImportedMaxId()+1; ii<=symtab.getMaxId(); ii++) {
-                UnifiedSymbolTable.Symbol s = syms[ii];
-                if (s == null) continue; // TODO can this happen?
+            for (int ii=0; ii<symtab.getLocalSymbolCount(); ii++) {
+                UnifiedSymbolTableSymbol s = syms[ii];
+                if (s == null) continue;
                 assert s.source == symtab;
 
-                int td_len2 = out.writeTypeDescWithLength(IonConstants.tidString, s.td_len - IonConstants.BB_TOKEN_LEN, s.name_len);
+                int td_len2 = out.writeTypeDescWithLength(IonConstants.tidString, s.getTdLen() - IonConstants.BB_TOKEN_LEN, s.getNameLen());
                 int name_len2 = out.writeString(s.name);
                 int t_len = td_len2 + name_len2;
-                if (t_len != s.td_len + s.name_len) {
+                if (t_len != s.getTdLen() + s.getNameLen()) {
                     int name_len3 = out.writeString(s.name);
                     throw new IllegalStateException("symbol length is wrong as " + name_len3);
                 }

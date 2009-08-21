@@ -65,6 +65,7 @@ public class IonSystemImpl
     private final UnifiedSymbolTable mySystemSymbols =
         UnifiedSymbolTable.getSystemSymbolTableInstance();
 
+
     private IonCatalog  myCatalog;
     private IonLoader   myLoader;
 
@@ -116,8 +117,7 @@ public class IonSystemImpl
     {
         if (imports == null || imports.length == 0)
         {
-            UnifiedSymbolTable st = new UnifiedSymbolTable(mySystemSymbols);
-            st.setSystem(this);
+            UnifiedSymbolTable st = UnifiedSymbolTable.makeNewLocalSymbolTable(this, mySystemSymbols);
             return st;
         }
 
@@ -142,24 +142,30 @@ public class IonSystemImpl
             systemTable = mySystemSymbols;
         }
 
-        UnifiedSymbolTable st = new UnifiedSymbolTable(systemTable, imports);
-        st.setSystem(this); // XXX
+        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewLocalSymbolTable(this, systemTable, imports);
+        st.setSystem(this);
         return st;
     }
 
 
-    public UnifiedSymbolTable newSharedSymbolTable(IonStruct serialized)
+    public UnifiedSymbolTable newSharedSymbolTable(IonStruct ionRep)
     {
-        UnifiedSymbolTable st = new UnifiedSymbolTable(serialized);
+        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewSharedSymbolTable(ionRep);
+        st.setSystem(this);
         return st;
     }
-
     public UnifiedSymbolTable newSharedSymbolTable(IonReader reader)
     {
-        UnifiedSymbolTable st = new UnifiedSymbolTable(reader);
+        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewSharedSymbolTable(reader, false);
+        st.setSystem(this);
         return st;
     }
-
+    public UnifiedSymbolTable newSharedSymbolTable(IonReader reader, boolean isOnStruct)
+    {
+        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewSharedSymbolTable(reader, isOnStruct);
+        st.setSystem(this);
+        return st;
+    }
     public UnifiedSymbolTable newSharedSymbolTable(String name,
                                                    int version,
                                                    Iterator<String> newSymbols,
@@ -191,7 +197,10 @@ public class IonSystemImpl
 
         addAllNonNull(syms, newSymbols);
 
-        return new UnifiedSymbolTable(name, version, syms.iterator());
+        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewSharedSymbolTable(name, version, syms.iterator());
+        st.setSystem(this);
+
+        return st;
     }
 
 
@@ -232,14 +241,6 @@ public class IonSystemImpl
         IonDatagramImpl datagram = newDatagram();
 
         if (initialChild != null) {
-            //LocalSymbolTable symtab = initialChild.getSymbolTable();
-            //if (symtab == null) {
-            //    symtab = this.newLocalSymbolTable();
-            //    IonValue ionRep = symtab.getIonRepresentation();
-            //    datagram.add(ionRep, true);
-            //    ((IonValueImpl)initialChild).setSymbolTable(symtab);
-            //}
-
             // This will fail if initialChild instanceof IonDatagram:
             datagram.add(initialChild);
         }
@@ -272,7 +273,7 @@ public class IonSystemImpl
     {
         return new LoaderImpl(this, myCatalog);
     }
-    
+
     public IonLoader newLoader(IonCatalog catalog)
     {
         return new LoaderImpl(this, catalog);
@@ -738,7 +739,7 @@ public class IonSystemImpl
 
     private boolean isUnderscoreAndDigits(String image, int firstChar, int lastChar)
     {
-        // you have to have enought characters for the underscore and
+        // you have to have enough characters for the underscore and
         // at least 1 digit
         if (lastChar - firstChar < 2) return false;
 

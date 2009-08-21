@@ -153,7 +153,7 @@ public class IonReaderTextUserX
     }
     private final void symbol_table_load()
     {
-        _symbols = UnifiedSymbolTable.loadLocalSymbolTable(this, _catalog);
+        _symbols = UnifiedSymbolTable.loadLocalSymbolTable(this._system, this, _catalog);
         return;
     }
     private final void symbol_table_reset()

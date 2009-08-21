@@ -572,12 +572,10 @@ public final class IonBinaryReader
         int td = _reader.read();
 
         if (((td >>> 4) & 0xf) == IonConstants.tidStruct) {
-            //boolean was_struct = this._in_struct;
             int     prev_parent_tid = this._parent_tid;  // TODO Always DATAGRAM
             int     prev_end = this._local_end;
 
             this._value_tid = td;
-            //this._in_struct = true;
             this._parent_tid = IonConstants.tidStruct;
 
             int len = this.read_length(td);
@@ -590,7 +588,7 @@ public final class IonBinaryReader
 
             SymbolTable systemSymbols = _current_symtab.getSystemSymbolTable();
             UnifiedSymbolTable local =
-                new UnifiedSymbolTable(systemSymbols, this, _catalog);
+                UnifiedSymbolTable.makeNewLocalSymbolTable(systemSymbols, _catalog, this); // ins truct == true
 
             _eof = false; // set by hasNext() on the last field in the symtab
 

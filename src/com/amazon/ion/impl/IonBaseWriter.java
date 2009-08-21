@@ -226,14 +226,16 @@ public abstract class IonBaseWriter
         // know a specific system symtab at any point of the data.
 
         if (_symbol_table == null) {
-            _symbol_table = new UnifiedSymbolTable(UnifiedSymbolTable.getSystemSymbolTableInstance());
+            // TODO: this should really have the correct Ion version here so that
+            //       we could pass it in to attach the right system symbol table
+            _symbol_table = UnifiedSymbolTable.makeNewLocalSymbolTable(1);
         }
 
         int sid = _symbol_table.findSymbol(name);
         if (sid > 0) return sid;
 
         if (_symbol_table.isSystemTable()) {
-            _symbol_table = new UnifiedSymbolTable(_symbol_table);
+            _symbol_table = UnifiedSymbolTable.makeNewLocalSymbolTable(_symbol_table);
         }
         assert _symbol_table.isLocalTable();
 

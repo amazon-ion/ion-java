@@ -184,6 +184,7 @@ abstract public class IonReaderBinaryRawX implements IonReader
     private static final int BINARY_VERSION_MARKER_TID = IonConstants.getTypeCode(IonConstants.BINARY_VERSION_MARKER_1_0[0]);
     private static final int BINARY_VERSION_MARKER_LEN = IonConstants.getLowNibble(IonConstants.BINARY_VERSION_MARKER_1_0[0]);
 
+
     private final void has_next_helper_raw() throws IOException
     {
         clear_value();
