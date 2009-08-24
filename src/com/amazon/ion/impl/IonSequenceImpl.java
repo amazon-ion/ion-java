@@ -132,6 +132,24 @@ public abstract class IonSequenceImpl
         return changed;
     }
 
+    public boolean addAll(int index, Collection<? extends IonValue> c)
+    {
+        if (index < 0 || index > size())
+        {
+            throw new IndexOutOfBoundsException();
+        }
+
+        // TODO optimize to avoid n^2 shifting and renumbering of elements.
+        boolean changed = false;
+        for (IonValue v : c)
+        {
+            add(index++, v);
+            changed = true;
+        }
+        return changed;
+    }
+
+
     public ValueFactory add()
     {
         return new CurriedValueFactory(_system)

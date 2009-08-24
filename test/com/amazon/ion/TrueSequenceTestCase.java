@@ -4,6 +4,7 @@ package com.amazon.ion;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 
@@ -37,9 +38,98 @@ public abstract class TrueSequenceTestCase
     public void testNullSequenceAddAll()
     {
         IonSequence seq = makeNull();
+
+        List<IonValue> list = Collections.emptyList();
+        boolean changed = seq.addAll(list);
+        assertFalse(changed);
+        checkNullSequence(seq);
+
         testAddAll(seq);
     }
 
+
+    public void testNullSequenceIndexedAddAll()
+    {
+        IonSequence seq = makeNull();
+
+        List<IonValue> list = Collections.emptyList();
+        boolean changed = seq.addAll(0, list);
+        assertFalse(changed);
+        checkNullSequence(seq);
+
+        testIndexedAddAll(seq);
+    }
+
+    /**
+     *  TODO JIRA ION-83  Implement indexed addAll for datagram
+     *  Hoist this up to SequencenceTestCase.
+     */
+    public void testIndexedAddAll()
+    {
+        IonSequence seq = makeEmpty();
+        testIndexedAddAll(seq);
+    }
+
+    public void testIndexedAddAll(IonSequence seq)
+    {
+        try
+        {
+            seq.addAll(0, null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+
+        List<IonValue> list = new ArrayList<IonValue>();
+        try
+        {
+            seq.addAll(1, list);
+            fail("expected exception");
+        }
+        catch (IndexOutOfBoundsException e) { }
+
+        boolean changed = seq.addAll(0, list);
+        assertFalse(changed);
+        assertEquals(0, seq.size());
+
+        IonValue v1 = system().newInt(1);
+        list.add(v1);
+
+        changed = seq.addAll(0, list);
+        assertTrue(changed);
+        assertEquals(1, seq.size());
+        assertSame(seq.get(0), v1);
+        assertSame(seq, v1.getContainer());
+
+        try
+        {
+            seq.addAll(0, list);
+            fail("expected exception");
+        }
+        catch (ContainedValueException e) { }
+
+        list.clear();
+        IonValue v2 = system().newInt(2);
+        IonValue v3 = system().newInt(3);
+        list.add(v2);
+        list.add(v3);
+
+        seq.addAll(1, list);
+        assertEquals(3, seq.size());
+        assertSame(seq.get(0), v1);
+        assertSame(seq.get(1), v2);
+        assertSame(seq.get(2), v3);
+
+        list.clear();
+        IonValue v4 = system().newInt(4);
+        list.add(v4);
+
+        seq.addAll(1, list);
+        assertEquals(4, seq.size());
+        assertSame(seq.get(0), v1);
+        assertSame(seq.get(1), v4);
+        assertSame(seq.get(2), v2);
+        assertSame(seq.get(3), v3);
+    }
 
     public void testNullSequenceContains()
     {

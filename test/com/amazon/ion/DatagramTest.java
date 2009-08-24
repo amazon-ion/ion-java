@@ -410,7 +410,7 @@ public class DatagramTest
         }
         catch (IllegalArgumentException e) { }
 
-        // Cannot insert a datagram  // TODO this operation unsupported
+        // Cannot insert a datagram  // TODO JIRA ION-84
 //        try
 //        {
 //            dg1.add(1, dg2);
@@ -465,7 +465,7 @@ public class DatagramTest
     public void testEmptyDatagram()
     {
         IonDatagram dg = loader().load("");
-//        testEmptySequence(dg); // FIXME implement add(int,v)
+//        testEmptySequence(dg); // TODO JIRA ION-84 implement add(int,v)
         dg.add().newInt(1);
         testClearContainer(dg);
     }

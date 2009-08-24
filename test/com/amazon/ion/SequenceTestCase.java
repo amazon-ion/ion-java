@@ -321,6 +321,7 @@ public abstract class SequenceTestCase
         catch (ContainedValueException e) { }
     }
 
+
     public void testContains()
     {
         IonNull nullValue1 = system().newNull();
@@ -536,7 +537,7 @@ public abstract class SequenceTestCase
                                                     (Object)nullValue2);
 
         IonSequence seq = makeEmpty();
-        // FIXME implement IonDatagram.retainAll
+        // FIXME JIRA ION-85 implement IonDatagram.retainAll
         if (seq.getType() == IonType.DATAGRAM) return;
 
         assertFalse(seq.retainAll(empty));
@@ -623,7 +624,7 @@ public abstract class SequenceTestCase
         assertSame(objArray, seq.toArray(objArray));
         checkArray(seq, objArray);
 
-        seq.remove(seq.get(1));  // TODO remove(1)
+        seq.remove(1);
         assertSame(objArray, seq.toArray(objArray));
         assertSame(seq.get(0), objArray[0]);
         assertEquals(null, objArray[1]);

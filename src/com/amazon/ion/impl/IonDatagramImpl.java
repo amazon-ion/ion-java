@@ -422,6 +422,7 @@ public final class IonDatagramImpl
     public void add(int index, IonValue element)
         throws ContainedValueException, NullPointerException
     {
+        // TODO JIRA ION-84
         throw new UnsupportedOperationException();
     }
 
@@ -429,6 +430,14 @@ public final class IonDatagramImpl
     public ValueFactory add(int index)
         throws ContainedValueException, NullPointerException
     {
+        // TODO JIRA ION-84
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean addAll(int index, Collection<? extends IonValue> c)
+    {
+        // TODO JIRA ION-83
         throw new UnsupportedOperationException();
     }
 

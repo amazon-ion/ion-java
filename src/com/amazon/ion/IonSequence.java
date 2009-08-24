@@ -239,11 +239,69 @@ public interface IonSequence
     public IonValue[] toArray();
 
 
-    // TODO temporary until we declare implements Collection
+    /**
+     * Appends all of the elements in the specified collection to the end of
+     * this sequence, in the order that they are returned by the collection's
+     * iterator.
+     * The behavior of this operation is unspecified if the specified
+     * collection is modified while the operation is in progress.
+     * (Note that this will occur if the specified collection is this sequence,
+     * and it's nonempty.)
+     * <p>
+     * Since Ion values can only have a single parent, this method will fail if
+     * the given collection is a non-empty {@link IonContainer}.
+     *
+     * @param c
+     * elements to be appended to this sequence.
+     *
+     * @return {@code true} if this sequence changed as a result of the call.
+     *
+     * @throws UnsupportedOperationException
+     * if this is an {@link IonDatagram}.
+     * @throws ClassCastException
+     * if one of the elements of the collection is not an {@link IonValue}
+     * @throws NullPointerException
+     * if one of the elements of the collection is {@code null}.
+     * @throws ContainedValueException
+     * if one of the elements is already contained by an {@link IonContainer}.
+     */
     public boolean addAll(Collection<? extends IonValue> c);
 
-    // TODO temporary until we declare implements List
-//    public boolean addAll(int index, Collection<? extends IonValue> c); // OPTIONAL
+
+    /**
+     * Inserts all of the elements in the specified collection into this
+     * sequence at the specified position. Shifts the element currently at that
+     * position (if any) and any subsequent elements to the right (increases
+     * their indices). The new elements will appear in this sequence in the
+     * order that they are returned by the specified collection's iterator.
+     * The behavior of this operation is unspecified if the specified
+     * collection is modified while the operation is in progress.
+     * (Note that this will occur if the specified collection is this sequence,
+     * and it's nonempty.)
+     * <p>
+     * Since Ion values can only have a single parent, this method will fail if
+     * the given collection is a non-empty {@link IonContainer}.
+     *
+     * @param index
+     * index at which to insert first element from the specified collection.
+     * @param c
+     * elements to be inserted into this sequence.
+     *
+     * @return {@code true} if this sequence changed as a result of the call.
+     *
+     * @throws UnsupportedOperationException
+     * if this is an {@link IonDatagram}.
+     * @throws ClassCastException
+     * if one of the elements of the collection is not an {@link IonValue}
+     * @throws NullPointerException
+     * if one of the elements of the collection is {@code null}.
+     * @throws ContainedValueException
+     * if one of the elements is already contained by an {@link IonContainer}.
+     * @throws IndexOutOfBoundsException
+     * if the index is out of range (index < 0 || index > size()).
+     */
+    public boolean addAll(int index, Collection<? extends IonValue> c);
+
 
     /**
      * Returns a list iterator of the elements in this sequence (in proper
