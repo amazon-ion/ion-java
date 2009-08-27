@@ -428,7 +428,7 @@ public abstract class IonReaderTextRawX
     private final void finish_value(SavePoint sp) throws IOException
     {
         if (_scanner.isUnfishedToken()) {
-            assert(_current_value_save_point.isClear());
+            assert(_current_value_save_point.isDefined());
             _scanner.finish_token(sp);
             int new_state = get_state_after_value();
             set_state(new_state);
