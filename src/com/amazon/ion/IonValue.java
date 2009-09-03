@@ -250,7 +250,9 @@ public interface IonValue
      * Ensures that this value, and all contained data, is fully materialized
      * into {@link IonValue} instances from any underlying Ion binary buffer.
      *
-     * @deprecated
+     * @deprecated with no direct replacement. This method has often been used
+     * to make values (somewhat) thread-safe, in which case one should use
+     * {@link #makeReadOnly()} instead.
      */
     @Deprecated
     public void deepMaterialize();
