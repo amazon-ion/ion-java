@@ -60,6 +60,17 @@ public interface IonDatagram
      */
     public boolean addAll(int index, Collection<? extends IonValue> c);
 
+    /**
+     * This inherited method is not yet supported by datagrams.
+     * <p>
+     * Vote for JIRA issue ION-90 if you need this.
+     *
+     * @throws UnsupportedOperationException at every call.
+     *
+     * @see <a href="https://issue-tracking.amazon.com/browse/ION-90">ION-90</a>
+     */
+    public IonValue set(int index, IonValue element);
+
 
     /**
      * Returns {@code false} at all times, since datagrams cannot be null.

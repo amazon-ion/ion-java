@@ -423,7 +423,7 @@ public final class IonDatagramImpl
         throws ContainedValueException, NullPointerException
     {
         // TODO JIRA ION-84
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("JIRA issue ION-84");
     }
 
     @Override
@@ -431,14 +431,22 @@ public final class IonDatagramImpl
         throws ContainedValueException, NullPointerException
     {
         // TODO JIRA ION-84
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("JIRA issue ION-84");
     }
 
     @Override
     public boolean addAll(int index, Collection<? extends IonValue> c)
     {
         // TODO JIRA ION-83
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("JIRA issue ION-83");
+    }
+
+    @Override
+    public IonValue set(int index, IonValue element)
+    {
+        // TODO JIRA ION-90
+        throw new UnsupportedOperationException("JIRA issue ION-90");
+
     }
 
     @Override

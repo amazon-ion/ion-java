@@ -4,15 +4,39 @@ package com.amazon.ion;
 
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.ListIterator;
 
 
 
 /**
  * Common functionality of Ion <code>list</code> and <code>sexp</code> types.
+ * <p>
+ * Ion sequences implement the standard Java {@link List} interface, behaving
+ * generally as expected, with the following exceptions:
+ * <ul>
+ *   <li>
+ *     Due to the reference-equality-based semantics of Ion sequences, methods
+ *     like {@link #remove(Object)} do not use {@link Object#equals} as
+ *     specified by the contract of {@link java.util.Collection}.
+ *     Instead they use reference equality ({@code ==} operator) to find the
+ *     given instance.
+ *   </li>
+ *   <li>
+ *     Any given {@link IonValue} instance may be a child of at most one
+ *     {@link IonContainer}.  Instances may be children of any number of
+ *     non-Ion {@link Collection}s.
+ *   </li>
+ *   <li>
+ *     The method {@link #subList(int, int)} is not implemented at all.
+ *     We think it will be quite challenging to get correct, and decided that
+ *     it was still valuable to extend {@link List} even with this contractual
+ *     violation.
+ *   </li>
+ * </ul>
  */
 public interface IonSequence
-    extends IonContainer, Collection<IonValue>
+    extends IonContainer, List<IonValue>
 {
     /**
      * Returns the element at the specified position in this sequence.
@@ -94,6 +118,30 @@ public interface IonSequence
      * is invoked, not when this method is invoked.
      */
     public ValueFactory add(int index);
+
+
+    /**
+     * Replaces the element at the specified position in this list with the
+     * specified element.
+     *
+     * @param index index of the element to replace.
+     * @param element element to be stored at the specified position.
+     * @return the element previously at the specified index.
+     *
+     * @throws UnsupportedOperationException
+     *   if this is an {@link IonDatagram}.
+     * @throws NullPointerException
+     *   if the specified element is {@code null}.
+     * @throws ContainedValueException
+     *   if the specified element is already part of a container.
+     * @throws IllegalArgumentException
+     *   if the specified element is an {@link IonDatagram}.
+     * @throws ReadOnlyValueException
+     *   if this value or the specified element {@link #isReadOnly()}.
+     * @throws IndexOutOfBoundsException
+     *   if the index is out of range ({@code index < 0 || index >= size()}).
+     */
+    public IonValue set(int index, IonValue element);
 
 
     /**
@@ -328,12 +376,21 @@ public interface IonSequence
      * to the {@code next} method).
      *
      * @throws IndexOutOfBoundsException
-     * if the index is out of range (index < 0 || index > size()).
+     * if the index is out of range ({@code index < 0 || index > size()}).
      */
     public ListIterator<IonValue> listIterator(int index);
 
-//    public IonValue set(int index, IonValue element); // OPTIONAL
-//    public List<IonValue> subList(int fromIndex, int toIndex);
+
+    /**
+     * This inherited method is not yet supported.
+     * <p>
+     * Vote for JIRA issue ION-92 if you need this.
+     *
+     * @throws UnsupportedOperationException at every call.
+     *
+     * @see <a href="https://issue-tracking.amazon.com/browse/ION-92">ION-92</a>
+     */
+    public List<IonValue> subList(int fromIndex, int toIndex);
 
     // TODO document that null sequence acts like empty
     public <T> T[] toArray(T[] a);

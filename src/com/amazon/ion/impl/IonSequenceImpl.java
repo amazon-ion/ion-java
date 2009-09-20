@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonDatagram;
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.ValueFactory;
@@ -12,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.List;
 
 
 /**
@@ -185,6 +187,39 @@ public abstract class IonSequenceImpl
     }
 
 
+    public IonValue set(int index, IonValue element)
+    {
+        checkForLock();
+        final IonValueImpl concrete = ((IonValueImpl) element);
+
+        // NOTE: size calls makeReady() so we don't have to
+        if (index < 0 || index >= size())
+        {
+            throw new IndexOutOfBoundsException("" + index);
+        }
+
+        validateNewChild(element);
+
+        assert _contents != null; // else index would be out of bounds above.
+
+        IonValueImpl removed = (IonValueImpl) _contents.set(index, concrete);
+        concrete._elementid = index;
+        concrete._container = this;
+
+        try
+        {
+            removed.detachFromContainer();
+            // calls setDirty(), UNLESS it hits an IOException
+        }
+        catch (IOException e)
+        {
+            setDirty();
+            throw new IonException(e);
+        }
+        return removed;
+    }
+
+
     public IonValue remove(int index)
     {
         // TODO optimize
@@ -263,6 +298,11 @@ public abstract class IonSequenceImpl
         return indexOf(o);
     }
 
+    public List<IonValue> subList(int fromIndex, int toIndex)
+    {
+        // TODO JIRA ION-92
+        throw new UnsupportedOperationException("JIRA issue ION-92");
+    }
 
     public IonValue[] toArray()
     {
