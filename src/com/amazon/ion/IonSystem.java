@@ -339,14 +339,14 @@ public interface IonSystem
 
 
     /**
-     * Creates an new {@link IonReader} instance over Ion text data.
+     * Creates an new {@link IonTextReader} instance over Ion text data.
      * <p>
      * The text is parsed incrementally by the reader, so any syntax errors
-     * will not be detected here.
+     * will not be detected during this call.
      *
      * @param ionText must not be null.
      */
-    public IonReader newReader(String ionText);
+    public IonTextReader newReader(String ionText);
 
     /**
      * Creates an new {@link IonReader} instance over a block of Ion data,
@@ -360,7 +360,9 @@ public interface IonSystem
 
     /**
      * Creates an new {@link IonReader} instance over a block of Ion data,
-     * detecting whether it's text or binary data.
+     * detecting whether it's text or binary data.  If the input data is
+     * text this may return an (@link IonTextReader) which can report the
+     * line and offset position of the parser for error reporting.
      *
      * @param ionData is used only within the range of bytes starting at
      * {@code offset} for {@code len} bytes.
@@ -375,7 +377,9 @@ public interface IonSystem
 
     /**
      * Creates a new {@link IonReader} instance over a stream of Ion data,
-     * detecting whether it's text or binary data.
+     * detecting whether it's text or binary data. If the input data is
+     * text this may return an (@link IonTextReader) which can report the
+     * line and offset position of the parser for error reporting.
      * <p>
      * <b>NOTE:</b> The current implementation of this method reads the entire
      * contents of the input stream into memory.

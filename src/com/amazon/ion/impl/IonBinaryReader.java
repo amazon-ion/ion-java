@@ -721,13 +721,16 @@ public final class IonBinaryReader
         return _value_type;
     }
 
+    private static int[] _empty_int_array = new int[0];
     public int[] getTypeAnnotationIds()
     {
         int[] ids = null;
         if (_state != S_BEFORE_CONTENTS) {
             throw new IllegalStateException();
         }
-        if (_annotation_start == -1) return null;
+        if (_annotation_start == -1) {
+            return _empty_int_array;
+        }
 
         int pos = _reader.position();
 
@@ -741,14 +744,21 @@ public final class IonBinaryReader
                 _reader.readVarUInt();
                 count++;
             }
-
-            // now, again, to save those values
-            ids = new int[count];
-            _reader.position(_annotation_start);
-            _reader.readVarUInt();
-            count = 0;
-            while (annotation_end > _reader.position()) {
-                ids[count++] = _reader.readVarUInt();
+            if (count == 0) {
+                // this case only comes up in the event of unusually
+                // formatted binary - where the value is annotated
+                // but there are no annotations
+                ids = _empty_int_array;
+            }
+            else {
+                // now, again, to save those values
+                ids = new int[count];
+                _reader.position(_annotation_start);
+                _reader.readVarUInt();
+                count = 0;
+                while (annotation_end > _reader.position()) {
+                    ids[count++] = _reader.readVarUInt();
+                }
             }
         }
         catch (IOException e) {
@@ -760,10 +770,13 @@ public final class IonBinaryReader
         return ids;
     }
 
+    private static String[] _empty_string_array = new String[0];
     public String[] getTypeAnnotations()
     {
         int[] ids = getTypeAnnotationIds();
-        if (ids == null) return null;
+        if (ids == null || ids.length < 1) {
+            return _empty_string_array;
+        }
         if (_current_symtab == null) {
             throw new IllegalStateException();
         }

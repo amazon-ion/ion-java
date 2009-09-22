@@ -105,6 +105,8 @@ public class IonReaderBinaryUserX extends IonReaderBinarySystemX
         IonReaderTextRawX.StringIterator it = new IonReaderTextRawX.StringIterator(anns);
         return it;
     }
+
+    private static String[] _empty_string_array = new String[0];
     @Override
     public String[] getTypeAnnotations()
     {
@@ -114,9 +116,15 @@ public class IonReaderBinaryUserX extends IonReaderBinarySystemX
         catch (IOException e) {
             error(e);
         }
-        String[] anns = new String[_annotation_count];
-        for (int ii=0; ii<_annotation_count; ii++) {
-            anns[ii] = _symbols.findKnownSymbol(_annotation_ids[ii]);
+        String[] anns;
+        if (_annotation_count < 1) {
+            anns = _empty_string_array;
+        }
+        else {
+            anns = new String[_annotation_count];
+            for (int ii=0; ii<_annotation_count; ii++) {
+                anns[ii] = _symbols.findKnownSymbol(_annotation_ids[ii]);
+            }
         }
         return anns;
     }

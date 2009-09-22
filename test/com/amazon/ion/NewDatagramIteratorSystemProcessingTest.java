@@ -3,7 +3,7 @@
 package com.amazon.ion;
 
 import com.amazon.ion.impl.IonDatagramImpl;
-import com.amazon.ion.impl.IonTextReader;
+import com.amazon.ion.impl.IonTextReaderImpl;
 import java.util.Iterator;
 
 /**
@@ -25,7 +25,7 @@ public class NewDatagramIteratorSystemProcessingTest
     protected Iterator<IonValue> iterate()
         throws Exception
     {
-        IonTextReader textReader = system().newSystemReader(myText);
+        IonTextReaderImpl textReader = system().newSystemReader(myText);
         IonDatagram datagram = new IonDatagramImpl(system(), catalog(), textReader);
         // Force symtab preparation  FIXME should not be necessary
         datagram.byteSize();
@@ -37,7 +37,7 @@ public class NewDatagramIteratorSystemProcessingTest
     protected Iterator<IonValue> systemIterate()
         throws Exception
     {
-        IonTextReader textReader = system().newSystemReader(myText);
+        IonTextReaderImpl textReader = system().newSystemReader(myText);
         IonDatagram datagram = new IonDatagramImpl(system(), catalog(), textReader);
         // Force symtab preparation  FIXME should not be necessary
         datagram.byteSize();

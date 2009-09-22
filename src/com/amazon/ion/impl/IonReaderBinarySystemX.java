@@ -64,7 +64,7 @@ public class IonReaderBinarySystemX extends IonReaderBinaryRawX
         Iterator<Integer> it = new IonReaderTextUserX.IntIterator(_annotation_ids, 0, _annotation_count);
         return it;
     }
-
+    private static int[] _empty_int_array = new int[0];
     @Override
     public int[] getTypeAnnotationIds()
     {
@@ -74,8 +74,14 @@ public class IonReaderBinarySystemX extends IonReaderBinaryRawX
         catch (IOException e) {
             error(e);
         }
-        int[] anns = new int[_annotation_count];
-        System.arraycopy(_annotation_ids, 0, anns, 0, _annotation_count);
+        int[] anns;
+        if (_annotation_count < 1) {
+            anns = _empty_int_array;
+        }
+        else {
+            anns = new int[_annotation_count];
+            System.arraycopy(_annotation_ids, 0, anns, 0, _annotation_count);
+        }
         return anns;
     }
 

@@ -27,6 +27,7 @@ import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonSystem;
+import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
@@ -406,24 +407,24 @@ public class IonSystemImpl
     // IonReader creation
 
 
-    public IonReader newReader(String ionText)
+    public IonTextReader newReader(String ionText)
     {
-        return new IonTextReader(ionText, getCatalog());
+        return new IonTextReaderImpl(ionText, getCatalog());
     }
 
-    public IonTextReader newSystemReader(String ionText)
+    public IonTextReaderImpl newSystemReader(String ionText)
     {
-        return new IonTextReader(ionText, getCatalog(), true);
+        return new IonTextReaderImpl(ionText, getCatalog(), true);
     }
 
 
-    public IonReader newSystemReader(Reader ionText)
+    public IonTextReader newSystemReader(Reader ionText)
     {
         try
         {
             // FIXME we shouldn't have to load the whole stream into a String.
             String str = IonImplUtils.loadReader(ionText);
-            return new IonTextReader(str, getCatalog(), true);
+            return new IonTextReaderImpl(str, getCatalog(), true);
         }
         catch (IOException e)
         {
@@ -453,7 +454,7 @@ public class IonSystemImpl
         }
         else {
             reader =
-                new IonTextReader(ionData, offset, len, getCatalog(), false);
+                new IonTextReaderImpl(ionData, offset, len, getCatalog(), false);
         }
         return reader;
     }
@@ -469,7 +470,7 @@ public class IonSystemImpl
         }
         else {
             reader =
-                new IonTextReader(ionData, offset, len, getCatalog(), true);
+                new IonTextReaderImpl(ionData, offset, len, getCatalog(), true);
         }
         return reader;
     }

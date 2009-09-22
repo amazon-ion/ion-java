@@ -3,7 +3,7 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonReader;
+import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
@@ -55,7 +55,7 @@ import java.util.NoSuchElementException;
  *
  */
 public abstract class IonReaderTextRawX
-    implements IonReader
+    implements IonTextReader
 {
     public abstract BigInteger bigIntegerValue();
 
@@ -1037,11 +1037,17 @@ public abstract class IonReaderTextRawX
         if (ids == null) return StringIterator.EMPTY_ITERATOR;
         return new StringIterator(ids);
     }
+
+    private static String[] _empty_string_array = new String[0];
     public String[] getTypeAnnotations()
     {
-        String[] annotations = new String[_annotation_count];
+        String[] annotations;
         if (_annotation_count > 0) {
+            annotations = new String[_annotation_count];
             System.arraycopy(_annotations, 0, annotations, 0, _annotation_count);
+        }
+        else {
+            annotations = _empty_string_array;
         }
         return annotations;
     }
