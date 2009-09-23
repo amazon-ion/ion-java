@@ -3,7 +3,7 @@
 package com.amazon.ion;
 
 import com.amazon.ion.impl.IonBinaryReader;
-import com.amazon.ion.impl.IonTextReader;
+import com.amazon.ion.impl.IonTextReaderImpl;
 import com.amazon.ion.impl.TreeReaderTest;
 import java.util.NoSuchElementException;
 
@@ -179,13 +179,13 @@ public abstract class ReaderSystemProcessingTestCase
 
         assertTrue(myReader.hasNext());
 
-        if (!(myReader instanceof IonTextReader)) { // FIXME text reader is broken
+        if (!(myReader instanceof IonTextReaderImpl)) { // FIXME text reader is broken
             assertFalse(myReader.isInStruct());
         }
 
         assertEquals(IonType.STRUCT, myReader.next());
         assertEquals(0, myReader.getDepth());
-        if (!(myReader instanceof IonTextReader)) { // FIXME text reader is broken
+        if (!(myReader instanceof IonTextReaderImpl)) { // FIXME text reader is broken
             assertFalse(myReader.isInStruct());
         }
 
@@ -197,7 +197,7 @@ public abstract class ReaderSystemProcessingTestCase
         assertTrue(myReader.isInStruct());
 
         myReader.stepOut();
-        if (!(myReader instanceof IonTextReader)) { // FIXME text reader is broken
+        if (!(myReader instanceof IonTextReaderImpl)) { // FIXME text reader is broken
             assertFalse(myReader.isInStruct());
         }
         assertFalse(myReader.hasNext());
@@ -215,7 +215,7 @@ public abstract class ReaderSystemProcessingTestCase
         assertEquals(IonType.SYMBOL, myReader.getType());
         assertTrue(myReader.hasNext());
 
-        if (!(myReader instanceof IonTextReader)) { // FIXME text reader is broken
+        if (!(myReader instanceof IonTextReaderImpl)) { // FIXME text reader is broken
             assertEquals(IonType.SYMBOL, myReader.getType());
         }
         assertEquals(IonType.INT, myReader.next());
