@@ -317,4 +317,16 @@ public interface IonValue
      *          content and annotations.
      */
     public boolean equals(Object other);
+
+
+    /**
+     * <b>NOT IMPLEMENTED!</b>
+     * <p>
+     * Vote for JIRA issue
+     * <a href="https://issue-tracking.amazon.com/browse/ION-37">ION-37</a>
+     * if you need this.
+     *
+     * @return the result of {@link Object#hashCode()}.
+     */
+    public int hashCode();
 }
