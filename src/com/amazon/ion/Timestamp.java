@@ -555,7 +555,9 @@ public final class Timestamp
         int temp, pos;
         int length = -1;
 
-        if (image == null || image.length() < 1) throw new IllegalArgumentException("invalid timestamp image");
+        if (image == null || image.length() < 1) {
+            throw new IllegalArgumentException("empty timestamp");
+        }
         length = image.length();
 
         // check for 'null.timestamp'
@@ -568,7 +570,7 @@ public final class Timestamp
                 }
                 return null;
             }
-            throw new IllegalArgumentException("invalid timestamp image");
+            throw new IllegalArgumentException("invalid timestamp syntax: " + image);
         }
 
         int year  = 1;
