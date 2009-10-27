@@ -70,6 +70,12 @@ public class IonSystemImpl
     private IonCatalog  myCatalog;
     private IonLoader   myLoader;
 
+    /**
+     * If true, this system will create the newer, faster, second-generation
+     * streaming readers. Be prepared for bugs!
+     */
+    public boolean useNewReaders_UNSUPPORTED_MAGIC = false;
+
 
     public IonSystemImpl()
     {
@@ -409,17 +415,32 @@ public class IonSystemImpl
 
     public IonTextReader newReader(String ionText)
     {
+        if (useNewReaders_UNSUPPORTED_MAGIC)
+        {
+            return new IonReaderTextUserX(this, ionText);
+        }
+
         return new IonTextReaderImpl(ionText, getCatalog());
     }
 
     public IonTextReaderImpl newSystemReader(String ionText)
     {
+        if (useNewReaders_UNSUPPORTED_MAGIC)
+        {
+            // FIXME This doesn't work because of return type.
+//            return new IonReaderTextSystemX(ionText);
+        }
         return new IonTextReaderImpl(ionText, getCatalog(), true);
     }
 
 
     public IonTextReader newSystemReader(Reader ionText)
     {
+        if (useNewReaders_UNSUPPORTED_MAGIC)
+        {
+            return new IonReaderTextSystemX(ionText);
+        }
+
         try
         {
             // FIXME we shouldn't have to load the whole stream into a String.
@@ -448,13 +469,23 @@ public class IonSystemImpl
     {
         boolean isBinary = IonBinary.matchBinaryVersionMarker(ionData);
 
+        if (useNewReaders_UNSUPPORTED_MAGIC)
+        {
+            if (isBinary)
+            {
+                return new IonReaderBinaryUserX(this, ionData, offset, len);
+            }
+
+            return new IonReaderTextUserX(this, ionData, offset, len);
+        }
+
         IonReader reader;
         if (isBinary) {
             reader = new IonBinaryReader(ionData, offset, len, getCatalog());
         }
         else {
-            reader =
-                new IonTextReaderImpl(ionData, offset, len, getCatalog(), false);
+            reader = new IonTextReaderImpl(ionData, offset, len, getCatalog(),
+                                           /* returnSystemValues */ false);
         }
         return reader;
     }
@@ -462,6 +493,16 @@ public class IonSystemImpl
     public IonReader newSystemReader(byte[] ionData, int offset, int len)
     {
         boolean isBinary = IonBinary.matchBinaryVersionMarker(ionData);
+
+        if (useNewReaders_UNSUPPORTED_MAGIC)
+        {
+            if (isBinary)
+            {
+                return new IonReaderBinarySystemX(ionData, offset, len);
+            }
+
+            return new IonReaderTextSystemX(ionData, offset, len);
+        }
 
         IonReader reader;
         if (isBinary) {
@@ -478,6 +519,29 @@ public class IonSystemImpl
 
     public IonReader newReader(InputStream ionData)
     {
+        if (useNewReaders_UNSUPPORTED_MAGIC)
+        {
+            boolean isBinary;
+            try
+            {
+                PushbackInputStream pushback =
+                    new PushbackInputStream(ionData, 8);
+                isBinary = IonImplUtils.streamIsIonBinary(pushback);
+
+                if (isBinary)
+                {
+                    return new IonReaderBinaryUserX(this, pushback);
+                }
+
+                Reader reader = new InputStreamReader(pushback, "UTF-8");
+                return new IonReaderTextUserX(this, reader);
+            }
+            catch (IOException e)
+            {
+                throw new IonException(e);
+            }
+        }
+
         // TODO optimize if stream is text!
         byte[] bytes;
         try
@@ -494,6 +558,29 @@ public class IonSystemImpl
 
     public IonReader newSystemReader(InputStream ionData)
     {
+        if (useNewReaders_UNSUPPORTED_MAGIC)
+        {
+            boolean isBinary;
+            try
+            {
+                PushbackInputStream pushback =
+                    new PushbackInputStream(ionData, 8);
+                isBinary = IonImplUtils.streamIsIonBinary(pushback);
+
+                if (isBinary)
+                {
+                    return new IonReaderBinarySystemX(pushback);
+                }
+
+                Reader reader = new InputStreamReader(pushback, "UTF-8");
+                return new IonReaderTextSystemX(reader);
+            }
+            catch (IOException e)
+            {
+                throw new IonException(e);
+            }
+        }
+
         byte[] bytes;
         try
         {
