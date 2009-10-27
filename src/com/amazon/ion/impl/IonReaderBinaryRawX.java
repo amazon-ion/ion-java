@@ -621,7 +621,7 @@ abstract public class IonReaderBinaryRawX implements IonReader
     public IonType getType()
     {
         if (_has_next_needed) {
-            throw new IllegalStateException("this type isn't valid until you have called hasNext (or next)");
+            throw new IllegalStateException("getType() isn't valid until you have called next()");
         }
         return _value_type;
     }
