@@ -423,12 +423,11 @@ public class IonSystemImpl
         return new IonTextReaderImpl(ionText, getCatalog());
     }
 
-    public IonTextReaderImpl newSystemReader(String ionText)
+    public IonTextReader newSystemReader(String ionText)
     {
         if (useNewReaders_UNSUPPORTED_MAGIC)
         {
-            // FIXME This doesn't work because of return type.
-//            return new IonReaderTextSystemX(ionText);
+            return new IonReaderTextSystemX(ionText);
         }
         return new IonTextReaderImpl(ionText, getCatalog(), true);
     }

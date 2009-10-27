@@ -68,10 +68,11 @@ public class LoaderImpl
     {
         if (USE_NEW_READERS)
         {
-            IonTextReaderImpl textReader = mySystem.newSystemReader(ionText);
+            IonReader reader = mySystem.newSystemReader(ionText);
             try
             {
-                IonDatagramImpl dg = new IonDatagramImpl(mySystem, myCatalog, textReader);
+                IonDatagramImpl dg =
+                    new IonDatagramImpl(mySystem, myCatalog, reader);
                 return dg;
             }
             catch (IOException e)
