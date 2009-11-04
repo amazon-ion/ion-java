@@ -220,6 +220,32 @@ public class DecimalTest
                      scale, actual.scale());
     }
 
+    // TODO FIXME ION-97
+    public void XXXtestNegativeZeroEquality()
+    {
+        IonDecimal posZero = (IonDecimal) oneValue("0.");
+        IonDecimal negZero = (IonDecimal) oneValue("-0.");
+
+        checkNotEquals(posZero, negZero);
+    }
+
+    // TODO FIXME ION-98
+    public void XXXtestPrecisionEquality()
+    {
+        IonDecimal v1 = (IonDecimal) oneValue("1.00");
+        IonDecimal v2 = (IonDecimal) oneValue("1.000");
+
+        checkNotEquals(v1, v2);
+    }
+
+
+    public void checkNotEquals(IonValue v1, IonValue v2)
+    {
+        assertFalse(v1.equals(v2));
+        assertFalse(v2.equals(v1));
+    }
+
+
     public void testBinaryDecimals()
         throws Exception
     {

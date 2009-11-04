@@ -353,6 +353,8 @@ public final class Equivalence {
                     result = Double.compare(do1, do2);
                     break;
                 case DECIMAL:
+                    // TODO FIXME ION-97
+                    // TODO FIXME ION-98
                     de1 = ((IonDecimal) v1).bigDecimalValue();
                     de2 = ((IonDecimal) v2).bigDecimalValue();
                     result = de1.compareTo(de2);
