@@ -13,6 +13,7 @@ import com.amazon.ion.FieldNameEscapesTest;
 import com.amazon.ion.FloatTest;
 import com.amazon.ion.GoodIonTests;
 import com.amazon.ion.IntTest;
+import com.amazon.ion.JavaNumericsTest;
 import com.amazon.ion.ListTest;
 import com.amazon.ion.LoaderTest;
 import com.amazon.ion.LongStringTest;
@@ -64,6 +65,7 @@ public class AllTests
         suite.addTestSuite(ByteBufferTest.class);
         suite.addTestSuite(TextTest.class);
         suite.addTestSuite(CharacterReaderTest.class);
+        suite.addTestSuite(JavaNumericsTest.class);
 
         // General framework tests
         suite.addTestSuite(SimpleCatalogTest.class);
