@@ -208,24 +208,8 @@ public interface IonSystem
      * with one configured appropriately, and then access it here.
      *
      * @return not <code>null</code>.
-     *
-     * @see #setLoader(IonLoader)
      */
     public IonLoader getLoader();
-
-
-    /**
-     * Sets the default system loader.
-     *
-     * @param loader The new system loader.
-     * @throws NullPointerException if loader is null.
-     * @throws IllegalArgumentException if <code>loader.getSystem()</code> is
-     * not this system.
-     *
-     * @deprecated Default loader should be immutable.
-     */
-    @Deprecated
-    public void setLoader(IonLoader loader);
 
 
     /**

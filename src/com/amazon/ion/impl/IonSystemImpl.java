@@ -291,13 +291,6 @@ public class IonSystemImpl
         return myLoader;
     }
 
-    public synchronized void setLoader(IonLoader loader)
-    {
-        if (loader == null) throw new NullPointerException();
-        myLoader = loader;
-    }
-
-
 
     //=========================================================================
     // Iterator creation
