@@ -110,7 +110,7 @@ public final class IonTreeReader
     public IonType next()
     {
         if (this._next == null && !this.hasNext()) {
-            throw new NoSuchElementException();
+            return null;
         }
         this._curr = this._next;
         this._next = null;

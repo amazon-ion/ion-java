@@ -5,7 +5,6 @@ package com.amazon.ion;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 
 
 /**
@@ -26,22 +25,30 @@ public interface IonReader
      * using {@link #next()}.
      * This method may be
      * called multiple times, which does not move the current position.
+     * <p>
+     * <b>WARNING:</b> this method alters the internal state of the reader such
+     * that you cannot reliably get values from the "current" element. The only
+     * thing you should call after {@code hasNext()} is {@link #next()}!
+     *
+     * @deprecated Applications should detect the end of the current level by
+     * checking for a {@code null} response from {@link #next()}.
      */
+    @Deprecated
     public boolean hasNext();
 
     /**
-     * Positions the reader on the next sibling after the current value.
-     * This returns the underlying
-     * IonType of the value that is found.  Once so positioned the contents of
+     * Positions this reader on the next sibling after the current value,
+     * returning the type of that value.  Once so positioned the contents of
      * this value can be accessed with the {@code *value()} methods.
      * <p>
      * A sequence of {@code next()} calls traverses the data at a constant
-     * level, and {@link #stepIn()} must be used in order to traverse down into
-     * any containers.
+     * depth, within the same container.
+     * Use {@link #stepIn()} to traverse down into any containers, and
+     * {@link #stepOut()} to traverse up to the parent container.
      *
-     * @return the type of the next Ion value; never {@link IonType#DATAGRAM}.
-     *
-     * @throws NoSuchElementException if there are no more elements.
+     * @return the type of the next Ion value (never {@link IonType#DATAGRAM}),
+     * or {@code null} when there are no more elements at the current depth in
+     * the same container.
      */
     public IonType next();
 

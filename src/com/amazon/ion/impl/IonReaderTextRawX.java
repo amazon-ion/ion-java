@@ -397,14 +397,12 @@ public abstract class IonReaderTextRawX
      * A NoSuchElementException is thrown if there are not values remaining.
      * Once called if there is a value available it's contents can
      * be accessed through the other public API's (such as getLong()).
-     * @return type of the next value
-     * @throws NoSuchElementException if hasNext() is false (i.e. the input is empty)
+     * @return type of the next value, or null if there is none.
      */
     public IonType next()
     {
         if (!hasNext()) {
-            // so if there really no next, it's a problem here
-            throw new NoSuchElementException();
+            return null;
         }
         if (_value_type == null && _scanner.isUnfishedToken()) {
             try {

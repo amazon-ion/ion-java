@@ -366,8 +366,7 @@ public abstract class IonBaseWriter
 
     public void writeValues(IonReader reader) throws IOException
     {
-        while (reader.hasNext()) {
-            reader.next();
+        while (reader.next() != null) {
             writeValue(reader);
         }
         return;

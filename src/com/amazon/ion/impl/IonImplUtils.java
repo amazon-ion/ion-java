@@ -22,8 +22,14 @@ import java.util.NoSuchElementException;
 /**
  * For internal use only!
  */
-final class IonImplUtils
+public final class IonImplUtils // TODO this class shouldn't be public
 {
+    /**
+     * Marker for code points relevant to removal of IonReader.hasNext().
+     */
+    public static final boolean READER_HASNEXT_REMOVED = false;
+
+
     /** Just a zero-length String array, used to avoid allocation. */
     public final static String[] EMPTY_STRING_ARRAY = new String[0];
 

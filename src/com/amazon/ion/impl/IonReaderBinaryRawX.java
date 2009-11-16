@@ -17,7 +17,6 @@ import java.math.BigInteger;
 import java.math.MathContext;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 
 
 /**
@@ -158,7 +157,7 @@ abstract public class IonReaderBinaryRawX implements IonReader
     public IonType next()
     {
         if (_eof) {
-            throw new NoSuchElementException();
+            return null;
         }
 
         if (_has_next_needed) {

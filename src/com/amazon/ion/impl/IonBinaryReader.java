@@ -253,7 +253,7 @@ public final class IonBinaryReader
     {
         // get actual type id, this also handle the hasNext & eof logic as necessary
         if (!hasNext()) {
-            throw new NoSuchElementException();
+            return null;
         }
         int tid = this.nextTid();
         _value_type = get_iontype_from_tid(tid);
@@ -901,8 +901,7 @@ public final class IonBinaryReader
     private void fillContainer(IonSystem sys, IonSequence list)
     {
         stepIn();
-        while(hasNext()) {
-            next();
+        while(next() != null) {
             list.add(getIonValue(sys));
         }
         stepOut();
@@ -910,8 +909,7 @@ public final class IonBinaryReader
     private void fillContainer(IonSystem sys, IonStruct struct)
     {
         stepIn();
-        while(hasNext()) {
-            next();
+        while(next() != null) {
             String fieldname = getFieldName();
             struct.add(fieldname, getIonValue(sys));
         }

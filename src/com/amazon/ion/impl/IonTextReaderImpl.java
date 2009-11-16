@@ -30,7 +30,6 @@ import java.io.Reader;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 
 /**
  * IonIterator implementation that walks over a text stream and
@@ -440,8 +439,7 @@ public final class IonTextReaderImpl
         if (_lookahead_type == null) {
             // we check just in case the caller didn't call hasNext()
             if (!hasNext()) {
-                // so if there really no next, it's a problem here
-                throw new NoSuchElementException();
+                return null;
             }
             // if there's something to return then it better have a type
             assert _lookahead_type != null;
@@ -719,8 +717,7 @@ public final class IonTextReaderImpl
     }
     void fillContainerList(IonSystem sys, IonSequence list) {
         this.stepIn();
-        while (this.hasNext()) {
-            this.next();
+        while (this.next() != null) {
             IonValue v = this.getIonValue(sys);
             list.add(v);
         }
@@ -728,8 +725,7 @@ public final class IonTextReaderImpl
     }
     void fillContainerStruct(IonSystem sys, IonStruct struct) {
         this.stepIn();
-        while (this.hasNext()) {
-            this.next();
+        while (this.next() != null) {
             String name = this.getFieldName();
             IonValue v = this.getIonValue(sys);
             struct.add(name, v);

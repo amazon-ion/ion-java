@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion.streaming;
@@ -15,6 +15,7 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.IonTokenReader;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -29,7 +30,7 @@ import java.util.Iterator;
 public class BinaryStreamingTest
     extends IonTestCase
 {
-	static final boolean _debug_flag = false;
+    static final boolean _debug_flag = false;
 
     @Override
     public void setUp()
@@ -285,19 +286,19 @@ public class BinaryStreamingTest
                     assertTrue( bd1.equals(bd2) );
                     break;
                 case TIMESTAMP:
-                	Timestamp actual = r.timestampValue();
+                    Timestamp actual = r.timestampValue();
 
                     if (value instanceof Date) {
                         assertEquals(value, actual.dateValue());
                         assertEquals(Timestamp.UTC_OFFSET, actual.getLocalOffset());
                     }
                     else if (value instanceof String) {
-                    	Timestamp ti2 =
+                        Timestamp ti2 =
                             IonTokenReader.Type.timeinfo.parse((String)value);
                         assertEquals(ti2, actual);
                     }
                     else if (value instanceof Timestamp) {
-                    	Timestamp ti2 = (Timestamp)value;
+                        Timestamp ti2 = (Timestamp)value;
                         assertEquals(ti2, actual);
                     }
                     else {
@@ -536,7 +537,6 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         t = r.next();
         assertTrue( t.equals(IonType.STRUCT) );
         r.stepIn();
-        r.hasNext();
 
         for (TestValue tv : testvalues) {
             tv.readAndTestValue(r);
@@ -556,65 +556,65 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
             +"offline_store_only:true,version:2,}";
         IonReader ir = system().newReader(s);
         IonBinaryWriter wr = system().newBinaryWriter();
-    	wr.writeValues(ir);
+        wr.writeValues(ir);
         byte[] buffer = wr.getBytes();
         dumpBuffer(buffer, buffer.length);
     }
     public void testValue2()
     throws Exception
     {
-    	String s =
-    		 "item_view::{item_id:\"B00096H8Q4\",marketplace_id:2,"
-    		+"product:{item_name:["
-    		+"{value:'''Method 24CT Leather Wipes''',lang:EN_CA},"
-    		+"{value:'''Method 24CT Chiffons de Cuir''',lang:FR_CA}],"
-    		+"list_price:{value:18.23,unit:EUR},}"
-    		+",index_suppressed:true,"
-    		+"offline_store_only:true,version:2,}";
-    	IonSystem sys = system();
-    	IonDatagram dg = sys.getLoader().load(s);
-    	IonValue v = dg.get(0);
-    	IonValue v2 = ((IonStruct)v).get("offline_store_only");
-    	SymbolTable sym = v.getSymbolTable();
-    	assert v2.getSymbolTable() == sym;
-    	IonReader ir = system().newReader(s);
+        String s =
+            "item_view::{item_id:\"B00096H8Q4\",marketplace_id:2,"
+            +"product:{item_name:["
+            +"{value:'''Method 24CT Leather Wipes''',lang:EN_CA},"
+            +"{value:'''Method 24CT Chiffons de Cuir''',lang:FR_CA}],"
+            +"list_price:{value:18.23,unit:EUR},}"
+            +",index_suppressed:true,"
+            +"offline_store_only:true,version:2,}";
+        IonSystem sys = system();
+        IonDatagram dg = sys.getLoader().load(s);
+        IonValue v = dg.get(0);
+        IonValue v2 = ((IonStruct)v).get("offline_store_only");
+        SymbolTable sym = v.getSymbolTable();
+        assert v2.getSymbolTable() == sym;
+        IonReader ir = system().newReader(s);
 
-    	Iterator<String> symbols = sym.iterateDeclaredSymbolNames();
-    	SymbolTable u = system().newSharedSymbolTable("items", 1, symbols);
-    	IonBinaryWriter wr = system().newBinaryWriter(u);
+        Iterator<String> symbols = sym.iterateDeclaredSymbolNames();
+        SymbolTable u = system().newSharedSymbolTable("items", 1, symbols);
+        IonBinaryWriter wr = system().newBinaryWriter(u);
 
-    	wr.writeValues(ir);
+        wr.writeValues(ir);
         byte[] buffer = wr.getBytes();
         dumpBuffer(buffer, buffer.length);
     }
     void dumpBuffer(byte[] buffer, int len)
     {
-    	if (!_debug_flag) return;
-    	for (int ii=0; ii<len; ii++) {
-        	int b = ((int)buffer[ii]) & 0xff;
-        	if ((ii & 0xf) == 0) {
-        		System.out.println();
-        		String x = "     "+ii;
-        		if (x.length() > 5)  x = x.substring(x.length() - 6);
-        		System.out.print(x+": ");
-        	}
-        	String y = "00"+Integer.toHexString(b);
-        	y = y.substring(y.length() - 2);
-        	System.out.print(y+" ");
+        if (!_debug_flag) return;
+        for (int ii=0; ii<len; ii++) {
+            int b = ((int)buffer[ii]) & 0xff;
+            if ((ii & 0xf) == 0) {
+                System.out.println();
+                String x = "     "+ii;
+                if (x.length() > 5)  x = x.substring(x.length() - 6);
+                System.out.print(x+": ");
+            }
+            String y = "00"+Integer.toHexString(b);
+            y = y.substring(y.length() - 2);
+            System.out.print(y+" ");
         }
         System.out.println();
 
-    	for (int ii=0; ii<len; ii++) {
-        	int b = ((int)buffer[ii]) & 0xff;
-        	if ((ii & 0xf) == 0) {
-        		System.out.println();
-        		String x = "     "+ii;
-        		if (x.length() > 5)  x = x.substring(x.length() - 6);
-        		System.out.print(x+": ");
-        	}
-        	String y = "  " + (char)((b >= 32 && b < 128) ? b : ' ');
-        	y = y.substring(y.length() - 2);
-        	System.out.print(y+" ");
+        for (int ii=0; ii<len; ii++) {
+            int b = ((int)buffer[ii]) & 0xff;
+            if ((ii & 0xf) == 0) {
+                System.out.println();
+                String x = "     "+ii;
+                if (x.length() > 5)  x = x.substring(x.length() - 6);
+                System.out.print(x+": ");
+            }
+            String y = "  " + (char)((b >= 32 && b < 128) ? b : ' ');
+            y = y.substring(y.length() - 2);
+            System.out.print(y+" ");
         }
         System.out.println();
 
@@ -647,7 +647,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
                 boolean value = ir.booleanValue();
                 assertTrue( value );
                 if (BinaryStreamingTest._debug_flag) {
-                	System.out.println(t + " " + name +": " + value);
+                    System.out.println(t + " " + name +": " + value);
                 }
             }
         }
@@ -700,7 +700,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         assertEquals(true, ir.booleanValue());
         ir.stepOut();
 
-        assertEquals(false, ir.hasNext());
+        assertEquals(null, ir.next());
     }
 
 
@@ -781,11 +781,10 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         }
 
         IonReader ir = system().newReader(buffer);
-        if (ir.hasNext()) {
-            ir.next();
+        if (ir.next() != null) {
             ir.stepIn();
-            while (ir.hasNext()) {
-                assertEquals(ir.next(), IonType.BOOL);
+            while (ir.next() != null) {
+                assertEquals(ir.getType(), IonType.BOOL);
                 assertEquals(ir.getFieldName(), "hello");
                 assertEquals(ir.booleanValue(), true);
 
@@ -867,48 +866,49 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         bytes = wr.getBytes();
 
         IonReader ir = system().newReader(bytes);
-        assertTrue(ir.hasNext());
-        ir.next();
+        assertEquals(IonType.STRUCT, ir.next());
         ir.stepIn();
 
-        assertTrue(ir.hasNext());
+        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.INT);
         assertEquals(ir.getFieldName(), "12");
         assertEquals(ir.intValue(), -12);
 
-        assertTrue(ir.hasNext());
+        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.FLOAT);
         assertEquals(ir.getFieldName(), "12242.124598129");
         assertEquals(ir.doubleValue(), 12242.124598129);
 
-        assertTrue(ir.hasNext());
+        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.BOOL);
         assertEquals(ir.getFieldName(), "Almost Done.");
         assertEquals(ir.booleanValue(), true);
 
-        assertTrue(ir.hasNext());
+        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.BOOL);
         assertEquals(ir.getFieldName(), "This is a test String.");
         assertEquals(ir.booleanValue(), true);
 
-        assertTrue(ir.hasNext());
+        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.BOOL);
         assertEquals(ir.getFieldName(), "false");
         assertEquals(ir.booleanValue(), false);
 
-        assertTrue(ir.hasNext());
+        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.INT);
         assertEquals(ir.getFieldName(), "long");
         assertEquals(ir.longValue(), 9326L);
 
-        assertTrue(ir.hasNext());
+        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.BOOL);
         assertEquals(ir.getFieldName(), "true");
         assertEquals(ir.booleanValue(), true);
 
-        assertFalse(ir.hasNext());
+        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertFalse(ir.hasNext());
+        assertEquals(null, ir.next());
         ir.stepOut();
-        assertFalse(ir.hasNext());
+        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertFalse(ir.hasNext());
+        assertEquals(null, ir.next());
     }
 
 }

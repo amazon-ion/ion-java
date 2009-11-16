@@ -237,7 +237,7 @@ public final
     private void loadSharedSymbolTableContents(IonReader reader, boolean isOnStruct)
     {
         if (!isOnStruct) {
-            if (!reader.hasNext()) {
+            if (!IonImplUtils.READER_HASNEXT_REMOVED && !reader.hasNext()) {
                 throw new IonException("invalid symbol table image passed in reader");
             }
             IonType t = reader.next();

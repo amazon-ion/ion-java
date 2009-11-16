@@ -48,7 +48,6 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
     @Override
     protected String[] getFilesToSkip()
     {
-        // TODO JIRA ION-8 fix Unicode bugs and enable test cases
         return new String[]
         {
 //             "equivs/stringU0001D11E.ion",
@@ -399,7 +398,6 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
 
         IonReader makeIterator(byte [] testBuffer) {
             IonReader inputIterator = system().newReader(testBuffer);
-            inputIterator.hasNext();
             return inputIterator;
         }
 
@@ -429,6 +427,7 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
                     System.out.println("debugging testfile35, with in line text symbol tables");
                 }
                 else {
+                    System.err.println(getName() + ": skipping testfile35");
                     return;
                 }
             }

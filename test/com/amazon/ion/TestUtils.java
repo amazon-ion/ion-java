@@ -2,6 +2,8 @@
 
 package com.amazon.ion;
 
+import static com.amazon.ion.impl.IonImplUtils.READER_HASNEXT_REMOVED;
+
 import java.io.UnsupportedEncodingException;
 import junit.framework.Assert;
 
@@ -19,9 +21,11 @@ public class TestUtils
      */
     public static void deepRead(IonReader reader)
     {
-        while (reader.hasNext())
+        while (READER_HASNEXT_REMOVED ? reader.next() != null : reader.hasNext())
         {
-            IonType t = reader.next();
+            IonType t = (READER_HASNEXT_REMOVED ? reader.getType() : reader.next());
+            if (t == null) break;
+
             switch (t)
             {
                 case NULL:

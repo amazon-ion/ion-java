@@ -3,6 +3,7 @@
 package com.amazon.ion;
 
 import com.amazon.ion.impl.IonBinaryReader;
+import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.IonTextReaderImpl;
 import com.amazon.ion.impl.TreeReaderTest;
 import java.util.NoSuchElementException;
@@ -130,16 +131,19 @@ public abstract class ReaderSystemProcessingTestCase
     @Override
     protected void checkEof()
     {
-        assertFalse("not at eof", myReader.hasNext());
+        // Doing this twice is intentional.
+        assertEquals("next() at eof", null, myReader.next());
+
+        if (!IonImplUtils.READER_HASNEXT_REMOVED) {
+            assertFalse("not at eof", myReader.hasNext());
+        }
+
+        assertEquals("next() at eof", null, myReader.next());
     }
 
     protected void badNext()
     {
-        try {
-            myReader.next();
-            fail("expected exception");
-        }
-        catch (NoSuchElementException e) { }
+        assertEquals("result from IonReader.next()", null, myReader.next());
     }
 
 

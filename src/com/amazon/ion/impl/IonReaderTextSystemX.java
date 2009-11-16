@@ -713,8 +713,7 @@ public class IonReaderTextSystemX
     }
     private final void fillContainerList(IonSystem sys, IonSequence list) {
         this.stepIn();
-        while (this.hasNext()) {
-            this.next();
+        while (this.next() != null) {
             IonValue v = this.getIonValue(sys);
             list.add(v);
         }
@@ -722,8 +721,7 @@ public class IonReaderTextSystemX
     }
     private final void fillContainerStruct(IonSystem sys, IonStruct struct) {
         this.stepIn();
-        while (this.hasNext()) {
-            this.next();
+        while (this.next() != null) {
             String name = this.getFieldName();
             IonValue v = this.getIonValue(sys);
             struct.add(name, v);
