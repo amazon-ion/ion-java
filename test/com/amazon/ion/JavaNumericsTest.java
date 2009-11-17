@@ -61,11 +61,37 @@ public class JavaNumericsTest
 
     public void testBigDecimalScale()
     {
-        final BigDecimal one_00 = new BigDecimal("1.00");
+        BigDecimal val = new BigDecimal("1.00");
+        assertEquals(1,   val.intValue());
+        assertEquals(100, val.unscaledValue().intValue());
+        assertEquals(2,   val.scale());
 
-        assertEquals(1,   one_00.intValue());
-        assertEquals(100, one_00.unscaledValue().intValue());
-        assertEquals(2,   one_00.scale());
+        // Scale can be controlled precisely by constructing from String
+        val = new BigDecimal("0.");
+        assertEquals(BigInteger.ZERO, val.unscaledValue());
+        assertEquals(0, val.scale());
+
+        val = new BigDecimal("0.00");
+        assertEquals(BigInteger.ZERO, val.unscaledValue());
+        assertEquals(2, val.scale());
+
+        // No decimal places when constructing directly from double zero
+        val = new BigDecimal(0d);
+        assertEquals(BigInteger.ZERO, val.unscaledValue());
+        assertEquals(0, val.scale());
+
+        val = new BigDecimal(0.00d);
+        assertEquals(BigInteger.ZERO, val.unscaledValue());
+        assertEquals(0, val.scale());
+
+        // But valueOf goes through Double.toString which prints 0d as 0.0
+        val = BigDecimal.valueOf(0d);
+        assertEquals(BigInteger.ZERO, val.unscaledValue());
+        assertEquals(1, val.scale());
+
+        val = BigDecimal.valueOf(0.00d);
+        assertEquals(BigInteger.ZERO, val.unscaledValue());
+        assertEquals(1, val.scale());
     }
 
     /**
