@@ -9,6 +9,7 @@ import com.amazon.ion.ClobTest;
 import com.amazon.ion.DatagramTest;
 import com.amazon.ion.DecimalTest;
 import com.amazon.ion.EquivsTests;
+import com.amazon.ion.ExtendedDecimalTest;
 import com.amazon.ion.FieldNameEscapesTest;
 import com.amazon.ion.FloatTest;
 import com.amazon.ion.GoodIonTests;
@@ -66,6 +67,7 @@ public class AllTests
         suite.addTestSuite(TextTest.class);
         suite.addTestSuite(CharacterReaderTest.class);
         suite.addTestSuite(JavaNumericsTest.class);
+        suite.addTestSuite(ExtendedDecimalTest.class);
 
         // General framework tests
         suite.addTestSuite(SimpleCatalogTest.class);

@@ -592,6 +592,17 @@ public abstract class IonTestCase
         return null;
     }
 
+    public static void assertPreciselyEquals(Decimal expected,
+                                             Decimal actual)
+    {
+        assertEquals(expected, actual);
+        assertEquals("value",
+                     expected.unscaledValue(), actual.unscaledValue());
+        assertEquals("scale",
+                     expected.scale(), actual.scale());
+        assertEquals("isNegativeZero",
+                     expected.isNegativeZero(), actual.isNegativeZero());
+    }
 
     public void assertIonEquals(IonValue expected, final IonValue found)
     {
