@@ -358,6 +358,9 @@ public final class Timestamp
     /**
      * Creates a new Timestamp,precise to the minute,
      * with a given local offset.
+     * <p>
+     * This is equivalent to the corresponding Ion value
+     * {@code YYYY-MM-DDThh:mm+-oo:oo}.
      */
     public Timestamp(int year, int month, int day,
                      int hour, int minute,
@@ -378,6 +381,9 @@ public final class Timestamp
     /**
      * Creates a new Timestamp, precise to the second,
      * with a given local offset.
+     * <p>
+     * This is equivalent to the corresponding Ion value
+     * {@code YYYY-MM-DDThh:mm:ss+-oo:oo}.
      */
     public Timestamp(int year, int month, int day,
                      int hour, int minute, int second,
@@ -399,13 +405,20 @@ public final class Timestamp
     /**
      * Creates a new Timestamp, precise to the fractional second,
      * with a given local offset.
+     * <p>
+     * This is equivalent to the corresponding Ion value
+     * {@code YYYY-MM-DDThh:mm:ss.fff+-oo:oo}.
+     *
+     * @param frac must not be null.  If negative, the absolute value is used.
+     *
+     * @throw {@link NullPointerException} if {@code frac} is {@code null}.
      */
     public Timestamp(int year, int month, int day,
                      int hour, int minute, int second, BigDecimal frac,
                      Integer offset)
     {
         this._precision = Precision.FRACTION;
-        this._fraction = frac;
+        this._fraction = frac.abs();
         this._second = second;
         this._minute = minute;
         this._hour = hour;
@@ -437,7 +450,7 @@ public final class Timestamp
         default:
             throw new IllegalArgumentException("invalid Precision passed to constructor");
         case FRACTION:
-            this._fraction = frac;
+            this._fraction = frac.abs();
         case SECOND:
             this._second = zsecond;
         case MINUTE:
@@ -452,6 +465,7 @@ public final class Timestamp
         }
         validate_fields();
         this._offset = offset;
+        // TODO why doesn't this do applyOffset() like the other constructors?
     }
 
 
