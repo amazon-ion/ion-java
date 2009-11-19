@@ -397,6 +397,21 @@ public interface IonSequence
 
 
     /**
+     * Removes all children of this sequence, returning them in an array.
+     * This is much more efficient than iterating the sequence and removing
+     * children one by one.
+     *
+     * @return a new array with all of the children of {@code s} in order, or
+     * {@code null} if {@link #isNullValue()}.
+     *
+     * @throws NullPointerException if {@code type} is {@code null}.
+     * @throws ClassCastException if any value in this sequence does not
+     * implement the given type.
+     */
+    public <T extends IonValue> T[] extract(Class<T> type);
+
+
+    /**
      * {@inheritDoc}
      */
     public IonSequence clone();

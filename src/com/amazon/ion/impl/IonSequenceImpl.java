@@ -9,6 +9,7 @@ import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.ValueFactory;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.IdentityHashMap;
@@ -329,6 +330,15 @@ public abstract class IonSequenceImpl
         return contents.toArray(a);
     }
 
+    @SuppressWarnings("unchecked")
+    public <T extends IonValue> T[] extract(Class<T> type)
+    {
+        if (isNullValue()) return null;
+        T[] array = (T[]) Array.newInstance(type, size());
+        toArray(array);
+        clear();
+        return array;
+    }
 
     //=========================================================================
 
