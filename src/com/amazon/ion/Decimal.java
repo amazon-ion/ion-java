@@ -121,17 +121,54 @@ public class Decimal
     public static final Decimal NEGATIVE_ZERO = new NegativeZero(0);
 
 
+    /**
+     * Efficiently determines whether an arbitary decimal value is a negative
+     * zero.  This can only be true when the value is actually a
+     * {@link Decimal}.
+     *
+     * @return {@true} if and only if the value is a negative zero.
+     *
+     * @throws NullPointerException if the value is {@code null}.
+     */
     public static boolean isNegativeZero(BigDecimal val)
     {
         return (val.getClass() == NegativeZero.class);
     }
 
+    /**
+     * Returns a "plain" {@link BigDecimal} instance, never a {@link Decimal}
+     * subclass.  As a side effect, this strips any negative-zero information.
+     *
+     * @param val may be null.
+     * @return {@code null} if the given value is {@code null}.
+     */
     public static BigDecimal plainBigDecimal(BigDecimal val)
     {
-        if (val.getClass() == BigDecimal.class) return val;
+        if (val == null
+            || val.getClass() == BigDecimal.class)
+        {
+            return val;
+        }
         return new BigDecimal(val.unscaledValue(), val.scale());
     }
 
+    /**
+     * Compares two decimal values for equality, observing both precision and
+     * negative zeros.  This differs from {@link BigDecimal#equals(Object)},
+     * which isn't aware of negative zeros, and from
+     * {@link BigDecimal#compareTo(BigDecimal)}, which ignores both precision
+     * and negative zeros.
+     *
+     * @return {@code true} if and only if the two {@link BigDecimal} objects
+     * have the same value, scale, and sign.
+     *
+     * @throws NullPointerException if either parameter is {@code null}.
+     */
+    public static boolean equals(BigDecimal v1, BigDecimal v2)
+    {
+        return (isNegativeZero(v1) == isNegativeZero(v2)
+                && v1.equals(v2));
+    }
 
     //=========================================================================
 
@@ -166,7 +203,7 @@ public class Decimal
     }
 
     public static Decimal valueOf(BigInteger unscaledVal, int scale,
-                                        MathContext mc)
+                                  MathContext mc)
     {
         return new Decimal(unscaledVal, scale, mc);
     }
@@ -206,7 +243,7 @@ public class Decimal
 
     public static Decimal valueOf(double val)
     {
-        if (0d == val && Double.compare(val, 0d) < 0)
+        if (Double.compare(val, -0d) == 0)
         {
             // Simulate BigDecimal.valueOf(0d) which has scale of 1
             return new NegativeZero(1);
@@ -216,7 +253,7 @@ public class Decimal
 
     public static Decimal valueOf(double val, MathContext mc)
     {
-        if (0d == val && Double.compare(val, 0d) < 0)
+        if (Double.compare(val, -0d) == 0)
         {
             return new NegativeZero(1, mc);
         }
