@@ -12,8 +12,11 @@ import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonBinary.Reader;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.Map.Entry;
 
 /**
@@ -68,6 +71,46 @@ public final class IonStructImpl
             clone.copyFrom(this);
         } catch (IOException e) {
             throw new IonException(e);
+        }
+
+        return clone;
+    }
+
+    public IonStruct cloneAndRemove(String... fieldNames)
+    {
+        return doClone(false, fieldNames);
+    }
+
+    public IonStruct cloneAndRetain(String... fieldNames)
+    {
+        return doClone(true, fieldNames);
+    }
+
+    private IonStruct doClone(boolean keep, String... fieldNames)
+    {
+        IonStruct clone;
+        if (isNullValue())
+        {
+            clone = _system.newNullStruct();
+        }
+        else
+        {
+            clone = _system.newEmptyStruct();
+            Set<String> fields =
+                new HashSet<String>(Arrays.asList(fieldNames));
+            for (IonValue value : this)
+            {
+                String fieldName = value.getFieldName();
+                if (fields.contains(fieldName) == keep)
+                {
+                    clone.add(fieldName, value.clone());
+                }
+            }
+        }
+
+        // TODO add IonValue.setTypeAnnotations
+        for (String annotation : getTypeAnnotations()) {
+            clone.addTypeAnnotation(annotation);
         }
 
         return clone;

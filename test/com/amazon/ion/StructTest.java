@@ -920,4 +920,32 @@ public class StructTest
 
         assertEquals(null, n2.getContainer());
     }
+
+    public void testCloneAndRemove()
+    {
+        IonStruct s1 = struct("a::b::{c:1,d:2,e:3,d:3}");
+        IonStruct actual = s1.cloneAndRemove("c", "e");
+        IonStruct expected = struct("a::b::{d:2,d:3}");
+        assertEquals(expected, actual);
+
+        assertEquals(struct("a::b::{}"), actual.cloneAndRemove("d"));
+
+        IonStruct n = struct("x::y::null.struct");
+        IonStruct n2 = n.cloneAndRemove("a");
+        assertEquals(struct("x::y::null.struct"), n2);
+    }
+
+    public void testCloneAndRetain()
+    {
+        IonStruct s1 = struct("a::b::{c:1,d:2,e:3,d:3}");
+        IonStruct actual = s1.cloneAndRetain("c", "d");
+        IonStruct expected = struct("a::b::{c:1,d:2,d:3}");
+        assertEquals(expected, actual);
+
+        assertEquals(struct("a::b::{}"), actual.cloneAndRetain("e"));
+
+        IonStruct n = struct("x::y::null.struct");
+        IonStruct n2 = n.cloneAndRetain("a");
+        assertEquals(struct("x::y::null.struct"), n2);
+    }
 }

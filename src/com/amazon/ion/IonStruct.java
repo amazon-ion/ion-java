@@ -217,4 +217,21 @@ public interface IonStruct
     // TODO public Set<Map.Entry<K,V>> entrySet();
 
     public IonStruct clone();
+
+
+    /**
+     * Clones this struct without including certain fields. This can be more
+     * efficient than cloning the struct and removing fields later on.
+     */
+    public IonStruct cloneAndRemove(String... fieldNames);
+
+
+    /**
+     * Clones this struct, including only certain fields. This can be more
+     * efficient than cloning the struct and removing fields later on.
+     *
+     * @throws NullPointerException
+     *   if {@code fieldNames}, or any element within it, is <code>null</code>.
+     */
+    public IonStruct cloneAndRetain(String... fieldNames);
 }
