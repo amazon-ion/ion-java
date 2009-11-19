@@ -329,6 +329,11 @@ public abstract class IonTestCase
         return (IonSexp) oneValue(text);
     }
 
+    public IonStruct struct(String text)
+    {
+        return (IonStruct) oneValue(text);
+    }
+
 
     /**
      * Parse a broken value, expecting an IonException.

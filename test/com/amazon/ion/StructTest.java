@@ -2,6 +2,7 @@
 
 package com.amazon.ion;
 
+import java.util.HashMap;
 import java.util.Iterator;
 
 
@@ -258,6 +259,64 @@ public class StructTest
         checkString("this is a string to overlap", f);
     }
 
+    public void testContainsKey()
+    {
+        IonStruct value = struct("{a:b}");
+        assertTrue(value.containsKey("a"));
+        assertFalse(value.containsKey("b"));
+        testBadContainsKey(value);
+
+        value = struct("{}");
+        testBadContainsKey(value);
+
+        value = struct("null.struct");
+        testBadContainsKey(value);
+    }
+
+    private void testBadContainsKey(IonStruct value)
+    {
+        try {
+            value.containsKey(null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+
+        try {
+            value.containsKey(12);
+            fail("expected exception");
+        }
+        catch (ClassCastException e) { }
+    }
+
+    public void testContainsValue()
+    {
+        IonStruct value = struct("{a:b}");
+        IonValue b = value.get("a");
+        assertTrue(value.containsValue(b));
+        assertFalse(value.containsValue(b.clone()));
+        testBadContainsValue(value);
+
+        value = struct("{}");
+        testBadContainsValue(value);
+
+        value = struct("null.struct");
+        testBadContainsValue(value);
+    }
+
+    private void testBadContainsValue(IonStruct value)
+    {
+        try {
+            value.containsValue(null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+
+        try {
+            value.containsValue(12);
+            fail("expected exception");
+        }
+        catch (ClassCastException e) { }
+    }
 
     public void testGetTwiceReturnsSame()
     {
@@ -275,6 +334,37 @@ public class StructTest
         nested.put("c", inserted);
         assertSame(inserted, ((IonStruct)value.get("a")).get("c"));
     }
+
+    public void testPutAll()
+    {
+        IonStruct value = struct("{}");
+        HashMap<String,IonValue> m = new HashMap<String,IonValue>();
+        m.put("a", system().newInt(1));
+        m.put("b", system().newInt(2));
+
+        value.putAll(m);
+        assertEquals(2, value.size());
+        assertSame(m.get("a"), value.get("a"));
+        assertSame(m.get("b"), value.get("b"));
+
+        try {
+            value.putAll(m);
+            fail("expected exception");
+        }
+        catch (ContainedValueException e) { }
+
+        try {
+            value.putAll(null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+
+        m.clear();
+        m.put("a", null);
+        value.putAll(m);
+        assertEquals(null, value.get("a"));
+    }
+
 
     public void testExtraCommas()
     {

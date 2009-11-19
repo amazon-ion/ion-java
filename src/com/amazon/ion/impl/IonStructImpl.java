@@ -13,6 +13,8 @@ import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonBinary.Reader;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
 
 /**
  * Implements the Ion <code>struct</code> type.
@@ -94,6 +96,18 @@ public final class IonStructImpl
     {
         makeReady();
         return get(fieldName.stringValue());
+    }
+
+    public boolean containsKey(Object fieldName)
+    {
+        String name = (String) fieldName;
+        return (null != get(name));
+    }
+
+    public boolean containsValue(Object value)
+    {
+        IonValue v = (IonValue) value;
+        return (v.getContainer() == this);
     }
 
     public IonValue get(String fieldName)
@@ -186,6 +200,15 @@ public final class IonStructImpl
                 put(fieldName, newValue);
             }
         };
+    }
+
+    public void putAll(Map<? extends String, ? extends IonValue> m)
+    {
+        // TODO this is very inefficient
+        for (Entry<? extends String, ? extends IonValue> entry : m.entrySet())
+        {
+            put(entry.getKey(), entry.getValue());
+        }
     }
 
 

@@ -2,6 +2,8 @@
 
 package com.amazon.ion;
 
+import java.util.Map;
+
 
 /**
  * An Ion <code>struct</code> value.
@@ -22,6 +24,14 @@ public interface IonStruct
      */
     public int size()
         throws NullValueException;
+
+
+    // Treats null.struct like empty struct
+    public boolean containsKey(Object fieldName);
+
+    // Uses reference equality
+    // Treats null.struct like empty struct
+    public boolean containsValue(Object value);
 
 
     /**
@@ -86,6 +96,24 @@ public interface IonStruct
      *   if {@code fieldName} is empty.
      */
     public ValueFactory put(String fieldName);
+
+
+    /**
+     * Copies all of the mappings from the specified map to this struct.
+     * The effect of this call is equivalent to that of calling
+     * {@link #put(String, IonValue) put(k, v)} on this struct once for each
+     * mapping from key {@code k} to value {@code v} in the specified map.
+     * The behavior of this operation is undefined if the specified map is
+     * modified while the operation is in progress.
+     * <p>
+     * If a key in the map maps to {@code null}, then all fields with that name
+     * will be removed from this struct.
+     *
+     * @throws NullPointerException if the given map is null.
+     * @throws ContainedValueException if any values in the map are already
+     * part of an {@link IonContainer} (even this one).
+     */
+    public void putAll(Map<? extends String, ? extends IonValue> m);
 
 
     /**
@@ -183,6 +211,10 @@ public interface IonStruct
      */
     public boolean retainAll(String... fieldNames);
 
+
+    // TODO public Set<K> keySet();
+    // TODO public Collection<V> values();
+    // TODO public Set<Map.Entry<K,V>> entrySet();
 
     public IonStruct clone();
 }
