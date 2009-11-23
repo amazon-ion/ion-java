@@ -324,6 +324,12 @@ public abstract class IonTestCase
         return value;
     }
 
+
+    public IonDecimal decimal(String text)
+    {
+        return (IonDecimal) oneValue(text);
+    }
+
     public IonSexp oneSexp(String text)
     {
         return (IonSexp) oneValue(text);
@@ -333,6 +339,7 @@ public abstract class IonTestCase
     {
         return (IonStruct) oneValue(text);
     }
+
 
 
     /**

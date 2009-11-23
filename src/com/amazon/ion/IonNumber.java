@@ -14,6 +14,7 @@ package com.amazon.ion;
 public interface IonNumber
     extends IonValue
 {
+    @Deprecated
     public enum Classification {
         NORMAL,
         NEGATIVE_ZERO,
@@ -29,18 +30,25 @@ public interface IonNumber
      * you to force this element to have special values such as negative zero.
      *
      * @param valueClassification classification to the value
+     *
+     * @deprecated
      */
+    @Deprecated
     public void setValueSpecial(Classification valueClassification);
 
 
     /**
      * This allows you to detect the various special values floating
      * point and decimal numbers might contain.  IonDecimal
-     * values may only be NORMAL or NEGATIVE_ZERO.  IonFloat values
+     * values may only be {@link #NORMAL} or {@link #NEGATIVE_ZERO}.
+     * IonFloat values
      * may have any Classification.
      *
      * @return Classification of the value this element
+     *
+     * @deprecated
      */
+    @Deprecated
     public Classification getClassification();
 
 }

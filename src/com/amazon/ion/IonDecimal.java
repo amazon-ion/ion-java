@@ -11,7 +11,7 @@ public interface IonDecimal
     extends IonNumber
 {
     /**
-     * Gets the value of this Ion <code>float</code> as a Java
+     * Gets the value of this Ion {@code decimal} as a Java
      * <code>float</code> value.
      *
      * @return the float value.
@@ -21,7 +21,7 @@ public interface IonDecimal
         throws NullValueException;
 
     /**
-     * Gets the value of this Ion <code>int</code> as a Java
+     * Gets the value of this Ion {@code decimal} as a Java
      * <code>double</code> value.
      *
      * @return the double value.
@@ -31,7 +31,7 @@ public interface IonDecimal
         throws NullValueException;
 
     /**
-     * Gets the value of this Ion <code>int</code> as a Java
+     * Gets the value of this Ion {@code decimal} as a Java
      * {@link BigDecimal} value.
      *
      * @return the <code>BigDecimal</code> value,
@@ -43,13 +43,31 @@ public interface IonDecimal
     public BigDecimal toBigDecimal();
 
     /**
-     * Gets the value of this Ion <code>int</code> as a Java
-     * {@link BigDecimal} value.
+     * Gets the value of this Ion {@code decimal} as a {@link BigDecimal}.
+     * If you need negative zeros, use {@link #decimalValue()}.
      *
-     * @return the <code>BigDecimal</code> value,
-     * or <code>null</code> if <code>this.isNullValue()</code>.
+     * @return the {@code BigDecimal} value,
+     * or {@code null} if {@code this.isNullValue()}.
+     *
+     * @see #decimalValue()
      */
     public BigDecimal bigDecimalValue();
+
+    /**
+     * Gets the value of this Ion {@code decimal} as a {@link Decimal},
+     * which extends {@link BigDecimal} with support for negative zeros.
+     *
+     * @return the {@code Decimal} value,
+     * or {@code null} if {@code this.isNullValue()}.
+     *
+     * @see #bigDecimalValue()
+     */
+    public Decimal decimalValue();
+
+    /**
+     * Sets the value of this element.
+     */
+    public void setValue(long value);
 
     /**
      * Sets the value of this element.
@@ -63,6 +81,7 @@ public interface IonDecimal
 
     /**
      * Sets the value of this element.
+     * To set a negative zero value, pass an {@link Decimal}.
      *
      * @param value the new value of this decimal;
      * may be <code>null</code> to make this <code>null.decimal</code>.
@@ -84,7 +103,10 @@ public interface IonDecimal
      * and {@code value} is non-zero, or if {@code classification} is anything
      * other than {@link IonNumber.Classification#NORMAL} or
      * {@link IonNumber.Classification#NEGATIVE_ZERO}.
+     *
+     * @deprecated Use {@link #setValue(BigDecimal)} instead.
      */
+    @Deprecated
     public void setValue(BigDecimal value, Classification classification);
 
     public IonDecimal clone();

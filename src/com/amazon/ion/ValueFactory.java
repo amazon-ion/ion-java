@@ -150,6 +150,7 @@ public interface ValueFactory
     /**
      * Constructs a new Ion {@code decimal} instance from a Java
      * {@link BigDecimal}.
+     * To create negative zero values, pass an {@link Decimal}.
      */
     public IonDecimal newDecimal(BigDecimal value);
 

@@ -8,6 +8,7 @@ import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
 import com.amazon.ion.ContainedValueException;
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonCatalog;
@@ -984,17 +985,17 @@ public class IonSystemImpl
 
     public IonDecimal newDecimal(long value)
     {
-        return new IonDecimalImpl(this, new BigDecimal(value));
+        return new IonDecimalImpl(this, Decimal.valueOf(value));
     }
 
     public IonDecimal newDecimal(double value)
     {
-        return new IonDecimalImpl(this, new BigDecimal(value));
+        return new IonDecimalImpl(this, Decimal.valueOf(value));
     }
 
     public IonDecimal newDecimal(BigInteger value)
     {
-        return new IonDecimalImpl(this, new BigDecimal(value));
+        return new IonDecimalImpl(this, Decimal.valueOf(value));
     }
 
     public IonDecimal newDecimal(BigDecimal value)
