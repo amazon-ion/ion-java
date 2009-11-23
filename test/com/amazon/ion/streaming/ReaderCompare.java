@@ -6,10 +6,11 @@ package com.amazon.ion.streaming;
 
 import static com.amazon.ion.impl.IonImplUtils.READER_HASNEXT_REMOVED;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonReader;
+import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.Timestamp;
-import java.math.BigDecimal;
 import org.junit.Assert;
 
 /**
@@ -146,9 +147,10 @@ public class ReaderCompare
                 break;
             }
             case DECIMAL:
-                BigDecimal bd1 = it1.bigDecimalValue();
-                BigDecimal bd2 = it2.bigDecimalValue();
-                assertEquals(bd1, bd2);
+                Decimal dec1 = it1.decimalValue();
+                Decimal dec2 = it2.decimalValue();
+                IonTestCase.assertPreciselyEquals(dec1, dec2);
+                // TODO also test bigDecimal, double, long, int etc.
                 break;
             case TIMESTAMP:
                 Timestamp t1 = it1.timestampValue();

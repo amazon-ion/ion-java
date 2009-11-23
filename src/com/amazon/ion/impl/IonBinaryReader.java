@@ -6,6 +6,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_ITERATOR;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonClob;
@@ -860,7 +861,7 @@ public final class IonBinaryReader
         case IonConstants.tidPosInt:
         case IonConstants.tidNegInt:    return sys.newInt(longValue());
         case IonConstants.tidFloat:     return sys.newFloat(doubleValue());
-        case IonConstants.tidDecimal:   return sys.newDecimal(bigDecimalValue());
+        case IonConstants.tidDecimal:   return sys.newDecimal(decimalValue());
         case IonConstants.tidTimestamp:
             IonTimestamp t = sys.newTimestamp();
             Timestamp ti = timestampValue();
@@ -964,6 +965,7 @@ public final class IonBinaryReader
             throw new IllegalStateException();
         }
         int tid = (_value_tid >>> 4);
+        // TODO spec allows this method to be called for float and decimal
         if (tid != IonConstants.tidNegInt && tid != IonConstants.tidPosInt) {
             throw new IllegalStateException();
         }
@@ -991,7 +993,7 @@ public final class IonBinaryReader
         int tid = (_value_tid >>> 4);
         try {
             if (tid == IonConstants.tidDecimal) {
-                BigDecimal dec = _reader.readDecimal(_value_len);
+                Decimal dec = _reader.readDecimal(_value_len);
                 value = dec.doubleValue();
             }
             else if (tid == IonConstants.tidFloat) {
@@ -1010,6 +1012,11 @@ public final class IonBinaryReader
 
     public BigDecimal bigDecimalValue()
     {
+        return Decimal.bigDecimalValue(decimalValue()); // Works for null.
+    }
+
+    public Decimal decimalValue()
+    {
         if (_state != S_BEFORE_CONTENTS) {
             throw new IllegalStateException();
         }
@@ -1018,7 +1025,7 @@ public final class IonBinaryReader
             throw new IllegalStateException();
         }
 
-        BigDecimal value;
+        Decimal value;
         try {
             value = _reader.readDecimal(_value_len);
         }
@@ -1053,6 +1060,7 @@ public final class IonBinaryReader
 
     public Date dateValue()
     {
+        // FIXME this will NPE if this.isNullValue()
         return timestampValue().dateValue();
     }
 

@@ -503,6 +503,15 @@ public abstract class SystemProcessingTestCase
         checkEof();
     }
 
+    public void testNegativeZeroDecimal()
+        throws Exception
+    {
+        startIteration("-0d0");
+        nextValue();
+        checkDecimal(-0.d); // TODO this should pass IonBigDecimal
+        checkEof();
+    }
+
     public void XXXtestPosFloat() // TODO rework?
         throws Exception
     {
@@ -584,7 +593,7 @@ public abstract class SystemProcessingTestCase
         assertEquals(ION_1_0, st.getIonVersionId());
         checkEof();
     }
-    
+
     public void testHighUnicodeDirectInBlob() {
         try {
             // JIRA ION-69

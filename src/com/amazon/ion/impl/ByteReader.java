@@ -4,9 +4,9 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.Timestamp;
 import java.io.IOException;
-import java.math.BigDecimal;
 
 /**
  * Interface to read bytes over a variety of sources.
@@ -143,13 +143,12 @@ public interface ByteReader
      */
     public double readFloat(int len) throws IOException;
     /**
-     * reads the next len bytes and converts them into a BigDecimal
-     * value.
+     * reads the next len bytes and converts them to a {@link Decimal} value.
      * @param len number of bytes over which the value extends
-     * @return BigDecimal object initialized to the represented value
+     * @return Decimal object initialized to the represented value; not null.
      * @throws IOException
      */
-    public BigDecimal readDecimal(int len) throws IOException;
+    public Decimal readDecimal(int len) throws IOException;
 
     /**
      * Reads the next len bytes and returns them as a {@link Timestamp}

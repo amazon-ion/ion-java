@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
@@ -201,9 +202,9 @@ public class IonReaderBinarySystemX extends IonReaderBinaryRawX
             _v.setAuthoritativeType(AS_TYPE.double_value);
             break;
         case DECIMAL:
-            BigDecimal bd = readDecimal(_value_len);
-            _v.setValue(bd);
-            _v.setAuthoritativeType(AS_TYPE.bigDecimal_value);
+            Decimal dec = readDecimal(_value_len);
+            _v.setValue(dec);
+            _v.setAuthoritativeType(AS_TYPE.decimal_value);
             break;
         case TIMESTAMP:
             // TODO: it looks like a 0 length return a null timestamp - is that right?
@@ -276,8 +277,13 @@ public class IonReaderBinarySystemX extends IonReaderBinaryRawX
     @Override
     public BigDecimal bigDecimalValue()
     {
-        prepare_value(AS_TYPE.bigDecimal_value);
+        prepare_value(AS_TYPE.decimal_value);
         return _v.getBigDecimal();
+    }
+    public Decimal decimalValue()
+    {
+        prepare_value(AS_TYPE.decimal_value);
+        return _v.getDecimal();
     }
     @Override
     public Date dateValue()

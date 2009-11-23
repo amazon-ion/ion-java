@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_ITERATOR;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
@@ -317,6 +318,14 @@ public final class IonTreeReader
     {
         if (_curr instanceof IonDecimal)  {
             return ((IonDecimal)_curr).bigDecimalValue();
+        }
+        throw new IllegalStateException("current value is not an ion decimal");
+    }
+
+    public Decimal decimalValue()
+    {
+        if (_curr instanceof IonDecimal)  {
+            return ((IonDecimal)_curr).decimalValue();
         }
         throw new IllegalStateException("current value is not an ion decimal");
     }

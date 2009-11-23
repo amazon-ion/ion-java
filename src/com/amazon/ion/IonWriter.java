@@ -300,14 +300,15 @@ public interface IonWriter
     public void writeFloat(double value) throws IOException;
 
     /**
-     * writes a BigDecimal value as an IonDecimal.  Ion uses an
-     * arbitrarily long sign/value and an arbitartily long signed
+     * Writes a BigDecimal value as an IonDecimal.  Ion uses an
+     * arbitrarily long sign/value and an arbitrarily long signed
      * exponent to write the value. This preserves
      * all of the BigDecimal digits, the number of
-     * significant digits.  However java.math.BigDecimal cannot represent
-     * negative zero, use writeDecimalNegativeZero() or
-     * writeDecimal(BigDecimal value, boolean isNegativeZero) instead
-     * if you require a negative zero.
+     * significant digits.
+     * <p>
+     * To write a negative zero value, pass this method a
+     * {@link Decimal} instance.
+     *
      * @param value BigDecimal to write
      */
     public void writeDecimal(BigDecimal value) throws IOException;
@@ -318,7 +319,10 @@ public interface IonWriter
      * java.math.BigDecimal class does not support the value negative
      * zero.  This method allows us to emit this value when it
      * is necessary.
+     *
+     * @deprecated Use {@link #writeDecimal(BigDecimal)} instead.
      */
+    @Deprecated
     public void writeDecimal(IonNumber.Classification classification)
         throws IOException;
 
@@ -336,7 +340,10 @@ public interface IonWriter
      * @param classification the kind of special value to write.
      * Currently only {@link IonNumber.Classification#NEGATIVE_ZERO}
      * is supported.
+     *
+     * @deprecated Replaced by {@link #writeDecimal(BigDecimal)}.
      */
+    @Deprecated
     public void writeDecimal(BigDecimal value,
                              IonNumber.Classification classification)
         throws IOException;

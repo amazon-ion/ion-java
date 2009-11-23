@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
@@ -997,13 +998,21 @@ done:   for (;;) {
         return retvalue;
     }
 
-    protected final BigDecimal readDecimal(int len) throws IOException
+    /**
+     * Near clone of {@link SimpleByteBuffer.SimpleByteReader#readDecimal(int)}
+     * and {@link IonBinary.Reader#readDecimalValue(IonDecimalImpl, int)}
+     * so keep them in sync!
+     */
+    protected final Decimal readDecimal(int len) throws IOException
     {
-        BigDecimal bd;
+        // TODO this doesn't seem like the right math context
+        MathContext mathContext = MathContext.DECIMAL128;
+
+        Decimal bd;
 
         // we only write out the '0' value as the nibble 0
         if (len == 0) {
-            bd = new BigDecimal(0, MathContext.DECIMAL128);
+            bd = Decimal.valueOf(0, mathContext);
         }
         else {
             // otherwise we to it the hard way ....
@@ -1013,12 +1022,13 @@ done:   for (;;) {
             int  exponent = readVarInt();
 
             BigInteger value;
+            int signum;
             if (_local_remaining > 0)
             {
                 byte[] bits = new byte[_local_remaining];
                 read(bits, 0, _local_remaining);
 
-                int signum = 1;
+                signum = 1;
                 if (bits[0] < 0)
                 {
                     // value is negative, clear the sign
@@ -1028,12 +1038,21 @@ done:   for (;;) {
                 value = new BigInteger(signum, bits);
             }
             else {
+                signum = 0;
                 value = BigInteger.ZERO;
             }
 
             // Ion stores exponent, BigDecimal uses the negation "scale"
             int scale = -exponent;
-            bd = new BigDecimal(value, scale, MathContext.DECIMAL128);
+            if (value.signum() == 0 && signum == -1)
+            {
+                assert value.equals(BigInteger.ZERO);
+                bd = Decimal.negativeZero(scale, mathContext);
+            }
+            else
+            {
+                bd = Decimal.valueOf(value, scale, mathContext);
+            }
 
             _local_remaining = save_limit;
         }
@@ -1204,7 +1223,7 @@ done:   for (;;) {
         throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
     }
     public BigDecimal bigDecimalValue()
-  {
+    {
         throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
     }
     public boolean booleanValue()

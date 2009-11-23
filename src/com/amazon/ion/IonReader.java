@@ -202,10 +202,24 @@ public interface IonReader
     public double doubleValue();
 
     /**
-     * Returns the current value as a BigDecimal.  This is only valid if there
-     * is an underlying value and the value is decimal.
+     * Returns the current value as a {@link BigDecimal}.
+     * This method should not return a {@link Decimal}, so it lacks support for
+     * negative zeros.
+     * <p>
+     * This method is only valid when {@link #getType()} returns
+     * {@link IonType#DECIMAL}.
      */
     public BigDecimal bigDecimalValue();
+    // TODO do these methods work when isNullValue()?
+
+    /**
+     * Returns the current value as a {@link Decimal}, which extends
+     * {@link BigDecimal} with support for negative zeros.
+     * This is only valid when {@link #getType()} returns
+     * {@link IonType#DECIMAL}.
+     */
+    public Decimal decimalValue();
+
 
     /**
      * Returns the current value as a {@link java.util.Date}.

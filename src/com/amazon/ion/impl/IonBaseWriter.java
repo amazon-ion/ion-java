@@ -2,12 +2,14 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonNumber;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.IonNumber.Classification;
 import java.io.IOException;
 import java.math.BigDecimal;
 
@@ -283,7 +285,16 @@ public abstract class IonBaseWriter
 
     public void writeDecimal(BigDecimal value) throws IOException
     {
-        writeDecimal(value, IonNumber.Classification.NORMAL);
+        Classification c;
+        if (Decimal.isNegativeZero(value))
+        {
+            c = Classification.NEGATIVE_ZERO;
+        }
+        else
+        {
+            c = Classification.NORMAL;
+        }
+        writeDecimal(value, c);
     }
 
     public void writeDecimal(IonNumber.Classification classification)
@@ -386,7 +397,7 @@ public abstract class IonBaseWriter
             if (_debug_on) System.out.print(":");
         }
         String [] a = reader.getTypeAnnotations();
-        if (a != null) {
+        if (a != null) { // TODO check for empty, check spec above
             setTypeAnnotations(a);
             if (_debug_on) System.out.print(";");
         }
@@ -413,7 +424,7 @@ public abstract class IonBaseWriter
                 if (_debug_on) System.out.print("f");
                 break;
             case DECIMAL:
-                writeDecimal(reader.bigDecimalValue());
+                writeDecimal(reader.decimalValue());
                 if (_debug_on) System.out.print("d");
                 break;
             case TIMESTAMP:

@@ -5,6 +5,7 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_ITERATOR;
 import static com.amazon.ion.util.IonTextUtils.printQuotedSymbol;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonClob;
@@ -681,7 +682,7 @@ public final class IonTextReaderImpl
         case BOOL:      return sys.newBool(booleanValue());
         case INT:       return sys.newInt(longValue());
         case FLOAT:     return sys.newFloat(doubleValue());
-        case DECIMAL:   return sys.newDecimal(bigDecimalValue());
+        case DECIMAL:   return sys.newDecimal(decimalValue());
         case TIMESTAMP:
             IonTimestamp t = sys.newNullTimestamp();
             Timestamp ti = timestampValue();
@@ -788,8 +789,7 @@ public final class IonTextReaderImpl
                 double d = doubleValue();
                 return (int)d;
             case DECIMAL:
-                BigDecimal bd = bigDecimalValue();
-                return bd.intValue();
+                return decimalValue().intValue();
             default:
                 break;
         }
@@ -828,8 +828,7 @@ public final class IonTextReaderImpl
                 double d = doubleValue();
                 return (long)d;
             case DECIMAL:
-                BigDecimal bd = bigDecimalValue();
-                return bd.longValue();
+                return decimalValue().longValue();
             default:
                 break;
         }
@@ -859,8 +858,7 @@ public final class IonTextReaderImpl
                 double d = Double.parseDouble(image);
                 return d;
             case DECIMAL:
-                BigDecimal bd = bigDecimalValue();
-                return bd.doubleValue();
+                return decimalValue().doubleValue();
             default:
                 break;
         }
@@ -869,12 +867,17 @@ public final class IonTextReaderImpl
 
     public BigDecimal bigDecimalValue()
     {
+        return Decimal.bigDecimalValue(decimalValue()); // Works for null.
+    }
+
+    public Decimal decimalValue()
+    {
         switch (_value_type) {
             case DECIMAL:
                 String s = _scanner.getValueAsString(_value_start, _value_end);
                 s = s.replace('d', 'e');
                 s = s.replace('D', 'E');
-                BigDecimal bd = new BigDecimal(s);
+                Decimal bd = Decimal.valueOf(s);
                 return bd;
             default:
                 break;
