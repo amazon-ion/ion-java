@@ -140,7 +140,7 @@ public class ExtendedDecimalTest
         checkNegativeZero(expectedScale, val);
         checkPositiveZero(expectedScale, val.abs());
         checkPositiveZero(expectedScale, val.abs(MathContext.DECIMAL32));
-        checkPositiveZero(expectedScale, Decimal.plainBigDecimal(val));
+        checkPositiveZero(expectedScale, Decimal.bigDecimalValue(val));
     }
 
     private void testPositiveZero(int expectedScale, BigDecimal val)
@@ -148,7 +148,7 @@ public class ExtendedDecimalTest
         checkPositiveZero(expectedScale, val);
         checkPositiveZero(expectedScale, val.abs());
         checkPositiveZero(expectedScale, val.abs(MathContext.DECIMAL32));
-        checkPositiveZero(expectedScale, Decimal.plainBigDecimal(val));
+        checkPositiveZero(expectedScale, Decimal.bigDecimalValue(val));
     }
 
     private void checkNegativeZero(int expectedScale, Decimal val)

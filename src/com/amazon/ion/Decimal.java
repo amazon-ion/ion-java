@@ -142,7 +142,7 @@ public class Decimal
      * @param val may be null.
      * @return {@code null} if the given value is {@code null}.
      */
-    public static BigDecimal plainBigDecimal(BigDecimal val)
+    public static BigDecimal bigDecimalValue(BigDecimal val)
     {
         if (val == null
             || val.getClass() == BigDecimal.class)
@@ -262,7 +262,7 @@ public class Decimal
 
     public static Decimal valueOf(BigDecimal val)
     {
-        if (val instanceof Decimal) return (Decimal) val;
+        if (val == null || val instanceof Decimal) return (Decimal) val;
         return new Decimal(val.unscaledValue(), val.scale());
     }
 
@@ -395,5 +395,17 @@ public class Decimal
     public final boolean isNegativeZero()
     {
         return (getClass() == NegativeZero.class);
+    }
+
+    /**
+     * Converts this to a "plain" {@link BigDecimal} instance, losing any
+     * negative zeros in the process.
+     *
+     * @return a {@link BigDecimal}, never a {@link Decimal}.
+     */
+    public final BigDecimal bigDecimalValue()
+    {
+
+        return new BigDecimal(unscaledValue(), scale());
     }
 }
