@@ -572,6 +572,16 @@ public abstract class SystemProcessingTestCase
         checkEof();
     }
 
+    public void testTimestampWithZeroFraction()
+        throws Exception
+    {
+        String text = "2009-11-23T17:04:03.0-04:00";
+        startIteration(text);
+        nextValue();
+        checkTimestamp("2009-11-23T17:04:03.0-04:00");
+        checkEof();
+    }
+
     public void testNullTimestamp()
         throws Exception
     {
