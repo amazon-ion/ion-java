@@ -76,8 +76,17 @@ public abstract class SystemProcessingTestCase
     /**
      * @param expected is the canonical form of the timestamp
      */
-    protected abstract void checkTimestamp(String expected)
+    protected abstract void checkTimestamp(Timestamp expected)
         throws Exception;
+
+    /**
+     * @param expected is the canonical form of the timestamp
+     */
+    protected void checkTimestamp(String expected)
+        throws Exception
+    {
+        checkTimestamp(Timestamp.valueOf(expected));
+    }
 
     protected abstract void checkEof()
         throws Exception;
@@ -560,6 +569,16 @@ public abstract class SystemProcessingTestCase
         checkTimestamp("2007-04-25");
         nextValue();
         checkTimestamp("2007-04-25");
+        checkEof();
+    }
+
+    public void testNullTimestamp()
+        throws Exception
+    {
+        String text = "null.timestamp";
+        startIteration(text);
+        nextValue();
+        checkTimestamp((Timestamp)null);
         checkEof();
     }
 

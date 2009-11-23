@@ -123,12 +123,13 @@ public abstract class ReaderSystemProcessingTestCase
 
 
     @Override
-    protected void checkTimestamp(String expected) throws Exception
+    protected void checkTimestamp(Timestamp expected) throws Exception
     {
         assertSame(IonType.TIMESTAMP, myReader.getType());
-        // TODO handle null.timestamp
-        assertEquals("timestamp",
-                     expected, myReader.timestampValue().toString());
+        assertEquals("timestamp", expected, myReader.timestampValue());
+        // TODO also check date
+//        Date expectedDate = (expected == null ? null : expected.dateValue());
+//        assertEquals("date", expectedDate, myReader.dateValue());
     }
 
     @Override

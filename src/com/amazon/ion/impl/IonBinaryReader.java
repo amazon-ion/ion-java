@@ -1060,8 +1060,8 @@ public final class IonBinaryReader
 
     public Date dateValue()
     {
-        // FIXME this will NPE if this.isNullValue()
-        return timestampValue().dateValue();
+        Timestamp time = timestampValue();
+        return (time == null ? null : time.dateValue());
     }
 
     public Timestamp timestampValue()

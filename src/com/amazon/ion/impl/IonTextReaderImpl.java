@@ -890,17 +890,18 @@ public final class IonTextReaderImpl
         if (!_value_type.equals(IonType.TIMESTAMP)) {
             throw new IllegalStateException("current value is not a timestamp");
         }
+        if (this._is_null) {
+            return null;
+        }
         String image = _scanner.getValueAsString(_value_start, _value_end);
         Timestamp ti = timeinfo.parse(image);
-
-        // FIXME broken for null.timestamp?!?
-
         return ti;
     }
 
     public Date dateValue()
     {
-        return timestampValue().dateValue();
+        Timestamp time = timestampValue();
+        return (time == null ? null : time.dateValue());
     }
 
     public String stringValue()

@@ -289,7 +289,7 @@ public class SystemReader
         else {
             int ln = IonConstants.getLowNibble(b);
             int hn = IonConstants.getTypeCode(b);
-            len = _buffer._reader.readLength(hn, ln);
+            len = 1 + _buffer._reader.readLength(hn, ln);
         }
         _buffer._reader.setPosition(_buffer_offset);
 
