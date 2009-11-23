@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -46,8 +44,7 @@ public final class IonDecimalImpl
     	return true;
     }
 
-    private IonNumber.Classification _classification;
-    private BigDecimal               _decimal_value;
+    private BigDecimal _decimal_value;
 
     /**
      * Constructs a <code>null.decimal</code> element.
@@ -56,7 +53,6 @@ public final class IonDecimalImpl
     {
         super(system, NULL_DECIMAL_TYPEDESC);
         _hasNativeValue = true; // Since this is null
-        _classification = Classification.NORMAL;
     }
 
     public IonDecimalImpl(IonSystemImpl system, BigDecimal value)
@@ -64,14 +60,6 @@ public final class IonDecimalImpl
         super(system, NULL_DECIMAL_TYPEDESC);
         _decimal_value = value;
         _hasNativeValue = true;
-
-        if (value != null && Decimal.isNegativeZero(value))
-        {
-            _classification = Classification.NEGATIVE_ZERO;
-        }
-        else {
-            _classification = Classification.NORMAL;
-        }
         assert isDirty();
     }
 
@@ -81,7 +69,6 @@ public final class IonDecimalImpl
     public IonDecimalImpl(IonSystemImpl system, int typeDesc)
     {
         super(system, typeDesc);
-        _classification = Classification.NORMAL;
         assert pos_getType() == IonConstants.tidDecimal;
     }
 
@@ -100,7 +87,7 @@ public final class IonDecimalImpl
 
         makeReady();
         clone.copyAnnotationsFrom(this);
-        clone.setValue(this._decimal_value,  this._classification);
+        clone.setValue(this._decimal_value);
 
         return clone;
     }
@@ -117,14 +104,7 @@ public final class IonDecimalImpl
     {
         makeReady();
         if (_decimal_value == null) throw new NullValueException();
-        float f;
-        if (Classification.NEGATIVE_ZERO.equals(_classification)) {
-        	assert _decimal_value.signum() == 0;
-        	f = (float)-0.0;
-        }
-        else {
-        	 f = _decimal_value.floatValue();
-        }
+        float f = _decimal_value.floatValue();
         return f;
     }
 
@@ -133,14 +113,7 @@ public final class IonDecimalImpl
     {
         makeReady();
         if (_decimal_value == null) throw new NullValueException();
-        double d;
-        if (Classification.NEGATIVE_ZERO.equals(_classification)) {
-        	assert _decimal_value.signum() == 0;
-        	d = -0.0;
-        }
-        else {
-        	 d = _decimal_value.doubleValue();
-        }
+        double d = _decimal_value.doubleValue();
         return d;
     }
 
@@ -189,13 +162,6 @@ public final class IonDecimalImpl
     {
         checkForLock();
         _decimal_value = value;
-        if (value != null && Decimal.isNegativeZero(value))
-        {
-            _classification = Classification.NEGATIVE_ZERO;
-        }
-        else {
-            _classification = Classification.NORMAL;
-        }
         _hasNativeValue = true;
         setDirty();
     }
@@ -213,15 +179,15 @@ public final class IonDecimalImpl
         switch (valueClassification)
         {
         case NORMAL:
+                _decimal_value = value;
         	break;
         case NEGATIVE_ZERO:
         	if (value.signum() != 0) throw new IllegalArgumentException("to be a negative zero the value must be zero");
+        	_decimal_value = Decimal.negativeZero(value.scale());
         	break;
         default:
         	throw new IllegalArgumentException("IonDecimal values may only be NORMAL or NEGATIVE_ZERO");
         }
-        _decimal_value = value;
-        _classification = valueClassification;
         _hasNativeValue = true;
         setDirty();
     }
@@ -232,7 +198,10 @@ public final class IonDecimalImpl
      */
     public IonNumber.Classification getClassification()
     {
-    	return this._classification;
+        makeReady();
+    	return (isNullValue() || ! Decimal.isNegativeZero(_decimal_value)
+    	            ? Classification.NORMAL
+    	            : Classification.NEGATIVE_ZERO);
     }
 
     @Override
@@ -246,7 +215,7 @@ public final class IonDecimalImpl
     protected int getNativeValueLength()
     {
         assert _hasNativeValue == true;
-        return IonBinary.lenIonDecimal(_decimal_value, _classification);
+        return IonBinary.lenIonDecimal(_decimal_value, getClassification());
     }
 
     @Override
@@ -290,7 +259,6 @@ public final class IonDecimalImpl
             throw new IonException("invalid type desc encountered for value");
         }
 
-        _classification = IonNumber.Classification.NORMAL;
         int ln = this.pos_getLowNibble();
         switch ((0xf & ln)) {
         case IonConstants.lnIsNullAtom:
@@ -320,7 +288,8 @@ public final class IonDecimalImpl
         assert valueLen == this.getNakedValueLength();
         assert valueLen > 0;
 
-        int wlen = writer.writeDecimalContent(_decimal_value, _classification);
+        int wlen = writer.writeDecimalContent(_decimal_value,
+                                              getClassification());
         assert wlen == valueLen;
 
         return;
