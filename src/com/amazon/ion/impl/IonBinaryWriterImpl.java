@@ -6,6 +6,7 @@ import static com.amazon.ion.impl.IonConstants.tidList;
 import static com.amazon.ion.impl.IonConstants.tidSexp;
 import static com.amazon.ion.impl.IonConstants.tidStruct;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonNumber;
 import com.amazon.ion.IonType;
@@ -402,6 +403,7 @@ public final class IonBinaryWriterImpl
             if (value == null || value.signum() != 0) {
                 throw new IllegalArgumentException("the value must be zero to write a negative zero");
             }
+            value = Decimal.negativeZero(value.scale());
         }
 
         if (value == null) {
@@ -410,7 +412,7 @@ public final class IonBinaryWriterImpl
         }
 
         int patch_len = 1;
-        int len = IonBinary.lenIonDecimal(value, classification);
+        int len = IonBinary.lenIonDecimal(value, false);
         int ln = len;
         if (len >= IonConstants.lnIsVarLen) {
             ln = IonConstants.lnIsVarLen;
@@ -423,7 +425,7 @@ public final class IonBinaryWriterImpl
         if (len >= IonConstants.lnIsVarLen) {
             _writer.writeVarUInt7Value(len, true);
         }
-        patch_len += _writer.writeDecimalContent(value, classification);
+        patch_len += _writer.writeDecimalContent(value, false);
         patch(patch_len);
     }
 

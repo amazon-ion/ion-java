@@ -8,7 +8,6 @@ import static com.amazon.ion.impl.IonTimestampImpl.precisionIncludes;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonNumber;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnexpectedEofException;
@@ -457,9 +456,10 @@ public class IonBinary
         return _ib_FLOAT64_LEN;
     }
 
-    public static boolean isNibbleZero(BigDecimal bd, IonNumber.Classification classification)
+    public static boolean isNibbleZero(BigDecimal bd, boolean forceContent)
     {
-    	if (IonNumber.Classification.NEGATIVE_ZERO.equals(classification)) return false;
+        if (forceContent) return false;
+    	if (Decimal.isNegativeZero(bd)) return false;
     	if (bd.signum() != 0) return false;
     	int scale = bd.scale();
     	return (scale == 0);
@@ -468,17 +468,18 @@ public class IonBinary
     /**
      * @param bd must not be null.
      */
-    public static int lenIonDecimal(BigDecimal bd, IonNumber.Classification classification) {
+    public static int lenIonDecimal(BigDecimal bd, boolean forceContent) {
 
         // first check for the special cases of null
         // and 0.0 which are encoded in the nibble
         if (bd == null) return 0;
-        if (isNibbleZero(bd, classification)) return 0;
+        if (isNibbleZero(bd, forceContent)) return 0;
 
         // otherwise do this the hard way
         BigInteger mantissa = bd.unscaledValue();
-        boolean neg_zero = IonNumber.Classification.NEGATIVE_ZERO.equals(classification);
-        int mantissaByteCount = lenVarInt8(mantissa, neg_zero); // negative zero force the zero to be written, positive zero does not
+        // negative zero forces the zero to be written, positive zero does not
+        forceContent = forceContent || Decimal.isNegativeZero(bd);
+        int mantissaByteCount = lenVarInt8(mantissa, forceContent);
 
         // We really need the length of the exponent (-scale) but in our
         // representation the length is the same regardless of sign.
@@ -509,7 +510,8 @@ public class IonBinary
     	    // TODO why was this explicitly NEGATIVE_ZERO?
     	    // As a result we've been generating binary data with wacky
     	    // fractions.
-    	    len += IonBinary.lenIonDecimal(di.getFractionalSecond(), IonNumber.Classification.NEGATIVE_ZERO);
+    	    len += IonBinary.lenIonDecimal(di.getFractionalSecond(),
+    	                                   /* forceContent */ true);
     	case SECOND:
     	    len++; // len of seconds < 60
     	case MINUTE:
@@ -683,10 +685,10 @@ public class IonBinary
         }
         return len + _ib_TOKEN_LEN;
     }
-    public static int lenIonDecimalWithTypeDesc(BigDecimal v, IonNumber.Classification classification) {
+    public static int lenIonDecimalWithTypeDesc(BigDecimal v) {
         int len = 0;
         if (v != null) {
-            int vlen = lenIonDecimal(v, classification);
+            int vlen = lenIonDecimal(v, false);
             len += vlen;
             len += lenLenFieldWithOptionalNibble(vlen);
         }
@@ -2582,13 +2584,13 @@ done:       for (;;) {
         	}
         	if (precisionIncludes(precision_flags, Precision.FRACTION)) {
                 // and, finally, any fractional component that is known
-        	    // FIXME negative zero?!?
-        	    returnlen += this.writeDecimalContent(di.getZFractionalSecond(), IonNumber.Classification.NEGATIVE_ZERO);
+        	    returnlen += this.writeDecimalContent(di.getZFractionalSecond(),
+        	                                          true /* forceContent */);
         	}
             return returnlen;
         }
 
-        public int writeDecimalWithTD(BigDecimal bd, IonNumber.Classification classification) throws IOException
+        public int writeDecimalWithTD(BigDecimal bd) throws IOException
         {
             int returnlen;
 
@@ -2597,13 +2599,13 @@ done:       for (;;) {
                 returnlen =
                     this.writeByte(IonDecimalImpl.NULL_DECIMAL_TYPEDESC);
             }
-            else if (isNibbleZero(bd, classification)) {
+            else if (isNibbleZero(bd, false)) {
                 returnlen =
                     this.writeByte(IonDecimalImpl.ZERO_DECIMAL_TYPEDESC);
             }
             else {
                 // otherwise we to it the hard way ....
-                int len = IonBinary.lenIonDecimal(bd, classification);
+                int len = IonBinary.lenIonDecimal(bd, false);
 
                 if (len < IonConstants.lnIsVarLen) {
                 	returnlen = this.writeByte(
@@ -2622,7 +2624,7 @@ done:       for (;;) {
                       	);
                 	this.writeVarInt7Value(len, false);
                 }
-                int wroteDecimalLen = writeDecimalContent(bd, classification);
+                int wroteDecimalLen = writeDecimalContent(bd, false);
                 assert wroteDecimalLen == len;
                 returnlen += wroteDecimalLen;
             }
@@ -2633,15 +2635,16 @@ done:       for (;;) {
         private static byte[] positiveZeroBitArray = new byte[0];
 
         // also used by writeDate()
-        public int writeDecimalContent(BigDecimal bd, IonNumber.Classification classification) throws IOException
+        public int writeDecimalContent(BigDecimal bd,
+                                       boolean forceContent)
+            throws IOException
         {
             int returnlen = 0;
 
-            // check for null and 0.0 which are encoded in the
-            // nibble
+            // check for null and 0. which are encoded in the nibble itself.
             if (bd == null) return 0;
 
-            if (isNibbleZero(bd, classification)) return 0;
+            if (isNibbleZero(bd, forceContent)) return 0;
 
             // otherwise we do it the hard way ....
             BigInteger mantissa = bd.unscaledValue();
@@ -2653,13 +2656,15 @@ done:       for (;;) {
             default:
             	throw new IllegalStateException("mantissa signum out of range");
             case 0:
-            	if (IonNumber.Classification.NEGATIVE_ZERO.equals(classification)) {
-            		bits = negativeZeroBitArray;
+                if (forceContent || Decimal.isNegativeZero(bd)) {
+                    bits = negativeZeroBitArray;
             	}
             	else {
-            		bits = positiveZeroBitArray;
+            	    bits = positiveZeroBitArray;
             	}
-            	isNegative = false;  // NOTE: we're lieing about this, since the negative zero bit array has the sign bit set already
+            	// NOTE: we're lieing about this, since the negative zero bit
+            	// array has the sign bit set already
+            	isNegative = false;
             	needExtraByteForSign = false;
             	break;
             case -1:

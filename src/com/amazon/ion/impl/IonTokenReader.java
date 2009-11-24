@@ -7,6 +7,7 @@ import static com.amazon.ion.util.IonTextUtils.isOperatorPart;
 import static com.amazon.ion.util.IonTextUtils.isWhitespace;
 import static com.amazon.ion.util.IonTextUtils.printCodePointAsString;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnexpectedEofException;
@@ -228,7 +229,7 @@ public class IonTokenReader
                     // No match for 'd' but look for 'D'
                     eFormat = s.replace('D', 'e');
                 }
-                tr.decimalValue = new BigDecimal(eFormat);
+                tr.decimalValue = Decimal.valueOf(eFormat);
                 return this;
             case constTime:
                 tr.dateValue = timeinfo.parse(s);

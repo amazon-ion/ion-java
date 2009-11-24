@@ -302,7 +302,7 @@ public abstract class IonBaseWriter
     {
         switch(classification) {
         case NEGATIVE_ZERO:
-            writeDecimal(BigDecimal.ZERO, classification);
+            writeDecimal(Decimal.NEGATIVE_ZERO, classification);
             break;
         default:
             throw new IllegalArgumentException("classification for IonDecimal special values may only be NEGATIVE_ZERO");
