@@ -412,9 +412,7 @@ public final class IonTextWriter
 
         // shortcut zero cases
         if (value == 0.0) {
-            // XXX use the raw bits to avoid boxing and distinguish +/-0e0
-            long bits = Double.doubleToLongBits(value);
-            if (bits == 0L) {
+            if (Double.compare(value, 0d) == 0) {
                 // positive zero
                 _output.append("0e0");
             }
