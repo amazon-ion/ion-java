@@ -440,7 +440,7 @@ public class IonTextUtils
             if (mode == EscapeMode.JSON) {
                 // JSON does not have a \Uxxxxyyyy escape, surrogates
                 // must be used as per RFC-4627
-                // 
+                //
                 // http://www.ietf.org/rfc/rfc4627.txt
                 // [...]
                 //   To escape an extended character that is not in the Basic Multilingual
@@ -497,7 +497,7 @@ public class IonTextUtils
         out.append(ZERO_PADDING[8-s.length()]);
         out.append(s);
     }
-    
+
     private static void printCodePointAsSurrogatePairHexDigits(Appendable out, int c)
         throws IOException
     {
@@ -811,8 +811,10 @@ public class IonTextUtils
             if (IonConstants.isHighSurrogate(c))
             {
                 i++;
-                char c2 = text.charAt(i);
-                if (i >= len || !IonConstants.isLowSurrogate(c2))
+                char c2;
+                // I apologize for the embedded assignment, but the alternative
+                // was worse.
+                if (i >= len || !IonConstants.isLowSurrogate(c2 = text.charAt(i)))
                 {
                     String message =
                         "text is invalid UTF-16. It contains an unmatched " +

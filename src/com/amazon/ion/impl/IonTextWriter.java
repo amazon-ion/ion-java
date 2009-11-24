@@ -260,9 +260,7 @@ public final class IonTextWriter
             if (name == null) {
                 throw new IllegalStateException(ERROR_MISSING_FIELD_NAME);
             }
-            // TODO avoid intermediate CharSequence
-            CharSequence escapedname = escapeSymbol(name);
-            _output.append(escapedname);
+            IonTextUtils.printSymbol(_output, name);
             _output.append(':');
             super.clearFieldName();
         }
@@ -273,11 +271,8 @@ public final class IonTextWriter
             String[] annotations = super.get_annotations_as_strings();
             for (int ii=0; ii<annotation_count; ii++) {
                 String name = annotations[ii];
-                // TODO avoid intermediate CharSequence
-                CharSequence escapedname = escapeSymbol(name);
-                _output.append(escapedname);
-                _output.append(':');
-                _output.append(':');
+                IonTextUtils.printSymbol(_output, name);
+                _output.append("::");
             }
             super.clearAnnotations();
         }
@@ -500,95 +495,8 @@ public final class IonTextWriter
         throws IOException
     {
         startValue();
-        _output.append('"');
-        CharSequence cs = escapeString(value);
-        _output.append(cs);
-        _output.append('"');
+        IonTextUtils.printString(_output, value);
         closeValue();
-    }
-    CharSequence escapeString(String value)
-        throws IOException
-    {
-        // Scan for anything that we may need to escape
-        for (int ii=0; ii<value.length(); ii++) {
-            char c = value.charAt(ii);
-            switch (c) {
-            case '"': //   \"  double quote
-            case '\\': //   \\  backslash
-                return escapeStringHelper(value, ii);
-            default:
-                if (c < 32 || c > 127) {
-                    return escapeStringHelper(value, ii);
-                }
-            }
-        }
-        return value;
-    }
-    CharSequence escapeStringHelper(String value, int firstNonAscii)
-        throws IOException
-    {
-        StringBuilder sb = new StringBuilder(value.length());
-        for (int jj=0; jj<firstNonAscii; jj++) {
-            sb.append(value.charAt(jj));
-        }
-        for (int ii=firstNonAscii; ii<value.length(); ii++) {
-            char c = value.charAt(ii);
-            if (c < 32) {
-                sb.append(lowEscapeSequence(c));
-            }
-            else if (c < 128) {
-                switch (c) {
-                case '"':   //   \"  double quote
-                //case '\'':  //   \'  single quote
-                case '\\':  //   \\  backslash
-                    sb.append('\\');
-                    break;
-                default:
-                    break;
-                }
-                sb.append(c);
-            }
-            else if (c == 128) {
-                sb.append('\\'+"u0100");
-            }
-            else if (IonConstants.isHighSurrogate(c)) {
-                ii++;
-                if (ii >= value.length()) {
-                    String message =
-                        "Text ends with unmatched UTF-16 surrogate " +
-                        IonTextUtils.printCodePointAsString(c);
-                    throw new IllegalArgumentException(message);
-                }
-                char c2 = value.charAt(ii);
-                if (!IonConstants.isLowSurrogate(c2)) {
-                    String message =
-                        "Text contains unmatched UTF-16 high surrogate " +
-                        IonTextUtils.printCodePointAsString(c) +
-                        " at index " + (ii-1);
-                    throw new IllegalArgumentException(message);
-                }
-                if (_printAscii) {
-                    int uc = IonConstants.makeUnicodeScalar(c, c2);
-                    printHighEscapeSequence(sb, uc);
-                }
-                else {
-                    // copy the two code units
-                    sb.append(c);
-                    sb.append(c2);
-                }
-            }
-            else if (IonConstants.isLowSurrogate(c)) {
-                String message =
-                    "Text contains unmatched UTF-16 low surrogate " +
-                    IonTextUtils.printCodePointAsString(c) +
-                    " at index " + ii;
-                throw new IllegalArgumentException(message);
-            }
-            else {
-                printBmpCodePoint(sb, c);
-            }
-        }
-        return sb;
     }
 
     // escape sequences for character below ascii 32 (space)
@@ -609,33 +517,6 @@ public final class IonTextWriter
         return '\\'+LOW_ESCAPE_SEQUENCES[c];
     }
 
-    private static void printHighEscapeSequence(Appendable out, int codePoint)
-        throws IOException
-    {
-        String image = Integer.toHexString(codePoint);
-        int len = image.length();
-        if (len <= 4) {
-            out.append('\\'+"u0000", 0, 6 - len);
-        }
-        else {
-            out.append('\\'+"U00000000", 0, 10 - len);
-        }
-        out.append(image);
-    }
-
-    private void printBmpCodePoint(Appendable out, int codePoint)
-        throws IOException
-    {
-        assert codePoint <= 0xFFFF;
-
-        if (this._printAscii) {
-            printHighEscapeSequence(out, codePoint);
-        }
-        else {
-            out.append((char) codePoint);
-        }
-    }
-
     public void writeSymbol(int symbolId)
         throws IOException
     {
@@ -649,113 +530,8 @@ public final class IonTextWriter
         throws IOException
     {
         startValue();
-        CharSequence cs = escapeSymbol(value);
-        _output.append(cs);
+        IonTextUtils.printSymbol(_output, value);
         closeValue();
-    }
-    static final boolean [] VALID_SYMBOL_CHARACTERS = makeValidSymbolCharacterHelperArray();
-    static boolean [] makeValidSymbolCharacterHelperArray() {
-        boolean [] is_valid = makeValidLeadingSymbolCharacterHelperArray();
-        // basically we add the digits '0' through '9' to the list
-        // of characters that are valid in an unquoted symbol to
-        // the list of characters that are valid to start a symbol
-        for (int c = '0'; c <= '9'; c++) is_valid[c] = true;
-        return is_valid;
-    }
-    static final boolean [] VALID_LEADING_SYMBOL_CHARACTERS = makeValidLeadingSymbolCharacterHelperArray();
-    static boolean [] makeValidLeadingSymbolCharacterHelperArray() {
-        boolean [] is_valid = new boolean[128];
-        for (int c = 'a'; c <= 'z'; c++) is_valid[c] = true;
-        for (int c = 'A'; c <= 'Z'; c++) is_valid[c] = true;
-        is_valid['_'] = true;
-        is_valid['$'] = true;
-        return is_valid;
-    }
-    CharSequence escapeSymbol(String value)
-        throws IOException
-    {
-        if (value.length() == 0) {
-            throw new IllegalArgumentException("Symbol text is empty");
-        }
-        char c = value.charAt(0);
-        if (c > 127 || !VALID_LEADING_SYMBOL_CHARACTERS[c]) {
-            return escapeSymbolHelper(value, 0);
-        }
-        for (int ii=1; ii<value.length(); ii++) {
-            c = value.charAt(ii);
-            if (c > 127 || !VALID_SYMBOL_CHARACTERS[c]) {
-                return escapeSymbolHelper(value, ii);
-            }
-        }
-        if (IonTextTokenizer.keyword(value, 0, value.length()) != -1) return escapeSymbolHelper(value, value.length() - 1);
-        return value;
-    }
-    CharSequence escapeSymbolHelper(String value, int firstNonAscii)
-        throws IOException
-    {
-        StringBuilder sb = new StringBuilder(value.length());
-        sb.append('\'');
-        for (int jj=0; jj<firstNonAscii; jj++) {
-            sb.append(value.charAt(jj));
-        }
-        for (int ii=firstNonAscii; ii<value.length(); ii++) {
-            char c = value.charAt(ii);
-            if (c < 32) {
-                sb.append(lowEscapeSequence(c));
-            }
-            else if (c < 128) {
-                switch (c) {
-                case '\'': //   \'  single quote
-                case '\\': //   \\  backslash
-                    sb.append('\\');
-                    break;
-                default:
-                    break;
-                }
-                sb.append(c);
-            }
-            else if (c == 128) {
-                sb.append('\\'+"u0100");
-            }
-            else if (IonConstants.isHighSurrogate(c)) {
-                ii++;
-                if (ii >= value.length()) {
-                    String message =
-                        "Text ends with unmatched UTF-16 surrogate " +
-                        IonTextUtils.printCodePointAsString(c);
-                    throw new IllegalArgumentException(message);
-                }
-                char c2 = value.charAt(ii);
-                if (!IonConstants.isLowSurrogate(c2)) {
-                    String message =
-                        "Text contains unmatched UTF-16 high surrogate " +
-                        IonTextUtils.printCodePointAsString(c) +
-                        " at index " + (ii-1);
-                    throw new IllegalArgumentException(message);
-                }
-                if (_printAscii) {
-                    int uc = IonConstants.makeUnicodeScalar(c, c2);
-                    printHighEscapeSequence(sb, uc);
-                }
-                else {
-                    // copy the two code units
-                    sb.append(c);
-                    sb.append(c2);
-                }
-            }
-            else if (IonConstants.isLowSurrogate(c)) {
-                String message =
-                    "Text contains unmatched UTF-16 low surrogate " +
-                    IonTextUtils.printCodePointAsString(c) +
-                    " at index " + ii;
-                throw new IllegalArgumentException(message);
-            }
-            else {
-                printBmpCodePoint(sb, c);
-            }
-        }
-        sb.append('\'');
-        return sb;
     }
 
     public void writeBlob(byte[] value)
