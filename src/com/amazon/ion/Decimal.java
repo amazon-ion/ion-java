@@ -27,7 +27,7 @@ import java.math.MathContext;
  * It also does not currently override any of the numerical methods,
  * <em>but it may do so in the future.</em>  If you are concerned about
  * consistent treatment of negative zeros in future releases, you may wish to
- * use {@link #plainBigDecimal} before performing those operations.
+ * use {@link #bigDecimalValue} before performing those operations.
  */
 public class Decimal
     extends BigDecimal
@@ -126,7 +126,7 @@ public class Decimal
      * zero.  This can only be true when the value is actually a
      * {@link Decimal}.
      *
-     * @return {@true} if and only if the value is a negative zero.
+     * @return {@code true} if and only if the value is a negative zero.
      *
      * @throws NullPointerException if the value is {@code null}.
      */

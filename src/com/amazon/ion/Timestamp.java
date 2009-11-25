@@ -411,7 +411,7 @@ public final class Timestamp
      *
      * @param frac must not be null.  If negative, the absolute value is used.
      *
-     * @throw {@link NullPointerException} if {@code frac} is {@code null}.
+     * @throws NullPointerException if {@code frac} is {@code null}.
      */
     public Timestamp(int year, int month, int day,
                      int hour, int minute, int second, BigDecimal frac,

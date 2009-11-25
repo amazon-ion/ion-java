@@ -40,7 +40,8 @@ public interface IonNumber
     /**
      * This allows you to detect the various special values floating
      * point and decimal numbers might contain.  IonDecimal
-     * values may only be {@link #NORMAL} or {@link #NEGATIVE_ZERO}.
+     * values may only be {@link Classification#NORMAL} or
+     * {@link Classification#NEGATIVE_ZERO}.
      * IonFloat values
      * may have any Classification.
      *
