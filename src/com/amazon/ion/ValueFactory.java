@@ -8,6 +8,8 @@ import java.util.Collection;
 
 /**
  * The factory for all {@link IonValue}s.
+ * <p>
+ * This interface is not intended to be used as an application extension point.
  */
 public interface ValueFactory
 {
@@ -136,6 +138,12 @@ public interface ValueFactory
     /**
      * Constructs a new Ion {@code decimal} instance from a Java
      * {@code double}.
+     *
+     * Note that this does not generate the exact decimal representation of the
+     * {@code double}'s binary floating-point value as via
+     * {@link BigDecimal#BigDecimal(double)}, but instead uses the more
+     * predictable behavior of matching the double's string representation
+     * as via {@link BigDecimal#valueOf(double)}.
      */
     public IonDecimal newDecimal(double value);
 
