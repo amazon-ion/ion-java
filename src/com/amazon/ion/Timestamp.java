@@ -1339,10 +1339,16 @@ public final class Timestamp
      * Note that a {@code 0} result does not imply that the two values are
      * {@link #equals}, as the timezones or precision of the two values may be
      * different.
+     * <p>
+     * This method is provided in preference to individual methods for each of
+     * the six boolean comparison operators (<, ==, >, >=, !=, <=).
+     * The suggested idiom for performing these comparisons is:
+     * {@code (x.compareTo(y) }<em>&lt;op></em>{@code 0)},
+     * where <em>&lt;op></em> is one of the six comparison operators.
      *
      * @param t second timestamp to compare 'this' to
-     * @return a negative integer, zero, or a positive integer as this object
-     * is less than, equal to, or greater than the specified object.
+     * @return -1, 0, or 1 as this {@code Timestamp}
+     * is less than, equal to, or greater than {@code t}.
      *
      * @throws NullPointerException if {@code t} is null.
      */
