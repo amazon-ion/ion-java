@@ -6,6 +6,7 @@ import static com.amazon.ion.impl.SymbolTableType.LOCAL;
 import static com.amazon.ion.impl.SymbolTableType.SHARED;
 import static com.amazon.ion.util.IonTextUtils.printQuotedSymbol;
 
+import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.InvalidSystemSymbolException;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
@@ -625,8 +626,8 @@ public final
     synchronized
     int findSymbol(String name)
     {
-        if (name == null || name.length() < 1) {
-            throw new IllegalArgumentException("a symbol name must have something in it");
+        if (name.length() < 1) {
+            throw new EmptySymbolException();
         }
         int sid = UNKNOWN_SYMBOL_ID;
 

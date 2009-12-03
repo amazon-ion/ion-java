@@ -156,6 +156,9 @@ public interface SymbolTable
      * @param name must not be null or empty.
      * @return the id of the requested symbol, or
      * {@link #UNKNOWN_SYMBOL_ID} if it's not defined.
+     *
+     * @throws NullPointerException if {@code name} is null.
+     * @throws EmptySymbolException if {@code name} is empty.
      */
     public int findSymbol(String name);
 
