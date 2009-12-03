@@ -817,4 +817,10 @@ public abstract class IonTestCase
         assertEquals(input, clone.toString());
         assertEquals(data, clone);
     }
+
+    public void logSkippedTest()
+    {
+        System.err.println("WARNING: skipped " + getClass().getName() + '.'
+                           + getName());
+    }
 }
