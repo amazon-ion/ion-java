@@ -528,6 +528,10 @@ public final class IonBinaryWriterImpl
 
     public void writeSymbol(String value) throws IOException
     {
+        if (value == null) {
+            writeNull(IonType.SYMBOL);
+            return;
+        }
         int symbolId = add_symbol(value);
         writeSymbol(symbolId);
     }

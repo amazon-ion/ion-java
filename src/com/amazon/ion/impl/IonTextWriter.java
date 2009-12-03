@@ -537,8 +537,14 @@ public final class IonTextWriter
     public void writeBlob(byte[] value)
         throws IOException
     {
-        writeBlob(value, 0, value.length);
+        if (value == null) {
+            writeNull(IonType.BLOB);
+        }
+        else {
+            writeBlob(value, 0, value.length);
+        }
     }
+
     public void writeBlob(byte[] value, int start, int len)
         throws IOException
     {
@@ -560,12 +566,18 @@ public final class IonTextWriter
         _output.append("}}");
         closeValue();
     }
+
     public void writeClob(byte[] value)
         throws IOException
     {
-        writeClob(value, 0, value.length);
-
+        if (value == null) {
+            writeNull(IonType.CLOB);
+        }
+        else {
+            writeClob(value, 0, value.length);
+        }
     }
+
     public void writeClob(byte[] value, int start, int len)
         throws IOException
     {

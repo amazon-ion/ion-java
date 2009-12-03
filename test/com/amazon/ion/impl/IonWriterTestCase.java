@@ -7,6 +7,7 @@ import static com.amazon.ion.Symtabs.GINGER_MAX_IDS;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
 import static com.amazon.ion.TestUtils.FERMATA;
 
+import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonDatagram;
@@ -22,6 +23,7 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
 import com.amazon.ion.TestUtils;
+import java.math.BigDecimal;
 import java.util.Arrays;
 
 /**
@@ -160,7 +162,13 @@ public abstract class IonWriterTestCase
     public void testWritingEmptySymbol()
         throws Exception
     {
-        testBadSymbol("");
+        IonWriter writer = makeWriter();
+        try
+        {
+            writer.writeSymbol("");
+            fail("expected exception");
+        }
+        catch (EmptySymbolException e) { }
     }
 
     public void testBadText(String text)
@@ -239,6 +247,25 @@ public abstract class IonWriterTestCase
 
     // TODO test failure of getBytes before stepping all the way out
 
+    public void testBadSetFieldName()
+        throws Exception
+    {
+        IonWriter iw = makeWriter();
+        iw.stepIn(IonType.STRUCT);
+
+        try {
+            iw.setFieldName(null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+
+        try {
+            iw.setFieldName("");
+            fail("expected exception");
+        }
+        catch (EmptySymbolException e) { }
+    }
+
     public void testWriteValueMissingFieldName()
         throws Exception
     {
@@ -290,5 +317,101 @@ public abstract class IonWriterTestCase
         iw.stepOut();
 
         assertEquals("{c:{b:10}}", reloadSingleValue().toString());
+    }
+
+    public void testWritingNulls()
+        throws Exception
+    {
+        IonWriter iw = makeWriter();
+        IonDatagram expected = system().newDatagram();
+
+        iw.writeBlob(null);
+        expected.add().newNullBlob();
+
+        iw.writeClob(null);
+        expected.add().newNullClob();
+
+        iw.writeDecimal((BigDecimal)null);
+        expected.add().newNullDecimal();
+
+        iw.writeString(null);
+        expected.add().newNullString();
+
+        iw.writeSymbol(null);
+        expected.add().newNullSymbol();
+
+        iw.writeTimestamp(null);
+        expected.add().newNullTimestamp();
+
+        assertEquals(expected, reload());
+    }
+
+    public void testWritingAnnotations()
+        throws Exception
+    {
+        IonWriter iw = makeWriter();
+        IonDatagram expected = system().newDatagram();
+
+        iw.addTypeAnnotation("a");
+        iw.writeNull();
+        IonValue v = expected.add().newNull();
+        v.addTypeAnnotation("a");
+
+        iw.addTypeAnnotation("b");
+        iw.addTypeAnnotation("c");
+        iw.writeNull();
+        v = expected.add().newNull();
+        v.addTypeAnnotation("b");
+        v.addTypeAnnotation("c");
+
+        // TODO ugh, writer and ionvalue behave differently
+//        iw.addTypeAnnotation("b");
+//        iw.addTypeAnnotation("b");
+//        iw.writeNull();
+//        v = expected.add().newNull();
+//        v.addTypeAnnotation("b");
+//        v.addTypeAnnotation("b");
+
+        iw.addTypeAnnotation("b");
+        iw.setTypeAnnotations(new String[]{"c", "d"});
+        iw.writeNull();
+        v = expected.add().newNull();
+        v.addTypeAnnotation("c");
+        v.addTypeAnnotation("d");
+
+        iw.addTypeAnnotation("b");
+        iw.setTypeAnnotations(new String[0]);
+        iw.writeNull();
+        v = expected.add().newNull();
+        v.clearTypeAnnotations();
+
+        iw.addTypeAnnotation("b");
+        iw.setTypeAnnotations(null);
+        iw.writeNull();
+        v = expected.add().newNull();
+        v.clearTypeAnnotations();
+
+        assertEquals(expected, reload());
+    }
+
+    public void testWritingAnnotationIds()
+        throws Exception
+    {
+        IonWriter iw = makeWriter();
+        IonDatagram expected = system().newDatagram();
+
+        iw.addTypeAnnotation("b");
+        iw.setTypeAnnotationIds(new int[0]);
+        iw.writeNull();
+        IonValue v = expected.add().newNull();
+        v.clearTypeAnnotations();
+
+        iw.addTypeAnnotation("b");
+        iw.setTypeAnnotationIds(null);
+        iw.writeNull();
+        v = expected.add().newNull();
+        v.clearTypeAnnotations();
+
+        assertEquals(expected, reload());
     }
 }

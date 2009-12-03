@@ -3,6 +3,7 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.Decimal;
+import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonNumber;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
@@ -142,7 +143,10 @@ public abstract class IonBaseWriter
     public void setTypeAnnotations(String[] annotations)
     {
         _annotations_type = IonType.STRING;
-        if (annotations.length > _annotation_count) {
+        if (annotations == null) {
+            annotations = IonImplUtils.EMPTY_STRING_ARRAY;
+        }
+        else if (annotations.length > _annotation_count) {
             growAnnotations(annotations.length);
         }
         System.arraycopy(annotations, 0, _annotations, 0, annotations.length);
@@ -152,7 +156,10 @@ public abstract class IonBaseWriter
     public void setTypeAnnotationIds(int[] annotationIds)
     {
         _annotations_type = IonType.INT;
-        if (annotationIds.length > _annotation_count) {
+        if (annotationIds == null) {
+            annotationIds = IonImplUtils.EMPTY_INT_ARRAY;
+        }
+        else if (annotationIds.length > _annotation_count) {
             growAnnotations(annotationIds.length);
         }
         System.arraycopy(annotationIds, 0, _annotation_sids, 0, annotationIds.length);
@@ -250,6 +257,9 @@ public abstract class IonBaseWriter
         if (!this.isInStruct()) {
             throw new IllegalStateException();
         }
+        if (name.length() == 0) {
+            throw new EmptySymbolException();
+        }
         _field_name_type = IonType.STRING;
         _field_name = name;
     }
@@ -285,6 +295,12 @@ public abstract class IonBaseWriter
 
     public void writeDecimal(BigDecimal value) throws IOException
     {
+        if (value == null)
+        {
+            writeNull(IonType.DECIMAL);
+            return;
+        }
+
         Classification c;
         if (Decimal.isNegativeZero(value))
         {
@@ -393,6 +409,9 @@ public abstract class IonBaseWriter
     {
         if (/* reader.isInStruct() && */ this.isInStruct() && has_empty_field_name()) {
             String fieldname = reader.getFieldName();
+            if (fieldname == null) {
+                throw new IllegalStateException(ERROR_MISSING_FIELD_NAME);
+            }
             setFieldName(fieldname);
             if (_debug_on) System.out.print(":");
         }
