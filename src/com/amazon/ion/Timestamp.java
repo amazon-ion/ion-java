@@ -1374,8 +1374,8 @@ public final class Timestamp
     /**
      * Compares this {@link Timestamp} to the specified Object.
      * The result is {@code true} if and only if the parameter is a
-     * {@link Timestamp} object that represents the same point in time and has
-     * the same precision as this object.
+     * {@link Timestamp} object that represents the same point in time,
+     * precision, and local offset as this object.
      * <p>
      * Use the {@link #compareTo(Object)} method to compare only the point in
      * time.
@@ -1391,7 +1391,7 @@ public final class Timestamp
      * Compares this {@link Timestamp} to another.
      * The result is {@code true} if and only if the parameter
      * represents the same point in time and has
-     * the same precision as this object.
+     * the same precision and local offset as this object.
      * <p>
      * Use the {@link #compareTo(Timestamp)} method to compare only the point
      * in time.
