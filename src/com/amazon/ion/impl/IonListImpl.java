@@ -24,6 +24,8 @@ public final class IonListImpl
         IonConstants.makeTypeDescriptor(IonConstants.tidList,
                                         IonConstants.lnIsNullSequence);
 
+    private static final int HASH_SIGNATURE =
+        IonType.LIST.toString().hashCode();
 
     /**
      * Constructs a null list value.
@@ -93,6 +95,16 @@ public final class IonListImpl
         return clone;
     }
 
+    /**
+     * Implements {@link Object#hashCode()} consistent with equals.
+     *
+     * @return  An int, consistent with the contracts for
+     *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
+     */
+    @Override
+    public int hashCode() {
+        return sequenceHashCode(HASH_SIGNATURE);
+    }
 
     public IonType getType()
     {

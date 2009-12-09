@@ -104,6 +104,24 @@ public abstract class IonSequenceImpl
     @Override
     public abstract IonSequenceImpl clone();
 
+    /**
+     * Calculate Ion Sequence hash code as seed value XORed with hash
+     * codes of contents, rotating 3 at each step to make the code
+     * order-dependent.
+     * @param seed Seed value
+     * @return hash code
+     */
+    protected int sequenceHashCode(int seed)
+    {
+        int hash_code = seed;
+        if (!isNullValue())  {
+            for (IonValue v : this)  {
+                hash_code ^= v.hashCode();
+                hash_code = hash_code << 29 | hash_code >>> 3;
+            }
+        }
+        return hash_code;
+    }
 
     @Override
     public boolean isNullValue()

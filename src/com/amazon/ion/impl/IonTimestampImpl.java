@@ -28,6 +28,8 @@ public final class IonTimestampImpl
     private static final int BIT_FLAG_MINUTE    = 0x08;
     private static final int BIT_FLAG_SECOND    = 0x10;
     private static final int BIT_FLAG_FRACTION  = 0x20;
+    private static final int HASH_SIGNATURE =
+        IonType.TIMESTAMP.toString().hashCode();
 
     static public int getPrecisionAsBitFlags(Precision p) {
         int precision_flags = 0;
@@ -104,6 +106,22 @@ public final class IonTimestampImpl
         return clone;
     }
 
+    /**
+     * Implements {@link Object#hashCode()} consistent with equals. This
+     * implementation uses the hash of the underlying timestamp value XOR'ed
+     * with a constant.
+     *
+     * @return  An int, consistent with the contracts for
+     *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
+     */
+    @Override
+    public int hashCode() {
+        int hash = HASH_SIGNATURE;
+        if (!isNullValue())  {
+            hash ^= timestampValue().hashCode();
+        }
+        return hash;
+    }
 
     public IonType getType()
     {

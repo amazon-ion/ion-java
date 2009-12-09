@@ -40,6 +40,9 @@ abstract public class IonContainerImpl
     @Override
     public abstract IonContainer clone();
 
+    @Override
+    public abstract int hashCode();
+
 
     /**
      * this copies the annotations and the field name if

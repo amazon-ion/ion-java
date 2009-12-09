@@ -22,6 +22,9 @@ public final class IonNullImpl
         IonConstants.makeTypeDescriptor(IonConstants.tidNull,
                                         IonConstants.lnIsNullAtom);
 
+    private static final int HASH_SIGNATURE =
+        IonType.NULL.toString().hashCode();
+
     /**
      * Constructs a <code>null.null</code> value.
      */
@@ -67,6 +70,16 @@ public final class IonNullImpl
         return clone;
     }
 
+    /**
+     * Implements {@link Object#hashCode()} consistent with equals.
+     *
+     * @return  An int, consistent with the contracts for
+     *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
+     */
+    @Override
+    public int hashCode() {
+        return HASH_SIGNATURE;
+    }
 
     public IonType getType()
     {

@@ -35,6 +35,8 @@ public final class IonStructImpl
         IonConstants.makeTypeDescriptor(IonConstants.tidStruct,
                                         IonConstants.lnIsOrderedStruct);
 
+    private static final int HASH_SIGNATURE =
+        IonType.STRUCT.toString().hashCode();
 
     private boolean _isOrdered = false;
 
@@ -74,6 +76,27 @@ public final class IonStructImpl
         }
 
         return clone;
+    }
+
+    /**
+     * Implements {@link Object#hashCode()} consistent with equals.
+     * This implementation uses a fixed constant XORs with the hash
+     * codes of contents and field names.  This is insensitive to order, as it
+     * should be.
+     *
+     * @return  An int, consistent with the contracts for
+     *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
+     */
+    @Override
+    public int hashCode() {
+        int hash_code = HASH_SIGNATURE;
+        if (!isNullValue())  {
+            for (IonValue v : this)  {
+                hash_code ^= v.hashCode();
+                hash_code ^= v.getFieldName().hashCode();
+            }
+        }
+        return hash_code;
     }
 
     public IonStruct cloneAndRemove(String... fieldNames)

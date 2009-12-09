@@ -210,6 +210,13 @@ public abstract class IonValueImpl
     @Override
     public abstract IonValue clone();
 
+    /**
+     * Since {@link #equals(Object)} is overridden, each concrete class must provide
+     * an implementation of {@link Object#hashCode()}
+     * @return hash code for instance consistent with equals().
+     */
+    @Override
+    public abstract int hashCode();
 
     /**
      * this copies the annotations and the field name if

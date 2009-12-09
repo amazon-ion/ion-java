@@ -38,6 +38,9 @@ public final class IonDatagramImpl
         IonConstants.makeTypeDescriptor(IonConstants.tidSexp,
                                         IonConstants.lnIsEmptyContainer);
 
+    private static final int HASH_SIGNATURE =
+        IonType.DATAGRAM.toString().hashCode();
+
     /** Underlying catalog */
     private final IonCatalog _catalog;
 
@@ -118,6 +121,17 @@ public final class IonDatagramImpl
         IonDatagramImpl clone = new IonDatagramImpl(this._system, _catalog, data);
 
         return clone;
+    }
+
+    /**
+     * Implements {@link Object#hashCode()} consistent with equals.
+     *
+     * @return  An int, consistent with the contracts for
+     *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
+     */
+    @Override
+    public int hashCode() {
+        return sequenceHashCode(HASH_SIGNATURE);
     }
 
     /**

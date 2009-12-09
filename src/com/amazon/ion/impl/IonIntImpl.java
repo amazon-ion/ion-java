@@ -39,6 +39,8 @@ public final class IonIntImpl
     static private final BigInteger MAX_VALUE =
         BigInteger.valueOf(Long.MAX_VALUE);
 
+    private static final int HASH_SIGNATURE =
+        IonType.INT.toString().hashCode();
 
     private Long _int_value;
 
@@ -83,6 +85,29 @@ public final class IonIntImpl
     	return clone;
     }
 
+    /**
+     * Calculate Ion Int hash code by returning long hash value XOR'ed
+     * with IonType hash code.
+     * @return hash code
+     */
+    @Override
+    public int hashCode()
+    {
+        int hash = HASH_SIGNATURE;
+        if (!isNullValue())  {
+            // FIXME if/when IonIntImpl is extended to support values bigger
+            // than a long,
+            long lv = longValue();
+            // jonker memorial bug:  throw away top 32 bits if they're not
+            // interesting.  Other n and -(n+1) get the same hash code.
+            hash ^= (int) lv;
+            int hi_word = (int) (lv >>> 32);
+            if (hi_word != 0 && hi_word != -1)  {
+                hash ^= hi_word;
+            }
+        }
+        return hash;
+    }
 
     public IonType getType()
     {

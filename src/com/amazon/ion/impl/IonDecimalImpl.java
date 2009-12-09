@@ -28,6 +28,9 @@ public final class IonDecimalImpl
         IonConstants.makeTypeDescriptor(IonConstants.tidDecimal,
                                         IonConstants.lnNumericZero);
 
+    private static final int HASH_SIGNATURE =
+        IonType.DECIMAL.toString().hashCode();
+
     public static boolean isNegativeZero(float value)
     {
     	if (value != 0) return false;
@@ -92,6 +95,24 @@ public final class IonDecimalImpl
         return clone;
     }
 
+    /**
+     * Calculate Ion Decimal hash code as hash code of double value,
+     * XOR'ed with IonType hash code. This is required because
+     * {@link IonDecimal#equals(Object)} is not consistent
+     * with {@link BigDecimal#equals(Object)}, but rather with
+     * {@link BigDecimal#compareTo(BigDecimal)}.
+     * @return hash code
+     */
+    @Override
+    public int hashCode()
+    {
+        int hash = HASH_SIGNATURE;
+        if (!isNullValue())  {
+            long bits = Double.doubleToLongBits(doubleValue());
+            hash ^= (int) ((bits >>> 32) ^ bits);
+        }
+        return hash;
+    }
 
     public IonType getType()
     {

@@ -8,6 +8,7 @@ import com.amazon.ion.NullValueException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.zip.CRC32;
 
 /**
  * The abstract parent of all Ion lob types.
@@ -28,6 +29,23 @@ public abstract class IonLobImpl
     @Override
     public abstract IonLobImpl clone();
 
+
+    /**
+     * Calculate LOB hash code as XOR of seed with CRC-32 of the LOB data.
+     * This distinguishes BLOBs from CLOBs
+     * @param seed Seed value
+     * @return hash code
+     */
+    protected int lobHashCode(int seed)
+    {
+        int hash_code = seed;
+        if (!isNullValue())  {
+            CRC32 crc = new CRC32();
+            crc.update(getBytes());
+            hash_code ^= (int) crc.getValue();
+        }
+        return hash_code;
+    }
 
     /**
      * this copies the contents of the lob from the source to

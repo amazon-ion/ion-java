@@ -43,7 +43,9 @@ public class EquivsTests
 
                     try
                     {
-                        assertIonEquals(current, next);
+                        assertEquals("Equivalent Ion not equal", current, next);
+                        assertEquals("Equal values have unequal hashes",
+                                     current.hashCode(), next.hashCode());
                     }
                     catch (Throwable e)
                     {

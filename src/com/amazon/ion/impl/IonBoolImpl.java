@@ -21,6 +21,9 @@ public final class IonBoolImpl
         IonConstants.makeTypeDescriptor(IonConstants.tidBoolean,
                                         IonConstants.lnIsNullAtom);
 
+    private static final int HASH_SIGNATURE =
+        IonType.BOOL.toString().hashCode();
+
     // TODO we can probably take less space by using two booleans
     // private boolean isNull, value;
     private Boolean _bool_value;
@@ -68,6 +71,31 @@ public final class IonBoolImpl
         return IonType.BOOL;
     }
 
+    /**
+     * Optimizes out a function call for a const result
+     */
+    protected static final int TRUE_HASH
+            = IonType.BOOL.toString().hashCode() ^ Boolean.TRUE.hashCode();
+
+    /**
+     * Optimizes out a function call for a const result
+     */
+    protected static final int FALSE_HASH
+            = IonType.BOOL.toString().hashCode() ^ Boolean.FALSE.hashCode();
+
+    /**
+     * Calculate bool hash code as Java does
+     * @return hash code
+     */
+    @Override
+    public int hashCode()
+    {
+        int hash = HASH_SIGNATURE;
+        if (!isNullValue())  {
+            hash ^= booleanValue() ? TRUE_HASH : FALSE_HASH;
+        }
+        return hash;
+    }
 
     public boolean booleanValue()
         throws NullValueException

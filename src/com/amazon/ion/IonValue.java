@@ -320,13 +320,8 @@ public interface IonValue
 
 
     /**
-     * <b>NOT IMPLEMENTED!</b>
-     * <p>
-     * Vote for JIRA issue
-     * <a href="https://issue-tracking.amazon.com/browse/ION-37">ION-37</a>
-     * if you need this.
-     *
-     * @return the result of {@link Object#hashCode()}.
+     * Implementation consistent with {@link #equals(Object)}.
+     * {@inheritDoc}
      */
     public int hashCode();
 }
