@@ -138,7 +138,7 @@ public interface ValueFactory
     /**
      * Constructs a new Ion {@code decimal} instance from a Java
      * {@code double}.
-     *
+     * <p>
      * Note that this does not generate the exact decimal representation of the
      * {@code double}'s binary floating-point value as via
      * {@link BigDecimal#BigDecimal(double)}, but instead uses the more

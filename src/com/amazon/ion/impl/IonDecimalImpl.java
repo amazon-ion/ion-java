@@ -165,14 +165,12 @@ public final class IonDecimalImpl
         setValue(Decimal.valueOf(value));
     }
 
-    // TODO need to specify whether float->IonDecimal is via print+parse
     public void setValue(float value)
     {
         // base setValue will check for the lock
         setValue(Decimal.valueOf(value));
     }
 
-    // TODO need to specify whether double->IonDecimal is via print+parse
     public void setValue(double value)
     {
         // base setValue will check for the lock

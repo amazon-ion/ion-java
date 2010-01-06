@@ -71,11 +71,21 @@ public interface IonDecimal
 
     /**
      * Sets the value of this element.
+     * This method behaves like {@link BigDecimal#valueOf(double)} in that it
+     * uses the {@code double}'s canonical string representation provided by
+     * {@link Double#toString(double)}}.
+     *
+     * @see Decimal#valueOf(double)
      */
     public void setValue(float value);
 
     /**
      * Sets the value of this element.
+     * This method behaves like {@link BigDecimal#valueOf(double)} in that it
+     * uses the {@code double}'s canonical string representation provided by
+     * {@link Double#toString(double)}}.
+     *
+     * @see Decimal#valueOf(double)
      */
     public void setValue(double value);
 

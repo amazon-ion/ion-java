@@ -96,15 +96,19 @@ public interface IonReader
     public IonType getType();
 
     /**
-     * Return the annotations of the current value as an array of strings.  The
-     * return value is null if there are no annotations on the current value.
+     * Return the annotations of the current value as an array of strings.
+     *
+     * @return the (ordered) annotations on the current value, or an empty
+     * array (not {@code null}) if there are none.
      */
     public String[] getTypeAnnotations();
 
     /**
      * Return the symbol id's of the annotations on the current value as an
-     * array of ints.  The return value is null if there are no annotations
-     * on the current value.
+     * array of ints.
+     *
+     * @return the (ordered) annotations on the current value, or an empty
+     * array (not {@code null}) if there are none.
      */
     public int[] getTypeAnnotationIds();
 
