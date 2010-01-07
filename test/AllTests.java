@@ -9,10 +9,14 @@ import com.amazon.ion.ClobTest;
 import com.amazon.ion.DatagramTest;
 import com.amazon.ion.DecimalTest;
 import com.amazon.ion.EquivsTests;
+import com.amazon.ion.ExtendedDecimalTest;
 import com.amazon.ion.FieldNameEscapesTest;
 import com.amazon.ion.FloatTest;
 import com.amazon.ion.GoodIonTests;
+import com.amazon.ion.HashCodeCorrectnessTest;
+import com.amazon.ion.HashCodeDistributionTest;
 import com.amazon.ion.IntTest;
+import com.amazon.ion.JavaNumericsTest;
 import com.amazon.ion.ListTest;
 import com.amazon.ion.LoaderTest;
 import com.amazon.ion.LongStringTest;
@@ -64,6 +68,8 @@ public class AllTests
         suite.addTestSuite(ByteBufferTest.class);
         suite.addTestSuite(TextTest.class);
         suite.addTestSuite(CharacterReaderTest.class);
+        suite.addTestSuite(JavaNumericsTest.class);
+        suite.addTestSuite(ExtendedDecimalTest.class);
 
         // General framework tests
         suite.addTestSuite(SimpleCatalogTest.class);
@@ -104,6 +110,10 @@ public class AllTests
         // equality testing
         suite.addTest(new JUnit4TestAdapter(EquivalenceTest.class));
         suite.addTest(new JUnit4TestAdapter(IonEqualsTest.class));
+
+        // hash code tests
+        suite.addTest(new JUnit4TestAdapter(HashCodeCorrectnessTest.class));
+        suite.addTest(new JUnit4TestAdapter(HashCodeDistributionTest.class));
 
         // General processing test suite
         suite.addTest(new GoodIonTests());

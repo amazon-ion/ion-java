@@ -50,6 +50,17 @@ public class TemporaryList
         return c;
     }
 
+    /**
+     * This shouldn't visible externally, but is required since it is a concrete
+     * class.
+     * @return raw sequence hash code
+     * @see Object#hashCode()
+     */
+    @Override
+    public int hashCode() {
+        return sequenceHashCode(0);
+    }
+
 
     public IonType getType()
     {

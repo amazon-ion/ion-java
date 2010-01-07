@@ -3,7 +3,8 @@
 package com.amazon.ion;
 
 import com.amazon.ion.impl.IonBinaryReader;
-import com.amazon.ion.impl.IonTextReader;
+import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.impl.IonTextReaderImpl;
 import com.amazon.ion.impl.TreeReaderTest;
 import java.util.NoSuchElementException;
 
@@ -76,11 +77,14 @@ public abstract class ReaderSystemProcessingTestCase
     protected void checkDecimal(double expected) throws Exception
     {
         assertSame(IonType.DECIMAL, myReader.getType());
+        Decimal dec = myReader.decimalValue();
         // TODO also test bigDecimalValue equivalence (not just double)
-        assertEquals("decimal content", expected, myReader.longValue());
-        assertEquals("decimal content", expected, myReader.doubleValue());
-        assertEquals("decimal content", expected,
-                     myReader.bigDecimalValue().doubleValue());
+//        assertEquals("decimal content", (long)expected, myReader.longValue());
+//        assertEquals("decimal content", expected, myReader.doubleValue());
+        assertEquals("float value compared",
+                     0, Float.compare((float)expected, dec.floatValue()));
+        assertEquals("double value compared",
+                     0, Double.compare(expected, dec.doubleValue()));
     }
 
     @Override
@@ -119,27 +123,31 @@ public abstract class ReaderSystemProcessingTestCase
 
 
     @Override
-    protected void checkTimestamp(String expected) throws Exception
+    protected void checkTimestamp(Timestamp expected) throws Exception
     {
         assertSame(IonType.TIMESTAMP, myReader.getType());
-        // TODO handle null.timestamp
-        assertEquals("timestamp",
-                     expected, myReader.timestampValue().toString());
+        assertEquals("timestamp", expected, myReader.timestampValue());
+        // TODO also check date
+//        Date expectedDate = (expected == null ? null : expected.dateValue());
+//        assertEquals("date", expectedDate, myReader.dateValue());
     }
 
     @Override
     protected void checkEof()
     {
-        assertFalse("not at eof", myReader.hasNext());
+        // Doing this twice is intentional.
+        assertEquals("next() at eof", null, myReader.next());
+
+        if (!IonImplUtils.READER_HASNEXT_REMOVED) {
+            assertFalse("not at eof", myReader.hasNext());
+        }
+
+        assertEquals("next() at eof", null, myReader.next());
     }
 
     protected void badNext()
     {
-        try {
-            myReader.next();
-            fail("expected exception");
-        }
-        catch (NoSuchElementException e) { }
+        assertEquals("result from IonReader.next()", null, myReader.next());
     }
 
 
@@ -179,13 +187,13 @@ public abstract class ReaderSystemProcessingTestCase
 
         assertTrue(myReader.hasNext());
 
-        if (!(myReader instanceof IonTextReader)) { // FIXME text reader is broken
+        if (!(myReader instanceof IonTextReaderImpl)) { // FIXME text reader is broken
             assertFalse(myReader.isInStruct());
         }
 
         assertEquals(IonType.STRUCT, myReader.next());
         assertEquals(0, myReader.getDepth());
-        if (!(myReader instanceof IonTextReader)) { // FIXME text reader is broken
+        if (!(myReader instanceof IonTextReaderImpl)) { // FIXME text reader is broken
             assertFalse(myReader.isInStruct());
         }
 
@@ -197,7 +205,7 @@ public abstract class ReaderSystemProcessingTestCase
         assertTrue(myReader.isInStruct());
 
         myReader.stepOut();
-        if (!(myReader instanceof IonTextReader)) { // FIXME text reader is broken
+        if (!(myReader instanceof IonTextReaderImpl)) { // FIXME text reader is broken
             assertFalse(myReader.isInStruct());
         }
         assertFalse(myReader.hasNext());
@@ -215,7 +223,7 @@ public abstract class ReaderSystemProcessingTestCase
         assertEquals(IonType.SYMBOL, myReader.getType());
         assertTrue(myReader.hasNext());
 
-        if (!(myReader instanceof IonTextReader)) { // FIXME text reader is broken
+        if (!(myReader instanceof IonTextReaderImpl)) { // FIXME text reader is broken
             assertEquals(IonType.SYMBOL, myReader.getType());
         }
         assertEquals(IonType.INT, myReader.next());

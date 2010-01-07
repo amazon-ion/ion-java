@@ -93,6 +93,12 @@ public interface IonValue
     extends Cloneable
 {
     /**
+     * A zero-length immutable {@code IonValue} array.
+     */
+    public static final IonValue[] EMPTY_ARRAY = new IonValue[0];
+
+
+    /**
      * Gets an enumeration value identifying the core Ion data type of this
      * object.
      *
@@ -168,6 +174,15 @@ public interface IonValue
 
 
     /**
+     * Removes this value from its container, if any.
+     *
+     * @return {@code true} if this value was in a container before this method
+     * was called.
+     */
+    public boolean removeFromContainer();
+
+
+    /**
      * Gets the user type annotations attached to this value
      * as strings.  This will return an empty array if there are no annotations.
      * @deprecated Use {@link #getTypeAnnotations()} instead.
@@ -235,7 +250,9 @@ public interface IonValue
      * Ensures that this value, and all contained data, is fully materialized
      * into {@link IonValue} instances from any underlying Ion binary buffer.
      *
-     * @deprecated
+     * @deprecated with no direct replacement. This method has often been used
+     * to make values (somewhat) thread-safe, in which case one should use
+     * {@link #makeReadOnly()} instead.
      */
     @Deprecated
     public void deepMaterialize();
@@ -300,4 +317,11 @@ public interface IonValue
      *          content and annotations.
      */
     public boolean equals(Object other);
+
+
+    /**
+     * Implementation consistent with {@link #equals(Object)}.
+     * {@inheritDoc}
+     */
+    public int hashCode();
 }

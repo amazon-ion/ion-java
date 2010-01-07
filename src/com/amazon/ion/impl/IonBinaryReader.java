@@ -6,6 +6,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_ITERATOR;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonClob;
@@ -253,7 +254,7 @@ public final class IonBinaryReader
     {
         // get actual type id, this also handle the hasNext & eof logic as necessary
         if (!hasNext()) {
-            throw new NoSuchElementException();
+            return null;
         }
         int tid = this.nextTid();
         _value_type = get_iontype_from_tid(tid);
@@ -572,12 +573,10 @@ public final class IonBinaryReader
         int td = _reader.read();
 
         if (((td >>> 4) & 0xf) == IonConstants.tidStruct) {
-            //boolean was_struct = this._in_struct;
             int     prev_parent_tid = this._parent_tid;  // TODO Always DATAGRAM
             int     prev_end = this._local_end;
 
             this._value_tid = td;
-            //this._in_struct = true;
             this._parent_tid = IonConstants.tidStruct;
 
             int len = this.read_length(td);
@@ -590,7 +589,7 @@ public final class IonBinaryReader
 
             SymbolTable systemSymbols = _current_symtab.getSystemSymbolTable();
             UnifiedSymbolTable local =
-                new UnifiedSymbolTable(systemSymbols, this, _catalog);
+                UnifiedSymbolTable.makeNewLocalSymbolTable(systemSymbols, _catalog, this); // ins truct == true
 
             _eof = false; // set by hasNext() on the last field in the symtab
 
@@ -723,13 +722,16 @@ public final class IonBinaryReader
         return _value_type;
     }
 
+    private static int[] _empty_int_array = new int[0];
     public int[] getTypeAnnotationIds()
     {
         int[] ids = null;
         if (_state != S_BEFORE_CONTENTS) {
             throw new IllegalStateException();
         }
-        if (_annotation_start == -1) return null;
+        if (_annotation_start == -1) {
+            return _empty_int_array;
+        }
 
         int pos = _reader.position();
 
@@ -743,14 +745,21 @@ public final class IonBinaryReader
                 _reader.readVarUInt();
                 count++;
             }
-
-            // now, again, to save those values
-            ids = new int[count];
-            _reader.position(_annotation_start);
-            _reader.readVarUInt();
-            count = 0;
-            while (annotation_end > _reader.position()) {
-                ids[count++] = _reader.readVarUInt();
+            if (count == 0) {
+                // this case only comes up in the event of unusually
+                // formatted binary - where the value is annotated
+                // but there are no annotations
+                ids = _empty_int_array;
+            }
+            else {
+                // now, again, to save those values
+                ids = new int[count];
+                _reader.position(_annotation_start);
+                _reader.readVarUInt();
+                count = 0;
+                while (annotation_end > _reader.position()) {
+                    ids[count++] = _reader.readVarUInt();
+                }
             }
         }
         catch (IOException e) {
@@ -762,10 +771,13 @@ public final class IonBinaryReader
         return ids;
     }
 
+    private static String[] _empty_string_array = new String[0];
     public String[] getTypeAnnotations()
     {
         int[] ids = getTypeAnnotationIds();
-        if (ids == null) return null;
+        if (ids == null || ids.length < 1) {
+            return _empty_string_array;
+        }
         if (_current_symtab == null) {
             throw new IllegalStateException();
         }
@@ -849,7 +861,7 @@ public final class IonBinaryReader
         case IonConstants.tidPosInt:
         case IonConstants.tidNegInt:    return sys.newInt(longValue());
         case IonConstants.tidFloat:     return sys.newFloat(doubleValue());
-        case IonConstants.tidDecimal:   return sys.newDecimal(bigDecimalValue());
+        case IonConstants.tidDecimal:   return sys.newDecimal(decimalValue());
         case IonConstants.tidTimestamp:
             IonTimestamp t = sys.newTimestamp();
             Timestamp ti = timestampValue();
@@ -890,8 +902,7 @@ public final class IonBinaryReader
     private void fillContainer(IonSystem sys, IonSequence list)
     {
         stepIn();
-        while(hasNext()) {
-            next();
+        while(next() != null) {
             list.add(getIonValue(sys));
         }
         stepOut();
@@ -899,8 +910,7 @@ public final class IonBinaryReader
     private void fillContainer(IonSystem sys, IonStruct struct)
     {
         stepIn();
-        while(hasNext()) {
-            next();
+        while(next() != null) {
             String fieldname = getFieldName();
             struct.add(fieldname, getIonValue(sys));
         }
@@ -955,6 +965,7 @@ public final class IonBinaryReader
             throw new IllegalStateException();
         }
         int tid = (_value_tid >>> 4);
+        // TODO spec allows this method to be called for float and decimal
         if (tid != IonConstants.tidNegInt && tid != IonConstants.tidPosInt) {
             throw new IllegalStateException();
         }
@@ -982,7 +993,7 @@ public final class IonBinaryReader
         int tid = (_value_tid >>> 4);
         try {
             if (tid == IonConstants.tidDecimal) {
-                BigDecimal dec = _reader.readDecimal(_value_len);
+                Decimal dec = _reader.readDecimal(_value_len);
                 value = dec.doubleValue();
             }
             else if (tid == IonConstants.tidFloat) {
@@ -1001,6 +1012,11 @@ public final class IonBinaryReader
 
     public BigDecimal bigDecimalValue()
     {
+        return Decimal.bigDecimalValue(decimalValue()); // Works for null.
+    }
+
+    public Decimal decimalValue()
+    {
         if (_state != S_BEFORE_CONTENTS) {
             throw new IllegalStateException();
         }
@@ -1009,7 +1025,7 @@ public final class IonBinaryReader
             throw new IllegalStateException();
         }
 
-        BigDecimal value;
+        Decimal value;
         try {
             value = _reader.readDecimal(_value_len);
         }
@@ -1044,7 +1060,8 @@ public final class IonBinaryReader
 
     public Date dateValue()
     {
-        return timestampValue().dateValue();
+        Timestamp time = timestampValue();
+        return (time == null ? null : time.dateValue());
     }
 
     public Timestamp timestampValue()

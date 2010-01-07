@@ -19,6 +19,11 @@ public abstract class ContainerTestCase
     protected abstract void add(IonContainer container, IonValue child);
 
     /**
+     * Creates Ion text, using given fragments of Ion text.
+     */
+    protected abstract String wrap(String... children);
+
+    /**
      * Creates a container, using given fragments of Ion text.
      */
     protected abstract IonContainer wrapAndParse(String... children);
@@ -193,9 +198,37 @@ public abstract class ContainerTestCase
     }
 
 
+    public void testRemoveFromContainer()
+    {
+        IonValue n = system().newNull();
+        assertFalse(n.removeFromContainer());
+
+        IonValue m = system().newInt(2);
+        IonContainer c = wrap(n, m);
+
+        assertTrue(n.removeFromContainer());
+        assertEquals(null, n.getContainer());
+        assertEquals(null, n.getFieldName());
+
+        assertEquals(1, c.size());
+        assertSame(m, c.iterator().next());
+        assertTrue(m.removeFromContainer());
+        assertEquals(null, m.getContainer());
+        assertEquals(null, m.getFieldName());
+        assertEquals(0, c.size());
+    }
+
+
     public void testDetachHasDifferentSymtab()
     {
-        IonContainer list = wrapAndParse("sym1", "[sym2]", "{f:sym3}", "a::3");
+        String data = wrap("sym1", "[sym2]", "{f:sym3}", "a::3");
+
+        IonDatagram dg = loader().load(data);
+
+        // Don't test this for datagram, which has different symtab behavior.
+        if (dg.get(0).getType() == IonType.SYMBOL) return;
+
+        IonContainer list = (IonContainer) dg.get(0);
         if (list instanceof IonDatagram) return;
 
         SymbolTable topSymtab = list.getSymbolTable();

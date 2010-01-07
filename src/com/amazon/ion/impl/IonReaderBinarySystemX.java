@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
@@ -64,7 +65,7 @@ public class IonReaderBinarySystemX extends IonReaderBinaryRawX
         Iterator<Integer> it = new IonReaderTextUserX.IntIterator(_annotation_ids, 0, _annotation_count);
         return it;
     }
-
+    private static int[] _empty_int_array = new int[0];
     @Override
     public int[] getTypeAnnotationIds()
     {
@@ -74,8 +75,14 @@ public class IonReaderBinarySystemX extends IonReaderBinaryRawX
         catch (IOException e) {
             error(e);
         }
-        int[] anns = new int[_annotation_count];
-        System.arraycopy(_annotation_ids, 0, anns, 0, _annotation_count);
+        int[] anns;
+        if (_annotation_count < 1) {
+            anns = _empty_int_array;
+        }
+        else {
+            anns = new int[_annotation_count];
+            System.arraycopy(_annotation_ids, 0, anns, 0, _annotation_count);
+        }
         return anns;
     }
 
@@ -195,9 +202,9 @@ public class IonReaderBinarySystemX extends IonReaderBinaryRawX
             _v.setAuthoritativeType(AS_TYPE.double_value);
             break;
         case DECIMAL:
-            BigDecimal bd = readDecimal(_value_len);
-            _v.setValue(bd);
-            _v.setAuthoritativeType(AS_TYPE.bigDecimal_value);
+            Decimal dec = readDecimal(_value_len);
+            _v.setValue(dec);
+            _v.setAuthoritativeType(AS_TYPE.decimal_value);
             break;
         case TIMESTAMP:
             // TODO: it looks like a 0 length return a null timestamp - is that right?
@@ -270,8 +277,13 @@ public class IonReaderBinarySystemX extends IonReaderBinaryRawX
     @Override
     public BigDecimal bigDecimalValue()
     {
-        prepare_value(AS_TYPE.bigDecimal_value);
+        prepare_value(AS_TYPE.decimal_value);
         return _v.getBigDecimal();
+    }
+    public Decimal decimalValue()
+    {
+        prepare_value(AS_TYPE.decimal_value);
+        return _v.getDecimal();
     }
     @Override
     public Date dateValue()

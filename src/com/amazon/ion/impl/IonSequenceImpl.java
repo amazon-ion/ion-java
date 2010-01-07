@@ -1,17 +1,20 @@
-// Copyright (c) 2007-20089 Amazon.com, Inc. All rights reserved.
+// Copyright (c) 2007-2009 Amazon.com, Inc. All rights reserved.
 
 package com.amazon.ion.impl;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonDatagram;
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.ValueFactory;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.List;
 
 
 /**
@@ -24,7 +27,8 @@ public abstract class IonSequenceImpl
     /**
      * A zero-length array.
      */
-    protected static final IonValue[] EMPTY_VALUE_ARRAY = new IonValue[0];
+    protected static final IonValue[] EMPTY_VALUE_ARRAY = IonValue.EMPTY_ARRAY;
+    // TODO inline and remove this
 
     /**
      * Constructs a sequence backed by a binary buffer.
@@ -100,6 +104,24 @@ public abstract class IonSequenceImpl
     @Override
     public abstract IonSequenceImpl clone();
 
+    /**
+     * Calculate Ion Sequence hash code as seed value XORed with hash
+     * codes of contents, rotating 3 at each step to make the code
+     * order-dependent.
+     * @param seed Seed value
+     * @return hash code
+     */
+    protected int sequenceHashCode(int seed)
+    {
+        int hash_code = seed;
+        if (!isNullValue())  {
+            for (IonValue v : this)  {
+                hash_code ^= v.hashCode();
+                hash_code = hash_code << 29 | hash_code >>> 3;
+            }
+        }
+        return hash_code;
+    }
 
     @Override
     public boolean isNullValue()
@@ -130,6 +152,24 @@ public abstract class IonSequenceImpl
         }
         return changed;
     }
+
+    public boolean addAll(int index, Collection<? extends IonValue> c)
+    {
+        if (index < 0 || index > size())
+        {
+            throw new IndexOutOfBoundsException();
+        }
+
+        // TODO optimize to avoid n^2 shifting and renumbering of elements.
+        boolean changed = false;
+        for (IonValue v : c)
+        {
+            add(index++, v);
+            changed = true;
+        }
+        return changed;
+    }
+
 
     public ValueFactory add()
     {
@@ -165,6 +205,47 @@ public abstract class IonSequenceImpl
         };
     }
 
+
+    public IonValue set(int index, IonValue element)
+    {
+        checkForLock();
+        final IonValueImpl concrete = ((IonValueImpl) element);
+
+        // NOTE: size calls makeReady() so we don't have to
+        if (index < 0 || index >= size())
+        {
+            throw new IndexOutOfBoundsException("" + index);
+        }
+
+        validateNewChild(element);
+
+        assert _contents != null; // else index would be out of bounds above.
+
+        IonValueImpl removed = (IonValueImpl) _contents.set(index, concrete);
+        concrete._elementid = index;
+        concrete._container = this;
+
+        try
+        {
+            removed.detachFromContainer();
+            // calls setDirty(), UNLESS it hits an IOException
+        }
+        catch (IOException e)
+        {
+            setDirty();
+            throw new IonException(e);
+        }
+        return removed;
+    }
+
+
+    public IonValue remove(int index)
+    {
+        // TODO optimize
+        IonValue v = get(index);
+        remove(v);
+        return v;
+    }
 
     public boolean remove(Object o)
     {
@@ -236,6 +317,11 @@ public abstract class IonSequenceImpl
         return indexOf(o);
     }
 
+    public List<IonValue> subList(int fromIndex, int toIndex)
+    {
+        // TODO JIRA ION-92
+        throw new UnsupportedOperationException("JIRA issue ION-92");
+    }
 
     public IonValue[] toArray()
     {
@@ -262,6 +348,15 @@ public abstract class IonSequenceImpl
         return contents.toArray(a);
     }
 
+    @SuppressWarnings("unchecked")
+    public <T extends IonValue> T[] extract(Class<T> type)
+    {
+        if (isNullValue()) return null;
+        T[] array = (T[]) Array.newInstance(type, size());
+        toArray(array);
+        clear();
+        return array;
+    }
 
     //=========================================================================
 

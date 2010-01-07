@@ -164,8 +164,11 @@ public final class IonTreeWriter
             IonValue prior = dg.systemGet(dg.systemSize() - 1);
             if (_sys.valueIsLocalSymbolTable(prior))
             {
-                _symbol_table = new UnifiedSymbolTable((IonStruct) prior,
-                                                       _sys.getCatalog());
+                _symbol_table = UnifiedSymbolTable.makeNewLocalSymbolTable(
+                                    _sys.getSystemSymbolTable()
+                                  , (IonStruct) prior
+                                  ,_sys.getCatalog()
+                                );
             }
         }
     }

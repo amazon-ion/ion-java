@@ -97,6 +97,8 @@ public interface IonWriter
      *
      * @throws IllegalStateException if the current container isn't a struct,
      * that is, if {@link #isInStruct()} is false.
+     * @throws NullPointerException if {@code name} is null.
+     * @throws EmptySymbolException if {@code name} is empty.
      */
     public void setFieldName(String name);
 
@@ -110,7 +112,8 @@ public interface IonWriter
      * The list of pending annotations is cleared when the current value is
      * written via one of the {@code write*()} or {@code open*()} methods.
      *
-     * @param annotations string array with the annotations
+     * @param annotations string array with the annotations.
+     * If null or empty, any pending annotations are cleared.
      */
     public void setTypeAnnotations(String[] annotations);
 
@@ -123,7 +126,8 @@ public interface IonWriter
      * The list of pending annotations is cleared when the current value is
      * written via one of the {@code write*()} or {@code open*()} methods.
      *
-     * @param annotationIds array with the annotation symbol ids
+     * @param annotationIds array with the annotation symbol ids.
+     * If null or empty, any pending annotations are cleared.
      */
     public void setTypeAnnotationIds(int[] annotationIds);
 
@@ -207,7 +211,7 @@ public interface IonWriter
 
     /**
      * Writes values from a reader until the end of the current container.
-     * This method iterates until {@link IonReader#hasNext()} is {@code false}
+     * This method iterates until {@link IonReader#next()} returns {@code null}
      * and does not {@link IonReader#stepOut() step out} to the container of
      * the current cursor position.
      * <p>
@@ -300,15 +304,16 @@ public interface IonWriter
     public void writeFloat(double value) throws IOException;
 
     /**
-     * writes a BigDecimal value as an IonDecimal.  Ion uses an
-     * arbitrarily long sign/value and an arbitartily long signed
+     * Writes a BigDecimal value as an Ion decimal.  Ion uses an
+     * arbitrarily long sign/value and an arbitrarily long signed
      * exponent to write the value. This preserves
      * all of the BigDecimal digits, the number of
-     * significant digits.  However java.math.BigDecimal cannot represent
-     * negative zero, use writeDecimalNegativeZero() or
-     * writeDecimal(BigDecimal value, boolean isNegativeZero) instead
-     * if you require a negative zero.
-     * @param value BigDecimal to write
+     * significant digits.
+     * <p>
+     * To write a negative zero value, pass this method a
+     * {@link Decimal} instance.
+     *
+     * @param value may be null to represent {@code null.decimal}.
      */
     public void writeDecimal(BigDecimal value) throws IOException;
 
@@ -318,7 +323,10 @@ public interface IonWriter
      * java.math.BigDecimal class does not support the value negative
      * zero.  This method allows us to emit this value when it
      * is necessary.
+     *
+     * @deprecated Use {@link #writeDecimal(BigDecimal)} instead.
      */
+    @Deprecated
     public void writeDecimal(IonNumber.Classification classification)
         throws IOException;
 
@@ -336,7 +344,10 @@ public interface IonWriter
      * @param classification the kind of special value to write.
      * Currently only {@link IonNumber.Classification#NEGATIVE_ZERO}
      * is supported.
+     *
+     * @deprecated Replaced by {@link #writeDecimal(BigDecimal)}.
      */
+    @Deprecated
     public void writeDecimal(BigDecimal value,
                              IonNumber.Classification classification)
         throws IOException;
@@ -387,7 +398,8 @@ public interface IonWriter
     /**
      * write value out as an IonSymbol value.  If the value is not
      * present in the symbol table it will be added to the symbol table.
-     * @param value string symbol write
+     *
+     * @param value may be null to represent {@code null.symbol}.
      *
      * @throws IllegalArgumentException if the value contains an invalid UTF-16
      * surrogate pair.
@@ -402,7 +414,7 @@ public interface IonWriter
      * code units necessary to define the Unicode code point to be
      * output, an exception will be raised if this case is encountered.
      *
-     * @param value Java String to be written
+     * @param value may be null to represent {@code null.string}.
      *
      * @throws IllegalArgumentException if the value contains an invalid UTF-16
      * surrogate pair.
@@ -412,7 +424,8 @@ public interface IonWriter
     /**
      * write the byte array out as an IonClob value.  This copies
      * the byte array.
-     * @param value bytes to be written
+     *
+     * @param value may be null to represent {@code null.clob}.
      */
     public void writeClob(byte[] value) throws IOException;
 
@@ -429,7 +442,8 @@ public interface IonWriter
     /**
      * write the byte array out as an IonBlob value.  This copies
      * the byte array.
-     * @param value bytes to be written
+     *
+     * @param value may be null to represent {@code null.blob}.
      */
     public void writeBlob(byte[] value) throws IOException;
 

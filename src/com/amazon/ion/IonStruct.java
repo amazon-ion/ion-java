@@ -2,6 +2,8 @@
 
 package com.amazon.ion;
 
+import java.util.Map;
+
 
 /**
  * An Ion <code>struct</code> value.
@@ -22,6 +24,14 @@ public interface IonStruct
      */
     public int size()
         throws NullValueException;
+
+
+    // Treats null.struct like empty struct
+    public boolean containsKey(Object fieldName);
+
+    // Uses reference equality
+    // Treats null.struct like empty struct
+    public boolean containsValue(Object value);
 
 
     /**
@@ -89,6 +99,24 @@ public interface IonStruct
 
 
     /**
+     * Copies all of the mappings from the specified map to this struct.
+     * The effect of this call is equivalent to that of calling
+     * {@link #put(String, IonValue) put(k, v)} on this struct once for each
+     * mapping from key {@code k} to value {@code v} in the specified map.
+     * The behavior of this operation is undefined if the specified map is
+     * modified while the operation is in progress.
+     * <p>
+     * If a key in the map maps to {@code null}, then all fields with that name
+     * will be removed from this struct.
+     *
+     * @throws NullPointerException if the given map is null.
+     * @throws ContainedValueException if any values in the map are already
+     * part of an {@link IonContainer} (even this one).
+     */
+    public void putAll(Map<? extends String, ? extends IonValue> m);
+
+
+    /**
      * Adds a new field to this struct.
      * If this is <code>null.struct</code>, then it becomes a single-field
      * struct.
@@ -130,10 +158,31 @@ public interface IonStruct
 
 
     /**
-     * Removes from this struct all fields with names in the given list.
+     * Removes a field by name, returning a value that was previously
+     * associated with the field, or {@code null} if this struct contained no
+     * such field.
+     * <p>
+     * Because Ion structs may have repeated fields, additional fields with the
+     * given name may still exist after this method returns.
+     * <p>
+     * If this struct is null ({@link #isNullValue()}) or empty,
+     * then this method returns null and has no effect.
      *
+     * @param fieldName must not be null or empty.
+     *
+     * @return previous value associated with the specifed field name, or
+     * {@code null} if there was no such field.
+     */
+    public IonValue remove(String fieldName);
+
+
+    /**
+     * Removes from this struct all fields with names in the given list.
      * If multiple fields with a given name exist in this struct,
      * they will all be removed.
+     * <p>
+     * If this struct is null ({@link #isNullValue()}) or empty,
+     * then this method returns {@code false} and has no effect.
      *
      * @param fieldNames the names of the fields to remove.
      *
@@ -149,6 +198,9 @@ public interface IonStruct
      * Retains only the fields in this struct that have one of the given names.
      * In other words, removes all fields with names that are not in
      * {@code fieldNames}.
+     * <p>
+     * If this struct is null ({@link #isNullValue()}) or empty,
+     * then this method returns {@code false} and has no effect.
      *
      * @param fieldNames the names of the fields to retain.
      *
@@ -160,5 +212,26 @@ public interface IonStruct
     public boolean retainAll(String... fieldNames);
 
 
+    // TODO public Set<K> keySet();
+    // TODO public Collection<V> values();
+    // TODO public Set<Map.Entry<K,V>> entrySet();
+
     public IonStruct clone();
+
+
+    /**
+     * Clones this struct without including certain fields. This can be more
+     * efficient than cloning the struct and removing fields later on.
+     */
+    public IonStruct cloneAndRemove(String... fieldNames);
+
+
+    /**
+     * Clones this struct, including only certain fields. This can be more
+     * efficient than cloning the struct and removing fields later on.
+     *
+     * @throws NullPointerException
+     *   if {@code fieldNames}, or any element within it, is <code>null</code>.
+     */
+    public IonStruct cloneAndRetain(String... fieldNames);
 }

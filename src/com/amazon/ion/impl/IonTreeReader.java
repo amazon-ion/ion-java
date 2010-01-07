@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_ITERATOR;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
@@ -110,7 +111,7 @@ public final class IonTreeReader
     public IonType next()
     {
         if (this._next == null && !this.hasNext()) {
-            throw new NoSuchElementException();
+            return null;
         }
         this._curr = this._next;
         this._next = null;
@@ -190,17 +191,19 @@ public final class IonTreeReader
             throw new IllegalStateException();
         }
         String [] annotations = _curr.getTypeAnnotations();
-        if (annotations == null || annotations.length < 1) {
-            return null;
+        if (annotations == null) {
+            annotations = _empty_string_array;
         }
-
         return annotations;
     }
 
+    private static int[] _empty_int_array = new int[0];
     public int[] getTypeAnnotationIds()
     {
         String [] annotations = getTypeAnnotations();
-        if (annotations == null)  return null;
+        if (annotations == null || annotations.length < 1) {
+            return _empty_int_array;
+        }
 
         int [] ids = new int[annotations.length];
         SymbolTable sym = _curr.getSymbolTable();
@@ -212,11 +215,14 @@ public final class IonTreeReader
         return ids;
     }
 
+    private static String[] _empty_string_array = new String[0];
     @SuppressWarnings("unchecked")
     public Iterator<Integer> iterateTypeAnnotationIds()
     {
         int [] ids = getTypeAnnotationIds();
-        if (ids == null) return (Iterator<Integer>) EMPTY_ITERATOR;
+        if (ids == null || ids.length < 1) {
+            return (Iterator<Integer>) EMPTY_ITERATOR;
+        }
         return new IdIterator(ids);
     }
 
@@ -312,6 +318,14 @@ public final class IonTreeReader
     {
         if (_curr instanceof IonDecimal)  {
             return ((IonDecimal)_curr).bigDecimalValue();
+        }
+        throw new IllegalStateException("current value is not an ion decimal");
+    }
+
+    public Decimal decimalValue()
+    {
+        if (_curr instanceof IonDecimal)  {
+            return ((IonDecimal)_curr).decimalValue();
         }
         throw new IllegalStateException("current value is not an ion decimal");
     }

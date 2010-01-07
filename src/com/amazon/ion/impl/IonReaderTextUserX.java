@@ -153,7 +153,7 @@ public class IonReaderTextUserX
     }
     private final void symbol_table_load()
     {
-        _symbols = UnifiedSymbolTable.loadLocalSymbolTable(this, _catalog);
+        _symbols = UnifiedSymbolTable.loadLocalSymbolTable(this._system, this, _catalog);
         return;
     }
     private final void symbol_table_reset()
@@ -196,16 +196,23 @@ public class IonReaderTextUserX
         return _symbols;
     }
 
+    private static int[] _empty_int_array = new int[0];
     @Override
     public int[] getTypeAnnotationIds()
     {
+        int[]    ids;
         String[] syms = getTypeAnnotations();
         int      len  = syms.length;
-        int[]    ids  = new int[len];
 
-        for (int ii=0; ii<len; ii++) {
-            String sym = stringValue();
-            ids[ii] = _symbols.findSymbol(sym);
+        if (len == 0) {
+            ids  = _empty_int_array;
+        }
+        else {
+            ids  = new int[len];
+            for (int ii=0; ii<len; ii++) {
+                String sym = stringValue();
+                ids[ii] = _symbols.findSymbol(sym);
+            }
         }
         return ids;
     }

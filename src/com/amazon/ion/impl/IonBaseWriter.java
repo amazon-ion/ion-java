@@ -2,12 +2,15 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.Decimal;
+import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonNumber;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.IonNumber.Classification;
 import java.io.IOException;
 import java.math.BigDecimal;
 
@@ -140,7 +143,10 @@ public abstract class IonBaseWriter
     public void setTypeAnnotations(String[] annotations)
     {
         _annotations_type = IonType.STRING;
-        if (annotations.length > _annotation_count) {
+        if (annotations == null) {
+            annotations = IonImplUtils.EMPTY_STRING_ARRAY;
+        }
+        else if (annotations.length > _annotation_count) {
             growAnnotations(annotations.length);
         }
         System.arraycopy(annotations, 0, _annotations, 0, annotations.length);
@@ -150,7 +156,10 @@ public abstract class IonBaseWriter
     public void setTypeAnnotationIds(int[] annotationIds)
     {
         _annotations_type = IonType.INT;
-        if (annotationIds.length > _annotation_count) {
+        if (annotationIds == null) {
+            annotationIds = IonImplUtils.EMPTY_INT_ARRAY;
+        }
+        else if (annotationIds.length > _annotation_count) {
             growAnnotations(annotationIds.length);
         }
         System.arraycopy(annotationIds, 0, _annotation_sids, 0, annotationIds.length);
@@ -226,14 +235,16 @@ public abstract class IonBaseWriter
         // know a specific system symtab at any point of the data.
 
         if (_symbol_table == null) {
-            _symbol_table = new UnifiedSymbolTable(UnifiedSymbolTable.getSystemSymbolTableInstance());
+            // TODO: this should really have the correct Ion version here so that
+            //       we could pass it in to attach the right system symbol table
+            _symbol_table = UnifiedSymbolTable.makeNewLocalSymbolTable(1);
         }
 
         int sid = _symbol_table.findSymbol(name);
         if (sid > 0) return sid;
 
         if (_symbol_table.isSystemTable()) {
-            _symbol_table = new UnifiedSymbolTable(_symbol_table);
+            _symbol_table = UnifiedSymbolTable.makeNewLocalSymbolTable(_symbol_table);
         }
         assert _symbol_table.isLocalTable();
 
@@ -245,6 +256,9 @@ public abstract class IonBaseWriter
     {
         if (!this.isInStruct()) {
             throw new IllegalStateException();
+        }
+        if (name.length() == 0) {
+            throw new EmptySymbolException();
         }
         _field_name_type = IonType.STRING;
         _field_name = name;
@@ -281,7 +295,22 @@ public abstract class IonBaseWriter
 
     public void writeDecimal(BigDecimal value) throws IOException
     {
-        writeDecimal(value, IonNumber.Classification.NORMAL);
+        if (value == null)
+        {
+            writeNull(IonType.DECIMAL);
+            return;
+        }
+
+        Classification c;
+        if (Decimal.isNegativeZero(value))
+        {
+            c = Classification.NEGATIVE_ZERO;
+        }
+        else
+        {
+            c = Classification.NORMAL;
+        }
+        writeDecimal(value, c);
     }
 
     public void writeDecimal(IonNumber.Classification classification)
@@ -289,7 +318,7 @@ public abstract class IonBaseWriter
     {
         switch(classification) {
         case NEGATIVE_ZERO:
-            writeDecimal(BigDecimal.ZERO, classification);
+            writeDecimal(Decimal.NEGATIVE_ZERO, classification);
             break;
         default:
             throw new IllegalArgumentException("classification for IonDecimal special values may only be NEGATIVE_ZERO");
@@ -364,8 +393,7 @@ public abstract class IonBaseWriter
 
     public void writeValues(IonReader reader) throws IOException
     {
-        while (reader.hasNext()) {
-            reader.next();
+        while (reader.next() != null) {
             writeValue(reader);
         }
         return;
@@ -381,11 +409,14 @@ public abstract class IonBaseWriter
     {
         if (/* reader.isInStruct() && */ this.isInStruct() && has_empty_field_name()) {
             String fieldname = reader.getFieldName();
+            if (fieldname == null) {
+                throw new IllegalStateException(ERROR_MISSING_FIELD_NAME);
+            }
             setFieldName(fieldname);
             if (_debug_on) System.out.print(":");
         }
         String [] a = reader.getTypeAnnotations();
-        if (a != null) {
+        if (a != null) { // TODO check for empty, check spec above
             setTypeAnnotations(a);
             if (_debug_on) System.out.print(";");
         }
@@ -412,7 +443,7 @@ public abstract class IonBaseWriter
                 if (_debug_on) System.out.print("f");
                 break;
             case DECIMAL:
-                writeDecimal(reader.bigDecimalValue());
+                writeDecimal(reader.decimalValue());
                 if (_debug_on) System.out.print("d");
                 break;
             case TIMESTAMP:

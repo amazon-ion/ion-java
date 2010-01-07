@@ -76,8 +76,17 @@ public abstract class SystemProcessingTestCase
     /**
      * @param expected is the canonical form of the timestamp
      */
-    protected abstract void checkTimestamp(String expected)
+    protected abstract void checkTimestamp(Timestamp expected)
         throws Exception;
+
+    /**
+     * @param expected is the canonical form of the timestamp
+     */
+    protected void checkTimestamp(String expected)
+        throws Exception
+    {
+        checkTimestamp(Timestamp.valueOf(expected));
+    }
 
     protected abstract void checkEof()
         throws Exception;
@@ -503,6 +512,15 @@ public abstract class SystemProcessingTestCase
         checkEof();
     }
 
+    public void testNegativeZeroDecimal()
+        throws Exception
+    {
+        startIteration("-0d0");
+        nextValue();
+        checkDecimal(-0.d); // TODO this should pass IonBigDecimal
+        checkEof();
+    }
+
     public void XXXtestPosFloat() // TODO rework?
         throws Exception
     {
@@ -554,6 +572,26 @@ public abstract class SystemProcessingTestCase
         checkEof();
     }
 
+    public void testTimestampWithZeroFraction()
+        throws Exception
+    {
+        String text = "2009-11-23T17:04:03.0-04:00";
+        startIteration(text);
+        nextValue();
+        checkTimestamp("2009-11-23T17:04:03.0-04:00");
+        checkEof();
+    }
+
+    public void testNullTimestamp()
+        throws Exception
+    {
+        String text = "null.timestamp";
+        startIteration(text);
+        nextValue();
+        checkTimestamp((Timestamp)null);
+        checkEof();
+    }
+
     public void testSpecialFloats()
         throws Exception
     {
@@ -584,7 +622,7 @@ public abstract class SystemProcessingTestCase
         assertEquals(ION_1_0, st.getIonVersionId());
         checkEof();
     }
-    
+
     public void testHighUnicodeDirectInBlob() {
         try {
             // JIRA ION-69

@@ -3,6 +3,7 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
+
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
@@ -36,10 +37,13 @@ public final class IonDatagramImpl
     static private final int DATAGRAM_TYPEDESC  =
         IonConstants.makeTypeDescriptor(IonConstants.tidSexp,
                                         IonConstants.lnIsEmptyContainer);
-    
+
+    private static final int HASH_SIGNATURE =
+        IonType.DATAGRAM.toString().hashCode();
+
     /** Underlying catalog */
     private final IonCatalog _catalog;
-    
+
     /**
      * Used while constructing, then set to null.
      */
@@ -117,6 +121,17 @@ public final class IonDatagramImpl
         IonDatagramImpl clone = new IonDatagramImpl(this._system, _catalog, data);
 
         return clone;
+    }
+
+    /**
+     * Implements {@link Object#hashCode()} consistent with equals.
+     *
+     * @return  An int, consistent with the contracts for
+     *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
+     */
+    @Override
+    public int hashCode() {
+        return sequenceHashCode(HASH_SIGNATURE);
     }
 
     /**
@@ -203,7 +218,7 @@ public final class IonDatagramImpl
                               catalog,
                               initialSymbolTable, ionText));
     }
-    
+
     /**
      * Workhorse constructor this does the actual work.
      *
@@ -248,7 +263,7 @@ public final class IonDatagramImpl
         // TODO this touches privates (testBinaryDataWithNegInt)
         _next_start = _buffer.buffer().size();
     }
-    
+
     /**
      * @param ionData must be in system mode
      */
@@ -384,8 +399,11 @@ public final class IonDatagramImpl
 
 //                if (false) {
                 IonStruct symtabStruct = (IonStruct) v;
-                symtab = new UnifiedSymbolTable(symtabStruct,
-                                                _catalog);
+                symtab = UnifiedSymbolTable.makeNewLocalSymbolTable(
+                             _system.getSystemSymbolTable()
+                             , symtabStruct
+                             ,_catalog
+                         );
 //                }
 //                else {
 //                    symtab = v.getSymbolTable();
@@ -418,14 +436,31 @@ public final class IonDatagramImpl
     public void add(int index, IonValue element)
         throws ContainedValueException, NullPointerException
     {
-        throw new UnsupportedOperationException();
+        // TODO JIRA ION-84
+        throw new UnsupportedOperationException("JIRA issue ION-84");
     }
 
     @Override
     public ValueFactory add(int index)
         throws ContainedValueException, NullPointerException
     {
-        throw new UnsupportedOperationException();
+        // TODO JIRA ION-84
+        throw new UnsupportedOperationException("JIRA issue ION-84");
+    }
+
+    @Override
+    public boolean addAll(int index, Collection<? extends IonValue> c)
+    {
+        // TODO JIRA ION-83
+        throw new UnsupportedOperationException("JIRA issue ION-83");
+    }
+
+    @Override
+    public IonValue set(int index, IonValue element)
+    {
+        // TODO JIRA ION-90
+        throw new UnsupportedOperationException("JIRA issue ION-90");
+
     }
 
     @Override
@@ -811,8 +846,11 @@ public final class IonDatagramImpl
                         if (priorIsLocalSymtab)
                         {
                             currentSymtab =
-                                new UnifiedSymbolTable((IonStruct) _contents.get(ii - 1),
-                                                       _catalog);
+                                UnifiedSymbolTable.makeNewLocalSymbolTable(
+                                    _system.getSystemSymbolTable()
+                                  , (IonStruct) _contents.get(ii - 1)
+                                  ,_catalog
+                                );
                         }
                         else if (currentSymtab.isSystemTable())
                         {

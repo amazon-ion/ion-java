@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonException;
@@ -211,7 +212,7 @@ public class IonReaderTextSystemX
                 break;
             case DECIMAL:
                 // note that the string was modified above when it was a charsequence
-                _v.setValue(new BigDecimal(s));
+                _v.setValue(Decimal.valueOf(s));
                 break;
             case FLOAT:
                 _v.setValue(Double.parseDouble(s));
@@ -252,7 +253,7 @@ public class IonReaderTextSystemX
             }
             break;
         case IonTokenConstsX.TOKEN_DECIMAL:
-            _v.setValue(new BigDecimal(s));
+            _v.setValue(Decimal.valueOf(s));
             break;
         case IonTokenConstsX.TOKEN_FLOAT:
             _v.setValue(Double.parseDouble(s));
@@ -420,8 +421,13 @@ public class IonReaderTextSystemX
     @Override
     public BigDecimal bigDecimalValue()
     {
-        load_or_cast_cached_value(AS_TYPE.bigDecimal_value);
+        load_or_cast_cached_value(AS_TYPE.decimal_value);
         return _v.getBigDecimal();
+    }
+    public Decimal decimalValue()
+    {
+        load_or_cast_cached_value(AS_TYPE.decimal_value);
+        return _v.getDecimal();
     }
     @Override
     public Date dateValue()
@@ -677,7 +683,7 @@ public class IonReaderTextSystemX
         case BOOL:      return sys.newBool(booleanValue());
         case INT:       return sys.newInt(longValue());
         case FLOAT:     return sys.newFloat(doubleValue());
-        case DECIMAL:   return sys.newDecimal(bigDecimalValue());
+        case DECIMAL:   return sys.newDecimal(decimalValue());
         case TIMESTAMP:
             IonTimestamp t = sys.newNullTimestamp();
             Timestamp ti = timestampValue();
@@ -713,8 +719,7 @@ public class IonReaderTextSystemX
     }
     private final void fillContainerList(IonSystem sys, IonSequence list) {
         this.stepIn();
-        while (this.hasNext()) {
-            this.next();
+        while (this.next() != null) {
             IonValue v = this.getIonValue(sys);
             list.add(v);
         }
@@ -722,8 +727,7 @@ public class IonReaderTextSystemX
     }
     private final void fillContainerStruct(IonSystem sys, IonStruct struct) {
         this.stepIn();
-        while (this.hasNext()) {
-            this.next();
+        while (this.next() != null) {
             String name = this.getFieldName();
             IonValue v = this.getIonValue(sys);
             struct.add(name, v);

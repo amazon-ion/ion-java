@@ -183,33 +183,41 @@ public class DecimalTest
 
     public void testNegativeZero()
     {
-        // Yes, Java floating point types can handle -0.0!
-        final float  floatNegZero  = Float.parseFloat("-0.");
-        final double doubleNegZero = Double.parseDouble("-0.");
+        IonDecimal value = decimal("-0.");
+        testNegativeZero(0, value);
 
-        IonDecimal value = (IonDecimal) oneValue("-0.");
-        assertEquals(floatNegZero,  value.floatValue());
-        assertEquals(doubleNegZero, value.doubleValue());
-        assertEquals(Classification.NEGATIVE_ZERO, value.getClassification());
+        IonDecimal value2 = decimal("-0d2");
+        assertFalse(value2.equals(value));
+        testNegativeZero(-2, value2);
 
-        // But BigDecimal cannot. :(
-        BigDecimal dec = value.bigDecimalValue();
-        checkDecimal(0, 0, dec);
-        assertEquals(0, dec.signum());
+        value2 = decimal("-0d1");
+        assertFalse(value2.equals(value));
+        testNegativeZero(-1, value2);
 
-        IonDecimal value2 = (IonDecimal) oneValue("-0d2");
-//        assertFalse(value2.equals(value));
-        assertEquals(floatNegZero,  value2.floatValue());
-        assertEquals(doubleNegZero, value2.doubleValue());
-        assertEquals(Classification.NEGATIVE_ZERO, value2.getClassification());
-        checkDecimal(0, -2, value2.bigDecimalValue());
+        value2 = decimal("1.");
+        value2.setValue(-0f);
+        testNegativeZero(1, value2);
 
-        value2 = (IonDecimal) oneValue("-0d1");
-//        assertFalse(value2.equals(value));
-        assertEquals(floatNegZero,  value2.floatValue());
-        assertEquals(doubleNegZero, value2.doubleValue());
-        assertEquals(Classification.NEGATIVE_ZERO, value2.getClassification());
-        checkDecimal(0, -1, value2.bigDecimalValue());
+        value2 = decimal("1.");
+        value2.setValue(-0d);
+        testNegativeZero(1, value2);
+    }
+
+    public void testNegativeZero(int scale, IonDecimal actual)
+    {
+        assertEquals(-0f, actual.floatValue());
+        assertEquals(-0d, actual.doubleValue());
+        assertEquals(Classification.NEGATIVE_ZERO, actual.getClassification());
+
+        BigDecimal bd = actual.bigDecimalValue();
+        Decimal dec = actual.decimalValue();
+
+        assertEquals(0, BigDecimal.ZERO.compareTo(bd));
+
+        checkDecimal(0, scale, bd);
+        checkDecimal(0, scale, dec);
+        assertEquals(0, Decimal.NEGATIVE_ZERO.compareTo(dec));
+        assertTrue(dec.isNegativeZero());
     }
 
     public void checkDecimal(int unscaled, int scale, BigDecimal actual)
@@ -219,6 +227,35 @@ public class DecimalTest
         assertEquals("decimal scale",
                      scale, actual.scale());
     }
+
+    public void testNegativeZeroEquality()
+    {
+        checkEquality(false, "0.",  "-0.");
+        checkEquality(false, "0.000",  "-0.000");
+    }
+
+    public void testPrecisionEquality()
+    {
+        checkEquality(true, "1.",  "1.");
+        checkEquality(true, "0.0", "0.0");
+
+        checkEquality(false, "1.",  "1.0");
+        checkEquality(false, "1.0", "1.00");
+
+        checkEquality(false, "0.",  "0.0");
+        checkEquality(false, "0.0", "0.00");
+    }
+
+
+    public void checkEquality(boolean expected, String v1, String v2)
+    {
+        IonDecimal d1 = decimal(v1);
+        IonDecimal d2 = decimal(v2);
+
+        assertEquals(expected, d1.equals(d2));
+        assertEquals(expected, d2.equals(d1));
+    }
+
 
     public void testBinaryDecimals()
         throws Exception
@@ -252,4 +289,12 @@ public class DecimalTest
         IonDecimal value = (IonDecimal) oneValue("1.00");
         assertEquals(one_00, value.bigDecimalValue());
     }
+
+    public void testSetValue()
+    {
+        IonDecimal value = decimal("1.23");
+        value.setValue(123);
+        checkDecimal(123, 0, value.bigDecimalValue());
+    }
+
 }

@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc. All rights reserved.
- */
+// Copyright (c) 2007-2009 Amazon.com, Inc. All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -11,6 +9,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.NullValueException;
+import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.IonBinary.Reader;
 import com.amazon.ion.impl.IonBinary.Writer;
@@ -40,6 +39,9 @@ abstract public class IonContainerImpl
 
     @Override
     public abstract IonContainer clone();
+
+    @Override
+    public abstract int hashCode();
 
 
     /**
@@ -548,12 +550,14 @@ abstract public class IonContainerImpl
 
     /**
      * Ensures that a potential new child is non-null, has no container,
-     * and is not a datagram.
+     * is not read-only, and is not a datagram.
      *
      * @throws NullPointerException
      *   if {@code child} is {@code null}.
      * @throws ContainedValueException
      *   if {@code child} is already part of a container.
+     * @throws ReadOnlyValueException
+     *   if {@code child} is read only.
      * @throws IllegalArgumentException
      *   if {@code child} is an {@link IonDatagram}.
      */
@@ -566,6 +570,8 @@ abstract public class IonContainerImpl
         {
             throw new ContainedValueException();
         }
+
+        if (child.isReadOnly()) throw new ReadOnlyValueException();
 
         if (child instanceof IonDatagram)
         {
@@ -593,7 +599,6 @@ abstract public class IonContainerImpl
         throws ContainedValueException, NullPointerException
     {
         final IonValueImpl concrete = ((IonValueImpl) element);
-        concrete.checkForLock();
 
         // TODO: try to reuse the byte array if it is present
         // and the symbol tables are compatible or
@@ -702,6 +707,8 @@ abstract public class IonContainerImpl
         if (child == concrete) // Yes, instance identity.
         {
             try {
+                // TODO improve final state if this method throws.
+                // Should be able to have the container be ok at least.
                 concrete.detachFromContainer();
                 _contents.remove(pos);
                 updateElementIds(pos);

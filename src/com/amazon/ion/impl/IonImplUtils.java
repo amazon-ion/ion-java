@@ -22,10 +22,19 @@ import java.util.NoSuchElementException;
 /**
  * For internal use only!
  */
-final class IonImplUtils
+public final class IonImplUtils // TODO this class shouldn't be public
 {
+    /**
+     * Marker for code points relevant to removal of IonReader.hasNext().
+     */
+    public static final boolean READER_HASNEXT_REMOVED = false;
+
+
     /** Just a zero-length String array, used to avoid allocation. */
     public final static String[] EMPTY_STRING_ARRAY = new String[0];
+
+    /** Just a zero-length int array, used to avoid allocation. */
+    public final static int[] EMPTY_INT_ARRAY = new int[0];
 
     /**
      * TODO Jonker 2009-02-12: Actual lookahead limit is unclear to me!

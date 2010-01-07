@@ -8,6 +8,7 @@ import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
 import com.amazon.ion.ContainedValueException;
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonCatalog;
@@ -27,6 +28,7 @@ import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonSystem;
+import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
@@ -65,8 +67,15 @@ public class IonSystemImpl
     private final UnifiedSymbolTable mySystemSymbols =
         UnifiedSymbolTable.getSystemSymbolTableInstance();
 
+
     private IonCatalog  myCatalog;
     private IonLoader   myLoader;
+
+    /**
+     * If true, this system will create the newer, faster, second-generation
+     * streaming readers. Be prepared for bugs!
+     */
+    public boolean useNewReaders_UNSUPPORTED_MAGIC = false;
 
 
     public IonSystemImpl()
@@ -116,8 +125,7 @@ public class IonSystemImpl
     {
         if (imports == null || imports.length == 0)
         {
-            UnifiedSymbolTable st = new UnifiedSymbolTable(mySystemSymbols);
-            st.setSystem(this);
+            UnifiedSymbolTable st = UnifiedSymbolTable.makeNewLocalSymbolTable(this, mySystemSymbols);
             return st;
         }
 
@@ -142,24 +150,30 @@ public class IonSystemImpl
             systemTable = mySystemSymbols;
         }
 
-        UnifiedSymbolTable st = new UnifiedSymbolTable(systemTable, imports);
-        st.setSystem(this); // XXX
+        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewLocalSymbolTable(this, systemTable, imports);
+        st.setSystem(this);
         return st;
     }
 
 
-    public UnifiedSymbolTable newSharedSymbolTable(IonStruct serialized)
+    public UnifiedSymbolTable newSharedSymbolTable(IonStruct ionRep)
     {
-        UnifiedSymbolTable st = new UnifiedSymbolTable(serialized);
+        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewSharedSymbolTable(ionRep);
+        st.setSystem(this);
         return st;
     }
-
     public UnifiedSymbolTable newSharedSymbolTable(IonReader reader)
     {
-        UnifiedSymbolTable st = new UnifiedSymbolTable(reader);
+        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewSharedSymbolTable(reader, false);
+        st.setSystem(this);
         return st;
     }
-
+    public UnifiedSymbolTable newSharedSymbolTable(IonReader reader, boolean isOnStruct)
+    {
+        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewSharedSymbolTable(reader, isOnStruct);
+        st.setSystem(this);
+        return st;
+    }
     public UnifiedSymbolTable newSharedSymbolTable(String name,
                                                    int version,
                                                    Iterator<String> newSymbols,
@@ -191,7 +205,10 @@ public class IonSystemImpl
 
         addAllNonNull(syms, newSymbols);
 
-        return new UnifiedSymbolTable(name, version, syms.iterator());
+        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewSharedSymbolTable(name, version, syms.iterator());
+        st.setSystem(this);
+
+        return st;
     }
 
 
@@ -232,14 +249,6 @@ public class IonSystemImpl
         IonDatagramImpl datagram = newDatagram();
 
         if (initialChild != null) {
-            //LocalSymbolTable symtab = initialChild.getSymbolTable();
-            //if (symtab == null) {
-            //    symtab = this.newLocalSymbolTable();
-            //    IonValue ionRep = symtab.getIonRepresentation();
-            //    datagram.add(ionRep, true);
-            //    ((IonValueImpl)initialChild).setSymbolTable(symtab);
-            //}
-
             // This will fail if initialChild instanceof IonDatagram:
             datagram.add(initialChild);
         }
@@ -272,7 +281,7 @@ public class IonSystemImpl
     {
         return new LoaderImpl(this, myCatalog);
     }
-    
+
     public IonLoader newLoader(IonCatalog catalog)
     {
         return new LoaderImpl(this, catalog);
@@ -282,13 +291,6 @@ public class IonSystemImpl
     {
         return myLoader;
     }
-
-    public synchronized void setLoader(IonLoader loader)
-    {
-        if (loader == null) throw new NullPointerException();
-        myLoader = loader;
-    }
-
 
 
     //=========================================================================
@@ -405,24 +407,38 @@ public class IonSystemImpl
     // IonReader creation
 
 
-    public IonReader newReader(String ionText)
+    public IonTextReader newReader(String ionText)
     {
-        return new IonTextReader(ionText, getCatalog());
+        if (useNewReaders_UNSUPPORTED_MAGIC)
+        {
+            return new IonReaderTextUserX(this, ionText);
+        }
+
+        return new IonTextReaderImpl(ionText, getCatalog());
     }
 
     public IonTextReader newSystemReader(String ionText)
     {
-        return new IonTextReader(ionText, getCatalog(), true);
+        if (useNewReaders_UNSUPPORTED_MAGIC)
+        {
+            return new IonReaderTextSystemX(ionText);
+        }
+        return new IonTextReaderImpl(ionText, getCatalog(), true);
     }
 
 
-    public IonReader newSystemReader(Reader ionText)
+    public IonTextReader newSystemReader(Reader ionText)
     {
+        if (useNewReaders_UNSUPPORTED_MAGIC)
+        {
+            return new IonReaderTextSystemX(ionText);
+        }
+
         try
         {
             // FIXME we shouldn't have to load the whole stream into a String.
             String str = IonImplUtils.loadReader(ionText);
-            return new IonTextReader(str, getCatalog(), true);
+            return new IonTextReaderImpl(str, getCatalog(), true);
         }
         catch (IOException e)
         {
@@ -446,13 +462,23 @@ public class IonSystemImpl
     {
         boolean isBinary = IonBinary.matchBinaryVersionMarker(ionData);
 
+        if (useNewReaders_UNSUPPORTED_MAGIC)
+        {
+            if (isBinary)
+            {
+                return new IonReaderBinaryUserX(this, ionData, offset, len);
+            }
+
+            return new IonReaderTextUserX(this, ionData, offset, len);
+        }
+
         IonReader reader;
         if (isBinary) {
             reader = new IonBinaryReader(ionData, offset, len, getCatalog());
         }
         else {
-            reader =
-                new IonTextReader(ionData, offset, len, getCatalog(), false);
+            reader = new IonTextReaderImpl(ionData, offset, len, getCatalog(),
+                                           /* returnSystemValues */ false);
         }
         return reader;
     }
@@ -461,6 +487,16 @@ public class IonSystemImpl
     {
         boolean isBinary = IonBinary.matchBinaryVersionMarker(ionData);
 
+        if (useNewReaders_UNSUPPORTED_MAGIC)
+        {
+            if (isBinary)
+            {
+                return new IonReaderBinarySystemX(ionData, offset, len);
+            }
+
+            return new IonReaderTextSystemX(ionData, offset, len);
+        }
+
         IonReader reader;
         if (isBinary) {
             reader =
@@ -468,7 +504,7 @@ public class IonSystemImpl
         }
         else {
             reader =
-                new IonTextReader(ionData, offset, len, getCatalog(), true);
+                new IonTextReaderImpl(ionData, offset, len, getCatalog(), true);
         }
         return reader;
     }
@@ -476,6 +512,29 @@ public class IonSystemImpl
 
     public IonReader newReader(InputStream ionData)
     {
+        if (useNewReaders_UNSUPPORTED_MAGIC)
+        {
+            boolean isBinary;
+            try
+            {
+                PushbackInputStream pushback =
+                    new PushbackInputStream(ionData, 8);
+                isBinary = IonImplUtils.streamIsIonBinary(pushback);
+
+                if (isBinary)
+                {
+                    return new IonReaderBinaryUserX(this, pushback);
+                }
+
+                Reader reader = new InputStreamReader(pushback, "UTF-8");
+                return new IonReaderTextUserX(this, reader);
+            }
+            catch (IOException e)
+            {
+                throw new IonException(e);
+            }
+        }
+
         // TODO optimize if stream is text!
         byte[] bytes;
         try
@@ -492,6 +551,29 @@ public class IonSystemImpl
 
     public IonReader newSystemReader(InputStream ionData)
     {
+        if (useNewReaders_UNSUPPORTED_MAGIC)
+        {
+            boolean isBinary;
+            try
+            {
+                PushbackInputStream pushback =
+                    new PushbackInputStream(ionData, 8);
+                isBinary = IonImplUtils.streamIsIonBinary(pushback);
+
+                if (isBinary)
+                {
+                    return new IonReaderBinarySystemX(pushback);
+                }
+
+                Reader reader = new InputStreamReader(pushback, "UTF-8");
+                return new IonReaderTextSystemX(reader);
+            }
+            catch (IOException e)
+            {
+                throw new IonException(e);
+            }
+        }
+
         byte[] bytes;
         try
         {
@@ -738,7 +820,7 @@ public class IonSystemImpl
 
     private boolean isUnderscoreAndDigits(String image, int firstChar, int lastChar)
     {
-        // you have to have enought characters for the underscore and
+        // you have to have enough characters for the underscore and
         // at least 1 digit
         if (lastChar - firstChar < 2) return false;
 
@@ -770,12 +852,16 @@ public class IonSystemImpl
     //-------------------------------------------------------------------------
     // DOM creation
 
-    private IonValue singleValue(Iterator<IonValue> iterator)
+
+    /**
+     * Helper for other overloads, not useful as public API.
+     */
+    private IonValue singleValue(IonReader reader)
     {
-        if (iterator.hasNext())
+        if (reader.next() != null)
         {
-            IonValue value = iterator.next();
-            if (! iterator.hasNext())
+            IonValue value = newValue(reader);
+            if (reader.next() == null)
             {
                 return value;
             }
@@ -786,15 +872,44 @@ public class IonSystemImpl
 
     public IonValue singleValue(String ionText)
     {
-        Iterator<IonValue> iterator = iterate(ionText);
-        return singleValue(iterator);
+        return singleValue(newReader(ionText));
     }
 
     public IonValue singleValue(byte[] ionData)
     {
-        Iterator<IonValue> iterator = iterate(ionData);
-        return singleValue(iterator);
+        return singleValue(newReader(ionData));
     }
+
+
+    /**
+     * Does not call {@link IonReader#next()}.
+     *
+     * @return a new value object, not null.
+     */
+    public IonValue newValue(IonReader reader)
+    {
+        IonType t = reader.getType();
+        if (t == null) {
+            throw new IonException("No value available");
+        }
+
+        // TODO streamline
+        IonList container = newEmptyList();
+        IonWriter writer = newWriter(container);
+        try
+        {
+            writer.writeValue(reader);
+        }
+        catch (IOException e)
+        {
+            throw new IonException("Unexpected exception writing to DOM", e);
+        }
+
+        IonValue v = container.remove(0);
+        assert v != null;
+        return v;
+    }
+
 
     /**
      * @deprecated Use {@link #newNullBlob()} instead
@@ -903,17 +1018,17 @@ public class IonSystemImpl
 
     public IonDecimal newDecimal(long value)
     {
-        return new IonDecimalImpl(this, new BigDecimal(value));
+        return new IonDecimalImpl(this, Decimal.valueOf(value));
     }
 
     public IonDecimal newDecimal(double value)
     {
-        return new IonDecimalImpl(this, new BigDecimal(value));
+        return new IonDecimalImpl(this, Decimal.valueOf(value));
     }
 
     public IonDecimal newDecimal(BigInteger value)
     {
-        return new IonDecimalImpl(this, new BigDecimal(value));
+        return new IonDecimalImpl(this, Decimal.valueOf(value));
     }
 
     public IonDecimal newDecimal(BigDecimal value)

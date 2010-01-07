@@ -321,6 +321,7 @@ public abstract class SequenceTestCase
         catch (ContainedValueException e) { }
     }
 
+
     public void testContains()
     {
         IonNull nullValue1 = system().newNull();
@@ -405,6 +406,46 @@ public abstract class SequenceTestCase
         catch (ClassCastException e) { }
     }
 
+
+    public void testRemoveByIndex()
+    {
+        IonSequence s = wrapAndParse("1", "2", "3");
+
+        try {
+            s.remove(-1);
+            fail("expected exception");
+        }
+        catch (IndexOutOfBoundsException e) { }
+
+        IonValue v = s.remove(1);
+        checkInt(2, v);
+        assertEquals(2, s.size());
+        checkInt(1, s.get(0));
+        checkInt(3, s.get(1));
+
+        try {
+            s.remove(2);
+            fail("expected exception");
+        }
+        catch (IndexOutOfBoundsException e) { }
+
+        v = s.remove(1);
+        checkInt(3, v);
+        assertEquals(1, s.size());
+        checkInt(1, s.get(0));
+    }
+
+    public void testRemoveByIndexOnReadOnly()
+    {
+        IonSequence s = wrapAndParse("1", "2", "3");
+        s.makeReadOnly();
+
+        try {
+            s.remove(0);
+            fail("expected exception");
+        }
+        catch (ReadOnlyValueException e) { }
+    }
 
     public void testRemoveAll()
     {
@@ -496,7 +537,7 @@ public abstract class SequenceTestCase
                                                     (Object)nullValue2);
 
         IonSequence seq = makeEmpty();
-        // FIXME implement IonDatagram.retainAll
+        // FIXME JIRA ION-85 implement IonDatagram.retainAll
         if (seq.getType() == IonType.DATAGRAM) return;
 
         assertFalse(seq.retainAll(empty));
@@ -583,7 +624,7 @@ public abstract class SequenceTestCase
         assertSame(objArray, seq.toArray(objArray));
         checkArray(seq, objArray);
 
-        seq.remove(seq.get(1));  // TODO remove(1)
+        seq.remove(1);
         assertSame(objArray, seq.toArray(objArray));
         assertSame(seq.get(0), objArray[0]);
         assertEquals(null, objArray[1]);

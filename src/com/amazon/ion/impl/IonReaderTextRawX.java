@@ -3,7 +3,7 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonReader;
+import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
@@ -55,7 +55,7 @@ import java.util.NoSuchElementException;
  *
  */
 public abstract class IonReaderTextRawX
-    implements IonReader
+    implements IonTextReader
 {
     public abstract BigInteger bigIntegerValue();
 
@@ -397,14 +397,12 @@ public abstract class IonReaderTextRawX
      * A NoSuchElementException is thrown if there are not values remaining.
      * Once called if there is a value available it's contents can
      * be accessed through the other public API's (such as getLong()).
-     * @return type of the next value
-     * @throws NoSuchElementException if hasNext() is false (i.e. the input is empty)
+     * @return type of the next value, or null if there is none.
      */
     public IonType next()
     {
         if (!hasNext()) {
-            // so if there really no next, it's a problem here
-            throw new NoSuchElementException();
+            return null;
         }
         if (_value_type == null && _scanner.isUnfishedToken()) {
             try {
@@ -428,7 +426,7 @@ public abstract class IonReaderTextRawX
     private final void finish_value(SavePoint sp) throws IOException
     {
         if (_scanner.isUnfishedToken()) {
-            assert(_current_value_save_point.isClear());
+            assert(_current_value_save_point.isDefined());
             _scanner.finish_token(sp);
             int new_state = get_state_after_value();
             set_state(new_state);
@@ -1037,11 +1035,17 @@ public abstract class IonReaderTextRawX
         if (ids == null) return StringIterator.EMPTY_ITERATOR;
         return new StringIterator(ids);
     }
+
+    private static String[] _empty_string_array = new String[0];
     public String[] getTypeAnnotations()
     {
-        String[] annotations = new String[_annotation_count];
+        String[] annotations;
         if (_annotation_count > 0) {
+            annotations = new String[_annotation_count];
             System.arraycopy(_annotations, 0, annotations, 0, _annotation_count);
+        }
+        else {
+            annotations = _empty_string_array;
         }
         return annotations;
     }

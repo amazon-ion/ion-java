@@ -61,7 +61,7 @@ public class DatagramTest
     }
 
     @Override
-    protected IonDatagram wrapAndParse(String... children)
+    protected String wrap(String... children)
     {
         StringBuilder buf = new StringBuilder();
         if (children != null)
@@ -72,7 +72,13 @@ public class DatagramTest
                 buf.append(' ');
             }
         }
-        String text = buf.toString();
+        return buf.toString();
+    }
+
+    @Override
+    protected IonDatagram wrapAndParse(String... children)
+    {
+        String text = wrap(children);
         return loader().load(text);
     }
 
@@ -236,6 +242,8 @@ public class DatagramTest
         }
     }
 
+
+    // TODO move elsewhere
     public void assertArrayEquals(byte[] expected, byte[] actual)
     {
         assertEquals("array length",
@@ -410,7 +418,7 @@ public class DatagramTest
         }
         catch (IllegalArgumentException e) { }
 
-        // Cannot insert a datagram  // TODO this operation unsupported
+        // Cannot insert a datagram  // TODO JIRA ION-84
 //        try
 //        {
 //            dg1.add(1, dg2);
@@ -465,7 +473,7 @@ public class DatagramTest
     public void testEmptyDatagram()
     {
         IonDatagram dg = loader().load("");
-//        testEmptySequence(dg); // FIXME implement add(int,v)
+//        testEmptySequence(dg); // TODO JIRA ION-84 implement add(int,v)
         dg.add().newInt(1);
         testClearContainer(dg);
     }
@@ -474,7 +482,7 @@ public class DatagramTest
     @Override
     public void testRemoveViaIteratorThenDirect()
     {
-        // TODO implement remove on datagram iterator
+        // TODO JIRA ION-91 implement remove on datagram iterator
     }
 
 
@@ -529,5 +537,16 @@ public class DatagramTest
         }
         catch (ReadOnlyValueException e) { }
         assertEquals(1, dg.size());
+    }
+
+    /**
+     * Verifies that detachment from binary buffer does deep materialization.
+     */
+    public void testMaterializationOnRemove()
+    {
+        IonDatagram dg = loader().load("[[1]]");
+        IonList l = (IonList) dg.remove(0);
+        l = (IonList) l.get(0);
+        assertEquals(1, ((IonInt)l.get(0)).intValue());
     }
 }

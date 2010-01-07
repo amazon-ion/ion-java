@@ -210,6 +210,13 @@ public abstract class IonValueImpl
     @Override
     public abstract IonValue clone();
 
+    /**
+     * Since {@link #equals(Object)} is overridden, each concrete class must provide
+     * an implementation of {@link Object#hashCode()}
+     * @return hash code for instance consistent with equals().
+     */
+    @Override
+    public abstract int hashCode();
 
     /**
      * this copies the annotations and the field name if
@@ -469,10 +476,24 @@ public abstract class IonValueImpl
         if (_container == null) {
             return null;
         }
+
+        // TODO why is this here?  (See below as well)
+        // I think this is vestigial embedded value logic that's now wrong.
         if (_container._isSystemValue) {
             return _container.getContainer();
         }
         return _container;
+    }
+
+    public final boolean removeFromContainer()
+    {
+        // TODO how does this interact with the strange systemvalue note above?
+        IonContainer c = getContainer();
+        if (c == null) return false;
+
+        boolean removed = c.remove(this);
+        assert removed;
+        return true;
     }
 
 
@@ -496,7 +517,15 @@ public abstract class IonValueImpl
         return _isLocked;
     }
 
-    protected final void checkForLock() {
+    /**
+     * Verifies that this value is not read-only.
+     *
+     * @throws ReadOnlyValueException
+     *   if this value {@link #isReadOnly()}.
+     */
+    protected final void checkForLock()
+        throws ReadOnlyValueException
+    {
         if (_isLocked) {
             throw new ReadOnlyValueException();
         }
@@ -558,6 +587,8 @@ public abstract class IonValueImpl
     /**
      * Recursively materialize all symbol text and detach from any symtab.
      * Calls {@link #setDirty()}.
+     * <p>
+     * <b>PRECONDITION:</b> this value must be deep materialized.
      */
     void detachFromSymbolTable()
     {
@@ -1016,23 +1047,31 @@ public abstract class IonValueImpl
     protected void detachFromBuffer()
         throws IOException
     {
+        // Containers override this method, doing deep materialization on the
+        // way down. This avoids two recursive traversals.
         materialize();
         _buffer = null;
     }
 
     /**
      * Removes this value from its container, ensuring that all data stays
-     * available.
+     * available.  Dirties this value and it's original container.
+     *
+     * @throws IOException
+     *   if there's a problem materializing this value from its binary buffer.
+     *   When this is thrown, no values are dirtied!
      */
     protected final void detachFromContainer() throws IOException
     {
         checkForLock();
-
         // TODO this should really copy the buffer to avoid materialization.
         // Note: that forces extraction and reconstruction of the local symtab.
         detachFromBuffer();
-        detachFromSymbolTable(); // Calls setDirty();
-        assert _isDirty;
+
+        // Requires prior deep-materialization.
+        // Calls setDirty() which also dirties container.
+        detachFromSymbolTable();
+        assert _isDirty && _container.isDirty();
 
         _container = null;
         _fieldName = null;

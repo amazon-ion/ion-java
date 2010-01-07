@@ -610,4 +610,33 @@ public class TimestampTest
         assertEquals(3, ts.getMonth());
         assertEquals(18, ts.getDay());
     }
+
+    public void testTimestampWithNegativeFraction()
+    {
+        BigDecimal frac = Decimal.negativeZero(3);
+
+        Timestamp ts = new Timestamp(2000, 11, 14, 17, 30, 12, frac, 0);
+        assertEquals("2000-11-14T17:30:12.000Z", ts.toString());
+
+        frac = new BigDecimal("-0.123");
+        ts = new Timestamp(2000, 11, 14, 17, 30, 12, frac, 0);
+        assertEquals("2000-11-14T17:30:12.123Z", ts.toString());
+    }
+
+    public void testNewTimestampWithNullFraction()
+    {
+        BigDecimal frac = null;
+        try {
+            new Timestamp(2000, 11, 14, 17, 30, 12, frac, 0);
+            fail("Expected exception");
+        }
+        catch (NullPointerException e) { }
+
+        try {
+            Timestamp.createFromUtcFields(Timestamp.Precision.FRACTION,
+                                          2000, 11, 14, 17, 30, 12, frac, 0);
+            fail("Expected exception");
+        }
+        catch (NullPointerException e) { }
+    }
 }

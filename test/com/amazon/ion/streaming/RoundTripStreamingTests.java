@@ -48,7 +48,6 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
     @Override
     protected String[] getFilesToSkip()
     {
-        // TODO JIRA ION-8 fix Unicode bugs and enable test cases
         return new String[]
         {
 //             "equivs/stringU0001D11E.ion",
@@ -209,6 +208,8 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
 
                 boolean datagrams_are_equal = Equivalence.ionEquals(this.ion, other.ion);
                 if (!datagrams_are_equal) {
+                    // Note: we're dumping this.binary, but that isn't what's
+                    // actually in the datagram.  So it could be misleading.
                     dump_datagrams(other);
                     datagrams_are_equal = Equivalence.ionEquals(this.ion, other.ion);
                 }
@@ -364,12 +365,10 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
         roundTripBufferResults roundTripBuffer(String pass, byte[] testBuffer)
         throws IOException
         {
-            roundTripBufferResults stream = new roundTripBufferResults(pass+" stream");
-            roundTripBufferResults tree = new roundTripBufferResults(pass + " tree");
-
-            if (this.getName().equals("strings_nl.ion")) {
-                stream.name = this.getName() + " (as stream)";
-            }
+            roundTripBufferResults stream =
+                new roundTripBufferResults(pass + " stream");
+            roundTripBufferResults tree =
+                new roundTripBufferResults(pass + " tree");
 
             stream.name = this.getName() + " (as stream)";
             tree.name = this.getName() + " (as IonValue)";
@@ -399,7 +398,6 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
 
         IonReader makeIterator(byte [] testBuffer) {
             IonReader inputIterator = system().newReader(testBuffer);
-            inputIterator.hasNext();
             return inputIterator;
         }
 
@@ -429,6 +427,7 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
                     System.out.println("debugging testfile35, with in line text symbol tables");
                 }
                 else {
+                    System.err.println(getName() + ": skipping testfile35");
                     return;
                 }
             }

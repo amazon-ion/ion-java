@@ -23,6 +23,8 @@ public final class IonStringImpl
         IonConstants.makeTypeDescriptor(IonConstants.tidString,
                                         IonConstants.lnIsNullAtom);
 
+    private static final int HASH_SIGNATURE =
+        IonType.STRING.toString().hashCode();
 
     /**
      * Constructs a <code>null.string</code> value.
@@ -59,6 +61,22 @@ public final class IonStringImpl
         clone.copyFrom(this);
 
         return clone;
+    }
+
+    /**
+     * Implements {@link Object#hashCode()} consistent with equals. This
+     * implementation uses the hash of the string value XOR'ed with a constant.
+     *
+     * @return  An int, consistent with the contracts for
+     *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
+     */
+    @Override
+    public int hashCode() {
+        int hash = HASH_SIGNATURE;
+        if (!isNullValue())  {
+            hash ^= stringValue().hashCode();
+        }
+        return hash;
     }
 
     public IonType getType()

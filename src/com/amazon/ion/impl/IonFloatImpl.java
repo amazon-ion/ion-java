@@ -28,6 +28,8 @@ public final class IonFloatImpl
 
     // not needed: static private final int SIZE_OF_IEEE_754_64_BITS = 8;
 
+    private static final int HASH_SIGNATURE =
+        IonType.FLOAT.toString().hashCode();
 
     private Double _float_value;
 
@@ -77,6 +79,22 @@ public final class IonFloatImpl
         clone.setValue(this._float_value);
 
         return clone;
+    }
+
+    /**
+     * Calculate Ion Float hash code as bits of double value,
+     * folded on themselves to form a 32 bit value.
+     * @return hash code
+     */
+    @Override
+    public int hashCode()
+    {
+        int hash = HASH_SIGNATURE;
+        if (!isNullValue())  {
+            long bits = Double.doubleToLongBits(doubleValue());
+            hash ^= (int) ((bits >>> 32) ^ bits);
+        }
+        return hash;
     }
 
     public IonType getType()

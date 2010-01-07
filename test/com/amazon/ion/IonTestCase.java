@@ -324,10 +324,22 @@ public abstract class IonTestCase
         return value;
     }
 
+
+    public IonDecimal decimal(String text)
+    {
+        return (IonDecimal) oneValue(text);
+    }
+
     public IonSexp oneSexp(String text)
     {
         return (IonSexp) oneValue(text);
     }
+
+    public IonStruct struct(String text)
+    {
+        return (IonStruct) oneValue(text);
+    }
+
 
 
     /**
@@ -431,6 +443,29 @@ public abstract class IonTestCase
         }
     }
 
+
+    /**
+     * Checks that the value is an IonTimestamp with the given value.
+     * @param expected may be null to check for null.timestamp
+     */
+    public void checkTimestamp(Timestamp expected, IonValue actual)
+    {
+        assertSame(IonType.TIMESTAMP, actual.getType());
+        IonTimestamp v = (IonTimestamp) actual;
+
+        Timestamp actualTime = v.timestampValue();
+
+        if (expected == null) {
+            assertTrue("expected null value", v.isNullValue());
+            assertNull(actualTime);
+        }
+        else
+        {
+            assertEquals("timestamp", expected, actualTime);
+            assertEquals("timestamp content",
+                         expected.toString(), actualTime.toString());
+        }
+    }
 
     /**
      * Checks that the value is an IonTimestamp with the given value.
@@ -592,7 +627,22 @@ public abstract class IonTestCase
         return null;
     }
 
+    public static void assertPreciselyEquals(Decimal expected,
+                                             Decimal actual)
+    {
+        assertEquals(expected, actual);
+        assertEquals("value",
+                     expected.unscaledValue(), actual.unscaledValue());
+        assertEquals("scale",
+                     expected.scale(), actual.scale());
+        assertEquals("isNegativeZero",
+                     expected.isNegativeZero(), actual.isNegativeZero());
+    }
 
+    /**
+     * @deprecated use {@link #assertEquals(Object, Object)} instead.
+     */
+    @Deprecated
     public void assertIonEquals(IonValue expected, final IonValue found)
     {
         assertSame("element classes", expected.getClass(), found.getClass());
@@ -655,9 +705,7 @@ public abstract class IonTestCase
 
                     public void visit(IonDecimal expected) throws Exception
                     {
-                        assertEquals("decimal value",
-                                     expected.bigDecimalValue(),
-                                     ((IonDecimal)found).bigDecimalValue());
+                        assertEquals("decimal value", expected, found);
                     }
 
                     public void visit(IonFloat expected) throws Exception
@@ -714,13 +762,9 @@ public abstract class IonTestCase
                                      ((IonString)found).stringValue());
                     }
 
-                    public void visit(IonStruct value) throws Exception
+                    public void visit(IonStruct expected) throws Exception
                     {
-                        IonStruct actual = (IonStruct) found;
-
-                        assertEquals(value.size(), actual.size());
-
-                        // TODO Need better struct equality
+                        assertEquals("struct", expected, found);
                     }
 
                     public void visit(IonSymbol expected) throws Exception
@@ -732,10 +776,8 @@ public abstract class IonTestCase
 
                     public void visit(IonTimestamp expected) throws Exception
                     {
-                        assertEquals(expected.getDecimalMillis(),
-                                     ((IonTimestamp)found).getDecimalMillis());
-                        assertEquals(expected.getLocalOffset(),
-                                     ((IonTimestamp)found).getLocalOffset());
+                        assertEquals(expected.timestampValue(),
+                                     ((IonTimestamp)found).timestampValue());
                     }
                 };
 
@@ -748,6 +790,9 @@ public abstract class IonTestCase
                 throw new AssertionError(e);
             }
         }
+
+        // Finally, cross-check against IonValue.equals()
+        assertEquals(expected, found);
     }
 
 
@@ -770,5 +815,11 @@ public abstract class IonTestCase
         IonValue clone = data.clone();
         assertEquals(input, clone.toString());
         assertEquals(data, clone);
+    }
+
+    public void logSkippedTest()
+    {
+        System.err.println("WARNING: skipped " + getClass().getName() + '.'
+                           + getName());
     }
 }

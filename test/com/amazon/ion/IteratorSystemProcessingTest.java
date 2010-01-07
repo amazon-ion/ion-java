@@ -121,7 +121,7 @@ public class IteratorSystemProcessingTest
     }
 
     @Override
-    protected void checkTimestamp(String expected) throws Exception
+    protected void checkTimestamp(Timestamp expected) throws Exception
     {
         checkTimestamp(expected, myCurrentValue);
     }

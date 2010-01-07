@@ -2,6 +2,7 @@
 
 package com.amazon.ion.util;
 
+import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.impl.IonConstants;
 import java.io.IOException;
 
@@ -207,14 +208,14 @@ public class IonTextUtils
      *
      * @throws NullPointerException
      *         if <code>symbol</code> is <code>null</code>.
-     * @throws IllegalArgumentException if <code>symbol</code> is empty.
+     * @throws EmptySymbolException if <code>symbol</code> is empty.
      */
     private static boolean symbolNeedsQuoting(CharSequence symbol,
                                               boolean      quoteOperators)
     {
         int length = symbol.length();
         if (length == 0) {
-            throw new IllegalArgumentException("symbol must be non-empty");
+            throw new EmptySymbolException();
         }
 
         // If the symbol's text matches an Ion keyword, we must quote it.
@@ -440,7 +441,7 @@ public class IonTextUtils
             if (mode == EscapeMode.JSON) {
                 // JSON does not have a \Uxxxxyyyy escape, surrogates
                 // must be used as per RFC-4627
-                // 
+                //
                 // http://www.ietf.org/rfc/rfc4627.txt
                 // [...]
                 //   To escape an extended character that is not in the Basic Multilingual
@@ -497,7 +498,7 @@ public class IonTextUtils
         out.append(ZERO_PADDING[8-s.length()]);
         out.append(s);
     }
-    
+
     private static void printCodePointAsSurrogatePairHexDigits(Appendable out, int c)
         throws IOException
     {
@@ -686,8 +687,8 @@ public class IonTextUtils
      *
      * @param out the stream to receive the Ion data.
      * @param text the symbol text; may be {@code null}.
-
      *
+     * @throws EmptySymbolException if {@code text} is empty.
      * @throws IOException if the {@link Appendable} throws an exception.
      */
     public static void printSymbol(Appendable out, CharSequence text)
@@ -746,6 +747,7 @@ public class IonTextUtils
      * @param text the symbol text; may be {@code null}.
      *
      * @throws IOException if the {@link Appendable} throws an exception.
+     * @throws EmptySymbolException if {@code text} is empty.
      * @throws IllegalArgumentException
      *     if the text contains invalid UTF-16 surrogates.
      */
@@ -755,6 +757,10 @@ public class IonTextUtils
         if (text == null)
         {
             out.append("null.symbol");
+        }
+        else if (text.length() == 0)
+        {
+            throw new EmptySymbolException();
         }
         else
         {
@@ -811,8 +817,10 @@ public class IonTextUtils
             if (IonConstants.isHighSurrogate(c))
             {
                 i++;
-                char c2 = text.charAt(i);
-                if (i >= len || !IonConstants.isLowSurrogate(c2))
+                char c2;
+                // I apologize for the embedded assignment, but the alternative
+                // was worse.
+                if (i >= len || !IonConstants.isLowSurrogate(c2 = text.charAt(i)))
                 {
                     String message =
                         "text is invalid UTF-16. It contains an unmatched " +

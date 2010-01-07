@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonTimestampImpl.precisionIncludes;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.Timestamp.Precision;
@@ -429,13 +430,21 @@ done:       for (;;) {
             return retvalue;
         }
 
-        public BigDecimal readDecimal(int len) throws IOException
+        /**
+         * Near clone of {@link IonReaderBinaryRawX#readDecimal(int)}
+         * and {@link IonBinary.Reader#readDecimalValue(IonDecimalImpl, int)}
+         * so keep them in sync!
+         */
+        public Decimal readDecimal(int len) throws IOException
         {
-            BigDecimal bd;
+            // TODO this doesn't seem like the right math context
+            MathContext mathContext = MathContext.DECIMAL128;
+
+            Decimal bd;
 
             // we only write out the '0' value as the nibble 0
             if (len == 0) {
-                bd = new BigDecimal(0, MathContext.DECIMAL128);
+                bd = Decimal.valueOf(0, mathContext);
             }
             else {
                 // otherwise we to it the hard way ....
@@ -444,12 +453,13 @@ done:       for (;;) {
                 int         bitlen = len - (this.position() - startpos);
 
                 BigInteger value;
+                int signum;
                 if (bitlen > 0)
                 {
                     byte[] bits = new byte[bitlen];
                     this.read(bits, 0, bitlen);
 
-                    int signum = 1;
+                    signum = 1;
                     if (bits[0] < 0)
                     {
                         // value is negative, clear the sign
@@ -459,12 +469,21 @@ done:       for (;;) {
                     value = new BigInteger(signum, bits);
                 }
                 else {
+                    signum = 0;
                     value = BigInteger.ZERO;
                 }
 
                 // Ion stores exponent, BigDecimal uses the negation "scale"
                 int scale = -exponent;
-                bd = new BigDecimal(value, scale, MathContext.DECIMAL128);
+                if (value.signum() == 0 && signum == -1)
+                {
+                    assert value.equals(BigInteger.ZERO);
+                    bd = Decimal.negativeZero(scale, mathContext);
+                }
+                else
+                {
+                    bd = Decimal.valueOf(value, scale, mathContext);
+                }
             }
             return bd;
         }
@@ -558,14 +577,20 @@ done:       for (;;) {
             return new String(chars, 0, ii);
         }
 
-        public int readUnicodeScalar() throws IOException {
-            int c = -1, b;
+        public final int readUnicodeScalar() throws IOException {
+            int b;
 
             b = read();
             // ascii is all good, even -1 (eof)
-            if (b < 0x80) {
-                return b;
+            if (b >= 0x80) {
+                b = readUnicodeScalar_helper(b);
+
             }
+            return b;
+        }
+        private final  int readUnicodeScalar_helper(int b) throws IOException
+        {
+            int c = -1;
 
             // now we start gluing the multi-byte value together
             if ((b & 0xe0) == 0xc0) {

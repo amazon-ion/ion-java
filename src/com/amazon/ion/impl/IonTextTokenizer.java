@@ -345,14 +345,14 @@ static final boolean _debug = false;
         next++;
         if (next == _token_lookahead_size) next = 0;
         if (next == _token_lookahead_current) {
-            throw new IonTextReader.IonParsingException("queue is full enquing token (internal error) "+input_position());
+            throw new IonTextReaderImpl.IonParsingException("queue is full enquing token (internal error) "+input_position());
         }
         _token_lookahead_next_available = next;
 
     }
     final void dequeueToken() {
         if (_token_lookahead_current == _token_lookahead_next_available) {
-            throw new IonTextReader.IonParsingException("token queue empty (internal error) "+input_position());
+            throw new IonTextReaderImpl.IonParsingException("token queue empty (internal error) "+input_position());
         }
         _token_lookahead_current++;
 
@@ -418,7 +418,7 @@ static final boolean _debug = false;
         int token = _token_lookahead_token[pos];
         return token;
     }
-    void scanBase64Value(IonTextReader parser) {
+    void scanBase64Value(IonTextReaderImpl parser) {
         int c, len = 0;
         int start, end;
         try {
@@ -442,17 +442,17 @@ static final boolean _debug = false;
                 c = this.read_char();
             }
             if ( filler_len > 3 ) {
-                throw new IonTextReader.IonParsingException("base64 allows no more than 3 chars of filler (trailing '=' chars), in tokenizer"+input_position());
+                throw new IonTextReaderImpl.IonParsingException("base64 allows no more than 3 chars of filler (trailing '=' chars), in tokenizer"+input_position());
             }
             if ( ((filler_len + len) & 0x3) != 0 ) { // if they're using the filler char the len should be divisible by 4
-                throw new IonTextReader.IonParsingException("base64 must be a multiple of 4 characters, in tokenizer"+input_position());
+                throw new IonTextReaderImpl.IonParsingException("base64 must be a multiple of 4 characters, in tokenizer"+input_position());
             }
             end = currentCharStart();
             this.setNextEnd(end);
             this.unread_char(c);
             _has_marked_symbol = true;
         } catch (IOException e) {
-            throw new IonTextReader.IonParsingException(e, "in tokenizer"+input_position());
+            throw new IonTextReaderImpl.IonParsingException(e, "in tokenizer"+input_position());
         }
     }
     public final int lob_lookahead() {
@@ -467,7 +467,7 @@ static final boolean _debug = false;
                 c = this.read_char();
             } while (Character.isWhitespace((char)c));
         } catch (IOException e) {
-            throw new IonTextReader.IonParsingException(e, " in scanner"+this.input_position());
+            throw new IonTextReaderImpl.IonParsingException(e, " in scanner"+this.input_position());
         }
         // we don't consume it, we just look at it
         this.unread_char(c);
@@ -476,7 +476,7 @@ static final boolean _debug = false;
     public final int lookahead(int distance)
     {
         if (distance < 0 || distance >= IonTextTokenizer._token_lookahead_size) {
-            throw new IonTextReader.IonParsingException("invalid lookahead distance "+distance+" (internal error)"+input_position());
+            throw new IonTextReaderImpl.IonParsingException("invalid lookahead distance "+distance+" (internal error)"+input_position());
         }
         if (distance >= queueCount()) {
             try {
@@ -485,7 +485,7 @@ static final boolean _debug = false;
                 }
             }
             catch (IOException e) {
-                throw new IonTextReader.IonParsingException(e, "in tokenizer"+input_position());
+                throw new IonTextReaderImpl.IonParsingException(e, "in tokenizer"+input_position());
             }
         }
         return this.peekTokenToken(distance);
@@ -643,6 +643,27 @@ loop:   for (;;) {
         String s = " at line " + _line + " offset " + _offset;
         return s;
     }
+
+    /**
+     * return the current position in the input stream.
+     * This will refer to the next character to be read.
+     * The first line is line 1.
+     * @return input line number
+     */
+    public long getLineNumber() { return _line; }
+
+    /**
+     * get the input position offset of the next character
+     * in the current input line.  This offset will be in
+     * bytes if the input data was sourced from bytes, either
+     * a byte array or an InputStream.  The offset will
+     * be in characters (Java characters) if the input was
+     * a CharSequence or a java.util.Reader.
+     * @return offset of input position in the current line
+     */
+    public long getLineOffset() { return _offset; }
+
+
     void enqueue_offset(int offset)
     {
         _offset_queue_head++;
@@ -702,7 +723,7 @@ loop:   for (;;) {
         try {
             c = read_char();
         } catch (IOException e) {
-            throw new IonTextReader.IonParsingException(e
+            throw new IonTextReaderImpl.IonParsingException(e
                                                         , " getting character in tokenizer"+input_position());
         }
         unread_char(c);
@@ -832,7 +853,7 @@ loop:   for (;;) {
         try {
             c2 = this.read_char();
         } catch (IOException e) {
-            throw new IonTextReader.IonParsingException(e, this.input_position());
+            throw new IonTextReaderImpl.IonParsingException(e, this.input_position());
         }
         if (c2 < 0) {
             throw new UnexpectedEofException("Unterminated blob or clob");
@@ -1585,7 +1606,7 @@ endofdate:
 
     protected final void bad_character()
     {
-        throw new IonTextReader.IonParsingException("invalid UTF-8 sequence encountered"+input_position());
+        throw new IonTextReaderImpl.IonParsingException("invalid UTF-8 sequence encountered"+input_position());
     }
     private final void unexpected_eof()
     {
@@ -1593,7 +1614,7 @@ endofdate:
     }
     protected final void bad_escape_sequence()
     {
-        throw new IonTextReader.IonParsingException("bad escape character encountered"+input_position());
+        throw new IonTextReaderImpl.IonParsingException("bad escape character encountered"+input_position());
     }
     private final void bad_token_start(int c)
     {
@@ -1602,16 +1623,16 @@ endofdate:
                         + printCodePointAsString(c)
                         + "] encountered where a token was supposed to start"
                         + input_position();
-        throw new IonTextReader.IonParsingException(message);
+        throw new IonTextReaderImpl.IonParsingException(message);
     }
     private final void bad_token()
     {
-        throw new IonTextReader.IonParsingException("a bad character was encountered in a token"+input_position());
+        throw new IonTextReaderImpl.IonParsingException("a bad character was encountered in a token"+input_position());
     }
     private final void bad_token(int c)
     {
         String charStr = printCodePointAsString(c);
-        throw new IonTextReader.IonParsingException("a bad character " + charStr + " was encountered"+input_position());
+        throw new IonTextReaderImpl.IonParsingException("a bad character " + charStr + " was encountered"+input_position());
     }
 
     String consumeTokenAsString()
@@ -1746,7 +1767,7 @@ endofdate:
             }
         }
         catch (IOException e){
-            throw new IonTextReader.IonParsingException(e
+            throw new IonTextReaderImpl.IonParsingException(e
                     , " getting string value in tokenizer"+input_position());
         }
         return pending_high_surrogate;
@@ -1886,7 +1907,7 @@ endofdate:
     int keyword(int start_word, int end_word)
     {
         if (start_word >= end_word) {
-            throw new IonTextReader.IonParsingException("start past end getting keyword (internal error)"+input_position());
+            throw new IonTextReaderImpl.IonParsingException("start past end getting keyword (internal error)"+input_position());
         }
         int c = _r.getByte(start_word);
         int len = end_word - start_word; // +1 but we build that into the constants below
