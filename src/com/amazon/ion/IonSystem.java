@@ -481,6 +481,17 @@ public interface IonSystem
     //-------------------------------------------------------------------------
     // DOM creation
 
+
+    /**
+     * Extracts the current value from a reader into an {@link IonValue}.
+     * The caller must position the reader on the correct value by calling
+     * {@link IonReader#next()} beforehand.
+     *
+     * @return a new value object, not null.
+     */
+    public IonValue newValue(IonReader reader);
+
+
     /**
      * Constructs a new <code>null.blob</code> instance.
      * @deprecated Use {@link #newNullBlob()} instead.
