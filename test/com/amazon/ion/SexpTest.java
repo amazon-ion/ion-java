@@ -37,7 +37,7 @@ public class SexpTest
 
 
     @Override
-    protected IonSexp wrapAndParse(String... children)
+    protected String wrap(String... children)
     {
         StringBuilder buf = new StringBuilder();
         buf.append('(');
@@ -50,7 +50,13 @@ public class SexpTest
             }
         }
         buf.append(')');
-        String text = buf.toString();
+        return buf.toString();
+    }
+
+    @Override
+    protected IonSexp wrapAndParse(String... children)
+    {
+        String text = wrap(children);
         return (IonSexp) system().singleValue(text);
     }
 
@@ -119,6 +125,21 @@ public class SexpTest
         checkAnnotation("b", val3);
         checkSymbol("c", val3);
         assertEquals(3, value.size());
+    }
+
+    public void testNegativeNumbersInSexp()
+        throws Exception
+    {
+        IonSexp value = (IonSexp) oneValue("(-1)");
+        checkInt(-1, value.get(0));
+
+        value = (IonSexp) oneValue("(--1)");
+        checkSymbol("--", value.get(0));
+        checkInt(1, value.get(1));
+
+        value = (IonSexp) oneValue("(a-1)");
+        checkSymbol("a", value.get(0));
+        checkInt(-1, value.get(1));
     }
 
     /** Ensure that triple-quote concatenation works inside sexp. */

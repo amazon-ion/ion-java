@@ -852,12 +852,16 @@ public class IonSystemImpl
     //-------------------------------------------------------------------------
     // DOM creation
 
-    private IonValue singleValue(Iterator<IonValue> iterator)
+
+    /**
+     * Helper for other overloads, not useful as public API.
+     */
+    private IonValue singleValue(IonReader reader)
     {
-        if (iterator.hasNext())
+        if (reader.next() != null)
         {
-            IonValue value = iterator.next();
-            if (! iterator.hasNext())
+            IonValue value = newValue(reader);
+            if (reader.next() == null)
             {
                 return value;
             }
@@ -868,15 +872,44 @@ public class IonSystemImpl
 
     public IonValue singleValue(String ionText)
     {
-        Iterator<IonValue> iterator = iterate(ionText);
-        return singleValue(iterator);
+        return singleValue(newReader(ionText));
     }
 
     public IonValue singleValue(byte[] ionData)
     {
-        Iterator<IonValue> iterator = iterate(ionData);
-        return singleValue(iterator);
+        return singleValue(newReader(ionData));
     }
+
+
+    /**
+     * Does not call {@link IonReader#next()}.
+     *
+     * @return a new value object, not null.
+     */
+    public IonValue newValue(IonReader reader)
+    {
+        IonType t = reader.getType();
+        if (t == null) {
+            throw new IonException("No value available");
+        }
+
+        // TODO streamline
+        IonList container = newEmptyList();
+        IonWriter writer = newWriter(container);
+        try
+        {
+            writer.writeValue(reader);
+        }
+        catch (IOException e)
+        {
+            throw new IonException("Unexpected exception writing to DOM", e);
+        }
+
+        IonValue v = container.remove(0);
+        assert v != null;
+        return v;
+    }
+
 
     /**
      * @deprecated Use {@link #newNullBlob()} instead

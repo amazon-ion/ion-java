@@ -61,7 +61,7 @@ public class DatagramTest
     }
 
     @Override
-    protected IonDatagram wrapAndParse(String... children)
+    protected String wrap(String... children)
     {
         StringBuilder buf = new StringBuilder();
         if (children != null)
@@ -72,7 +72,13 @@ public class DatagramTest
                 buf.append(' ');
             }
         }
-        String text = buf.toString();
+        return buf.toString();
+    }
+
+    @Override
+    protected IonDatagram wrapAndParse(String... children)
+    {
+        String text = wrap(children);
         return loader().load(text);
     }
 

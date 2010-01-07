@@ -30,7 +30,7 @@ public class StructTest
     }
 
     @Override
-    protected IonStruct wrapAndParse(String... children)
+    protected String wrap(String... children)
     {
         StringBuilder buf = new StringBuilder();
         buf.append('{');
@@ -46,7 +46,13 @@ public class StructTest
             }
         }
         buf.append('}');
-        String text = buf.toString();
+        return buf.toString();
+    }
+
+    @Override
+    protected IonStruct wrapAndParse(String... children)
+    {
+        String text = wrap(children);
         return (IonStruct) system().singleValue(text);
     }
 
