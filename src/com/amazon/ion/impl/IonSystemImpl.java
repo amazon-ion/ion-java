@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbolTable.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
+import static com.amazon.ion.impl.IonBinary.matchBinaryVersionMarker;
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
@@ -460,18 +461,12 @@ public class IonSystemImpl
 
     public IonReader newReader(byte[] ionData, int offset, int len)
     {
-        boolean isBinary = IonBinary.matchBinaryVersionMarker(ionData);
-
         if (useNewReaders_UNSUPPORTED_MAGIC)
         {
-            if (isBinary)
-            {
-                return new IonReaderBinaryUserX(this, ionData, offset, len);
-            }
-
-            return new IonReaderTextUserX(this, ionData, offset, len);
+            return newReaderUserX(ionData, offset, len);
         }
 
+        boolean isBinary = matchBinaryVersionMarker(ionData, offset, len);
         IonReader reader;
         if (isBinary) {
             reader = new IonBinaryReader(ionData, offset, len, getCatalog());
@@ -481,6 +476,18 @@ public class IonSystemImpl
                                            /* returnSystemValues */ false);
         }
         return reader;
+    }
+
+    private IonReader newReaderUserX(byte[] ionData, int offset, int len)
+    {
+        boolean isBinary = matchBinaryVersionMarker(ionData, offset, len);
+
+        if (isBinary)
+        {
+            return new IonReaderBinaryUserX(this, ionData, offset, len);
+        }
+
+        return new IonReaderTextUserX(this, ionData, offset, len);
     }
 
     public IonReader newSystemReader(byte[] ionData, int offset, int len)
@@ -852,6 +859,22 @@ public class IonSystemImpl
     //-------------------------------------------------------------------------
     // DOM creation
 
+    /**
+     * Helper for other overloads, not useful as public API.
+     */
+    private IonValue singleValue(Iterator<IonValue> iterator)
+    {
+        if (iterator.hasNext())
+        {
+            IonValue value = iterator.next();
+            if (! iterator.hasNext())
+            {
+                return value;
+            }
+        }
+
+        throw new IonException("not a single value");
+    }
 
     /**
      * Helper for other overloads, not useful as public API.
@@ -872,12 +895,18 @@ public class IonSystemImpl
 
     public IonValue singleValue(String ionText)
     {
-        return singleValue(newReader(ionText));
+//        return singleValue(newReader(ionText));
+        // FIXME ION-113 Use IonReader to avoid binary transcoding
+        Iterator<IonValue> iterator = iterate(ionText);
+        return singleValue(iterator);
     }
 
     public IonValue singleValue(byte[] ionData)
     {
-        return singleValue(newReader(ionData));
+//        return singleValue(newReader(ionData));
+        // FIXME ION-113 Use IonReader to avoid binary transcoding
+        Iterator<IonValue> iterator = iterate(ionData);
+        return singleValue(iterator);
     }
 
 
