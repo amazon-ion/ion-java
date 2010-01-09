@@ -16,6 +16,7 @@ import com.amazon.ion.GoodIonTests;
 import com.amazon.ion.HashCodeCorrectnessTest;
 import com.amazon.ion.HashCodeDistributionTest;
 import com.amazon.ion.IntTest;
+import com.amazon.ion.IonSystemTest;
 import com.amazon.ion.JavaNumericsTest;
 import com.amazon.ion.ListTest;
 import com.amazon.ion.LoaderTest;
@@ -134,6 +135,8 @@ public class AllTests
         suite.addTest(new BadIonStreamingTests());
         suite.addTest(new GoodIonStreamingTests());
         suite.addTest(new RoundTripStreamingTests());
+
+        suite.addTestSuite(IonSystemTest.class);
 
         //$JUnit-END$
 
