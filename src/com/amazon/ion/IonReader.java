@@ -6,6 +6,16 @@ import java.math.BigDecimal;
 import java.util.Date;
 import java.util.Iterator;
 
+/* One design goal is for the readers and writers to be independent of an
+ * IonSystem or ValueFactory and thus independent of particular implementations
+ * of the DOM.
+ *
+ * The issue is that one needs a ValueFactory in order to construct the tree.
+ * So one either needs to pass a ValueFactory / IonSystem to the reader, or
+ * pass the reader to the system.  I decided that the dependencies were better
+ * the latter way.  So we have IonSystem.newValue(IonReader) instead of
+ * IonReader.nextValue(IonSystem).
+ */
 
 /**
  * Provides stream-based access to Ion data independent of its underlying
@@ -142,16 +152,6 @@ public interface IonReader
      */
     public String getFieldName();
 
-    /**
-     * Return the current value as an IonValue using the passed in IonSystem
-     * context. This returns null if there is no valid current value.
-     *
-     * @param sys ion context for the returned value to be created under.
-     * This does not have be the same as the context of the iterators value,
-     * if it has one.
-     */
-     // TODO Probably more appropriate to be system.newIonValue(IonReader)
-//    public IonValue getIonValue(IonSystem sys);
 
     /**
      * Returns the whether or not the current value a null ion value.
