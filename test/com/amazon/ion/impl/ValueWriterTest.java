@@ -33,15 +33,17 @@ public class ValueWriterTest
     }
 
 
+
     @Override
     public void testWritingBadSurrogates()
     {
         logSkippedTest();
     }
-
+/*
     @Override
     public void testWritingAnnotationIds()
     {
         logSkippedTest();
     }
+*/
 }

@@ -14,12 +14,6 @@ public class BinaryReaderSystemProcessingTest
     protected byte[] myBytes;
 
     @Override
-    protected boolean processingBinary()
-    {
-        return true;
-    }
-
-    @Override
     protected void prepare(String text)
         throws Exception
     {
@@ -29,21 +23,25 @@ public class BinaryReaderSystemProcessingTest
     }
 
     @Override
-    protected IonReader read() throws Exception
+    public IonReader read() throws Exception
     {
         return system().newReader(myBytes);
     }
 
     @Override
-    protected IonReader systemRead() throws Exception
+    public IonReader systemRead() throws Exception
     {
         return system().newSystemReader(myBytes);
     }
 
     @Override
-    protected void checkMissingSymbol(String expected, int expectedSid)
+    protected boolean checkMissingSymbol(String expected, int expectedSymbolTableSid, int expectedLocalSid)
         throws Exception
     {
-        checkSymbol("$" + expectedSid, expectedSid);
+        checkSymbol("$" + expectedSymbolTableSid, expectedSymbolTableSid);
+
+        // when missing from a shared table the symbol
+        // will not have been added to the local symbols
+        return false;
     }
 }

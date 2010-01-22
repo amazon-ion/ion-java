@@ -13,13 +13,6 @@ public class DatagramBytesSystemProcessingTest
 {
     private byte[] myBytes;
 
-
-    @Override
-    protected boolean processingBinary()
-    {
-        return true;
-    }
-
     @Override
     protected void prepare(String text)
         throws Exception
@@ -46,9 +39,13 @@ public class DatagramBytesSystemProcessingTest
     }
 
     @Override
-    protected void checkMissingSymbol(String expected, int expectedSid)
+    protected boolean checkMissingSymbol(String expected, int expectedSymbolTableSid, int expectedLocalSid)
         throws Exception
     {
-        checkSymbol("$" + expectedSid, expectedSid);
+        checkSymbol("$" + expectedSymbolTableSid, expectedSymbolTableSid);
+
+        // when missing from a shared table the symbol
+        // will not have been added to the local symbols
+        return false;
     }
 }

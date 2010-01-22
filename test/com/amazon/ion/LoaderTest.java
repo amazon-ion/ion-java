@@ -295,7 +295,8 @@ public class LoaderTest
         byte[] raw = dg.getBytes();
         IonLoader loader = sys.newLoader();
         IonDatagram dg_fred = loader.load(raw);
-        IonSymbol sym_fred = (IonSymbol) dg_fred.get(0);
+        IonValue v = dg_fred.get(0);
+        IonSymbol sym_fred = (IonSymbol) v;
         String string_fred = sym_fred.stringValue();
         assertEquals("fred_1", string_fred);
 

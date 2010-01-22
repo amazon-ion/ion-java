@@ -16,13 +16,6 @@ public class IteratorSystemProcessingTest
     private Iterator<IonValue> myIterator;
     private IonValue myCurrentValue;
 
-
-    @Override
-    protected boolean processingBinary()
-    {
-        return false;
-    }
-
     protected Iterator<IonValue> iterate()
         throws Exception
     {
@@ -114,10 +107,14 @@ public class IteratorSystemProcessingTest
     }
 
     @Override
-    protected void checkMissingSymbol(String expected, int expectedSid)
+    protected boolean checkMissingSymbol(String expected, int expectedSymbolTableSid, int expectedLocalSid)
         throws Exception
     {
         checkSymbol(expected, myCurrentValue);
+
+        // when missing from a shared table the symbol
+        // will have been added to the local symbols
+        return true;
     }
 
     @Override

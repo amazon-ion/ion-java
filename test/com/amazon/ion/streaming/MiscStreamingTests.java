@@ -51,7 +51,9 @@ public class MiscStreamingTests
         //    value2 symbol 'str2' (2 bytes: 1 typedesc + 1 sid)
         IonReader ir = system().newReader(s);
 
-        IonBinaryWriter wr = system().newBinaryWriter();
+        IonSystem system = system();
+        IonBinaryWriter wr = system.newBinaryWriter();
+        wr = system.newBinaryWriter();
         wr.writeValues(ir);
 
         byte[] buffer = wr.getBytes();

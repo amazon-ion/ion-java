@@ -388,10 +388,10 @@ public abstract class IonTestCase
     {
         assertTrue("datagram is too small", datagram.length >= 4);
 
-        assertEquals("datagram cookie byte 1", (byte) 0xE0, datagram[0]);
-        assertEquals("datagram cookie byte 2", (byte) 0x01, datagram[1]);
-        assertEquals("datagram cookie byte 3", (byte) 0x00, datagram[2]);
-        assertEquals("datagram cookie byte 4", (byte) 0xEA, datagram[3]);
+        assertEquals("datagram cookie byte 1", 0xE0, datagram[0] & 0xff );
+        assertEquals("datagram cookie byte 2", 0x01, datagram[1] & 0xff);
+        assertEquals("datagram cookie byte 3", 0x00, datagram[2] & 0xff);
+        assertEquals("datagram cookie byte 4", 0xEA, datagram[3] & 0xff);
     }
 
 
@@ -550,7 +550,11 @@ public abstract class IonTestCase
         assertSame(IonType.SYMBOL, value.getType());
         IonSymbol sym = (IonSymbol) value;
         assertEquals("symbol name", name, sym.stringValue());
-        assertEquals("symbol id", id, sym.getSymbolId());
+        // just so we can set a break point on this before we lose all context
+        int sid = sym.getSymbolId();
+        if (sid != id) {
+            assertEquals("symbol id", id, sym.getSymbolId());
+        }
     }
 
     public void checkSymbol(String name, int id, SymbolTable symtab)

@@ -13,11 +13,6 @@ public class DatagramTreeReaderSystemProcessingTest
 {
     private String myText;
 
-    @Override
-    protected boolean processingBinary()
-    {
-        return false;
-    }
 
     @Override
     protected void prepare(String text)
@@ -26,7 +21,7 @@ public class DatagramTreeReaderSystemProcessingTest
     }
 
     @Override
-    protected IonReader read() throws Exception
+    public IonReader read() throws Exception
     {
         IonLoader loader = loader();
         IonDatagram datagram = loader.load(myText);
@@ -34,7 +29,7 @@ public class DatagramTreeReaderSystemProcessingTest
     }
 
     @Override
-    protected IonReader systemRead() throws Exception
+    public IonReader systemRead() throws Exception
     {
         IonLoader loader = loader();
         IonDatagram datagram = loader.load(myText);
@@ -42,9 +37,17 @@ public class DatagramTreeReaderSystemProcessingTest
     }
 
     @Override
-    protected void checkMissingSymbol(String expected, int expectedSid)
+    protected boolean checkMissingSymbol(String expected, int expectedSymbolTableSid, int expectedLocalSid)
         throws Exception
     {
-        checkSymbol(expected, expectedSid);
+        // the symbol is missing from the shared symbol table
+        // so the only valid sid is the local id that got assigned
+        // to fill in the gap
+        checkSymbol(expected, expectedLocalSid);
+
+        // when missing from a shared table the symbol
+        // will have been added to the local symbols
+        return true;
     }
+
 }

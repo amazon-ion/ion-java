@@ -14,12 +14,6 @@ public class LoadBinaryBytesSystemProcessingTest
     private byte[] myBytes;
 
     @Override
-    protected boolean processingBinary()
-    {
-        return true;
-    }
-
-    @Override
     protected void prepare(String text)
         throws Exception
     {
@@ -36,9 +30,16 @@ public class LoadBinaryBytesSystemProcessingTest
     }
 
     @Override
-    protected void checkMissingSymbol(String expected, int expectedSid)
+    protected boolean checkMissingSymbol(String expected, int expectedSymbolTableSid, int expectedLocalSid)
         throws Exception
     {
-        checkSymbol("$" + expectedSid, expectedSid);
+        // we're working on a datagram, the symbol will have
+        // been materialized during the datagram construction
+        checkSymbol("$" + expectedSymbolTableSid, expectedSymbolTableSid);
+        //checkSymbol(expected, expectedSymbolTableSid);
+
+        // when missing from a shared table the symbol
+        // will have been added to the local symbols
+        return false;
     }
 }

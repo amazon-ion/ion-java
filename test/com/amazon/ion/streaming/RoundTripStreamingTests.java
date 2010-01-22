@@ -4,16 +4,16 @@ package com.amazon.ion.streaming;
 
 import com.amazon.ion.DirectoryTestSuite;
 import com.amazon.ion.FileTestCase;
+import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.impl.IonBinaryWriterImpl;
-import com.amazon.ion.impl.IonTextWriter;
-import com.amazon.ion.impl.IonTreeWriter;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.util.Equivalence;
 import com.amazon.ion.util.Printer;
 import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -133,11 +133,13 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
         throws IOException
         {
             IonReader in = makeIterator(buffer);
-            IonTextWriter tw = new IonTextWriter(prettyPrint);
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            IonWriter tw = system().newTextWriter(out, prettyPrint);
 
             tw.writeValues(in);
-            byte[] buf = tw.getBytes(); // this is utf-8
+            tw.flush();
 
+            byte[] buf = out.toByteArray(); // this is utf-8
             return buf;
         }
 
@@ -155,7 +157,7 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
         throws IOException
         {
             IonReader in = makeIterator(buffer);
-            IonBinaryWriterImpl bw = system().newBinaryWriter();
+            IonBinaryWriter bw = system().newBinaryWriter();
 
             bw.writeValues(in);
             byte[] buf = bw.getBytes(); // this is binary
@@ -172,12 +174,13 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
         throws IOException
         {
             IonReader in = makeIterator(buffer);
-            IonTreeWriter tw = new IonTreeWriter(mySystem);
+            IonDatagram dg = system().newDatagram();
+            IonWriter tw = system().newTreeSystemWriter(dg);
 
             tw.writeValues(in);
-            IonValue v = tw.getContentAsIonValue();
+            //IonValue v = tw.getContentAsIonValue();
 
-            return (IonDatagram)v;
+            return dg;
         }
 
         private static class roundTripBufferResults
@@ -196,13 +199,16 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
             void compareResultsPass1(roundTripBufferResults other, IonLoader loader)
             {
                 String vs = this.title + " vs " + other.title;
-                //assertEquals("string: " + vs, this.string, other.string);
+
                 compareStringAsTree("string: " + vs, other, loader);
                 compareBuffers("utf8: " + vs, this.utf8_buf, other.utf8_buf);
+
                 // We don't compare raw utf8_pretty buffers, since we shouldn't
                 // care whether pretty-printing is byte-for-byte identical.
                 compareUTF8AsTree("utf8: " + vs, other, loader);
                 comparePrettyUTF8AsTree("pretty utf8: " + vs, other, loader);
+
+                // now we compare the binary buffers both byte by byte and as a tree
                 compareBuffers("binary: " + vs, this.binary, other.binary);
                 compareBinaryAsTree("binary: " + vs, other, loader);
 
@@ -379,13 +385,13 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
             // Turn the DOM back into text...
             tree.string     = makeString(inputDatagram);
             tree.utf8_buf   = tree.string.getBytes("UTF-8");
-            tree.utf8_pretty = tree.string.getBytes("UTF-8"); // FIXME hack
+            tree.utf8_pretty= tree.string.getBytes("UTF-8"); // FIXME hack
             tree.binary     = makeBinary(inputDatagram);
             tree.ion        = inputDatagram;
             checkBinaryHeader(tree.binary);
 
             stream.utf8_buf = makeText(testBuffer, false);
-            stream.utf8_pretty = makeText(testBuffer, true);
+            stream.utf8_pretty= makeText(testBuffer, true);
             stream.string   = makeString(testBuffer);
             stream.binary   = makeBinary(testBuffer);
             stream.ion      = makeTree(testBuffer);
@@ -432,10 +438,10 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
                 }
             }
 
-            roundTripBufferResults pass1 = roundTripBuffer("P1: buffer", myBuffer);
-            roundTripBufferResults pass2bin = roundTripBuffer("P2: binary",pass1.binary);
-            roundTripBufferResults pass2text = roundTripBuffer("P3: utf8", pass1.utf8_buf);
-            roundTripBufferResults pass2pretty = roundTripBuffer("P3: utf8", pass1.utf8_pretty);
+            roundTripBufferResults pass1 = roundTripBuffer("original buffer", myBuffer);
+            roundTripBufferResults pass2bin = roundTripBuffer("binary from pass 1",pass1.binary);
+            roundTripBufferResults pass2text = roundTripBuffer("utf8 from pass 1", pass1.utf8_buf);
+            roundTripBufferResults pass2pretty = roundTripBuffer("utf8 pretty from pass 1", pass1.utf8_pretty);
             if (pass2bin == pass2text && pass2pretty == pass2pretty) {
                 // mostly to force these to be used (pass2*)
                 throw new RuntimeException("boy this is odd");

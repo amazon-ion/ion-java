@@ -13,11 +13,13 @@ public class TrBwBrProcessingTest
     protected void prepare(String text)
         throws Exception
     {
-        IonReader textReader = system().newReader(text);
+        IonReader textReader = system().newSystemReader(text);
         IonBinaryWriter binaryWriter = system().newBinaryWriter();
         binaryWriter.writeValues(textReader);
         myBytes = binaryWriter.getBytes();
     }
+
+/*
 
     @Override
     public void testLocalTableReplacement() throws Exception
@@ -63,4 +65,7 @@ public class TrBwBrProcessingTest
                            + com.amazon.ion.TrBwBrProcessingTest.class
                            + ".testTrivialLocalTableReplacement()");
     }
+
+*/
+
 }

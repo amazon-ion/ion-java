@@ -5,6 +5,7 @@ package com.amazon.ion;
 import static com.amazon.ion.impl.IonImplUtils.READER_HASNEXT_REMOVED;
 
 import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
 import junit.framework.Assert;
 
 /**
@@ -21,11 +22,9 @@ public class TestUtils
      */
     public static void deepRead(IonReader reader)
     {
-        while (READER_HASNEXT_REMOVED ? reader.next() != null : reader.hasNext())
+        IonType t = null;
+        while ((t = doNext(reader)) != null )
         {
-            IonType t = (READER_HASNEXT_REMOVED ? reader.getType() : reader.next());
-            if (t == null) break;
-
             switch (t)
             {
                 case NULL:
@@ -38,6 +37,7 @@ public class TestUtils
                 case SYMBOL:
                 case BLOB:
                 case CLOB:
+                    materializeScalar(reader);
                     break;
 
                 case STRUCT:
@@ -51,6 +51,78 @@ public class TestUtils
                 default:
                     Assert.fail("unexpected type: " + t);
             }
+        }
+    }
+
+    private static IonType doNext(IonReader reader)
+    {
+        boolean hasnext = true;
+        IonType t = null;
+
+        if (READER_HASNEXT_REMOVED == false) {
+            hasnext = reader.hasNext();
+        }
+        if (hasnext) {
+            t = reader.next();
+        }
+        return t;
+    }
+
+
+    private static void materializeScalar(IonReader reader)
+    {
+        IonType t = reader.getType();
+
+        if (t == null) {
+            return;
+        }
+        if (reader.isNullValue()) {
+            return;
+        }
+
+        switch (t)
+        {
+            case NULL:
+                // we really shouldn't get here, but it's not really an issue
+                reader.isNullValue();
+                break;
+            case BOOL:
+                boolean b = reader.booleanValue();
+                break;
+            case INT:
+                long l = reader.longValue();
+                break;
+            case FLOAT:
+                double f = reader.doubleValue();
+                break;
+            case DECIMAL:
+                BigDecimal bd = reader.bigDecimalValue();
+                break;
+            case TIMESTAMP:
+                Timestamp time = reader.timestampValue();
+                break;
+            case STRING:
+                String s = reader.stringValue();
+                break;
+            case SYMBOL:
+                int sid = reader.getSymbolId();
+                String sy = reader.stringValue();
+                break;
+            case BLOB:
+            case CLOB:
+                // getting the size is close enough since the
+                // reader has to evaluate the contents to know
+                // the length the user needs for new.
+                int bs = reader.byteSize();
+                break;
+
+            case STRUCT:
+            case LIST:
+            case SEXP:
+                break;
+
+            default:
+                Assert.fail("unexpected type: " + t);
         }
     }
 

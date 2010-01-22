@@ -11,6 +11,7 @@ import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonDatagram;
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonLob;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonString;
@@ -42,7 +43,18 @@ public abstract class IonWriterTestCase
         throws Exception
     {
         byte[] bytes = outputByteArray();
-        return loader().load(bytes);
+        IonDatagram dg;
+        try {
+            // force all the classes to load to we can step
+            // into the next time we try this and actually
+            // see what's going on
+            dg = loader().load(bytes);
+        }
+        catch (IonException e) {
+            // do nothing
+        }
+        dg = loader().load(bytes);
+        return dg;
     }
 
     protected IonValue reloadSingleValue()

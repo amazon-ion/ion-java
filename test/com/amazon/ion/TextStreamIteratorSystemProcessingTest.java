@@ -13,7 +13,6 @@ public class TextStreamIteratorSystemProcessingTest
     private byte[] myBytes;
     private InputStream myStream;
 
-
     @Override
     protected void prepare(String text)
         throws Exception

@@ -43,7 +43,10 @@ public class EquivsTests
 
                     try
                     {
-                        assertEquals("Equivalent Ion not equal", current, next);
+                        // the extra if allows us (me) to set a break point on failures here, specifically here.
+                        if (current == null || next == null || current.equals(next) == false) {
+                            assertEquals("Equivalent Ion not equal", current, next);
+                        }
                         assertEquals("Equal values have unequal hashes",
                                      current.hashCode(), next.hashCode());
                     }
