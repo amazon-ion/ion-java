@@ -99,6 +99,7 @@ public class IonTextUtils
         case '(':  case ')':
         case ',':
         case '\"': case '\'':
+        case '/':
         case ' ':  case '\t':  case '\n':  case '\r':  // Whitespace
         // case '/': // we check start of comment in the caller where we
         //              can peek ahead for the following slash or asterisk
@@ -109,7 +110,8 @@ public class IonTextUtils
         }
     }
 
-    public static boolean isDigit(int codePoint, int radix) {
+    public static boolean isDigit(int codePoint, int radix)
+    {
         switch (codePoint) {
         case '0': case '1': case '2': case '3': case '4':
         case '5': case '6': case '7':
@@ -121,6 +123,37 @@ public class IonTextUtils
             return (radix == 16);
         }
         return false;
+    }
+
+    public static int digitValue(int codePoint, int radix)
+    {
+        assert(isDigit(codePoint, radix) == true);
+
+        switch (codePoint) {
+        case '0':       return 0;
+        case '1':       return 1;
+        case '2':       return 2;
+        case '3':       return 3;
+        case '4':       return 4;
+        case '5':       return 5;
+        case '6':       return 6;
+        case '7':       return 7;
+        case '8':       return 8;
+        case '9':       return 9;
+        case 'A':
+        case 'a':       return 10;
+        case 'B':
+        case 'b':       return 11;
+        case 'C':
+        case 'c':       return 12;
+        case 'D':
+        case 'd':       return 13;
+        case 'E':
+        case 'e':       return 14;
+        case 'F':
+        case 'f':       return 15;
+        }
+        return -1;
     }
 
     private static boolean is8bitValue(int v) {
@@ -925,5 +958,38 @@ public class IonTextUtils
     //     \xhh ASCII character in hexadecimal notation (1-2 digits)
     //    \\uhhhh Unicode character in hexadecimal
     //     \Uhhhhhhhh Unicode character in hexadecimal
+
+
+    public static final class StringPeekReader
+    {
+        private CharSequence _cs;
+        private int          _pos;
+        private int          _len;
+
+        public StringPeekReader(CharSequence cs) {
+            this(cs, 0, cs.length());
+        }
+        public StringPeekReader(CharSequence cs, int length) {
+            this(cs, 0, length);
+        }
+        public StringPeekReader(CharSequence cs, int offset, int length) {
+            _cs = cs;
+            _pos = offset;
+            _len = (cs == null) ? -1 : (offset + length);
+        }
+        public final int next() {
+            if (_pos >= _len) {
+                return -1;
+            }
+            return _cs.charAt(_pos++);
+        }
+        public final int peek() {
+            if (_pos >= _len) {
+                return -1;
+            }
+            return _cs.charAt(_pos);
+        }
+    }
+
 
 }

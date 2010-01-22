@@ -92,6 +92,14 @@ public interface SymbolTable
     public String getSystemId();
 
     /**
+     * Gets the IonSystem that this symbol table is constructed against.
+     * This may return null if there is no IonSystem associated with
+     * this particular table.
+     * @return IonSystem IonSystem associated with this symbol table or null
+     */
+    public IonSystem getSystem();
+
+    /**
      * Gets the identifier for the Ion version (and thus the system symbol
      * table) used by this table.
      * The version identifier is a string of the form {@code "$ion_X_Y"}.
@@ -241,6 +249,15 @@ public interface SymbolTable
      */
     @Deprecated
     public IonStruct getIonRepresentation();
+
+    /**
+     * Gets an Ion reader that can be used to read over the
+     * symbol table as an ion value.
+     *
+     * @return a non-null IonReader
+     *
+     */
+    public IonReader getReader();
 
 
     /**

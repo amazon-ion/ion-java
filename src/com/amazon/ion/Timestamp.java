@@ -317,22 +317,31 @@ public final class Timestamp
 
     void validate_fields()
     {
-        if (_year < 1  || _year > 9999) throw new IllegalArgumentException("year must be between 1 and 9999 inclusive GMT, and local time");
-        if (_month < 1 || _month > 12) throw new IllegalArgumentException("month is between 1 and 12 inclusive");
-        if (_day < 1   || _day > last_day_in_month(_year, _month))
-            throw new IllegalArgumentException("day is between 1 and "+last_day_in_month(_year, _month)+" inclusive");
+        if (_year < 1  || _year > 9999) error_in_field("year must be between 1 and 9999 inclusive GMT, and local time");
+        if (_month < 1 || _month > 12) error_in_field("month is between 1 and 12 inclusive");
+        if (_day < 1   || _day > last_day_in_month(_year, _month)) {
+            error_in_field("day is between 1 and "+last_day_in_month(_year, _month)+" inclusive");
+        }
 
-        if (_hour < 0 || _hour > 23) throw new IllegalArgumentException("hour is between 0 and 23 inclusive");
-        if (_minute < 0 || _minute > 59) throw new IllegalArgumentException("minute is between 0 and 59 inclusive");
-        if (_second < 0 || _second > 59) throw new IllegalArgumentException("second is between 0 and 59 inclusive");
+        if (_hour < 0 || _hour > 23)     error_in_field("hour is between 0 and 23 inclusive");
+        if (_minute < 0 || _minute > 59) error_in_field("minute is between 0 and 59 inclusive");
+        if (_second < 0 || _second > 59) error_in_field("second is between 0 and 59 inclusive");
 
         if (this._precision == Precision.FRACTION) {
-            if (_fraction == null)
-                throw new IllegalArgumentException("fractional seconds cannot be null when the precision is Timestamp.TT_FRAC");
-            if (_fraction.signum() == -1) throw new IllegalArgumentException("fractional seconds must be greater than or equal to 0 and less than 1");
-            if (BigDecimal.ONE.compareTo(_fraction) != 1)
-                throw new IllegalArgumentException("fractional seconds must be greater than or equal to 0 and less than 1");
+            if (_fraction == null) error_in_field("fractional seconds cannot be null when the precision is Timestamp.TT_FRAC");
+            if (_fraction.signum() == -1) {
+                error_in_field("fractional seconds must be greater than or equal to 0 and less than 1");
+            }
+            if (BigDecimal.ONE.compareTo(_fraction) != 1) {
+                error_in_field("fractional seconds must be greater than or equal to 0 and less than 1");
+            }
         }
+    }
+    static void error_in_field(String message)
+    {
+        IllegalArgumentException e = new IllegalArgumentException(message);
+        //throw new IonException(e);
+        throw e;
     }
 
     /**
@@ -702,12 +711,12 @@ public final class Timestamp
                 case DAY:
                     break;
                 default:
-                    throw new IllegalArgumentException("invalid timezone offset: missing timezone offset");
+                    error_in_field("invalid timezone offset: missing timezone offset");
             }
             offset = null;
         }
         if (image.length() > (pos + 1) && !isValidFollowChar(image.charAt(pos + 1))) {
-            throw new IllegalArgumentException("invalid excess characters encountered");
+            error_in_field("invalid excess characters encountered");
         }
 
         Timestamp ts =
@@ -730,13 +739,13 @@ public final class Timestamp
 
         for (ii=start; ii<end; ii++) {
             char c = in.charAt(ii);
-            if (!Character.isDigit(c)) throw new IllegalArgumentException(msg+" has an invalid character: '"+c+"' encountered");
+            if (!Character.isDigit(c)) error_in_field(msg+" has an invalid character: '"+c+"' encountered");
             value *= 10;
             value += c - '0';
         }
         if (terminator != -1) {
             if (ii >= in.length() || in.charAt(ii) != terminator) {
-                throw new IllegalArgumentException(msg+" has a bad terminator character: '"+terminator+"' expected");
+                error_in_field(msg+" has a bad terminator character: '"+terminator+"' expected");
             }
         }
         return value;
@@ -1270,7 +1279,7 @@ public final class Timestamp
         while (length > 0) {
             length--;
             int next = value / 10;
-            temp[length] =  (char)((int)'0' + (value - next*10));
+            temp[length] =  (char)('0' + (value - next*10));
             value = next;
         }
         while (length > 0) {

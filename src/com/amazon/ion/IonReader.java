@@ -94,10 +94,24 @@ public interface IonReader
     public int getDepth();
 
     /**
+     * Returns the type of iteration this writer is performing.
+     */
+    public IonIterationType getIterationType();
+
+
+    /**
      * Returns the symbol table that is applicable to the current value.
      * This may be either a system or local symbol table.
      */
     public SymbolTable getSymbolTable();
+
+    /**
+     * Returns the IonSystem that may have been specified when constructing
+     * this reader.  IonReaders do not necessarily require a system.  If
+     * no system was used in the construction of this reader a null is
+     * returned.
+     */
+    public IonSystem getSystem();
 
     /**
      * Returns the type of the current value, or null if there is no valid

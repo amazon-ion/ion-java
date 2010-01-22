@@ -5,6 +5,7 @@ package com.amazon.ion;
 import com.amazon.ion.util.IonStreamUtils;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Date;
 
 /**
@@ -48,13 +49,25 @@ public interface IonWriter
 {
 
     /**
-     * sets the symbol table to use for encoding to be the passed
-     * in symbol table.
-     * @param symbols base symbol table for encoding
+     * Sets the symbol table to use for encoding to be the passed
+     * in symbol table.  The can only be done outside an Ion value,
+     * that is at the datagram level.  As symbols are written
+     * this symbol table is used to resolve them.  If the symbols
+     * are undefined this symbol table is updated to include them
+     * as local symbols.  The updated symbol table will be
+     * written before any of the local values are emitted.
+     * <p>
+     * If the symbol table is the system symbol table an Ion
+     * version marker will be written to the output.  If symbols
+     * not in the system symbol table are written a local
+     * symbol table will be created and written before the
+     * current top level value.
      *
-     * @deprecated Removed pending a better API.
+     * @param symbols base symbol table for encoding
+     * @throws IllegalArgumentException if symbols is null or a shared symbol table
+
      */
-//    public void setSymbolTable(SymbolTable symbols);
+     public void setSymbolTable(SymbolTable symbols) throws IOException;
 
     /**
      * Gets the symbol table that is currently in use by the writer.
@@ -69,6 +82,43 @@ public interface IonWriter
      */
     public SymbolTable getSymbolTable();
 
+    /**
+     * Get the IonSystem associated with this writer.  This
+     * may return null if no IonSystem is attached.  An IonSystem
+     * is required if the writer needs to construct a local
+     * symbol table.
+     * @return IonSystem attached IonSystem or null
+     */
+    public IonSystem getSystem();
+
+    /**
+     * Returns the current depth of containers the writer is at.  This is
+     * 0 if the writer is at the datagram level.
+     * @return int depth of container nesting
+     */
+    public int getDepth();
+
+    /**
+     * Returns the type of output this writer is generating.
+     */
+    public IonIterationType getIterationType();
+
+    /**
+     * This forces any pending data to be written to the
+     * users output stream.  If not user output stream
+     * has been specified (in the constructor) this
+     * operation will simply reset state as if it had
+     * written the data.  The data will be written
+     * whenever the user later requests it through
+     * flush with a passed in value or through a call
+     * to getBytes.
+     *
+     * @throws IllegalStateException if the writer is in the
+     *  midst of writing a value, this would be most common if
+     *  there is an unclosed container (a stepIn() without a
+     *  matching stepOut()).
+     */
+    public void flush() throws IOException;
 
     /**
      * Sets the pending field name to the given symbol id.
@@ -102,6 +152,31 @@ public interface IonWriter
      */
     public void setFieldName(String name);
 
+    /**
+     * This returns the field name of the value about to be written
+     * if the field name has been set.  If the field name has not been
+     * defined this will return null.
+     * @return String name of the field about to be written or null if it is not yet set
+     */
+    public String getFieldName();
+
+    /**
+     * Returns the symbol id of the current field name, if the field name
+     * has been set.  If the name has not been set, either as either a String
+     * or a symbol id value, this returns -1 (undefined symbol).
+     * @return symbol id of the name of the field about to be written or -1 if it is not set
+     */
+    public int getFieldId();
+
+    /**
+     * Returns true if the field name has been set either through setFieldName or
+     * setFieldId.  This is generally more efficient than calling getFieldName or
+     * getFieldId and checking the return type as it does not need to resolve the
+     * name through a symbol table.  This returns false if the field name has not
+     * been set.
+     * @return true if a field name has been set false otherwise
+     */
+    public boolean isFieldNameSet();
 
     /**
      * Sets the full list of pending annotations to the given text symbols.
@@ -151,9 +226,41 @@ public interface IonWriter
      */
     public void addTypeAnnotationId(int annotationId);
 
+    /**
+     * Gets the current list of pending annotations.
+     * This is the contents of the current {@code annotations} array
+     * of this writer.
+     * <p>
+     * If the annotations were set as IDs they
+     * will be converted if a symbol table is available.  In the event
+     * a symbol table is not available a null array will be returned.
+     * If no annotations are set a 0 length array will be returned.
+     * <p>
+     * @return pending type annotations as strings, null if the
+     * annotations cannot be expressed as strings.
+     */
+    public String[] getTypeAnnotations();
+
+    /**
+     * Gets the current list of pending annotations.
+     * This is the contents of the current {@code annotations} array
+     * of this writer.
+     * <p>
+     * If the annotations were set as string they
+     * will be converted to symbol IDs (ints) if a symbol table is
+     * available.  In the event a symbol table is not available a
+     * null array will be returned.
+     * If no annotations are set a 0 length array will be returned.
+     * <p>
+     * @return pending type annotations as symbol ID ints, null if the
+     * annotations cannot be expressed as IDs.
+     */
+    public int[] getTypeAnnotationIds();
+
+
 
     //=========================================================================
-    // Container navagation
+    // Container navigation
 
     /**
      * Writes the beginning of a non-null container (list, sexp, or struct).
@@ -271,19 +378,24 @@ public interface IonWriter
     public void writeInt(int value) throws IOException;
 
     /**
-     * writes a signed 64 bit value, a Java byte, as an IonInt.
+     * writes a signed 64 bit value, a Java long, as an IonInt.
      * @param value signed int to write
      */
     public void writeInt(long value) throws IOException;
 
-    // TODO add writeInt(Number)
+    /**
+     * writes a BigInteger value as an IonInt.  If the
+     * BigInteger value is null this writes a null int.
+     * @param value BigInteger to write
+     */
+    public void writeInt(BigInteger value) throws IOException;
 
 
     /**
-     * writes a 32 bit binary floaing point value, a Java float,
+     * writes a 32 bit binary floating point value, a Java float,
      * as an IonFloat.  Currently IonFloat values are output as
      * 64 bit IEEE 754 big endian values.  As a result writeFloat
-     * is simply a convienience method which casts the float
+     * is simply a convenience method which casts the float
      * up to a double on output.
      * @param value float to write
      *
@@ -293,11 +405,11 @@ public interface IonWriter
     public void writeFloat(float value) throws IOException;
 
     /**
-     * writes a 64 bit binary floaing point value, a Java double,
+     * writes a 64 bit binary floating point value, a Java double,
      * as an IonFloat.  Currently IonFloat values are output as
      * 64 bit IEEE 754 big endian values.  IonFloat preserves all
      * valid floating point values, including -0.0, Nan and +/-infinity.
-     * It does not gaurantee preservation of -Nan or other less
+     * It does not guarantee preservation of -Nan or other less
      * less "common" values.
      * @param value double to write
      */
@@ -332,7 +444,7 @@ public interface IonWriter
 
     /**
      * writes a BigDecimal value as an IonDecimal.  Ion uses an
-     * arbitrarily long sign/value and an arbitartily long signed
+     * arbitrarily long sign/value and an arbitrarily long signed
      * exponent to write the value. This preserves
      * all of the BigDecimal digits, the number of
      * significant digits.  Since java.math.BigDecimal cannot represent
@@ -407,6 +519,22 @@ public interface IonWriter
     public void writeSymbol(String value) throws IOException;
 
     /**
+     * Write an Ion version marker symbol to the output.  This
+     * is the $ion_1_0 value currently (in later versions the
+     * number may change).  In text output this appears as the
+     * text symbol.  In binary this will be the symbol id if
+     * the writer is in a list, sexp or struct.  If the writer
+     * is currently at the top level this will write the
+     * "magic cookie" value.
+     *
+     *  Writing a version marker will reset the symbol table
+     *  to be the system symbol table.
+     *
+     * @throws IOException
+     */
+    public void writeIonVersionMarker() throws IOException;
+
+    /**
      * Writes a {@link java.lang.String} as an Ion string. Since Ion strings are
      * UTF-8 and Java Strings are Unicode 16.  As such the resulting
      * lengths may not match.  In addition some Java strings are not
@@ -449,7 +577,7 @@ public interface IonWriter
 
     /**
      * writes a portion of the byte array out as an IonBlob value.  This
-     * copies the porition of the byte array that is written.
+     * copies the portion of the byte array that is written.
      * @param value bytes to be written
      * @param start offset of the first byte in value to write
      * @param len number of bytes to write from value
@@ -461,9 +589,9 @@ public interface IonWriter
 
     /**
      * writes an IonList with a series of IonBool values. This
-     * starts a List, writes the values (without any annoations)
+     * starts a List, writes the values (without any annotations)
      * and closes the list. For text and tree writers this is
-     * just a convienience, but for the binary writer it can be
+     * just a convenience, but for the binary writer it can be
      * optimized internally.
      * @param values boolean values to populate the list with
      *
@@ -474,9 +602,9 @@ public interface IonWriter
 
     /**
      * writes an IonList with a series of IonInt values. This
-     * starts a List, writes the values (without any annoations)
+     * starts a List, writes the values (without any annotations)
      * and closes the list. For text and tree writers this is
-     * just a convienience, but for the binary writer it can be
+     * just a convenience, but for the binary writer it can be
      * optimized internally.
      * @param values signed byte values to populate the lists int's with
      *
@@ -487,9 +615,9 @@ public interface IonWriter
 
     /**
      * writes an IonList with a series of IonInt values. This
-     * starts a List, writes the values (without any annoations)
+     * starts a List, writes the values (without any annotations)
      * and closes the list. For text and tree writers this is
-     * just a convienience, but for the binary writer it can be
+     * just a convenience, but for the binary writer it can be
      * optimized internally.
      * @param values signed short values to populate the lists int's with
      *
@@ -500,9 +628,9 @@ public interface IonWriter
 
     /**
      * writes an IonList with a series of IonInt values. This
-     * starts a List, writes the values (without any annoations)
+     * starts a List, writes the values (without any annotations)
      * and closes the list. For text and tree writers this is
-     * just a convienience, but for the binary writer it can be
+     * just a convenience, but for the binary writer it can be
      * optimized internally.
      * @param values signed int values to populate the lists int's with
      *
@@ -513,9 +641,9 @@ public interface IonWriter
 
     /**
      * writes an IonList with a series of IonInt values. This
-     * starts a List, writes the values (without any annoations)
+     * starts a List, writes the values (without any annotations)
      * and closes the list. For text and tree writers this is
-     * just a convienience, but for the binary writer it can be
+     * just a convenience, but for the binary writer it can be
      * optimized internally.
      * @param values signed long values to populate the lists int's with
      *
@@ -526,9 +654,9 @@ public interface IonWriter
 
     /**
      * writes an IonList with a series of IonFloat values. This
-     * starts a List, writes the values (without any annoations)
+     * starts a List, writes the values (without any annotations)
      * and closes the list. For text and tree writers this is
-     * just a convienience, but for the binary writer it can be
+     * just a convenience, but for the binary writer it can be
      * optimized internally.  Note that since, currently, IonFloat
      * is a 64 bit float this is a helper that simply casts
      * the passed in floats to double before writing them.
@@ -541,9 +669,9 @@ public interface IonWriter
 
     /**
      * writes an IonList with a series of IonFloat values. This
-     * starts a List, writes the values (without any annoations)
+     * starts a List, writes the values (without any annotations)
      * and closes the list. For text and tree writers this is
-     * just a convienience, but for the binary writer it can be
+     * just a convenience, but for the binary writer it can be
      * optimized internally.
      * @param values 64 bit float values to populate the lists IonFloat's with
      *
@@ -554,9 +682,9 @@ public interface IonWriter
 
     /**
      * writes an IonList with a series of IonString values. This
-     * starts a List, writes the values (without any annoations)
+     * starts a List, writes the values (without any annotations)
      * and closes the list. For text and tree writers this is
-     * just a convienience, but for the binary writer it can be
+     * just a convenience, but for the binary writer it can be
      * optimized internally.
      * @param values Java String to populate the lists IonString's from
      *
@@ -564,4 +692,5 @@ public interface IonWriter
      */
     @Deprecated
     public void writeStringList(String[] values) throws IOException;
+
 }

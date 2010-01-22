@@ -4,8 +4,9 @@ package com.amazon.ion.apps;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
+import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.impl.IonTextWriter;
+import com.amazon.ion.system.SystemFactory;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -133,7 +134,12 @@ public class PrintApp
     protected void process(IonReader reader, OutputStream out)
         throws IOException, IonException
     {
-        IonWriter writer = new IonTextWriter(out, true);
+        IonSystem system = reader.getSystem();
+        if (system == null) {
+            system = SystemFactory.newSystem();
+        }
+        IonWriter writer = system.newTextWriter(out);  // was new IonTextWriter(out, true);
+
         writer.writeValues(reader);
 
         // Ensure there's a newline at the end and flush the buffer.
