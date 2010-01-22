@@ -139,7 +139,7 @@ abstract public class IonContainerImpl
 
         if (this.isDirty())
         {
-            assert _hasNativeValue == true || _isPositionLoaded == false;
+            assert _hasNativeValue() == true || _isPositionLoaded() == false;
             if (_contents != null)
             {
                 for (IonValue child : _contents)
@@ -172,7 +172,7 @@ abstract public class IonContainerImpl
         if (isNullValue())
         {
             _contents = new ArrayList<IonValue>();
-            _hasNativeValue = true;
+            _hasNativeValue(true);
             setDirty();
         }
         /*
@@ -191,7 +191,7 @@ abstract public class IonContainerImpl
 
     @Override
     public void makeReadOnly() {
-        if (_isLocked) return;
+        if (_isLocked()) return;
         synchronized (this) { // TODO why is this needed?
             deepMaterialize();
             if (_contents != null) {
@@ -199,7 +199,7 @@ abstract public class IonContainerImpl
                     child.makeReadOnly();
                 }
             }
-            _isLocked = true;
+            _isLocked(true);
         }
     }
 
@@ -213,7 +213,7 @@ abstract public class IonContainerImpl
                 detachAllChildren();
                 _contents = null;
             }
-            _hasNativeValue = true;
+            _hasNativeValue(true);
             setDirty();
         }
     }
@@ -252,7 +252,7 @@ abstract public class IonContainerImpl
     {
         // TODO throw IonException not IOException
 
-        if (!_hasNativeValue)
+        if (!_hasNativeValue())
         {
             // First materialization must be from clean state.
             assert !isDirty() || _buffer == null;
@@ -260,7 +260,7 @@ abstract public class IonContainerImpl
 
             if (_buffer != null)
             {
-                assert _isPositionLoaded == true;
+                assert _isPositionLoaded() == true;
 
                 IonBinary.Reader reader = this._buffer.reader();
                 reader.sync();
@@ -276,10 +276,10 @@ abstract public class IonContainerImpl
             }
             else
             {
-                assert _isPositionLoaded == false;
+                assert _isPositionLoaded() == false;
             }
 
-            _hasNativeValue = true;
+            _hasNativeValue(true);
         }
     }
 
@@ -635,7 +635,7 @@ abstract public class IonContainerImpl
         if (_contents == null)
         {
             _contents = new ArrayList<IonValue>();
-            _hasNativeValue = true;
+            _hasNativeValue(true);
         }
 
         _contents.add(index, element);
@@ -679,7 +679,7 @@ abstract public class IonContainerImpl
     @Override
     void detachFromSymbolTable()
     {
-        assert _hasNativeValue; // else we don't know if _contents is valid
+        assert _hasNativeValue(); // else we don't know if _contents is valid
         if (this._contents != null) {
             for (int ii=0; ii<this._contents.size(); ii++) {
                 IonValueImpl v = (IonValueImpl)this._contents.get(ii);
@@ -696,7 +696,7 @@ abstract public class IonContainerImpl
             return false;
 
         // We must already be materialized, else we wouldn't have a child.
-        assert _hasNativeValue;
+        assert _hasNativeValue();
 
         // Get all the data into the DOM, since the element will be losing
         // its backing store.

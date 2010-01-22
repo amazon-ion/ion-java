@@ -36,8 +36,8 @@ public abstract class IonValueImpl
      * WARNING: This member can change even when the value is read-only, since
      * the container may be mutable and have values added or removed.
      */
-    protected int _elementid;
-    private String _fieldName;
+    protected int    _elementid;
+    private String   _fieldName;
     private String[] _annotations;
 
     //
@@ -105,19 +105,50 @@ public abstract class IonValueImpl
      * If the value does not have backing buffer this is always false;
      * If this value is true the _isPositionLoaded must also be true;
      */
-    protected boolean      _isMaterialized;
+    private static final int IS_MATERIALIZED = 0x01;
+    protected final boolean _isMaterialized() { return is_true(IS_MATERIALIZED); }
+    protected final boolean _isMaterialized(boolean flag) {
+        if (flag) {
+            set_flag(IS_MATERIALIZED);
+        }
+        else {
+            clear_flag(IS_MATERIALIZED);
+        }
+        return flag;
+    }
 
     /**
      * Indicates whether or not the position information has been loaded.
      * If the value does not have backing buffer this is always false;
      */
-    protected boolean      _isPositionLoaded;
+    private static final int IS_POSITION_LOADED = 0x02;
+    protected final boolean _isPositionLoaded() { return is_true(IS_POSITION_LOADED); }
+    protected final boolean _isPositionLoaded(boolean flag) {
+        if (flag) {
+            set_flag(IS_POSITION_LOADED);
+        }
+        else {
+            clear_flag(IS_POSITION_LOADED);
+        }
+        return flag;
+    }
 
     /**
      * Indicates whether our nativeValue (stored by concrete subclasses)
      * has been determined.
      */
-    protected boolean      _hasNativeValue;
+    private static final int HAS_NATIVE_VALUE = 0x04;
+    protected final boolean _hasNativeValue() { return is_true(HAS_NATIVE_VALUE); }
+    protected final boolean _hasNativeValue(boolean flag) {
+        if (flag) {
+            set_flag(HAS_NATIVE_VALUE);
+        }
+        else {
+            clear_flag(HAS_NATIVE_VALUE);
+        }
+        return flag;
+    }
+
 
     /**
      * Indicates whether our {@link #_nativeValue} has been updated and is
@@ -130,15 +161,69 @@ public abstract class IonValueImpl
      * <p>
      * Note that a value with no buffer is always dirty.
      */
-    private boolean      _isDirty;
+    private static final int IS_DIRTY = 0x08;
+    private final boolean _isDirty() { return is_true(IS_DIRTY); }
+    private final boolean _isDirty(boolean flag) {
+        if (flag) {
+            set_flag(IS_DIRTY);
+        }
+        else {
+            clear_flag(IS_DIRTY);
+        }
+        return flag;
+    }
+
 
     /**
      * Tracks whether or not this instance is locked.  Locked values
      * may not be mutated and must be thread safe for reading.
      */
-    protected boolean    _isLocked;
+    private static final int IS_LOCKED = 0x10;
+    protected final boolean _isLocked() { return is_true(IS_LOCKED); }
+    protected final boolean _isLocked(boolean flag) {
+        if (flag) {
+            set_flag(IS_LOCKED);
+        }
+        else {
+            clear_flag(IS_LOCKED);
+        }
+        return flag;
+    }
 
-    protected boolean    _isSystemValue;
+
+    private static final int IS_SYSTEM_VALUE = 0x20;
+    protected final boolean _isSystemValue() { return is_true(IS_SYSTEM_VALUE); }
+    protected final boolean _isSystemValue(boolean flag) {
+        if (flag) {
+            set_flag(IS_SYSTEM_VALUE);
+        }
+        else {
+            clear_flag(IS_SYSTEM_VALUE);
+        }
+        return flag;
+    }
+
+
+    /**
+     * this hold all the various boolean flags we have
+     * in a single int.  Use set_flag(), clear_flag(), is_true()
+     * and the associated int flag to check the various flags.
+     * This is to avoid the overhead java seems to impose
+     * for a boolean value - it should be a bit, but it seems
+     * to be an int (4 bytes for 1 bit seems excessive).
+     */
+    private int _flags;
+    private final boolean is_true(int flag_bit) {
+        return ((_flags & flag_bit) != 0);
+    }
+    private final void set_flag(int flag_bit) {
+        assert(flag_bit != 0);
+        _flags |= flag_bit;
+    }
+    private final void clear_flag(int flag_bit) {
+        assert(flag_bit != 0);
+        _flags &= ~flag_bit;
+    }
 
     /**
      * This is the containing value, if there is one.  The container
@@ -186,10 +271,10 @@ public abstract class IonValueImpl
         _system = system;
 
         pos_init();
-        _isMaterialized     = false;
-        _isPositionLoaded   = false;
-        _hasNativeValue     = false;
-        _isDirty            = true;
+        _isMaterialized(false);
+        _isPositionLoaded(false);
+        _hasNativeValue(false);
+        _isDirty(true);
         pos_setTypeDescriptorByte(typedesc);
     }
 
@@ -274,10 +359,10 @@ public abstract class IonValueImpl
 
     protected void makeReady()
     {
-        if (_hasNativeValue) return;
-        if (_isMaterialized) return;
+        if (_hasNativeValue()) return;
+        if (_isMaterialized()) return;
         if (_entry_start != -1) {
-            assert _isPositionLoaded == true;
+            assert _isPositionLoaded() == true;
             try {
                 materialize();
             }
@@ -422,7 +507,7 @@ public abstract class IonValueImpl
         // scalar classes override this, but call the
         // super() copy (this one) when they don't
         // have a native value.
-        assert _hasNativeValue == false || _isPositionLoaded == true;
+        assert _hasNativeValue() == false || _isPositionLoaded() == true;
 
         int ln = this.pos_getLowNibble();
         return (ln == IonConstants.lnIsNullAtom);
@@ -484,7 +569,7 @@ public abstract class IonValueImpl
 
         // TODO why is this here?  (See below as well)
         // I think this is vestigial embedded value logic that's now wrong.
-        if (_container._isSystemValue) {
+        if (_container._isSystemValue()) {
             return _container.getContainer();
         }
         return _container;
@@ -507,19 +592,19 @@ public abstract class IonValueImpl
     }
 
     public final boolean isDirty() {
-        return _isDirty;
+        return _isDirty();
     }
 
     public void makeReadOnly() {
-        if (_isLocked) return;
+        if (_isLocked()) return;
         synchronized (this) {
             deepMaterialize();
-            _isLocked = true;
+            _isLocked(true);
         }
     }
 
     public final boolean isReadOnly() {
-        return _isLocked;
+        return _isLocked();
     }
 
     /**
@@ -531,7 +616,7 @@ public abstract class IonValueImpl
     protected final void checkForLock()
         throws ReadOnlyValueException
     {
-        if (_isLocked) {
+        if (_isLocked()) {
             throw new ReadOnlyValueException();
         }
     }
@@ -542,8 +627,8 @@ public abstract class IonValueImpl
      */
     protected void setDirty() {
         checkForLock();
-        if (this._isDirty == false) {
-            this._isDirty = true;
+        if (this._isDirty() == false) {
+            this._isDirty(true);
             if (this._container != null) {
                 this._container.setDirty();
             }
@@ -555,7 +640,7 @@ public abstract class IonValueImpl
 
     protected void setClean() {
         assert _buffer != null;
-        this._isDirty = false;
+        this._isDirty(false);
     }
 
 
@@ -731,9 +816,9 @@ public abstract class IonValueImpl
         // TODO: should this be if (!(_container instanceof IonDatagram)) _symboltable = null;
         //       that is push all symbol tables up to the immediate datagram child members?
         //       since there's no buffer there's no binary ...
-        _isMaterialized     = false;   // because there's no buffer
-        _isPositionLoaded   = false;
-        _isDirty            = true;
+        _isMaterialized(false);   // because there's no buffer
+        _isPositionLoaded(false);
+        _isDirty(true);
 
         _fieldSid           =  0;
         _entry_start        = -1;
@@ -743,12 +828,12 @@ public abstract class IonValueImpl
     }
 
     void pos_initDatagram(int typeDesc, int length) {
-        _isMaterialized     = false;
-        _isPositionLoaded   = true;
-        _hasNativeValue     = false;
+        _isMaterialized(false);
+        _isPositionLoaded(true);
+        _hasNativeValue(false);
 
         // if we have a buffer, and it's not loaded, it has to be clean
-        _isDirty            = false;
+        _isDirty(false);
 
         _fieldSid           = 0;
         _type_desc          = typeDesc;
@@ -761,9 +846,9 @@ public abstract class IonValueImpl
 
     void pos_clear()
     {
-        _isMaterialized     = false;
-        _isPositionLoaded   = false;
-        _isDirty            = true;
+        _isMaterialized(false);
+        _isPositionLoaded(false);
+        _isDirty(true);
 
         _fieldSid           =  0;
         _type_desc          =  0;
@@ -775,10 +860,10 @@ public abstract class IonValueImpl
 
     void pos_load(int fieldId, Reader valueReader) throws IOException
     {
-        _isMaterialized     = false;
-        _isPositionLoaded   = true;
-        _hasNativeValue     = false;
-        _isDirty            = false; // if we have a buffer, and it's not loaded, it has to be clean
+        _isMaterialized(false);
+        _isPositionLoaded(true);
+        _hasNativeValue(false);
+        _isDirty(false); // if we have a buffer, and it's not loaded, it has to be clean
 
         pos_setFieldId(fieldId);
 
@@ -815,7 +900,7 @@ public abstract class IonValueImpl
                 // the value length was "wrong"
                 vlen = IonConstants.BINARY_VERSION_MARKER_SIZE - 1;
                 this._next_start = this._value_content_start + vlen;
-                this._isSystemValue = true;
+                this._isSystemValue(true);
             }
             else {
                 // read past the annotation list
@@ -937,9 +1022,9 @@ public abstract class IonValueImpl
      */
     protected synchronized void materialize() throws IOException
     {
-        if ( this._isMaterialized ) return;
+        if ( this._isMaterialized() ) return;
 
-        if ( this._isPositionLoaded == false ) {
+        if ( this._isPositionLoaded() == false ) {
             if (this._buffer != null) {
                 throw new IonException("invalid value state - buffer but not loaded!");
             }
@@ -951,7 +1036,7 @@ public abstract class IonValueImpl
             throw new IonException("invalid value state - loaded but no buffer!");
         }
 
-        assert ! this._isLocked;
+        assert ! this._isLocked();
 
         IonBinary.Reader reader = _buffer.reader();
         reader.sync();
@@ -970,8 +1055,8 @@ public abstract class IonValueImpl
         // TODO doMaterializeValue should precondition !_hasNativeValue and
         // then set _hasNativeValue here, OnceAndOnlyOnce.
         this.doMaterializeValue(reader);
-        assert _hasNativeValue;
-        this._isMaterialized = true;
+        assert _hasNativeValue();
+        this._isMaterialized(true);
     }
 
     protected SymbolTable materializeSymbolTable()
@@ -1006,7 +1091,7 @@ public abstract class IonValueImpl
 
     protected synchronized void materializeAnnotations(IonBinary.Reader reader) throws IOException
     {
-        assert this._isMaterialized == false;
+        assert this._isMaterialized() == false;
 
         if (!this.pos_isAnnotated()) return;
 
@@ -1088,7 +1173,7 @@ public abstract class IonValueImpl
         // Requires prior deep-materialization.
         // Calls setDirty() which also dirties container.
         detachFromSymbolTable();
-        assert _isDirty && _container.isDirty();
+        assert _isDirty() && _container.isDirty();
 
         _container = null;
         _fieldName = null;
@@ -1128,15 +1213,15 @@ public abstract class IonValueImpl
         assert !(this instanceof IonContainer);
 
         int len;
-        if (this._isDirty) {
-            assert _hasNativeValue == true || _isPositionLoaded == false;
+        if (this._isDirty()) {
+            assert _hasNativeValue() == true || _isPositionLoaded() == false;
 
             if (isNullValue()) return 0;
 
             len = getNativeValueLength();
         }
         else {
-            assert _isPositionLoaded;
+            assert _isPositionLoaded();
             len = pos_getValueOnlyLength();
         }
         return len;
@@ -1321,7 +1406,7 @@ public abstract class IonValueImpl
      * @throws IOException
      */
     protected final int updateToken() throws IOException {
-        if (!this._isDirty) return 0;
+        if (!this._isDirty()) return 0;
 
         int old_next_start = _next_start;
 
@@ -1364,7 +1449,7 @@ public abstract class IonValueImpl
         // overwrite the sid as everything is computed on the new value
         _fieldSid = newFieldSid;
 
-        _isPositionLoaded = true;
+        _isPositionLoaded(true);
 
         // and the delta is how far the end moved
         return _next_start - old_next_start;
@@ -1456,7 +1541,7 @@ public abstract class IonValueImpl
         assert writer != null;
         assert writer.position() == newPosition;
 
-        if (!this._isDirty)
+        if (!this._isDirty())
         {
             // We don't need to re-encode, but we may need to move our data
             // and we must update our positions to deal with buffer movement.

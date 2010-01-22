@@ -32,7 +32,7 @@ public final class IonStringImpl
     public IonStringImpl(IonSystemImpl system)
     {
         super(system, NULL_STRING_TYPEDESC);
-        _hasNativeValue = true; // Since this is null
+        _hasNativeValue(true); // Since this is null
     }
 
 
@@ -97,7 +97,7 @@ public final class IonStringImpl
     @Override
     protected int getNativeValueLength()
     {
-        assert _hasNativeValue == true;
+        assert _hasNativeValue() == true;
         return IonBinary.lenIonString(_get_value());
     }
 
@@ -105,7 +105,7 @@ public final class IonStringImpl
     @Override
     protected int computeLowNibble(int valuelen)
     {
-        assert _hasNativeValue == true;
+        assert _hasNativeValue() == true;
 
         int ln = 0;
         if (_get_value() == null) {
@@ -123,10 +123,10 @@ public final class IonStringImpl
     @Override
     protected void doMaterializeValue(IonBinary.Reader reader) throws IOException
     {
-        assert this._isPositionLoaded == true && this._buffer != null;
+        assert this._isPositionLoaded() == true && this._buffer != null;
 
         // a native value trumps a buffered value
-        if (_hasNativeValue) return;
+        if (_hasNativeValue()) return;
 
         // the reader will have been positioned for us
         assert reader.position() == this.pos_getOffsetAtValueTD();
@@ -156,7 +156,7 @@ public final class IonStringImpl
             break;
         }
 
-        _hasNativeValue = true;
+        _hasNativeValue(true);
     }
 
 

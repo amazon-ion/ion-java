@@ -38,7 +38,7 @@ public abstract class IonSequenceImpl
     protected IonSequenceImpl(IonSystemImpl system, int typeDesc)
     {
         super(system, typeDesc);
-        assert !_hasNativeValue;
+        assert !_hasNativeValue();
     }
 
     /**
@@ -57,7 +57,7 @@ public abstract class IonSequenceImpl
         {
             _contents = new ArrayList<IonValue>();
         }
-        _hasNativeValue = true;
+        _hasNativeValue(true);
     }
 
     /**
@@ -84,7 +84,7 @@ public abstract class IonSequenceImpl
         assert _contents == null;
         assert isDirty();
 
-        _hasNativeValue = true;
+        _hasNativeValue(true);
 
         if (elements != null)
         {
@@ -126,7 +126,7 @@ public abstract class IonSequenceImpl
     @Override
     public boolean isNullValue()
     {
-        if (_hasNativeValue || !_isPositionLoaded) {
+        if (_hasNativeValue() || !_isPositionLoaded()) {
             return (_contents == null);
         }
 
@@ -370,7 +370,7 @@ public abstract class IonSequenceImpl
     protected int computeLowNibble(int valuelen)
         throws IOException
     {
-        assert _hasNativeValue;
+        assert _hasNativeValue();
 
         if (_contents == null) { return IonConstants.lnIsNullSequence; }
 
@@ -388,7 +388,7 @@ public abstract class IonSequenceImpl
                              int cumulativePositionDelta)
         throws IOException
     {
-        assert _hasNativeValue == true || _isPositionLoaded == false;
+        assert _hasNativeValue() == true || _isPositionLoaded() == false;
         assert !(this instanceof IonDatagram);
 
         writer.write(this.pos_getTypeDescriptorByte());

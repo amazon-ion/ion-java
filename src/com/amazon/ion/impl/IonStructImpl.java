@@ -47,7 +47,7 @@ public final class IonStructImpl
     public IonStructImpl(IonSystemImpl system)
     {
         this(system, NULL_STRUCT_TYPEDESC);
-        _hasNativeValue = true;
+        _hasNativeValue(true);
     }
 
     /**
@@ -149,7 +149,7 @@ public final class IonStructImpl
     @Override
     public boolean isNullValue()
     {
-        if (_hasNativeValue || !_isPositionLoaded) {
+        if (_hasNativeValue() || !_isPositionLoaded()) {
             return (_contents == null);
         }
 
@@ -425,7 +425,7 @@ public final class IonStructImpl
     @Override
     protected int computeLowNibble(int valuelen)
     {
-        assert _hasNativeValue;
+        assert _hasNativeValue();
 
         if (_contents == null) return IonConstants.lnIsNullStruct;
 
@@ -447,7 +447,7 @@ public final class IonStructImpl
                              int cumulativePositionDelta)
         throws IOException
     {
-        assert _hasNativeValue == true || _isPositionLoaded == false;
+        assert _hasNativeValue() == true || _isPositionLoaded() == false;
 
         writer.write(this.pos_getTypeDescriptorByte());
 

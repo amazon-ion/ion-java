@@ -51,7 +51,7 @@ public final class IonIntImpl
     public IonIntImpl(IonSystemImpl system)
     {
         super(system, NULL_INT_TYPEDESC);
-        _hasNativeValue = true; // Since this is null
+        _hasNativeValue(true); // Since this is null
     }
 
     /**
@@ -164,7 +164,7 @@ public final class IonIntImpl
         if (value == null)
         {
             _int_value = null;
-            _hasNativeValue = true;
+            _hasNativeValue(true);
             setDirty();
         }
         else
@@ -187,14 +187,14 @@ public final class IonIntImpl
     private void doSetValue(Long value)
     {
         _int_value = value;
-        _hasNativeValue = true;
+        _hasNativeValue(true);
         setDirty();
     }
 
     @Override
     public synchronized boolean isNullValue()
     {
-        if (!_hasNativeValue) return super.isNullValue();
+        if (!_hasNativeValue()) return super.isNullValue();
         return (_int_value == null);
     }
 
@@ -202,7 +202,7 @@ public final class IonIntImpl
     @Override
     protected int getNativeValueLength()
     {
-        assert _hasNativeValue == true;
+        assert _hasNativeValue() == true;
         if (_int_value == null) return 0;
         // TODO streamline following; this is only call site.
         return IonBinary.lenIonInt(_int_value);
@@ -211,7 +211,7 @@ public final class IonIntImpl
     @Override
     protected int computeTypeDesc(int valuelen)
     {
-        assert _hasNativeValue == true;
+        assert _hasNativeValue() == true;
 
         if (_int_value == null) {
             return NULL_INT_TYPEDESC;
@@ -247,10 +247,10 @@ public final class IonIntImpl
     protected void doMaterializeValue(IonBinary.Reader reader)
         throws IOException
     {
-        assert this._isPositionLoaded == true && this._buffer != null;
+        assert this._isPositionLoaded() == true && this._buffer != null;
 
         // a native value trumps a buffered value
-        if (_hasNativeValue) return;
+        if (_hasNativeValue()) return;
 
         // the reader will have been positioned for us
         assert reader.position() == this.pos_getOffsetAtValueTD();
@@ -288,7 +288,7 @@ public final class IonIntImpl
             break;
         }
 
-        _hasNativeValue = true;
+        _hasNativeValue(true);
     }
 
 

@@ -55,14 +55,14 @@ public final class IonDecimalImpl
     public IonDecimalImpl(IonSystemImpl system)
     {
         super(system, NULL_DECIMAL_TYPEDESC);
-        _hasNativeValue = true; // Since this is null
+        _hasNativeValue(true); // Since this is null
     }
 
     public IonDecimalImpl(IonSystemImpl system, BigDecimal value)
     {
         super(system, NULL_DECIMAL_TYPEDESC);
         _decimal_value = value;
-        _hasNativeValue = true;
+        _hasNativeValue(true);
         assert isDirty();
     }
 
@@ -181,7 +181,7 @@ public final class IonDecimalImpl
     {
         checkForLock();
         _decimal_value = value;
-        _hasNativeValue = true;
+        _hasNativeValue(true);
         setDirty();
     }
 
@@ -207,7 +207,7 @@ public final class IonDecimalImpl
         default:
         	throw new IllegalArgumentException("IonDecimal values may only be NORMAL or NEGATIVE_ZERO");
         }
-        _hasNativeValue = true;
+        _hasNativeValue(true);
         setDirty();
     }
 
@@ -226,21 +226,21 @@ public final class IonDecimalImpl
     @Override
     public synchronized boolean isNullValue()
     {
-        if (!_hasNativeValue) return super.isNullValue();
+        if (!_hasNativeValue()) return super.isNullValue();
         return (_decimal_value == null);
     }
 
     @Override
     protected int getNativeValueLength()
     {
-        assert _hasNativeValue == true;
+        assert _hasNativeValue() == true;
         return IonBinary.lenIonDecimal(_decimal_value, false);
     }
 
     @Override
     protected int computeLowNibble(int valuelen)
     {
-        assert _hasNativeValue == true;
+        assert _hasNativeValue() == true;
 
         int ln = 0;
         if (_decimal_value == null) {
@@ -261,10 +261,10 @@ public final class IonDecimalImpl
     @Override
     protected void doMaterializeValue(IonBinary.Reader reader) throws IOException
     {
-        assert this._isPositionLoaded == true && this._buffer != null;
+        assert this._isPositionLoaded() == true && this._buffer != null;
 
         // a native value trumps a buffered value
-        if (_hasNativeValue) return;
+        if (_hasNativeValue()) return;
 
         // the reader will have been positioned for us
         assert reader.position() == this.pos_getOffsetAtValueTD();
@@ -298,7 +298,7 @@ public final class IonDecimalImpl
             break;
         }
 
-        _hasNativeValue = true;
+        _hasNativeValue(true);
     }
 
     @Override

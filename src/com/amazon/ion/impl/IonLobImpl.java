@@ -79,7 +79,7 @@ public abstract class IonLobImpl
             }
             System.arraycopy(source, offset, _lob_value, 0, length);
         }
-        _hasNativeValue = true;
+        _hasNativeValue(true);
         setDirty();
     }
 
@@ -128,7 +128,7 @@ public abstract class IonLobImpl
     @Override
     protected final int getNativeValueLength()
     {
-        assert _hasNativeValue == true;
+        assert _hasNativeValue() == true;
         if (_lob_value == null) return 0;
         return _lob_value.length;
     }
@@ -137,7 +137,7 @@ public abstract class IonLobImpl
     @Override
     protected final int computeLowNibble(int valuelen)
     {
-        assert _hasNativeValue == true;
+        assert _hasNativeValue() == true;
 
         int ln = 0;
         if (_lob_value == null) {
@@ -157,10 +157,10 @@ public abstract class IonLobImpl
     protected final void doMaterializeValue(IonBinary.Reader reader)
         throws IOException
     {
-        assert this._isPositionLoaded == true && this._buffer != null;
+        assert this._isPositionLoaded() == true && this._buffer != null;
 
         // a native value trumps a buffered value
-        if (_hasNativeValue) return;
+        if (_hasNativeValue()) return;
 
         // the reader will have been positioned for us
         assert reader.position() == this.pos_getOffsetAtValueTD();
@@ -191,7 +191,7 @@ public abstract class IonLobImpl
             break;
         }
 
-        _hasNativeValue = true;
+        _hasNativeValue(true);
     }
 
     @Override
@@ -210,7 +210,7 @@ public abstract class IonLobImpl
     @Override
     public final synchronized boolean isNullValue()
     {
-        if (!_hasNativeValue) return super.isNullValue();
+        if (!_hasNativeValue()) return super.isNullValue();
         return (_lob_value == null);
     }
 }

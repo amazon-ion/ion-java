@@ -279,8 +279,8 @@ public final class IonDatagramImpl
         // fake up the pos values as this is an odd case
         // Note that size is incorrect; we fix it below.
         pos_initDatagram(DATAGRAM_TYPEDESC, _buffer.buffer().size());
-        _isMaterialized = true;
-        _hasNativeValue = true;
+        _isMaterialized(true);
+        _hasNativeValue(true);
 
         if (ionData != null)  // FIXME refactor, we don't throw in this case
         {
@@ -777,7 +777,7 @@ public final class IonDatagramImpl
                     assert child.isDirty();
                 }
 
-                child._isSystemValue = true;
+                child._isSystemValue(true);
                 // already done: addToContents(child);
             }
 
@@ -1001,7 +1001,7 @@ public final class IonDatagramImpl
     protected int writeValue(IonBinary.Writer writer,
                              int cumulativePositionDelta) throws IOException
     {
-        assert _hasNativeValue;
+        assert _hasNativeValue();
 
         cumulativePositionDelta = doWriteContainerContents(writer, cumulativePositionDelta);
 

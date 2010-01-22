@@ -30,7 +30,7 @@ public final class IonBlobImpl
     public IonBlobImpl(IonSystemImpl system)
     {
         super(system, NULL_BLOB_TYPEDESC);
-        _hasNativeValue = true; // Since this is null
+        _hasNativeValue(true); // Since this is null
     }
 
     /**
