@@ -354,19 +354,19 @@ public class IonScalarConversionsX
         private static final BigDecimal max_long_decimal_value = BigDecimal.valueOf(Long.MAX_VALUE);
 
         // member variables for the variant
-        int           _authoritative_type_idx;             // the original type - this not the bit mask
-        int           _types_set;                          // all the various type it's been cast to (includes the original)
-        boolean       _is_null;
-        IonType       _null_type;
-        boolean       _boolean_value;
-        int           _int_value;
-        long          _long_value;
-        double        _double_value;
-        String        _string_value;
-        BigInteger    _bigInteger_value;
-        Decimal       _decimal_value;
-        Date          _date_value;
-        Timestamp     _timestamp_value;
+        int         _authoritative_type_idx;             // the original type - this not the bit mask
+        int         _types_set;                          // all the various type it's been cast to (includes the original)
+        boolean     _is_null;
+        IonType     _null_type;
+        boolean     _boolean_value;
+        int         _int_value;
+        long        _long_value;
+        double      _double_value;
+        String      _string_value;
+        BigInteger  _bigInteger_value;
+        Decimal     _decimal_value;
+        Date        _date_value;
+        Timestamp   _timestamp_value;
 
         //
         // public accessors
@@ -442,6 +442,53 @@ public class IonScalarConversionsX
             _timestamp_value = value;
             set_value_type(AS_TYPE.timestamp_value);
         }
+
+        public final void addValueToNull(IonType t) {
+            _is_null = true;
+            _null_type = t;
+            add_value_type(AS_TYPE.null_value);
+        }
+        public final void addValue(boolean value) {
+            _boolean_value = value;
+            add_value_type(AS_TYPE.boolean_value);
+        }
+        public final void addValue(int value) {
+            _int_value = value;
+            add_value_type(AS_TYPE.int_value);
+        }
+        public final void addValue(long value) {
+            _long_value = value;
+            add_value_type(AS_TYPE.long_value);
+        }
+        public final void addValue(double value) {
+            _double_value = value;
+            add_value_type(AS_TYPE.double_value);
+        }
+        public final void addValue(String value) {
+            _string_value = value;
+            add_value_type(AS_TYPE.string_value);
+        }
+        public final void addValue(BigInteger value) {
+            _bigInteger_value = value;
+            add_value_type(AS_TYPE.bigInteger_value);
+        }
+        public final void addValue(BigDecimal value) {
+            _decimal_value = (Decimal)value;
+            add_value_type(AS_TYPE.decimal_value);
+        }
+        public final void addValue(Decimal value) {
+            _decimal_value = value;
+            add_value_type(AS_TYPE.decimal_value);
+        }
+        public final void addValue(Date value) {
+            _date_value = value;
+            add_value_type(AS_TYPE.date_value);
+        }
+        public final void addValue(Timestamp value) {
+            _timestamp_value = value;
+            add_value_type(AS_TYPE.timestamp_value);
+        }
+
 
         public final int getAuthoritativeType() {
             return _authoritative_type_idx;

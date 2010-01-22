@@ -460,7 +460,12 @@ public abstract class IonValueImpl
             if (symtab == null) {
                 return -1;
             }
-            _fieldSid = symtab.addSymbol(this._fieldName);
+            if (symtab.isSystemTable()) {
+                _fieldSid = symtab.findSymbol(this._fieldName);
+            }
+            else {
+                _fieldSid = symtab.addSymbol(this._fieldName);
+            }
         }
         return this._fieldSid;
     }
@@ -975,15 +980,27 @@ public abstract class IonValueImpl
         if (symtab == null && _container != null) {
             symtab = _container.materializeSymbolTable();
         }
-        if (symtab == null) {
+        return symtab;
+    }
+    protected SymbolTable materializeUpdateableSymbolTable()
+    {
+        SymbolTable symtab = _symboltable;
+        if (symtab != null && symtab.isLocalTable()) {
+            return symtab;
+        }
+        if (_container != null) {
+            symtab = _container.materializeUpdateableSymbolTable();
+        }
+        else if (!this.isReadOnly()) {
+            if (symtab == null) {
+                symtab = this._system.getSystemSymbolTable();
+            }
             synchronized (this) {
-                // TODO - should this be here or can we put this off
-                //        even longer (until someone asks for the binary
-                //        buffer, for example)
-//                _symboltable = _system.newLocalSymbolTable();
-//                symtab = _symboltable;
+                symtab = UnifiedSymbolTable.makeNewLocalSymbolTable(symtab);
+                this.setSymbolTable(symtab);
             }
         }
+        // else we return whatever we already have
         return symtab;
     }
 
@@ -1168,14 +1185,22 @@ public abstract class IonValueImpl
 
         SymbolTable symtab =  this.getSymbolTable();
         if (symtab == null) {
+            // get whatever table is currently available
+            // we may override this if we need to add
+            // symbols, since we'll need an update-able
+            // symbol table then
             symtab = this.materializeSymbolTable();
-// cas symtab:            // TODO:  what should we do here?  Perhaps create a default table?
-// cas symtab:            throw new IonException("can't serialize symbols without a symbol table");
         }
 
         // first add up the length of the annotations symbol id lengths
         for (int ii=0; ii<_annotations.length; ii++) {
-            int symId = this.getSymbolTable().findSymbol(_annotations[ii]);
+            int symId = symtab.findSymbol(_annotations[ii]);
+            if (symId <= 0) {
+                if (symtab == null || !symtab.isLocalTable()) {
+                    symtab = this.materializeUpdateableSymbolTable();
+                    symId = symtab.findSymbol(_annotations[ii]);
+                }
+            }
             if (symId <= 0) {
                 throw new IllegalStateException("the annotation must be in the symbol table");
             }
@@ -1195,7 +1220,8 @@ public abstract class IonValueImpl
     public int getFieldNameOverheadLength() {
         int len = 0;
 
-        if (this._fieldSid == 0 && this._fieldName != null)
+        // CAS: 14 jan 2010 changed fieldSid==0 to fieldSid<=0
+        if (this._fieldSid <= 0 && this._fieldName != null)
         {
             // We haven't interned the symbol, do so now.
             this._fieldSid = this.getSymbolTable().findSymbol(this._fieldName);

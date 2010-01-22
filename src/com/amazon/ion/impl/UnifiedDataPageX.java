@@ -145,7 +145,9 @@ public abstract class UnifiedDataPageX
      * Specialized versions of DataPage.  One to handle bytes the
      * other to handle chars
      */
-    static final class Bytes extends UnifiedDataPageX
+    // FIXME: remove "public" when UnifiedOutputBufferX is
+    //        integrated back into ion.impl
+    public static final class Bytes extends UnifiedDataPageX
     {
         public Bytes(int size) {
             _page_type   = PageType.BYTES;
@@ -186,7 +188,9 @@ public abstract class UnifiedDataPageX
         }
     }
 
-    static final class Chars extends UnifiedDataPageX
+    // FIXME: remove "public" when UnifiedOutputBufferX is
+    //        integrated back into ion.impl
+    public static final class Chars extends UnifiedDataPageX
     {
         public Chars(int size) {
             _page_type   = PageType.CHARS;

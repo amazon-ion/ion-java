@@ -36,7 +36,8 @@ import java.util.Iterator;
  *  csuver
  *  16 July 2009
  */
-abstract public class IonReaderBinaryRawX implements IonReader
+abstract public class IonReaderBinaryRawX
+    implements IonReader
 {
     static final int DEFAULT_CONTAINER_STACK_SIZE = 12; // a multiple of 3
     static final int DEFAULT_ANNOTATION_SIZE = 10;
@@ -79,6 +80,8 @@ abstract public class IonReaderBinaryRawX implements IonReader
     int                 _container_top;
     long[]              _container_stack; // triples of: position, type, local_end
 
+    protected IonReaderBinaryRawX() {
+    }
 
     protected final void init(UnifiedInputStreamX uis) {
         _input = uis;
@@ -171,7 +174,9 @@ abstract public class IonReaderBinaryRawX implements IonReader
         }
 
         _has_next_needed = true;
-        assert( _value_type != null ); // this should only be null here if we're at eof (and then we should have failed already)
+
+        // this should only be null here if we're at eof
+        assert( _value_type != null || _eof == true);
         return _value_type;
     }
 
@@ -181,8 +186,8 @@ abstract public class IonReaderBinaryRawX implements IonReader
     //      (byte) 0x01,
     //      (byte) 0x00,
     //      (byte) 0xEA };
-    private static final int BINARY_VERSION_MARKER_TID = IonConstants.getTypeCode(IonConstants.BINARY_VERSION_MARKER_1_0[0]);
-    private static final int BINARY_VERSION_MARKER_LEN = IonConstants.getLowNibble(IonConstants.BINARY_VERSION_MARKER_1_0[0]);
+    private static final int BINARY_VERSION_MARKER_TID = IonConstants.getTypeCode(IonConstants.BINARY_VERSION_MARKER_1_0[0] & 0xff);
+    private static final int BINARY_VERSION_MARKER_LEN = IonConstants.getLowNibble(IonConstants.BINARY_VERSION_MARKER_1_0[0] & 0xff);
 
 
     private final void has_next_helper_raw() throws IOException
@@ -211,49 +216,12 @@ abstract public class IonReaderBinaryRawX implements IonReader
                     if (_value_len == BINARY_VERSION_MARKER_LEN ) {
                         // this isn't valid for any type descriptor except the first byte
                         // of a 4 byte version marker - so lets read the rest
-                        for (int ii=1; ii<IonConstants.BINARY_VERSION_MARKER_1_0.length; ii++) {
-                            int b = read();
-                            if (b != (IonConstants.BINARY_VERSION_MARKER_1_0[ii] & 0xff)) {
-                                error_at("invalid binary image");
-                            }
-                        }
-                        // so it's a 4 byte version marker - make it look like
-                        // the symbol $ion_1_0 ...
-                        _value_tid = IonConstants.tidSymbol;
-                        _value_len = 0; // so skip will go the right place - here
-                        _v.setValue(UnifiedSymbolTable.ION_1_0_SID);
-                        _v.setAuthoritativeType(AS_TYPE.int_value);
+                        load_version_marker();
                         _value_type = IonType.SYMBOL;
-                        _value_is_null = false;
-                        _value_lob_is_ready = false;
-                        _annotations.clear();
-                        _value_field_id = UnifiedSymbolTable.UNKNOWN_SID;
-                        _state = State.S_AFTER_VALUE;
                     }
                     else {
                         // if it's not a bvm then it's an ordinary annotated value
-
-                        // we need to skip over the annotations to read
-                        // the actual type id byte for the value.  We'll
-                        // save the annotations using a save point, which
-                        // will pin the input buffers until we free this,
-                        // not later than the next call to hasNext().
-
-                        int alen = readVarUInt();
-                        _annotations.start(getPosition(), 0);
-                        skip(alen);
-                        _annotations.markEnd();
-
-                        // this will both get the type id and it will reset the
-                        // length as well (over-writing the len + annotations value
-                        // that is there now, before the call)
-                        _value_tid = read_type_id();
-                        if (_value_tid == UnifiedInputStreamX.EOF) {
-                            error_at("unexpected EOF encountered where a type descriptor byte was expected");
-                        }
-
-                        _value_type = get_iontype_from_tid(_value_tid);
-                        assert( _value_type != null );
+                        _value_type = load_annotation_start_with_value_type();
                     }
                 }
                 else {
@@ -282,6 +250,55 @@ abstract public class IonReaderBinaryRawX implements IonReader
         // we always want to exit here
         _has_next_needed = false;
         return;
+    }
+    private final void load_version_marker() throws IOException
+    {
+        for (int ii=1; ii<IonConstants.BINARY_VERSION_MARKER_1_0.length; ii++) {
+            int b = read();
+            if (b != (IonConstants.BINARY_VERSION_MARKER_1_0[ii] & 0xff)) {
+                error_at("invalid binary image");
+            }
+        }
+        // so it's a 4 byte version marker - make it look like
+        // the symbol $ion_1_0 ...
+        _value_tid = IonConstants.tidSymbol;
+        _value_len = 0; // so skip will go the right place - here
+        _v.setValue(UnifiedSymbolTable.ION_1_0_SID);
+        _v.setAuthoritativeType(AS_TYPE.int_value);
+        // _value_type = IonType.SYMBOL;  we do this in the caller so it's easier to see
+        _value_is_null = false;
+        _value_lob_is_ready = false;
+        _annotations.clear();
+        _value_field_id = UnifiedSymbolTable.UNKNOWN_SID;
+        _state = State.S_AFTER_VALUE;
+    }
+    private final IonType load_annotation_start_with_value_type() throws IOException
+    {
+        IonType value_type;
+
+        // we need to skip over the annotations to read
+        // the actual type id byte for the value.  We'll
+        // save the annotations using a save point, which
+        // will pin the input buffers until we free this,
+        // not later than the next call to hasNext().
+
+        int alen = readVarUInt();
+        _annotations.start(getPosition(), 0);
+        skip(alen);
+        _annotations.markEnd();
+
+        // this will both get the type id and it will reset the
+        // length as well (over-writing the len + annotations value
+        // that is there now, before the call)
+        _value_tid = read_type_id();
+        if (_value_tid == UnifiedInputStreamX.EOF) {
+            error_at("unexpected EOF encountered where a type descriptor byte was expected");
+        }
+
+        value_type = get_iontype_from_tid(_value_tid);
+        assert( value_type != null );
+
+        return value_type;
     }
     protected final int load_annotations() throws IOException {
         switch (_state) {
@@ -457,7 +474,16 @@ abstract public class IonReaderBinaryRawX implements IonReader
         default:
             throw new IllegalStateException();
         }
-        assert( _state == State.S_BEFORE_VALUE );
+        if (_value_is_null) {
+            if (_state != State.S_AFTER_VALUE) {
+                assert( _state == State.S_AFTER_VALUE );
+            }
+        }
+        else {
+            if (_state != State.S_BEFORE_VALUE) {
+                assert( _state == State.S_BEFORE_VALUE );
+            }
+        }
 
         // first push place where we'll take up our next
         // value processing when we step out
@@ -620,9 +646,9 @@ abstract public class IonReaderBinaryRawX implements IonReader
     }
     public IonType getType()
     {
-        if (_has_next_needed) {
-            throw new IllegalStateException("getType() isn't valid until you have called next()");
-        }
+        //if (_has_next_needed) {
+        //    throw new IllegalStateException("getType() isn't valid until you have called next()");
+        //}
         return _value_type;
     }
     public boolean isInStruct()
@@ -1223,7 +1249,7 @@ done:   for (;;) {
         throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
     }
     public BigDecimal bigDecimalValue()
-    {
+  {
         throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
     }
     public boolean booleanValue()

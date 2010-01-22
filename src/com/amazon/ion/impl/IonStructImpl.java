@@ -494,6 +494,10 @@ public final class IonStructImpl
             _contents.add(child);
             pos = child.pos_getOffsetofNextValue();
         }
-        assert pos == end;  // TODO should throw IonException
+        if (pos != end) {
+            // TODO should we throw an IonException here?
+            // this would be caused by improperly formed binary
+            assert pos == end;
+        }
     }
 }

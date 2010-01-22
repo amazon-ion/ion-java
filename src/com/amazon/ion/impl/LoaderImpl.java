@@ -73,6 +73,7 @@ public class LoaderImpl
             {
                 IonDatagramImpl dg =
                     new IonDatagramImpl(mySystem, myCatalog, reader);
+
                 return dg;
             }
             catch (IOException e)
@@ -184,7 +185,8 @@ public class LoaderImpl
         if (USE_NEW_READERS)
         {
             IonReader reader = mySystem.newSystemReader(pushback);
-            assert reader instanceof IonTextReaderImpl;
+            assert reader.getIterationType().isText();
+            //assert reader instanceof IonTextReaderImpl;
             try
             {
                 IonDatagramImpl dg = new IonDatagramImpl(mySystem, myCatalog, reader);

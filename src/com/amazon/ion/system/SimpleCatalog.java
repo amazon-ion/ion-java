@@ -4,8 +4,8 @@
 
 package com.amazon.ion.system;
 
-import com.amazon.ion.IonMutableCatalog;
 import com.amazon.ion.IonCatalog;
+import com.amazon.ion.IonMutableCatalog;
 import com.amazon.ion.SymbolTable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -92,7 +92,32 @@ public class SimpleCatalog
                 assert !versions.isEmpty();
 
                 // In Java 5 this works:
-                st = versions.get(versions.lastKey());
+                // OK it doesn't seem to work
+                //Integer last_version = versions.lastKey();
+                //st = versions.get(last_version);
+                int best = version;
+                Integer ibest = null;
+                for (Integer v : versions.keySet())
+                {
+                    if (best > version) {
+                        if (v.intValue() < best) {
+                            best = v.intValue();
+                            ibest = v;
+                        }
+                    }
+                    else if (best < version) {
+                        if (v.intValue() > best) {
+                            best = v.intValue();
+                            ibest = v;
+                        }
+                    }
+                    else {
+                        best = v.intValue();
+                        ibest = v;
+                    }
+                }
+                assert(ibest != null);
+                st = versions.get(ibest);
 
                 // TODO in Java 6 this is probably faster:
                 //Map.Entry<Integer, UnifiedSymbolTable> entry;

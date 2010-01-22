@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -1284,7 +1285,6 @@ static final boolean test_with_no_version_checking = false;
             this._buf = null;
             this._pos = -1;
         }
-
         public final int writeTo(OutputStream out, int len) throws IOException
         {
             if (_buf == null) throw new IOException("stream is closed");
@@ -1294,15 +1294,23 @@ static final boolean test_with_no_version_checking = false;
             int startingPos = _pos;
             int localEnd = _pos + len;
             if (localEnd > _buf.size()) localEnd = _buf.size();
+            assert(_curr.blockOffsetFromAbsolute(_pos) == _blockPosition);
 
             while (_pos < localEnd) {
                 int available = _curr._limit - _blockPosition;
-                if (available > localEnd - _pos) available = localEnd - _pos;
+                boolean partial_read = available > localEnd - _pos;
+                if (partial_read) {
+                    available = localEnd - _pos;
+                }
 
                 out.write(_curr._buffer, _blockPosition, available);
                 _pos += available;
+                if (partial_read) {
+                    _blockPosition += available;
+                    break;
+                }
                 _curr = _buf.findBlockForRead(this, _version, _curr, _pos);
-                _blockPosition = 0;
+                _blockPosition =_curr.blockOffsetFromAbsolute(_pos);
             }
 
             fail_on_version_change();
@@ -1667,7 +1675,7 @@ static final boolean test_with_no_version_checking = false;
         }
         /**
          * Writes bytes from the specified byte stream from its current
-         * stream position up to length bytes from the stream.  Writing the 
+         * stream position up to length bytes from the stream.  Writing the
          * bytes to the current position in this output stream.
          * @throws IOException
          */
@@ -1688,7 +1696,7 @@ static final boolean test_with_no_version_checking = false;
         {
             int written = 0;
             boolean read_all = (len == -1);
-            
+
             for (;;)
             {
                 int writeInThisBlock = bytesAvailableToWriteInCurr(_pos);
@@ -1820,4 +1828,129 @@ static final boolean test_with_no_version_checking = false;
         }
         public BlockedBufferException(Throwable cause) { super(cause); }
     }
+
+
+
+    public static class BufferedOutputStream
+        extends OutputStream
+    {
+        BlockedBuffer           _buffer;
+        BlockedByteOutputStream _writer;
+
+        public BufferedOutputStream() {
+            this(new BlockedBuffer());
+        }
+        public BufferedOutputStream(BlockedBuffer buffer) {
+            _buffer = buffer;
+            _writer = new BlockedByteOutputStream(_buffer);
+        }
+
+        /**
+         * Gets the size in bytes of this binary data.
+         * This is generally needed before calling {@link #getBytes()} or
+         * {@link #getBytes(byte[], int, int)}.
+         *
+         * @return the size in bytes.
+         */
+        public int byteSize()
+        {
+            return _buffer.size();
+        }
+
+        /**
+         * Copies the current contents of this writer as a new byte array holding
+         * Ion binary-encoded data.
+         * This allocates an array of the size needed to exactly
+         * hold the output and copies the entire value to it.
+         *
+         * @return the byte array with the writers output
+         * @throws IOException
+         */
+        public byte[] getBytes()
+            throws IOException
+        {
+            int size = byteSize();
+            ByteArrayOutputStream byteStream = new ByteArrayOutputStream(size);
+            writeBytes(byteStream);
+            byte[] bytes = byteStream.toByteArray();
+            return bytes;
+        }
+
+
+        /**
+         * Copies the current contents of the writer to a given byte array
+         * array.  This starts writing to the array at offset and writes
+         * up to len bytes.
+         * If this writer is not able to stop in the middle of its
+         * work this may overwrite the array and later throw and exception.
+         *
+         * @param bytes users byte array to write into
+         * @param offset initial offset in the array to write into
+         * @param len maximum number of bytes to write from offset on
+         * @return number of bytes written
+         * @throws IOException
+         */
+        public int getBytes(byte[] bytes, int offset, int len)
+            throws IOException
+        {
+            SimpleByteBuffer outbuf = new SimpleByteBuffer(bytes, offset, len);
+            OutputStream     writer = (OutputStream)outbuf.getWriter();
+            int              written = writeBytes(writer);
+            return written;
+        }
+
+        /**
+         * Writes the current contents of the writer to the output
+         * stream.  This is only valid if the writer is not in the
+         * middle of writing a container.
+         *
+         * @param userstream OutputStream to write the bytes to
+         * @return int length of bytes written
+         * @throws IOException
+         */
+        public int writeBytes(OutputStream userstream)
+            throws IOException
+        {
+            int limit = _buffer.size();
+            int pos = 0;
+            int version = _buffer.getVersion();
+            bbBlock curr = null;
+
+            _buffer.start_mutate(this, version);
+
+            while (pos < limit) {
+                curr = _buffer.findBlockForRead(this, version, curr, pos);
+                if (curr == null) {
+                    throw new IOException("buffer missing expected bytes");
+                }
+                int len = curr.bytesAvailableToRead(pos);
+                if (len <= 0) {
+                    throw new IOException("buffer missing expected bytes");
+                }
+                userstream.write(curr._buffer, 0, len);
+                pos += len;
+            }
+
+            _buffer.end_mutate(this);
+
+            return pos;
+        }
+
+        @Override
+        public void write(int b) throws IOException
+        {
+            _writer.write(b);
+        }
+        @Override
+        public void write(byte[] bytes) throws IOException
+        {
+            write(bytes, 0, bytes.length);
+        }
+        @Override
+        public void write(byte[] bytes, int off, int len) throws IOException
+        {
+            _writer.write(bytes, off, len);
+        }
+    }
+
 }

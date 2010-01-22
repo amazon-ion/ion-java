@@ -10,6 +10,7 @@ import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonIterationType;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonSexp;
@@ -44,6 +45,7 @@ public final class IonTextReaderImpl
     static final boolean _debug = false;
 
 
+    IonSystem        _system;
     IonTextTokenizer _scanner;
     IonCatalog       _catalog;
     SymbolTable      _current_symtab;
@@ -86,7 +88,7 @@ public final class IonTextReaderImpl
     // int             _saved_position;
     void save_state() {
         if (_saved_copy == null) {
-            _saved_copy = new IonTextReaderImpl();
+            _saved_copy = new IonTextReaderImpl(this._system, this._is_returning_system_values);
         }
         copy_state_to(_saved_copy);
         _saved_copy._scanner = this._scanner.get_saved_copy();
@@ -223,55 +225,69 @@ public final class IonTextReaderImpl
         _value_is_container = false;
     }
 
-    private IonTextReaderImpl() {
-        _is_returning_system_values = false;  // FIXME really?!?!?
+    private IonTextReaderImpl(IonSystem sys, boolean returnSystemValues) {
+        _is_returning_system_values = returnSystemValues;
+        _system = sys;
     }
 
-    public IonTextReaderImpl(byte[] buf) {
-        this(new IonTextTokenizer(buf), null, false);
+    public IonTextReaderImpl(IonSystem sys, byte[] buf) {
+        this(sys, new IonTextTokenizer(buf), null, false);
     }
-    public IonTextReaderImpl(byte[] buf, int start, int len) {
-        this(new IonTextTokenizer(buf, start, len), null, false);
+    public IonTextReaderImpl(IonSystem sys, byte[] buf, int start, int len) {
+        this(sys, new IonTextTokenizer(buf, start, len), null, false);
     }
 
-    public IonTextReaderImpl(byte[] buf, int start, int len,
+    public IonTextReaderImpl(IonSystem sys, byte[] buf, int start, int len,
                          IonCatalog catalog,
                          boolean returnSystemValues)
     {
-        this(new IonTextTokenizer(buf, start, len),
+        this(sys,
+             new IonTextTokenizer(buf, start, len),
              catalog,
              returnSystemValues);
     }
 
-    public IonTextReaderImpl(String ionText) {
-        this(new IonTextTokenizer(ionText), null, false);
+    public IonTextReaderImpl(IonSystem sys, String ionText) {
+        this(sys, new IonTextTokenizer(ionText), null, false);
     }
 
-    public IonTextReaderImpl(String ionText,
+    public IonTextReaderImpl(IonSystem sys,
+                         String ionText,
                          IonCatalog catalog,
                          boolean returnSystemValues)
     {
-        this(new IonTextTokenizer(ionText), catalog, returnSystemValues);
+        this(sys, new IonTextTokenizer(ionText), catalog, returnSystemValues);
     }
 
-    public IonTextReaderImpl(byte[] buf, IonCatalog catalog) {
-        this(new IonTextTokenizer(buf), catalog, false);
+    public IonTextReaderImpl(IonSystem sys, byte[] buf, IonCatalog catalog) {
+        this(sys, new IonTextTokenizer(buf), catalog, false);
     }
-    public IonTextReaderImpl(byte[] buf, int start, int len, IonCatalog catalog) {
-        this(new IonTextTokenizer(buf, start, len), catalog, false);
+    public IonTextReaderImpl(IonSystem sys, byte[] buf, int start, int len, IonCatalog catalog) {
+        this(sys, new IonTextTokenizer(buf, start, len), catalog, false);
     }
-    public IonTextReaderImpl(String ionText, IonCatalog catalog) {
-        this(new IonTextTokenizer(ionText), catalog, false);
+    public IonTextReaderImpl(IonSystem sys, String ionText, IonCatalog catalog) {
+        this(sys, new IonTextTokenizer(ionText), catalog, false);
     }
 
-    private IonTextReaderImpl(IonTextTokenizer scanner, IonCatalog catalog,
+    private IonTextReaderImpl(IonSystem sys, IonTextTokenizer scanner, IonCatalog catalog,
                           boolean returnSystemValues)
     {
-        this._is_returning_system_values = returnSystemValues;
+        this(sys, returnSystemValues);
+        //this._is_returning_system_values = returnSystemValues;
         this._scanner = scanner;
         this._catalog = catalog;
-        this._current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
+        this._current_symtab = sys.getSystemSymbolTable();  // UnifiedSymbolTable.getSystemSymbolTableInstance();
         _state = IonTextReaderImpl.State_read_datagram;
+    }
+
+
+    public IonIterationType getIterationType()
+    {
+        return IonIterationType.USER_TEXT;
+    }
+    public IonSystem getSystem()
+    {
+        return _system;
     }
 
     /**
@@ -394,7 +410,7 @@ public final class IonTextReaderImpl
             switch (_lookahead_type) {
             case SYMBOL:
                 if (UnifiedSymbolTable.ION_1_0.equals(this.stringValue())) {
-                    _current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
+                    _current_symtab = _system.getSystemSymbolTable(); // UnifiedSymbolTable.getSystemSymbolTableInstance();
                     skip_value = true; // FIXME get system tab from current
                 }
                 break;
@@ -566,7 +582,7 @@ public final class IonTextReaderImpl
     public SymbolTable getSymbolTable()
     {
         if (_current_symtab == null) {
-            _current_symtab = UnifiedSymbolTable.makeNewLocalSymbolTable(1);
+            _current_symtab = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, 1);
         }
         assert _current_symtab.isLocalTable() || _current_symtab.isSystemTable();
         return _current_symtab;
@@ -624,7 +640,7 @@ public final class IonTextReaderImpl
     {
         int[] ids = getTypeAnnotationIds();
         if (ids == null) return (Iterator<Integer>) EMPTY_ITERATOR;
-        return new IonTreeReader.IdIterator(ids);
+        return new IonImplUtils.IntIterator(ids);
     }
 
     @SuppressWarnings("unchecked")
@@ -632,7 +648,7 @@ public final class IonTextReaderImpl
     {
         String[] ids = getTypeAnnotations();
         if (ids == null) return (Iterator<String>) EMPTY_ITERATOR;
-        return new IonTreeReader.StringIterator(ids);
+        return new IonImplUtils.StringIterator(ids);
     }
 
     public int getFieldId()

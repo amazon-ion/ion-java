@@ -176,10 +176,43 @@ public abstract class UnifiedInputStreamX
             if (_pos < curr.getStartingOffset()) {
                 curr.inc_unread_count();
             }
+
         }
         else {
             _buffer.putCharAt(getPosition(), c);
         }
+    }
+    public final boolean unread_optional_cr()
+    {
+        boolean did_unread = false;
+        UnifiedDataPageX curr = _buffer.getCurrentPage();
+        int c;
+
+        // if we're in the current buffer and we unread a
+        // new line and we can see we were preceded by a
+        // carriage return in which case we need to back up
+        // 1 more position.
+        // If we can't back up into a real data we don't
+        // care about this since our next unread/read will
+        // be work the same anyway since a new line will
+        // just be a lone new line.
+        // This corrects bug where the scanner reads a char
+        // then a \r\n unreads the \n (the \r was eaten by
+        // read()) unreads the char and that overwrites
+        // the \r and has editted the buffer.  That's a bad
+        // thing.
+        if (_pos > curr.getStartingOffset()) {
+            if (is_byte_data()) {
+                c = _bytes[_pos-1] & 0xff;
+            }
+            else {
+                c = _chars[_pos-1];
+            }
+            if (c == '\r') {
+                _pos--;
+            }
+        }
+        return did_unread;
     }
 
     public final int read() throws IOException {

@@ -3,6 +3,8 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.Decimal;
+import com.amazon.ion.IonIterationType;
+import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
@@ -18,21 +20,23 @@ import java.util.Iterator;
 /**
  *
  */
-public class IonReaderBinarySystemX extends IonReaderBinaryRawX
+public class IonReaderBinarySystemX
+    extends IonReaderBinaryRawX
 {
-
     // ValueVariant _v; actually owned by the raw reader so it can be cleared at appropriate times
-
-    public IonReaderBinarySystemX(byte[] bytes) {
+    protected IonReaderBinarySystemX(byte[] bytes) {
+        super();
         UnifiedInputStreamX uis = UnifiedInputStreamX.makeStream(bytes);
         init(uis);
     }
-    public IonReaderBinarySystemX(byte[] bytes, int offset, int length) {
+    protected IonReaderBinarySystemX(byte[] bytes, int offset, int length) {
+        super();
         UnifiedInputStreamX uis = UnifiedInputStreamX.makeStream(bytes, offset, length);
         init(uis);
 
     }
-    public IonReaderBinarySystemX(InputStream userBytes) {
+    protected IonReaderBinarySystemX(InputStream userBytes) {
+        super();
         UnifiedInputStreamX uis;
         try {
             uis = UnifiedInputStreamX.makeStream(userBytes);
@@ -42,8 +46,19 @@ public class IonReaderBinarySystemX extends IonReaderBinaryRawX
         }
         init(uis);
     }
-    public IonReaderBinarySystemX(UnifiedInputStreamX userBytes) {
+    protected IonReaderBinarySystemX(UnifiedInputStreamX userBytes) {
+        super();
         init(userBytes);
+    }
+
+    public IonIterationType getIterationType()
+    {
+        return IonIterationType.SYSTEM_BINARY;
+    }
+
+    public IonSystem getSystem()
+    {
+        return null;
     }
 
 
@@ -101,8 +116,9 @@ public class IonReaderBinarySystemX extends IonReaderBinaryRawX
         if (as_type != 0 && !_v.hasValueOfType(as_type)) {
             // we should never get here with a symbol asking for anything other
             // than a numeric cast (from some other numeric already loaded)
-            assert( !IonType.SYMBOL.equals(_value_type)
-                 || (_v.hasNumericType() && ValueVariant.isNumericType(as_type)));
+            if (IonType.SYMBOL.equals(_value_type) && !ValueVariant.isNumericType(as_type)) {
+                assert(IonType.SYMBOL.equals(_value_type) && !ValueVariant.isNumericType(as_type));
+            }
 
             if (!_v.can_convert(as_type)) {
                 String message = "can't cast from "
@@ -271,12 +287,18 @@ public class IonReaderBinarySystemX extends IonReaderBinaryRawX
     @Override
     public BigInteger bigIntegerValue()
     {
+        if (_value_is_null) {
+            return null;
+        }
         prepare_value(AS_TYPE.bigInteger_value);
         return _v.getBigInteger();
     }
     @Override
     public BigDecimal bigDecimalValue()
     {
+        if (_value_is_null) {
+            return null;
+        }
         prepare_value(AS_TYPE.decimal_value);
         return _v.getBigDecimal();
     }
@@ -288,23 +310,45 @@ public class IonReaderBinarySystemX extends IonReaderBinaryRawX
     @Override
     public Date dateValue()
     {
+        if (_value_is_null) {
+            return null;
+        }
         prepare_value(AS_TYPE.date_value);
         return _v.getDate();
     }
     @Override
     public Timestamp timestampValue()
     {
+        if (_value_is_null) {
+            return null;
+        }
         prepare_value(AS_TYPE.timestamp_value);
         return _v.getTimestamp();
     }
     @Override
     public String stringValue()
     {
+        if (_value_is_null) {
+            return null;
+        }
         if (IonType.SYMBOL.equals(_value_type)) {
             throw new UnsupportedOperationException("not supported - use UserReader");
         }
         prepare_value(AS_TYPE.string_value);
         return _v.getString();
+    }
+
+    @Override
+    public int getSymbolId()
+    {
+        if (!IonType.SYMBOL.equals(_value_type)) {
+            String message = "can't cast from "
+                +IonScalarConversionsX.getValueTypeName(_v.getAuthoritativeType())
+                +" to SYMBOL ID";
+            error_at(message);
+        }
+        int sid = intValue();
+        return sid;
     }
 
     //

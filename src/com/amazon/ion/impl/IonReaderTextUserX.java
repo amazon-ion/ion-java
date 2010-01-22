@@ -3,6 +3,7 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonCatalog;
+import com.amazon.ion.IonIterationType;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
@@ -41,7 +42,7 @@ public class IonReaderTextUserX
     SymbolTable _symbols;
 
     public IonReaderTextUserX(IonSystem system, char[] chars) {
-        super(chars);
+        super(chars, 0, chars.length);
         initUserReader(system);
     }
     public IonReaderTextUserX(IonSystem system, char[] chars, int offset, int length) {
@@ -49,7 +50,7 @@ public class IonReaderTextUserX
         initUserReader(system);
     }
     public IonReaderTextUserX(IonSystem system, CharSequence chars) {
-        super(chars);
+        super(chars, 0, chars.length());
         initUserReader(system);
     }
     public IonReaderTextUserX(IonSystem system, CharSequence chars, int offset, int length) {
@@ -61,7 +62,7 @@ public class IonReaderTextUserX
         initUserReader(system);
     }
     public IonReaderTextUserX(IonSystem system, byte[] bytes) {
-        super(bytes);
+        super(bytes, 0, bytes.length);
         initUserReader(system);
     }
     public IonReaderTextUserX(IonSystem system, byte[] bytes, int offset, int length) {
@@ -86,6 +87,17 @@ public class IonReaderTextUserX
         _symbols = system.getSystemSymbolTable();
     }
 
+    @Override
+    public IonIterationType getIterationType()
+    {
+        return IonIterationType.USER_TEXT;
+    }
+
+    @Override
+    public IonSystem getSystem()
+    {
+        return _system;
+    }
 
     /**
      * this looks forward to see if there is an upcoming value
@@ -183,7 +195,17 @@ public class IonReaderTextUserX
             throw new IllegalStateException("only valid if the value is a symbol");
         }
         String symbol = stringValue();
-        int    id     = _symbols.findSymbol(symbol);
+        if (!_symbols.isLocalTable()) {
+            UnifiedSymbolTable local;
+            if (_symbols.isSystemTable()) {
+                local = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _system.getSystemSymbolTable());
+            }
+            else { // if (_symbols.isSharedTable()) {
+                local = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _system.getSystemSymbolTable(), _symbols);
+            }
+            _symbols = local;
+        }
+        int    id     = _symbols.addSymbol(symbol);
         return id;
     }
 

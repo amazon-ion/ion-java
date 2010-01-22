@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonIterationType;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
@@ -13,7 +14,8 @@ import java.util.Iterator;
 /**
  *
  */
-public class IonReaderBinaryUserX extends IonReaderBinarySystemX
+public class IonReaderBinaryUserX
+    extends IonReaderBinarySystemX
 {
     IonSystem   _system;
     SymbolTable _symbols;
@@ -38,6 +40,42 @@ public class IonReaderBinaryUserX extends IonReaderBinarySystemX
     private final void init_user(IonSystem system) {
         _system = system;
         _symbols = system.getSystemSymbolTable();
+    }
+
+    @Override
+    public IonSystem getSystem()
+    {
+        return _system;
+    }
+
+    @Override
+    public IonIterationType getIterationType()
+    {
+        return IonIterationType.USER_BINARY;
+    }
+
+    @Override
+    public IonType next()
+    {
+        if (_eof) {
+            // new contract - don't call hasNext, just get a null
+            // back from next at EOF
+            // throw new NoSuchElementException();
+            return null;
+        }
+
+        try {
+            while (!_eof && _has_next_needed) {
+                has_next_helper_user();
+            }
+        }
+        catch (IOException e) {
+            error(e);
+        }
+
+        _has_next_needed = true;
+
+        return _value_type;
     }
 
     @Override
@@ -70,9 +108,10 @@ public class IonReaderBinaryUserX extends IonReaderBinarySystemX
                 for(int ii=0; ii<count; ii++) {
                     if (_annotation_ids[ii] == UnifiedSymbolTable.ION_SYMBOL_TABLE_SID) {
                         stepIn();
-                        if (!hasNext()) {
-                            this.error_at("local symbol table with an empty struct encountered");
-                        }
+                        //an empty struct is actually ok, just not very interesting
+                        //if (!hasNext()) {
+                        //    this.error_at("local symbol table with an empty struct encountered");
+                        //}
                         UnifiedSymbolTable symtab =
                             UnifiedSymbolTable.makeNewLocalSymbolTable(_system, this, true);
                         stepOut();
@@ -131,11 +170,14 @@ public class IonReaderBinaryUserX extends IonReaderBinarySystemX
     @Override
     public String stringValue()
     {
+        if (_value_is_null) {
+            return null;
+        }
         if (IonType.SYMBOL.equals(_value_type)) {
             if (!_v.hasValueOfType(AS_TYPE.string_value)) {
                 int sid = intValue();
                 String sym = _symbols.findSymbol(sid);
-                _v.setValue(sym);
+                _v.addValue(sym);
             }
         }
         else {

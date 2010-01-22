@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.impl.IonScalarConversionsX.CantConvertException;
 
@@ -165,7 +166,7 @@ public class IonTokenConstsX
     public final static boolean[] isHexDigit = makeHexDigitTestArray(hexValue);
     private final static int[] makeHexValueArray() {
         int[] hex = new int[256];
-        for (int ii=0; ii<128; ii++) {
+        for (int ii=0; ii<256; ii++) {
             hex[ii] = -1;
         }
         for (int ii='0'; ii<='9'; ii++) {
@@ -191,16 +192,17 @@ public class IonTokenConstsX
     }
     public final static int hexDigitValue(int c) {
         if (!isHexDigit(c)) {
-            throw new IllegalArgumentException("character '"+((char)c)+"' is not a hex digit");
+            IllegalArgumentException e = new IllegalArgumentException("character '"+((char)c)+"' is not a hex digit");
+            throw new IonException(e);
         }
         return hexValue[c];
     }
 
     public final static int[] decimalValue = makeDecimalValueArray();
-    public final static boolean[] isDecimalDigit = makeDecimalDigitTestArray(hexValue);
+    public final static boolean[] isDecimalDigit = makeDecimalDigitTestArray(decimalValue);
     private final static int[] makeDecimalValueArray() {
         int[] dec = new int[256];
-        for (int ii=0; ii<128; ii++) {
+        for (int ii=0; ii<256; ii++) {
             dec[ii] = -1;
         }
         for (int ii='0'; ii<='9'; ii++) {
@@ -216,7 +218,7 @@ public class IonTokenConstsX
         return is_hex;
     }
     public final static boolean isDigit(int c) {
-        return isDecimalDigit[c & 0xff] && is8bitValue(c);
+        return isDecimalDigit[c & 0xff] && is7bitValue(c);
     }
     public final static int decimalDigitValue(int c) {
         if (!isDigit(c)) {
@@ -293,6 +295,7 @@ public class IonTokenConstsX
         return escapeCharacterImage[c];
     }
 
+    // FIXME: this should be isValidEscapeStart (valid, not value)
     public final static boolean isValueEscapeStart(int c) {
         return (escapeCharactersValues[c & 0xff] != ESCAPE_NOT_DEFINED)
          && is8bitValue(c);
@@ -745,7 +748,7 @@ public class IonTokenConstsX
         int kw = KEYWORD_unrecognized;
         if (possible_names != IonTokenConstsX.KW_ALL_BITS) {
             for (int ii=0; ii<typeNameBits.length; ii++) {
-                int tb = typeNameBits[ii]; 
+                int tb = typeNameBits[ii];
                 if (tb == possible_names) {
                     if (typeNameNames[ii].length() == length) {
                         kw = typeNameKeyWordIds[ii];

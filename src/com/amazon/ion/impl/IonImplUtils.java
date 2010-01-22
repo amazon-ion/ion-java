@@ -4,9 +4,10 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
-import com.amazon.ion.IonWriter;
+import com.amazon.ion.IonSystem;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.Reader;
+import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -161,7 +162,11 @@ public final class IonImplUtils // TODO this class shouldn't be public
     public static String valueToString(IonReader reader)
     {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        IonWriter writer = new IonTextWriter(out);
+        TextOptions options = new TextOptions(false, true, false); // pretty print, ascii only, filter symbol tables
+        IonSystem sys = reader.getSystem(); // this may be null, if it is we can only hope we don't need a symbol table
+        IonWriterSystemText writer = new IonWriterSystemText(sys, out, options);
+        // IonWriter writer = IonWriterUserText new IonTextWriter(out);
+
         try
         {
             writer.writeValue(reader);
@@ -173,4 +178,52 @@ public final class IonImplUtils // TODO this class shouldn't be public
         String s = out.toString();
         return s;
     }
+
+    static final class StringIterator implements Iterator<String>
+    {
+        String [] _values;
+        int       _pos;
+
+        StringIterator(String[] values) {
+            _values = values;
+        }
+        public boolean hasNext() {
+            return (_pos < _values.length);
+        }
+        public String next() {
+            if (!hasNext()) throw new NoSuchElementException();
+            return _values[_pos++];
+        }
+        public void remove() {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    static final class IntIterator implements Iterator<Integer>
+    {
+        int []  _values;
+        int     _pos;
+        int     _len;
+
+        IntIterator(int[] values) {
+            this(values, 0, values.length);
+        }
+        IntIterator(int[] values, int off, int len) {
+            _values = values;
+            _len = len;
+            _pos = off;
+        }
+        public boolean hasNext() {
+            return (_pos < _len);
+        }
+        public Integer next() {
+            if (!hasNext()) throw new NoSuchElementException();
+            int value = _values[_pos++];
+            return value;
+        }
+        public void remove() {
+            throw new UnsupportedOperationException();
+        }
+    }
+
 }

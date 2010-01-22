@@ -120,10 +120,18 @@ public class IonReaderTextRawTokensX
 
     protected final void unread_char(int c)
     {
-        if (c == IonTokenConstsX.EMPTY_ESCAPE_SEQUENCE || c == '\n') {
+        if (c == IonTokenConstsX.EMPTY_ESCAPE_SEQUENCE) {
             c = line_count_unread(c);
+            _stream.unread(c);
         }
-        _stream.unread(c);
+        else if (c == '\n') {
+            c = line_count_unread(c);
+            _stream.unread(c);
+            _stream.unread_optional_cr();
+        }
+        else {
+            _stream.unread(c);
+        }
     }
     private final int line_count_unread(int c) {
         assert( c == IonTokenConstsX.EMPTY_ESCAPE_SEQUENCE || c == '\n' );
@@ -503,7 +511,7 @@ public class IonReaderTextRawTokensX
             c2 = read_char();
             if (c2 != '{') {
                 unread_char(c2);
-                return next_token_finish(IonTokenConstsX.TOKEN_OPEN_BRACE, true);
+                return next_token_finish(IonTokenConstsX.TOKEN_OPEN_BRACE, true); // CAS: 9 nov 2009
             }
             return next_token_finish(IonTokenConstsX.TOKEN_OPEN_DOUBLE_BRACE, true);
         case '}':
@@ -513,11 +521,11 @@ public class IonReaderTextRawTokensX
             // two structs together. see tryForDoubleBrace() below
             return next_token_finish(IonTokenConstsX.TOKEN_CLOSE_BRACE, false);
         case '[':
-            return next_token_finish(IonTokenConstsX.TOKEN_OPEN_SQUARE, false);
+            return next_token_finish(IonTokenConstsX.TOKEN_OPEN_SQUARE, true); // CAS: 9 nov 2009
         case ']':
             return next_token_finish(IonTokenConstsX.TOKEN_CLOSE_SQUARE, false);
         case '(':
-            return next_token_finish(IonTokenConstsX.TOKEN_OPEN_PAREN, false);
+            return next_token_finish(IonTokenConstsX.TOKEN_OPEN_PAREN, true); // CAS: 9 nov 2009
         case ')':
             return next_token_finish(IonTokenConstsX.TOKEN_CLOSE_PAREN, false);
         case ',':
@@ -597,7 +605,7 @@ public class IonReaderTextRawTokensX
         }
         throw new IonException("invalid state: next token switch shouldn't exit");
     }
-    private int next_token_finish(int token, boolean content_is_waiting) {
+    private final int next_token_finish(int token, boolean content_is_waiting) {
         _token = token;
         _unfinished_token = content_is_waiting;
         return _token;
@@ -814,6 +822,7 @@ public class IonReaderTextRawTokensX
                 t = IonTokenConstsX.TOKEN_FLOAT;
                 break;
             case '.':  // the decimal might have an 'e' somewhere down the line so we don't really know the type here
+                break;
             default:
                 if (is_value_terminating_character(c)) {
                     t = IonTokenConstsX.TOKEN_INT;
@@ -1036,9 +1045,12 @@ public class IonReaderTextRawTokensX
             }
             c = skip_over_digits(c);
         }
+        if (!is_value_terminating_character(c)) {
+            bad_token(c);
+        }
         if (sp != null) {
             sp.markEnd(-1);
-         }
+        }
         return c;
     }
     private int skip_over_int(SavePoint sp) throws IOException
@@ -1048,6 +1060,9 @@ public class IonReaderTextRawTokensX
             c = read_char();
         }
         c = skip_over_digits(c);
+        if (!is_value_terminating_character(c)) {
+            bad_token(c);
+        }
         if (sp != null) {
             sp.markEnd(-1);
         }
@@ -1077,6 +1092,9 @@ public class IonReaderTextRawTokensX
             c = read_char();
         } while (IonTokenConstsX.isHexDigit(c));
 
+        if (!is_value_terminating_character(c)) {
+            bad_token(c);
+        }
         if (sp != null) {
             sp.markEnd(-1);
         }
@@ -1171,6 +1189,9 @@ public class IonReaderTextRawTokensX
         else if (c == 'Z' || c == 'z') {
             c = read_char();
         }
+        if (!is_value_terminating_character(c)) {
+            bad_token(c);
+        }
         if (sp != null) {
             sp.markEnd(-1);
         }
@@ -1198,7 +1219,6 @@ public class IonReaderTextRawTokensX
     protected IonType load_number(StringBuilder sb) throws IOException
     {
         boolean has_sign = false;
-        long    start_pos;
         int     t, c;
 
         // this reads int, float, decimal and timestamp strings
@@ -1207,7 +1227,7 @@ public class IonReaderTextRawTokensX
         //case '5': case '6': case '7': case '8': case '9':
         //case '-': case '+':
 
-        start_pos = _stream.getPosition();
+        //start_pos = _stream.getPosition();
         c = read_char();
         has_sign = ((c == '-') || (c == '+'));
         if (has_sign) {
@@ -1242,35 +1262,29 @@ public class IonReaderTextRawTokensX
             unread_char(c2);
         }
 
-        // leading digits
+        // remaining (after the first, c is the first) leading digits
         c = load_digits(sb, c);
 
         if (c == '-' || c == 'T') {
             // this better be a timestamp and it starts with a 4 digit
             // year followed by a dash and no leading sign
             if (has_sign) bad_token(c);
-            long pos = _stream.getPosition();
-            long len = pos - start_pos;
-            if (len != 5) bad_token(c);
+            int len = sb.length();
+            if (len != 4) bad_token(c);
             IonType tt = load_timestamp(sb, c);
             return tt;
         }
 
-        // numbers aren't allowed to have excess leading '0'
-        // (zeros) so we have to check here
         if (starts_with_zero) {
-            long pos = _stream.getPosition();
-            long len = pos - start_pos;
-            if (len == 2) {
-                if (has_sign) bad_token(c);
+            int len = sb.length();
+            if (has_sign) {
+                len--; // we don't count the sign
             }
-            else if (len == 3) {
-                if (!has_sign) bad_token(c);
-            }
-            else {
+            if (len != 1) {
                 bad_token(c);
             }
         }
+
         if (c == '.') {
             // so if it's a float of some sort
             // mark it as at least a DECIMAL
@@ -1326,6 +1340,7 @@ public class IonReaderTextRawTokensX
         }
         return c;
     }
+
     private final int load_digits(StringBuilder sb, int c) throws IOException
     {
         while (Character.isDigit(c)) {
@@ -1334,6 +1349,7 @@ public class IonReaderTextRawTokensX
         }
         return c;
     }
+
     private final void load_fixed_digits(StringBuilder sb, int len) throws IOException
     {
         int c;
