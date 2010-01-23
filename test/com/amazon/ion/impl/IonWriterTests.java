@@ -16,7 +16,7 @@ public class IonWriterTests
 
         suite.addTestSuite(TextWriterTest.class);
         suite.addTestSuite(BinaryWriterTest.class);
-        // FIXME should have ValueWriterTest as well.
+        suite.addTestSuite(ValueWriterTest.class);
 
         return suite;
     }

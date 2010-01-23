@@ -289,7 +289,7 @@ public class SystemReader
         else {
             int ln = IonConstants.getLowNibble(b);
             int hn = IonConstants.getTypeCode(b);
-            len = _buffer._reader.readLength(hn, ln);
+            len = 1 + _buffer._reader.readLength(hn, ln);
         }
         _buffer._reader.setPosition(_buffer_offset);
 
@@ -303,7 +303,7 @@ public class SystemReader
     public IonSystemImpl getSystem() {
         return _system;
     }
-    
+
     /** Returns the catalog being used by this reader. */
     public IonCatalog getCatalog() {
         return _catalog;
@@ -456,7 +456,7 @@ public class SystemReader
         if (_system.valueIsLocalSymbolTable(curr))
         {
             _currentSymbolTable =
-                new UnifiedSymbolTable((IonStruct) curr, _catalog);
+                UnifiedSymbolTable.makeNewLocalSymbolTable(_system.getSystemSymbolTable(), (IonStruct) curr, _catalog);
             _currentIsHidden = true;
         }
         else if (_system.valueIsSystemId(curr))

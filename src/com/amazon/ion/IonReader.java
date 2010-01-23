@@ -5,8 +5,17 @@ package com.amazon.ion;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 
+/* One design goal is for the readers and writers to be independent of an
+ * IonSystem or ValueFactory and thus independent of particular implementations
+ * of the DOM.
+ *
+ * The issue is that one needs a ValueFactory in order to construct the tree.
+ * So one either needs to pass a ValueFactory / IonSystem to the reader, or
+ * pass the reader to the system.  I decided that the dependencies were better
+ * the latter way.  So we have IonSystem.newValue(IonReader) instead of
+ * IonReader.nextValue(IonSystem).
+ */
 
 /**
  * Provides stream-based access to Ion data independent of its underlying
@@ -26,22 +35,30 @@ public interface IonReader
      * using {@link #next()}.
      * This method may be
      * called multiple times, which does not move the current position.
+     * <p>
+     * <b>WARNING:</b> this method alters the internal state of the reader such
+     * that you cannot reliably get values from the "current" element. The only
+     * thing you should call after {@code hasNext()} is {@link #next()}!
+     *
+     * @deprecated Applications should detect the end of the current level by
+     * checking for a {@code null} response from {@link #next()}.
      */
+    @Deprecated
     public boolean hasNext();
 
     /**
-     * Positions the reader on the next sibling after the current value.
-     * This returns the underlying
-     * IonType of the value that is found.  Once so positioned the contents of
+     * Positions this reader on the next sibling after the current value,
+     * returning the type of that value.  Once so positioned the contents of
      * this value can be accessed with the {@code *value()} methods.
      * <p>
      * A sequence of {@code next()} calls traverses the data at a constant
-     * level, and {@link #stepIn()} must be used in order to traverse down into
-     * any containers.
+     * depth, within the same container.
+     * Use {@link #stepIn()} to traverse down into any containers, and
+     * {@link #stepOut()} to traverse up to the parent container.
      *
-     * @return the type of the next Ion value; never {@link IonType#DATAGRAM}.
-     *
-     * @throws NoSuchElementException if there are no more elements.
+     * @return the type of the next Ion value (never {@link IonType#DATAGRAM}),
+     * or {@code null} when there are no more elements at the current depth in
+     * the same container.
      */
     public IonType next();
 
@@ -77,10 +94,24 @@ public interface IonReader
     public int getDepth();
 
     /**
+     * Returns the type of iteration this writer is performing.
+     */
+    public IonIterationType getIterationType();
+
+
+    /**
      * Returns the symbol table that is applicable to the current value.
      * This may be either a system or local symbol table.
      */
     public SymbolTable getSymbolTable();
+
+    /**
+     * Returns the IonSystem that may have been specified when constructing
+     * this reader.  IonReaders do not necessarily require a system.  If
+     * no system was used in the construction of this reader a null is
+     * returned.
+     */
+    public IonSystem getSystem();
 
     /**
      * Returns the type of the current value, or null if there is no valid
@@ -89,15 +120,19 @@ public interface IonReader
     public IonType getType();
 
     /**
-     * Return the annotations of the current value as an array of strings.  The
-     * return value is null if there are no annotations on the current value.
+     * Return the annotations of the current value as an array of strings.
+     *
+     * @return the (ordered) annotations on the current value, or an empty
+     * array (not {@code null}) if there are none.
      */
     public String[] getTypeAnnotations();
 
     /**
      * Return the symbol id's of the annotations on the current value as an
-     * array of ints.  The return value is null if there are no annotations
-     * on the current value.
+     * array of ints.
+     *
+     * @return the (ordered) annotations on the current value, or an empty
+     * array (not {@code null}) if there are none.
      */
     public int[] getTypeAnnotationIds();
 
@@ -131,16 +166,6 @@ public interface IonReader
      */
     public String getFieldName();
 
-    /**
-     * Return the current value as an IonValue using the passed in IonSystem
-     * context. This returns null if there is no valid current value.
-     *
-     * @param sys ion context for the returned value to be created under.
-     * This does not have be the same as the context of the iterators value,
-     * if it has one.
-     */
-     // TODO Probably more appropriate to be system.newIonValue(IonReader)
-//    public IonValue getIonValue(IonSystem sys);
 
     /**
      * Returns the whether or not the current value a null ion value.
@@ -195,10 +220,24 @@ public interface IonReader
     public double doubleValue();
 
     /**
-     * Returns the current value as a BigDecimal.  This is only valid if there
-     * is an underlying value and the value is decimal.
+     * Returns the current value as a {@link BigDecimal}.
+     * This method should not return a {@link Decimal}, so it lacks support for
+     * negative zeros.
+     * <p>
+     * This method is only valid when {@link #getType()} returns
+     * {@link IonType#DECIMAL}.
      */
     public BigDecimal bigDecimalValue();
+    // TODO do these methods work when isNullValue()?
+
+    /**
+     * Returns the current value as a {@link Decimal}, which extends
+     * {@link BigDecimal} with support for negative zeros.
+     * This is only valid when {@link #getType()} returns
+     * {@link IonType#DECIMAL}.
+     */
+    public Decimal decimalValue();
+
 
     /**
      * Returns the current value as a {@link java.util.Date}.

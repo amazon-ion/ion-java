@@ -2,6 +2,7 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.system.SystemFactory;
 import java.io.UnsupportedEncodingException;
 import org.junit.Before;
@@ -48,7 +49,9 @@ public class SurrogateEscapeTest extends IonTestCase {
 
         if (RUN_TEXT_READER_ASSERTS) {
             final IonReader reader = reader();
-            assertTrue(reader.hasNext());
+            if (! IonImplUtils.READER_HASNEXT_REMOVED) {
+                assertTrue(reader.hasNext());
+            }
             assertEquals(IonType.STRING, reader.next());
             assertSingleCodePoint(expectedCode, reader.stringValue());
         }

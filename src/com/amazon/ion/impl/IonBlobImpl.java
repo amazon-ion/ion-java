@@ -21,13 +21,16 @@ public final class IonBlobImpl
          IonConstants.makeTypeDescriptor(IonConstants.tidBlob,
                                          IonConstants.lnIsNullAtom);
 
+    private static final int HASH_SIGNATURE =
+        IonType.BLOB.toString().hashCode();
+
     /**
      * Constructs a <code>null.blob</code> element.
      */
     public IonBlobImpl(IonSystemImpl system)
     {
         super(system, NULL_BLOB_TYPEDESC);
-        _hasNativeValue = true; // Since this is null
+        _hasNativeValue(true); // Since this is null
     }
 
     /**
@@ -54,6 +57,17 @@ public final class IonBlobImpl
         clone.copyFrom(this);
 
         return clone;
+    }
+
+    /**
+     * Implements {@link Object#hashCode()} consistent with equals.
+     *
+     * @return  An int, consistent with the contracts for
+     *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
+     */
+    @Override
+    public int hashCode() {
+        return lobHashCode(HASH_SIGNATURE);
     }
 
     public IonType getType()

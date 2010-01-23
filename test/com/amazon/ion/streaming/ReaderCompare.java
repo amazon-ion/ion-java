@@ -1,13 +1,16 @@
 /*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion.streaming;
 
+import static com.amazon.ion.impl.IonImplUtils.READER_HASNEXT_REMOVED;
+
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonReader;
+import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.Timestamp;
-import java.math.BigDecimal;
 import org.junit.Assert;
 
 /**
@@ -18,13 +21,18 @@ public class ReaderCompare
 {
     public static void compare(IonReader it1, IonReader it2) {
         while (hasNext(it1, it2)) {
-            IonType t1 = it1.next();
-            IonType t2 = it2.next();
+            IonType t1 = (READER_HASNEXT_REMOVED ? it1.getType() : it1.next());
+            IonType t2 = (READER_HASNEXT_REMOVED ? it2.getType() : it2.next());
+
+            if ((t1 != t2) && (t1 == null || t2 == null || !t1.equals(t2))) {
+                assertEquals("ion type", t1, t2);
+            }
+            if (t1 == null) break;
+
             if (it1.isInStruct()) {
                 compareFieldNames(it1, it2);
             }
             compareAnnotations(it1, it2);
-            assertEquals(t1, t2);
             assertEquals(it1.isNullValue(), it2.isNullValue());
             if (it1.isNullValue()) {
                 // remember - anything can be a null value
@@ -67,11 +75,27 @@ public class ReaderCompare
 
     public static boolean hasNext(IonReader it1, IonReader it2)
     {
-        boolean more = it1.hasNext();
-        assertEquals("hasNext results don't match", more, it2.hasNext());
-        // Check that result doesn't change
-        assertEquals(more, it1.hasNext());
-        assertEquals(more, it2.hasNext());
+        boolean more;
+        if (READER_HASNEXT_REMOVED)
+        {
+            more = (it1.next() != null);
+            assertEquals("next results don't match", more, it2.next() != null);
+        }
+        else
+        {
+            more = it1.hasNext();
+            assertEquals("hasNext results don't match", more, it2.hasNext());
+
+            // Check that result doesn't change
+            assertEquals(more, it1.hasNext());
+            assertEquals(more, it2.hasNext());
+        }
+
+        if (!more) {
+            assertEquals(null, it1.next());
+            assertEquals(null, it2.next());
+        }
+
         return more;
     }
 
@@ -125,13 +149,14 @@ public class ReaderCompare
                 break;
             }
             case DECIMAL:
-                BigDecimal bd1 = it1.bigDecimalValue();
-                BigDecimal bd2 = it2.bigDecimalValue();
-                assertEquals(bd1, bd2);
+                Decimal dec1 = it1.decimalValue();
+                Decimal dec2 = it2.decimalValue();
+                IonTestCase.assertPreciselyEquals(dec1, dec2);
+                // TODO also test bigDecimal, double, long, int etc.
                 break;
             case TIMESTAMP:
-            	Timestamp t1 = it1.timestampValue();
-            	Timestamp t2 = it2.timestampValue();
+                Timestamp t1 = it1.timestampValue();
+                Timestamp t2 = it2.timestampValue();
                 assertEquals(t1, t2);
                 break;
             case STRING:

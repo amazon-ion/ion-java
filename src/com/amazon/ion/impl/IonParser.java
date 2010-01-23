@@ -4,7 +4,6 @@ package com.amazon.ion.impl;
 
 
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonNumber;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
@@ -129,8 +128,8 @@ public class IonParser
             this._out.writer().truncate();
         }
         catch (IOException ioe) {
-            throw new IonException(ioe.getMessage()+ " at " + this._in.position(),
-                                    ioe);
+            String message = ioe.getMessage()+ " at " + this._in.position();
+            throw new IonException(message, ioe);
         }
     }
 
@@ -283,8 +282,9 @@ public class IonParser
                 processKeywordValue();
             }
             else {
-                throw new IonException("expected value is invalid at "
-                                        + this._in.position());
+                String message = "expected value is invalid at "
+                                + this._in.position();
+                throw new IonException(message);
             }
         }
     }
@@ -373,7 +373,9 @@ loop:   for (;;) {
         }
 
         if (_t != IonTokenReader.Type.tCloseParen) {
-            throw new IonException("this list needs a closing paren at " + this._in.position());
+            String message = "this list needs a closing paren at "
+                            + this._in.position();
+            throw new IonException(message);
         }
 
         // here we backpatch the head of this list
@@ -406,7 +408,9 @@ loop:   for (;;) {
 
         }
         if (_t != IonTokenReader.Type.tCloseSquare) {
-            throw new IonException("expected ',' or ']' in list at " + this._in.position());
+            String message = "expected ',' or ']' in list at "
+                            + this._in.position();
+            throw new IonException(message);
         }
 
         // here we backpatch the head of this list
@@ -444,7 +448,11 @@ loop:   for (;;) {
                 string_name = true;
                 break;
             default:
-                throw new IonException("missing structure member name at " + this._in.position());
+                {
+                    String message = "missing structure member name at "
+                                    + this._in.position();
+                    throw new IonException(message);
+                }
             }
 
             // process the field name
@@ -455,7 +463,9 @@ loop:   for (;;) {
                 if (c == ':') {
                     c = this._in.read();
                     if (c == ':') {
-                        throw new IonException("member name expected but usertypedesc found at " + this._in.position());
+                        String message = "member name expected but usertypedesc found at "
+                                        + this._in.position();
+                        throw new IonException(message);
                     }
                     this._in.unread(c);
                 }
@@ -474,9 +484,13 @@ loop:   for (;;) {
             case tComma:
                 break;
             default:
-                throw new IonException("expected ',' or '}' but found '" +
-                                       _t.getImage() + "' in struct at " +
-                                       this._in.position());
+                {
+                    String message = "expected ',' or '}' but found '"
+                                    + _t.getImage()
+                                    + "' in struct at "
+                                    + this._in.position();
+                    throw new IonException(message);
+                }
             }
 
             // we're past that comma
@@ -484,7 +498,9 @@ loop:   for (;;) {
         }
 
         if (_t != IonTokenReader.Type.tCloseCurly) {
-            throw new IonException("this structure needs a closing curly brace at " + this._in.position());
+            String message = "this structure needs a closing curly brace at "
+                            + this._in.position();
+            throw new IonException(message);
         }
 
         // TODO check for "accidental" ordering.
@@ -604,9 +620,7 @@ loop:   for (;;) {
         case constDecimal:
             {
                 BigDecimal bd = this._in.decimalValue;
-                boolean negative_zero = (bd != null && bd.signum() == 0 && this._in.isNegative);
-                IonNumber.Classification c = negative_zero ? IonNumber.Classification.NEGATIVE_ZERO : IonNumber.Classification.NORMAL;
-                this._out.writer().writeDecimalWithTD(bd, c);
+                this._out.writer().writeDecimalWithTD(bd);
             }
             break;
         case constTime:
@@ -615,9 +629,10 @@ loop:   for (;;) {
             }
             break;
         default:
-            String message =
-                "internal error, unrecognized numeric token type " + castto +
-                " at " + this._in.position();
+            String message = "internal error, unrecognized numeric token type "
+                            + castto
+                            + " at "
+                            + this._in.position();
             throw new IonException(message);
         }
 
@@ -656,12 +671,16 @@ loop:   for (;;) {
             // we finished the "string" at the ending quote
             c = this._in.readIgnoreWhitespaceButNotComments();
             if (c != '}') {
-                throw new IonException("invalid clob value, double curly braces expected at " + this._in.position());
+                String message = "invalid clob value, double curly braces expected at "
+                                + this._in.position();
+                throw new IonException(message);
             }
             // we saw 1 close curly, is there a second (or should be)
             c = this._in.read();
             if (c != '}') {
-                throw new IonException("invalid clob value, double curly braces expected at " + this._in.position());
+                String message = "invalid clob value, double curly braces expected at "
+                                + this._in.position();
+                throw new IonException(message);
             }
         }
         else {
@@ -692,7 +711,9 @@ loop:   for (;;) {
                 if (c == -1) {
                     throw new UnexpectedEofException();
                 }
-                throw new IonException("invalid base64 ending, at least one curly brace was expected at " + this._in.position());
+                String message = "invalid base64 ending, at least one curly brace was expected at "
+                                + this._in.position();
+                throw new IonException(message);
             }
             // we saw 1 close curly, is there a second
             c = this._in.read();
@@ -700,7 +721,9 @@ loop:   for (;;) {
                 if (c == -1) {
                     throw new UnexpectedEofException();
                 }
-                throw new IonException("invalid base64 ending, double curly braces expected at " + this._in.position());
+                String message = "invalid base64 ending, double curly braces expected at "
+                                + this._in.position();
+                throw new IonException(message);
             }
 
             int len = this._out.writer().position() - start;

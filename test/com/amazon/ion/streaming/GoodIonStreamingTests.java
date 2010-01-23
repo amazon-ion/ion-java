@@ -5,7 +5,7 @@ package com.amazon.ion.streaming;
 import com.amazon.ion.DirectoryTestSuite;
 import com.amazon.ion.FileTestCase;
 import com.amazon.ion.IonReader;
-import com.amazon.ion.IonType;
+import com.amazon.ion.TestUtils;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -39,11 +39,10 @@ public class GoodIonStreamingTests extends DirectoryTestSuite {
     @Override
     protected String[] getFilesToSkip()
     {
-        // TODO JIRA ION-8 fix Unicode bugs and enable test cases
         return new String[]
         {
-            "equivs/stringU0001D11E.ion",
-            "equivs/symbols.ion",
+            //"equivs/stringU0001D11E.ion",
+            //"equivs/symbols.ion",
         };
     }
 
@@ -80,36 +79,7 @@ public class GoodIonStreamingTests extends DirectoryTestSuite {
             }
 
             IonReader reader = system().newReader(buf);
-            readEverything(reader);
-        }
-
-        void readEverything(IonReader it) {
-            while (it.hasNext()) {
-                IonType t = it.next();
-                switch (t) {
-                    case NULL:
-                    case BOOL:
-                    case INT:
-                    case FLOAT:
-                    case DECIMAL:
-                    case TIMESTAMP:
-                    case STRING:
-                    case SYMBOL:
-                    case BLOB:
-                    case CLOB:
-                        break;
-                    case STRUCT:
-                    case LIST:
-                    case SEXP:
-                        it.stepIn();
-                        readEverything(it);
-                        it.stepOut();
-                        break;
-                    case DATAGRAM:
-                        fail("datagram not expected");
-                }
-            }
-            return;
+            TestUtils.deepRead(reader);
         }
     }
 }

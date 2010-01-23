@@ -24,7 +24,7 @@ public class IonCharacterReader extends PushbackReader {
      *
      * @see IonImplUtils#MAX_LOOKAHEAD_UTF16
      */
-    public static final int DEFAULT_BUFFER_SIZE = 5;
+    public static final int DEFAULT_BUFFER_SIZE = 12;
 
     /**
      * The additional buffer padding--this is to add to the fact that the

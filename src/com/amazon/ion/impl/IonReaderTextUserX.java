@@ -3,6 +3,7 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonCatalog;
+import com.amazon.ion.IonIterationType;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
@@ -40,9 +41,16 @@ public class IonReaderTextUserX
     IonCatalog  _catalog;
     SymbolTable _symbols;
 
-
+    public IonReaderTextUserX(IonSystem system, char[] chars) {
+        super(chars, 0, chars.length);
+        initUserReader(system);
+    }
+    public IonReaderTextUserX(IonSystem system, char[] chars, int offset, int length) {
+        super(chars, offset, length);
+        initUserReader(system);
+    }
     public IonReaderTextUserX(IonSystem system, CharSequence chars) {
-        super(chars);
+        super(chars, 0, chars.length());
         initUserReader(system);
     }
     public IonReaderTextUserX(IonSystem system, CharSequence chars, int offset, int length) {
@@ -54,7 +62,7 @@ public class IonReaderTextUserX
         initUserReader(system);
     }
     public IonReaderTextUserX(IonSystem system, byte[] bytes) {
-        super(bytes);
+        super(bytes, 0, bytes.length);
         initUserReader(system);
     }
     public IonReaderTextUserX(IonSystem system, byte[] bytes, int offset, int length) {
@@ -79,6 +87,17 @@ public class IonReaderTextUserX
         _symbols = system.getSystemSymbolTable();
     }
 
+    @Override
+    public IonIterationType getIterationType()
+    {
+        return IonIterationType.USER_TEXT;
+    }
+
+    @Override
+    public IonSystem getSystem()
+    {
+        return _system;
+    }
 
     /**
      * this looks forward to see if there is an upcoming value
@@ -116,7 +135,7 @@ public class IonReaderTextUserX
             // down in some other value - note that _value_type
             // will be null at eof and on as yet undetermined
             // numeric types (which are never system values)
-            if (_value_type != null && IonType.DATAGRAM.equals(getContainerType())) {
+            if (_value_type != null && !isNullValue() && IonType.DATAGRAM.equals(getContainerType())) {
                 switch (_value_type) {
                 case STRUCT:
                     if (_annotation_count > 0) {
@@ -146,7 +165,7 @@ public class IonReaderTextUserX
     }
     private final void symbol_table_load()
     {
-        _symbols = UnifiedSymbolTable.loadLocalSymbolTable(this, _catalog);
+        _symbols = UnifiedSymbolTable.loadLocalSymbolTable(this._system, this, _catalog);
         return;
     }
     private final void symbol_table_reset()
@@ -176,7 +195,17 @@ public class IonReaderTextUserX
             throw new IllegalStateException("only valid if the value is a symbol");
         }
         String symbol = stringValue();
-        int    id     = _symbols.findSymbol(symbol);
+        if (!_symbols.isLocalTable()) {
+            UnifiedSymbolTable local;
+            if (_symbols.isSystemTable()) {
+                local = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _system.getSystemSymbolTable());
+            }
+            else { // if (_symbols.isSharedTable()) {
+                local = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _system.getSystemSymbolTable(), _symbols);
+            }
+            _symbols = local;
+        }
+        int    id     = _symbols.addSymbol(symbol);
         return id;
     }
 
@@ -189,16 +218,23 @@ public class IonReaderTextUserX
         return _symbols;
     }
 
+    private static int[] _empty_int_array = new int[0];
     @Override
     public int[] getTypeAnnotationIds()
     {
+        int[]    ids;
         String[] syms = getTypeAnnotations();
         int      len  = syms.length;
-        int[]    ids  = new int[len];
 
-        for (int ii=0; ii<len; ii++) {
-            String sym = stringValue();
-            ids[ii] = _symbols.findSymbol(sym);
+        if (len == 0) {
+            ids  = _empty_int_array;
+        }
+        else {
+            ids  = new int[len];
+            for (int ii=0; ii<len; ii++) {
+                String sym = stringValue();
+                ids[ii] = _symbols.findSymbol(sym);
+            }
         }
         return ids;
     }
@@ -211,7 +247,7 @@ public class IonReaderTextUserX
         return new IntIterator(ids);
     }
 
-    static final class IntIterator implements Iterator<Integer>
+    public static final class IntIterator implements Iterator<Integer>
     {
         static IntIterator EMPTY_ITERATOR = new IntIterator(null);
 
@@ -219,9 +255,14 @@ public class IonReaderTextUserX
         int   _length;
         int   _pos;
 
-        IntIterator(int[] values) {
+        public IntIterator(int[] values) {
             _values = values;
             _length = (values == null) ? 0 : values.length;
+        }
+        public IntIterator(int[] values, int offset, int len) {
+            _values = values;
+            _pos = offset;
+            _length = len;
         }
         public boolean hasNext() {
             return (_pos < _length);

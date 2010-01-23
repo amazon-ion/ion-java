@@ -2,13 +2,16 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.impl.IonValueImpl;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 
 /**
- *
+ * Test cases for "true" sequence types (list and sexp), covering features that
+ * are not supported by datagram.
  */
 public abstract class TrueSequenceTestCase
     extends SequenceTestCase
@@ -37,9 +40,257 @@ public abstract class TrueSequenceTestCase
     public void testNullSequenceAddAll()
     {
         IonSequence seq = makeNull();
+
+        List<IonValue> list = Collections.emptyList();
+        boolean changed = seq.addAll(list);
+        assertFalse(changed);
+        checkNullSequence(seq);
+
         testAddAll(seq);
     }
 
+
+    public void testNullSequenceIndexedAddAll()
+    {
+        IonSequence seq = makeNull();
+
+        List<IonValue> list = Collections.emptyList();
+        boolean changed = seq.addAll(0, list);
+        assertFalse(changed);
+        checkNullSequence(seq);
+
+        testIndexedAddAll(seq);
+    }
+
+    /**
+     *  TODO JIRA ION-83  Implement indexed addAll for datagram
+     *  Hoist this up to SequencenceTestCase.
+     */
+    public void testIndexedAddAll()
+    {
+        IonSequence seq = makeEmpty();
+        testIndexedAddAll(seq);
+    }
+
+    public void testIndexedAddAll(IonSequence seq)
+    {
+        try
+        {
+            seq.addAll(0, null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+
+        List<IonValue> list = new ArrayList<IonValue>();
+        try
+        {
+            seq.addAll(1, list);
+            fail("expected exception");
+        }
+        catch (IndexOutOfBoundsException e) { }
+
+        boolean changed = seq.addAll(0, list);
+        assertFalse(changed);
+        assertEquals(0, seq.size());
+
+        IonValue v1 = system().newInt(1);
+        list.add(v1);
+
+        changed = seq.addAll(0, list);
+        assertTrue(changed);
+        assertEquals(1, seq.size());
+        assertSame(seq.get(0), v1);
+        assertSame(seq, v1.getContainer());
+
+        try
+        {
+            seq.addAll(0, list);
+            fail("expected exception");
+        }
+        catch (ContainedValueException e) { }
+
+        list.clear();
+        IonValue v2 = system().newInt(2);
+        IonValue v3 = system().newInt(3);
+        list.add(v2);
+        list.add(v3);
+
+        seq.addAll(1, list);
+        assertEquals(3, seq.size());
+        assertSame(seq.get(0), v1);
+        assertSame(seq.get(1), v2);
+        assertSame(seq.get(2), v3);
+
+        list.clear();
+        IonValue v4 = system().newInt(4);
+        list.add(v4);
+
+        seq.addAll(1, list);
+        assertEquals(4, seq.size());
+        assertSame(seq.get(0), v1);
+        assertSame(seq.get(1), v4);
+        assertSame(seq.get(2), v2);
+        assertSame(seq.get(3), v3);
+    }
+
+    /**
+     *  TODO JIRA ION-90 Implement set for datagram
+     *  Hoist this up to SequencenceTestCase.
+     */
+    public void testSet()
+    {
+        IonSequence s = wrapAndParse("e0", "e1", "e3");
+
+        set(s, 0);
+        set(s, 2);
+        set(s, 1);
+
+        assertEquals(wrapAndParse("0", "1", "2"), s);
+    }
+
+    public void testSetInsideDatagramForcesEncode()
+    {
+        IonSequence s = wrapAndParse("e0", "'''text'''", "e3");
+        IonDatagram d = system().newDatagram(s);
+        byte[] bytes = d.getBytes();
+
+        set(s, 1);
+
+        byte[] newBytes = d.getBytes();
+        assertTrue("encoded data should change",
+                   bytes.length != newBytes.length);
+    }
+
+
+    private void set(IonSequence s, int index)
+    {
+        IonValue origElement = s.get(index);
+        IonValue newElement = system().newInt(index);
+
+        IonSequence expectedElements = s.clone();
+        expectedElements.remove(index);
+        expectedElements.add(index, newElement.clone());
+
+        IonValue removed = s.set(index, newElement);
+
+        assertSame(newElement, s.get(index));
+        assertSame(s, newElement.getContainer());
+        assertSame(origElement, removed);
+        assertEquals(null, removed.getContainer());
+
+        assertEquals(index, ((IonValueImpl)newElement).getElementId());
+
+        assertEquals(expectedElements, s);
+    }
+
+    /**
+     *  TODO JIRA ION-90 Implement set for datagram
+     *  Hoist this up to SequencenceTestCase.
+     */
+    public void testSetNullElement()
+    {
+        IonSequence s = wrapAndParse("e0");
+        testSetThrows(s, 0, null, NullPointerException.class);
+    }
+
+    /**
+     *  TODO JIRA ION-90 Implement set for datagram
+     *  Hoist this up to SequencenceTestCase.
+     */
+    public void testSetContainedValue()
+    {
+        IonSequence s0 = wrapAndParse("e0");
+        IonSequence s1 = wrapAndParse("e1");
+
+        testSetThrows(s0, 0, s1.get(0), ContainedValueException.class);
+    }
+
+    /**
+     *  TODO JIRA ION-90 Implement set for datagram
+     *  Hoist this up to SequencenceTestCase.
+     */
+    public void testSetDatagram()
+    {
+        IonSequence s = wrapAndParse("e0");
+        IonDatagram dg = loader().load("hi");
+        testSetThrows(s, 0, dg, IllegalArgumentException.class);
+    }
+
+    /**
+     *  TODO JIRA ION-90 Implement set for datagram
+     *  Hoist this up to SequencenceTestCase.
+     */
+    public void testSetReadOnlyChild()
+    {
+        IonSequence s = wrapAndParse("e0");
+        IonValue v = system().newNull();
+        v.makeReadOnly();
+        testSetThrows(s, 0, v, ReadOnlyValueException.class);
+    }
+
+    /**
+     *  TODO JIRA ION-90 Implement set for datagram
+     *  Hoist this up to SequencenceTestCase.
+     */
+    public void testSetReadOnlyContainer()
+    {
+        IonSequence s = wrapAndParse("e0");
+        s.makeReadOnly();
+        IonValue v = system().newNull();
+        testSetThrows(s, 0, v, ReadOnlyValueException.class);
+    }
+
+    /**
+     *  TODO JIRA ION-90 Implement set for datagram
+     *  Hoist this up to SequencenceTestCase.
+     */
+    public void testSetOutOfBounds()
+    {
+        IonSequence s = makeNull();
+        if (s != null)
+        {
+            testSetOutOfBounds(s, -1);
+            testSetOutOfBounds(s, 0);
+            testSetOutOfBounds(s, 1);
+        }
+        // else we're testing datagram
+
+        s = makeEmpty();
+        testSetOutOfBounds(s, -1);
+        testSetOutOfBounds(s, 0);
+        testSetOutOfBounds(s, 1);
+
+        s.add().newInt(3498);
+        testSetOutOfBounds(s, -1);
+        testSetOutOfBounds(s, 1);
+        testSetOutOfBounds(s, 2);
+    }
+
+    private void testSetOutOfBounds(IonSequence s, int index)
+    {
+        IonValue v = system().newNull();
+        testSetThrows(s, index, v, IndexOutOfBoundsException.class);
+    }
+
+    private <T extends RuntimeException>
+    void testSetThrows(IonSequence s, int index, IonValue v,
+                       Class<T> exceptionType)
+        throws RuntimeException
+    {
+        IonSequence orig = s.clone();
+        try {
+            s.set(index, v);
+            fail("expected " + exceptionType.getSimpleName());
+        }
+        catch (RuntimeException e)
+        {
+            if (! exceptionType.isAssignableFrom(e.getClass()))
+            {
+                throw e;
+            }
+        }
+        assertEquals(orig, s);
+    }
 
     public void testNullSequenceContains()
     {

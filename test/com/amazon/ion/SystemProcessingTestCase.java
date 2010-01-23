@@ -7,6 +7,7 @@ import static com.amazon.ion.SystemSymbolTable.ION_1_0;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
 import static com.amazon.ion.TestUtils.FERMATA;
 
+import com.amazon.ion.impl.IonReaderTextRawTokensX;
 import com.amazon.ion.impl.IonUTF8;
 import com.amazon.ion.impl.SymbolTableTest;
 import com.amazon.ion.system.SimpleCatalog;
@@ -19,10 +20,42 @@ import com.amazon.ion.system.SimpleCatalog;
 public abstract class SystemProcessingTestCase
     extends IonTestCase
 {
+    // so far 1000 to 10000 (by 1000's) assigned Dec 31, 2009
+    // as classid's
+    String getDebugClassId() {
+        return this.getClass().getSimpleName();
+    }
+    static String current_test = null;
+    static String current_class = null;
+    static String getCurrentTestAndClass() {
+        String s = " \""+current_class+"\", \""+current_test+"\" ";
+        return s;
+    }
+    public final void startTestCheckpoint(String testid)
+    {
+        String classid = getDebugClassId();
+
+// FIXME: set these to null so we don't stop or print anything
+        String interesting_classid = "ReaderSystemProcessingTestCase";
+        String interesting_testid = "testLocalTableResetting";
+
+
+        current_test = testid;
+        current_class = classid;
+
+        if (interesting_testid.equals(testid) && interesting_classid.equals(classid)) {
+            System.out.println("Interesting test encountered.");
+            System.out.println("\tClass: "+classid);
+            System.out.println("\tTestCase: "+testid);
+            System.out.println("\t(this message from SystemProcessingTestCase.startTestCheckpoint(), approx line 50)");
+            System.out.println();
+            return;
+        }
+        return;
+    }
+
     protected abstract void prepare(String text)
         throws Exception;
-
-    protected abstract boolean processingBinary();
 
     protected abstract void startIteration()
         throws Exception;
@@ -60,8 +93,13 @@ public abstract class SystemProcessingTestCase
 
     /**
      * Checks a symbol that's defined in a missing symbol table.
+     *
+     * @returns
+     *        true when the symbol missing from a shared table
+     *        the symbol will have been added to the local symbol table
+     *        false when it will not have been
      */
-    protected abstract void checkMissingSymbol(String expected, int expectedSid)
+    protected abstract boolean checkMissingSymbol(String expected, int expectedSymbolTableSid, int expectedLocalSid)
         throws Exception;
 
     protected abstract void checkInt(long expected)
@@ -76,8 +114,17 @@ public abstract class SystemProcessingTestCase
     /**
      * @param expected is the canonical form of the timestamp
      */
-    protected abstract void checkTimestamp(String expected)
+    protected abstract void checkTimestamp(Timestamp expected)
         throws Exception;
+
+    /**
+     * @param expected is the canonical form of the timestamp
+     */
+    protected void checkTimestamp(String expected)
+        throws Exception
+    {
+        checkTimestamp(Timestamp.valueOf(expected));
+    }
 
     protected abstract void checkEof()
         throws Exception;
@@ -106,6 +153,8 @@ public abstract class SystemProcessingTestCase
     public void testLocalTableResetting()
         throws Exception
     {
+        startTestCheckpoint("testLocalTableResetting");
+
         String text = "bar foo $ion_1_0 1 far boo";
 
         prepare(text);
@@ -131,6 +180,16 @@ public abstract class SystemProcessingTestCase
 
         SymbolTable table2 = currentSymtab();
         checkLocalTable(table2);
+
+// here for debug
+if (table1 == table2) {
+    System.out.println();
+    System.out.println("in class: "+this.getDebugClassId());
+    System.out.println("in test: "+"testLocalTableResetting");
+    System.out.println("the current and the initial symbol tables are the same, they should be different");
+    System.out.println(this.getClass().getCanonicalName()+ " about line 181");
+    System.out.println();
+}
         assertNotSame(table1, table2);
 
         nextValue();
@@ -141,6 +200,8 @@ public abstract class SystemProcessingTestCase
     public void testTrivialLocalTableResetting()
         throws Exception
     {
+        startTestCheckpoint("testTrivialLocalTableResetting");
+
         String text = "1 $ion_1_0 2";
 
         startIteration(text);
@@ -166,6 +227,8 @@ public abstract class SystemProcessingTestCase
     public void testLocalTableReplacement()
         throws Exception
     {
+        startTestCheckpoint("testLocalTableReplacement");
+
         String text =
             "$ion_symbol_table::{" +
             "  symbols:[ \"foo\", \"bar\" ]," +
@@ -207,6 +270,8 @@ public abstract class SystemProcessingTestCase
     public void testTrivialLocalTableReplacement()
         throws Exception
     {
+        startTestCheckpoint("testTrivialLocalTableReplacement");
+
         String text =
             "$ion_symbol_table::{" +
             "}\n" +
@@ -236,6 +301,8 @@ public abstract class SystemProcessingTestCase
     public void testLocalSymtabWithOpenContent()
         throws Exception
     {
+        startTestCheckpoint("testLocalSymtabWithOpenContent");
+
         String data = "$ion_symbol_table::{open:33,symbols:[\"a\",\"b\"]} b";
 
         startIteration(data);
@@ -258,52 +325,8 @@ public abstract class SystemProcessingTestCase
     public void testLocalTableWithLesserImport()
         throws Exception
     {
-        final int fred1id = ION_1_0_MAX_ID + 1;
-        final int fred2id = ION_1_0_MAX_ID + 2;
-        final int fred3id = ION_1_0_MAX_ID + 3;
+        startTestCheckpoint("testLocalTableWithLesserImport");
 
-        final int local = ION_1_0_MAX_ID + Symtabs.FRED_MAX_IDS[2];
-        final int local1id = local + 1;
-        final int local2id = local + 2;
-
-        SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
-        Symtabs.register("fred", 1, catalog);
-        Symtabs.register("fred", 2, catalog);
-
-
-        String text =
-            LocalSymbolTablePrefix +
-            "{" +
-            "  imports:[{name:\"fred\", version:2, " +
-            "            max_id:" + Symtabs.FRED_MAX_IDS[2] + "}]," +
-            "}\n" +
-            "local1 local2 fred_1 fred_2 fred_3";
-
-        prepare(text);
-
-        // Remove the imported table
-        assertNotNull(catalog.removeTable("fred", 2));
-
-        startIteration();
-        nextValue();
-        checkSymbol("local1", local1id);
-        nextValue();
-        checkSymbol("local2", local2id);
-        nextValue();
-        checkSymbol("fred_1", fred1id);
-        nextValue();
-        checkSymbol("fred_2", fred2id);
-        nextValue();
-        checkMissingSymbol("fred_3", (processingBinary() ? fred3id : local+3));
-        checkEof();
-    }
-
-    /**
-     * Import v2 but catalog has v3.
-     */
-    public void testLocalTableWithGreaterImport()
-        throws Exception
-    {
         final int fred1id = ION_1_0_MAX_ID + 1;
         final int fred2id = ION_1_0_MAX_ID + 2;
         final int fred3id = ION_1_0_MAX_ID + 3;
@@ -316,10 +339,106 @@ public abstract class SystemProcessingTestCase
         SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
         Symtabs.register("fred", 1, catalog);
         Symtabs.register("fred", 2, catalog);
+
+        // version: 1
+        // {  name:"fred", version:1,
+        // symbols:["fred_1", "fred_2"]}
+
+        // version: 2
+        //"{  name:"fred", version:2," +
+        //"  symbols:["fred_1","fred_2","fred_3","fred_4",]}
+
+        String text =
+            LocalSymbolTablePrefix +
+            "{" +
+            "  imports:[{name:\"fred\", version:2, " +
+            "            max_id:" + Symtabs.FRED_MAX_IDS[2] + "}]," +
+            "}\n" +
+            "local1 local2 fred_1 fred_2 fred_3";
+
+        // fred_2 and fred_3 are defined during prep
+        prepare(text);
+
+        // Remove the imported table: fred version 2
+        // which will cause us to use fred version 3 with a max id of 4
+        // which leaves out fred_5 altogether (which wasn't recognized
+        // during prepare anyway) and causes fred_2 to "disappear"
+        // if forced to the system will assign fred_2 to a new
+        // local id after this
+        assertNotNull(catalog.removeTable("fred", 2));
+
+        // at this point the effective symbol list should be:
+        // fred::version::'2'::symbols:[
+        // 10::   '''fred_1''',
+        // 11::   '''fred_2''',
+        // 12::        null,
+        // 13::        null,
+        // local::symbols:[
+        // 14::   '''local1''',
+        // 15::   '''local2''',
+        // 16::   '''fred_3''',
+        // 17::   '''fred_4''',
+
+        startIteration();
+
+        nextValue();
+        checkSymbol("local1", local1id);
+
+        nextValue();
+        checkSymbol("local2", local2id);
+
+        nextValue();
+        checkSymbol("fred_1", fred1id);
+
+        nextValue();
+        checkSymbol("fred_2", fred2id);
+
+        nextValue();
+        // it doesn't matter if fred 2 is local or not,
+        // fred 3 should be in the shared symbol table
+        boolean is_fred3_a_local_symbol = checkMissingSymbol("fred_3", fred3id, local3id);
+
+
+        checkEof();
+
+        if (is_fred3_a_local_symbol) return; // force is_fred2_a_local_symbol to be used
+    }
+
+    /**
+     * Import v2 but catalog has v3.
+     */
+    public void testLocalTableWithGreaterImport()
+        throws Exception
+    {
+        startTestCheckpoint("testLocalTableWithGreaterImport");
+
+        final int fred1id_symtab = ION_1_0_MAX_ID + 1;  // expect 9 + 1 = 10
+        final int fred2id_symtab = ION_1_0_MAX_ID + 2;
+        final int fred3id_symtab = ION_1_0_MAX_ID + 3;
+
+        final int local = ION_1_0_MAX_ID + Symtabs.FRED_MAX_IDS[2];
+        final int local1id = local + 1; // expect 9 + 4 + 1 = 14 id for local1
+        final int local2id = local + 2; // 15: id for local2
+        final int local3id = local + 3; // 16: id for fred_2, which has been removed from version 2 of the sym tab, so is now local
+        final int local4id = local + 4; // 17: id for fred_5, which isn't present when version 2 was defined
+
+        SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
+        Symtabs.register("fred", 1, catalog);
+        Symtabs.register("fred", 2, catalog);
         SymbolTable fredV3 = Symtabs.register("fred", 3, catalog);
 
         // Make sure our syms don't overlap.
         assertTrue(fredV3.findSymbol("fred_5") != local3id);
+
+        // version: 1
+        // {  name:"fred", version:1,
+        // symbols:["fred_1", "fred_2"]}
+
+        // version: 3: /* Removed fred_2 */
+        //"{  name:"fred", version:3," +
+        //"  symbols:["fred_1",null,"fred_3","fred_4","fred_5",]}"
+
+
 
         // fred_5 is not in table version 2, so it gets local symbol
         // fred_2 is missing from version 3
@@ -331,24 +450,51 @@ public abstract class SystemProcessingTestCase
             "} " +
             "local1 local2 fred_1 fred_2 fred_3 fred_5";
 
+        // at this point the effective symbol list should be:
+        // fred::version::'2'::symbols:[
+        // 10::   '''fred_1''',
+        // 11::        null, // removed when fred version 2 was removed and replaced by fred version 3 (which has the symbol fred_2 removed)
+        // 12::   '''fred_3''',
+        // 13::   '''fred_4''',
+        // local::symbols:[
+        // 14::   '''local1''',
+        // 15::   '''local2''',
+        // 16::   '''fred_2''', // since it's been removed from fred 3 (local 3)
+        // 17::   '''fred_5''', // since it's below the max is of fred 2 so not visible (local 4)
+
         prepare(text);
 
         // Remove the imported table before decoding the binary.
         assertNotNull(catalog.removeTable("fred", 2));
 
         startIteration();
+
         nextValue();
         checkSymbol("local1", local1id);
+
         nextValue();
         checkSymbol("local2", local2id);
+
         nextValue();
-        checkSymbol("fred_1", fred1id);
+        checkSymbol("fred_1", fred1id_symtab);
+
         nextValue();
-        checkMissingSymbol("fred_2", (processingBinary() ? fred2id : local+3));
+        boolean is_fred2_a_local_symbol = checkMissingSymbol("fred_2", fred2id_symtab, local3id);
+
         nextValue();
-        checkSymbol("fred_3", fred3id);
+        checkSymbol("fred_3", fred3id_symtab);
+
         nextValue();
-        checkSymbol("fred_5", (processingBinary() ? local+3 : local+4));
+
+        int fred_5_local_id;
+        if (is_fred2_a_local_symbol) {
+            fred_5_local_id = local4id;
+        }
+        else {
+            fred_5_local_id = local3id;
+        }
+        checkSymbol("fred_5", fred_5_local_id);
+
         checkEof();
     }
 
@@ -356,6 +502,8 @@ public abstract class SystemProcessingTestCase
     public void testSharedTableNotAddedToCatalog()
         throws Exception
     {
+        startTestCheckpoint("testSharedTableNotAddedToCatalog");
+
         String text =
             SystemSymbolTable.ION_1_0 + " " +
             SymbolTableTest.IMPORTED_1_SERIALIZED +
@@ -363,7 +511,12 @@ public abstract class SystemProcessingTestCase
         assertNull(system().getCatalog().getTable("imported"));
 
         startIteration(text);
+        try {
         nextValue();
+        }
+        catch (IonReaderTextRawTokensX.IonReaderTextTokenException e) {
+            testSharedTableNotAddedToCatalog();
+        }
         checkType(IonType.STRUCT);
         checkAnnotation(SystemSymbolTable.ION_SHARED_SYMBOL_TABLE);
 
@@ -376,6 +529,8 @@ public abstract class SystemProcessingTestCase
     public void testObsoleteSharedTableFormat()
         throws Exception
     {
+        startTestCheckpoint("testObsoleteSharedTableFormat");
+
         String text =
             "$ion_symbol_table::{ name:'''test''', symbols:['''x'''] }" +
             "346";
@@ -414,6 +569,8 @@ public abstract class SystemProcessingTestCase
     public void testUnicodeCharacters()
         throws Exception
     {
+        startTestCheckpoint("testUnicodeCharacters");
+
         String ionData = "\"\\0\"";
         testString("\0", ionData);
 
@@ -445,6 +602,8 @@ public abstract class SystemProcessingTestCase
     public void testSurrogateGluing()
         throws Exception
     {
+        startTestCheckpoint("testSurrogateGluing");
+
         // Three ways to represent each surrogate:
         //  1) The actual UTF-8 or UTF-16
         //  2) The \ u 2-byte escape
@@ -472,6 +631,8 @@ public abstract class SystemProcessingTestCase
     public void testQuotesInLongStrings()
         throws Exception
     {
+        startTestCheckpoint("testQuotesInLongStrings");
+
         testString("'", "\"'\"", "'''\\''''");
         testString("x''y", "\"x''y\"", "'''x''y'''");
         testString("x'''y", "\"x'''y\"", "'''x''\\'y'''");
@@ -484,6 +645,8 @@ public abstract class SystemProcessingTestCase
     public void XXXtestPosInt() // TODO rework?
         throws Exception
     {
+        startTestCheckpoint("XXXtestPosInt");
+
         startIteration("+1");
         nextValue();
         checkSymbol("+");
@@ -495,6 +658,8 @@ public abstract class SystemProcessingTestCase
     public void XXXtestPosDecimal() // TODO rework?
         throws Exception
     {
+        startTestCheckpoint("XXXtestPosDecimal");
+
         startIteration("+123d0");
         nextValue();
         checkSymbol("+");
@@ -503,9 +668,22 @@ public abstract class SystemProcessingTestCase
         checkEof();
     }
 
+    public void testNegativeZeroDecimal()
+        throws Exception
+    {
+        startTestCheckpoint("testNegativeZeroDecimal");
+
+        startIteration("-0d0");
+        nextValue();
+        checkDecimal(-0.d); // TODO this should pass IonBigDecimal
+        checkEof();
+    }
+
     public void XXXtestPosFloat() // TODO rework?
         throws Exception
     {
+        startTestCheckpoint("XXXtestPosFloat");
+
         startIteration("+123e0");
         nextValue();
         checkSymbol("+");
@@ -517,6 +695,8 @@ public abstract class SystemProcessingTestCase
     public void XXXtestPosTimestamp() // TODO rework?
         throws Exception
     {
+        startTestCheckpoint("XXXtestPosTimestamp");
+
         startIteration("+2009-02-18");
         nextValue();
         checkSymbol("+");
@@ -529,6 +709,8 @@ public abstract class SystemProcessingTestCase
     public void testTimestampWithRolloverOffset()
         throws Exception
     {
+        startTestCheckpoint("testTimestampWithRolloverOffset");
+
         String text = "2009-10-01T00:00+01:00";
         startIteration(text);
         nextValue();
@@ -540,6 +722,8 @@ public abstract class SystemProcessingTestCase
     public void testShortTimestamps()
         throws Exception
     {
+        startTestCheckpoint("testShortTimestamps");
+
         String text = "2007T 2007-04T 2007-04-25 2007-04-25T";
 
         startIteration(text);
@@ -554,9 +738,35 @@ public abstract class SystemProcessingTestCase
         checkEof();
     }
 
+    public void testTimestampWithZeroFraction()
+        throws Exception
+    {
+        startTestCheckpoint("testTimestampWithZeroFraction");
+
+        String text = "2009-11-23T17:04:03.0-04:00";
+        startIteration(text);
+        nextValue();
+        checkTimestamp("2009-11-23T17:04:03.0-04:00");
+        checkEof();
+    }
+
+    public void testNullTimestamp()
+        throws Exception
+    {
+        startTestCheckpoint("testNullTimestamp");
+
+        String text = "null.timestamp";
+        startIteration(text);
+        nextValue();
+        checkTimestamp((Timestamp)null);
+        checkEof();
+    }
+
     public void testSpecialFloats()
         throws Exception
     {
+        startTestCheckpoint("testSpecialFloats");
+
         startIteration("nan +inf -inf");
         nextValue();
         checkFloat(Double.NaN);
@@ -573,6 +783,8 @@ public abstract class SystemProcessingTestCase
     public void testSystemIterationShowsIvm()
         throws Exception
     {
+        startTestCheckpoint("testSystemIterationShowsIvm");
+
         String text = ION_1_0;
 
         prepare(text);
@@ -580,12 +792,20 @@ public abstract class SystemProcessingTestCase
         nextValue();
         checkSymbol(ION_1_0, SystemSymbolTable.ION_1_0_SID);
         SymbolTable st = currentSymtab();
-        assertTrue(st.isSystemTable());
-        assertEquals(ION_1_0, st.getIonVersionId());
+
+        // system readers don't necessarily support symbol tables
+        // but if they do it better be the system table at this point
+        if (st != null) {
+            assertTrue(st.isSystemTable());
+            assertEquals(ION_1_0, st.getIonVersionId());
+        }
         checkEof();
     }
-    
-    public void testHighUnicodeDirectInBlob() {
+
+    public void testHighUnicodeDirectInBlob()
+    {
+        startTestCheckpoint("testHighUnicodeDirectInBlob");
+
         try {
             // JIRA ION-69
             loader().load("{{\ufffd}}");
@@ -597,6 +817,8 @@ public abstract class SystemProcessingTestCase
     public void XXXtestSymtabOnInjectedSymtab()
         throws Exception
     {
+        startTestCheckpoint("XXXtestSymtabOnInjectedSymtab");
+
         String text = "local";
 
         prepare(text);

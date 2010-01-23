@@ -127,6 +127,9 @@ public interface IonSystem
 
     /**
      * Materializes a shared symbol table from its serialized form.
+     * This method expects the reader to be positioned before the struct.
+     * Which is to say the reader's next() method has not been called
+     * to position the reader on the symbol table struct.
      *
      * @param reader must not be null.
      *
@@ -134,6 +137,15 @@ public interface IonSystem
      */
     public SymbolTable newSharedSymbolTable(IonReader reader);
 
+    /**
+     * Materializes a shared symbol table from its serialized form.
+     *
+     * @param reader must not be null.
+     * @param alreadyOnStruct is true if the caller has aleady next-ed onto the struct, false if a next call is needed
+     *
+     * @return a new symbol table instance.
+     */
+    public SymbolTable newSharedSymbolTable(IonReader reader, boolean alreadyOnStruct);
 
     /**
      * Creates a new empty datagram.
@@ -186,7 +198,7 @@ public interface IonSystem
 
     /**
      * Constructs a new loader instance using the given catalog.
-     * 
+     *
      * @see #newLoader()
      */
     public IonLoader newLoader(IonCatalog catalog);
@@ -196,24 +208,8 @@ public interface IonSystem
      * with one configured appropriately, and then access it here.
      *
      * @return not <code>null</code>.
-     *
-     * @see #setLoader(IonLoader)
      */
     public IonLoader getLoader();
-
-
-    /**
-     * Sets the default system loader.
-     *
-     * @param loader The new system loader.
-     * @throws NullPointerException if loader is null.
-     * @throws IllegalArgumentException if <code>loader.getSystem()</code> is
-     * not this system.
-     *
-     * @deprecated Default loader should be immutable.
-     */
-    @Deprecated
-    public void setLoader(IonLoader loader);
 
 
     /**
@@ -327,14 +323,14 @@ public interface IonSystem
 
 
     /**
-     * Creates an new {@link IonReader} instance over Ion text data.
+     * Creates an new {@link IonTextReader} instance over Ion text data.
      * <p>
      * The text is parsed incrementally by the reader, so any syntax errors
-     * will not be detected here.
+     * will not be detected during this call.
      *
      * @param ionText must not be null.
      */
-    public IonReader newReader(String ionText);
+    public IonTextReader newReader(String ionText);
 
     /**
      * Creates an new {@link IonReader} instance over a block of Ion data,
@@ -348,7 +344,9 @@ public interface IonSystem
 
     /**
      * Creates an new {@link IonReader} instance over a block of Ion data,
-     * detecting whether it's text or binary data.
+     * detecting whether it's text or binary data.  If the input data is
+     * text this may return an (@link IonTextReader) which can report the
+     * line and offset position of the parser for error reporting.
      *
      * @param ionData is used only within the range of bytes starting at
      * {@code offset} for {@code len} bytes.
@@ -363,7 +361,9 @@ public interface IonSystem
 
     /**
      * Creates a new {@link IonReader} instance over a stream of Ion data,
-     * detecting whether it's text or binary data.
+     * detecting whether it's text or binary data. If the input data is
+     * text this may return an (@link IonTextReader) which can report the
+     * line and offset position of the parser for error reporting.
      * <p>
      * <b>NOTE:</b> The current implementation of this method reads the entire
      * contents of the input stream into memory.
@@ -480,6 +480,17 @@ public interface IonSystem
 
     //-------------------------------------------------------------------------
     // DOM creation
+
+
+    /**
+     * Extracts the current value from a reader into an {@link IonValue}.
+     * The caller must position the reader on the correct value by calling
+     * {@link IonReader#next()} beforehand.
+     *
+     * @return a new value object, not null.
+     */
+    public IonValue newValue(IonReader reader);
+
 
     /**
      * Constructs a new <code>null.blob</code> instance.

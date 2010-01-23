@@ -4,7 +4,7 @@ import com.amazon.ion.DirectoryTestSuite;
 import com.amazon.ion.FileTestCase;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
-import com.amazon.ion.IonType;
+import com.amazon.ion.TestUtils;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -64,39 +64,9 @@ public class BadIonStreamingTests extends DirectoryTestSuite {
             // to make sure the iterator made the right
             // choice of binary or text?  Or should be test
             // that somewhere else?
-            readEverything(it);
-        }
 
-        void readEverything(IonReader it) {
-            while (it.hasNext()) {
-                IonType t = it.next();
-                switch (t) {
-                    case NULL:
-                    case BOOL:
-                    case INT:
-                    case FLOAT:
-                    case DECIMAL:
-                    case TIMESTAMP:
-                    case STRING:
-                    case SYMBOL:
-                    case BLOB:
-                    case CLOB:
-                        if (this.myFileIsBinary) break; // really a no op to shut up the warning
-                        break;
-                    case STRUCT:
-                    case LIST:
-                    case SEXP:
-                        it.stepIn();
-                        readEverything(it);
-                        it.stepOut();
-                        break;
-                    case DATAGRAM:
-                        fail("datagram not expected");
-                }
-            }
-            return;
+            TestUtils.deepRead(it);
         }
-
     }
 
     public static TestSuite suite() {

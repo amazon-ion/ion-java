@@ -66,13 +66,13 @@ abstract class IonTextImpl
     protected final void _set_value(String value)
     {
         _text_value = value;
-        _hasNativeValue = true;
+        _hasNativeValue(true);
     }
 
     @Override
     public final boolean isNullValue()
     {
-        if (!_hasNativeValue) return super.isNullValue();
+        if (!_hasNativeValue()) return super.isNullValue();
         return (_text_value == null);
     }
 

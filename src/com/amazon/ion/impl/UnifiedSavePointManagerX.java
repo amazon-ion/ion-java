@@ -45,7 +45,7 @@ public class UnifiedSavePointManagerX
     SavePoint           _active_stack;
     int                 _open_save_points;
 
-    UnifiedSavePointManagerX(UnifiedInputStreamX  stream) {
+    public UnifiedSavePointManagerX(UnifiedInputStreamX  stream) {
         _stream = stream;
         _buffer = stream._buffer;
         _inuse = null;

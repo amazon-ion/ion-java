@@ -86,11 +86,11 @@ public class GoodIonTests
         // TODO JIRA ION-8 fix Unicode bugs and enable test cases
         return new String[]
         {
-            "equivs/stringU0001D11E.ion",
-            "equivs/stringU0120.ion",
-            "equivs/stringU2021.ion",
-            "equivs/symbols.ion",
-            "equivs/textNewlines.ion",
+//            "equivs/stringU0001D11E.ion",
+//            "equivs/stringU0120.ion",
+//            "equivs/stringU2021.ion",
+//            "equivs/symbols.ion",
+//            "equivs/textNewlines.ion",
         };
     }
 }

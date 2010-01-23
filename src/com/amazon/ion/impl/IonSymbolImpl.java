@@ -29,6 +29,8 @@ public final class IonSymbolImpl
 
     private static final int NULL_SYMBOL_ID = 0;
 
+    private static final int HASH_SIGNATURE =
+        IonType.SYMBOL.toString().hashCode();
 
     /**
      * SID is zero when this is null.symbol
@@ -42,7 +44,7 @@ public final class IonSymbolImpl
     public IonSymbolImpl(IonSystemImpl system)
     {
         this(system, NULL_SYMBOL_TYPEDESC);
-        _hasNativeValue = true; // Since this is null
+        _hasNativeValue(true); // Since this is null
     }
 
     public IonSymbolImpl(IonSystemImpl system, String name)
@@ -79,6 +81,22 @@ public final class IonSymbolImpl
         return clone;
     }
 
+    /**
+     * Implements {@link Object#hashCode()} consistent with equals. This
+     * implementation uses the hash of the string value XOR'ed with a constant.
+     *
+     * @return  An int, consistent with the contracts for
+     *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
+     */
+    @Override
+    public int hashCode() {
+        int hash = HASH_SIGNATURE;
+        if (!isNullValue())  {
+            hash ^= stringValue().hashCode();
+        }
+        return hash;
+    }
+
     public IonType getType()
     {
         return IonType.SYMBOL;
@@ -90,7 +108,7 @@ public final class IonSymbolImpl
         if (this.isNullValue()) return null;
 
         makeReady();
-        if (this._hasNativeValue) {
+        if (this._hasNativeValue()) {
             return _get_value();
         }
         return this.getSymbolTable().findSymbol(this.getSymbolId());
@@ -112,7 +130,7 @@ public final class IonSymbolImpl
 
         // TODO this can be streamlined
         if (mySid == UNKNOWN_SYMBOL_ID) {
-            assert _hasNativeValue == true && isDirty();
+            assert _hasNativeValue() == true && isDirty();
             SymbolTable symtab = getSymbolTable();
             if (symtab == null) {
                 symtab = materializeSymbolTable();
@@ -153,7 +171,7 @@ public final class IonSymbolImpl
     @Override
     protected int getNativeValueLength()
     {
-        assert _hasNativeValue == true;
+        assert _hasNativeValue() == true;
 
         if (this.isIonVersionMarker()) {
             return IonConstants.BINARY_VERSION_MARKER_SIZE;
@@ -171,9 +189,9 @@ public final class IonSymbolImpl
         assert SystemSymbolTable.ION_1_0.equals(this._get_value());
 
         _is_IonVersionMarker = isIVM;
-        _isSystemValue = true;
-        _hasNativeValue = true;
-        _isMaterialized = true;
+        _isSystemValue(true);
+        _hasNativeValue(true);
+        _isMaterialized(true);
 
         mySid = SystemSymbolTable.ION_1_0_SID;
     }
@@ -181,10 +199,10 @@ public final class IonSymbolImpl
     @Override
     protected int computeLowNibble(int valuelen)
     {
-        assert _hasNativeValue == true;
+        assert _hasNativeValue() == true;
 
         if (mySid == UNKNOWN_SYMBOL_ID) {
-            assert _hasNativeValue == true && isDirty();
+            assert _hasNativeValue() == true && isDirty();
             String name = _get_value();
             mySid = (name == null
                          ? NULL_SYMBOL_ID
@@ -219,7 +237,7 @@ public final class IonSymbolImpl
         super.updateSymbolTable(symtab);
 
         if (mySid < 1 && this.isNullValue() == false) {
-            assert _hasNativeValue == true && isDirty();
+            assert _hasNativeValue() == true && isDirty();
             mySid = symtab.addSymbol(this._get_value());
         }
     }
@@ -267,10 +285,10 @@ public final class IonSymbolImpl
     protected void doMaterializeValue(IonBinary.Reader reader)
         throws IOException
     {
-        assert this._isPositionLoaded == true && this._buffer != null;
+        assert this._isPositionLoaded() == true && this._buffer != null;
 
         // a native value trumps a buffered value
-        if (_hasNativeValue) return;
+        if (_hasNativeValue()) return;
 
         // the reader will have been positioned for us
         assert reader.position() == this.pos_getOffsetAtValueTD();
@@ -311,7 +329,7 @@ public final class IonSymbolImpl
             }
         }
 
-        _hasNativeValue = true;
+        _hasNativeValue(true);
     }
 
 

@@ -4,15 +4,39 @@ package com.amazon.ion;
 
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.ListIterator;
 
 
 
 /**
  * Common functionality of Ion <code>list</code> and <code>sexp</code> types.
+ * <p>
+ * Ion sequences implement the standard Java {@link List} interface, behaving
+ * generally as expected, with the following exceptions:
+ * <ul>
+ *   <li>
+ *     Due to the reference-equality-based semantics of Ion sequences, methods
+ *     like {@link #remove(Object)} do not use {@link Object#equals} as
+ *     specified by the contract of {@link java.util.Collection}.
+ *     Instead they use reference equality ({@code ==} operator) to find the
+ *     given instance.
+ *   </li>
+ *   <li>
+ *     Any given {@link IonValue} instance may be a child of at most one
+ *     {@link IonContainer}.  Instances may be children of any number of
+ *     non-Ion {@link Collection}s.
+ *   </li>
+ *   <li>
+ *     The method {@link #subList(int, int)} is not implemented at all.
+ *     We think it will be quite challenging to get correct, and decided that
+ *     it was still valuable to extend {@link List} even with this contractual
+ *     violation.
+ *   </li>
+ * </ul>
  */
 public interface IonSequence
-    extends IonContainer, Collection<IonValue>
+    extends IonContainer, List<IonValue>
 {
     /**
      * Returns the element at the specified position in this sequence.
@@ -94,6 +118,45 @@ public interface IonSequence
      * is invoked, not when this method is invoked.
      */
     public ValueFactory add(int index);
+
+
+    /**
+     * Replaces the element at the specified position in this list with the
+     * specified element.
+     *
+     * @param index index of the element to replace.
+     * @param element element to be stored at the specified position.
+     * @return the element previously at the specified index.
+     *
+     * @throws UnsupportedOperationException
+     *   if this is an {@link IonDatagram}.
+     * @throws NullPointerException
+     *   if the specified element is {@code null}.
+     * @throws ContainedValueException
+     *   if the specified element is already part of a container.
+     * @throws IllegalArgumentException
+     *   if the specified element is an {@link IonDatagram}.
+     * @throws ReadOnlyValueException
+     *   if this value or the specified element {@link #isReadOnly()}.
+     * @throws IndexOutOfBoundsException
+     *   if the index is out of range ({@code index < 0 || index >= size()}).
+     */
+    public IonValue set(int index, IonValue element);
+
+
+    /**
+     * Removes the element at the specified position.
+     * Shifts any subsequent elements to the left (subtracts one from their
+     * indices). Returns the element that was removed from the list.
+     *
+     * @param index the index of the elment to be removed.
+     *
+     * @return the element previously at the specified position.
+     *
+     * @throws IndexOutOfBoundsException if the index is out of range
+     * (index < 0 || index >= size()).
+     */
+    public IonValue remove(int index);
 
 
     /**
@@ -224,11 +287,69 @@ public interface IonSequence
     public IonValue[] toArray();
 
 
-    // TODO temporary until we declare implements Collection
+    /**
+     * Appends all of the elements in the specified collection to the end of
+     * this sequence, in the order that they are returned by the collection's
+     * iterator.
+     * The behavior of this operation is unspecified if the specified
+     * collection is modified while the operation is in progress.
+     * (Note that this will occur if the specified collection is this sequence,
+     * and it's nonempty.)
+     * <p>
+     * Since Ion values can only have a single parent, this method will fail if
+     * the given collection is a non-empty {@link IonContainer}.
+     *
+     * @param c
+     * elements to be appended to this sequence.
+     *
+     * @return {@code true} if this sequence changed as a result of the call.
+     *
+     * @throws UnsupportedOperationException
+     * if this is an {@link IonDatagram}.
+     * @throws ClassCastException
+     * if one of the elements of the collection is not an {@link IonValue}
+     * @throws NullPointerException
+     * if one of the elements of the collection is {@code null}.
+     * @throws ContainedValueException
+     * if one of the elements is already contained by an {@link IonContainer}.
+     */
     public boolean addAll(Collection<? extends IonValue> c);
 
-    // TODO temporary until we declare implements List
-//    public boolean addAll(int index, Collection<? extends IonValue> c); // OPTIONAL
+
+    /**
+     * Inserts all of the elements in the specified collection into this
+     * sequence at the specified position. Shifts the element currently at that
+     * position (if any) and any subsequent elements to the right (increases
+     * their indices). The new elements will appear in this sequence in the
+     * order that they are returned by the specified collection's iterator.
+     * The behavior of this operation is unspecified if the specified
+     * collection is modified while the operation is in progress.
+     * (Note that this will occur if the specified collection is this sequence,
+     * and it's nonempty.)
+     * <p>
+     * Since Ion values can only have a single parent, this method will fail if
+     * the given collection is a non-empty {@link IonContainer}.
+     *
+     * @param index
+     * index at which to insert first element from the specified collection.
+     * @param c
+     * elements to be inserted into this sequence.
+     *
+     * @return {@code true} if this sequence changed as a result of the call.
+     *
+     * @throws UnsupportedOperationException
+     * if this is an {@link IonDatagram}.
+     * @throws ClassCastException
+     * if one of the elements of the collection is not an {@link IonValue}
+     * @throws NullPointerException
+     * if one of the elements of the collection is {@code null}.
+     * @throws ContainedValueException
+     * if one of the elements is already contained by an {@link IonContainer}.
+     * @throws IndexOutOfBoundsException
+     * if the index is out of range (index < 0 || index > size()).
+     */
+    public boolean addAll(int index, Collection<? extends IonValue> c);
+
 
     /**
      * Returns a list iterator of the elements in this sequence (in proper
@@ -255,16 +376,39 @@ public interface IonSequence
      * to the {@code next} method).
      *
      * @throws IndexOutOfBoundsException
-     * if the index is out of range (index < 0 || index > size()).
+     * if the index is out of range ({@code index < 0 || index > size()}).
      */
     public ListIterator<IonValue> listIterator(int index);
 
-//    public IonValue remove(int index); // OPTIONAL
-//    public IonValue set(int index, IonValue element); // OPTIONAL
-//    public List<IonValue> subList(int fromIndex, int toIndex);
+
+    /**
+     * This inherited method is not yet supported.
+     * <p>
+     * Vote for JIRA issue ION-92 if you need this.
+     *
+     * @throws UnsupportedOperationException at every call.
+     *
+     * @see <a href="https://issue-tracking.amazon.com/browse/ION-92">ION-92</a>
+     */
+    public List<IonValue> subList(int fromIndex, int toIndex);
 
     // TODO document that null sequence acts like empty
     public <T> T[] toArray(T[] a);
+
+
+    /**
+     * Removes all children of this sequence, returning them in an array.
+     * This is much more efficient than iterating the sequence and removing
+     * children one by one.
+     *
+     * @return a new array with all of the children of {@code s} in order, or
+     * {@code null} if {@link #isNullValue()}.
+     *
+     * @throws NullPointerException if {@code type} is {@code null}.
+     * @throws ClassCastException if any value in this sequence does not
+     * implement the given type.
+     */
+    public <T extends IonValue> T[] extract(Class<T> type);
 
 
     /**

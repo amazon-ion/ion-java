@@ -317,22 +317,31 @@ public final class Timestamp
 
     void validate_fields()
     {
-        if (_year < 1  || _year > 9999) throw new IllegalArgumentException("year must be between 1 and 9999 inclusive GMT, and local time");
-        if (_month < 1 || _month > 12) throw new IllegalArgumentException("month is between 1 and 12 inclusive");
-        if (_day < 1   || _day > last_day_in_month(_year, _month))
-            throw new IllegalArgumentException("day is between 1 and "+last_day_in_month(_year, _month)+" inclusive");
+        if (_year < 1  || _year > 9999) error_in_field("year must be between 1 and 9999 inclusive GMT, and local time");
+        if (_month < 1 || _month > 12) error_in_field("month is between 1 and 12 inclusive");
+        if (_day < 1   || _day > last_day_in_month(_year, _month)) {
+            error_in_field("day is between 1 and "+last_day_in_month(_year, _month)+" inclusive");
+        }
 
-        if (_hour < 0 || _hour > 23) throw new IllegalArgumentException("hour is between 0 and 23 inclusive");
-        if (_minute < 0 || _minute > 59) throw new IllegalArgumentException("minute is between 0 and 59 inclusive");
-        if (_second < 0 || _second > 59) throw new IllegalArgumentException("second is between 0 and 59 inclusive");
+        if (_hour < 0 || _hour > 23)     error_in_field("hour is between 0 and 23 inclusive");
+        if (_minute < 0 || _minute > 59) error_in_field("minute is between 0 and 59 inclusive");
+        if (_second < 0 || _second > 59) error_in_field("second is between 0 and 59 inclusive");
 
         if (this._precision == Precision.FRACTION) {
-            if (_fraction == null)
-                throw new IllegalArgumentException("fractional seconds cannot be null when the precision is Timestamp.TT_FRAC");
-            if (_fraction.signum() == -1) throw new IllegalArgumentException("fractional seconds must be greater than or equal to 0 and less than 1");
-            if (BigDecimal.ONE.compareTo(_fraction) != 1)
-                throw new IllegalArgumentException("fractional seconds must be greater than or equal to 0 and less than 1");
+            if (_fraction == null) error_in_field("fractional seconds cannot be null when the precision is Timestamp.TT_FRAC");
+            if (_fraction.signum() == -1) {
+                error_in_field("fractional seconds must be greater than or equal to 0 and less than 1");
+            }
+            if (BigDecimal.ONE.compareTo(_fraction) != 1) {
+                error_in_field("fractional seconds must be greater than or equal to 0 and less than 1");
+            }
         }
+    }
+    static void error_in_field(String message)
+    {
+        IllegalArgumentException e = new IllegalArgumentException(message);
+        //throw new IonException(e);
+        throw e;
     }
 
     /**
@@ -358,6 +367,9 @@ public final class Timestamp
     /**
      * Creates a new Timestamp,precise to the minute,
      * with a given local offset.
+     * <p>
+     * This is equivalent to the corresponding Ion value
+     * {@code YYYY-MM-DDThh:mm+-oo:oo}.
      */
     public Timestamp(int year, int month, int day,
                      int hour, int minute,
@@ -378,6 +390,9 @@ public final class Timestamp
     /**
      * Creates a new Timestamp, precise to the second,
      * with a given local offset.
+     * <p>
+     * This is equivalent to the corresponding Ion value
+     * {@code YYYY-MM-DDThh:mm:ss+-oo:oo}.
      */
     public Timestamp(int year, int month, int day,
                      int hour, int minute, int second,
@@ -399,13 +414,20 @@ public final class Timestamp
     /**
      * Creates a new Timestamp, precise to the fractional second,
      * with a given local offset.
+     * <p>
+     * This is equivalent to the corresponding Ion value
+     * {@code YYYY-MM-DDThh:mm:ss.fff+-oo:oo}.
+     *
+     * @param frac must not be null.  If negative, the absolute value is used.
+     *
+     * @throws NullPointerException if {@code frac} is {@code null}.
      */
     public Timestamp(int year, int month, int day,
                      int hour, int minute, int second, BigDecimal frac,
                      Integer offset)
     {
         this._precision = Precision.FRACTION;
-        this._fraction = frac;
+        this._fraction = frac.abs();
         this._second = second;
         this._minute = minute;
         this._hour = hour;
@@ -437,7 +459,7 @@ public final class Timestamp
         default:
             throw new IllegalArgumentException("invalid Precision passed to constructor");
         case FRACTION:
-            this._fraction = frac;
+            this._fraction = frac.abs();
         case SECOND:
             this._second = zsecond;
         case MINUTE:
@@ -452,6 +474,7 @@ public final class Timestamp
         }
         validate_fields();
         this._offset = offset;
+        // TODO why doesn't this do applyOffset() like the other constructors?
     }
 
 
@@ -555,7 +578,9 @@ public final class Timestamp
         int temp, pos;
         int length = -1;
 
-        if (image == null || image.length() < 1) throw new IllegalArgumentException("invalid timestamp image");
+        if (image == null || image.length() < 1) {
+            throw new IllegalArgumentException("empty timestamp");
+        }
         length = image.length();
 
         // check for 'null.timestamp'
@@ -568,7 +593,7 @@ public final class Timestamp
                 }
                 return null;
             }
-            throw new IllegalArgumentException("invalid timestamp image");
+            throw new IllegalArgumentException("invalid timestamp syntax: " + image);
         }
 
         int year  = 1;
@@ -686,12 +711,12 @@ public final class Timestamp
                 case DAY:
                     break;
                 default:
-                    throw new IllegalArgumentException("invalid timezone offset: missing timezone offset");
+                    error_in_field("invalid timezone offset: missing timezone offset");
             }
             offset = null;
         }
         if (image.length() > (pos + 1) && !isValidFollowChar(image.charAt(pos + 1))) {
-            throw new IllegalArgumentException("invalid excess characters encountered");
+            error_in_field("invalid excess characters encountered");
         }
 
         Timestamp ts =
@@ -714,13 +739,13 @@ public final class Timestamp
 
         for (ii=start; ii<end; ii++) {
             char c = in.charAt(ii);
-            if (!Character.isDigit(c)) throw new IllegalArgumentException(msg+" has an invalid character: '"+c+"' encountered");
+            if (!Character.isDigit(c)) error_in_field(msg+" has an invalid character: '"+c+"' encountered");
             value *= 10;
             value += c - '0';
         }
         if (terminator != -1) {
             if (ii >= in.length() || in.charAt(ii) != terminator) {
-                throw new IllegalArgumentException(msg+" has a bad terminator character: '"+terminator+"' expected");
+                error_in_field(msg+" has a bad terminator character: '"+terminator+"' expected");
             }
         }
         return value;
@@ -1254,7 +1279,7 @@ public final class Timestamp
         while (length > 0) {
             length--;
             int next = value / 10;
-            temp[length] =  (char)((int)'0' + (value - next*10));
+            temp[length] =  (char)('0' + (value - next*10));
             value = next;
         }
         while (length > 0) {
@@ -1323,10 +1348,16 @@ public final class Timestamp
      * Note that a {@code 0} result does not imply that the two values are
      * {@link #equals}, as the timezones or precision of the two values may be
      * different.
+     * <p>
+     * This method is provided in preference to individual methods for each of
+     * the six boolean comparison operators (<, ==, >, >=, !=, <=).
+     * The suggested idiom for performing these comparisons is:
+     * {@code (x.compareTo(y) }<em>&lt;op></em>{@code 0)},
+     * where <em>&lt;op></em> is one of the six comparison operators.
      *
      * @param t second timestamp to compare 'this' to
-     * @return a negative integer, zero, or a positive integer as this object
-     * is less than, equal to, or greater than the specified object.
+     * @return -1, 0, or 1 as this {@code Timestamp}
+     * is less than, equal to, or greater than {@code t}.
      *
      * @throws NullPointerException if {@code t} is null.
      */
@@ -1352,8 +1383,8 @@ public final class Timestamp
     /**
      * Compares this {@link Timestamp} to the specified Object.
      * The result is {@code true} if and only if the parameter is a
-     * {@link Timestamp} object that represents the same point in time and has
-     * the same precision as this object.
+     * {@link Timestamp} object that represents the same point in time,
+     * precision, and local offset as this object.
      * <p>
      * Use the {@link #compareTo(Object)} method to compare only the point in
      * time.
@@ -1369,7 +1400,7 @@ public final class Timestamp
      * Compares this {@link Timestamp} to another.
      * The result is {@code true} if and only if the parameter
      * represents the same point in time and has
-     * the same precision as this object.
+     * the same precision and local offset as this object.
      * <p>
      * Use the {@link #compareTo(Timestamp)} method to compare only the point
      * in time.
@@ -1380,6 +1411,7 @@ public final class Timestamp
         if (t == null) return false;
 
         // if the precisions are not the same the values are not
+        // precision doesn't matter WRT to equality
         if (this._precision != t._precision) return false;
 
         // if the local offset are not the same the values are not

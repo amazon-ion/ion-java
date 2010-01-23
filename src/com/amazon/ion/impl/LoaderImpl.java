@@ -68,10 +68,12 @@ public class LoaderImpl
     {
         if (USE_NEW_READERS)
         {
-            IonTextReader textReader = mySystem.newSystemReader(ionText);
+            IonReader reader = mySystem.newSystemReader(ionText);
             try
             {
-                IonDatagramImpl dg = new IonDatagramImpl(mySystem, myCatalog, textReader);
+                IonDatagramImpl dg =
+                    new IonDatagramImpl(mySystem, myCatalog, reader);
+
                 return dg;
             }
             catch (IOException e)
@@ -138,7 +140,7 @@ public class LoaderImpl
             if (! isBinary)
             {
                 IonReader reader = mySystem.newSystemReader(ionData);
-                assert reader instanceof IonTextReader;
+                assert reader instanceof IonTextReaderImpl;
                 try
                 {
                     IonDatagramImpl dg = new IonDatagramImpl(mySystem, myCatalog, reader);
@@ -183,7 +185,8 @@ public class LoaderImpl
         if (USE_NEW_READERS)
         {
             IonReader reader = mySystem.newSystemReader(pushback);
-            assert reader instanceof IonTextReader;
+            assert reader.getIterationType().isText();
+            //assert reader instanceof IonTextReaderImpl;
             try
             {
                 IonDatagramImpl dg = new IonDatagramImpl(mySystem, myCatalog, reader);

@@ -2,7 +2,6 @@
 
 package com.amazon.ion;
 
-import java.util.Arrays;
 import com.amazon.ion.impl.IonSystemImpl;
 import com.amazon.ion.impl.UserReader;
 import com.amazon.ion.system.SimpleCatalog;
@@ -18,6 +17,7 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.Iterator;
 
 /**
@@ -287,14 +287,19 @@ public class LoaderTest
         }
         catch (IonException ie) { /* ok */ }
     }
-    
+
     public void testCatalogOnLoader() throws Exception {
         IonSystem sys = new IonSystemImpl(Symtabs.CATALOG);
         IonDatagram dg = sys.newDatagram(Symtabs.CATALOG.getTable("fred", 1));
         dg.add().newSymbol("fred_1");
         byte[] raw = dg.getBytes();
-        assertEquals("fred_1", ((IonSymbol) sys.newLoader().load(raw).get(0)).stringValue());
-        
+        IonLoader loader = sys.newLoader();
+        IonDatagram dg_fred = loader.load(raw);
+        IonValue v = dg_fred.get(0);
+        IonSymbol sym_fred = (IonSymbol) v;
+        String string_fred = sym_fred.stringValue();
+        assertEquals("fred_1", string_fred);
+
         // let's make an interesting catalog that has
         // a different v1 fred symtab
         IonMutableCatalog newCatalog = new SimpleCatalog();

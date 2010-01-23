@@ -1,5 +1,6 @@
 package com.amazon.ion.util;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDecimal;
@@ -15,7 +16,6 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.Timestamp;
 import java.io.IOException;
 import java.io.InputStream;
-import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -87,6 +87,12 @@ import java.util.Map;
  * @author Almann Goo
  */
 public final class Equivalence {
+
+    /**
+     * Marker for code that needs to be altered in order to support a public
+     * comparison API to determine ordering of values, not just equality.
+     */
+    private static final boolean PUBLIC_COMPARISON_API = false;
 
     private static final boolean _debug_stop_on_false = true;
 
@@ -291,7 +297,6 @@ public final class Equivalence {
         boolean      bo1, bo2;
         BigInteger   bi1, bi2;
         double       do1, do2;
-        BigDecimal   de1, de2;
         String       string1, string2;
         IonValue     stop_value;
         IonValue     next1, next2;
@@ -353,10 +358,18 @@ public final class Equivalence {
                     result = Double.compare(do1, do2);
                     break;
                 case DECIMAL:
-                    de1 = ((IonDecimal) v1).bigDecimalValue();
-                    de2 = ((IonDecimal) v2).bigDecimalValue();
-                    result = de1.compareTo(de2);
+                {
+                    IonDecimal d1 = (IonDecimal) v1;
+                    IonDecimal d2 = (IonDecimal) v2;
+
+                    Decimal dec1 = d1.decimalValue();
+                    Decimal dec2 = d2.decimalValue();
+
+                    assert !PUBLIC_COMPARISON_API;
+                    boolean eq = Decimal.equals(dec1, dec2);
+                    result = (eq ? 0 : 1);
                     break;
+                }
                 case TIMESTAMP:
                 {
                     Timestamp t1 = ((IonTimestamp) v1).timestampValue();
@@ -364,9 +377,8 @@ public final class Equivalence {
                     // There's no "strict" before/after in Timestamp, so
                     // fall through to non-strict comparison.
                     if (strict) {
-                        // TODO this is broken for strict comparison
-                        // since we don't actually distinguish before/after
-                        // but that's not exposed through public APIs.
+                        assert !PUBLIC_COMPARISON_API;
+                        // Report inequality, but not proper ordering.
                         result = (t1.equals(t2) ? 0 : 1);
                     }
                     else {

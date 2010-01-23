@@ -37,7 +37,7 @@ public class ListTest
 
 
     @Override
-    protected IonList wrapAndParse(String... children)
+    protected String wrap(String... children)
     {
         StringBuilder buf = new StringBuilder();
         buf.append('[');
@@ -50,7 +50,13 @@ public class ListTest
             }
         }
         buf.append(']');
-        String text = buf.toString();
+        return buf.toString();
+    }
+
+    @Override
+    protected IonList wrapAndParse(String... children)
+    {
+        String text = wrap(children);
         return (IonList) system().singleValue(text);
     }
 

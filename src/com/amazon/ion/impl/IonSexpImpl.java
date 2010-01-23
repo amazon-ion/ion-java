@@ -24,6 +24,8 @@ public class IonSexpImpl
         IonConstants.makeTypeDescriptor(IonConstants.tidSexp,
                                         IonConstants.lnIsNullSequence);
 
+    private static final int HASH_SIGNATURE =
+        IonType.SEXP.toString().hashCode();
 
     /**
      * Constructs a <code>null.sexp</code> value.
@@ -89,6 +91,17 @@ public class IonSexpImpl
         }
 
         return clone;
+    }
+
+    /**
+     * Implements {@link Object#hashCode()} consistent with equals.
+     *
+     * @return  An int, consistent with the contracts for
+     *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
+     */
+    @Override
+    public int hashCode() {
+        return sequenceHashCode(HASH_SIGNATURE);
     }
 
     public IonType getType()

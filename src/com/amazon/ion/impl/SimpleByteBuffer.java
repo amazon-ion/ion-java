@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonTimestampImpl.precisionIncludes;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.Timestamp.Precision;
@@ -429,13 +430,21 @@ done:       for (;;) {
             return retvalue;
         }
 
-        public BigDecimal readDecimal(int len) throws IOException
+        /**
+         * Near clone of {@link IonReaderBinaryRawX#readDecimal(int)}
+         * and {@link IonBinary.Reader#readDecimalValue(IonDecimalImpl, int)}
+         * so keep them in sync!
+         */
+        public Decimal readDecimal(int len) throws IOException
         {
-            BigDecimal bd;
+            // TODO this doesn't seem like the right math context
+            MathContext mathContext = MathContext.DECIMAL128;
+
+            Decimal bd;
 
             // we only write out the '0' value as the nibble 0
             if (len == 0) {
-                bd = new BigDecimal(0, MathContext.DECIMAL128);
+                bd = Decimal.valueOf(0, mathContext);
             }
             else {
                 // otherwise we to it the hard way ....
@@ -444,12 +453,13 @@ done:       for (;;) {
                 int         bitlen = len - (this.position() - startpos);
 
                 BigInteger value;
+                int signum;
                 if (bitlen > 0)
                 {
                     byte[] bits = new byte[bitlen];
                     this.read(bits, 0, bitlen);
 
-                    int signum = 1;
+                    signum = 1;
                     if (bits[0] < 0)
                     {
                         // value is negative, clear the sign
@@ -459,12 +469,21 @@ done:       for (;;) {
                     value = new BigInteger(signum, bits);
                 }
                 else {
+                    signum = 0;
                     value = BigInteger.ZERO;
                 }
 
                 // Ion stores exponent, BigDecimal uses the negation "scale"
                 int scale = -exponent;
-                bd = new BigDecimal(value, scale, MathContext.DECIMAL128);
+                if (value.signum() == 0 && signum == -1)
+                {
+                    assert value.equals(BigInteger.ZERO);
+                    bd = Decimal.negativeZero(scale, mathContext);
+                }
+                else
+                {
+                    bd = Decimal.valueOf(value, scale, mathContext);
+                }
             }
             return bd;
         }
@@ -558,14 +577,20 @@ done:       for (;;) {
             return new String(chars, 0, ii);
         }
 
-        public int readUnicodeScalar() throws IOException {
-            int c = -1, b;
+        public final int readUnicodeScalar() throws IOException {
+            int b;
 
             b = read();
             // ascii is all good, even -1 (eof)
-            if (b < 0x80) {
-                return b;
+            if (b >= 0x80) {
+                b = readUnicodeScalar_helper(b);
+
             }
+            return b;
+        }
+        private final  int readUnicodeScalar_helper(int b) throws IOException
+        {
+            int c = -1;
 
             // now we start gluing the multi-byte value together
             if ((b & 0xe0) == 0xc0) {
@@ -627,6 +652,183 @@ done:       for (;;) {
         }
     }
 
+    static final class UserByteWriter extends OutputStream implements ByteWriter
+    {
+        SimpleByteWriter _simple_writer;
+        OutputStream     _user_stream;
+        int              _position;
+        int              _limit;
+        int              _buffer_size;
+
+        // constants used for the various write routines to verify
+        // sufficient room in the output buffer for writing
+        private final static int MAX_UINT7_BINARY_LENGTH = 5; // (1 + (32 / 7))
+        private final static int MAX_FLOAT_BINARY_LENGTH = 8; // ieee 64 bit float
+
+        private final static int REQUIRED_BUFFER_SPACE   = 8; // max of the required lengths
+
+        UserByteWriter(OutputStream userOuputStream, byte[] buf)
+        {
+            if (buf == null || buf.length < REQUIRED_BUFFER_SPACE) {
+                throw new IllegalArgumentException("requires a buffer at least "+REQUIRED_BUFFER_SPACE+" bytes long");
+            }
+
+            SimpleByteBuffer bytebuffer = new SimpleByteBuffer(buf);
+            _simple_writer =  new SimpleByteWriter(bytebuffer);
+            _user_stream = userOuputStream;
+            _buffer_size = buf.length;
+            _limit = _buffer_size;
+        }
+
+        private final void checkForSpace(int needed) {
+            if (_position + needed > _limit) {
+                flush();
+            }
+        }
+
+        /**
+         * this flushes the current buffer to the users output
+         * stream and resets the buffer.  It is called automatically
+         * as the buffer fills.  It can be called at any time if more
+         * frequent flushing is desired.
+         */
+        @Override
+        public void flush() {
+            // is there anything to flush?
+            if (_position + _buffer_size > _limit) {
+                try {
+                    _simple_writer.flushTo(_user_stream);
+                }
+                catch (IOException e) {
+                    throw new IonException(e);
+                }
+                _limit = _position + _buffer_size;
+            }
+        }
+
+        public void insert(int length)
+        {
+            throw new UnsupportedOperationException("use a SimpleByteWriter if you need to insert");
+        }
+
+        public int position()
+        {
+            return _position;
+        }
+
+        public void position(int newPosition)
+        {
+            throw new UnsupportedOperationException("use a SimpleByteWriter if you need to set your position");
+        }
+
+        public void remove(int length)
+        {
+            throw new UnsupportedOperationException("use a SimpleByteWriter if you need to remove bytes");
+        }
+
+        @Override
+        public void write(int b) throws IOException
+        {
+            write((byte)b);
+        }
+
+        public void write(byte b) throws IOException
+        {
+            checkForSpace(1);
+            _simple_writer.write(b);
+            _position++;
+        }
+
+        // cloned from SimpleByteBuffer as we need to check the
+        // length and this may require flushing more often than
+        // the default writeDecimal supports.
+        public int writeDecimal(BigDecimal value) throws IOException
+        {
+            int returnlen = _simple_writer.writeDecimal(value, this);
+            return returnlen;
+        }
+
+        public int writeFloat(double value) throws IOException
+        {
+            checkForSpace(MAX_FLOAT_BINARY_LENGTH);
+            int returnlen = _simple_writer.writeFloat(value);
+            return returnlen;
+        }
+
+        public int writeIonInt(long value, int len) throws IOException
+        {
+            checkForSpace(len);
+            int returnlen = _simple_writer.writeIonInt(value, len);
+            return returnlen;
+        }
+
+        public int writeIonInt(int value, int len) throws IOException
+        {
+            checkForSpace(len);
+            int returnlen = _simple_writer.writeIonInt(value, len);
+            return returnlen;
+        }
+
+        public int writeString(String value) throws IOException
+        {
+            int returnlen = _simple_writer.writeString(value, this);
+            return returnlen;
+        }
+
+        public void writeTypeDesc(int typeDescByte) throws IOException
+        {
+            checkForSpace(1);
+            _simple_writer.writeTypeDesc(typeDescByte);
+        }
+
+        public int writeTypeDescWithLength(int typeid, int lenOfLength,
+                                           int valueLength) throws IOException
+        {
+            checkForSpace(1 + MAX_UINT7_BINARY_LENGTH);
+            int returnlen = _simple_writer.writeTypeDescWithLength(typeid, lenOfLength, valueLength);
+            return returnlen;
+        }
+
+        public int writeTypeDescWithLength(int typeid, int valueLength) throws IOException
+        {
+            checkForSpace(1 + MAX_UINT7_BINARY_LENGTH);
+            int returnlen = _simple_writer.writeTypeDescWithLength(typeid, valueLength);
+            return returnlen;
+        }
+
+        public int writeVarInt(long value, int len, boolean forceZeroWrite)
+            throws IOException
+        {
+            checkForSpace(len);
+            int returnlen = _simple_writer.writeVarInt(value, len, forceZeroWrite);
+            return returnlen;
+        }
+
+        public int writeVarInt(int value, int len, boolean forceZeroWrite)
+            throws IOException
+        {
+            checkForSpace(len);
+            int returnlen = _simple_writer.writeVarInt(value, len, forceZeroWrite);
+            return returnlen;
+        }
+
+        public int writeVarUInt(int value, int len, boolean forceZeroWrite)
+            throws IOException
+        {
+            checkForSpace(len);
+            int returnlen = _simple_writer.writeVarUInt(value, len, forceZeroWrite);
+            return returnlen;
+        }
+
+        public int writeVarUInt(long value, int len, boolean forceZeroWrite)
+            throws IOException
+        {
+            checkForSpace(len);
+            int returnlen = _simple_writer.writeVarUInt(value, len, forceZeroWrite);
+            return returnlen;
+        }
+    }
+
     static final class SimpleByteWriter extends OutputStream implements ByteWriter
     {
         private static final int _ib_FLOAT64_LEN         =    8;
@@ -638,6 +840,11 @@ done:       for (;;) {
         SimpleByteWriter(SimpleByteBuffer bytebuffer) {
             _buffer = bytebuffer;
             _position = bytebuffer._start;
+        }
+
+        protected void flushTo(OutputStream userOutput) throws IOException {
+            _buffer.writeBytes(userOutput);
+            _position = 0;
         }
 
         public int position()
@@ -726,7 +933,7 @@ done:       for (;;) {
             return written_len;
         }
 
-        public int writeTypeDescWithLength2(int typeid, int valueLength)
+        public int writeTypeDescWithLength(int typeid, int valueLength)
         {
             int written_len = 1;
 
@@ -867,7 +1074,7 @@ done:       for (;;) {
             return len;
         }
 
-        public int writeVarInt(long value, int len, boolean force_zero_write)
+        public int writeVarInt(long value, int len, boolean forceZeroWrite)
         {
             //int len = 0;
 
@@ -917,7 +1124,7 @@ done:       for (;;) {
                 case 0: write((byte)((value & mask) | 0x80L));
                 }
             }
-            else if (force_zero_write) {
+            else if (forceZeroWrite) {
                 write((byte)0x80);
                 assert len == 1;
             }
@@ -927,7 +1134,7 @@ done:       for (;;) {
             return len;
         }
 
-        public int writeVarUint(long value, int len, boolean force_zero_write)
+        public int writeVarUInt(long value, int len, boolean force_zero_write)
         {
             int mask = 0x7F;
             assert len == IonBinary.lenVarUInt7(value);
@@ -987,7 +1194,18 @@ done:       for (;;) {
             return this.writeULong(dBits, _ib_FLOAT64_LEN);
         }
 
-        public int writeDecimal(BigDecimal value)
+        public int writeDecimal(BigDecimal value) throws IOException
+        {
+            int returnlen = writeDecimal(value, null);
+            return returnlen;
+        }
+
+        // this is a private version that supports both the buffer write
+        // and the output to the user stream.  This is slower (since there
+        // are extra tests, an extra call, and an extra paramenter), but
+        // it avoids duplicating this code.  And decimals are generally
+        // expensive anyway.
+        private int writeDecimal(BigDecimal value, UserByteWriter userWriter) throws IOException
         {
             int returnlen = 0;
             // we only write out the '0' value as the nibble 0
@@ -1005,21 +1223,38 @@ done:       for (;;) {
 
                 // Ion stores exponent, BigDecimal uses the negation "scale"
                 int exponent = -scale;
-                returnlen += this.writeIonInt(exponent, IonBinary.lenVarUInt7(exponent));
+                if (userWriter != null) {
+                    returnlen += userWriter.writeIonInt(exponent, IonBinary.lenVarUInt7(exponent));
+                }
+                else {
+                    returnlen += this.writeIonInt(exponent, IonBinary.lenVarUInt7(exponent));
+                }
 
                 // If the first bit is set, we can't use it for the sign,
                 // and we need to write an extra byte to hold it.
                 boolean needExtraByteForSign = ((bits[0] & 0x80) != 0);
                 if (needExtraByteForSign)
                 {
-                    this.write((byte)(isNegative ? 0x80 : 0x00));
+                    if (userWriter != null) {
+                        userWriter.write((byte)(isNegative ? 0x80 : 0x00));
+                    }
+                    else {
+                        this.write((byte)(isNegative ? 0x80 : 0x00));
+                    }
                     returnlen++;
                 }
                 else if (isNegative)
                 {
                     bits[0] |= 0x80;
                 }
-                this.write(bits, 0, bits.length);
+                // if we have a userWriter to write to, we really don't care about
+                // the value in our local buffer.
+                if (userWriter != null) {
+                    userWriter.write(bits, 0, bits.length);
+                }
+                else {
+                    this.write(bits, 0, bits.length);
+                }
                 returnlen += bits.length;
             }
             return returnlen;
@@ -1074,16 +1309,17 @@ done:       for (;;) {
 
         final public int writeString(String value) throws IOException
         {
+            int returnlen = writeString(value, null);
+            return returnlen;
+        }
+
+        final private int writeString(String value, UserByteWriter userWriter) throws IOException
+        {
             int len = 0;
 
             for (int ii=0; ii<value.length(); ii++) {
                 int c = value.charAt(ii);
-                if (c < 128) {
-                    // don't even both to call the "utf8" converter for ascii
-                    write((byte)c);
-                    len++;
-                }
-                else {
+                if (c > 127) {
                     if (c >= 0xD800) {
                         if (IonConstants.isHighSurrogate(c)) {
                             ii++;
@@ -1103,58 +1339,32 @@ done:       for (;;) {
                         }
                         // from 0xE000 up the _writeUnicodeScalar will check for us
                     }
-                    len += writeUnicodeScalarAsUTF8(c);
+                    c = IonBinary.makeUTF8IntFromScalar(c);
+                }
+
+                // write it here - try to test userWriter as little as possible
+                if (userWriter == null) {
+                    for (;;) {
+                        write((byte)(c & 0xff));
+                        len++;
+                        if ((c & 0xffffff00) == 0) {
+                            break;
+                        }
+                        c = c >>> 8;
+                    }
+                }
+                else {
+                    for (;;) {
+                        userWriter.write((byte)(c & 0xff));
+                        len++;
+                        if ((c & 0xffffff00) == 0) {
+                            break;
+                        }
+                        c = c >>> 8;
+                    }
                 }
             }
             return len;
-        }
-        final public int writeUnicodeScalarAsUTF8(int c) throws IOException
-        {
-            // TO DO: check this encoding, it is from:
-            //      http://en.wikipedia.org/wiki/UTF-8
-            // we probably should use some sort of Java supported
-            // library for this.  this class might be of interest:
-            //     CharsetDecoder(Charset cs, float averageCharsPerByte, float maxCharsPerByte)
-            // in: java.nio.charset.CharsetDecoder
-
-            int len = -1;
-
-            // first the quick, easy and common case - ascii
-            if (c < 0x80) {
-                write((byte)(0xff & c ));
-                len = 1;
-            }
-            else if (c < 0x800) {
-                // 2 bytes characters from 0x000080 to 0x0007FF
-                write((byte)( 0xff & (0xC0 | (c >> 6)) ));
-                write((byte)( 0xff & (0x80 | (c & 0x3F)) ));
-                len = 2;
-            }
-            else if (c < 0x10000) {
-                // 3 byte characters from 0x800 to 0xFFFF
-                // but only 0x800...0xD7FF and 0xE000...0xFFFF are valid
-                if (c > 0xD7FF && c < 0xE000) {
-                    this.throwUTF8Exception();
-                }
-                write((byte)( 0xff & (0xE0 |  (c >> 12)) ));
-                write((byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) ));
-                write((byte)( 0xff & (0x80 |  (c & 0x3F)) ));
-                len = 3;
-            }
-            else if (c <= 0x10FFFF) {
-                // 4 byte characters 0x010000 to 0x10FFFF
-                // these are are valid
-                write((byte)( 0xff & (0xF0 |  (c >> 18)) ));
-                write((byte)( 0xff & (0x80 | ((c >> 12) & 0x3F)) ));
-                write((byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) ));
-                write((byte)( 0xff & (0x80 | (c & 0x3F)) ));
-                len = 4;
-            }
-            else {
-                this.throwUTF8Exception();
-            }
-            return len;
-
         }
         void throwUTF8Exception() throws IOException
         {

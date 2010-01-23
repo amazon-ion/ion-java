@@ -2,13 +2,11 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.impl.IonReaderTextRawTokensX.IonReaderTextTokenException;
-import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
-import com.amazon.ion.impl.IonScalarConversionsX.CantConvertException;
-
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonIterationType;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonSexp;
@@ -18,6 +16,9 @@ import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.impl.IonReaderTextRawTokensX.IonReaderTextTokenException;
+import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
+import com.amazon.ion.impl.IonScalarConversionsX.CantConvertException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -44,17 +45,26 @@ public class IonReaderTextSystemX
 
     Iterator<String> EMPTY_ITERATOR = new StringIterator(null);
 
-    public IonReaderTextSystemX(CharSequence chars) {
-        UnifiedInputStreamX iis;
-        iis = UnifiedInputStreamX.makeStream(chars);
-        init(iis);
+    protected IonReaderTextSystemX(char[] chars) {
+        this(chars, 0, chars.length);
     }
-    public IonReaderTextSystemX(CharSequence chars, int offset, int length) {
+    protected IonReaderTextSystemX(char[] chars, int offset, int length) {
+        super();
         UnifiedInputStreamX iis;
         iis = UnifiedInputStreamX.makeStream(chars, offset, length);
         init(iis);
     }
-    public IonReaderTextSystemX(Reader userChars) {
+    protected IonReaderTextSystemX(CharSequence chars) {
+        this(chars, 0, chars.length());
+    }
+    protected IonReaderTextSystemX(CharSequence chars, int offset, int length) {
+        super();
+        UnifiedInputStreamX iis;
+        iis = UnifiedInputStreamX.makeStream(chars, offset, length);
+        init(iis);
+    }
+    protected IonReaderTextSystemX(Reader userChars) {
+        super();
         UnifiedInputStreamX iis;
         try {
             iis = UnifiedInputStreamX.makeStream(userChars);
@@ -64,17 +74,17 @@ public class IonReaderTextSystemX
         }
         init(iis);
     }
-    public IonReaderTextSystemX(byte[] bytes) {
-        UnifiedInputStreamX iis;
-        iis = UnifiedInputStreamX.makeStream(bytes);
-        init(iis);
+    protected IonReaderTextSystemX(byte[] bytes) {
+        this(bytes, 0, bytes.length);
     }
-    public IonReaderTextSystemX(byte[] bytes, int offset, int length) {
+    protected IonReaderTextSystemX(byte[] bytes, int offset, int length) {
+        super();
         UnifiedInputStreamX iis;
         iis = UnifiedInputStreamX.makeStream(bytes, offset, length);
         init(iis);
     }
-    public IonReaderTextSystemX(InputStream userBytes) {
+    protected IonReaderTextSystemX(InputStream userBytes) {
+        super();
         UnifiedInputStreamX iis;
         try {
             iis = UnifiedInputStreamX.makeStream(userBytes);
@@ -84,7 +94,8 @@ public class IonReaderTextSystemX
         }
         init(iis);
     }
-    public IonReaderTextSystemX(File file) {
+    protected IonReaderTextSystemX(File file) {
+        super();
         UnifiedInputStreamX iis;
         try {
             InputStream userBytes = new FileInputStream(file);
@@ -95,10 +106,21 @@ public class IonReaderTextSystemX
         }
         init(iis);
     }
-
-    public IonReaderTextSystemX(UnifiedInputStreamX iis) {
+    protected IonReaderTextSystemX(UnifiedInputStreamX iis) {
+        super();
         init(iis);
     }
+
+    public IonIterationType getIterationType()
+    {
+        return IonIterationType.SYSTEM_TEXT;
+    }
+
+    public IonSystem getSystem()
+    {
+        return null;
+    }
+
 
     /**
      * this checks the state of the raw reader to make sure
@@ -202,10 +224,20 @@ public class IonReaderTextSystemX
                 break;
             case DECIMAL:
                 // note that the string was modified above when it was a charsequence
-                _v.setValue(new BigDecimal(s));
+                try {
+                _v.setValue(Decimal.valueOf(s));
+                }
+                catch (NumberFormatException e) {
+                    parse_error(e);
+                }
                 break;
             case FLOAT:
-                _v.setValue(Double.parseDouble(s));
+                try {
+                    _v.setValue(Double.parseDouble(s));
+                }
+                catch (NumberFormatException e) {
+                    parse_error(e);
+                }
                 break;
             case TIMESTAMP:
                 _v.setValue(Timestamp.valueOf(s));
@@ -243,13 +275,31 @@ public class IonReaderTextSystemX
             }
             break;
         case IonTokenConstsX.TOKEN_DECIMAL:
-            _v.setValue(new BigDecimal(s));
+            try {
+            _v.setValue(Decimal.valueOf(s));
+            }
+            catch (NumberFormatException e) {
+                parse_error(e);
+            }
             break;
         case IonTokenConstsX.TOKEN_FLOAT:
-            _v.setValue(Double.parseDouble(s));
+            try {
+                _v.setValue(Double.parseDouble(s));
+            }
+            catch (NumberFormatException e) {
+                parse_error(e);
+            }
+
             break;
         case IonTokenConstsX.TOKEN_TIMESTAMP:
-            _v.setValue(Timestamp.valueOf(s));
+            Timestamp t = null;
+            try {
+                t = Timestamp.valueOf(s);
+            }
+            catch (IllegalArgumentException e) {
+                parse_error(e);
+            }
+            _v.setValue(t);
             break;
         case IonTokenConstsX.TOKEN_SYMBOL_BASIC:
             // this includes the various value keywords like true
@@ -332,15 +382,42 @@ public class IonReaderTextSystemX
         // this should only be called when it actually has to do some work
         assert !_v.hasValueOfType(value_type);
 
-        if (!_v.can_convert(value_type)) {
-            String message = "can't cast from "
-                +IonScalarConversionsX.getValueTypeName(_v.getAuthoritativeType())
-                +" to "
-                +IonScalarConversionsX.getValueTypeName(value_type);
-            throw new CantConvertException(message);
+        if (_v.isNull()) {
+            return;
         }
-        int fnid = _v.get_conversion_fnid(value_type);
-        _v.cast(fnid);
+
+        if (IonType.SYMBOL.equals(_value_type)) {
+            switch(value_type) {
+                case AS_TYPE.int_value:
+                    int sid = _v.getInt();
+                    String sym = getSymbolTable().findSymbol(sid);
+                    _v.setValue(sym);
+                    break;
+                case AS_TYPE.string_value:
+                    sym = _v.getString();
+                    sid = getSymbolTable().findSymbol(sym);
+                    _v.setValue(sid);
+                    break;
+                default:
+                {   String message = "can't cast symbol from "
+                        +IonScalarConversionsX.getValueTypeName(_v.getAuthoritativeType())
+                        +" to "
+                        +IonScalarConversionsX.getValueTypeName(value_type);
+                    throw new CantConvertException(message);
+                }
+            }
+        }
+        else {
+            if (!_v.can_convert(value_type)) {
+                String message = "can't cast from "
+                    +IonScalarConversionsX.getValueTypeName(_v.getAuthoritativeType())
+                    +" to "
+                    +IonScalarConversionsX.getValueTypeName(value_type);
+                throw new CantConvertException(message);
+            }
+            int fnid = _v.get_conversion_fnid(value_type);
+            _v.cast(fnid);
+        }
     }
 
     //
@@ -379,30 +456,40 @@ public class IonReaderTextSystemX
     public BigInteger bigIntegerValue()
     {
         load_or_cast_cached_value(AS_TYPE.bigInteger_value);
+        if (_v.isNull()) return null;
         return _v.getBigInteger();
     }
     @Override
     public BigDecimal bigDecimalValue()
     {
-        load_or_cast_cached_value(AS_TYPE.bigDecimal_value);
+        load_or_cast_cached_value(AS_TYPE.decimal_value);
+        if (_v.isNull()) return null;
         return _v.getBigDecimal();
+    }
+    public Decimal decimalValue()
+    {
+        load_or_cast_cached_value(AS_TYPE.decimal_value);
+        return _v.getDecimal();
     }
     @Override
     public Date dateValue()
     {
         load_or_cast_cached_value(AS_TYPE.date_value);
+        if (_v.isNull()) return null;
         return _v.getDate();
     }
     @Override
     public Timestamp timestampValue()
     {
         load_or_cast_cached_value(AS_TYPE.timestamp_value);
+        if (_v.isNull()) return null;
         return _v.getTimestamp();
     }
     @Override
     public String stringValue()
     {
         load_or_cast_cached_value(AS_TYPE.string_value);
+        if (_v.isNull()) return null;
         return _v.getString();
     }
 
@@ -641,7 +728,7 @@ public class IonReaderTextSystemX
         case BOOL:      return sys.newBool(booleanValue());
         case INT:       return sys.newInt(longValue());
         case FLOAT:     return sys.newFloat(doubleValue());
-        case DECIMAL:   return sys.newDecimal(bigDecimalValue());
+        case DECIMAL:   return sys.newDecimal(decimalValue());
         case TIMESTAMP:
             IonTimestamp t = sys.newNullTimestamp();
             Timestamp ti = timestampValue();
@@ -677,8 +764,7 @@ public class IonReaderTextSystemX
     }
     private final void fillContainerList(IonSystem sys, IonSequence list) {
         this.stepIn();
-        while (this.hasNext()) {
-            this.next();
+        while (this.next() != null) {
             IonValue v = this.getIonValue(sys);
             list.add(v);
         }
@@ -686,8 +772,7 @@ public class IonReaderTextSystemX
     }
     private final void fillContainerStruct(IonSystem sys, IonStruct struct) {
         this.stepIn();
-        while (this.hasNext()) {
-            this.next();
+        while (this.next() != null) {
             String name = this.getFieldName();
             IonValue v = this.getIonValue(sys);
             struct.add(name, v);

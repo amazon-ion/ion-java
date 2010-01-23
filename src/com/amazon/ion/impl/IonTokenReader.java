@@ -7,6 +7,7 @@ import static com.amazon.ion.util.IonTextUtils.isOperatorPart;
 import static com.amazon.ion.util.IonTextUtils.isWhitespace;
 import static com.amazon.ion.util.IonTextUtils.printCodePointAsString;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnexpectedEofException;
@@ -228,7 +229,7 @@ public class IonTokenReader
                     // No match for 'd' but look for 'D'
                     eFormat = s.replace('D', 'e');
                 }
-                tr.decimalValue = new BigDecimal(eFormat);
+                tr.decimalValue = Decimal.valueOf(eFormat);
                 return this;
             case constTime:
                 tr.dateValue = timeinfo.parse(s);
@@ -658,8 +659,33 @@ public class IonTokenReader
                         int dot = value.length();
                         value.append((char)c);
                         c = this.read();
-                        readIdentifierContents(c);
-                        this.keyword = setNullType(value, dot + 1, value.length() - dot - 1);
+                        int added = readIdentifierContents(c, IonTokenConstsX.TN_MAX_NAME_LENGTH + 1); // +1 is "enough roap" so if there are extra letters at the end of the keyword we keep at least 1
+                        int kw = IonTokenConstsX.keyword(value, dot+1, dot+added+1);
+                        switch (kw) {
+                        case IonTokenConstsX.KEYWORD_NULL:
+                        case IonTokenConstsX.KEYWORD_BOOL:
+                        case IonTokenConstsX.KEYWORD_INT:
+                        case IonTokenConstsX.KEYWORD_FLOAT:
+                        case IonTokenConstsX.KEYWORD_DECIMAL:
+                        case IonTokenConstsX.KEYWORD_TIMESTAMP:
+                        case IonTokenConstsX.KEYWORD_SYMBOL:
+                        case IonTokenConstsX.KEYWORD_STRING:
+                        case IonTokenConstsX.KEYWORD_BLOB:
+                        case IonTokenConstsX.KEYWORD_CLOB:
+                        case IonTokenConstsX.KEYWORD_LIST:
+                        case IonTokenConstsX.KEYWORD_SEXP:
+                        case IonTokenConstsX.KEYWORD_STRUCT:
+                            this.keyword = setNullType(value, dot + 1, value.length() - dot - 1);
+                            break;
+                        default:
+                            // not a valid type name - so we have to unread back to the dot
+                            for (int ii=value.length(); ii>dot; ) {
+                                ii--;
+                                char uc = value.charAt(ii);
+                                unread(uc);
+                            }
+                            this.keyword = Type.kwNull;
+                        }
                     }
                     else {
                         unread(c);
@@ -722,6 +748,24 @@ public class IonTokenReader
             unread(c);  // we throw back our terminator here
         }
         return quotedIdentifier;
+    }
+    int readIdentifierContents(int c, int max_length) throws IOException {
+        assert(c != '\'' && c != '\"');
+
+        value.append((char)c);
+        int count = 1;
+
+        while (count < max_length) {
+            c = read();
+            if (!IonTextUtils.isIdentifierPart(c)) {
+                unread(c);  // we throw back our terminator here
+                break;
+            }
+            value.append((char)c);
+            count++;
+        }
+
+        return count;
     }
 
     static Type matchKeyword(StringBuilder sb, int pos, int valuelen) throws IOException

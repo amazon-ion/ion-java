@@ -22,13 +22,16 @@ public final class IonNullImpl
         IonConstants.makeTypeDescriptor(IonConstants.tidNull,
                                         IonConstants.lnIsNullAtom);
 
+    private static final int HASH_SIGNATURE =
+        IonType.NULL.toString().hashCode();
+
     /**
      * Constructs a <code>null.null</code> value.
      */
     public IonNullImpl(IonSystemImpl system)
     {
         super(system, NULL_NULL_TYPEDESC);
-        _hasNativeValue = true;
+        _hasNativeValue(true);
     }
 
     /**
@@ -37,7 +40,7 @@ public final class IonNullImpl
     public IonNullImpl(IonSystemImpl system, int typeDesc)
     {
         super(system, typeDesc);
-        _hasNativeValue = true;
+        _hasNativeValue(true);
 
         // This is necessary to trap badly-encoded data.
         // FIXME don't error in this case.
@@ -67,6 +70,16 @@ public final class IonNullImpl
         return clone;
     }
 
+    /**
+     * Implements {@link Object#hashCode()} consistent with equals.
+     *
+     * @return  An int, consistent with the contracts for
+     *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
+     */
+    @Override
+    public int hashCode() {
+        return HASH_SIGNATURE;
+    }
 
     public IonType getType()
     {
@@ -97,16 +110,16 @@ public final class IonNullImpl
     @Override
     protected void doMaterializeValue(IonBinary.Reader reader)
     {
-        assert this._isPositionLoaded == true && this._buffer != null;
+        assert this._isPositionLoaded() == true && this._buffer != null;
 
         // a native value trumps a buffered value
-        if (_hasNativeValue) return;
+        if (_hasNativeValue()) return;
 
         // the reader will have been positioned for us
         assert reader.position() == this.pos_getOffsetAtValueTD();
         assert this.pos_getType() == IonConstants.tidNull;
 
-        _hasNativeValue = true;
+        _hasNativeValue(true);
     }
 
 

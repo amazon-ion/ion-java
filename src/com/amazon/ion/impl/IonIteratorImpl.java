@@ -112,7 +112,7 @@ public class IonIteratorImpl
                     v = _system.newFloat(_reader.doubleValue());
                     break;
                 case DECIMAL:
-                    v = _system.newDecimal(_reader.bigDecimalValue());
+                    v = _system.newDecimal(_reader.decimalValue());
                     break;
                 case TIMESTAMP:
                     v = _system.newTimestamp(_reader.timestampValue());

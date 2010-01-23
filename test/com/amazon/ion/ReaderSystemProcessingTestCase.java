@@ -2,10 +2,8 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl.IonBinaryReader;
-import com.amazon.ion.impl.IonTextReader;
+import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.TreeReaderTest;
-import java.util.NoSuchElementException;
 
 
 /**
@@ -76,11 +74,14 @@ public abstract class ReaderSystemProcessingTestCase
     protected void checkDecimal(double expected) throws Exception
     {
         assertSame(IonType.DECIMAL, myReader.getType());
+        Decimal dec = myReader.decimalValue();
         // TODO also test bigDecimalValue equivalence (not just double)
-        assertEquals("decimal content", expected, myReader.longValue());
-        assertEquals("decimal content", expected, myReader.doubleValue());
-        assertEquals("decimal content", expected,
-                     myReader.bigDecimalValue().doubleValue());
+//        assertEquals("decimal content", (long)expected, myReader.longValue());
+//        assertEquals("decimal content", expected, myReader.doubleValue());
+        assertEquals("float value compared",
+                     0, Float.compare((float)expected, dec.floatValue()));
+        assertEquals("double value compared",
+                     0, Double.compare(expected, dec.doubleValue()));
     }
 
     @Override
@@ -102,6 +103,9 @@ public abstract class ReaderSystemProcessingTestCase
     {
         assertSame(IonType.SYMBOL, myReader.getType());
         assertEquals(expected, myReader.stringValue());
+        // we don't really care what this returns, but it forces
+        // any symbol table processing to occur, if necessary
+        myReader.getSymbolId();
     }
 
     @Override
@@ -109,37 +113,63 @@ public abstract class ReaderSystemProcessingTestCase
         throws Exception
     {
         assertSame(IonType.SYMBOL, myReader.getType());
-        assertEquals(expected, myReader.stringValue());
 
-        // FIXME this is a bug in binary reader
-        if (!(myReader instanceof IonBinaryReader)) {
-            assertEquals(expectedSid, myReader.getSymbolId());
+        // we'll use this to make sure we did check something here
+        boolean was_checked = false;
+
+        IonIterationType reader_type = myReader.getIterationType();
+
+        // first we check the text representation which all
+        // user readers and any non-binary readers will have
+        if (reader_type.isText() || reader_type.isUser()) {
+            String reader_name = myReader.stringValue();
+            assertEquals(expected, reader_name);
+            was_checked = true;
         }
+
+        // now we check the binary value, which user readers
+        // and any non-text readers should understand
+        if (reader_type.isUser() || !reader_type.isText()) {
+            int sid = myReader.getSymbolId();
+            if (expectedSid != sid) {
+                int reader_sid = myReader.getSymbolId();
+                assertEquals(expectedSid, reader_sid);
+            }
+            was_checked = true;
+        }
+
+        // finally we make sure we checked at least one of the
+        // two representations (symbol text or symbol id)
+        assert(was_checked);
     }
 
 
     @Override
-    protected void checkTimestamp(String expected) throws Exception
+    protected void checkTimestamp(Timestamp expected) throws Exception
     {
         assertSame(IonType.TIMESTAMP, myReader.getType());
-        // TODO handle null.timestamp
-        assertEquals("timestamp",
-                     expected, myReader.timestampValue().toString());
+        assertEquals("timestamp", expected, myReader.timestampValue());
+        // TODO also check date
+//        Date expectedDate = (expected == null ? null : expected.dateValue());
+//        assertEquals("date", expectedDate, myReader.dateValue());
     }
 
     @Override
     protected void checkEof()
     {
+        // Doing this twice is intentional.
+        assertEquals("next() at eof", null, myReader.next());
+
+        if (!IonImplUtils.READER_HASNEXT_REMOVED) {
         assertFalse("not at eof", myReader.hasNext());
+    }
+
+        assertEquals("next() at eof", null, myReader.next());
     }
 
     protected void badNext()
     {
-        try {
-            myReader.next();
-            fail("expected exception");
-        }
-        catch (NoSuchElementException e) { }
+        assertEquals("result from IonReader.next()", null, myReader.next());
     }
 
 
@@ -148,6 +178,8 @@ public abstract class ReaderSystemProcessingTestCase
     public void testNextAtEnd()
         throws Exception
     {
+        startTestCheckpoint("testNextAtEnd"); // uses simple constants since the number just has to be unique for matching on the break point
+
         String text = "[]";
         startIteration(text);
         myReader.next();
@@ -173,40 +205,41 @@ public abstract class ReaderSystemProcessingTestCase
     public void testIsInStruct()
         throws Exception
     {
+        startTestCheckpoint("testIsInStruct"); // uses simple constants since the number just has to be unique for matching on the break point
+
         String text = "{}";
         startIteration(text);
         assertFalse(myReader.isInStruct());
 
-        assertTrue(myReader.hasNext());
+        // hasNext is depreciated: assertTrue(myReader.hasNext());
+        assertFalse(myReader.isInStruct());
 
-        if (!(myReader instanceof IonTextReader)) { // FIXME text reader is broken
-            assertFalse(myReader.isInStruct());
-        }
 
         assertEquals(IonType.STRUCT, myReader.next());
-        assertEquals(0, myReader.getDepth());
-        if (!(myReader instanceof IonTextReader)) { // FIXME text reader is broken
-            assertFalse(myReader.isInStruct());
+        if (0 != myReader.getDepth()) {
+            assertEquals(0, myReader.getDepth());
         }
+        assertFalse(myReader.isInStruct());
 
         myReader.stepIn();
         assertTrue(myReader.isInStruct());
         assertEquals(1, myReader.getDepth());
 
-        assertFalse(myReader.hasNext());
+        // assertFalse(myReader.hasNext());
         assertTrue(myReader.isInStruct());
 
         myReader.stepOut();
-        if (!(myReader instanceof IonTextReader)) { // FIXME text reader is broken
-            assertFalse(myReader.isInStruct());
-        }
-        assertFalse(myReader.hasNext());
+        assertFalse(myReader.isInStruct());
+
+        // hasNext is depreciated: assertFalse(myReader.hasNext());
     }
 
 
     public void testHasNextLeavesCurrentData()
         throws Exception
     {
+        startTestCheckpoint("testHasNextLeavesCurrentData"); // uses simple constants since the number just has to be unique for matching on the break point
+
         String text = "hello 2";
         startIteration(text);
 
@@ -215,10 +248,95 @@ public abstract class ReaderSystemProcessingTestCase
         assertEquals(IonType.SYMBOL, myReader.getType());
         assertTrue(myReader.hasNext());
 
-        if (!(myReader instanceof IonTextReader)) { // FIXME text reader is broken
-            assertEquals(IonType.SYMBOL, myReader.getType());
-        }
+        // FIXed ME text reader was broken, now fixed
+        // really the binary readers were returning the
+        // ion version marker which is a symbol and the
+        // first (0th) value in a datagram.
+        //if (!(myReader instanceof IonTextReaderImpl)) {
+        //    assertEquals(IonType.SYMBOL, myReader.getType());
+        //}
         assertEquals(IonType.INT, myReader.next());
     }
 
+    // JIRA ION-79 reported by Scott Barber
+    public void testDeepNesting()
+        throws Exception
+    {
+        startTestCheckpoint("testDeepNesting"); // uses simple constants since the number just has to be unique for matching on the break point
+
+        String text =
+            "A::{data:B::{items:[C::{itemPromos:[D::{f4:['''12.5''']}]}]}}";
+        startIteration(text);
+
+        IonReader reader = myReader;
+//        reader.hasNext();
+        reader.next();
+        assertEquals("A", reader.getTypeAnnotations()[0]);
+        reader.stepIn();
+        {
+//            reader.hasNext();
+            reader.next();
+            assertEquals("B", reader.getTypeAnnotations()[0]);
+            reader.stepIn();
+            {
+                reader.next();
+                reader.stepIn(); // list
+                {
+                    reader.next();
+                    assertEquals("C", reader.getTypeAnnotations()[0]);
+                    reader.stepIn();
+                    {
+                        reader.next();
+                        reader.stepIn();
+                        { // list
+                            reader.next();
+                            assertEquals("D", reader.getTypeAnnotations()[0]);
+                            reader.stepIn();
+                            {
+                                reader.next();
+                                assertEquals("f4", reader.getFieldName());
+                                reader.stepIn();
+                                {
+                                    reader.next();
+                                    assertEquals("12.5", reader.stringValue());
+//                                    assertFalse(reader.hasNext());
+                                }
+                                reader.stepOut();
+//                                assertFalse(reader.hasNext());
+                            }
+                            reader.stepOut();
+//                            boolean hasNext3 = reader.hasNext(); // FIXME this returns true, should return false (Text version does this correctly)
+//                            assertFalse(reader.hasNext()); // TODO uncomment
+//                            try {
+                            IonType t = reader.next();
+                            assertNull("reader should not find a value", t);
+//                                fail("expected exception"); // TODO uncomment
+//                            }
+//                            catch (NoSuchElementException e) { }
+//                            assertFalse(reader.hasNext());
+                        }
+                        reader.stepOut(); // FIXME fails here...
+//                        assertFalse(reader.hasNext());
+                    }
+                    reader.stepOut(); //
+//                    assertFalse(reader.hasNext());
+                }
+                reader.stepOut();
+//                assertFalse(reader.hasNext());
+            }
+            reader.stepOut();
+//            assertFalse(reader.hasNext());
+        }
+        reader.stepOut();
+//        assertFalse(reader.hasNext());
+        assertEquals(0, reader.getDepth());
+        try {
+            reader.stepOut();
+            fail("expected exception");
+        }
+        catch (IllegalStateException e) {
+            // TODO compare to IonMessages.CANNOT_STEP_OUT
+            // Can't do that right now due to permissions
+        }
+    }
 }

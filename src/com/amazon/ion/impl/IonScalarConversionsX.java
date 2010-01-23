@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.Timestamp;
@@ -21,7 +22,7 @@ public class IonScalarConversionsX
         public static final int int_value          =  3;
         public static final int long_value         =  4;
         public static final int bigInteger_value   =  5;
-        public static final int bigDecimal_value   =  6;
+        public static final int decimal_value      =  6;
         public static final int double_value       =  7;
         public static final int string_value       =  8;
         public static final int date_value         =  9;
@@ -34,7 +35,7 @@ public class IonScalarConversionsX
         public static final int numeric_types      = idx_to_bit_mask(int_value)
                                                    | idx_to_bit_mask(long_value)
                                                    | idx_to_bit_mask(bigInteger_value)
-                                                   | idx_to_bit_mask(bigDecimal_value)
+                                                   | idx_to_bit_mask(decimal_value)
                                                    | idx_to_bit_mask(double_value);
 
         public static final int datetime_types     = idx_to_bit_mask(date_value)
@@ -48,17 +49,36 @@ public class IonScalarConversionsX
 
     public static String getValueTypeName(int value_type) {
         switch (value_type) {
-        case AS_TYPE.null_value:       return "null_value";
-        case AS_TYPE.boolean_value:    return "boolean_value";
-        case AS_TYPE.int_value:        return "int_value";
-        case AS_TYPE.long_value:       return "long_value";
-        case AS_TYPE.bigInteger_value: return "bigInteger_value";
-        case AS_TYPE.bigDecimal_value: return "bigDecimal_value";
-        case AS_TYPE.double_value:     return "double_value";
-        case AS_TYPE.string_value:     return "string_value";
-        case AS_TYPE.date_value:       return "date_value";
-        case AS_TYPE.timestamp_value:  return "timestamp_value";
+        case AS_TYPE.null_value:       return "null";
+        case AS_TYPE.boolean_value:    return "boolean";
+        case AS_TYPE.int_value:        return "int";
+        case AS_TYPE.long_value:       return "long";
+        case AS_TYPE.bigInteger_value: return "bigInteger";
+        case AS_TYPE.decimal_value:    return "decimal";
+        case AS_TYPE.double_value:     return "double";
+        case AS_TYPE.string_value:     return "string";
+        case AS_TYPE.date_value:       return "date";
+        case AS_TYPE.timestamp_value:  return "timestamp";
         default:                       return "<unrecognized conversion value type: "+Integer.toString(value_type)+">";
+        }
+    }
+    public static String get_value_type_name(int value_type) {
+        switch (value_type) {
+        case AS_TYPE.null_value:
+        case AS_TYPE.boolean_value:
+        case AS_TYPE.int_value:
+        case AS_TYPE.long_value:
+        case AS_TYPE.bigInteger_value:
+        case AS_TYPE.decimal_value:
+        case AS_TYPE.double_value:
+        case AS_TYPE.string_value:
+        case AS_TYPE.date_value:
+        case AS_TYPE.timestamp_value:
+            return getValueTypeName(value_type)+"_value";
+        default:
+            return "<unrecognized conversion value type: "
+                   +Integer.toString(value_type)
+                   + ">";
         }
     }
 
@@ -71,7 +91,7 @@ public class IonScalarConversionsX
     protected final static int FNID_FROM_STRING_TO_INT          =  3;
     protected final static int FNID_FROM_STRING_TO_LONG         =  4;
     protected final static int FNID_FROM_STRING_TO_BIGINTEGER   =  5;
-    protected final static int FNID_FROM_STRING_TO_BIGDECIMAL   =  6;
+    protected final static int FNID_FROM_STRING_TO_DECIMAL      =  6;
     protected final static int FNID_FROM_STRING_TO_DOUBLE       =  7;
     protected final static int FNID_FROM_STRING_TO_DATE         =  8;
     protected final static int FNID_FROM_STRING_TO_TIMESTAMP    =  9;
@@ -82,7 +102,7 @@ public class IonScalarConversionsX
                         FNID_FROM_STRING_TO_INT,
                         FNID_FROM_STRING_TO_LONG,
                         FNID_FROM_STRING_TO_BIGINTEGER,
-                        FNID_FROM_STRING_TO_BIGDECIMAL,
+                        FNID_FROM_STRING_TO_DECIMAL,
                         FNID_FROM_STRING_TO_DOUBLE,
                         FNID_identity,
                         FNID_FROM_STRING_TO_DATE,
@@ -97,7 +117,7 @@ public class IonScalarConversionsX
     protected final static int FNID_FROM_INT_TO_STRING          = 12;
     protected final static int FNID_FROM_LONG_TO_STRING         = 13;
     protected final static int FNID_FROM_BIGINTEGER_TO_STRING   = 14;
-    protected final static int FNID_FROM_BIGDECIMAL_TO_STRING   = 15;
+    protected final static int FNID_FROM_DECIMAL_TO_STRING      = 15;
     protected final static int FNID_FROM_DOUBLE_TO_STRING       = 16;
     protected final static int FNID_FROM_DATE_TO_STRING         = 17;
     protected final static int FNID_FROM_TIMESTAMP_TO_STRING    = 18;
@@ -108,7 +128,7 @@ public class IonScalarConversionsX
                         FNID_FROM_INT_TO_STRING,
                         FNID_FROM_LONG_TO_STRING,
                         FNID_FROM_BIGINTEGER_TO_STRING,
-                        FNID_FROM_BIGDECIMAL_TO_STRING,
+                        FNID_FROM_DECIMAL_TO_STRING,
                         FNID_FROM_DOUBLE_TO_STRING,
                         FNID_identity,
                         FNID_FROM_DATE_TO_STRING,
@@ -121,7 +141,7 @@ public class IonScalarConversionsX
     //to_int_conversion;
     protected final static int FNID_FROM_LONG_TO_INT         = 19;
     protected final static int FNID_FROM_BIGINTEGER_TO_INT   = 20;
-    protected final static int FNID_FROM_BIGDECIMAL_TO_INT   = 21;
+    protected final static int FNID_FROM_DECIMAL_TO_INT      = 21;
     protected final static int FNID_FROM_DOUBLE_TO_INT       = 22;
     static int [] to_int_conversion = {
                         FNID_no_conversion,  // fake entry to switch from 0 based to 1 based
@@ -130,7 +150,7 @@ public class IonScalarConversionsX
                         FNID_identity,
                         FNID_FROM_LONG_TO_INT,
                         FNID_FROM_BIGINTEGER_TO_INT,
-                        FNID_FROM_BIGDECIMAL_TO_INT,
+                        FNID_FROM_DECIMAL_TO_INT,
                         FNID_FROM_DOUBLE_TO_INT,
                         FNID_FROM_STRING_TO_INT,
                         FNID_no_conversion,
@@ -142,7 +162,7 @@ public class IonScalarConversionsX
     //to_long_conversion;
     protected final static int FNID_FROM_INT_TO_LONG          = 23;
     protected final static int FNID_FROM_BIGINTEGER_TO_LONG   = 24;
-    protected final static int FNID_FROM_BIGDECIMAL_TO_LONG   = 25;
+    protected final static int FNID_FROM_DECIMAL_TO_LONG      = 25;
     protected final static int FNID_FROM_DOUBLE_TO_LONG       = 26;
     static int [] to_long_conversion = {
                         FNID_no_conversion,  // fake entry to switch from 0 based to 1 based
@@ -151,7 +171,7 @@ public class IonScalarConversionsX
                         FNID_FROM_INT_TO_LONG,
                         FNID_identity,
                         FNID_FROM_BIGINTEGER_TO_LONG,
-                        FNID_FROM_BIGDECIMAL_TO_LONG,
+                        FNID_FROM_DECIMAL_TO_LONG,
                         FNID_FROM_DOUBLE_TO_LONG,
                         FNID_FROM_STRING_TO_LONG,
                         FNID_no_conversion,
@@ -164,7 +184,7 @@ public class IonScalarConversionsX
     //to_bigInteger_conversion;
     protected final static int FNID_FROM_INT_TO_BIGINTEGER          = 27;
     protected final static int FNID_FROM_LONG_TO_BIGINTEGER         = 28;
-    protected final static int FNID_FROM_BIGDECIMAL_TO_BIGINTEGER   = 29;
+    protected final static int FNID_FROM_DECIMAL_TO_BIGINTEGER      = 29;
     protected final static int FNID_FROM_DOUBLE_TO_BIGINTEGER       = 30;
     static int [] to_bigInteger_conversion = {
                         FNID_no_conversion,  // fake entry to switch from 0 based to 1 based
@@ -173,7 +193,7 @@ public class IonScalarConversionsX
                         FNID_FROM_INT_TO_BIGINTEGER,
                         FNID_FROM_LONG_TO_BIGINTEGER,
                         FNID_identity,
-                        FNID_FROM_BIGDECIMAL_TO_BIGINTEGER,
+                        FNID_FROM_DECIMAL_TO_BIGINTEGER,
                         FNID_FROM_DOUBLE_TO_BIGINTEGER,
                         FNID_FROM_STRING_TO_BIGINTEGER,
                         FNID_no_conversion,
@@ -182,21 +202,21 @@ public class IonScalarConversionsX
                         FNID_no_conversion
                     };
 
-    //to_bigDecimal_conversion;
-    protected final static int FNID_FROM_INT_TO_BIGDECIMAL          = 31;
-    protected final static int FNID_FROM_LONG_TO_BIGDECIMAL         = 32;
-    protected final static int FNID_FROM_BIGINTEGER_TO_BIGDECIMAL   = 33;
-    protected final static int FNID_FROM_DOUBLE_TO_BIGDECIMAL       = 34;
-    static int [] to_bigDecimal_conversion = {
+    //to_decimal_conversion;
+    protected final static int FNID_FROM_INT_TO_DECIMAL          = 31;
+    protected final static int FNID_FROM_LONG_TO_DECIMAL         = 32;
+    protected final static int FNID_FROM_BIGINTEGER_TO_DECIMAL   = 33;
+    protected final static int FNID_FROM_DOUBLE_TO_DECIMAL       = 34;
+    static int [] to_decimal_conversion = {
                         FNID_no_conversion,  // fake entry to switch from 0 based to 1 based
                         FNID_no_conversion,
                         FNID_no_conversion,
-                        FNID_FROM_INT_TO_BIGDECIMAL,
-                        FNID_FROM_LONG_TO_BIGDECIMAL,
-                        FNID_FROM_BIGINTEGER_TO_BIGDECIMAL,
+                        FNID_FROM_INT_TO_DECIMAL,
+                        FNID_FROM_LONG_TO_DECIMAL,
+                        FNID_FROM_BIGINTEGER_TO_DECIMAL,
                         FNID_identity,
-                        FNID_FROM_DOUBLE_TO_BIGDECIMAL,
-                        FNID_FROM_STRING_TO_BIGDECIMAL,
+                        FNID_FROM_DOUBLE_TO_DECIMAL,
+                        FNID_FROM_STRING_TO_DECIMAL,
                         FNID_no_conversion,
                         FNID_no_conversion,
                         FNID_no_conversion,
@@ -207,7 +227,7 @@ public class IonScalarConversionsX
     protected final static int FNID_FROM_INT_TO_DOUBLE          = 35;
     protected final static int FNID_FROM_LONG_TO_DOUBLE         = 36;
     protected final static int FNID_FROM_BIGINTEGER_TO_DOUBLE   = 37;
-    protected final static int FNID_FROM_BIGDECIMAL_TO_DOUBLE   = 38;
+    protected final static int FNID_FROM_DECIMAL_TO_DOUBLE      = 38;
     static int [] to_double_conversion = {
                         FNID_no_conversion,  // fake entry to switch from 0 based to 1 based
                         FNID_no_conversion,
@@ -215,7 +235,7 @@ public class IonScalarConversionsX
                         FNID_FROM_INT_TO_DOUBLE,
                         FNID_FROM_LONG_TO_DOUBLE,
                         FNID_FROM_BIGINTEGER_TO_DOUBLE,
-                        FNID_FROM_BIGDECIMAL_TO_DOUBLE,
+                        FNID_FROM_DECIMAL_TO_DOUBLE,
                         FNID_identity,
                         FNID_FROM_STRING_TO_DOUBLE,
                         FNID_no_conversion,
@@ -265,8 +285,8 @@ public class IonScalarConversionsX
                 return to_long_conversion[authoritative_type];
             case AS_TYPE.bigInteger_value:
                 return to_bigInteger_conversion[authoritative_type];
-            case AS_TYPE.bigDecimal_value:
-                return to_bigDecimal_conversion[authoritative_type];
+            case AS_TYPE.decimal_value:
+                return to_decimal_conversion[authoritative_type];
             case AS_TYPE.double_value:
                 return to_double_conversion[authoritative_type];
             case AS_TYPE.string_value:
@@ -344,7 +364,7 @@ public class IonScalarConversionsX
         double      _double_value;
         String      _string_value;
         BigInteger  _bigInteger_value;
-        BigDecimal  _bigDecimal_value;
+        Decimal     _decimal_value;
         Date        _date_value;
         Timestamp   _timestamp_value;
 
@@ -362,15 +382,23 @@ public class IonScalarConversionsX
             return ((_types_set & AS_TYPE.idx_to_bit_mask(value_type)) != 0);
         }
         public final boolean hasNumericType() {
-            return (AS_TYPE.numeric_types & _types_set) != 0;
+            return ((AS_TYPE.numeric_types & _types_set) != 0);
+        }
+        public static final boolean isNumericType(int type_idx) {
+            int type_flag = AS_TYPE.idx_to_bit_mask(type_idx);
+            return ((AS_TYPE.numeric_types & type_flag) != 0);
         }
         public final boolean hasDatetimeType() {
-            return (AS_TYPE.datetime_types & _types_set) != 0;
+            return ((AS_TYPE.datetime_types & _types_set) != 0);
         }
         public final void setAuthoritativeType(int value_type) {
             if (_authoritative_type_idx == value_type) return;
             if (!hasValueOfType(value_type)) {
-                throw new ConversionException("you must set of cast the variant to have a value of type "+getValueTypeName(value_type));
+                String message = "you must set the "
+                               + getValueTypeName(value_type)
+                               + " value before you can set the authoritative type to "
+                               + getValueTypeName(value_type);
+                throw new IllegalStateException(message);
             }
         }
         public final void setValueToNull(IonType t) {
@@ -402,9 +430,9 @@ public class IonScalarConversionsX
             _bigInteger_value = value;
             set_value_type(AS_TYPE.bigInteger_value);
         }
-        public final void setValue(BigDecimal value) {
-            _bigDecimal_value = value;
-            set_value_type(AS_TYPE.bigDecimal_value);
+        public final void setValue(Decimal value) {
+            _decimal_value = value;
+            set_value_type(AS_TYPE.decimal_value);
         }
         public final void setValue(Date value) {
             _date_value = value;
@@ -414,6 +442,53 @@ public class IonScalarConversionsX
             _timestamp_value = value;
             set_value_type(AS_TYPE.timestamp_value);
         }
+
+        public final void addValueToNull(IonType t) {
+            _is_null = true;
+            _null_type = t;
+            add_value_type(AS_TYPE.null_value);
+        }
+        public final void addValue(boolean value) {
+            _boolean_value = value;
+            add_value_type(AS_TYPE.boolean_value);
+        }
+        public final void addValue(int value) {
+            _int_value = value;
+            add_value_type(AS_TYPE.int_value);
+        }
+        public final void addValue(long value) {
+            _long_value = value;
+            add_value_type(AS_TYPE.long_value);
+        }
+        public final void addValue(double value) {
+            _double_value = value;
+            add_value_type(AS_TYPE.double_value);
+        }
+        public final void addValue(String value) {
+            _string_value = value;
+            add_value_type(AS_TYPE.string_value);
+        }
+        public final void addValue(BigInteger value) {
+            _bigInteger_value = value;
+            add_value_type(AS_TYPE.bigInteger_value);
+        }
+        public final void addValue(BigDecimal value) {
+            _decimal_value = (Decimal)value;
+            add_value_type(AS_TYPE.decimal_value);
+        }
+        public final void addValue(Decimal value) {
+            _decimal_value = value;
+            add_value_type(AS_TYPE.decimal_value);
+        }
+        public final void addValue(Date value) {
+            _date_value = value;
+            add_value_type(AS_TYPE.date_value);
+        }
+        public final void addValue(Timestamp value) {
+            _timestamp_value = value;
+            add_value_type(AS_TYPE.timestamp_value);
+        }
+
 
         public final int getAuthoritativeType() {
             return _authoritative_type_idx;
@@ -450,8 +525,12 @@ public class IonScalarConversionsX
             return _bigInteger_value;
         }
         public final BigDecimal getBigDecimal() {
-            if (!hasValueOfType(AS_TYPE.bigDecimal_value)) throw new ValueNotSetException("BigDecimal value not set");
-            return _bigDecimal_value;
+            if (!hasValueOfType(AS_TYPE.decimal_value)) throw new ValueNotSetException("BigDecimal value not set");
+            return Decimal.bigDecimalValue(_decimal_value);
+        }
+        public final Decimal getDecimal() {
+            if (!hasValueOfType(AS_TYPE.decimal_value)) throw new ValueNotSetException("BigDecimal value not set");
+            return _decimal_value;
         }
         public final Date getDate() {
             if (!hasValueOfType(AS_TYPE.date_value)) throw new ValueNotSetException("Date value not set");
@@ -474,7 +553,7 @@ public class IonScalarConversionsX
                 case AS_TYPE.int_value:
                 case AS_TYPE.long_value:
                 case AS_TYPE.bigInteger_value:
-                case AS_TYPE.bigDecimal_value:
+                case AS_TYPE.decimal_value:
                 case AS_TYPE.double_value:
                     can = (is_numeric_type(_authoritative_type_idx) || (_authoritative_type_idx == AS_TYPE.string_value));
                     break;
@@ -507,7 +586,7 @@ public class IonScalarConversionsX
             case FNID_FROM_STRING_TO_INT:            fn_from_string_to_int();                 break;
             case FNID_FROM_STRING_TO_LONG:           fn_from_string_to_long();                break;
             case FNID_FROM_STRING_TO_BIGINTEGER:     fn_from_string_to_biginteger();          break;
-            case FNID_FROM_STRING_TO_BIGDECIMAL:     fn_from_string_to_bigdecimal();          break;
+            case FNID_FROM_STRING_TO_DECIMAL:        fn_from_string_to_decimal();             break;
             case FNID_FROM_STRING_TO_DOUBLE:         fn_from_string_to_double();              break;
             case FNID_FROM_STRING_TO_DATE:           fn_from_string_to_date();                break;
             case FNID_FROM_STRING_TO_TIMESTAMP:      fn_from_string_to_timestamp();           break;
@@ -516,30 +595,30 @@ public class IonScalarConversionsX
             case FNID_FROM_INT_TO_STRING:            fn_from_int_to_string();                 break;
             case FNID_FROM_LONG_TO_STRING:           fn_from_long_to_string();                break;
             case FNID_FROM_BIGINTEGER_TO_STRING:     fn_from_biginteger_to_string();          break;
-            case FNID_FROM_BIGDECIMAL_TO_STRING:     fn_from_bigdecimal_to_string();          break;
+            case FNID_FROM_DECIMAL_TO_STRING:        fn_from_decimal_to_string();             break;
             case FNID_FROM_DOUBLE_TO_STRING:         fn_from_double_to_string();              break;
             case FNID_FROM_DATE_TO_STRING:           fn_from_date_to_string();                break;
             case FNID_FROM_TIMESTAMP_TO_STRING:      fn_from_timestamp_to_string();           break;
             case FNID_FROM_LONG_TO_INT:              fn_from_long_to_int();                   break;
             case FNID_FROM_BIGINTEGER_TO_INT:        fn_from_biginteger_to_int();             break;
-            case FNID_FROM_BIGDECIMAL_TO_INT:        fn_from_bigdecimal_to_int();             break;
+            case FNID_FROM_DECIMAL_TO_INT:           fn_from_decimal_to_int();                break;
             case FNID_FROM_DOUBLE_TO_INT:            fn_from_double_to_int();                 break;
             case FNID_FROM_INT_TO_LONG:              fn_from_int_to_long();                   break;
             case FNID_FROM_BIGINTEGER_TO_LONG:       fn_from_biginteger_to_long();            break;
-            case FNID_FROM_BIGDECIMAL_TO_LONG:       fn_from_bigdecimal_to_long();            break;
+            case FNID_FROM_DECIMAL_TO_LONG:          fn_from_decimal_to_long();               break;
             case FNID_FROM_DOUBLE_TO_LONG:           fn_from_double_to_long();                break;
             case FNID_FROM_INT_TO_BIGINTEGER:        fn_from_int_to_biginteger();             break;
             case FNID_FROM_LONG_TO_BIGINTEGER:       fn_from_long_to_biginteger();            break;
-            case FNID_FROM_BIGDECIMAL_TO_BIGINTEGER: fn_from_bigdecimal_to_biginteger();      break;
+            case FNID_FROM_DECIMAL_TO_BIGINTEGER:    fn_from_decimal_to_biginteger();         break;
             case FNID_FROM_DOUBLE_TO_BIGINTEGER:     fn_from_double_to_biginteger();          break;
-            case FNID_FROM_INT_TO_BIGDECIMAL:        fn_from_int_to_bigdecimal();             break;
-            case FNID_FROM_LONG_TO_BIGDECIMAL:       fn_from_long_to_bigdecimal();            break;
-            case FNID_FROM_BIGINTEGER_TO_BIGDECIMAL: fn_from_biginteger_to_bigdecimal();      break;
-            case FNID_FROM_DOUBLE_TO_BIGDECIMAL:     fn_from_double_to_bigdecimal();          break;
+            case FNID_FROM_INT_TO_DECIMAL:           fn_from_int_to_decimal();                break;
+            case FNID_FROM_LONG_TO_DECIMAL:          fn_from_long_to_decimal();               break;
+            case FNID_FROM_BIGINTEGER_TO_DECIMAL:    fn_from_biginteger_to_decimal();         break;
+            case FNID_FROM_DOUBLE_TO_DECIMAL:        fn_from_double_to_decimal();             break;
             case FNID_FROM_INT_TO_DOUBLE:            fn_from_int_to_double();                 break;
             case FNID_FROM_LONG_TO_DOUBLE:           fn_from_long_to_double();                break;
             case FNID_FROM_BIGINTEGER_TO_DOUBLE:     fn_from_biginteger_to_double();          break;
-            case FNID_FROM_BIGDECIMAL_TO_DOUBLE:     fn_from_bigdecimal_to_double();          break;
+            case FNID_FROM_DECIMAL_TO_DOUBLE:        fn_from_decimal_to_double();             break;
             case FNID_FROM_TIMESTAMP_TO_DATE:        fn_from_timestamp_to_date();             break;
             case FNID_FROM_DATE_TO_TIMESTAMP:        fn_from_date_to_timestamp();             break;
             default: throw new ConversionException("unrecoginzed conversion fnid ["+castfnid+"]invoked");
@@ -581,9 +660,9 @@ public class IonScalarConversionsX
             _bigInteger_value = new BigInteger(_string_value);
             add_value_type(AS_TYPE.bigInteger_value);
         }
-        private final void fn_from_string_to_bigdecimal() {
-            _bigDecimal_value = new BigDecimal(_string_value);
-            add_value_type(AS_TYPE.bigDecimal_value);
+        private final void fn_from_string_to_decimal() {
+            _decimal_value = Decimal.valueOf(_string_value);
+            add_value_type(AS_TYPE.decimal_value);
         }
         private final void fn_from_string_to_double() {
             _double_value = Double.parseDouble(_string_value);
@@ -621,8 +700,8 @@ public class IonScalarConversionsX
             _string_value = _bigInteger_value.toString();
             add_value_type(AS_TYPE.string_value);
         }
-        private final void fn_from_bigdecimal_to_string() {
-            _string_value = _bigDecimal_value.toString();
+        private final void fn_from_decimal_to_string() {
+            _string_value = _decimal_value.toString();
             add_value_type(AS_TYPE.string_value);
         }
         private final void fn_from_double_to_string() {
@@ -655,13 +734,13 @@ public class IonScalarConversionsX
             _int_value = _bigInteger_value.intValue();
             add_value_type(AS_TYPE.int_value);
         }
-        private final void fn_from_bigdecimal_to_int() {
-            if (min_int_decimal_value.compareTo(_bigDecimal_value) > 0
-             || max_int_decimal_value.compareTo(_bigDecimal_value) < 0
+        private final void fn_from_decimal_to_int() {
+            if (min_int_decimal_value.compareTo(_decimal_value) > 0
+             || max_int_decimal_value.compareTo(_decimal_value) < 0
              ) {
                 throw new CantConvertException("BigDecimal value is too large to fit in an int");
             }
-            _int_value = _bigDecimal_value.intValue();
+            _int_value = _decimal_value.intValue();
             add_value_type(AS_TYPE.int_value);
         }
         private final void fn_from_double_to_int() {
@@ -686,13 +765,13 @@ public class IonScalarConversionsX
             _long_value = _bigInteger_value.longValue();
             add_value_type(AS_TYPE.long_value);
         }
-        private final void fn_from_bigdecimal_to_long() {
-            if (min_long_decimal_value.compareTo(_bigDecimal_value) > 0
-             || max_long_decimal_value.compareTo(_bigDecimal_value) < 0
+        private final void fn_from_decimal_to_long() {
+            if (min_long_decimal_value.compareTo(_decimal_value) > 0
+             || max_long_decimal_value.compareTo(_decimal_value) < 0
             ) {
                 throw new CantConvertException("BigDecimal value is too large to fit in a long");
             }
-            _long_value = _bigDecimal_value.intValue();
+            _long_value = _decimal_value.intValue();
             add_value_type(AS_TYPE.long_value);
         }
         private final void fn_from_double_to_long() {
@@ -712,29 +791,29 @@ public class IonScalarConversionsX
             _bigInteger_value = BigInteger.valueOf(_long_value);
             add_value_type(AS_TYPE.bigInteger_value);
         }
-        private final void fn_from_bigdecimal_to_biginteger() {
-            _bigInteger_value = _bigDecimal_value.toBigInteger();
+        private final void fn_from_decimal_to_biginteger() {
+            _bigInteger_value = _decimal_value.toBigInteger();
             add_value_type(AS_TYPE.bigInteger_value);
         }
         private final void fn_from_double_to_biginteger() {
             _bigInteger_value = BigInteger.valueOf((long)_double_value);
             add_value_type(AS_TYPE.bigInteger_value);
         }
-        private final void fn_from_int_to_bigdecimal() {
-            _bigDecimal_value = BigDecimal.valueOf(_int_value);
-            add_value_type(AS_TYPE.bigDecimal_value);
+        private final void fn_from_int_to_decimal() {
+            _decimal_value = Decimal.valueOf(_int_value);
+            add_value_type(AS_TYPE.decimal_value);
         }
-        private final void fn_from_long_to_bigdecimal() {
-            _bigDecimal_value = BigDecimal.valueOf(_long_value);
-            add_value_type(AS_TYPE.bigDecimal_value);
+        private final void fn_from_long_to_decimal() {
+            _decimal_value = Decimal.valueOf(_long_value);
+            add_value_type(AS_TYPE.decimal_value);
         }
-        private final void fn_from_biginteger_to_bigdecimal() {
-            _bigDecimal_value = new BigDecimal(_bigInteger_value);
-            add_value_type(AS_TYPE.bigDecimal_value);
+        private final void fn_from_biginteger_to_decimal() {
+            _decimal_value = Decimal.valueOf(_bigInteger_value);
+            add_value_type(AS_TYPE.decimal_value);
         }
-        private final void fn_from_double_to_bigdecimal() {
-            _bigDecimal_value = BigDecimal.valueOf(_double_value);
-            add_value_type(AS_TYPE.bigDecimal_value);
+        private final void fn_from_double_to_decimal() {
+            _decimal_value = Decimal.valueOf(_double_value);
+            add_value_type(AS_TYPE.decimal_value);
         }
         private final void fn_from_int_to_double() {
             _double_value = _int_value;
@@ -748,8 +827,8 @@ public class IonScalarConversionsX
             _double_value = _bigInteger_value.doubleValue();
             add_value_type(AS_TYPE.double_value);
         }
-        private final void fn_from_bigdecimal_to_double() {
-            _double_value = _bigDecimal_value.doubleValue();
+        private final void fn_from_decimal_to_double() {
+            _double_value = _decimal_value.doubleValue();
             add_value_type(AS_TYPE.double_value);
         }
         private final void fn_from_timestamp_to_date() {

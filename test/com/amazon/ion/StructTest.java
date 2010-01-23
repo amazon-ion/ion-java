@@ -2,6 +2,7 @@
 
 package com.amazon.ion;
 
+import java.util.HashMap;
 import java.util.Iterator;
 
 
@@ -29,7 +30,7 @@ public class StructTest
     }
 
     @Override
-    protected IonStruct wrapAndParse(String... children)
+    protected String wrap(String... children)
     {
         StringBuilder buf = new StringBuilder();
         buf.append('{');
@@ -45,7 +46,13 @@ public class StructTest
             }
         }
         buf.append('}');
-        String text = buf.toString();
+        return buf.toString();
+    }
+
+    @Override
+    protected IonStruct wrapAndParse(String... children)
+    {
+        String text = wrap(children);
         return (IonStruct) system().singleValue(text);
     }
 
@@ -258,6 +265,64 @@ public class StructTest
         checkString("this is a string to overlap", f);
     }
 
+    public void testContainsKey()
+    {
+        IonStruct value = struct("{a:b}");
+        assertTrue(value.containsKey("a"));
+        assertFalse(value.containsKey("b"));
+        testBadContainsKey(value);
+
+        value = struct("{}");
+        testBadContainsKey(value);
+
+        value = struct("null.struct");
+        testBadContainsKey(value);
+    }
+
+    private void testBadContainsKey(IonStruct value)
+    {
+        try {
+            value.containsKey(null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+
+        try {
+            value.containsKey(12);
+            fail("expected exception");
+        }
+        catch (ClassCastException e) { }
+    }
+
+    public void testContainsValue()
+    {
+        IonStruct value = struct("{a:b}");
+        IonValue b = value.get("a");
+        assertTrue(value.containsValue(b));
+        assertFalse(value.containsValue(b.clone()));
+        testBadContainsValue(value);
+
+        value = struct("{}");
+        testBadContainsValue(value);
+
+        value = struct("null.struct");
+        testBadContainsValue(value);
+    }
+
+    private void testBadContainsValue(IonStruct value)
+    {
+        try {
+            value.containsValue(null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+
+        try {
+            value.containsValue(12);
+            fail("expected exception");
+        }
+        catch (ClassCastException e) { }
+    }
 
     public void testGetTwiceReturnsSame()
     {
@@ -275,6 +340,37 @@ public class StructTest
         nested.put("c", inserted);
         assertSame(inserted, ((IonStruct)value.get("a")).get("c"));
     }
+
+    public void testPutAll()
+    {
+        IonStruct value = struct("{}");
+        HashMap<String,IonValue> m = new HashMap<String,IonValue>();
+        m.put("a", system().newInt(1));
+        m.put("b", system().newInt(2));
+
+        value.putAll(m);
+        assertEquals(2, value.size());
+        assertSame(m.get("a"), value.get("a"));
+        assertSame(m.get("b"), value.get("b"));
+
+        try {
+            value.putAll(m);
+            fail("expected exception");
+        }
+        catch (ContainedValueException e) { }
+
+        try {
+            value.putAll(null);
+            fail("expected exception");
+        }
+        catch (NullPointerException e) { }
+
+        m.clear();
+        m.put("a", null);
+        value.putAll(m);
+        assertEquals(null, value.get("a"));
+    }
+
 
     public void testExtraCommas()
     {
@@ -505,6 +601,59 @@ public class StructTest
         s.put("g", v2);
     }
 
+
+    public void testRemove()
+    {
+        IonStruct s = (IonStruct) oneValue("{a:1,b:2,b:3,c:4}");
+
+        IonValue v = s.remove("c");
+        checkInt(4, v);
+        assertEquals(3, s.size());
+        assertNull(s.get("c"));
+
+        v = s.remove("q");
+        assertNull(v);
+        assertEquals(3, s.size());
+        assertNull(s.get("q"));
+
+        v = s.remove("a");
+        checkInt(1, v);
+
+        v = s.remove("b");
+        assertTrue(v.getType() == IonType.INT);
+        assertEquals(1, s.size());
+        long leftoverB = ((IonInt)s.get("b")).longValue();
+        assertTrue(leftoverB == 2 || leftoverB == 3);
+
+        try {
+            s.remove((String) null);
+            fail("Expected NullPointerException");
+        }
+        catch (NullPointerException e) { }
+
+        s = system().newEmptyStruct();
+        assertNull(s.remove("something"));
+        assertTrue(s.isEmpty());
+        assertFalse(s.isNullValue());
+
+        s = system().newNullStruct();
+        assertNull(s.remove("something"));
+        assertTrue(s.isNullValue());
+    }
+
+    public void testRemoveOnReadOnlyStruct()
+    {
+        IonStruct s = (IonStruct) oneValue("{a:1}");
+        s.makeReadOnly();
+
+        try {
+            s.remove("a");
+            fail("expected exception");
+        }
+        catch (ReadOnlyValueException e) { }
+        checkInt(1, s.get("a"));
+    }
+
     public void testRemoveAll()
     {
         IonStruct s = (IonStruct) oneValue("{a:1,b:2,b:3,c:4,d:5}");
@@ -530,13 +679,35 @@ public class StructTest
         }
         catch (NullPointerException e) { }
 
-        // TODO clarify null.struct behavior
-//        s = system().newNullStruct();
-//        try {
-//            s.removeAll((String[]) null);
-//            fail("Expected NullPointerException");
-//        }
-//        catch (NullPointerException e) { }
+        try {
+            s.removeAll("1", null, "2");
+            fail("Expected NullPointerException");
+        }
+        catch (NullPointerException e) { }
+
+        s = system().newEmptyStruct();
+        changed = s.removeAll((String[]) null);
+        assertFalse(changed);
+        assertTrue(s.isEmpty());
+        assertFalse(s.isNullValue());
+
+        s = system().newNullStruct();
+        changed = s.removeAll((String[]) null);
+        assertFalse(changed);
+        assertTrue(s.isNullValue());
+    }
+
+    public void testRemoveAllOnReadOnlyStruct()
+    {
+        IonStruct s = (IonStruct) oneValue("{a:1}");
+        s.makeReadOnly();
+
+        try {
+            s.removeAll("a");
+            fail("expected exception");
+        }
+        catch (ReadOnlyValueException e) { }
+        checkInt(1, s.get("a"));
     }
 
     public void testRetainAll()
@@ -559,6 +730,42 @@ public class StructTest
         changed = s.retainAll("b", "a");
         assertTrue(changed);
         assertEquals(2, s.size());
+
+        try {
+            s.retainAll((String[]) null);
+            fail("Expected NullPointerException");
+        }
+        catch (NullPointerException e) { }
+
+        try {
+            s.retainAll("1", null, "2");
+            fail("Expected NullPointerException");
+        }
+        catch (NullPointerException e) { }
+
+        s = system().newEmptyStruct();
+        changed = s.retainAll("holla");
+        assertFalse(changed);
+        assertTrue(s.isEmpty());
+        assertFalse(s.isNullValue());
+
+        s = system().newNullStruct();
+        changed = s.removeAll("yo");
+        assertFalse(changed);
+        assertTrue(s.isNullValue());
+    }
+
+    public void testRetainAllOnReadOnlyStruct()
+    {
+        IonStruct s = (IonStruct) oneValue("{a:1}");
+        s.makeReadOnly();
+
+        try {
+            s.retainAll("X");
+            fail("expected exception");
+        }
+        catch (ReadOnlyValueException e) { }
+        checkInt(1, s.get("a"));
     }
 
     public void testRemoveViaIteratorThenDirect()
@@ -718,5 +925,33 @@ public class StructTest
         assertSame(n1, c.iterator().next());
 
         assertEquals(null, n2.getContainer());
+    }
+
+    public void testCloneAndRemove()
+    {
+        IonStruct s1 = struct("a::b::{c:1,d:2,e:3,d:3}");
+        IonStruct actual = s1.cloneAndRemove("c", "e");
+        IonStruct expected = struct("a::b::{d:2,d:3}");
+        assertEquals(expected, actual);
+
+        assertEquals(struct("a::b::{}"), actual.cloneAndRemove("d"));
+
+        IonStruct n = struct("x::y::null.struct");
+        IonStruct n2 = n.cloneAndRemove("a");
+        assertEquals(struct("x::y::null.struct"), n2);
+    }
+
+    public void testCloneAndRetain()
+    {
+        IonStruct s1 = struct("a::b::{c:1,d:2,e:3,d:3}");
+        IonStruct actual = s1.cloneAndRetain("c", "d");
+        IonStruct expected = struct("a::b::{c:1,d:2,d:3}");
+        assertEquals(expected, actual);
+
+        assertEquals(struct("a::b::{}"), actual.cloneAndRetain("e"));
+
+        IonStruct n = struct("x::y::null.struct");
+        IonStruct n2 = n.cloneAndRetain("a");
+        assertEquals(struct("x::y::null.struct"), n2);
     }
 }

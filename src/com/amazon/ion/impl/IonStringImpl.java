@@ -23,6 +23,8 @@ public final class IonStringImpl
         IonConstants.makeTypeDescriptor(IonConstants.tidString,
                                         IonConstants.lnIsNullAtom);
 
+    private static final int HASH_SIGNATURE =
+        IonType.STRING.toString().hashCode();
 
     /**
      * Constructs a <code>null.string</code> value.
@@ -30,7 +32,7 @@ public final class IonStringImpl
     public IonStringImpl(IonSystemImpl system)
     {
         super(system, NULL_STRING_TYPEDESC);
-        _hasNativeValue = true; // Since this is null
+        _hasNativeValue(true); // Since this is null
     }
 
 
@@ -61,6 +63,22 @@ public final class IonStringImpl
         return clone;
     }
 
+    /**
+     * Implements {@link Object#hashCode()} consistent with equals. This
+     * implementation uses the hash of the string value XOR'ed with a constant.
+     *
+     * @return  An int, consistent with the contracts for
+     *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
+     */
+    @Override
+    public int hashCode() {
+        int hash = HASH_SIGNATURE;
+        if (!isNullValue())  {
+            hash ^= stringValue().hashCode();
+        }
+        return hash;
+    }
+
     public IonType getType()
     {
         return IonType.STRING;
@@ -79,7 +97,7 @@ public final class IonStringImpl
     @Override
     protected int getNativeValueLength()
     {
-        assert _hasNativeValue == true;
+        assert _hasNativeValue() == true;
         return IonBinary.lenIonString(_get_value());
     }
 
@@ -87,7 +105,7 @@ public final class IonStringImpl
     @Override
     protected int computeLowNibble(int valuelen)
     {
-        assert _hasNativeValue == true;
+        assert _hasNativeValue() == true;
 
         int ln = 0;
         if (_get_value() == null) {
@@ -105,10 +123,10 @@ public final class IonStringImpl
     @Override
     protected void doMaterializeValue(IonBinary.Reader reader) throws IOException
     {
-        assert this._isPositionLoaded == true && this._buffer != null;
+        assert this._isPositionLoaded() == true && this._buffer != null;
 
         // a native value trumps a buffered value
-        if (_hasNativeValue) return;
+        if (_hasNativeValue()) return;
 
         // the reader will have been positioned for us
         assert reader.position() == this.pos_getOffsetAtValueTD();
@@ -138,7 +156,7 @@ public final class IonStringImpl
             break;
         }
 
-        _hasNativeValue = true;
+        _hasNativeValue(true);
     }
 
 
