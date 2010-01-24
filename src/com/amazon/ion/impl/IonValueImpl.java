@@ -212,7 +212,7 @@ public abstract class IonValueImpl
      * for a boolean value - it should be a bit, but it seems
      * to be an int (4 bytes for 1 bit seems excessive).
      */
-    private int _flags;
+    private short _flags;
     private final boolean is_true(int flag_bit) {
         return ((_flags & flag_bit) != 0);
     }
