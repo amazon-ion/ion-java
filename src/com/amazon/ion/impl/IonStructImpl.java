@@ -150,7 +150,7 @@ public final class IonStructImpl
     public boolean isNullValue()
     {
         if (_hasNativeValue() || !_isPositionLoaded()) {
-            return (_contents == null);
+            return (_children == null);
         }
 
         int ln = this.pos_getLowNibble();
@@ -217,17 +217,17 @@ public final class IonStructImpl
         makeReady();
 
         int size;
-        if (_contents != null) {
+        if (_children != null) {
             try {
                 // Walk backwards to minimize array movement
                 int lowestRemovedIndex = -1;
-                for (int i = _contents.size() - 1; i >= 0; i--)
+                for (int i = get_child_count() - 1; i >= 0; i--)
                 {
-                    IonValue child = _contents.get(i);
+                    IonValue child = get_child(i);
                     if (fieldName.equals(child.getFieldName()))
                     {
                         ((IonValueImpl)child).detachFromContainer();
-                        _contents.remove(i);
+                        this.remove_child(i);
                         lowestRemovedIndex = i;
                     }
                 }
@@ -239,7 +239,7 @@ public final class IonStructImpl
             catch (IOException e) {
                 throw new IonException(e);
             }
-            size = _contents.size();
+            size = this.get_child_count();
         }
         else {
             size = 0;
@@ -427,9 +427,9 @@ public final class IonStructImpl
     {
         assert _hasNativeValue();
 
-        if (_contents == null) return IonConstants.lnIsNullStruct;
+        if (_children == null) return IonConstants.lnIsNullStruct;
 
-        if (_contents.isEmpty()) return IonConstants.lnIsEmptyContainer;
+        if (get_child_count() == 0) return IonConstants.lnIsEmptyContainer;
 
         if (_isOrdered) return IonConstants.lnIsOrderedStruct;
 
@@ -451,7 +451,7 @@ public final class IonStructImpl
 
         writer.write(this.pos_getTypeDescriptorByte());
 
-        if (_contents != null && _contents.size() > 0)
+        if (get_child_count() > 0)
         {
             // TODO Rewrite this to avoid computing length again
             int vlen = this.getNativeValueLength();
@@ -490,8 +490,8 @@ public final class IonStructImpl
             reader.setPosition(pos);
             int sid = reader.readVarUInt7IntValue();
             child = makeValueFromReader(sid, reader, buffer, symtab, this, _system);
-            child._elementid = _contents.size();
-            _contents.add(child);
+            child._elementid = get_child_count();
+            add_child(child._elementid, child);
             pos = child.pos_getOffsetofNextValue();
         }
         if (pos != end) {

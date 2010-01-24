@@ -525,7 +525,7 @@ public class IonReaderTreeSystem
         {
             if (_eof) return false;
 
-            int len = _parent._contents.size();
+            int len = _parent.get_child_count();
 
             if (_next_idx > 0) {
                 // first we have to verify the position of the
@@ -536,14 +536,14 @@ public class IonReaderTreeSystem
                 _next_idx = len; // if we can't find our current
                                  // value we'll be at eof anyway
                 while (ii<len) {
-                    if (_curr == _parent._contents.get(ii)) {
+                    if (_curr == _parent.get_child(ii)) {
                         _next_idx = ii+1;
                         break;
                     }
                 }
             }
             // if there anything left?
-            if (_next_idx >= _parent._contents.size()) {
+            if (_next_idx >= _parent.get_child_count()) {
                 _eof = true;
             }
             return !_eof;
@@ -557,7 +557,7 @@ public class IonReaderTreeSystem
                 _curr = null;
             }
             else {
-                _curr = _parent._contents.get(_next_idx);
+                _curr = _parent.get_child(_next_idx);
                 _next_idx++;
             }
             return _curr;

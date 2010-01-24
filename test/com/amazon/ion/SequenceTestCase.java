@@ -765,10 +765,10 @@ public abstract class SequenceTestCase
 
         s = wrapAndParse("0", "1", "2");
 
-        ListIterator<IonValue> i = s.listIterator(0);
-        assertSame(s.get(0), i.next());
-        assertSame(s.get(1), i.next());
-        assertSame(s.get(1), i.previous());
+        ListIterator<IonValue> i = s.listIterator(0); // position is .5
+        assertSame(s.get(0), i.next());  // next == 0, 1 is next next, pos is 1.5
+        assertSame(s.get(1), i.next());  // next == 1, 2 is next next, pos is 2.5
+        assertSame(s.get(1), i.previous());  // return is 1, pos is 1.5
         assertSame(s.get(1), i.next());
         assertSame(s.get(2), i.next());
         assertFalse(i.hasNext());
