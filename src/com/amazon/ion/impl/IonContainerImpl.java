@@ -85,7 +85,7 @@ abstract public class IonContainerImpl
             // children
             if (this._contents == null) {
                 int len = source._contents.size();
-                if (len < 1) len = 10;
+                if (len < 1) len = 2;
                 this._contents = new ArrayList<IonValue>(len);
             }
             // we should have an empty content list at this point
@@ -171,7 +171,7 @@ abstract public class IonContainerImpl
         checkForLock();
         if (isNullValue())
         {
-            _contents = new ArrayList<IonValue>();
+            _contents = new ArrayList<IonValue>(2);
             _hasNativeValue(true);
             setDirty();
         }
@@ -268,7 +268,7 @@ abstract public class IonContainerImpl
 
                 if (!isNullValue())
                 {
-                    _contents = new ArrayList<IonValue>();
+                    _contents = new ArrayList<IonValue>(2);
                     // this skips past then td and value len
                     reader.setPosition(this.pos_getOffsetAtActualValue());
                     doMaterializeValue(reader);
@@ -634,7 +634,7 @@ abstract public class IonContainerImpl
 
         if (_contents == null)
         {
-            _contents = new ArrayList<IonValue>();
+            _contents = new ArrayList<IonValue>(2);
             _hasNativeValue(true);
         }
 
