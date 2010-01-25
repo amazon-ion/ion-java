@@ -31,6 +31,11 @@ public class TimestampTest
      */
     private static final TimeZone UTC = TimeZone.getTimeZone("UTC");
 
+    /**
+     * PST = -08:00 = -480
+     */
+    private static final int PST_OFFSET = -8 * 60;
+
 
     public static Calendar makeUtcCalendar()
     {
@@ -574,6 +579,43 @@ public class TimestampTest
         badValue("2009-12-32T00:00Z");
     }
 
+    public void testNewTimestamp()
+    {
+        Timestamp ts = new Timestamp(2010, 2, 1, 10, 11, PST_OFFSET);
+        checkFields(2010, 2, 1, 10, 11, 0, null, PST_OFFSET, ts);
+        assertEquals("2010-02-01T10:11-08:00", ts.toString());
+        assertEquals("2010-02-01T18:11Z", ts.toZString());
+
+        ts = new Timestamp(2010, 2, 1, 10, 11, null);
+        checkFields(2010, 2, 1, 10, 11, 0, null, null, ts);
+        assertEquals("2010-02-01T10:11-00:00", ts.toString());
+        assertEquals("2010-02-01T10:11Z", ts.toZString());
+
+
+        ts = new Timestamp(2010, 2, 1, 10, 11, 12, PST_OFFSET);
+        checkFields(2010, 2, 1, 10, 11, 12, null, PST_OFFSET, ts);
+        assertEquals("2010-02-01T10:11:12-08:00", ts.toString());
+        assertEquals("2010-02-01T18:11:12Z", ts.toZString());
+
+        ts = new Timestamp(2010, 2, 1, 10, 11, 12, null);
+        checkFields(2010, 2, 1, 10, 11, 12, null, null, ts);
+        assertEquals("2010-02-01T10:11:12-00:00", ts.toString());
+        assertEquals("2010-02-01T10:11:12Z", ts.toZString());
+
+
+        BigDecimal fraction = new BigDecimal(".34");
+        ts = new Timestamp(2010, 2, 1, 10, 11, 12, fraction, PST_OFFSET);
+        checkFields(2010, 2, 1, 10, 11, 12, fraction, PST_OFFSET, ts);
+        assertEquals("2010-02-01T10:11:12.34-08:00", ts.toString());
+        assertEquals("2010-02-01T18:11:12.34Z", ts.toZString());
+
+        ts = new Timestamp(2010, 2, 1, 10, 11, 12, fraction, null);
+        checkFields(2010, 2, 1, 10, 11, 12, fraction, null, ts);
+        assertEquals("2010-02-01T10:11:12.34-00:00", ts.toString());
+        assertEquals("2010-02-01T10:11:12.34Z", ts.toZString());
+    }
+
+
     public void testNewTimestampFromCalendar()
     {
         Calendar cal = makeUtcCalendar();
@@ -600,6 +642,21 @@ public class TimestampTest
         assertEquals(1, ts.getDay());
         assertEquals(0, ts.getLocalOffset().intValue());
 
+        cal.clear();
+        cal.set(2009, 1, 1, 10, 11, 12);
+        cal.setTimeZone(TimeZone.getTimeZone("PST"));
+        ts = new Timestamp(cal);
+        assertEquals(Timestamp.Precision.SECOND, ts.getPrecision());
+        assertEquals(2009, ts.getYear());
+        assertEquals(2, ts.getMonth());
+        assertEquals(1, ts.getDay());
+        assertEquals(10, ts.getHour());
+        assertEquals(11, ts.getMinute());
+        assertEquals(12, ts.getSecond());
+        assertEquals(PST_OFFSET, ts.getLocalOffset().intValue());
+
+
+        cal = makeUtcCalendar(); // reset time zone
         cal.clear();
         cal.set(2009, 2, 18);
         assertFalse(cal.isSet(Calendar.HOUR_OF_DAY));

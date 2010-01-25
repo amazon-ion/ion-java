@@ -164,14 +164,17 @@ public final class Timestamp
     /**
      * this changes the year-minute values with rollover to apply
      * the timezone offset to the local struct values.
-     * @param offset the offset value, null Integer is not value here is should be handled by the caller
+     *
+     * @param offset the local offset, in minutes from GMT.
      */
     private void apply_offset(int offset)
     {
         if (offset == 0) return;
         if (offset < -24*60 || offset > 24*60) {
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException("bad offset " + offset);
         }
+        // To convert _to_ GMT you must SUBTRACT the local offset
+        offset = -offset;
         int hour_offset = offset / 60;
         int min_offset = offset - (hour_offset * 60);
         if (offset < 0) {
@@ -236,8 +239,10 @@ public final class Timestamp
         this._second = date.getSeconds();
         // this is done because the y-m-d values are in the local timezone
         // so this adjusts the value back to zulu time (GMT)
+        // Note that the sign on this is opposite of Ion (and Calendar) offset.
+        // Example: PST = 480 here but Ion/Calendar use -480 = -08:00 = GMT-8
         int offset = date.getTimezoneOffset();
-        this.apply_offset(offset);
+        this.apply_offset(-offset);
     }
     private void set_fraction_from_millis(long ms) {
         this._precision = Precision.FRACTION;
@@ -278,7 +283,6 @@ public final class Timestamp
             BigDecimal millis = new BigDecimal(cal.get(Calendar.MILLISECOND));
             this._fraction = millis.movePointRight(3); // make these actually 1/1000's of a second
         }
-        this._offset = cal.get(Calendar.ZONE_OFFSET);
     }
 
     /**
@@ -292,10 +296,6 @@ public final class Timestamp
      * @param cal the source calendar value
      */
     private void copy_from_calendar_fields(Precision p, Calendar cal) {
-        int offset = 0;
-        if (cal.isSet(Calendar.ZONE_OFFSET)) {
-            offset = cal.get(Calendar.ZONE_OFFSET) / 1000*60; // convert to minutes from milliseconds
-        }
         assert this._day == 1;
         switch (p) {
             case FRACTION:
@@ -307,11 +307,20 @@ public final class Timestamp
             case DAY:
                 this._day = cal.get(Calendar.DAY_OF_MONTH);
             case MONTH:
-                this._month = cal.get(Calendar.MONTH) + 1; // calendar months are 0 based, timestamp months are 1 based
+                // calendar months are 0 based, timestamp months are 1 based
+                this._month = cal.get(Calendar.MONTH) + 1;
             case YEAR:
                 this._year = cal.get(Calendar.YEAR);
         }
-        this.apply_offset(offset);
+
+        // Strangely, if this test is made before calling get(), it will return
+        // false even when Calendar.setTimeZone() was called.
+        if (cal.isSet(Calendar.ZONE_OFFSET)) {
+            // convert ms to minutes
+            _offset = cal.get(Calendar.ZONE_OFFSET) / (1000*60);
+            // Transform our members from local time to Zulu
+            this.apply_offset(_offset);
+        }
     }
 
 
@@ -370,6 +379,8 @@ public final class Timestamp
      * <p>
      * This is equivalent to the corresponding Ion value
      * {@code YYYY-MM-DDThh:mm+-oo:oo}.
+     *
+     * @param offset may be null to indicate unknown local offset.
      */
     public Timestamp(int year, int month, int day,
                      int hour, int minute,
@@ -383,8 +394,10 @@ public final class Timestamp
         this._year = year;
 
         validate_fields();
+        if (offset != null) {
         this._offset = offset;
         apply_offset(offset);
+    }
     }
 
     /**
@@ -393,6 +406,8 @@ public final class Timestamp
      * <p>
      * This is equivalent to the corresponding Ion value
      * {@code YYYY-MM-DDThh:mm:ss+-oo:oo}.
+     *
+     * @param offset may be null to indicate unknown local offset.
      */
     public Timestamp(int year, int month, int day,
                      int hour, int minute, int second,
@@ -407,8 +422,10 @@ public final class Timestamp
         this._year = year;
 
         validate_fields();
+        if (offset != null) {
         this._offset = offset;
         apply_offset(offset);
+    }
     }
 
     /**
@@ -419,6 +436,7 @@ public final class Timestamp
      * {@code YYYY-MM-DDThh:mm:ss.fff+-oo:oo}.
      *
      * @param frac must not be null.  If negative, the absolute value is used.
+     * @param offset may be null to indicate unknown local offset.
      *
      * @throws NullPointerException if {@code frac} is {@code null}.
      */
@@ -436,8 +454,10 @@ public final class Timestamp
         this._year = year;
 
         validate_fields();
+        if (offset != null) {
         this._offset = offset;
         apply_offset(offset);
+    }
     }
 
     /**
@@ -474,7 +494,9 @@ public final class Timestamp
         }
         validate_fields();
         this._offset = offset;
-        // TODO why doesn't this do applyOffset() like the other constructors?
+        // This doesn't call applyOffset() like the other constructors because
+        // we already expect Zulu field valus, and that's what we're supposed
+        // to have.
     }
 
 
@@ -487,6 +509,8 @@ public final class Timestamp
      * field members reflect GMT time, not local time.
      * This is the "native" constructor which sets all the values
      * appropriately and directly.
+     *
+     * @param offset may be null to indicate unknown local offset.
      */
     public static Timestamp
     createFromUtcFields(Precision p, int zyear, int zmonth, int zday,
@@ -724,7 +748,7 @@ public final class Timestamp
                           hour, minute, seconds, fraction, offset);
         if (offset != null) {
             // if there is a local offset, we have to adjust the date/time value
-            ts.apply_offset(-offset);
+            ts.apply_offset(offset);
         }
         return ts;
     }
@@ -792,8 +816,8 @@ public final class Timestamp
         int offset = this._offset != null ? this._offset.intValue() : 0;
         //Precision p = (this._precision == Precision.TT_FRAC) ? Precision.TT_SECS : this._precision;
         Timestamp localtime = new Timestamp(this._precision, this._year, this._month, this._day, this._hour, this._minute, this._second, this._fraction, null);
-        localtime.apply_offset(offset);
-        localtime._offset = this._offset;
+        localtime.apply_offset(-offset);
+        localtime._offset = this._offset;  // FIXME Misleading
         //localtime._precision = this._precision;
         return localtime;
     }
@@ -1129,6 +1153,8 @@ public final class Timestamp
      * as if it had been specified in zulu time.  This is especially
      * useful for debugging as the resulting value has had the
      * local offset "applied".
+     *
+     * @see #printZ(Appendable)
      */
     public String toZString()
     {
@@ -1161,11 +1187,9 @@ public final class Timestamp
         Timestamp adjusted = this;
 
         // Adjust UTC time back to local time
-        if (this._offset != null) {
-            if (this._offset.intValue() != 0) {
+        if (this._offset != null && this._offset.intValue() != 0) {
                 adjusted = make_localtime();
             }
-        }
 
         print(out, adjusted);
     }
@@ -1183,7 +1207,7 @@ public final class Timestamp
         throws IOException
     {
         Timestamp ztime = this.clone();
-        ztime._offset = null;
+        ztime._offset = UTC_OFFSET;
         ztime.print(out);
     }
 
