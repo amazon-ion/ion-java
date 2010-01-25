@@ -357,9 +357,23 @@ public abstract class IonValueImpl
         }
     }
 
-    protected void makeReady()
+    // this is split to make it more likely
+    // that it will be inlined. This is
+    // very frequently called.
+    // It doesn't look like you can have
+    // a materialized value which doesn't
+    // have a native value, so the first
+    // test should be enough.  But the
+    // _isMaterialized test was there
+    // before and there's no need, at this
+    // time, to change this.
+    protected final void makeReady()
     {
         if (_hasNativeValue()) return;
+        makeReadyHelper();
+    }
+    private final void makeReadyHelper()
+    {
         if (_isMaterialized()) return;
         if (_entry_start != -1) {
             assert _isPositionLoaded() == true;
@@ -617,8 +631,13 @@ public abstract class IonValueImpl
         throws ReadOnlyValueException
     {
         if (_isLocked()) {
-            throw new ReadOnlyValueException();
+            throwReadOnlyException();
         }
+    }
+    private final void throwReadOnlyException()
+        throws ReadOnlyValueException
+    {
+        throw new ReadOnlyValueException();
     }
 
     /**
@@ -1016,14 +1035,21 @@ public abstract class IonValueImpl
     /**
      * Decodes the content of this element into Java values for access via
      * this object.  If this is a container, the children are not necessarily
-     * materialized.
+     * materialized.  Real work is in materialize_helper() which has the
+     * synchronization is overridden in IonContainerImpl.  The split should
+     * allow materialize to be in-lined.
      * <p/>
      * Postcondition: <code>this._hasNativeValue == true </code>
      */
-    protected synchronized void materialize() throws IOException
+    protected final void materialize() throws IOException
     {
-        if ( this._isMaterialized() ) return;
 
+        if ( this._isMaterialized() ) return;
+        materialize_helper();
+    }
+    protected synchronized void materialize_helper()
+        throws IOException
+    {
         if ( this._isPositionLoaded() == false ) {
             if (this._buffer != null) {
                 throw new IonException("invalid value state - buffer but not loaded!");

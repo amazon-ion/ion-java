@@ -339,7 +339,7 @@ abstract public class IonContainerImpl
      * @throws IOException
      */
     @Override
-    protected void materialize()
+    protected synchronized void materialize_helper()
         throws IOException
     {
         // TODO throw IonException not IOException
@@ -847,7 +847,9 @@ abstract public class IonContainerImpl
             __readOnly = readOnly;
         }
 
-        private void force_position_sync()
+        // split to encourage the in-lining of the common
+        // case where we don't actually do anything
+        private final void force_position_sync()
         {
             if (__pos <= 0 || __pos > _child_count) {
                 return;
@@ -855,6 +857,10 @@ abstract public class IonContainerImpl
             if (__current == null || __current == _children[__pos - 1]) {
                 return;
             }
+            force_position_sync_helper();
+        }
+        private final void force_position_sync_helper()
+        {
             if (__readOnly) {
                 throw new IonException("read only sequence was changed");
             }
@@ -895,15 +901,15 @@ abstract public class IonContainerImpl
             throw new UnsupportedOperationException();
         }
 
-        public boolean hasNext()
+        public final boolean hasNext()
         {
-            force_position_sync();
+            // called in nextIndex(): force_position_sync();
             return (nextIndex() < _child_count);
         }
 
-        public boolean hasPrevious()
+        public final boolean hasPrevious()
         {
-            force_position_sync();
+            // called in previousIndex(): force_position_sync();
             return (previousIndex() >= 0);
         }
 
@@ -919,7 +925,7 @@ abstract public class IonContainerImpl
             return __current;
         }
 
-        public int nextIndex()
+        public final int nextIndex()
         {
             force_position_sync();
             if (__pos >= _child_count) {
@@ -945,7 +951,7 @@ abstract public class IonContainerImpl
             return __current;
         }
 
-        public int previousIndex()
+        public final int previousIndex()
         {
             force_position_sync();
             int prev_idx = __pos - 1;
