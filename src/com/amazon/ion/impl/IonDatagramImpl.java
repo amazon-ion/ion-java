@@ -477,6 +477,11 @@ public final class IonDatagramImpl
         return super.get(index);
     }
 
+    @Override
+    public Iterator<IonValue> iterator() {
+        return new UserContentsIterator(_userContents.listIterator(0),
+                                        this.isReadOnly());
+    }
 
     @Override
     public ListIterator<IonValue> listIterator(int index)

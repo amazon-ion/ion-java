@@ -798,7 +798,7 @@ abstract public class IonContainerImpl
         throw new AssertionError("element's index is not correct");
     }
 
-    public final Iterator<IonValue> iterator()
+    public Iterator<IonValue> iterator()
     {
         return listIterator(0);
     }
