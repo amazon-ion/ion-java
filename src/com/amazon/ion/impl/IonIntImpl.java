@@ -42,7 +42,9 @@ public final class IonIntImpl
     private static final int HASH_SIGNATURE =
         IonType.INT.toString().hashCode();
 
-    private Long _int_value;
+    //private Long _int_value;
+    private long _long_value;
+
 
 
     /**
@@ -51,6 +53,7 @@ public final class IonIntImpl
     public IonIntImpl(IonSystemImpl system)
     {
         super(system, NULL_INT_TYPEDESC);
+        _isNullValue(true);
         _hasNativeValue(true); // Since this is null
     }
 
@@ -60,6 +63,7 @@ public final class IonIntImpl
     public IonIntImpl(IonSystemImpl system, int typeDesc)
     {
         super(system, typeDesc);
+        _isNullValue(true);
         assert pos_getType() == IonConstants.tidPosInt
             || pos_getType() == IonConstants.tidNegInt
         ;
@@ -80,7 +84,7 @@ public final class IonIntImpl
 
     	makeReady();
     	clone.copyAnnotationsFrom(this);
-        clone.doSetValue(this._int_value);
+        clone.doSetValue(this._long_value, this._isNullValue());
 
     	return clone;
     }
@@ -119,24 +123,24 @@ public final class IonIntImpl
         throws NullValueException
     {
         makeReady();
-        if (_int_value == null) throw new NullValueException();
-        return _int_value.intValue();
+        if (_isNullValue()) throw new NullValueException();
+        return (int)_long_value;
     }
 
     public long longValue()
         throws NullValueException
     {
         makeReady();
-        if (_int_value == null) throw new NullValueException();
-        return _int_value.longValue();
+        if (_isNullValue()) throw new NullValueException();
+        return _long_value;
     }
 
     public BigInteger bigIntegerValue()
         throws NullValueException
     {
         makeReady();
-        if (_int_value == null) return null;
-        return BigInteger.valueOf(_int_value.longValue());
+        if (_isNullValue()) return null;
+        return BigInteger.valueOf(_long_value);
     }
 
     @Deprecated
@@ -149,13 +153,13 @@ public final class IonIntImpl
     public void setValue(int value)
     {
         checkForLock();
-        doSetValue(Long.valueOf(value));
+        doSetValue(Long.valueOf(value), false);
     }
 
     public void setValue(long value)
     {
         checkForLock();
-    	doSetValue(Long.valueOf(value));
+    	doSetValue(Long.valueOf(value), false);
     }
 
     public void setValue(Number value)
@@ -163,9 +167,7 @@ public final class IonIntImpl
     	checkForLock();
         if (value == null)
         {
-            _int_value = null;
-            _hasNativeValue(true);
-            setDirty();
+            doSetValue(0, true);
         }
         else
         {
@@ -180,13 +182,14 @@ public final class IonIntImpl
                     throw new IonException(message);
                 }
             }
-            doSetValue(Long.valueOf(value.longValue()));
+            doSetValue(value.longValue(), false);
         }
     }
 
-    private void doSetValue(Long value)
+    private void doSetValue(long value, boolean isNull)
     {
-        _int_value = value;
+        _long_value = value;
+        _isNullValue(isNull);
         _hasNativeValue(true);
         setDirty();
     }
@@ -195,17 +198,16 @@ public final class IonIntImpl
     public synchronized boolean isNullValue()
     {
         if (!_hasNativeValue()) return super.isNullValue();
-        return (_int_value == null);
+        return _isNullValue();
     }
-
 
     @Override
     protected int getNativeValueLength()
     {
         assert _hasNativeValue() == true;
-        if (_int_value == null) return 0;
+        if (_isNullValue()) return 0;
         // TODO streamline following; this is only call site.
-        return IonBinary.lenIonInt(_int_value);
+        return IonBinary.lenIonInt(_long_value);
     }
 
     @Override
@@ -213,11 +215,11 @@ public final class IonIntImpl
     {
         assert _hasNativeValue() == true;
 
-        if (_int_value == null) {
+        if (_isNullValue()) {
             return NULL_INT_TYPEDESC;
         }
 
-        long content = _int_value.longValue();
+        long content = _long_value;
         if (content == 0) {
             return ZERO_INT_TYPEDESC;
         }
@@ -271,10 +273,13 @@ public final class IonIntImpl
         int ln = this.pos_getLowNibble();
         switch ((0xf & ln)) {
         case IonConstants.lnIsNullAtom:
-            _int_value = null;
+            _long_value = 0;
+            _isNullValue(true);
             break;
         case 0:
-            _int_value = ZERO_LONG;
+            //_int_value = ZERO_LONG;
+            _long_value = 0;
+            _isNullValue(false);
             break;
         case IonConstants.lnIsVarLen:
             ln = reader.readVarUInt7IntValue();
@@ -284,7 +289,9 @@ public final class IonIntImpl
             if (type == IonConstants.tidNegInt) {
                 l = - l;
             }
-            _int_value = Long.valueOf(l);
+            //_int_value = Long.valueOf(l);
+            _long_value = l;
+            _isNullValue(false);
             break;
         }
 
@@ -299,7 +306,7 @@ public final class IonIntImpl
         assert valueLen == this.getNakedValueLength();
         assert valueLen > 0;
 
-        long l = (_int_value < 0) ? -_int_value : _int_value;
+        long l = (_long_value < 0) ? -_long_value : _long_value;
 
         int wlen = writer.writeVarUInt8Value(l, valueLen);
         assert wlen == valueLen;

@@ -101,11 +101,55 @@ public abstract class IonValueImpl
      */
 
     /**
+     * this hold all the various boolean flags we have
+     * in a single int.  Use set_flag(), clear_flag(), is_true()
+     * and the associated int flag to check the various flags.
+     * This is to avoid the overhead java seems to impose
+     * for a boolean value - it should be a bit, but it seems
+     * to be an int (4 bytes for 1 bit seems excessive).
+     */
+    private short _flags;
+
+    private static final int IS_MATERIALIZED    = 0x01;
+    private static final int IS_POSITION_LOADED = 0x02;
+    private static final int HAS_NATIVE_VALUE   = 0x04;
+    private static final int IS_DIRTY           = 0x08;
+    private static final int IS_LOCKED          = 0x10;
+    private static final int IS_SYSTEM_VALUE    = 0x20;
+    private static final int IS_NULL_VALUE      = 0x40;
+    private static final int IS_BOOL_TRUE       = 0x80;
+
+
+    private final boolean is_true(int flag_bit) {
+        // FIXME: removed, dead code for debugging
+        if (flag_bit == IS_BOOL_TRUE) {
+            flag_bit = IS_BOOL_TRUE;
+        }
+        return ((_flags & flag_bit) != 0);
+    }
+    private final void set_flag(int flag_bit) {
+        // FIXME: removed, dead code for debugging
+        if (flag_bit == IS_BOOL_TRUE) {
+            flag_bit = IS_BOOL_TRUE;
+        }
+        assert(flag_bit != 0);
+        _flags |= flag_bit;
+    }
+    private final void clear_flag(int flag_bit) {
+        // FIXME: removed, dead code for debugging
+        if (flag_bit == IS_BOOL_TRUE) {
+            flag_bit = IS_BOOL_TRUE;
+        }
+        assert(flag_bit != 0);
+        _flags &= ~flag_bit;
+    }
+
+
+    /**
      * Indicates whether or not a value has been loaded from its buffer.
      * If the value does not have backing buffer this is always false;
      * If this value is true the _isPositionLoaded must also be true;
      */
-    private static final int IS_MATERIALIZED = 0x01;
     protected final boolean _isMaterialized() { return is_true(IS_MATERIALIZED); }
     protected final boolean _isMaterialized(boolean flag) {
         if (flag) {
@@ -121,7 +165,6 @@ public abstract class IonValueImpl
      * Indicates whether or not the position information has been loaded.
      * If the value does not have backing buffer this is always false;
      */
-    private static final int IS_POSITION_LOADED = 0x02;
     protected final boolean _isPositionLoaded() { return is_true(IS_POSITION_LOADED); }
     protected final boolean _isPositionLoaded(boolean flag) {
         if (flag) {
@@ -137,7 +180,6 @@ public abstract class IonValueImpl
      * Indicates whether our nativeValue (stored by concrete subclasses)
      * has been determined.
      */
-    private static final int HAS_NATIVE_VALUE = 0x04;
     protected final boolean _hasNativeValue() { return is_true(HAS_NATIVE_VALUE); }
     protected final boolean _hasNativeValue(boolean flag) {
         if (flag) {
@@ -161,7 +203,6 @@ public abstract class IonValueImpl
      * <p>
      * Note that a value with no buffer is always dirty.
      */
-    private static final int IS_DIRTY = 0x08;
     private final boolean _isDirty() { return is_true(IS_DIRTY); }
     private final boolean _isDirty(boolean flag) {
         if (flag) {
@@ -178,7 +219,6 @@ public abstract class IonValueImpl
      * Tracks whether or not this instance is locked.  Locked values
      * may not be mutated and must be thread safe for reading.
      */
-    private static final int IS_LOCKED = 0x10;
     protected final boolean _isLocked() { return is_true(IS_LOCKED); }
     protected final boolean _isLocked(boolean flag) {
         if (flag) {
@@ -191,7 +231,6 @@ public abstract class IonValueImpl
     }
 
 
-    private static final int IS_SYSTEM_VALUE = 0x20;
     protected final boolean _isSystemValue() { return is_true(IS_SYSTEM_VALUE); }
     protected final boolean _isSystemValue(boolean flag) {
         if (flag) {
@@ -203,27 +242,36 @@ public abstract class IonValueImpl
         return flag;
     }
 
+    /**
+     * used by IonIntImpl and IonBoolImpl (so far)
+     */
+    protected final boolean _isNullValue() { return is_true(IS_NULL_VALUE); }
+    protected final boolean _isNullValue(boolean flag) {
+        if (flag) {
+            set_flag(IS_NULL_VALUE);
+        }
+        else {
+            clear_flag(IS_NULL_VALUE);
+        }
+        return flag;
+    }
 
     /**
-     * this hold all the various boolean flags we have
-     * in a single int.  Use set_flag(), clear_flag(), is_true()
-     * and the associated int flag to check the various flags.
-     * This is to avoid the overhead java seems to impose
-     * for a boolean value - it should be a bit, but it seems
-     * to be an int (4 bytes for 1 bit seems excessive).
+     * since an IonBool only has true or false, it's value
+     * can live in one of the flags bit
      */
-    private short _flags;
-    private final boolean is_true(int flag_bit) {
-        return ((_flags & flag_bit) != 0);
+    protected final boolean _isBoolTrue() { return is_true(IS_BOOL_TRUE); }
+    protected final boolean _isBoolTrue(boolean flag) {
+        if (flag) {
+            set_flag(IS_BOOL_TRUE);
+        }
+        else {
+            clear_flag(IS_BOOL_TRUE);
+        }
+        return flag;
     }
-    private final void set_flag(int flag_bit) {
-        assert(flag_bit != 0);
-        _flags |= flag_bit;
-    }
-    private final void clear_flag(int flag_bit) {
-        assert(flag_bit != 0);
-        _flags &= ~flag_bit;
-    }
+
+
 
     /**
      * This is the containing value, if there is one.  The container
