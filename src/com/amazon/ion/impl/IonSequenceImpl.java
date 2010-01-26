@@ -340,7 +340,7 @@ public abstract class IonSequenceImpl
     public <T> T[] toArray(T[] a)
     {
         Class<?> type = a.getClass().getComponentType();
-        if (!type.isAssignableFrom(IonValue.class)) {
+        if (!IonValue.class.isAssignableFrom(type)) {
             throw new ArrayStoreException();
         }
         int size = get_child_count();
