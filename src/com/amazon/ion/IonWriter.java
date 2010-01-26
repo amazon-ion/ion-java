@@ -1,0 +1,696 @@
+// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
+
+package com.amazon.ion;
+
+import com.amazon.ion.util.IonStreamUtils;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.Date;
+
+/**
+ * Writes Ion data to an output source.
+ *
+ * This interface allows
+ * the user to logically write the values as they view the data
+ * without being concerned about which output format is needed.
+ * <p>
+ * A value is written via the set of typed {@code write*()} methods such as
+ * {@link #writeBool(boolean)} and {@link #writeInt(long)}.
+ * Each of these methods outputs a single Ion value, and afterwards the writer
+ * is prepared to receive the data for the next sibling value.
+ * <p>
+ * Any type annotations must be set before the value is written.
+ * Once the value has been written the "pending annotations" are erased,
+ * so they are must be set again if they need to be applied to the next value.
+ * <p>
+ * Similarly the field name must be set before the value is
+ * written (assuming the value is a field in a structure).  The field name
+ * is also "erased" once used, so it must be set for each field.
+ * <p>
+ * To write a container, first write any annotations and/or field name
+ * applicable to the container itself.
+ * Then call {@link #stepIn(IonType)} with the desired container type.
+ * Then write each child value in order.
+ * Finally, call {@link #stepOut()} to close the container.
+ * <p>
+ * Several {@code write*List()}
+ * helper routines are included to simplify writing arrays of
+ * common scalars to the output.  For binary this output can be
+ * optimized for some performance gain, but for text and tree
+ * these are simply convenience covers.
+ * <p>
+ * Once all the values have been written into the writer the
+ * caller can use getBytes() or writeBytes() to get the cached output
+ * as a byte array (either a new one allocated by the writer or
+ * a user supplied buffer), or output to an output stream.
+ */
+public interface IonWriter
+{
+
+    /**
+     * Sets the symbol table to use for encoding to be the passed
+     * in symbol table.  The can only be done outside an Ion value,
+     * that is at the datagram level.  As symbols are written
+     * this symbol table is used to resolve them.  If the symbols
+     * are undefined this symbol table is updated to include them
+     * as local symbols.  The updated symbol table will be
+     * written before any of the local values are emitted.
+     * <p>
+     * If the symbol table is the system symbol table an Ion
+     * version marker will be written to the output.  If symbols
+     * not in the system symbol table are written a local
+     * symbol table will be created and written before the
+     * current top level value.
+     *
+     * @param symbols base symbol table for encoding
+     * @throws IllegalArgumentException if symbols is null or a shared symbol table
+
+     */
+     public void setSymbolTable(SymbolTable symbols) throws IOException;
+
+    /**
+     * Gets the symbol table that is currently in use by the writer.
+     * While writing a number of values the symbol table will be
+     * populated with any added symbols.
+     * <p>
+     * Note that the table may be replaced during processing.  For example,
+     * the stream may start out with a system table that's later replaced by a
+     * local table in order to store newly-encountered symbols.
+     *
+     * @return current symbol table
+     */
+    public SymbolTable getSymbolTable();
+
+    /**
+     * Get the IonSystem associated with this writer.  This
+     * may return null if no IonSystem is attached.  An IonSystem
+     * is required if the writer needs to construct a local
+     * symbol table.
+     * @return IonSystem attached IonSystem or null
+     */
+    public IonSystem getSystem();
+
+    /**
+     * Returns the current depth of containers the writer is at.  This is
+     * 0 if the writer is at the datagram level.
+     * @return int depth of container nesting
+     */
+    public int getDepth();
+
+    /**
+     * Returns the type of output this writer is generating.
+     */
+    public IonIterationType getIterationType();
+
+    /**
+     * This forces any pending data to be written to the
+     * users output stream.  If not user output stream
+     * has been specified (in the constructor) this
+     * operation will simply reset state as if it had
+     * written the data.  The data will be written
+     * whenever the user later requests it through
+     * flush with a passed in value or through a call
+     * to getBytes.
+     *
+     * @throws IllegalStateException if the writer is in the
+     *  midst of writing a value, this would be most common if
+     *  there is an unclosed container (a stepIn() without a
+     *  matching stepOut()).
+     */
+    public void flush() throws IOException;
+
+    /**
+     * Sets the pending field name to the given symbol id.
+     * The id is expected to be already present in the current symbol table
+     * (but this is not checked).
+     * <p>
+     * The pending field name is cleared when the current value is written via
+     * one of the {@code write*()} or {@code open*()} methods.
+     *
+     * @param id symbol id of the field name
+     *
+     * @throws IllegalStateException if the current container isn't a struct,
+     * that is, if {@link #isInStruct()} is false.
+     */
+    public void setFieldId(int id);
+
+    /**
+     * Sets the pending field name to the given text.
+     * If the string is not present in the current symbol table,
+     * it will be added.
+     * <p>
+     * The pending field name is cleared when the current value is written via
+     * one of the {@code write*()} or {@code open*()} methods.
+     *
+     * @param name text of the field name
+     *
+     * @throws IllegalStateException if the current container isn't a struct,
+     * that is, if {@link #isInStruct()} is false.
+     * @throws NullPointerException if {@code name} is null.
+     * @throws EmptySymbolException if {@code name} is empty.
+     */
+    public void setFieldName(String name);
+
+    /**
+     * This returns the field name of the value about to be written
+     * if the field name has been set.  If the field name has not been
+     * defined this will return null.
+     * @return String name of the field about to be written or null if it is not yet set
+     */
+    public String getFieldName();
+
+    /**
+     * Returns the symbol id of the current field name, if the field name
+     * has been set.  If the name has not been set, either as either a String
+     * or a symbol id value, this returns -1 (undefined symbol).
+     * @return symbol id of the name of the field about to be written or -1 if it is not set
+     */
+    public int getFieldId();
+
+    /**
+     * Returns true if the field name has been set either through setFieldName or
+     * setFieldId.  This is generally more efficient than calling getFieldName or
+     * getFieldId and checking the return type as it does not need to resolve the
+     * name through a symbol table.  This returns false if the field name has not
+     * been set.
+     * @return true if a field name has been set false otherwise
+     */
+    public boolean isFieldNameSet();
+
+    /**
+     * Sets the full list of pending annotations to the given text symbols.
+     * Any pending annotations are cleared.
+     * The contents of the {@code annotations} array are copied into this
+     * writer, so the caller does not need to preserve the array.
+     * <p>
+     * The list of pending annotations is cleared when the current value is
+     * written via one of the {@code write*()} or {@code open*()} methods.
+     *
+     * @param annotations string array with the annotations.
+     * If null or empty, any pending annotations are cleared.
+     */
+    public void setTypeAnnotations(String[] annotations);
+
+    /**
+     * Sets the full list of pending annotations to the given symbol ids.
+     * Any pending annotations are cleared.
+     * The contents of the {@code annotations} array are copied into this
+     * writer, so the caller does not need to preserve the array.
+     * <p>
+     * The list of pending annotations is cleared when the current value is
+     * written via one of the {@code write*()} or {@code open*()} methods.
+     *
+     * @param annotationIds array with the annotation symbol ids.
+     * If null or empty, any pending annotations are cleared.
+     */
+    public void setTypeAnnotationIds(int[] annotationIds);
+
+    /**
+     * Adds a given string to the list of pending annotations.
+     * <p>
+     * The list of pending annotations is cleared when the current value is
+     * written via one of the {@code write*()} or {@code open*()} methods.
+     *
+     * @param annotation string annotation to append to the annotation list
+     */
+    public void addTypeAnnotation(String annotation);
+
+    /**
+     * Adds a given symbol id to the list of pending annotations.
+     * <p>
+     * The list of pending annotations is cleared when the current value is
+     * written via one of the {@code write*()} or {@code open*()} methods.
+     *
+     * @param annotationId symbol id to append to the annotation list
+     */
+    public void addTypeAnnotationId(int annotationId);
+
+    /**
+     * Gets the current list of pending annotations.
+     * This is the contents of the current {@code annotations} array
+     * of this writer.
+     * <p>
+     * If the annotations were set as IDs they
+     * will be converted if a symbol table is available.  In the event
+     * a symbol table is not available a null array will be returned.
+     * If no annotations are set a 0 length array will be returned.
+     * <p>
+     * @return pending type annotations as strings, null if the
+     * annotations cannot be expressed as strings.
+     */
+    public String[] getTypeAnnotations();
+
+    /**
+     * Gets the current list of pending annotations.
+     * This is the contents of the current {@code annotations} array
+     * of this writer.
+     * <p>
+     * If the annotations were set as string they
+     * will be converted to symbol IDs (ints) if a symbol table is
+     * available.  In the event a symbol table is not available a
+     * null array will be returned.
+     * If no annotations are set a 0 length array will be returned.
+     * <p>
+     * @return pending type annotations as symbol ID ints, null if the
+     * annotations cannot be expressed as IDs.
+     */
+    public int[] getTypeAnnotationIds();
+
+
+
+    //=========================================================================
+    // Container navigation
+
+    /**
+     * Writes the beginning of a non-null container (list, sexp, or struct).
+     * This must be matched by a call to {@link #stepOut()} after the last
+     * child value.
+     * <p>
+     * This method is <em>not</em> used to write {@code null.list} et al.
+     * To write null values use {@link #writeNull(IonType)}.
+     *
+     * @param containerType must be one of
+     * {@link IonType#LIST}, {@link IonType#SEXP}, or {@link IonType#STRUCT}.
+     */
+    public void stepIn(IonType containerType) throws IOException;
+
+
+    /**
+     * Writes the end of the current container, returning this writer to the
+     * context of parent container.
+     * Invocation of this method must match a preceding call to
+     * {@link #stepIn(IonType)}.
+     */
+    public void stepOut() throws IOException;
+
+
+    /**
+     * Determines whether values are being written as fields of a struct.
+     * This is especially useful when it is not clear whether field names need
+     * to be written or not.
+     *
+     * @return true when the parent is a struct.
+     */
+    public boolean isInStruct();
+
+
+    //=========================================================================
+    // Value writing
+
+    /**
+     * writes the contents of the passed in Ion value to the output.
+     * <p>
+     * This method also writes annotations and field names (if in a struct),
+     * and performs a deep write, including the contents of
+     * any containers encountered.
+     */
+    public void writeValue(IonValue value) throws IOException;
+
+    /**
+     * Writes the current value from a reader.
+     * <p>
+     * This method also writes annotations and field names (if in a struct),
+     * and performs a deep write, including the contents of
+     * any containers encountered.
+     */
+    public void writeValue(IonReader reader) throws IOException;
+
+    /**
+     * Writes values from a reader until the end of the current container.
+     * This method iterates until {@link IonReader#next()} returns {@code null}
+     * and does not {@link IonReader#stepOut() step out} to the container of
+     * the current cursor position.
+     * <p>
+     * This method also writes annotations and field names (if in a struct),
+     * and performs a deep write, including the contents of
+     * any containers encountered.
+     */
+    public void writeValues(IonReader reader) throws IOException;
+
+
+    /**
+     * Writes a value of Ion's null type ({@code null} aka {@code null.null}).
+     */
+    public void writeNull() throws IOException;
+
+    /**
+     * Writes a null value of a specified Ion type.
+     *
+     * @param type type of the null to be written
+     */
+    public void writeNull(IonType type) throws IOException;
+
+
+    /**
+     * writes a non-null boolean value (true or false) as an IonBool
+     * to output.
+     * @param value true or false as desired
+     */
+    public void writeBool(boolean value) throws IOException;
+
+
+    /**
+     * writes a signed 8 bit value, a Java byte, as an IonInt.
+     * @param value signed int to write
+     *
+     * @deprecated Use {@link #writeInt(long)}.
+     */
+    @Deprecated
+    public void writeInt(byte value) throws IOException;
+
+    /**
+     * writes a signed 16 bit value, a Java short, as an IonInt.
+     * @param value signed int to write
+     *
+     * @deprecated Use {@link #writeInt(long)}.
+     */
+    @Deprecated
+    public void writeInt(short value) throws IOException;
+
+    /**
+     * writes a signed 32 bit value, a Java int, as an IonInt.
+     * @param value signed int to write
+     *
+     * @deprecated Use {@link #writeInt(long)}.
+     */
+    @Deprecated
+    public void writeInt(int value) throws IOException;
+
+    /**
+     * writes a signed 64 bit value, a Java long, as an IonInt.
+     * @param value signed int to write
+     */
+    public void writeInt(long value) throws IOException;
+
+    /**
+     * writes a BigInteger value as an IonInt.  If the
+     * BigInteger value is null this writes a null int.
+     * @param value BigInteger to write
+     */
+    public void writeInt(BigInteger value) throws IOException;
+
+
+    /**
+     * writes a 32 bit binary floating point value, a Java float,
+     * as an IonFloat.  Currently IonFloat values are output as
+     * 64 bit IEEE 754 big endian values.  As a result writeFloat
+     * is simply a convenience method which casts the float
+     * up to a double on output.
+     * @param value float to write
+     *
+     * @deprecated Use {@link #writeFloat(double)}.
+     */
+    @Deprecated
+    public void writeFloat(float value) throws IOException;
+
+    /**
+     * writes a 64 bit binary floating point value, a Java double,
+     * as an IonFloat.  Currently IonFloat values are output as
+     * 64 bit IEEE 754 big endian values.  IonFloat preserves all
+     * valid floating point values, including -0.0, Nan and +/-infinity.
+     * It does not guarantee preservation of -Nan or other less
+     * less "common" values.
+     * @param value double to write
+     */
+    public void writeFloat(double value) throws IOException;
+
+    /**
+     * Writes a BigDecimal value as an Ion decimal.  Ion uses an
+     * arbitrarily long sign/value and an arbitrarily long signed
+     * exponent to write the value. This preserves
+     * all of the BigDecimal digits, the number of
+     * significant digits.
+     * <p>
+     * To write a negative zero value, pass this method a
+     * {@link Decimal} instance.
+     *
+     * @param value may be null to represent {@code null.decimal}.
+     */
+    public void writeDecimal(BigDecimal value) throws IOException;
+
+    /**
+     * writes a special value as decimal.  Currently IonDecimal only
+     * supports the special value of negative zero value.  The
+     * java.math.BigDecimal class does not support the value negative
+     * zero.  This method allows us to emit this value when it
+     * is necessary.
+     *
+     * @deprecated Use {@link #writeDecimal(BigDecimal)} instead.
+     */
+    @Deprecated
+    public void writeDecimal(IonNumber.Classification classification)
+        throws IOException;
+
+    /**
+     * writes a BigDecimal value as an IonDecimal.  Ion uses an
+     * arbitrarily long sign/value and an arbitrarily long signed
+     * exponent to write the value. This preserves
+     * all of the BigDecimal digits, the number of
+     * significant digits.  Since java.math.BigDecimal cannot represent
+     * negative zero this method allows the caller to specify that
+     * this value is a negative zero.  If isNegativeZero is true and
+     * the value is not numerically equal to zero this will
+     * throw an IllegalArgumentException.
+     * @param value BigDecimal to write
+     * @param classification the kind of special value to write.
+     * Currently only {@link IonNumber.Classification#NEGATIVE_ZERO}
+     * is supported.
+     *
+     * @deprecated Replaced by {@link #writeDecimal(BigDecimal)}.
+     */
+    @Deprecated
+    public void writeDecimal(BigDecimal value,
+                             IonNumber.Classification classification)
+        throws IOException;
+
+    /**
+     * Writes a timestamp value.
+     *
+     * @param value may be null to represent {@code null.timestamp}.
+     */
+    public void writeTimestamp(Timestamp value) throws IOException;
+
+    /**
+     * writes the passed in Date (in milliseconds since the epoch) as an
+     * IonTimestamp.  The Date value is treated as a UTC value with an
+     * unknown timezone offset (a z value).
+     * @param value java.util Date holding the UTC timestamp;
+     * may be null to represent {@code null.timestamp}.
+     *
+     * @deprecated Use {@link #writeTimestamp(Timestamp)}.
+     */
+    @Deprecated
+    public void writeTimestampUTC(Date value) throws IOException;
+
+    /**
+     * writes the passed in Date (in milliseconds since the epoch) as an
+     * IonTimestamp with the associated timezone offset.  The Date value
+     * is treated as a UTC date and time value.  The offset is the offset
+     * of the timezone where the value originated. (the date is expected
+     * to have already be adjusted to UTC if necessary)
+     * @param value java.util Date holding the UTC timestamp;
+     * may be null to represent {@code null.timestamp}.
+     * @param localOffset minutes from UTC where the value was authored
+     *
+     * @deprecated Use {@link #writeTimestamp(Timestamp)}.
+     */
+    @Deprecated
+    public void writeTimestamp(Date value, Integer localOffset)
+        throws IOException;
+
+    /**
+     * write symbolId out as an IonSymbol value.  The value does not
+     * have to be valid in the symbol table, unless the output is
+     * text, in which case it does.
+     * @param symbolId symbol table id to write
+     */
+    public void writeSymbol(int symbolId) throws IOException;
+
+    /**
+     * write value out as an IonSymbol value.  If the value is not
+     * present in the symbol table it will be added to the symbol table.
+     *
+     * @param value may be null to represent {@code null.symbol}.
+     *
+     * @throws IllegalArgumentException if the value contains an invalid UTF-16
+     * surrogate pair.
+     */
+    public void writeSymbol(String value) throws IOException;
+
+    /**
+     * Write an Ion version marker symbol to the output.  This
+     * is the $ion_1_0 value currently (in later versions the
+     * number may change).  In text output this appears as the
+     * text symbol.  In binary this will be the symbol id if
+     * the writer is in a list, sexp or struct.  If the writer
+     * is currently at the top level this will write the
+     * "magic cookie" value.
+     *
+     *  Writing a version marker will reset the symbol table
+     *  to be the system symbol table.
+     *
+     * @throws IOException
+     */
+    public void writeIonVersionMarker() throws IOException;
+
+    /**
+     * Writes a {@link java.lang.String} as an Ion string. Since Ion strings are
+     * UTF-8 and Java Strings are Unicode 16.  As such the resulting
+     * lengths may not match.  In addition some Java strings are not
+     * valid as they may contain only one of the two needed surrogate
+     * code units necessary to define the Unicode code point to be
+     * output, an exception will be raised if this case is encountered.
+     *
+     * @param value may be null to represent {@code null.string}.
+     *
+     * @throws IllegalArgumentException if the value contains an invalid UTF-16
+     * surrogate pair.
+     */
+    public void writeString(String value) throws IOException;
+
+    /**
+     * write the byte array out as an IonClob value.  This copies
+     * the byte array.
+     *
+     * @param value may be null to represent {@code null.clob}.
+     */
+    public void writeClob(byte[] value) throws IOException;
+
+    /**
+     * writes a portion of the byte array out as an IonClob value.  This
+     * copies the porition of the byte array that is written.
+     * @param value bytes to be written
+     * @param start offset of the first byte in value to write
+     * @param len number of bytes to write from value
+     */
+    public void writeClob(byte[] value, int start, int len)
+        throws IOException;
+
+    /**
+     * write the byte array out as an IonBlob value.  This copies
+     * the byte array.
+     *
+     * @param value may be null to represent {@code null.blob}.
+     */
+    public void writeBlob(byte[] value) throws IOException;
+
+    /**
+     * writes a portion of the byte array out as an IonBlob value.  This
+     * copies the portion of the byte array that is written.
+     * @param value bytes to be written
+     * @param start offset of the first byte in value to write
+     * @param len number of bytes to write from value
+     */
+    public void writeBlob(byte[] value, int start, int len)
+        throws IOException;
+
+
+
+    /**
+     * writes an IonList with a series of IonBool values. This
+     * starts a List, writes the values (without any annotations)
+     * and closes the list. For text and tree writers this is
+     * just a convenience, but for the binary writer it can be
+     * optimized internally.
+     * @param values boolean values to populate the list with
+     *
+     * @deprecated Moved to {@link IonStreamUtils}.
+     */
+    @Deprecated
+    public void writeBoolList(boolean[] values) throws IOException;
+
+    /**
+     * writes an IonList with a series of IonInt values. This
+     * starts a List, writes the values (without any annotations)
+     * and closes the list. For text and tree writers this is
+     * just a convenience, but for the binary writer it can be
+     * optimized internally.
+     * @param values signed byte values to populate the lists int's with
+     *
+     * @deprecated Moved to {@link IonStreamUtils}.
+     */
+    @Deprecated
+    public void writeIntList(byte[] values) throws IOException;
+
+    /**
+     * writes an IonList with a series of IonInt values. This
+     * starts a List, writes the values (without any annotations)
+     * and closes the list. For text and tree writers this is
+     * just a convenience, but for the binary writer it can be
+     * optimized internally.
+     * @param values signed short values to populate the lists int's with
+     *
+     * @deprecated Moved to {@link IonStreamUtils}.
+     */
+    @Deprecated
+    public void writeIntList(short[] values) throws IOException;
+
+    /**
+     * writes an IonList with a series of IonInt values. This
+     * starts a List, writes the values (without any annotations)
+     * and closes the list. For text and tree writers this is
+     * just a convenience, but for the binary writer it can be
+     * optimized internally.
+     * @param values signed int values to populate the lists int's with
+     *
+     * @deprecated Moved to {@link IonStreamUtils}.
+     */
+    @Deprecated
+    public void writeIntList(int[] values) throws IOException;
+
+    /**
+     * writes an IonList with a series of IonInt values. This
+     * starts a List, writes the values (without any annotations)
+     * and closes the list. For text and tree writers this is
+     * just a convenience, but for the binary writer it can be
+     * optimized internally.
+     * @param values signed long values to populate the lists int's with
+     *
+     * @deprecated Moved to {@link IonStreamUtils}.
+     */
+    @Deprecated
+    public void writeIntList(long[] values) throws IOException;
+
+    /**
+     * writes an IonList with a series of IonFloat values. This
+     * starts a List, writes the values (without any annotations)
+     * and closes the list. For text and tree writers this is
+     * just a convenience, but for the binary writer it can be
+     * optimized internally.  Note that since, currently, IonFloat
+     * is a 64 bit float this is a helper that simply casts
+     * the passed in floats to double before writing them.
+     * @param values 32 bit float values to populate the lists IonFloat's with
+     *
+     * @deprecated Moved to {@link IonStreamUtils}.
+     */
+    @Deprecated
+    public void writeFloatList(float[] values) throws IOException;
+
+    /**
+     * writes an IonList with a series of IonFloat values. This
+     * starts a List, writes the values (without any annotations)
+     * and closes the list. For text and tree writers this is
+     * just a convenience, but for the binary writer it can be
+     * optimized internally.
+     * @param values 64 bit float values to populate the lists IonFloat's with
+     *
+     * @deprecated Moved to {@link IonStreamUtils}.
+     */
+    @Deprecated
+    public void writeFloatList(double[] values) throws IOException;
+
+    /**
+     * writes an IonList with a series of IonString values. This
+     * starts a List, writes the values (without any annotations)
+     * and closes the list. For text and tree writers this is
+     * just a convenience, but for the binary writer it can be
+     * optimized internally.
+     * @param values Java String to populate the lists IonString's from
+     *
+     * @deprecated Moved to {@link IonStreamUtils}.
+     */
+    @Deprecated
+    public void writeStringList(String[] values) throws IOException;
+
+}
