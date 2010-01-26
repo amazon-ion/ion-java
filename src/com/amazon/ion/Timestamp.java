@@ -118,12 +118,12 @@ public final class Timestamp
      * _month and _day are 1 based (0 is an invalid value for
      * these in a non-null Timestamp.
      */
-    private int     _year;
-    private int     _month = 1; // Initialized to valid default
-    private int     _day   = 1; // Initialized to valid default
-    private int     _hour;
-    private int     _minute;
-    private int     _second;
+    private short   _year;
+    private byte    _month = 1; // Initialized to valid default
+    private byte    _day   = 1; // Initialized to valid default
+    private byte    _hour;
+    private byte    _minute;
+    private byte    _second;
     private BigDecimal     _fraction;  // fractional seconds, this will be between >= 0 and < 1
 
     /**
@@ -231,12 +231,12 @@ public final class Timestamp
      */
     @SuppressWarnings("deprecation")
     private void set_fields_from_millis(Date date) {
-        this._year    = date.getYear() + 1900;
-        this._month   = date.getMonth() + 1;  // calendar months are 0 based, timestamp months are 1 based
-        this._day     = date.getDate();
-        this._hour    = date.getHours();
-        this._minute  = date.getMinutes();
-        this._second = date.getSeconds();
+        this._year    = (short)(date.getYear() + 1900);
+        this._month   = (byte)(date.getMonth() + 1);  // calendar months are 0 based, timestamp months are 1 based
+        this._day     = (byte)date.getDate();
+        this._hour    = (byte)date.getHours();
+        this._minute  = (byte)date.getMinutes();
+        this._second  = (byte)date.getSeconds();
         // this is done because the y-m-d values are in the local timezone
         // so this adjusts the value back to zulu time (GMT)
         // Note that the sign on this is opposite of Ion (and Calendar) offset.
@@ -300,17 +300,17 @@ public final class Timestamp
         switch (p) {
             case FRACTION:
             case SECOND:
-                this._second = cal.get(Calendar.SECOND);
+                this._second = (byte)cal.get(Calendar.SECOND);
             case MINUTE:
-                this._hour = cal.get(Calendar.HOUR_OF_DAY);
-                this._minute = cal.get(Calendar.MINUTE);
+                this._hour   = (byte)cal.get(Calendar.HOUR_OF_DAY);
+                this._minute = (byte)cal.get(Calendar.MINUTE);
             case DAY:
-                this._day = cal.get(Calendar.DAY_OF_MONTH);
+                this._day    = (byte)cal.get(Calendar.DAY_OF_MONTH);
             case MONTH:
                 // calendar months are 0 based, timestamp months are 1 based
-                this._month = cal.get(Calendar.MONTH) + 1;
+                this._month  = (byte)(cal.get(Calendar.MONTH) + 1);
             case YEAR:
-                this._year = cal.get(Calendar.YEAR);
+                this._year   = (short)cal.get(Calendar.YEAR);
         }
 
         // Strangely, if this test is made before calling get(), it will return
@@ -366,11 +366,11 @@ public final class Timestamp
         int end_of_month = last_day_in_month(zyear, zmonth);
         if (zday < 1 || zday > end_of_month) throw new IllegalArgumentException("day is between 1 and "+end_of_month+" inclusive");
         this._precision = Precision.DAY;
-        this._day = zday;  // days are base 1 (as you'd expect)
-        this._month = zmonth;
-        this._year = zyear;
+        this._day       = (byte)zday;  // days are base 1 (as you'd expect)
+        this._month     = (byte)zmonth;
+        this._year      = (short)zyear;
         validate_fields();
-        this._offset = UNKNOWN_OFFSET;
+        this._offset    = UNKNOWN_OFFSET;
     }
 
     /**
@@ -387,11 +387,11 @@ public final class Timestamp
                      Integer offset)
     {
         this._precision = Precision.MINUTE;
-        this._minute = minute;
-        this._hour = hour;
-        this._day = day;  // days are base 1 (as you'd expect)
-        this._month = month;
-        this._year = year;
+        this._minute    = (byte)minute;
+        this._hour      = (byte)hour;
+        this._day       = (byte)day;  // days are base 1 (as you'd expect)
+        this._month     = (byte)month;
+        this._year      = (short)year;
 
         validate_fields();
         if (offset != null) {
@@ -414,12 +414,12 @@ public final class Timestamp
                      Integer offset)
     {
         this._precision = Precision.SECOND;
-        this._second = second;
-        this._minute = minute;
-        this._hour = hour;
-        this._day = day;  // days are base 1 (as you'd expect)
-        this._month = month;
-        this._year = year;
+        this._second    = (byte)second;
+        this._minute    = (byte)minute;
+        this._hour      = (byte)hour;
+        this._day       = (byte)day;  // days are base 1 (as you'd expect)
+        this._month     = (byte)month;
+        this._year      = (short)year;
 
         validate_fields();
         if (offset != null) {
@@ -446,12 +446,12 @@ public final class Timestamp
     {
         this._precision = Precision.FRACTION;
         this._fraction = frac.abs();
-        this._second = second;
-        this._minute = minute;
-        this._hour = hour;
-        this._day = day;  // days are base 1 (as you'd expect)
-        this._month = month;
-        this._year = year;
+        this._second   = (byte)second;
+        this._minute   = (byte)minute;
+        this._hour     = (byte)hour;
+        this._day      = (byte)day;  // days are base 1 (as you'd expect)
+        this._month    = (byte)month;
+        this._year     = (short)year;
 
         validate_fields();
         if (offset != null) {
@@ -481,16 +481,16 @@ public final class Timestamp
         case FRACTION:
             this._fraction = frac.abs();
         case SECOND:
-            this._second = zsecond;
+            this._second = (byte)zsecond;
         case MINUTE:
-            this._minute = zminute;
-            this._hour = zhour;
+            this._minute = (byte)zminute;
+            this._hour   = (byte)zhour;
         case DAY:
-            this._day = zday;  // days are base 1 (as you'd expect)
+            this._day    = (byte)zday;  // days are base 1 (as you'd expect)
         case MONTH:
-            this._month = zmonth;
+            this._month  = (byte)zmonth;
         case YEAR:
-            this._year = zyear;
+            this._year   = (short)zyear;
         }
         validate_fields();
         this._offset = offset;

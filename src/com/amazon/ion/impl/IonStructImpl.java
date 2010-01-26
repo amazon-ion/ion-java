@@ -38,7 +38,8 @@ public final class IonStructImpl
     private static final int HASH_SIGNATURE =
         IonType.STRUCT.toString().hashCode();
 
-    private boolean _isOrdered = false;
+    // TODO: add support for _isOrdered: private boolean _isOrdered = false;
+    private static final boolean _isOrdered = false;
 
 
     /**
@@ -177,6 +178,25 @@ public final class IonStructImpl
     }
 
     public IonValue get(String fieldName)
+    {
+        // FIXME: remove this once perf testing is done
+        if (this._child_count > 4) return get_longlist(fieldName);
+
+        validateFieldName(fieldName);
+
+        if (isNullValue()) return null;
+
+        makeReady();
+
+        for (IonValue field : this) {
+            if (fieldName.equals(field.getFieldName())) {
+                return field;
+            }
+        }
+        return null;
+    }
+
+    private final IonValue get_longlist(String fieldName)
     {
         validateFieldName(fieldName);
 
