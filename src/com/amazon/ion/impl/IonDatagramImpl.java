@@ -230,7 +230,7 @@ public final class IonDatagramImpl
     IonDatagramImpl(IonSystemImpl system,
                     SystemReader rawStream)
     {
-        super(system, DATAGRAM_TYPEDESC, true);
+        super(system, DATAGRAM_TYPEDESC, false);
 
         assert system == rawStream.getSystem();
 
@@ -655,16 +655,15 @@ public final class IonDatagramImpl
         return false;
     }
 
-
     /**
      * @return false
      */
-    @Override
-    public boolean isNullValue()
-    {
-        return false;
-    }
-
+    //@Override
+    //public boolean isNullValue()
+    //{
+    //    assert(this._isNullValue() == false);
+    //    return false;
+    //}
 
     /**
      * Does nothing since datagrams have no annotations.

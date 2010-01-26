@@ -47,6 +47,7 @@ public final class IonFloatImpl
         super(system, NULL_FLOAT_TYPEDESC);
         _float_value = value;
         _hasNativeValue(true);
+        _isNullValue(value == null);
         assert isDirty();
     }
 
@@ -152,6 +153,7 @@ public final class IonFloatImpl
         if (value == null)
         {
             _float_value = null;
+            _isNullValue(true);
             _hasNativeValue(true);
             setDirty();
         }
@@ -165,16 +167,16 @@ public final class IonFloatImpl
     {
         checkForLock();
         _float_value = d;
+        _isNullValue(d == null);
         _hasNativeValue(true);
         setDirty();
     }
 
-    @Override
-    public synchronized boolean isNullValue()
-    {
-        if (!_hasNativeValue()) return super.isNullValue();
-        return (_float_value == null);
-    }
+    //public boolean oldisNullValue()
+    //{
+    //    if (!_hasNativeValue()) return super.oldisNullValue();
+    //    return (_float_value == null);
+    //}
 
     @Override
     protected int getNativeValueLength()

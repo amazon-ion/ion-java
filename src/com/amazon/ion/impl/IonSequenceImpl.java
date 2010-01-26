@@ -52,11 +52,17 @@ public abstract class IonSequenceImpl
         assert _children == null;
         assert isDirty();
 
-        if (!makeNull)
+        if (makeNull)
         {
+            _isNullValue(true);
+        }
+        else
+        {
+            _isNullValue(false);
             _children = new IonValue[initialSize(typeDesc)];
             _child_count = 0;
         }
+
         _hasNativeValue(true);
     }
 
@@ -85,6 +91,9 @@ public abstract class IonSequenceImpl
         assert isDirty();
 
         _hasNativeValue(true);
+
+        boolean isnull = (elements == null);
+        _isNullValue(isnull);
 
         if (elements != null)
         {
@@ -123,16 +132,15 @@ public abstract class IonSequenceImpl
         return hash_code;
     }
 
-    @Override
-    public boolean isNullValue()
-    {
-        if (_hasNativeValue() || !_isPositionLoaded()) {
-            return (_children == null);
-        }
-
-        int ln = this.pos_getLowNibble();
-        return (ln == IonConstants.lnIsNullSequence);
-    }
+    //public boolean oldisNullValue()
+    //{
+    //    if (_hasNativeValue() || !_isPositionLoaded()) {
+    //        return _isNullValue();
+    //    }
+    //
+    //    int ln = this.pos_getLowNibble();
+    //    return (ln == IonConstants.lnIsNullSequence);
+    //}
 
     @Override
     // Increasing visibility

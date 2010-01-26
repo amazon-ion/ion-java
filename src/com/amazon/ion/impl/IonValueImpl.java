@@ -10,6 +10,7 @@ import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonStruct;
+import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
@@ -324,6 +325,8 @@ public abstract class IonValueImpl
         _hasNativeValue(false);
         _isDirty(true);
         pos_setTypeDescriptorByte(typedesc);
+        boolean isnull = (IonConstants.getLowNibble(typedesc) == IonConstants.lnIsNull);
+        _isNullValue(isnull);
     }
 
 
@@ -560,21 +563,10 @@ public abstract class IonValueImpl
         return value;
     }
 
-
-    public synchronized boolean isNullValue()
+    public final synchronized boolean isNullValue()
     {
-        // container overrides this method
-        assert ! (this instanceof IonContainer);
-
-        // scalar classes override this, but call the
-        // super() copy (this one) when they don't
-        // have a native value.
-        assert _hasNativeValue() == false || _isPositionLoaded() == true;
-
-        int ln = this.pos_getLowNibble();
-        return (ln == IonConstants.lnIsNullAtom);
+        return _isNullValue();
     }
-
 
     /**
      * Ensures that this value is not an Ion null.  Used as a helper for
@@ -1260,8 +1252,16 @@ public abstract class IonValueImpl
 
         // First materialize, because we're gonna mark ourselves dirty.
         makeReady();
+        String oldname = this._fieldName;
         this._fieldName = name;
         this._fieldSid  = 0;
+        IonContainer container = this._container;
+        if (container != null) {
+            if (IonType.STRUCT.equals(container.getType())) {
+                assert(container instanceof IonStructImpl);
+                ((IonStructImpl)container).updateFieldName(oldname, name, this);
+            }
+        }
         this.setDirty();
     }
 

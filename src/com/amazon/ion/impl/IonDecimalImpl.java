@@ -62,6 +62,7 @@ public final class IonDecimalImpl
     {
         super(system, NULL_DECIMAL_TYPEDESC);
         _decimal_value = value;
+        _isNullValue(value == null);
         _hasNativeValue(true);
         assert isDirty();
     }
@@ -181,6 +182,7 @@ public final class IonDecimalImpl
     {
         checkForLock();
         _decimal_value = value;
+        _isNullValue(value == null);
         _hasNativeValue(true);
         setDirty();
     }
@@ -199,10 +201,12 @@ public final class IonDecimalImpl
         {
         case NORMAL:
                 _decimal_value = value;
+                _isNullValue(value == null);
         	break;
         case NEGATIVE_ZERO:
         	if (value.signum() != 0) throw new IllegalArgumentException("to be a negative zero the value must be zero");
         	_decimal_value = Decimal.negativeZero(value.scale());
+        	_isNullValue(false);
         	break;
         default:
         	throw new IllegalArgumentException("IonDecimal values may only be NORMAL or NEGATIVE_ZERO");
@@ -223,12 +227,11 @@ public final class IonDecimalImpl
     	            : Classification.NEGATIVE_ZERO);
     }
 
-    @Override
-    public synchronized boolean isNullValue()
-    {
-        if (!_hasNativeValue()) return super.isNullValue();
-        return (_decimal_value == null);
-    }
+    //public boolean oldisNullValue()
+    //{
+    //    if (!_hasNativeValue()) return super.oldisNullValue();
+    //    return (_decimal_value == null);
+    //}
 
     @Override
     protected int getNativeValueLength()

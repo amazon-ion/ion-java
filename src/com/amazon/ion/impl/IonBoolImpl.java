@@ -62,6 +62,7 @@ public final class IonBoolImpl
         makeReady();
         clone.copyAnnotationsFrom(this);
         clone.setValue(this._bool_value);
+        clone._isNullValue(this._isNullValue());
 
         return clone;
     }
@@ -101,7 +102,9 @@ public final class IonBoolImpl
         throws NullValueException
     {
         makeReady();
-        if (_bool_value == null) throw new NullValueException();
+        if (_isNullValue()) { // if (_bool_value == null) {
+            throw new NullValueException();
+        }
         return _bool_value;
     }
 
@@ -115,6 +118,7 @@ public final class IonBoolImpl
     {
         checkForLock();
         _bool_value = b;
+        _isNullValue(b == null);
         _hasNativeValue(true);
         setDirty();
     }
@@ -133,23 +137,24 @@ public final class IonBoolImpl
         int ln = 0;
         if (_bool_value == null) {
             ln = IonConstants.lnIsNullAtom;
+            _isNullValue(true);
         }
         else if (_bool_value.equals(true)) {
             ln = IonConstants.lnBooleanTrue;
+            _isNullValue(false);
         }
         else {
             ln = IonConstants.lnBooleanFalse;
+            _isNullValue(false);
         }
         return ln;
     }
 
-
-    @Override
-    public synchronized boolean isNullValue()
-    {
-        if (!_hasNativeValue()) return super.isNullValue();
-        return (_bool_value == null);
-    }
+    //public boolean oldisNullValue()
+    //{
+    //    if (!_hasNativeValue()) return super.oldisNullValue();
+    //    return (_bool_value == null);
+    //}
 
     @Override
     protected void doMaterializeValue(IonBinary.Reader reader)
@@ -167,12 +172,15 @@ public final class IonBoolImpl
         switch (ln) {
         case IonConstants.lnIsNullAtom:
             _bool_value = null;
+            _isNullValue(true);
             break;
         case IonConstants.lnBooleanFalse:
             _bool_value = Boolean.FALSE;
+            _isNullValue(false);
             break;
         case IonConstants.lnBooleanTrue:
             _bool_value = Boolean.TRUE;
+            _isNullValue(false);
             break;
         default:
             throw new IonException("malformed binary boolean value");

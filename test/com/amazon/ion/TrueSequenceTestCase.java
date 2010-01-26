@@ -278,6 +278,7 @@ public abstract class TrueSequenceTestCase
         throws RuntimeException
     {
         IonSequence orig = s.clone();
+        assertEquals(orig.isNullValue(), s.isNullValue());
         try {
             s.set(index, v);
             fail("expected " + exceptionType.getSimpleName());

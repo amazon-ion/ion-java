@@ -53,7 +53,7 @@ public final class IonIntImpl
     public IonIntImpl(IonSystemImpl system)
     {
         super(system, NULL_INT_TYPEDESC);
-        _isNullValue(true);
+        // _isNullValue(true);
         _hasNativeValue(true); // Since this is null
     }
 
@@ -63,7 +63,7 @@ public final class IonIntImpl
     public IonIntImpl(IonSystemImpl system, int typeDesc)
     {
         super(system, typeDesc);
-        _isNullValue(true);
+        // _isNullValue(true);
         assert pos_getType() == IonConstants.tidPosInt
             || pos_getType() == IonConstants.tidNegInt
         ;
@@ -194,12 +194,11 @@ public final class IonIntImpl
         setDirty();
     }
 
-    @Override
-    public synchronized boolean isNullValue()
-    {
-        if (!_hasNativeValue()) return super.isNullValue();
-        return _isNullValue();
-    }
+    //public boolean oldisNullValue()
+    //{
+    //    if (!_hasNativeValue()) return super.oldisNullValue();
+    //    return _isNullValue();
+    //}
 
     @Override
     protected int getNativeValueLength()
