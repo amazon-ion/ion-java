@@ -643,6 +643,13 @@ public abstract class SequenceTestCase
             fail("expected exception");
         }
         catch (ArrayStoreException e) { }
+
+        seq.clear();
+        seq.add().newEmptyStruct();
+        IonStruct[] structArray = new IonStruct[1];
+        IonStruct[] extracted = seq.toArray(structArray);
+        assertSame(structArray, extracted);
+        assertSame(seq.get(0), structArray[0]);
     }
 
     public void checkArray(IonSequence expected, Object[] actual)

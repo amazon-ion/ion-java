@@ -62,7 +62,6 @@ public abstract class IonSequenceImpl
             _children = new IonValue[initialSize(typeDesc)];
             _child_count = 0;
         }
-
         _hasNativeValue(true);
     }
 
@@ -347,13 +346,11 @@ public abstract class IonSequenceImpl
     @SuppressWarnings("unchecked")
     public <T> T[] toArray(T[] a)
     {
-        Class<?> type = a.getClass().getComponentType();
-        if (!type.isAssignableFrom(IonValue.class)) {
-            throw new ArrayStoreException();
-        }
         int size = get_child_count();
         if (a.length < size)
         {
+            // TODO JDK 1.6 this could use Arrays.copyOf
+            Class<?> type = a.getClass().getComponentType();
             // generates unchecked warning
             a = (T[]) Array.newInstance(type, size);
         }
