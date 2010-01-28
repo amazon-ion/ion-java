@@ -359,6 +359,7 @@ abstract public class IonContainerImpl
             for (int ii=0; ii<_child_count; ii++) {
                 IonValue child = _children[ii];
                 ((IonValueImpl)child).detachFromContainer();
+                _children[ii] = null;
             }
         } catch (IOException ioe) {
             throw new IonException(ioe);
