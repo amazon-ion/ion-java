@@ -59,7 +59,14 @@ public abstract class IonLobImpl
     protected final void copyFrom(IonLobImpl source)
     {
         copyAnnotationsFrom(source); // materializes this and the source
-        setBytes(source._lob_value);
+        byte[] new_bytes;
+        if (source._isNullValue()) {
+            new_bytes = null;
+        }
+        else {
+            new_bytes = source._lob_value;
+        }
+        setBytes(new_bytes);
     }
 
     /**
@@ -70,6 +77,7 @@ public abstract class IonLobImpl
         if (source == null)
         {
             _lob_value = null;
+            _isNullValue(true);
         }
         else
         {
@@ -78,6 +86,7 @@ public abstract class IonLobImpl
                 _lob_value = new byte[length];
             }
             System.arraycopy(source, offset, _lob_value, 0, length);
+            _isNullValue(false);
         }
         _hasNativeValue(true);
         setDirty();
@@ -102,7 +111,14 @@ public abstract class IonLobImpl
     public final byte[] getBytes()
     {
         makeReady();
-        return (_lob_value == null ? null : _lob_value.clone());
+        byte[] user_copy;
+        if (_isNullValue()) {
+            user_copy = null;
+        }
+        else {
+            user_copy = _lob_value.clone();
+        }
+        return user_copy;
     }
 
     public final void setBytes(byte[] bytes)
@@ -140,7 +156,7 @@ public abstract class IonLobImpl
         assert _hasNativeValue() == true;
 
         int ln = 0;
-        if (_lob_value == null) {
+        if (_isNullValue()) { // if (_lob_value == null) {
             ln = IonConstants.lnIsNullAtom;
         }
         else {
@@ -178,9 +194,11 @@ public abstract class IonLobImpl
         switch ((0xf & ln)) {
         case IonConstants.lnIsNullAtom:
             _lob_value = null;
+            _isNullValue(true);
             break;
         case 0:
             _lob_value = new byte[0];
+            _isNullValue(false);
             break;
         case IonConstants.lnIsVarLen:
             ln = reader.readVarUInt7IntValue();
@@ -188,6 +206,7 @@ public abstract class IonLobImpl
         default:
             _lob_value = new byte[ln];
             reader.read(_lob_value, 0, ln);
+            _isNullValue(false);
             break;
         }
 
@@ -207,10 +226,9 @@ public abstract class IonLobImpl
         return;
     }
 
-    @Override
-    public final synchronized boolean isNullValue()
-    {
-        if (!_hasNativeValue()) return super.isNullValue();
-        return (_lob_value == null);
-    }
+    //public boolean oldisNullValue()
+    //{
+    //    if (!_hasNativeValue()) return super.oldisNullValue();
+    //    return (_lob_value == null);
+    //}
 }

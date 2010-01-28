@@ -103,6 +103,8 @@ public final class IonTimestampImpl
         clone.copyAnnotationsFrom(this);  // Calls makeReady()
         clone._timestamp_value = this._timestamp_value;
         clone._hasNativeValue(true);
+        clone._isNullValue(this._isNullValue());
+
         return clone;
     }
 
@@ -137,7 +139,10 @@ public final class IonTimestampImpl
     public Date dateValue()
     {
         makeReady();
-        if (_timestamp_value == null) return null;
+        // if (_timestamp_value == null) {
+        if (_isNullValue()) {
+            return null;
+        }
         return _timestamp_value.dateValue();
     }
 
@@ -145,7 +150,10 @@ public final class IonTimestampImpl
     public Integer getLocalOffset() throws NullValueException
     {
         makeReady();
-        if (_timestamp_value == null) throw new NullValueException();
+        // if (_timestamp_value == null) {
+        if (_isNullValue()) {
+            throw new NullValueException();
+        }
         return _timestamp_value.getLocalOffset();
     }
 
@@ -156,7 +164,10 @@ public final class IonTimestampImpl
     private Integer getInternalLocalOffset()
     {
         makeReady();
-        if (_timestamp_value == null) return null;
+        // if (_timestamp_value == null) {
+        if (_isNullValue()) {
+            return null;
+        }
         return _timestamp_value.getLocalOffset();
     }
 
@@ -164,6 +175,7 @@ public final class IonTimestampImpl
     {
         checkForLock();
         _timestamp_value = timestamp;
+        _isNullValue(timestamp == null);
         _hasNativeValue(true);
         setDirty();
     }
@@ -195,7 +207,10 @@ public final class IonTimestampImpl
     public BigDecimal getDecimalMillis()
     {
         makeReady();
-        if (_timestamp_value == null) return null;
+        // if (_timestamp_value == null) {
+        if (_isNullValue()) {
+            return null;
+        }
         return _timestamp_value.getDecimalMillis();
     }
 
@@ -211,7 +226,8 @@ public final class IonTimestampImpl
     {
         makeReady();
 
-        if (_timestamp_value == null) {
+        // if (_timestamp_value == null) {
+        if (_isNullValue()) {
             throw new NullValueException();
         }
 
@@ -270,17 +286,16 @@ public final class IonTimestampImpl
     {
         checkForLock();
         _timestamp_value = null;
+        _isNullValue(true);
         _hasNativeValue(true);
         setDirty();
     }
 
-
-    @Override
-    public synchronized boolean isNullValue()
-    {
-        if (!_hasNativeValue()) return super.isNullValue();
-        return (_timestamp_value == null);
-    }
+    //public boolean oldisNullValue()
+    //{
+    //    if (!_hasNativeValue()) return super.oldisNullValue();
+    //    return (_timestamp_value == null);
+    //}
 
     @Override
     protected int getNativeValueLength()
@@ -296,7 +311,8 @@ public final class IonTimestampImpl
         assert _hasNativeValue() == true;
 
         int ln = 0;
-        if (_timestamp_value == null) {
+        // if (_timestamp_value == null) {
+        if (_isNullValue()) {
             ln = IonConstants.lnIsNullAtom;
         }
         else {
@@ -332,15 +348,18 @@ public final class IonTimestampImpl
         switch ((0xf & ln)) {   // TODO is the mask necessary?
         case IonConstants.lnIsNullAtom:
             _timestamp_value = null;
+            _isNullValue(true);
             break;
         case 0:
             _timestamp_value = new Timestamp(0, null);
+            _isNullValue(false);
             break;
         case IonConstants.lnIsVarLen:
             ln = reader.readVarUInt7IntValue();
             // fall through to default:
         default:
             _timestamp_value = reader.readTimestampValue(ln);
+            _isNullValue(false);
             break;
         }
 

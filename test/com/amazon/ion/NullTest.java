@@ -65,12 +65,14 @@ public class NullTest
         IonDatagram values = loadTestFile("good/nonNulls.ion");
         // File contains a list of non-null values.
 
+        int idx = 0;
         for (IonValue value : values)
         {
             if (value.isNullValue())
             {
                 fail("Value should not be null: " + value);
             }
+            idx++;
         }
     }
 }

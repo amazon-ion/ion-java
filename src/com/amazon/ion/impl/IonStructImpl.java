@@ -13,8 +13,8 @@ import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonBinary.Reader;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
@@ -77,6 +77,71 @@ public final class IonStructImpl
         }
 
         return clone;
+    }
+
+    private HashMap<String, Integer> _field_map;
+    private int                      _field_map_duplicate_count;
+    @Override
+    protected void transitionToLargeSize(int size)
+    {
+        if (_field_map != null) return;
+        _field_map = new HashMap<String, Integer>(size);
+        int count = get_child_count();
+        for (int ii=0; ii<count; ii++) {
+            IonValueImpl v = (IonValueImpl)get_child(ii);
+            String name = v.getFieldName();
+            _field_map.put(name, ii);
+        }
+        return;
+    }
+    private int find_duplicate(String fieldName)
+    {
+        int size = get_child_count();
+        for (int ii=0; ii<size; ii++) {
+            IonValueImpl field = (IonValueImpl)get_child(ii);
+            if (fieldName.equals(field.getFieldName())) {
+                return ii;
+            }
+        }
+        return -1;
+    }
+    private void add_field(String fieldName, int newFieldIdx)
+    {
+        Integer idx = _field_map.get(fieldName);
+        if (idx == null) {
+            // TODO: should we put the latest field over the top of the
+            //       previous duplicate?
+            _field_map.put(fieldName, newFieldIdx);
+        }
+        else {
+            _field_map_duplicate_count++;
+        }
+
+    }
+    private void remove_field(String fieldName, int idx)
+    {
+        _field_map.remove(fieldName);
+        if (_field_map_duplicate_count > 0) {
+            int ii = find_duplicate(fieldName);
+            if (ii >= 0) {
+                _field_map.put(fieldName, ii);
+                _field_map_duplicate_count--;
+            }
+        }
+    }
+    protected void updateFieldName(String oldname, String name, IonValue field)
+    {
+        assert(name != null && name.equals(field.getFieldName()));
+        if (oldname == null) return;
+        if (_field_map == null) return;
+        Integer idx = _field_map.get(oldname);
+        if (idx == null) return;
+        IonValue oldfield = get_child(idx);
+        // yes, we want object identity in this test
+        if (oldfield == field) {
+            remove_field(oldname, idx);
+            add_field(name, idx);
+        }
     }
 
     /**
@@ -147,16 +212,15 @@ public final class IonStructImpl
     }
 
 
-    @Override
-    public boolean isNullValue()
-    {
-        if (_hasNativeValue() || !_isPositionLoaded()) {
-            return (_children == null);
-        }
-
-        int ln = this.pos_getLowNibble();
-        return (ln == IonConstants.lnIsNullStruct);
-    }
+    //public boolean oldisNullValue()
+    //{
+    //    if (_hasNativeValue() || !_isPositionLoaded()) {
+    //        return (_children == null);
+    //    }
+    //
+    //    int ln = this.pos_getLowNibble();
+    //    return (ln == IonConstants.lnIsNullStruct);
+    //}
 
 
     public IonValue get(IonSymbol fieldName)
@@ -179,8 +243,8 @@ public final class IonStructImpl
 
     public IonValue get(String fieldName)
     {
-        // FIXME: remove this once perf testing is done
-        if (this._child_count > 4) return get_longlist(fieldName);
+// FIXME: remove this once perf testing is done
+//if (this._child_count > 4) return get_longlist(fieldName);
 
         validateFieldName(fieldName);
 
@@ -188,12 +252,26 @@ public final class IonStructImpl
 
         makeReady();
 
-        for (IonValue field : this) {
-            if (fieldName.equals(field.getFieldName())) {
-                return field;
+        IonValue field = null;
+        if (_field_map != null) {
+            Integer idx = _field_map.get(fieldName);
+            if (idx != null) {
+                field = get_child(idx);
             }
         }
-        return null;
+        else {
+            int ii, size = get_child_count();
+            for (ii=0; ii<size; ii++) {
+                field = get_child(ii);
+                if (fieldName.equals(field.getFieldName())) {
+                    break;
+                }
+            }
+            if (ii>=size) {
+                field = null;
+            }
+        }
+        return field;
     }
 
     private final IonValue get_longlist(String fieldName)
@@ -313,6 +391,10 @@ public final class IonStructImpl
         // This should be true because we've validated that its not contained.
         assert value.getFieldName() == null;
         concrete.setFieldName(fieldName);
+
+        if (_field_map != null) {
+            add_field(fieldName, concrete._elementid);
+        }
     }
 
     public ValueFactory add(final String fieldName)
@@ -331,17 +413,15 @@ public final class IonStructImpl
     {
         checkForLock();
 
-        // TODO optimize
-        for (Iterator<IonValue> i = iterator(); i.hasNext();)
-        {
-            IonValue field = i.next();
-            if (fieldName.equals(field.getFieldName()))
-            {
-                i.remove();
-                return field;
+        IonValue field = get(fieldName);
+        if (field != null) {
+            super.remove(field);
+            if (_field_map != null) {
+                assert(field instanceof IonValueImpl);
+                remove_field(fieldName, ((IonValueImpl)field)._elementid);
             }
         }
-        return null;
+        return field;
     }
 
     public boolean removeAll(String... fieldNames)
@@ -350,15 +430,16 @@ public final class IonStructImpl
 
         checkForLock();
 
-        for (Iterator<IonValue> i = iterator(); i.hasNext();)
-        {
-            IonValue field = i.next();
-            if (isListedField(field, fieldNames))
-            {
-                i.remove();
+        int size = get_child_count();
+        for (int ii=size; ii>0; ) {
+            ii--;
+            IonValue field = get_child(ii);
+            if (isListedField(field, fieldNames)) {
+                field.removeFromContainer();
                 removedAny = true;
             }
         }
+
         return removedAny;
     }
 
@@ -367,12 +448,13 @@ public final class IonStructImpl
         checkForLock();
 
         boolean removedAny = false;
-        for (Iterator<IonValue> i = iterator(); i.hasNext();)
-        {
-            IonValue field = i.next();
+        int size = get_child_count();
+        for (int ii=size; ii>0; ) {
+            ii--;
+            IonValue field = get_child(ii);
             if (! isListedField(field, fieldNames))
             {
-                i.remove();
+                field.removeFromContainer();
                 removedAny = true;
             }
         }

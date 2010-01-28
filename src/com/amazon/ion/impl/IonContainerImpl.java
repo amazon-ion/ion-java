@@ -30,45 +30,69 @@ abstract public class IonContainerImpl
      * sizes for the various types of containers
      * expected to be tuned.
      */
+    static final int[] INITIAL_SIZE = make_initial_size_array();
+    static int[] make_initial_size_array() {
+        int[] sizes = new int[IonConstants.tidDATAGRAM + 1];
+        sizes[IonConstants.tidList]     = 1;
+        sizes[IonConstants.tidSexp]     = 4;
+        sizes[IonConstants.tidStruct]   = 5;
+        sizes[IonConstants.tidDATAGRAM] = 3;
+        return sizes;
+    }
+    static final int[] NEXT_SIZE = make_next_size_array();
+    static int[] make_next_size_array() {
+        int[] sizes = new int[IonConstants.tidDATAGRAM + 1];
+        sizes[IonConstants.tidList]     = 4;
+        sizes[IonConstants.tidSexp]     = 8;
+        sizes[IonConstants.tidStruct]   = 8;
+        sizes[IonConstants.tidDATAGRAM] = 10;
+        return sizes;
+    }
     static final protected int initialSize(int typeDesc)
     {
-        int tid = IonConstants.getTypeCode(typeDesc & 0xff) & 0xff;
-
-        switch(tid) {
-        case IonConstants.tidList: // list(11)
-            return 1; // most lists have only single member
-        case IonConstants.tidSexp: // 12
-            return 4; // just a guess
-        case IonConstants.tidStruct: // 13
-            return 5; // value, key, misc overhead
-        case IonConstants.tidDATAGRAM:
-            return 3; // ivm, local symbol table, value
-        default:
-            return 4; // another guess
+        int tid = IonConstants.getTypeCode(typeDesc & 0xff);
+        if (tid < 0 || tid >= INITIAL_SIZE.length) {
+            assert("this should never happen: type id's should be in range".length() < 0);
+            return 4;
         }
+        int new_size = INITIAL_SIZE[tid];
+        return new_size;
     }
     final protected int nextSize(int current_size)
     {
-        int tid = pos_getTypeDescriptorByte() & 0xff;
+        int typeDesc = pos_getTypeDescriptorByte();
+        int tid = IonConstants.getTypeCode(typeDesc & 0xff);
 
         if (current_size == 0) {
-            return initialSize(tid);
+            int new_size = initialSize(typeDesc);
+            return new_size;
         }
 
-        switch(tid) {
-        case IonConstants.tidList: // list(11)
-            if (current_size < 8) return current_size + 1;
-            break;
-        case IonConstants.tidStruct: // 13
-            if (current_size < 8) return current_size + 1;
-            break;
-        case IonConstants.tidDATAGRAM:
-            if (current_size < 4) return 8;
-            break;
-        default:
-            break;
+        if (tid < 0 || tid >= NEXT_SIZE.length) {
+            assert("this should never happen: type id's should be in range".length() < 0);
+            return current_size * 2;
         }
-        return current_size * 2;
+
+        int next_size = NEXT_SIZE[tid];
+        if (next_size == current_size) {
+            // note that unrecognized sizes, either due to unrecognized type id
+            // or some sort of custom size in the initial allocation, meh.
+            transitionToLargeSize(next_size);
+            next_size = current_size * 2;
+        }
+        else {
+            // includes if (next_size == 0) { ...
+            assert(current_size > 0);  // we should have bailed earlier if this was 0
+            next_size = current_size * 2;
+        }
+
+        return next_size;
+    }
+    // this is overridden in IonStructImpl to add the hashmap
+    // of field names when the struct becomes modestly large
+    protected void transitionToLargeSize(int size)
+    {
+        return;
     }
     /**
      * Only meaningful if {@link #_hasNativeValue}.
@@ -81,19 +105,31 @@ abstract public class IonContainerImpl
     }
     protected IonValue get_child(int idx)
     {
+        if (idx < 0 || idx >= _child_count) {
+            throw new IndexOutOfBoundsException(""+idx);
+        }
         return _children[idx];
     }
     protected IonValue set_child(int idx, IonValue child)
     {
+        if (idx < 0 || idx >= _child_count) {
+            throw new IndexOutOfBoundsException(""+idx);
+        }
         IonValue prev = _children[idx];
         _children[idx] = child;
         return prev;
     }
-    protected int add_child(int idx, IonValue child) {
-        if (_child_count >= _children.length) {
-            int new_len = this.nextSize(_children.length);
+    protected int add_child(int idx, IonValue child)
+    {
+        _isNullValue(false); // if we add children we're not null anymore
+        if (_children == null || _child_count >= _children.length) {
+            int old_len = (_children == null) ? 0 : _children.length;
+            int new_len = this.nextSize(old_len);
+            assert(new_len > idx);
             IonValue[] temp = new IonValue[new_len];
-            System.arraycopy(_children, 0, temp, 0, _child_count);
+            if (old_len > 0) {
+                System.arraycopy(_children, 0, temp, 0, old_len);
+            }
             _children = temp;
         }
         if (idx < _child_count) {
@@ -170,14 +206,21 @@ abstract public class IonContainerImpl
         else {
             // it's not null so there better be something there
             // at least 0 children :)
-            assert source._children != null;
+            assert source.get_child_count() == 0 || source._children != null;
+            _isNullValue(source._isNullValue()); // this will be false
 
             // and we'll need a contents array to hold at least 0
             // children
             if (this._children == null) {
-                int len = source._children.length;
-                if (len < 1) len = 10;
-                this._children = new IonValue[len];
+                int current_size = (source._children == null) ? 0 : source._children.length;
+                int next_size = current_size;
+                if (next_size < 1) {
+                    next_size = initialSize(pos_getTypeDescriptorByte());
+                }
+                this._children = new IonValue[next_size];
+                if (next_size >= this.nextSize(next_size)) {
+                    this.transitionToLargeSize(next_size);
+                }
             }
             // we should have an empty content list at this point
             assert this.get_child_count() == 0;
@@ -258,8 +301,9 @@ abstract public class IonContainerImpl
         checkForLock();
         if (isNullValue())
         {
-            _children = new IonValue[0];
+            _children = null;
             _child_count = 0;
+            _isNullValue(false);    // TODO: really?  It seems to be true, based on previous behavior, but why does "clear" make something "nonNull"?
             _hasNativeValue(true);
             setDirty();
         }
@@ -296,17 +340,17 @@ abstract public class IonContainerImpl
     public void makeNull()
     {
         checkForLock();
-        if (!isNullValue())
+
+        if (_children != null)
         {
-            if (_children != null)
-            {
-                detachAllChildren();
-                _children = null;
-                _child_count = 0;
-            }
-            _hasNativeValue(true);
-            setDirty();
+            detachAllChildren();
+            _children = null;
+            _child_count = 0;
         }
+
+        _hasNativeValue(true);
+        _isNullValue(true);
+        setDirty();
     }
 
     private void detachAllChildren()
@@ -349,7 +393,7 @@ abstract public class IonContainerImpl
         {
             // First materialization must be from clean state.
             assert !isDirty() || _buffer == null;
-            assert _children == null;
+            assert get_child_count() == 0; // _children == null;
 
             if (_buffer != null)
             {
@@ -361,7 +405,7 @@ abstract public class IonContainerImpl
 
                 if (!isNullValue())
                 {
-                    _children = new IonValue[0];
+                    _children = null;
                     _child_count = 0;
                     // this skips past then td and value len
                     reader.setPosition(this.pos_getOffsetAtActualValue());
@@ -711,7 +755,7 @@ abstract public class IonContainerImpl
 
         makeReady();
 
-        if (_children == null)
+        if (_children == null || _child_count == 0)
         {
             _children = new IonValue[initialSize(pos_getTypeDescriptorByte())];
             _hasNativeValue(true);

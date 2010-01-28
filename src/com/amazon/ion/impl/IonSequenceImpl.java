@@ -52,8 +52,13 @@ public abstract class IonSequenceImpl
         assert _children == null;
         assert isDirty();
 
-        if (!makeNull)
+        if (makeNull)
         {
+            _isNullValue(true);
+        }
+        else
+        {
+            _isNullValue(false);
             _children = new IonValue[initialSize(typeDesc)];
             _child_count = 0;
         }
@@ -85,6 +90,9 @@ public abstract class IonSequenceImpl
         assert isDirty();
 
         _hasNativeValue(true);
+
+        boolean isnull = (elements == null);
+        _isNullValue(isnull);
 
         if (elements != null)
         {
@@ -123,16 +131,15 @@ public abstract class IonSequenceImpl
         return hash_code;
     }
 
-    @Override
-    public boolean isNullValue()
-    {
-        if (_hasNativeValue() || !_isPositionLoaded()) {
-            return (_children == null);
-        }
-
-        int ln = this.pos_getLowNibble();
-        return (ln == IonConstants.lnIsNullSequence);
-    }
+    //public boolean oldisNullValue()
+    //{
+    //    if (_hasNativeValue() || !_isPositionLoaded()) {
+    //        return _isNullValue();
+    //    }
+    //
+    //    int ln = this.pos_getLowNibble();
+    //    return (ln == IonConstants.lnIsNullSequence);
+    //}
 
     @Override
     // Increasing visibility
@@ -339,13 +346,11 @@ public abstract class IonSequenceImpl
     @SuppressWarnings("unchecked")
     public <T> T[] toArray(T[] a)
     {
-        Class<?> type = a.getClass().getComponentType();
-        if (!IonValue.class.isAssignableFrom(type) && !type.isAssignableFrom(IonValue.class)) {
-            throw new ArrayStoreException();
-        }
         int size = get_child_count();
         if (a.length < size)
         {
+            // TODO JDK 1.6 this could use Arrays.copyOf
+            Class<?> type = a.getClass().getComponentType();
             // generates unchecked warning
             a = (T[]) Array.newInstance(type, size);
         }

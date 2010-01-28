@@ -87,11 +87,12 @@ public final class IonNullImpl
     }
 
 
-    @Override
-    public final boolean isNullValue()
-    {
-        return true;
-    }
+    //@Override
+    //public final boolean isNullValue()
+    //{
+    //    assert(this._isNullValue() == true);
+    //    return true;
+    //}
 
 
     @Override
