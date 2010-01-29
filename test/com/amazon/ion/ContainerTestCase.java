@@ -318,4 +318,15 @@ public abstract class ContainerTestCase
         assertSame(c, n.getContainer());
         assertSame(n, c.iterator().next());
     }
+
+    /** TODO ION-117 */
+    public void XXXtestSelfContainment()
+    {
+        IonContainer c = makeEmpty();
+        try {
+            add(c, c);
+            fail("expected exception");
+        }
+        catch (IonException e) { }
+    }
 }
