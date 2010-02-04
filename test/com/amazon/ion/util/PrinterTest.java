@@ -527,7 +527,17 @@ public class PrinterTest
 
         // TODO test printTimestampAsMillis
     }
-    
+
+    public void testPrintJsonTimestampString()
+        throws Exception
+    {
+        IonTimestamp ts = (IonTimestamp) oneValue("2007-05-15");
+        myPrinter.setJsonMode();
+        myPrinter.setPrintTimestampAsMillis(false);
+        myPrinter.setPrintTimestampAsString(true);
+        checkRendering("\"2007-05-15\"", ts);
+    }
+
     public void testJsonEscapeNonBmp() throws Exception {
         // JIRA ION-33
         // JIRA ION-64
@@ -539,13 +549,13 @@ public class PrinterTest
             .toString()
             .getBytes("UTF-8")
             ;
-        
+
         final IonDatagram dg = loader().load(literal);
         final StringBuilder out = new StringBuilder();
         final Printer json = new Printer();
         json.setJsonMode();
         json.print(dg.get(0), out);
-        
+
         assertEquals(
             "\"\\uDAF7\\uDE56\"".toLowerCase(),
             out.toString().toLowerCase()
