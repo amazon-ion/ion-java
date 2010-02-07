@@ -108,48 +108,6 @@
 
   <target name="test" depends="jars.test, -cacheTestData" 
       description="Run unit tests">
-    <property name="teardown" value="true"/>
-    <property name="testcaseOverride" value="()"/>
-    <property name="domain" value="test"/>
-    <property name="loglevel" value="DEBUG"/>
-    <property name="suite" value="AllTests"/>
-
-    <junit printsummary="false"
-           haltonfailure="false" haltonerror="false"
-           failureproperty="test.failure"
-           dir="${basedir}"
-           fork="true"
-           includeantruntime="false">
-      <test name="${suite}" todir="${dir.output.logs}" outfile="TEST" />
-
-      <!-- JUnit task adds the minimum Ant libs to make things work. -->
-      <classpath>
-        <path path="${build.classpath}"/>
-        <path path="${test.classpath}"/>
-        <path path="${run.classpath}"/>
-        <pathelement location="${jar.output.src}"/>
-        <pathelement location="${jar.output.test}"/>
-      </classpath>
-
-      <sysproperty key="java.library.path" value="${java.libraryPath.test}" />
-      <sysproperty key="com.amazon.iontests.iontestdata.path"
-                   value="${dir.test.data}"/>
-
-      <assertions enableSystemAssertions="true">
-        <!--
-          This syntax gives no easy way to turn assertions on/off by property
-          -->
-        <enable />
-      </assertions>
-
-      <!-- Log messages to the console. -->
-      <formatter type="brief" usefile="false" />
-
-      <!-- Long logs to file. -->
-      <formatter type="xml" />
-    </junit>
-
-    <fail message="Test(s) failed" if="test.failure" />
   </target>
 
 

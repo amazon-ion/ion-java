@@ -3,6 +3,7 @@
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.ContainedValueException;
+import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
@@ -43,7 +44,7 @@ public abstract class IonContainerLite
     public abstract void accept(ValueVisitor visitor) throws Exception;
 
     @Override
-    public abstract IonContainerLite clone();
+    public abstract IonContainer clone();
 
     /**
      * IonContainer methods
@@ -587,7 +588,7 @@ public abstract class IonContainerLite
             for (int i = 0; i < size; i++)
             {
                 IonValueLite child = sourceContents[i];
-                IonValueLite copy = child.clone();
+                IonValueLite copy = (IonValueLite) child.clone();
                 if (cloningFields) {
                     String name = child.getFieldName();
                     copy.setFieldName(name);
