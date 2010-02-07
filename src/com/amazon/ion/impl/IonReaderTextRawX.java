@@ -1025,8 +1025,9 @@ public abstract class IonReaderTextRawX
      */
     protected void tokenValueIsFinished() {
         _scanner.tokenIsFinished();
-        int state_after_scalar = get_state_after_value();
-        set_state(state_after_scalar);
+        // XXX this doesn't work
+        //int state_after_scalar = get_state_after_value();
+        //set_state(state_after_scalar);
     }
 
     private final void push_container_state(IonType newContainer)
