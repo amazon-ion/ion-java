@@ -281,6 +281,9 @@ public class IonStructLite
             // This is true because we've validated that its not contained.
             // assert value.getFieldName() == null;
             concrete.setFieldName(fieldName);
+            if (_field_map != null) {
+                add_field(fieldName, concrete._elementid());
+            }
         }
     }
 
