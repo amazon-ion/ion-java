@@ -73,6 +73,9 @@ public abstract class SystemProcessingTestCase
     protected abstract void nextValue()
         throws Exception;
 
+    protected abstract IonType currentValueType()
+        throws Exception;
+
     protected abstract SymbolTable currentSymtab()
         throws Exception;
 
@@ -170,10 +173,20 @@ public abstract class SystemProcessingTestCase
         checkSymbol("foo");
         assertSame(table1, currentSymtab());
 
-        // The symbol table changes here
-
+        // The symbol table changes here ...
         nextValue();
+
+        // FIXME --- how should this work?
+        if (!IonType.INT.equals(currentValueType())) {
+            checkSymbol("$ion_1_0");  // if we didn't hit the int 1 then we should have the $ion_1_0
+            nextValue();
+            // ???
+        }
         checkInt(1);
+
+        // we should have reset to the system symbol table here
+        SymbolTable table3 = currentSymtab();
+        assertNotSame(table1, table3);
 
         nextValue();
         checkSymbol("far");
@@ -212,7 +225,23 @@ if (table1 == table2) {
         SymbolTable table1 = currentSymtab();
         checkTrivialLocalTable(table1);
 
+        // move from the 1 to either the $ion_1_0 or the 2
         nextValue();
+
+// FIXME --- how should this work?
+//           since there is no symbol table other than
+//           the default system the $ion_1_0 in the middle
+//           of this sequence isn't meaningful, but if
+//           you're asking for system values with a system
+//           reader you will see it.  If you convert through
+//           a number of readers and writers you might or
+//           might not preserve the $ion_1_0
+        if (!IonType.INT.equals(currentValueType())) {
+            checkSymbol("$ion_1_0");  // if we didn't hit the int 1 then we should have the $ion_1_0
+            nextValue();
+            // ???
+        }
+
         checkInt(2);
 
         SymbolTable table2 = currentSymtab();

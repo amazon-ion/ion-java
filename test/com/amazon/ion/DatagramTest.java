@@ -7,7 +7,7 @@ import static com.amazon.ion.SystemSymbolTable.ION_1_0;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0_SID;
 
-import com.amazon.ion.impl.IonSystemImpl;
+import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.impl.IonValueImpl;
 import java.io.ByteArrayOutputStream;
 import java.util.Collection;
@@ -108,13 +108,13 @@ public class DatagramTest
     public void testAutomaticSystemId()
         throws Exception
     {
-        IonSystemImpl system = system();
-        SymbolTable systemSymtab_1_0 = system.getSystemSymbolTable(ION_1_0);
+        IonSystemPrivate system = system();
+        SymbolTable      systemSymtab_1_0 = system.getSystemSymbolTable(ION_1_0);
 
         IonDatagram dg = system.newDatagram();
 
         IonNull v = system.newNull();
-        assertNull(v.getSymbolTable());
+        assertTrue(v.getSymbolTable() == null || v.getSymbolTable().isSystemTable());
 
         dg.add(v);
 
@@ -128,13 +128,13 @@ public class DatagramTest
     public void testManualSystemId()
         throws Exception
     {
-        IonSystemImpl system = system();
-        SymbolTable systemSymtab_1_0 = system.getSystemSymbolTable(ION_1_0);
+        IonSystemPrivate system = system();
+        SymbolTable      systemSymtab_1_0 = system.getSystemSymbolTable(ION_1_0);
 
         IonDatagram dg = system.newDatagram();
 
         IonSymbol sysId = system.newSymbol(SystemSymbolTable.ION_1_0);
-        assertNull(sysId.getSymbolTable());
+        assertTrue(sysId.getSymbolTable() == null || sysId.getSymbolTable().isSystemTable());
 
         // $ion_1_0 at the front top-level is a systemId
         dg.add(sysId);
@@ -166,6 +166,10 @@ public class DatagramTest
         IonDatagram datagram1 = myLoader.load(bytes);
         assertEquals(1, datagram1.size());
         checkSymbol("swamp", datagram1.get(0));
+
+        IonSymbol sym = (IonSymbol)datagram1.get(0);
+        sym.getSymbolId();
+        sym.stringValue();
 
         // System view should have IonVersionMarker(symbol), a symbol table then the symbol
         assertEquals(3, datagram1.systemSize()); // cas 22 apr 2008 was: 2

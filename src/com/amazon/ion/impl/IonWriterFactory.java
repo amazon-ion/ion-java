@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonIterationType;
@@ -25,6 +26,7 @@ public class IonWriterFactory
     IonSystem           _system;
     SymbolTable         _symbols;
     SymbolTable[]       _imports;
+    IonCatalog          _catalog;
     OutputStream        _out;
     Appendable          _chars;
     TextOptions         _options;
@@ -75,17 +77,17 @@ public class IonWriterFactory
             writer = new IonWriterSystemText(_system, _chars, _options);
             break;
         case SYSTEM_BINARY:
-            writer = new IonWriterSystemBinary(_system, _out, _auto_flush, _assure_ivm);
+            writer = new IonWriterSystemBinary(_system, _out, _auto_flush, !_assure_ivm);
             break;
         case SYSTEM_ION_VALUE:
-            writer = new IonWriterSystemTree(_system, _container);
+            writer = new IonWriterSystemTree(_system, _catalog, _container);
             break;
         case USER_TEXT:
             if (_out != null) {
-                writer = new IonWriterUserText(_system, _out, _options);
+                writer = new IonWriterUserText(_system, _catalog, _out, _options);
             }
             else if (_chars != null) {
-                writer = new IonWriterUserText(_system, _chars, _options);
+                writer = new IonWriterUserText(_system, _catalog, _chars, _options);
             }
             else {
                 assert("this should never be allowed by the previous checks".length() < 0);
@@ -93,12 +95,12 @@ public class IonWriterFactory
             }
             break;
         case USER_BINARY:
-            IonWriterSystemBinary binary_system = new IonWriterSystemBinary(_system, _out, _auto_flush, _assure_ivm);
-            writer = new IonWriterUserBinary(_system, binary_system);
+            IonWriterSystemBinary binary_system = new IonWriterSystemBinary(_system, _out, _auto_flush, !_assure_ivm);
+            writer = new IonWriterUserBinary(_system, _catalog, binary_system, !_assure_ivm);
             break;
         case USER_ION_VALUE:
-            IonWriterSystemTree tree_system = new IonWriterSystemTree(_system, _container);
-            writer = new IonWriterUserTree(tree_system);
+            IonWriterSystemTree tree_system = new IonWriterSystemTree(_system, _catalog, _container);
+            writer = new IonWriterUserTree(tree_system, _catalog, !_assure_ivm);
             break;
         default:
             throw new IonException("unexpected writer type encountered "+_type.toString());
@@ -134,12 +136,16 @@ public class IonWriterFactory
         _system = system;
     }
 
+    public synchronized void set(IonCatalog catalog)
+    {
+        force_in_progress();
+        _catalog = catalog;
+    }
+
     public synchronized void set(SymbolTable symbolTable)
     {
-        if (symbolTable != null) {
-            if (!(symbolTable.isLocalTable() || symbolTable.isSystemTable())) {
-                throw new IonException("symbol table must be null, or a local, or a system symbol table");
-            }
+        if (UnifiedSymbolTable.isAssignableTable(symbolTable) == false) {
+            throw new IonException("symbol table must be null, or a local, or a system symbol table");
         }
         force_in_progress();
         _symbols = symbolTable;
@@ -229,6 +235,18 @@ public class IonWriterFactory
         default:
             throw new IonException("unexpected writer type encountered "+_type.toString());
         }
+
+        switch (_type) {
+        case USER_TEXT:
+        case USER_BINARY:
+            if (_system == null) {
+                property_error("user writers require an IonSystem");
+            }
+            break;
+        default:
+            throw new IonException("unexpected writer type encountered "+_type.toString());
+        }
+
     }
 
     private void check_for_excess_properties()
@@ -288,7 +306,6 @@ public class IonWriterFactory
         default:
             break;
         }
-
     }
 
     private void construct_derived_properties()
@@ -321,5 +338,101 @@ public class IonWriterFactory
             assert(_system != null); // this is checked earlier
             _container = _system.newDatagram();
         }
+
+        if (_catalog == null && _system != null) {
+            // when a catalog is needed we also need a system (which was checked)
+            _catalog = _system.getCatalog();
+        }
     }
+
+    /**
+     * static short cut methods to construct IonWriters
+     * quickly.
+     */
+    public static IonWriter makeWriter(IonContainer value)
+    {
+        IonSystem sys = value.getSystem();
+        IonCatalog cat = sys.getCatalog();
+        IonWriter writer = makeWriter(value, cat);
+        return writer;
+    }
+    public static IonWriter makeWriter(IonContainer value, IonCatalog catalog)
+    {
+        IonSystem sys = value.getSystem();
+        IonWriterSystemTree system_writer = new IonWriterSystemTree(sys, catalog, value);
+        IonWriter writer = new IonWriterUserTree(system_writer, catalog, true);
+        return writer;
+    }
+    public static IonWriter makeWriter(IonCatalog catalog, IonContainer value)
+    {
+        IonSystem sys = value.getSystem();
+        IonWriterSystemTree system_writer = new IonWriterSystemTree(sys, catalog, value);
+        IonWriter writer = new IonWriterUserTree(system_writer, catalog, true);
+        return writer;
+    }
+    public static IonWriter makeWriter(IonSystem system, OutputStream output)
+    {
+        IonCatalog catalog = system.getCatalog();
+        IonWriter writer = makeWriter(system, catalog, output);
+        return writer;
+    }
+    public static IonWriter makeWriter(IonSystem system, IonCatalog catalog, OutputStream output)
+    {
+        IonWriterSystemBinary system_writer = new IonWriterSystemBinary(system, output,
+                                                            /* autoFlush */    false,
+                                                            /* suppressIVM */  false
+                                                            );
+        IonWriter writer = new IonWriterUserBinary(system, catalog, system_writer, true);
+        return writer;
+    }
+    public static IonWriter makeWriter(IonSystem system, Appendable output, TextOptions options)
+    {
+        IonCatalog catalog = system.getCatalog();
+        IonWriter writer = makeWriter(system, catalog, output, options);
+        return writer;
+    }
+    public static IonWriter makeWriter(IonSystem system, IonCatalog catalog, Appendable output, TextOptions options)
+    {
+        IonWriter writer = new IonWriterUserText(system, catalog, output, options);
+        return writer;
+    }
+    public static IonWriter makeWriter(IonSystem system, OutputStream output, TextOptions options)
+    {
+        IonCatalog catalog = system.getCatalog();
+        IonWriter writer = makeWriter(system, catalog, output, options);
+        return writer;
+    }
+    public static IonWriter makeWriter(IonSystem system, IonCatalog catalog, OutputStream output, TextOptions options)
+    {
+        IonWriter writer = new IonWriterUserText(system, catalog, output, options);
+        return writer;
+    }
+
+    public static IonWriter makeSystemWriter(IonContainer value)
+    {
+        IonSystem sys = value.getSystem();
+        IonCatalog cat = sys.getCatalog();
+        IonWriter writer = new IonWriterSystemTree(sys, cat, value);
+        return writer;
+    }
+    public static IonWriter makeSystemWriter(IonSystem system, OutputStream output)
+    {
+        IonWriter writer = new IonWriterSystemBinary(system, output,
+                                                     /* autoFlush */ false,
+                                                     /*suppressIVM*/ false
+                                                     );
+        return writer;
+    }
+    public static IonWriter makeSystemWriter(IonSystem system, Appendable output, TextOptions options)
+    {
+        IonWriter writer = new IonWriterSystemText(system, output, options);
+        return writer;
+    }
+    public static IonWriter makeSystemWriter(IonSystem system, OutputStream output, TextOptions options)
+    {
+        IonWriter writer = new IonWriterSystemText(system, output, options);
+        return writer;
+    }
+
+
 }

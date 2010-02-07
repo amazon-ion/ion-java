@@ -228,18 +228,20 @@ public final class IonSymbolImpl
     }
 
     @Override
-    public void updateSymbolTable(SymbolTable symtab)
+    public SymbolTable populateSymbolValues(SymbolTable symtab)
     {
         // TODO do we really need to materialize?
         makeReady();
 
         // the super method will check for the lock
-        super.updateSymbolTable(symtab);
+        super.populateSymbolValues(symtab);
 
         if (mySid < 1 && this.isNullValue() == false) {
             assert _hasNativeValue() == true && isDirty();
             mySid = symtab.addSymbol(this._get_value());
         }
+
+        return symtab;
     }
 
     @Override

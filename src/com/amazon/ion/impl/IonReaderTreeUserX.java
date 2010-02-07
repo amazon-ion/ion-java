@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonIterationType;
 import com.amazon.ion.IonReader;
@@ -16,11 +17,14 @@ import com.amazon.ion.SymbolTable;
  */
 public class IonReaderTreeUserX
     extends IonReaderTreeSystem
+    implements IonReaderWriterPrivate
 {
+    IonCatalog _catalog;
 
-    public IonReaderTreeUserX(IonValue value)
+    public IonReaderTreeUserX(IonValue value, IonCatalog catalog)
     {
         super(value);
+        _catalog = catalog;
     }
 
     @Override
@@ -58,6 +62,8 @@ public class IonReaderTreeUserX
         if (_eof) return false;
         if (_next != null) return true;
 
+        clear_system_value_stack();
+
         // read values from the system
         // reader and if they are system values
         // process them.  Return when we've
@@ -82,7 +88,9 @@ public class IonReaderTreeUserX
                         }
                     }
                     if (sid == UnifiedSymbolTable.ION_1_0_SID) {
-                        set_symbol_table(_system.getSystemSymbolTable());
+                        SymbolTable symbols = _system.getSystemSymbolTable();
+                        set_symbol_table(symbols);
+                        push_symbol_table(symbols);
                         _next = null;
                         continue;
                     }
@@ -92,9 +100,10 @@ public class IonReaderTreeUserX
                 ) {
                     assert(_next instanceof IonStruct);
                     // read a local symbol table
-                    IonReader reader = new IonReaderTreeUserX(_next);
+                    IonReader reader = new IonReaderTreeUserX(_next, _catalog);
                     SymbolTable symtab = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, reader, false);
                     set_symbol_table(symtab);
+                    push_symbol_table(symtab);
                     _next = null;
                     continue;
                 }
@@ -105,5 +114,43 @@ public class IonReaderTreeUserX
             break;
         }
         return (next_type != null);
+    }
+    //
+    //  This code handles the skipped symbol table
+    //  support - it is cloned in IonReaderTextUserX
+    //  and IonReaderBinaryUserX
+    //
+    //  SO ANY FIXES HERE WILL BE NEEDED IN THOSE
+    //  TWO LOCATIONS AS WELL.
+    //
+    private int _symbol_table_top = 0;
+    private SymbolTable[] _symbol_table_stack = new SymbolTable[3]; // 3 is rare, IVM followed by a local sym tab with open content
+    private void clear_system_value_stack()
+    {
+        while (_symbol_table_top > 0) {
+            _symbol_table_top--;
+            _symbol_table_stack[_symbol_table_top] = null;
+        }
+    }
+    private void push_symbol_table(SymbolTable symbols)
+    {
+        assert(symbols != null);
+        if (_symbol_table_top >= _symbol_table_stack.length) {
+            int new_len = _symbol_table_stack.length * 2;
+            SymbolTable[] temp = new SymbolTable[new_len];
+            System.arraycopy(_symbol_table_stack, 0, temp, 0, _symbol_table_stack.length);
+            _symbol_table_stack = temp;
+        }
+        _symbol_table_stack[_symbol_table_top++] = symbols;
+    }
+    public SymbolTable pop_passed_symbol_table()
+    {
+        if (_symbol_table_top <= 0) {
+            return null;
+        }
+        _symbol_table_top--;
+        SymbolTable symbols = _symbol_table_stack[_symbol_table_top];
+        _symbol_table_stack[_symbol_table_top] = null;
+        return symbols;
     }
 }

@@ -76,6 +76,26 @@ public class IonWriterSystemText
         }
     }
 
+    @Override
+    void reset() throws IOException
+    {
+        if (getDepth() != 0) {
+            throw new IllegalStateException("you can't reset a writer that is in the middle of writing a value");
+        }
+        setSymbolTable(_system.getSystemSymbolTable());
+    }
+
+    @Override
+    UnifiedSymbolTable inject_local_symbol_table() throws IOException
+    {
+        // no catalog since it doesn't matter as this is a
+        // pure local table, with no imports
+        UnifiedSymbolTable symbols
+            = UnifiedSymbolTable.makeNewLocalSymbolTable(_symbol_table);
+        return symbols;
+    }
+
+
     //@Override
     //public void setSymbolTable(SymbolTable symbols)
     // it is unnecessary to override setSymbolTable

@@ -29,7 +29,7 @@ public class UserReader
     private SymbolTable    _localSymbolTable;
 
     private boolean        _at_eof;
-    private IonValueImpl   _next;
+    private IonValue       _next;
 
 
     /**
@@ -40,7 +40,7 @@ public class UserReader
                       SymbolTable initialSymbolTable,
                       Reader input)
     {
-        this(new SystemReader(system,
+        this(SystemReaderImpl.makeSystemReader(system,
                               system.getCatalog(),
                               initialSymbolTable,
                               input));
@@ -100,11 +100,11 @@ public class UserReader
                 prefetch();
             }
             if (_next != null) {
-                IonValueImpl retval = _next;
+                IonValue retval = _next;
                 _next = null;
                 _localSymbolTable = _systemReader.getLocalSymbolTable();
                 if (this._recycle_buffer) {
-                    retval.clear_position_and_buffer();
+                    ((IonValueImpl)retval).clear_position_and_buffer();
                 }
                 return retval;
             }
@@ -162,6 +162,11 @@ public class UserReader
     {
         _at_eof = true;
         _next = null;
-        _systemReader.close();
+        try {
+            _systemReader.close();
+        }
+        catch (IOException e) {
+            throw new IonException(e);
+        }
     }
 }

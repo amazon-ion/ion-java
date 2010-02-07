@@ -54,6 +54,7 @@ public class IonTokenConstsX
     public static final int TOKEN_count                 = 26;
 
     public static final int KEYWORD_unrecognized = -1;
+    public static final int KEYWORD_none         =  0;
     public static final int KEYWORD_TRUE      =  1;
     public static final int KEYWORD_FALSE     =  2;
     public static final int KEYWORD_NULL      =  3;

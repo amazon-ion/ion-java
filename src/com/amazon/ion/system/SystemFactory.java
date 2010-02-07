@@ -5,6 +5,7 @@ package com.amazon.ion.system;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.impl.IonSystemImpl;
+import com.amazon.ion.impl.lite.IonSystemLite;
 
 /**
  * The bootstrap factory to create an application's {@link IonSystem}.
@@ -22,6 +23,8 @@ public final class SystemFactory
      * - default system version; could be lower than the latest supported.
      */
 
+    private static boolean USE_LITE_SYSTEM_IMPL = true;
+
     /**
      * Constructs a new system instance with a default configuration.
      * <p>
@@ -33,6 +36,9 @@ public final class SystemFactory
      */
     public static IonSystem newSystem()
     {
+        if (USE_LITE_SYSTEM_IMPL) {
+            return new IonSystemLite();
+        }
         return new IonSystemImpl();
     }
 
@@ -48,6 +54,9 @@ public final class SystemFactory
     {
         if (catalog == null) throw new NullPointerException("catalog is null");
 
+        if (USE_LITE_SYSTEM_IMPL) {
+            return new IonSystemLite(catalog);
+        }
         return new IonSystemImpl(catalog);
     }
 }

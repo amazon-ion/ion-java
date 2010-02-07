@@ -22,20 +22,17 @@ import java.util.Iterator;
  */
 public class IonReaderBinarySystemX
     extends IonReaderBinaryRawX
+    implements IonReaderWriterPrivate
 {
+    IonSystem _system;
     // ValueVariant _v; actually owned by the raw reader so it can be cleared at appropriate times
-    protected IonReaderBinarySystemX(byte[] bytes) {
-        super();
-        UnifiedInputStreamX uis = UnifiedInputStreamX.makeStream(bytes);
-        init(uis);
-    }
-    protected IonReaderBinarySystemX(byte[] bytes, int offset, int length) {
+    protected IonReaderBinarySystemX(IonSystem system, byte[] bytes, int offset, int length) {
         super();
         UnifiedInputStreamX uis = UnifiedInputStreamX.makeStream(bytes, offset, length);
         init(uis);
-
+        _system = system;
     }
-    protected IonReaderBinarySystemX(InputStream userBytes) {
+    protected IonReaderBinarySystemX(IonSystem system, InputStream userBytes) {
         super();
         UnifiedInputStreamX uis;
         try {
@@ -45,10 +42,12 @@ public class IonReaderBinarySystemX
             throw new IonReaderBinaryExceptionX(e);
         }
         init(uis);
+        _system = system;
     }
-    protected IonReaderBinarySystemX(UnifiedInputStreamX userBytes) {
+    protected IonReaderBinarySystemX(IonSystem system, UnifiedInputStreamX userBytes) {
         super();
         init(userBytes);
+        _system = system;
     }
 
     public IonIterationType getIterationType()
@@ -58,7 +57,7 @@ public class IonReaderBinarySystemX
 
     public IonSystem getSystem()
     {
-        return null;
+        return _system;
     }
 
 
@@ -332,7 +331,8 @@ public class IonReaderBinarySystemX
             return null;
         }
         if (IonType.SYMBOL.equals(_value_type)) {
-            throw new UnsupportedOperationException("not supported - use UserReader");
+            return null;
+//            throw new UnsupportedOperationException("not supported - use UserReader");
         }
         prepare_value(AS_TYPE.string_value);
         return _v.getString();
@@ -358,17 +358,20 @@ public class IonReaderBinarySystemX
     @Override
     public String getFieldName()
     {
-        throw new UnsupportedOperationException("not supported - use UserReader");
+        return null;
+//        throw new UnsupportedOperationException("not supported - use UserReader");
     }
     @Override
     public Iterator<String> iterateTypeAnnotations()
     {
-        throw new UnsupportedOperationException("not supported - use UserReader");
+        return null;
+//        throw new UnsupportedOperationException("not supported - use UserReader");
     }
     @Override
     public String[] getTypeAnnotations()
     {
-        throw new UnsupportedOperationException("not supported - use UserReader");
+        return null;
+//        throw new UnsupportedOperationException("not supported - use UserReader");
     }
     @Override
     public SymbolTable getSymbolTable()
@@ -376,4 +379,9 @@ public class IonReaderBinarySystemX
         return null;
     }
 
+    // system readers don't skip any symbol tables
+    public SymbolTable pop_passed_symbol_table()
+    {
+        return null;
+    }
 }

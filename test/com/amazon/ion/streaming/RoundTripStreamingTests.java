@@ -23,7 +23,7 @@ import junit.framework.TestSuite;
 
 public class RoundTripStreamingTests extends DirectoryTestSuite
 {
-    static final boolean _debug_flag = false;
+    static final boolean _debug_flag = true;
 
     public static TestSuite suite()
     {
@@ -59,7 +59,7 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
     }
 
 
-    private static class StreamingRoundTripTest
+    protected static class StreamingRoundTripTest
     extends FileTestCase
     {
         private Printer       myPrinter;
@@ -427,14 +427,17 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
             //  test comparison again with the resulting binary
             //  and resulting text (1 level recurse or 2?
 
-            if (this.getName().startsWith("testfile35")) {
-                // FIXME - we need to fix the problem with in line text symbol tables !!
+            String filename = this.myTestFile.getAbsolutePath();
+            if (filename.contains("__")) {
                 if (_debug_flag) {
-                    System.out.println("debugging testfile35, with in line text symbol tables");
+                    System.out.println();
+                    System.out.println("debugging "+this.getName()+", with in line text symbol tables ");
+                    int w = 3;
+                    w = break_point_point(w);
+                    System.out.println(""+w);
                 }
                 else {
-                    System.err.println(getName() + ": skipping testfile35");
-                    return;
+                    System.err.println("skipping: "+this.getName());
                 }
             }
 
@@ -446,6 +449,17 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
                 // mostly to force these to be used (pass2*)
                 throw new RuntimeException("boy this is odd");
             }
+        }
+        int break_point_point(int x) throws Exception
+        {
+            int y = 2;
+            int z;
+            z = x + y;
+            roundTripBufferResults pass1 = roundTripBuffer("original buffer", myBuffer);
+            roundTripBufferResults pass2bin = roundTripBuffer("binary from pass 1",pass1.binary);
+            roundTripBufferResults pass2text = roundTripBuffer("utf8 from pass 1", pass1.utf8_buf);
+            roundTripBufferResults pass2pretty = roundTripBuffer("utf8 pretty from pass 1", pass1.utf8_pretty);
+            return z;
         }
     }
 

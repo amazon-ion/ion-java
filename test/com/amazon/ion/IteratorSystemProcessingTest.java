@@ -55,6 +55,15 @@ public class IteratorSystemProcessingTest
     }
 
     @Override
+    protected IonType currentValueType() throws Exception
+    {
+        if (myCurrentValue == null) {
+            return null;
+        }
+        return myCurrentValue.getType();
+    }
+
+    @Override
     protected void checkAnnotation(String expected)
     {
         if (! myCurrentValue.hasTypeAnnotation(expected))
@@ -110,7 +119,7 @@ public class IteratorSystemProcessingTest
     protected boolean checkMissingSymbol(String expected, int expectedSymbolTableSid, int expectedLocalSid)
         throws Exception
     {
-        checkSymbol(expected, myCurrentValue);
+        checkSymbol(expected, expectedLocalSid, myCurrentValue);
 
         // when missing from a shared table the symbol
         // will have been added to the local symbols

@@ -227,6 +227,10 @@ public abstract class ContainerTestCase
         // Don't test this for datagram, which has different symtab behavior.
         if (dg.get(0).getType() == IonType.SYMBOL) return;
 
+// FIXME: this forces the local symbol tables to be created
+Iterator<IonValue> it = dg.systemIterator();
+it.next();
+
         IonContainer list = (IonContainer) dg.get(0);
         if (list instanceof IonDatagram) return;
 
@@ -287,6 +291,7 @@ public abstract class ContainerTestCase
 
         IonNull n = system().newNull();
         n.makeReadOnly();
+        assertEquals(null, n.getContainer());
 
         try
         {

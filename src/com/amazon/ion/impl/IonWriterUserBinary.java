@@ -2,8 +2,10 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonSystem;
+import com.amazon.ion.IonCatalog;
+import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonIterationType;
+import com.amazon.ion.IonSystem;
 import com.amazon.ion.SymbolTable;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -20,9 +22,9 @@ public class IonWriterUserBinary
     // methods.  However those are sufficiently expensive that
     // the cost of the cast should be lost in the noise.
 
-    protected IonWriterUserBinary(IonSystem system, IonWriterSystemBinary systemWriter)
+    protected IonWriterUserBinary(IonSystem system, IonCatalog catalog, IonWriterSystemBinary systemWriter, boolean suppressIVM)
     {
-        super(systemWriter, null);
+        super(systemWriter, catalog, (IonContainer)null, suppressIVM);
     }
 
     @Override
@@ -38,28 +40,38 @@ public class IonWriterUserBinary
     }
 
     @Override
-    public void setSymbolTable(SymbolTable symbols) throws IOException
+    public void set_symbol_table_helper(SymbolTable prev_symbols, SymbolTable new_symbols) throws IOException
     {
-        assert(_system_writer instanceof IonWriterSystemBinary);
-        IonWriterSystemBinary swriter = ((IonWriterSystemBinary)_system_writer);
-
-        if (!swriter.atDatagramLevel()) {
-            throw new IllegalStateException("symbol table can only be set at a top level");
-        }
-        if (symbols.isSystemTable()) {
-            // for the public API this turns into an Item Version Marker
-            if (!_after_ion_version_marker) {
-                swriter.writeIonVersionMarker();
+        // for a binary writer we always write out symbol tables
+        // writeUserSymbolTable(new_symbols);
+        if (new_symbols.isSystemTable()) {
+            // TODO: this will suppress multiple attempts to write
+            //       a system symbol table - do we want that?  (usually
+            //       we do, but always?)
+            if (_after_ion_version_marker) {
+                return;
             }
-            swriter.setSymbolTable(symbols);
-        }
-        else if (symbols.isLocalTable()) {
-            swriter.set_symbol_table_and_patch(symbols);
+            // writing to the system writer keeps us from
+            // recursing on the writeIonVersionMarker call
+            _system_writer.writeIonVersionMarker();
+            _after_ion_version_marker = true;
         }
         else {
-            throw new IllegalArgumentException("symbol table must be a system or a local table");
+            assert(new_symbols.isLocalTable());
+            assert(_system_writer instanceof IonWriterSystemBinary);
+            ((IonWriterSystemBinary)_system_writer).patchInSymbolTable(new_symbols);
         }
-
     }
 
+    @Override
+    UnifiedSymbolTable inject_local_symbol_table() throws IOException
+    {
+        // no catalog since it doesn't matter as this is a
+        // pure local table, with no imports
+        // we let the system writer handle this work
+        assert(_system_writer instanceof IonWriterSystemBinary);
+        UnifiedSymbolTable symbols
+            = ((IonWriterSystemBinary)_system_writer).inject_local_symbol_table();
+        return symbols;
+    }
 }

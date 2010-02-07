@@ -2,7 +2,6 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl.IonDatagramImpl;
 import java.util.Iterator;
 
 /**
@@ -25,10 +24,20 @@ public class NewDatagramIteratorSystemProcessingTest
         throws Exception
     {
         IonReader reader = system().newSystemReader(myText);
-        IonDatagram datagram =
-            new IonDatagramImpl(system(), catalog(), reader);
+
+        // was: new IonDatagramImpl(system(), catalog(), reader);
         // Force symtab preparation  FIXME should not be necessary
-        datagram.byteSize();
+        // datagram.byteSize();
+        IonDatagram datagram = system().newDatagram();
+
+        // not newTreeUserWriter since we don't want to see local
+        // symbol tables even if they're required
+        IonWriter writer = system().newTreeWriter(datagram);
+
+        writer.writeValues(reader);
+        writer.flush();
+
+        datagram.deepMaterialize();
 
         return datagram.iterator();
     }
@@ -38,10 +47,15 @@ public class NewDatagramIteratorSystemProcessingTest
         throws Exception
     {
         IonReader reader = system().newSystemReader(myText);
-        IonDatagram datagram =
-            new IonDatagramImpl(system(), catalog(), reader);
-        // Force symtab preparation  FIXME should not be necessary
-        datagram.byteSize();
+        // was: IonDatagram datagram =
+        //         new IonDatagramImpl(system(), catalog(), reader);
+        //      // Force symtab preparation  FIXME should not be necessary
+        //      datagram.byteSize();
+
+        IonDatagram datagram = system().newDatagram();
+        IonWriter writer = system().newTreeSystemWriter(datagram);
+        writer.writeValues(reader);
+        writer.flush();
 
         return datagram.systemIterator();
     }

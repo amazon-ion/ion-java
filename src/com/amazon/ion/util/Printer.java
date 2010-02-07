@@ -19,8 +19,11 @@ import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonTimestamp;
+import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.impl.UnifiedSymbolTable;
 import com.amazon.ion.util.IonTextUtils.SymbolVariant;
 import java.io.IOException;
 import java.io.InputStream;
@@ -58,6 +61,7 @@ public class Printer
         public boolean sexpAsList;
         public boolean skipAnnotations;
         public boolean skipSystemValues;
+        public boolean skipRedundantSystemValues;
         public boolean stringAsJson;
         public boolean symbolAsString;
         public boolean timestampAsString;
@@ -665,22 +669,98 @@ public class Printer
             }
 
             boolean hitOne = false;
+
+            // if we're skipping system values we don't need to check for
+            // redundant system values.  But otherwise we do what the
+            // user tells us to (through myOptions)
+            final boolean skip_redundant_system_values = (myOptions.skipRedundantSystemValues == true) && (myOptions.skipSystemValues == false);
+            SymbolTable previous_symbols = null;
+
             while (i.hasNext())
             {
-                if (hitOne)
-                {
-                    myOut.append(asList  ?  ','  :  ' ');
-                }
-                hitOne = true;
-
                 IonValue child = i.next();
-                writeChild(child, true);
+
+                if (skip_redundant_system_values)
+                {
+                    SymbolTable new_symbols = child.getSymbolTable();
+                    child = check_for_skip(child, previous_symbols, new_symbols);
+                    previous_symbols = new_symbols;
+                }
+
+                if (child != null)
+                {
+                    if (hitOne)
+                    {
+                        myOut.append(asList  ?  ','  :  ' ');
+                    }
+                    writeChild(child, true);
+                    hitOne = true; // we've only "hit one" if we wrote it
+                }
             }
 
             if (asList)
             {
                 myOut.append(']');
             }
+        }
+
+        private final IonValue check_for_skip(IonValue child, SymbolTable previous_symbols, SymbolTable new_symbols)
+        {
+            IonType t = child.getType();
+            switch (t) {
+            case STRUCT:
+                if (child.hasTypeAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE)) {
+                    assert(previous_symbols != null && new_symbols != null);
+                    if (new_symbols.isLocalTable() == true
+                     || symbol_table_struct_has_imports(child)
+                    ) {
+                        return print_version_of_symbol_table(child);
+                    }
+                    return null;
+                }
+                break;
+            case SYMBOL:
+                if (((IonSymbol)child).getSymbolId() == UnifiedSymbolTable.ION_1_0_SID) {
+                    if (previous_symbols != null && previous_symbols.isSystemTable()) {
+                        return null;
+                    }
+                    // fall through to default (false)
+                }
+                // fall through to default (false)
+                break;
+            default:
+                break;
+            }
+            return child;
+        }
+
+        static final private boolean symbol_table_struct_has_imports(IonValue child) {
+            IonStruct struct = (IonStruct)child;
+            IonValue imports = struct.get(UnifiedSymbolTable.IMPORTS);
+            if (imports != null && IonType.LIST.equals(imports.getType())) {
+                return true;
+            }
+            return false;
+        }
+        static final private IonValue print_version_of_symbol_table(IonValue child)
+        {
+            IonStruct struct = child.getSystem().newEmptyStruct();
+            String[] as = child.getTypeAnnotations();
+            for (int ii=0; ii<as.length; ii++) {
+                String a = as[ii];
+                struct.addTypeAnnotation(a);
+            }
+            Iterator<IonValue> it = ((IonStruct)child).iterator();
+            while (it.hasNext()) {
+                IonValue member = it.next();
+                int sid = member.getFieldId();
+                if (sid == UnifiedSymbolTable.SYMBOLS_SID) {
+                    continue;
+                }
+                IonValue clone = member.clone();
+                struct.add(member.getFieldName(), clone);
+            }
+            return struct;
         }
 
         @Override

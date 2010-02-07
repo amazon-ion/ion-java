@@ -36,16 +36,16 @@ import java.util.NoSuchElementException;
  *
  */
 public class IonReaderTreeSystem
-    implements IonReader
+    implements IonReader, IonReaderWriterPrivate
 {
-    protected IonSystem          _system;
-    protected SymbolTable        _symbols;
-    protected Iterator<IonValue> _iter;
-    protected IonContainerImpl   _root;
-    protected IonValue           _parent;
-    protected IonValue           _next;
-    protected IonValue           _curr;
-    protected boolean            _eof;
+    protected IonSystem           _system;
+    protected SymbolTable         _symbols;
+    protected Iterator<IonValue>  _iter;
+    protected IonContainerPrivate _root;
+    protected IonValue            _parent;
+    protected IonValue            _next;
+    protected IonValue            _curr;
+    protected boolean             _eof;
 
     protected Object[]           _stack = new Object[10];
     protected int                _top;
@@ -58,17 +58,20 @@ public class IonReaderTreeSystem
         else {
             _system = value.getSystem();
             if (value instanceof IonDatagram) {
+                // datagrams interacting with these readers must be
+                // IonContainerPrivate containers
+                assert(value instanceof IonContainerPrivate);
                 IonDatagram dg = (IonDatagram) value;
                 _parent = dg;
-                _root = (IonContainerImpl) dg;
-                _iter = new Children(dg);
+                _root = (IonContainerPrivate)dg;
+                _iter = dg.systemIterator(); // we want a system reader not: new Children(dg);
             }
             else {
                 _next = value;
-                if (value instanceof IonContainerImpl) {
-                    _root = (IonContainerImpl)value;
-                    while (_root._container != null) {
-                        _root = _root._container;
+                if (value instanceof IonContainerPrivate) {
+                    _root = (IonContainerPrivate)value;
+                    while (_root.getContainer() != null) {
+                        _root = (IonContainerPrivate)_root.getContainer();
                     }
                 }
             }
@@ -499,16 +502,16 @@ public class IonReaderTreeSystem
 
     private static final class Children implements Iterator<IonValue>
     {
-        boolean          _eof;
-        int              _next_idx;
-        IonContainerImpl _parent;
-        IonValue         _curr;
+        boolean             _eof;
+        int                 _next_idx;
+        IonContainerPrivate _parent;
+        IonValue            _curr;
 
         Children(IonContainer parent)
         {
-            if (parent instanceof IonContainerImpl) {
-                _parent = (IonContainerImpl)parent;
-                _parent.makeReady();
+            if (parent instanceof IonContainerPrivate) {
+                _parent = (IonContainerPrivate)parent;
+                // _parent.makeReady();
                 _next_idx = 0;
                 _curr = null;
                 if (_parent.isNullValue()) {
@@ -567,5 +570,11 @@ public class IonReaderTreeSystem
         {
             throw new UnsupportedOperationException();
         }
+    }
+
+    // system readers don't skip any symbol tables
+    public SymbolTable pop_passed_symbol_table()
+    {
+        return null;
     }
 }

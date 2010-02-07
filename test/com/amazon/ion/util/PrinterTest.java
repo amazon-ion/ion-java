@@ -67,6 +67,7 @@ public class PrinterTest
         throws Exception
     {
         StringBuilder w = new StringBuilder();
+        myPrinter.myOptions.skipRedundantSystemValues = true;
         myPrinter.print(value, w);
         assertEquals(expected, w.toString());
     }
@@ -526,16 +527,6 @@ public class PrinterTest
         checkRendering("" + value.getMillis(), value);
 
         // TODO test printTimestampAsMillis
-    }
-
-    public void testPrintJsonTimestampString()
-        throws Exception
-    {
-        IonTimestamp ts = (IonTimestamp) oneValue("2007-05-15");
-        myPrinter.setJsonMode();
-        myPrinter.setPrintTimestampAsMillis(false);
-        myPrinter.setPrintTimestampAsString(true);
-        checkRendering("\"2007-05-15\"", ts);
     }
 
     public void testJsonEscapeNonBmp() throws Exception {

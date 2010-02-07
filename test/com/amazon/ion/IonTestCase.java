@@ -2,8 +2,9 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl.IonSystemImpl;
+import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.system.SimpleCatalog;
+import com.amazon.ion.system.SystemFactory;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -22,8 +23,8 @@ public abstract class IonTestCase
     extends TestCase
 {
     private static boolean ourSystemPropertiesLoaded = false;
-    protected IonSystemImpl mySystem;
-    protected IonLoader myLoader;
+    protected IonSystemPrivate mySystem;
+    protected IonLoader        myLoader;
 
 
     public IonTestCase()
@@ -161,13 +162,23 @@ public abstract class IonTestCase
     // ========================================================================
     // Fixture Helpers
 
-    protected IonSystemImpl system()
+
+    protected IonSystemPrivate system()
     {
         if (mySystem == null)
         {
-            mySystem = new IonSystemImpl();
+            mySystem = (IonSystemPrivate)SystemFactory.newSystem(); // was: new IonSystemImpl();
         }
         return mySystem;
+    }
+
+    // added helper, this returns a separate system
+    // every time since the user is passing in a catalog
+    // which changes the state of the system object
+    protected IonSystemPrivate system(IonCatalog catalog)
+    {
+        IonSystemPrivate system = (IonSystemPrivate)SystemFactory.newSystem(catalog);
+        return system;
     }
 
     protected SimpleCatalog catalog()

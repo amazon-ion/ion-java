@@ -24,7 +24,7 @@ import java.util.NoSuchElementException;
  */
 abstract public class IonContainerImpl
     extends IonValueImpl
-    implements IonContainer
+    implements IonContainerPrivate
 {
     /**
      * sizes for the various types of containers
@@ -100,17 +100,17 @@ abstract public class IonContainerImpl
     //protected ArrayList<IonValue> _contents;
     protected int        _child_count;
     protected IonValue[] _children;
-    protected int get_child_count() {
+    public int get_child_count() {
         return _child_count;
     }
-    protected IonValue get_child(int idx)
+    public IonValue get_child(int idx)
     {
         if (idx < 0 || idx >= _child_count) {
             throw new IndexOutOfBoundsException(""+idx);
         }
         return _children[idx];
     }
-    protected IonValue set_child(int idx, IonValue child)
+    public IonValue set_child(int idx, IonValue child)
     {
         if (idx < 0 || idx >= _child_count) {
             throw new IndexOutOfBoundsException(""+idx);
@@ -119,7 +119,7 @@ abstract public class IonContainerImpl
         _children[idx] = child;
         return prev;
     }
-    protected int add_child(int idx, IonValue child)
+    public int add_child(int idx, IonValue child)
     {
         _isNullValue(false); // if we add children we're not null anymore
         if (_children == null || _child_count >= _children.length) {
@@ -140,7 +140,7 @@ abstract public class IonContainerImpl
         _children[idx] = child;
         return idx;
     }
-    protected void remove_child(int idx) {
+    public void remove_child(int idx) {
         assert(idx >=0 && idx < _child_count); // this also asserts child count > 0
         if (idx + 1 <= _child_count) {
             System.arraycopy(_children, idx+1, _children, idx, _child_count - idx - 1);
@@ -148,7 +148,7 @@ abstract public class IonContainerImpl
         _child_count--;
         _children[_child_count] = null;
     }
-    protected int find_Child(IonValue child) {
+    public int find_Child(IonValue child) {
         for (int ii=0; ii<_child_count; ii++) {
             if (_children[ii] == child) {
                 return ii;
@@ -497,14 +497,15 @@ abstract public class IonContainerImpl
 
 
     @Override
-    public void updateSymbolTable(SymbolTable symtab)
+    public SymbolTable populateSymbolValues(SymbolTable symtab)
     {
         // the "super" copy of this method will check the lock
-        super.updateSymbolTable(symtab);
+        super.populateSymbolValues(symtab);
         for (int ii=0; ii<_child_count; ii++) {
             IonValue v = get_child(ii);
-            ((IonValueImpl)v).updateSymbolTable(symtab);
+            ((IonValueImpl)v).populateSymbolValues(symtab);
         }
+        return symtab;
     }
 
     @Override

@@ -26,7 +26,7 @@ import java.io.IOException;
  *
  */
 public abstract class IonValueImpl
-    implements IonValue
+    implements IonValuePrivate
 {
     private static final String[] EMPTY_ANNOTATIONS = new String[0];
 
@@ -615,6 +615,20 @@ public abstract class IonValueImpl
         return getFieldId();
     }
 
+    public IonValuePrivate getRoot()
+    {
+        IonValueImpl parent;
+        IonValueImpl value = this;
+        for (;;) {
+            parent = (IonValueImpl)value.getContainer();
+            if (parent == null) {
+                break;
+            }
+            value = parent;
+        }
+        return value;
+    }
+
     public final IonContainer getContainer()
     {
         if (_container == null) {
@@ -631,7 +645,7 @@ public abstract class IonValueImpl
 
     public final boolean removeFromContainer()
     {
-        // TODO how does this interact with the strange systemvalue note above?
+        // TODO how does this interact with the strange system value note above?
         IonContainer c = getContainer();
         if (c == null) return false;
 
@@ -712,15 +726,17 @@ public abstract class IonValueImpl
 
         return this._symboltable;
     }
+    public SymbolTable getAssignedSymbolTable()
+    {
+        return this._symboltable;
+    }
 
     /**
      *
      * @param symtab must be local, system, or null.
      */
     public void setSymbolTable(SymbolTable symtab) {
-        if (symtab != null
-            && ! (symtab.isLocalTable() || symtab.isSystemTable()))
-        {
+        if (UnifiedSymbolTable.isAssignableTable(symtab) == false) {
             throw new IllegalArgumentException("symbol table must be local or system");
         }
         checkForLock();
@@ -1144,7 +1160,7 @@ public abstract class IonValueImpl
         }
         else if (!this.isReadOnly()) {
             if (symtab == null) {
-                symtab = this._system.getSystemSymbolTable();
+                symtab = _system.getSystemSymbolTable();
             }
             synchronized (this) {
                 symtab = UnifiedSymbolTable.makeNewLocalSymbolTable(symtab);
@@ -1564,7 +1580,7 @@ public abstract class IonValueImpl
     /**
      * Adds all of our annotations into the symbol table.
      */
-    public void updateSymbolTable(SymbolTable symtab)
+    public SymbolTable populateSymbolValues(SymbolTable symtab)
     {
         checkForLock();
 
@@ -1579,6 +1595,8 @@ public abstract class IonValueImpl
         if (this._fieldName != null) {
             symtab.addSymbol(this._fieldName);
         }
+
+        return symtab;
     }
 
     /**
