@@ -56,7 +56,9 @@ public class IonStructLite
             // copy over the field map proper
             // FIXME - I think this should be cleaned up w.r.t. copyFrom as this is slightly redundant
             //         due to transitioningToLarge size in copyFrom.
-            clone._field_map = new HashMap<String, Integer>(_field_map);
+            if (clone._field_map != null) {
+                clone._field_map = new HashMap<String, Integer>(_field_map);
+            }
             clone._field_map_duplicate_count = _field_map_duplicate_count;
         } catch (IOException e) {
             throw new IonException(e);
