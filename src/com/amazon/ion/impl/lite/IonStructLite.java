@@ -355,6 +355,22 @@ public class IonStructLite
             }
         };
     }
+    
+    @Override
+    public boolean remove(final IonValue element) {
+        final boolean removed = super.remove(element);
+        // FIXME - this is probably not the most efficient way to do this
+        if (removed && _field_map != null) {
+            // re-index
+            _field_map.clear();
+            _field_map_duplicate_count = 0;
+            for (int ii = 0; ii < _child_count; ii++) {
+                final IonValueLite child = _children[ii];
+                add_field(child.getFieldName(), ii);
+            }
+        }
+        return removed;
+    }
 
     public IonValue remove(String fieldName)
     {
