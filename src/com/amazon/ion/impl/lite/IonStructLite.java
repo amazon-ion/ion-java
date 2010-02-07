@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl.lite;
 
+import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
@@ -303,28 +304,35 @@ public class IonStructLite
             put(entry.getKey(), entry.getValue());
         }
     }
-
+    
+    @Override
+    public boolean add(IonValue child)
+        throws NullPointerException, IllegalArgumentException,
+        ContainedValueException
+    {
+        String field_name = child.getFieldName();
+        add(field_name, child);
+        return true;
+    }
 
     public void add(String fieldName, IonValue value)
     {
         // TODO maintain _isOrdered
 
-        checkForLock();
-
+        validateNewChild(value);
         validateFieldName(fieldName);
-    //  validateNewChild(value);          // This is done by add() below.
 
         IonValueLite concrete = (IonValueLite) value;
-        add(concrete);
+        int size = get_child_count();
 
-        // This should be true because we've validated that its not contained.
-        assert value.getFieldName() == null;
+        add(size, concrete);
         concrete.setFieldName(fieldName);
 
         if (_field_map != null) {
             add_field(fieldName, concrete._elementid());
         }
     }
+
 
     public ValueFactory add(final String fieldName)
     {
