@@ -241,7 +241,7 @@ public abstract class IonValueLite
      * IonContainerImpl, IonTextImpl and IonLobImpl.
      */
     @Override
-    public abstract IonValue clone();
+    public abstract IonValueLite clone();
 
     /**
      * copyValueContentFrom is used to make a duplicate
