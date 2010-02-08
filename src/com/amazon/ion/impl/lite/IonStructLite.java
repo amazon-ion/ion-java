@@ -53,7 +53,7 @@ public class IonStructLite
        try {
           // copy over the field map first so that the
           // call to transition to large in copyFrom
-          // doesn’t do any unnecessary work
+          // doesn't do any unnecessary work
           if (_field_map != null) {
              clone._field_map = new HashMap<String, Integer>(_field_map);
           }
