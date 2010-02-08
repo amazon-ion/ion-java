@@ -1023,11 +1023,19 @@ public abstract class IonReaderTextRawX
      * called by super classes to tell us that the
      * current token has been consumed.
      */
-    protected void tokenValueIsFinished() {
+    protected void tokenValueIsFinished()
+    {
         _scanner.tokenIsFinished();
-        // XXX this doesn't work
-        //int state_after_scalar = get_state_after_value();
-        //set_state(state_after_scalar);
+        if (IonType.BLOB.equals(_value_type) || IonType.CLOB.equals(_value_type))
+        {
+            int state_after_scalar = get_state_after_value();
+            set_state(state_after_scalar);
+        }
+//
+//  fix during IMS 3 integration - unnecessary (and in 1 circumstance harmful)
+//
+//        int state_after_scalar = get_state_after_value();
+//        set_state(state_after_scalar);
     }
 
     private final void push_container_state(IonType newContainer)

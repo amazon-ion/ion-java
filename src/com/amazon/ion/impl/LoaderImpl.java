@@ -134,30 +134,29 @@ public class LoaderImpl
 
     public IonDatagramImpl load(byte[] ionData)
     {
-        if (USE_NEW_READERS)
+        IonDatagramImpl dg = null;
+
+        try
         {
             boolean isBinary = IonBinary.matchBinaryVersionMarker(ionData);
-            if (! isBinary)
-            {
+            if (USE_NEW_READERS && !isBinary) {
                 IonReader reader = mySystem.newSystemReader(ionData);
                 assert reader instanceof IonTextReaderImpl;
-                try
-                {
-                    IonDatagramImpl dg = new IonDatagramImpl(mySystem, myCatalog, reader);
-                    // Force symtab preparation  FIXME should not be necessary
-                    dg.byteSize();
-                    return dg;
-                }
-                catch (IOException e)
-                {
-                    throw new IonException(e);
-                }
+                dg = new IonDatagramImpl(mySystem, myCatalog, reader);
             }
-            // else fall through, the old implementation is fine
-            // TODO refactor this path to eliminate SystemReader
+            else {
+                dg = new IonDatagramImpl(mySystem, myCatalog, ionData);
+            }
+
+            // Force symtab preparation  FIXME should not be necessary
+            dg.byteSize();
+        }
+        catch (IOException e)
+        {
+            throw new IonException(e);
         }
 
-        return new IonDatagramImpl(mySystem, myCatalog, ionData);
+        return dg;
     }
 
 

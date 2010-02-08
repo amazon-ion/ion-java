@@ -59,4 +59,14 @@ public final class SystemFactory
         }
         return new IonSystemImpl(catalog);
     }
+
+    public static IonSystem newSystem(boolean use_lite)
+    {
+        if (use_lite) {
+            return new IonSystemLite();
+        }
+        return new IonSystemImpl();
+    }
+
+
 }

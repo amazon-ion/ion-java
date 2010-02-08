@@ -132,10 +132,10 @@ public abstract class IonContainerLite
     protected class SequenceContentIterator
         implements ListIterator<IonValue>
     {
-        private final boolean  __readOnly;
-        private       boolean  __lastMoveWasPrevious;
-        private       int      __pos;
-        private       IonValue __current;
+        protected final boolean  __readOnly;
+        protected       boolean  __lastMoveWasPrevious;
+        protected       int      __pos;
+        protected       IonValue __current;
 
         public SequenceContentIterator(int index, boolean readOnly)
         {
@@ -151,7 +151,7 @@ public abstract class IonContainerLite
 
         // split to encourage the in-lining of the common
         // case where we don't actually do anything
-        private final void force_position_sync()
+        protected final void force_position_sync()
         {
             if (__pos <= 0 || __pos > _child_count) {
                 return;
@@ -325,7 +325,7 @@ public abstract class IonContainerLite
 
         checkForLock();
 
-        if (element == null || element.getContainer() != this) {
+        if (element.getContainer() != this) {
             return false;
         }
 
@@ -337,7 +337,9 @@ public abstract class IonContainerLite
         IonValueLite child = get_child_lite(pos);
         if (child == concrete) // Yes, instance identity.
         {
-            concrete.detachFromContainer();
+            // no, this is done in remove_child and will
+            // if called first it will corrupt the elementid
+            // no: concrete.detachFromContainer();
             remove_child(pos);
             patch_elements_helper(pos);
 
@@ -522,7 +524,10 @@ public abstract class IonContainerLite
         concrete.checkForLock();
 
         add_child(index, concrete);
+
         patch_elements_helper(index + 1);
+
+        assert((index >= 0) && (index < get_child_count()) && (concrete == get_child(index)) && (concrete._elementid() == index));
     }
 
 
@@ -588,7 +593,7 @@ public abstract class IonContainerLite
             for (int i = 0; i < size; i++)
             {
                 IonValueLite child = sourceContents[i];
-                IonValueLite copy = (IonValueLite) child.clone();
+                IonValueLite copy = (IonValueLite)child.clone();  // TODO: remove when we upgrade the Java compiler
                 if (cloningFields) {
                     String name = child.getFieldName();
                     copy.setFieldName(name);
@@ -724,8 +729,7 @@ public abstract class IonContainerLite
         {
             throw new ContainedValueException();
         }
-        // FIXME - is the following even necessary?
-        //assert(this.getSystem() == child.getSystem());
+        assert(this.getSystem() == child.getSystem());
 
         _isNullValue(false); // if we add children we're not null anymore
         if (_children == null || _child_count >= _children.length) {
@@ -750,10 +754,17 @@ public abstract class IonContainerLite
     }
     public void remove_child(int idx)
     {
-        assert(idx >=0 && idx < _child_count); // this also asserts child count > 0
+        assert(idx >=0);
+        assert(idx < get_child_count()); // this also asserts child count > 0
+
+if (get_child(idx) == null) {
+            assert(get_child(idx) != null);
+}
+
         _children[idx].detachFromContainer();
-        if (idx + 1 <= _child_count) {
-            System.arraycopy(_children, idx+1, _children, idx, _child_count - idx - 1);
+        int children_to_move = _child_count - idx - 1;
+        if (children_to_move > 0) {
+            System.arraycopy(_children, idx+1, _children, idx, children_to_move);
         }
         _child_count--;
         _children[_child_count] = null;

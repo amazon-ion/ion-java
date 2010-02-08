@@ -2,7 +2,6 @@
 
 package com.amazon.ion.impl.lite;
 
-import java.util.ListIterator;
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
@@ -15,6 +14,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
@@ -30,8 +31,6 @@ public class IonStructLite
         IonType.STRUCT.toString().hashCode();
 
     // TODO: add support for _isOrdered: private boolean _isOrdered = false;
-    private static final boolean _isOrdered = false;
-
 
     /**
      * Constructs a binary-backed struct value.
@@ -47,100 +46,210 @@ public class IonStructLite
      * IonValueImpl.copyFrom().
      */
     @Override
-    public IonStructLite clone()
+    public IonStruct clone()
     {
-        IonStructLite clone = new IonStructLite(_context.getSystemLite(), false);
+       IonStructLite clone = new IonStructLite(_context.getSystemLite(), false);
 
-        try {
-            // copy over the field map first so that the
-            // call to transition to large in copyFrom
-            // doesn’t do any unnecessary work
-            if (_field_map != null) {
-                clone._field_map = new HashMap<String, Integer>(_field_map);
-            }
-            clone._field_map_duplicate_count = _field_map_duplicate_count;
-            clone.copyFrom(this);
-        } catch (IOException e) {
-            throw new IonException(e);
-        }
-        return clone;
+       try {
+          // copy over the field map first so that the
+          // call to transition to large in copyFrom
+          // doesn’t do any unnecessary work
+          if (_field_map != null) {
+             clone._field_map = new HashMap<String, Integer>(_field_map);
+          }
+          clone._field_map_duplicate_count = _field_map_duplicate_count;
+          clone.copyFrom(this);
+      }
+       catch (IOException e) {
+         throw new IonException(e);
+      }
+       return clone;
     }
 
     private HashMap<String, Integer> _field_map;
-    private int                      _field_map_duplicate_count;
+
+
+    public int                      _field_map_duplicate_count;
+
+
     @Override
     protected void transitionToLargeSize(int size)
     {
         if (_field_map != null) return;
+
         _field_map = new HashMap<String, Integer>(size);
         int count = get_child_count();
         for (int ii=0; ii<count; ii++) {
             IonValueLite v = get_child_lite(ii);
             String name = v.getFieldName();
-            _field_map.put(name, ii);
+            if (_field_map.get(name) != null) {
+                _field_map_duplicate_count++;
+            }
+            _field_map.put(name, ii); // this causes the map to have the largest index value stored
         }
         return;
     }
-    private int find_duplicate(String fieldName)
+    private void add_field(String fieldName, int newFieldIdx)
     {
-        int size = get_child_count();
-        for (int ii=0; ii<size; ii++) {
+        Integer idx = _field_map.get(fieldName);
+        if (idx != null) {
+            _field_map_duplicate_count++;
+            if (idx.intValue() > newFieldIdx) {
+                newFieldIdx = idx.intValue();
+            }
+        }
+        _field_map.put(fieldName, newFieldIdx);
+    }
+    private void remove_field(String fieldName, int lowest_idx, int copies)
+    {
+        Integer field_idx = _field_map.get(fieldName);
+        assert(field_idx != null);
+        _field_map.remove(fieldName);
+        _field_map_duplicate_count -= (copies - 1);
+    }
+    private void remove_field(String fieldName, int idx)
+    {
+        Integer field_idx = _field_map.get(fieldName);
+        assert(field_idx != null);
+
+        if (field_idx.intValue() != idx) {
+            // if the map has a different index, this must
+            // be a duplicate, and this copy isn't in the map
+            assert(_field_map_duplicate_count > 0);
+            _field_map_duplicate_count--;
+        }
+        else if (_field_map_duplicate_count > 0) {
+            // if we have any duplicates we have to check
+            // every time since we don't track which field
+            // is duplicated - so any dup can be expensive
+            int ii = find_last_duplicate(fieldName, idx);
+
+            if (ii == -1) {
+                // this is the last copy of this key
+                _field_map.remove(fieldName);
+            }
+            else {
+                // replaces this fields (the one being
+                // removed) array idx in the map with
+                // the preceding duplicates index
+                _field_map.put(fieldName, ii);
+                _field_map_duplicate_count--;
+            }
+        }
+        else {
+            // since there are not dup's we can just update
+            // the map by removing this fieldname
+            _field_map.remove(fieldName);
+        }
+    }
+
+    private void patch_map_elements_helper(int removed_idx)
+    {
+        if (removed_idx >= get_child_count()) {
+            // if this was the at the end of the list
+            // there's nothing to change
+            return;
+        }
+
+        for (int ii=removed_idx; ii<get_child_count(); ii++) {
+            IonValueLite value = get_child_lite(ii);
+            String  field_name = value.getFieldName();
+            Integer map_idx = _field_map.get(field_name);
+            if (map_idx.intValue() != ii) {
+                // if this is a field that to the right of
+                // the removed (in process of removing) value
+                // we need to patch the index value
+                _field_map.put(field_name, ii);
+            }
+        }
+    }
+
+    public void debug_print_map()
+    {
+        if (_field_map == null) {
+            return;
+        }
+        Iterator<Entry<String, Integer>> it = _field_map.entrySet().iterator();
+        System.out.print("   map: [");
+        boolean first = true;
+        while (it.hasNext()) {
+            Entry<String, Integer> e = it.next();
+            if (!first) {
+                System.out.print(",");
+            }
+            System.out.print(""+e.getKey()+":"+e.getValue());
+            first = false;
+        }
+        System.out.println("]");
+    }
+
+    public String debug_check_map()
+    {
+        if (_field_map == null) {
+            return null;
+        }
+        String error = "";
+        Iterator<Entry<String, Integer>> it = _field_map.entrySet().iterator();
+        while (it.hasNext()) {
+            Entry<String, Integer> e = it.next();
+            int idx = e.getValue().intValue();
+            IonValueLite v = (idx >= 0 && idx < get_child_count()) ? get_child_lite(idx) : null;
+            if (v == null || idx != v._elementid() || (e.getKey().equals(v.getFieldName()) == false)) {
+                error += "map entry ["+e+"] doesn't match list value ["+v+"]\n";
+            }
+        }
+
+        return (error == "") ? null : error;
+    }
+
+    private int find_last_duplicate(String fieldName, int existing_idx)
+    {
+        for (int ii=existing_idx; ii>0; ) {
+            ii--;
             IonValueLite field = get_child_lite(ii);
             if (fieldName.equals(field.getFieldName())) {
                 return ii;
             }
         }
+        assert(there_is_only_one(fieldName, existing_idx));
         return -1;
     }
-    private void add_field(String fieldName, int newFieldIdx)
+    private boolean there_is_only_one(String fieldName, int existing_idx)
     {
-        Integer idx = _field_map.get(fieldName);
-        if (idx == null) {
-            // TODO: should we put the latest field over the top of the
-            //       previous duplicate?
-            _field_map.put(fieldName, newFieldIdx);
-        }
-        else {
-            _field_map_duplicate_count++;
-        }
-
-    }
-    private void remove_field(String fieldName, int idx)
-    {
-        _field_map.remove(fieldName);
-        if (_field_map_duplicate_count > 0) {
-            int ii = find_duplicate(fieldName);
-            if (ii >= 0) {
-                _field_map.put(fieldName, ii);
-                _field_map_duplicate_count--;
+        int count = 0;
+        for (int ii=0; ii<get_child_count(); ii++) {
+            IonValueLite v = get_child_lite(ii);
+            if (v.getFieldName().equals(fieldName)) {
+                count++;
             }
         }
-    }
-    protected void updateFieldName(String oldname, String name, IonValue field)
-    {
-        assert(name != null && name.equals(field.getFieldName()));
-        if (oldname == null) return;
-        if (_field_map == null) return;
-        Integer idx = _field_map.get(oldname);
-        if (idx == null) return;
-        IonValue oldfield = get_child(idx);
-        // yes, we want object identity in this test
-        if (oldfield == field) {
-            remove_field(oldname, idx);
-            add_field(name, idx);
+        if (count == 1 || count == 0) {
+            return true;
         }
+        return false;
     }
-    
-    private void reIndex() {
-        if (_field_map != null) {
-            _field_map.clear();
-            _field_map_duplicate_count = 0;
-            for (int ii = 0; ii < _child_count; ii++) {
-                final IonValueLite child = _children[ii];
-                add_field(child.getFieldName(), ii);
-            }
-        }
-    }
+//
+//    updateFieldName is unnecessary since field names are immutable
+//    (except when the value is unattached to any struct)
+//
+//    protected void updateFieldName(String oldname, String name, IonValue field)
+//    {
+//        assert(name != null && name.equals(field.getFieldName()));
+//
+//        if (oldname == null) return;
+//        if (_field_map == null) return;
+//
+//        Integer idx = _field_map.get(oldname);
+//        if (idx == null) return;
+//
+//        IonValue oldfield = get_child(idx);
+//
+//        // yes, we want object identity in this test
+//        if (oldfield == field) {
+//            remove_field(oldname, idx);
+//            add_field(name, idx);
+//        }
+//    }
 
     /**
      * Implements {@link Object#hashCode()} consistent with equals.
@@ -229,80 +338,94 @@ public class IonStructLite
 
     public IonValue get(String fieldName)
     {
+        int field_idx = find_field_helper(fieldName);
+        IonValue field;
+
+        if (field_idx < 0) {
+            field = null;
+        }
+        else {
+            field = get_child(field_idx);
+        }
+
+        return field;
+    }
+    private int find_field_helper(String fieldName)
+    {
         validateFieldName(fieldName);
 
-        if (isNullValue()) return null;
-
-        IonValue field = null;
-        if (_field_map != null) {
+        if (isNullValue()) {
+            // nothing to see here, move along
+        }
+        else if (_field_map != null) {
             Integer idx = _field_map.get(fieldName);
             if (idx != null) {
-                field = get_child(idx);
+                return idx.intValue();
             }
         }
         else {
             int ii, size = get_child_count();
             for (ii=0; ii<size; ii++) {
-                field = get_child(ii);
+                IonValue field = get_child(ii);
                 if (fieldName.equals(field.getFieldName())) {
-                    break;
+                    return ii;
                 }
             }
-            if (ii>=size) {
-                field = null;
-            }
         }
-        return field;
+        return -1;
     }
-    public void put(String fieldName, IonValue value)
+
+    @Override
+    public void clear()
     {
-        // TODO maintain _isOrdered
+        super.clear();
+        _field_map = null;
+        _field_map_duplicate_count = 0;
+    }
 
-        checkForLock();
+    @Override
+    public boolean add(IonValue child)
+        throws NullPointerException, IllegalArgumentException,
+        ContainedValueException
+    {
+        String field_name = child.getFieldName();
+        add(field_name, child);
 
-        validateFieldName(fieldName);
-        if (value != null) validateNewChild(value);
+        return true; // add always works, or throws, since we allow dupicate fields
+    }
 
-        int size;
-        if (_children != null) {
 
-            // Walk backwards to minimize array movement
-            int lowestRemovedIndex = -1;
-            for (int i = get_child_count() - 1; i >= 0; i--)
-            {
-                IonValueLite child = get_child_lite(i);
-                if (fieldName.equals(child.getFieldName()))
-                {
-                    child.detachFromContainer();
-                    this.remove_child(i);
-                    lowestRemovedIndex = i;
-                }
-            }
-            if (lowestRemovedIndex >= 0)
-            {
-                patch_elements_helper(lowestRemovedIndex);
-                // FIXME make this more efficient...
-                reIndex();
-            }
-            size = this.get_child_count();
-        }
-        else {
-            size = 0;
-        }
-
-        if (value != null)
+    public ValueFactory add(final String fieldName)
+    {
+        return new CurriedValueFactoryLite(_context.getSystemLite())
         {
-            IonValueLite concrete = (IonValueLite) value;
-            add(size, concrete);
-            // updateElementIds - not needed since we're adding at the end
-            // patch_elements_helper(lowest_bad_idx)
-
-            // This is true because we've validated that its not contained.
-            // assert value.getFieldName() == null;
-            concrete.setFieldName(fieldName);
-            if (_field_map != null) {
-                add_field(fieldName, concrete._elementid());
+            @Override
+            void handle(IonValue newValue)
+            {
+                add(fieldName, newValue);
             }
+        };
+    }
+
+    public void add(String fieldName, IonValue value)
+    {
+        validateNewChild(value);
+        validateFieldName(fieldName);
+
+        IonValueLite concrete = (IonValueLite) value;
+        int size = get_child_count();
+
+        // set the fieldname first so that setFieldName
+        // doesn't complain that we're changing the name
+        // of a field that's already in a struct somewhere.
+        concrete.setFieldName(fieldName);
+
+        // add this to the Container child collection
+        add(size, concrete);
+
+        // if we have a hash map we need to update it now
+        if (_field_map != null) {
+            add_field(fieldName, concrete._elementid());
         }
     }
 
@@ -326,75 +449,122 @@ public class IonStructLite
             put(entry.getKey(), entry.getValue());
         }
     }
-    
-    @Override
-    public boolean add(IonValue child)
-        throws NullPointerException, IllegalArgumentException,
-        ContainedValueException
-    {
-        String field_name = child.getFieldName();
-        add(field_name, child);
-        return true;
-    }
 
-    public void add(String fieldName, IonValue value)
+    /**
+     * put is "make this value the one and only value
+     * associated with this fieldName".  The side effect
+     * is that if there were multiple fields with this
+     * name when put is complete there will only be the
+     * one value in the collection.
+     */
+    public void put(String fieldName, IonValue value)
     {
-        // TODO maintain _isOrdered
+        checkForLock();
 
-        validateNewChild(value);
         validateFieldName(fieldName);
+        if (value != null) validateNewChild(value);
 
-        IonValueLite concrete = (IonValueLite) value;
-        int size = get_child_count();
+        int field_idx = get_child_count();
+        int lowestRemovedIndex = field_idx;
+        boolean any_removed = false;
 
-        add(size, concrete);
-        concrete.setFieldName(fieldName);
+        // first we remove the any existing fields
+        // associated with fieldName (which may be none)
+        if (_field_map != null && _field_map_duplicate_count == 0)
+        {
+            // we have a map and no duplicates so the index
+            // (aka map) is all we need to find the only
+            // value associated with fieldName, if there is one
+            Integer idx = _field_map.get(fieldName);
+            if (idx != null) {
+                lowestRemovedIndex = idx.intValue();
+                remove_field(fieldName, lowestRemovedIndex);
+                remove_child(lowestRemovedIndex);
+                any_removed = true;
+            }
+            field_idx = get_child_count();
+        }
+        else {
+            // either we don't have a map (index) or there
+            // are duplicates in both cases we have to
+            // scan the child list directly.
+            // Walk backwards to minimize array movement
+            // as we remove fields as we encounter them.
+            int copies_removed = 0;
+            for (int ii = field_idx; ii > 0; )
+            {
+                ii--;
+                IonValueLite child = get_child_lite(ii);
+                if (fieldName.equals(child.getFieldName()))
+                {
+                    // done by remove_child: child.detachFromContainer();
+                    remove_child(ii);
+                    lowestRemovedIndex = ii;
+                    copies_removed++;
+                    any_removed = true;
+                }
+            }
+            if (any_removed && _field_map != null) {
+                remove_field(fieldName, lowestRemovedIndex, copies_removed);
+            }
+        }
+        if (any_removed) {
+            if (_field_map != null) {
+                patch_map_elements_helper(lowestRemovedIndex);
+            }
+            patch_elements_helper(lowestRemovedIndex);
+        }
 
-        if (_field_map != null) {
-            add_field(fieldName, concrete._elementid());
+        // once we've removed any existing copy we now add,
+        // this (delete + add == put) turns out be be the
+        // right choice since:
+        //   1 - because of possible duplicates we can't
+        //       guarantee the idx is stable
+        //   2 - we have to maintain the hash and that
+        //       really means we end up with the delete
+        //       anyway
+        // strictly speaking this approach, while simpler,
+        // is more expensive when we don't have a has and
+        // the value already exists, and it's not at the
+        // end of the field list anyway.
+        if (value != null) {
+            add(fieldName, value);
         }
     }
 
-
-    public ValueFactory add(final String fieldName)
-    {
-        return new CurriedValueFactoryLite(_context.getSystemLite())
-        {
-            @Override
-            void handle(IonValue newValue)
-            {
-                add(fieldName, newValue);
-            }
-        };
-    }
-    
     @Override
     public ListIterator<IonValue> listIterator(int index) {
         return new SequenceContentIterator(index, isReadOnly()) {
             @Override
             public void remove() {
+                if (__readOnly) {
+                    throw new UnsupportedOperationException();
+                }
+                force_position_sync();
+
+                int idx = __pos;
+                if (!__lastMoveWasPrevious) {
+                    // position is 1 ahead of the array index
+                    idx--;
+                }
+                if (idx < 0) {
+                    throw new ArrayIndexOutOfBoundsException();
+                }
+
+                IonValueLite concrete = (IonValueLite) __current;
+                int concrete_idx = concrete._elementid();
+                assert(concrete_idx == idx);
+
+                if (_field_map != null) {
+                    remove_field(concrete.getFieldName(), idx);
+                }
                 super.remove();
-                // make sure map is consistent
-                reIndex();
+
+                if (_field_map != null) {
+                    patch_map_elements_helper(idx);
+                }
             }
         };
-    }
-    
-    @Override
-    public void clear() {
-        super.clear();
-        _field_map = null;
-        _field_map_duplicate_count = 0;
-    }
-    
-    @Override
-    public boolean remove(final IonValue element) {
-        final boolean removed = super.remove(element);
-        // FIXME - this is probably not the most efficient way to do this
-        if (removed) {
-            reIndex();
-        }
-        return removed;
     }
 
     public IonValue remove(String fieldName)
@@ -402,14 +572,63 @@ public class IonStructLite
         checkForLock();
 
         IonValue field = get(fieldName);
-        if (field != null) {
-            remove(field);
-            if (_field_map != null) {
-                assert(field instanceof IonValueLite);
-                remove_field(fieldName, ((IonValueLite)field)._elementid());
-            }
+        if (field == null) {
+            return null;
         }
+        assert(field instanceof IonValueLite);
+        int idx = ((IonValueLite)field)._elementid();
+
+        // update the hash map first we don't want
+        // the child list changed until we've done
+        // this since the map update expects the
+        // index value of the remove field to be
+        // correct and unchanged.
+        if (_field_map != null) {
+            remove_field(fieldName, idx);
+        }
+
+        super.remove(field);
+
+        if (_field_map != null) {
+            patch_map_elements_helper(idx);
+        }
+
         return field;
+    }
+
+    @Override
+    public boolean remove(IonValue element)
+    {
+        if (element == null) {
+            throw new NullPointerException();
+        }
+        assert (element instanceof IonValueLite);
+
+        checkForLock();
+
+        if (element.getContainer() != this) {
+            return false;
+        }
+
+        IonValueLite concrete = (IonValueLite) element;
+        int idx = concrete._elementid();
+
+        // update the hash map first we don't want
+        // the child list changed until we've done
+        // this since the map update expects the
+        // index value of the remove field to be
+        // correct and unchanged.
+        if (_field_map != null) {
+            remove_field(concrete.getFieldName(), idx);
+        }
+
+        super.remove(concrete);
+
+        if (_field_map != null) {
+            patch_map_elements_helper(idx);
+        }
+
+        return true;
     }
 
     public boolean removeAll(String... fieldNames)

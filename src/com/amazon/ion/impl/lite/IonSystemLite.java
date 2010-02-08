@@ -482,6 +482,11 @@ public class IonSystemLite
     private boolean load_children(IonContainerLite container, IonReader reader)
     {
         boolean contains_symbol = false;
+        //final boolean in_struct = (container instanceof IonStruct);
+        //IonStruct struct_container = null;
+        //if (in_struct) {
+        //    struct_container = (IonStruct)container;
+        //}
         reader.stepIn();
         for (;;) {
             IonType t = reader.next();
@@ -489,7 +494,12 @@ public class IonSystemLite
                 break;
             }
             IonValueLite child = load_value_helper(reader);
-            container.add(child);
+            //if (in_struct) {
+            //    struct_container.add(child.getFieldName(), child);
+            //}
+            //else {
+                container.add(child);
+            //}
             if (child._isSymbolPresent()) {
                 contains_symbol = true;
             }

@@ -566,6 +566,21 @@ public final
         return false;
     }
 
+    public static boolean isTrivialTable(SymbolTable table)
+    {
+        if (table == null)         return true;
+        if (table.isSystemTable()) return true;
+        if (table.isLocalTable()) {
+            // this is only true when there are no local
+            // symbols defined
+            // and there are no imports with any symbols
+            if (table.getMaxId() == ION_SYSTEM_SYMBOL_TABLE_MAX_ID) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public boolean isLocalTable() {
         // Not synchronized since this member never changes after construction.
         return _name == null;

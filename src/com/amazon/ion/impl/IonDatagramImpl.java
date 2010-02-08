@@ -1206,7 +1206,7 @@ public final class IonDatagramImpl
             }
 
             SymbolTable symtab = ichild.getSymbolTable();
-            if (symtab == null || symtab.isSystemTable())
+            if (symtab == null || symtab.isSystemTable() || symtab.getMaxId() <= UnifiedSymbolTable.ION_SYSTEM_SYMBOL_TABLE_MAX_ID)
             {
                 if (priorIsLocalSymtab)
                 {

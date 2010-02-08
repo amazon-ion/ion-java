@@ -311,7 +311,7 @@ public class IonWriterSystemBinary
         // patch this symbol table in "here" at the end
         // which will grow the arrays as necessary
         patchInSymbolTable(symbols);
-
+        
         if (_top == 0) {
             // if we're at the datagram level already
             // we don't need to back-track to our parent

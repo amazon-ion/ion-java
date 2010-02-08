@@ -193,6 +193,9 @@ public class ClobTest
         badValue("{{\"\\U0000003f\"}}");
     }
 
+    public void testParseTripleQuoteLoader() {
+        IonValue c = oneValue("{aws_id:a, aws_key:b, aes_key:{{'''c'''}}, bucket:d, bucket_suffix:e, flush_timeout:1}");
+    }
 
     // TODO  test use of other encodings
     // TODO test long strings and concatenation

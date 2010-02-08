@@ -274,7 +274,7 @@ public class IonReaderTreeSystem
     public boolean isInStruct()
     {
         return (_parent instanceof IonStruct);
-        }
+    }
 
     public boolean isNullValue()
     {

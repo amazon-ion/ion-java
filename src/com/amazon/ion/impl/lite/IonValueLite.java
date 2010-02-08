@@ -235,7 +235,7 @@ public abstract class IonValueLite
     /**
      * the base classes in IonValue(Impl) should not be called for
      * cloning directly. The user should be calling clone on the
-     * actualy (leaf) instances class (such as IonIntImpl).  The
+     * Actually (leaf) instances class (such as IonIntImpl).  The
      * shared clone work is handled in copyFrom(src) in any base
      * classes that need to support this - including IonValueImpl,
      * IonContainerImpl, IonTextImpl and IonLobImpl.
@@ -354,6 +354,7 @@ public abstract class IonValueLite
 
     protected final void setFieldName(String name)
     {
+        assert(this.getContainer() == null);
         _fieldName = name;
     }
 

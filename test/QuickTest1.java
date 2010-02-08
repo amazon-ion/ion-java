@@ -1,6 +1,8 @@
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonString;
+import com.amazon.ion.IonStruct;
+import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
@@ -21,6 +23,45 @@ import java.util.zip.GZIPInputStream;
  */
 public class QuickTest1
 {
+
+    public static void ivsv3test2() {
+        String value = "MarketplaceConfig::{schema:\"marketplaceConfig@1.0\",marketplace_id:12345678,marketplace_name:\"test marketplace\","
+        +"state:\"open\",datacenter_groups:[\"IAD\"],publishing_realms:[\"USAmazon\"],landlord_customer_id:12340000,"
+        +"domain_id:555,default_currency_code:USD,default_language_tag:en_US,version:1}";
+
+        IonSystem sys = SystemFactory.newSystem(true);
+        IonStruct s = (IonStruct)sys.singleValue(value);
+
+        IonValue currency = s.get("default_currency_code");
+        assert(currency != null);
+        assert(currency instanceof IonSymbol);
+        assert(((IonSymbol)currency).stringValue().equals("USD"));
+
+    }
+    public static void testStruct() {
+        IonSystem sys = SystemFactory.newSystem(true);
+        IonStruct daoConfig = (IonStruct)sys.singleValue(
+            "{"
+            + "  JdbcDaoConfig:{"
+            + "    name:\"configuration\","
+            + "    description:\"DAO config for configuration store.\","
+            + "    version:1.0,"
+            + "    dataColumn:\"data\","
+            + "    optimisticCheck:true,"
+            + "    keyDefs:["
+            + "      {name:\"key\", type:\"string\", column:\"key\"}"
+            + "    ],"
+            + "    versionDef:{name:\"version\", column:\"version\",},"
+            + "    numVersionsToKeep:999,"
+            + "  }"
+            + "}"
+        );
+
+        IonStruct jdbcDaoConfig = (IonStruct) daoConfig.get("JdbcDaoConfig");
+        assert(jdbcDaoConfig != null && jdbcDaoConfig.isNullValue() == false);
+        IonValue val = jdbcDaoConfig.get("numVersionsToKeep");
+        assert(val != null && val.isNullValue() == false);
+    }
 
     static void ioncpputf8() throws IOException
     {
@@ -82,6 +123,10 @@ public class QuickTest1
     }
     public static void main(String[] args) throws Exception
     {
+        ivsv3test2();
+
+        testStruct();
+
         test_doubles();
 
         ioncpputf8();

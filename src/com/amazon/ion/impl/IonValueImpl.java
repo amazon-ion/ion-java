@@ -742,9 +742,14 @@ public abstract class IonValueImpl
         checkForLock();
         SymbolTable currentSymtab = getSymbolTable();
         if (currentSymtab != symtab) {
-            if (currentSymtab != null) {
+            if (UnifiedSymbolTable.isTrivialTable(currentSymtab) == false) {
                 detachFromSymbolTable(); // Calls setDirty
             }
+            else {
+                makeReady();
+                this.setDirty();
+            }
+  //          detachFromSymbolTable(); // Calls setDirty
             this._symboltable = symtab;
         }
     }
