@@ -729,7 +729,6 @@ public abstract class IonContainerLite
         {
             throw new ContainedValueException();
         }
-        assert(this.getSystem() == child.getSystem());
 
         _isNullValue(false); // if we add children we're not null anymore
         if (_children == null || _child_count >= _children.length) {
