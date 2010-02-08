@@ -368,6 +368,13 @@ public class IonStructLite
     }
     
     @Override
+    public void clear() {
+        super.clear();
+        _field_map = null;
+        _field_map_duplicate_count = 0;
+    }
+    
+    @Override
     public boolean remove(final IonValue element) {
         final boolean removed = super.remove(element);
         // FIXME - this is probably not the most efficient way to do this
@@ -383,7 +390,7 @@ public class IonStructLite
 
         IonValue field = get(fieldName);
         if (field != null) {
-            super.remove(field);
+            remove(field);
             if (_field_map != null) {
                 assert(field instanceof IonValueLite);
                 remove_field(fieldName, ((IonValueLite)field)._elementid());
