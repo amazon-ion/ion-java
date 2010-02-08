@@ -55,7 +55,7 @@ public class IonStructLite
             // copy over the field map first so that the
             // call to transition to large in copyFrom
             // doesn’t do any unnecessary work
-            if (clone._field_map != null) {
+            if (_field_map != null) {
                 clone._field_map = new HashMap<String, Integer>(_field_map);
             }
             clone._field_map_duplicate_count = _field_map_duplicate_count;
@@ -128,6 +128,17 @@ public class IonStructLite
         if (oldfield == field) {
             remove_field(oldname, idx);
             add_field(name, idx);
+        }
+    }
+    
+    private void reIndex() {
+        if (_field_map != null) {
+            _field_map.clear();
+            _field_map_duplicate_count = 0;
+            for (int ii = 0; ii < _child_count; ii++) {
+                final IonValueLite child = _children[ii];
+                add_field(child.getFieldName(), ii);
+            }
         }
     }
 
@@ -270,6 +281,8 @@ public class IonStructLite
             if (lowestRemovedIndex >= 0)
             {
                 patch_elements_helper(lowestRemovedIndex);
+                // FIXME make this more efficient...
+                reIndex();
             }
             size = this.get_child_count();
         }
@@ -359,14 +372,8 @@ public class IonStructLite
     public boolean remove(final IonValue element) {
         final boolean removed = super.remove(element);
         // FIXME - this is probably not the most efficient way to do this
-        if (removed && _field_map != null) {
-            // re-index
-            _field_map.clear();
-            _field_map_duplicate_count = 0;
-            for (int ii = 0; ii < _child_count; ii++) {
-                final IonValueLite child = _children[ii];
-                add_field(child.getFieldName(), ii);
-            }
+        if (removed) {
+            reIndex();
         }
         return removed;
     }
