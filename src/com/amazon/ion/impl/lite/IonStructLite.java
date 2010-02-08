@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl.lite;
 
+import java.util.ListIterator;
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
@@ -363,6 +364,18 @@ public class IonStructLite
             void handle(IonValue newValue)
             {
                 add(fieldName, newValue);
+            }
+        };
+    }
+    
+    @Override
+    public ListIterator<IonValue> listIterator(int index) {
+        return new SequenceContentIterator(index, isReadOnly()) {
+            @Override
+            public void remove() {
+                super.remove();
+                // make sure map is consistent
+                reIndex();
             }
         };
     }

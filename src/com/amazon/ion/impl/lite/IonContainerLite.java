@@ -129,7 +129,7 @@ public abstract class IonContainerLite
      *  defined in datagram, so changes here are likely to be needed
      *  in datagram as well.
      */
-    protected final class SequenceContentIterator
+    protected class SequenceContentIterator
         implements ListIterator<IonValue>
     {
         private final boolean  __readOnly;
