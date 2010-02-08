@@ -101,8 +101,39 @@ public class IonConcreteContext
 
     public void setParentThroughContext(IonValueLite child, IonContext newParent)
     {
-        _owning_context = newParent;
-        child._context = this;
+        // HACK: we need to refactor this to make it simpler and take
+        //       away the need to check the parent type
+
+        // but for now ...
+        if (newParent instanceof IonDatagram
+         || newParent instanceof IonSystem
+         || newParent instanceof IonConcreteContext
+        ) {
+            _owning_context = newParent;
+            child._context = this;
+        }
+        else { // struct, list, sexp, templist
+            IonContainerLite parent = (IonContainerLite)newParent;
+            SymbolTable child_symbols = child.getAssignedSymbolTable();
+            SymbolTable parent_symbols = parent.getSymbolTable();
+            if (UnifiedSymbolTable.isLocalAndNonTrivial(child_symbols)) {
+                // we may have a problem here ...
+                if (child_symbols != parent_symbols) {
+                    // perhaps we should throw
+                    // but for now we're just ignoring this since
+                    // in a valueLite all symbols have string values
+                }
+            }
+
+            // set the child to point directly to the parent
+            // skipping over this concrete context
+            child._context = newParent;
+
+            // null out this context and return it to the system
+            // that is let the GC collect it in due course
+            _owning_context = null;
+            _symbols = null;
+        }
     }
 
     public void setSymbolTableOfChild(SymbolTable symbols, IonValueLite child)
