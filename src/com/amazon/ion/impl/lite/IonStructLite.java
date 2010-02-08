@@ -10,7 +10,6 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl.IonValueImpl;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -386,7 +385,7 @@ public class IonStructLite
         if (field != null) {
             super.remove(field);
             if (_field_map != null) {
-                assert(field instanceof IonValueImpl);
+                assert(field instanceof IonValueLite);
                 remove_field(fieldName, ((IonValueLite)field)._elementid());
             }
         }
