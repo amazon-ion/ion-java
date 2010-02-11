@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2010 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -16,6 +14,15 @@ import java.util.Random;
 public class ByteBufferTest
     extends IonTestCase
 {
+    @Override
+    public void tearDown()
+        throws Exception
+    {
+        super.tearDown();
+        BlockedBuffer.resetParameters();
+    }
+
+
     public void testSmallInsertion()
     {
         BufferManager buf = new BufferManager();
@@ -68,7 +75,7 @@ public class ByteBufferTest
     {
         testRandomUpdates(32*1024, 32*1024, 1000);
     }
-    
+
 final static boolean _debug_long_test = false;
 	public void testRandomUpdatesLargeAndLong()  throws Exception
 	{
@@ -82,13 +89,13 @@ final static boolean _debug_long_test = false;
     {
         testRandomUpdates(128, 4096, 1000, 1230074384739L);
     }
-    
+
     private void testRandomUpdates(int min, int max, int count) throws Exception
     {
     	long seed = System.currentTimeMillis();
     	testRandomUpdates(min, max, count, seed);
     }
-    
+
     private void testRandomUpdates(int min, int max, int count, long seed) throws Exception
     {
         BlockedBuffer.setBlockSizeParameters(min, max); // make it work hard

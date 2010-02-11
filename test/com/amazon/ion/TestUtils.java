@@ -1,10 +1,11 @@
-// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2010 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import static com.amazon.ion.impl.IonImplUtils.READER_HASNEXT_REMOVED;
 
 import java.io.UnsupportedEncodingException;
+import java.util.Iterator;
 import junit.framework.Assert;
 
 /**
@@ -52,6 +53,19 @@ public class TestUtils
                     Assert.fail("unexpected type: " + t);
             }
         }
+    }
+
+
+    public static void assertEqualValues(Iterator<?> expectedValues,
+                                         Iterator<?> actualValues)
+    {
+        Object expected;
+        while (expectedValues.hasNext())
+        {
+            expected = expectedValues.next();
+            Assert.assertEquals(expected, actualValues.next());
+        }
+        Assert.assertFalse("unexpected next value", actualValues.hasNext());
     }
 
 
