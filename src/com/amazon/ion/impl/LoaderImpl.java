@@ -23,7 +23,7 @@ import java.io.StringReader;
 public class LoaderImpl
     implements IonLoader
 {
-    static final boolean USE_NEW_READERS = false;
+    static final boolean USE_NEW_READERS = true;
 
     private final IonSystemImpl mySystem;
     private final IonCatalog    myCatalog;

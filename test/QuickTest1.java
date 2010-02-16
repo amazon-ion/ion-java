@@ -8,6 +8,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.impl.UnifiedSymbolTable;
 import com.amazon.ion.system.SystemFactory;
+import com.amazon.ion.system.SystemFactory.SystemCapabilities;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -29,7 +30,7 @@ public class QuickTest1
         +"state:\"open\",datacenter_groups:[\"IAD\"],publishing_realms:[\"USAmazon\"],landlord_customer_id:12340000,"
         +"domain_id:555,default_currency_code:USD,default_language_tag:en_US,version:1}";
 
-        IonSystem sys = SystemFactory.newSystem(true);
+        IonSystem sys = SystemFactory.newSystem(SystemCapabilities.LITE);
         IonStruct s = (IonStruct)sys.singleValue(value);
 
         IonValue currency = s.get("default_currency_code");
@@ -39,7 +40,7 @@ public class QuickTest1
 
     }
     public static void testStruct() {
-        IonSystem sys = SystemFactory.newSystem(true);
+        IonSystem sys = SystemFactory.newSystem(SystemCapabilities.LITE);
         IonStruct daoConfig = (IonStruct)sys.singleValue(
             "{"
             + "  JdbcDaoConfig:{"

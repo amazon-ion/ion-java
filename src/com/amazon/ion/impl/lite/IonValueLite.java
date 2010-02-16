@@ -253,10 +253,29 @@ public abstract class IonValueLite
      */
     protected void copyValueContentFrom(IonValueLite original)
     {
-        // this._fieldName    = original._fieldName;
+        // values we copy
         this._flags        = original._flags;
-        this._isLocked(false);  // when we're copying the flags, the target is by definition not locked
         this._annotations  = original.getTypeAnnotationStrings();
+        if (original._context instanceof IonConcreteContext) {
+            // if the original value had context, we need to
+            // copy that too, so we attach our copy to its
+            // system owner through a fresh concrete context
+            IonConcreteContext.attachWithConcreteContext(
+                                   this.getSystemLite()
+                                 , this
+                                 , original.getAssignedSymbolTable()
+            );
+        }
+        else {
+            // otherwise we attach the copy to its system directly
+            this._context = this.getSystemLite();
+        }
+
+        // and now values we don't copy
+        // this is done second as the flag assignment
+        // copies all the flags, including locked
+        this._fieldName = null;
+        this._isLocked(false);  // when we're copying the flags, the target is by definition not locked
     }
 
 

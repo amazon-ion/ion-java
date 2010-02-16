@@ -102,6 +102,10 @@ public class IonStructLite
     }
     private void remove_field(String fieldName, int lowest_idx, int copies)
     {
+        if (_field_map == null) {
+            return;
+        }
+
         Integer field_idx = _field_map.get(fieldName);
         assert(field_idx != null);
         _field_map.remove(fieldName);
@@ -109,6 +113,10 @@ public class IonStructLite
     }
     private void remove_field(String fieldName, int idx)
     {
+        if (_field_map == null) {
+            return;
+        }
+
         Integer field_idx = _field_map.get(fieldName);
         assert(field_idx != null);
 
@@ -145,6 +153,10 @@ public class IonStructLite
 
     private void patch_map_elements_helper(int removed_idx)
     {
+        if (_field_map == null) {
+            return;
+        }
+
         if (removed_idx >= get_child_count()) {
             // if this was the at the end of the list
             // there's nothing to change
@@ -155,6 +167,9 @@ public class IonStructLite
             IonValueLite value = get_child_lite(ii);
             String  field_name = value.getFieldName();
             Integer map_idx = _field_map.get(field_name);
+            if (map_idx == null) {
+                assert(map_idx != null);
+            }
             if (map_idx.intValue() != ii) {
                 // if this is a field that to the right of
                 // the removed (in process of removing) value
@@ -464,8 +479,7 @@ public class IonStructLite
         validateFieldName(fieldName);
         if (value != null) validateNewChild(value);
 
-        int field_idx = get_child_count();
-        int lowestRemovedIndex = field_idx;
+        int lowestRemovedIndex = get_child_count();
         boolean any_removed = false;
 
         // first we remove the any existing fields
@@ -482,7 +496,6 @@ public class IonStructLite
                 remove_child(lowestRemovedIndex);
                 any_removed = true;
             }
-            field_idx = get_child_count();
         }
         else {
             // either we don't have a map (index) or there
@@ -491,7 +504,7 @@ public class IonStructLite
             // Walk backwards to minimize array movement
             // as we remove fields as we encounter them.
             int copies_removed = 0;
-            for (int ii = field_idx; ii > 0; )
+            for (int ii = get_child_count(); ii > 0; )
             {
                 ii--;
                 IonValueLite child = get_child_lite(ii);
@@ -504,14 +517,12 @@ public class IonStructLite
                     any_removed = true;
                 }
             }
-            if (any_removed && _field_map != null) {
+            if (any_removed) {
                 remove_field(fieldName, lowestRemovedIndex, copies_removed);
             }
         }
         if (any_removed) {
-            if (_field_map != null) {
-                patch_map_elements_helper(lowestRemovedIndex);
-            }
+            patch_map_elements_helper(lowestRemovedIndex);
             patch_elements_helper(lowestRemovedIndex);
         }
 

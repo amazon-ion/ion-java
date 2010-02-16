@@ -123,8 +123,6 @@ public class IonSystemLite
         }
 
         IonValue copy = datagram.get(0);
-        copy.removeFromContainer();
-
         return (T) copy;
     }
 
@@ -507,6 +505,33 @@ public class IonSystemLite
         }
         reader.stepOut();
         return contains_symbol;
+    }
+
+    IonValueLite newValue(IonType valueType)
+    {
+        IonValueLite v;
+
+        if (valueType == null) {
+            throw new IllegalArgumentException("the value type must be specified");
+        }
+        switch (valueType) {
+        case NULL:          v = newNull();          break;
+        case BOOL:          v = newNullBool();      break;
+        case INT:           v = newNullInt();       break;
+        case FLOAT:         v = newNullFloat();     break;
+        case DECIMAL:       v = newNullDecimal();   break;
+        case TIMESTAMP:     v = newNullTimestamp(); break;
+        case SYMBOL:        v = newNullSymbol();    break;
+        case STRING:        v = newNullString();    break;
+        case CLOB:          v = newNullClob();      break;
+        case BLOB:          v = newNullBlob();      break;
+        case LIST:          v = newEmptyList();     break;
+        case SEXP:          v = newEmptySexp();     break;
+        case STRUCT:        v = newEmptyStruct();   break;
+        default: throw new IonException("unexpected type encountered reading value: "+valueType);
+        }
+
+        return v;
     }
 
 

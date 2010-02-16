@@ -978,16 +978,24 @@ public class StructTest
         }
     }
 
+
     static final boolean _debug_print_flag = false;
+
+
     static final int COMMAND_EXECUTION_COUNTER_MAX = 1000;
-    static final int C_ADD_UNIQUE       = 1;
-    static final int C_ADD_DUPLICATE    = 2;
-    static final int C_DELETE_UNIQUE    = 3;
-    static final int C_DELETE_DUPLICATE = 4;
-    static final int C_COMPARE          = 5;
-    static final int C_CHANGE_UNIQUE    = 6;
-    static final int C_CHANGE_DUPLICATE = 7;
-    static final int COMMAND_MAX        = 7;
+    static final int C_ADD_UNIQUE         =  1;
+    static final int C_ADD_DUPLICATE      =  2;
+    static final int C_DELETE_UNIQUE      =  3;
+    static final int C_DELETE_DUPLICATE   =  4;
+    static final int C_COMPARE            =  5;
+    static final int C_CHANGE_UNIQUE      =  6;
+    static final int C_CHANGE_DUPLICATE   =  7;
+    static final int C_PUT_NULL_UNIQUE    =  8;
+    static final int C_PUT_NULL_DUPLICATE =  9;
+    static final int C_PUT_INVALID        = 10;
+    static final int C_PUT_NULL_INVALID   = 11;
+    static final int C_DELETE_ITERATOR    = 12;
+    static final int COMMAND_MAX          = 12;
 
     public void testRandomChanges()
     {
@@ -1065,6 +1073,38 @@ public class StructTest
                         s2.add(other);
                     }
                     break;
+                case C_PUT_NULL_UNIQUE:
+                    field = choose_unique(r, s2);
+                    if (field != null) {
+                        String fieldName = field._fieldName;
+                        s1.put(fieldName, null);
+                        remove_all_copies(s2, fieldName); // s2.remove(field);
+                    }
+                    break;
+                case C_PUT_NULL_DUPLICATE:
+                    field = choose_duplicate(r, s2);
+                    if (field != null) {
+                        String fieldName = field._fieldName;
+                        s1.put(fieldName, null);
+                        remove_all_copies(s2, fieldName);
+                    }
+                    break;
+                case C_PUT_INVALID:
+                    field = make_unique(s1);
+                    s1.put(field._fieldName, field._value);
+                    s2.add(field);
+                    break;
+                case C_PUT_NULL_INVALID:
+                    field = make_unique(s1);
+                    s1.put(field._fieldName, null);
+                    break;
+                case C_DELETE_ITERATOR:
+                    field = choose_any(r, s2);
+                    if (field != null) {
+                        iterator_delete(field, s1);
+                        s2.remove(field);
+                    }
+                    break;
                 default:
                     assertEquals("we've encounterd an unexpeced", "command id"+command);
                     break;
@@ -1104,6 +1144,8 @@ public class StructTest
             switch (cmd) {
             case C_ADD_UNIQUE:
             case C_COMPARE:
+            case C_PUT_INVALID:
+            case C_PUT_NULL_INVALID:
             default: // who knows?
                 break loop;
             case C_ADD_DUPLICATE:
@@ -1111,6 +1153,9 @@ public class StructTest
             case C_DELETE_DUPLICATE:
             case C_CHANGE_UNIQUE:
             case C_CHANGE_DUPLICATE:
+            case C_PUT_NULL_UNIQUE:
+            case C_PUT_NULL_DUPLICATE:
+            case C_DELETE_ITERATOR:
                 if (size > 0) break loop;
                 break; // continue;
             }
@@ -1147,6 +1192,23 @@ public class StructTest
             System.out.println("new duplicate: "+dup.toString());
         }
         return dup;
+    }
+    TestField choose_any(Random r, ArrayList<TestField> s)
+    {
+        if (s.size() < 1) {
+            if (_debug_print_flag) {
+                System.out.println("choose any : null");
+            }
+            return null;
+        }
+
+        int idx = r.nextInt(s.size());
+        TestField field = s.get(idx);
+
+        if (_debug_print_flag) {
+            System.out.println("choose any: "+field);
+        }
+        return field;
     }
     TestField choose_unique(Random r, ArrayList<TestField> s)
     {
@@ -1235,6 +1297,18 @@ public class StructTest
             }
         }
         return false;
+    }
+    void iterator_delete(TestField field, IonStruct s1)
+    {
+        Iterator<IonValue> it = s1.iterator();
+        while (it.hasNext()) {
+            IonValue v = it.next();
+            if (v == field._value) {
+                it.remove();
+                return;
+            }
+        }
+        assertEquals("the iteration didn't find field ", field._fieldName);
     }
     void compare_field_lists(IonStruct s1, ArrayList<TestField> s2)
     {
@@ -1330,14 +1404,19 @@ public class StructTest
     }
     String command_name(int cmd) {
         switch (cmd) {
-        case C_ADD_UNIQUE:       return "C_ADD_UNIQUE";
-        case C_ADD_DUPLICATE:    return "C_ADD_DUPLICATE";
-        case C_DELETE_UNIQUE:    return "C_DELETE_UNIQUE";
-        case C_DELETE_DUPLICATE: return "C_DELETE_DUPLICATE";
-        case C_COMPARE:          return "C_COMPARE";
-        case C_CHANGE_UNIQUE:    return "C_CHANGE_UNIQUE";
-        case C_CHANGE_DUPLICATE: return "C_CHANGE_DUPLICATE";
-        default:                 return "<cmd: "+cmd+">";
+        case C_ADD_UNIQUE:         return "C_ADD_UNIQUE";
+        case C_ADD_DUPLICATE:      return "C_ADD_DUPLICATE";
+        case C_DELETE_UNIQUE:      return "C_DELETE_UNIQUE";
+        case C_DELETE_DUPLICATE:   return "C_DELETE_DUPLICATE";
+        case C_COMPARE:            return "C_COMPARE";
+        case C_CHANGE_UNIQUE:      return "C_CHANGE_UNIQUE";
+        case C_CHANGE_DUPLICATE:   return "C_CHANGE_DUPLICATE";
+        case C_PUT_NULL_UNIQUE:    return "C_PUT_NULL_UNIQUE";
+        case C_PUT_NULL_DUPLICATE: return "C_PUT_NULL_DUPLICATE";
+        case C_PUT_INVALID:        return "C_PUT_INVALID";
+        case C_PUT_NULL_INVALID:   return "C_PUT_NULL_INVALID";
+        case C_DELETE_ITERATOR:    return "C_DELETE_ITERATOR";
+        default:                   return "<cmd: "+cmd+">";
         }
     }
 
@@ -1364,6 +1443,13 @@ public class StructTest
          iter.remove();
          assertNull(data.get("a"));
          assertNotNull(data.get("b"));
+     }
+
+     public void testGetContainer() {
+         final IonStruct container = system().newEmptyStruct();
+         final IonValue child = oneValue("{}");
+         container.put("a", child);
+         child.getContainer().remove(child);
      }
 
 

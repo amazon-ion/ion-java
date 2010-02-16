@@ -431,7 +431,7 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
             if (filename.contains("__")) {
                 if (_debug_flag) {
                     System.out.println();
-                    System.out.println("debugging "+this.getName()+", with in line text symbol tables ");
+                    System.out.println("WARNING: debugging "+this.getName()+", with in line text symbol tables (with triple underscore flag in name)");
                     int w = 3;
                     w = break_point_point(w);
                     System.out.println(""+w);

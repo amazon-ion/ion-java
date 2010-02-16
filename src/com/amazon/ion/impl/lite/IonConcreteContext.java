@@ -38,6 +38,48 @@ public class IonConcreteContext
         _system = system;
     }
 
+    protected static void attachWithConcreteContext(IonContext parent, IonValueLite child, SymbolTable symbolTable)
+    {
+        IonConcreteContext concrete_context;
+
+        if (child._context  instanceof IonConcreteContext) {
+            concrete_context = (IonConcreteContext)child._context;
+        }
+        else {
+            concrete_context = new IonConcreteContext(parent.getSystemLite());
+        }
+
+        concrete_context._owning_context = parent;
+        child._context = concrete_context;
+        concrete_context._symbols = symbolTable;
+    }
+
+    protected static void attachWithoutConcreteContext(IonContext parent, IonValueLite child)
+    {
+        assert(test_symbol_table_compatibility(parent, child));
+        if (child._context instanceof IonConcreteContext) {
+            ((IonConcreteContext)child._context).clear();
+        }
+        child._context = parent;
+    }
+
+    private static boolean test_symbol_table_compatibility(IonContext parent, IonValueLite child)
+    {
+        SymbolTable parent_symbols = parent.getSymbolTable();
+        SymbolTable child_symbols = child.getAssignedSymbolTable();
+
+        if (UnifiedSymbolTable.isLocalAndNonTrivial(child_symbols)) {
+            // we may have a problem here ...
+            if (child_symbols != parent_symbols) {
+                // perhaps we should throw
+                // but for now we're just ignoring this since
+                // in a valueLite all symbols have string values
+                // we could throw or return false
+            }
+        }
+        return true;
+    }
+
     protected void clear()
     {
         _owning_context = null;
@@ -112,27 +154,9 @@ public class IonConcreteContext
             _owning_context = newParent;
             child._context = this;
         }
-        else { // struct, list, sexp, templist
-            IonContainerLite parent = (IonContainerLite)newParent;
-            SymbolTable child_symbols = child.getAssignedSymbolTable();
-            SymbolTable parent_symbols = parent.getSymbolTable();
-            if (UnifiedSymbolTable.isLocalAndNonTrivial(child_symbols)) {
-                // we may have a problem here ...
-                if (child_symbols != parent_symbols) {
-                    // perhaps we should throw
-                    // but for now we're just ignoring this since
-                    // in a valueLite all symbols have string values
-                }
-            }
-
-            // set the child to point directly to the parent
-            // skipping over this concrete context
-            child._context = newParent;
-
-            // null out this context and return it to the system
-            // that is let the GC collect it in due course
-            _owning_context = null;
-            _symbols = null;
+        else {
+            // struct, list, sexp, templist
+            attachWithoutConcreteContext(newParent, child);
         }
     }
 

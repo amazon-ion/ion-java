@@ -65,4 +65,5 @@ public interface IonValuePrivate
      * @return the symbol table after symbol resolution
      */
     public SymbolTable populateSymbolValues(SymbolTable symbols);
+
 }
