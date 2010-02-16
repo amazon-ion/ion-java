@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2010 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -124,6 +124,19 @@ public class TestUtils
             default:
                 Assert.fail("unexpected type: " + t);
         }
+    }
+
+
+    public static void assertEqualValues(Iterator<?> expectedValues,
+                                         Iterator<?> actualValues)
+    {
+        Object expected;
+        while (expectedValues.hasNext())
+        {
+            expected = expectedValues.next();
+            Assert.assertEquals(expected, actualValues.next());
+        }
+        Assert.assertFalse("unexpected next value", actualValues.hasNext());
     }
 
 

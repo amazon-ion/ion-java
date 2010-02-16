@@ -1,10 +1,11 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2010 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import com.amazon.ion.streaming.ReaderCompare;
 import java.io.File;
 import java.io.FileInputStream;
+import java.util.Iterator;
 import junit.framework.TestSuite;
 
 
@@ -26,8 +27,11 @@ public class GoodIonTests
         public void runTest()
             throws Exception
         {
+            // Pass 1: Use Loader to read the data
             IonDatagram datagram = load(myTestFile);
 
+
+            // Pass 2: Use IonReader
             IonReader treeReader = system().newReader(datagram);
 
             FileInputStream in = new FileInputStream(myTestFile);
@@ -40,6 +44,22 @@ public class GoodIonTests
                 in.close();
             }
 
+
+            // Pass 3: Use Iterator
+            in = new FileInputStream(myTestFile);
+            try {
+                Iterator<IonValue> i = system().iterate(in);
+
+                Iterator<IonValue> expected = datagram.iterator();
+
+                TestUtils.assertEqualValues(expected, i);
+            }
+            finally {
+                in.close();
+            }
+
+
+            // Pass 4: Encode to binary, and use Reader
             if (! myFileIsBinary) {
                 // Check the encoding of text to binary.
                 treeReader = system().newReader(datagram);
@@ -83,7 +103,6 @@ public class GoodIonTests
     @Override
     protected String[] getFilesToSkip()
     {
-        // TODO JIRA ION-8 fix Unicode bugs and enable test cases
         return new String[]
         {
 //            "equivs/stringU0001D11E.ion",

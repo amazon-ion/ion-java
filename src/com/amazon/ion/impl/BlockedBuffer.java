@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2010 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -77,14 +77,23 @@ static final boolean test_with_no_version_checking = false;
     }
 
     static boolean debugValidation = false;
+    static int _defaultBlockSizeMin;
+    static int _defaultBlockSizeUpperLimit;
 
-    public static int _defaultBlockSizeMin = 4096 * 8;
-    public static int _defaultBlockSizeUpperLimit = 4096 * 8;
+    static {
+        resetParameters();
+    }
+
+    public static void resetParameters() {
+        debugValidation = false;
+        _defaultBlockSizeMin = 4096 * 8;
+        _defaultBlockSizeUpperLimit = 4096 * 8;
+    }
 
     public int _blockSizeMin = _defaultBlockSizeMin;
     public int _blockSizeUpperLimit = _defaultBlockSizeUpperLimit;
 
-    public static void setBlockSizeParameters(int min, int max,
+    static void setBlockSizeParameters(int min, int max,
                                               boolean intenseValidation) {
         debugValidation = intenseValidation;
         setBlockSizeParameters(min, max);
@@ -1694,6 +1703,8 @@ static final boolean test_with_no_version_checking = false;
          */
         private final void _write(InputStream bytestream, int len) throws IOException
         {
+            if (len == 0) return;
+
             int written = 0;
             boolean read_all = (len == -1);
 
@@ -1708,8 +1719,8 @@ static final boolean test_with_no_version_checking = false;
                 }
                 int len_read = bytestream.read(_curr._buffer, _blockPosition, to_read);
                 if (len_read == -1) break;
-                if (len_read == 0) continue;  // can this really happen?
-
+                if (len_read > 0)
+                {
                 _pos += len_read;
                 _blockPosition += len_read;
                 if (_blockPosition > _curr._limit) {
@@ -1718,6 +1729,7 @@ static final boolean test_with_no_version_checking = false;
                 }
                 else {
                     assert _pos <= _buf._buf_limit;
+                }
                 }
 
                 if (len_read == writeInThisBlock) {
