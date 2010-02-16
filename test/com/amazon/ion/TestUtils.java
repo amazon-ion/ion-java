@@ -6,6 +6,7 @@ import static com.amazon.ion.impl.IonImplUtils.READER_HASNEXT_REMOVED;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
+import java.util.Iterator;
 import junit.framework.Assert;
 
 /**
