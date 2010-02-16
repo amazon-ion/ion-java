@@ -63,6 +63,7 @@ public class IonStructLite
        catch (IOException e) {
          throw new IonException(e);
       }
+       clone.assertState();
        return clone;
     }
 
@@ -72,6 +73,19 @@ public class IonStructLite
     public int                      _field_map_duplicate_count;
 
 
+    protected void assertState() {
+        if (_field_map != null && _field_map.size() + _field_map_duplicate_count != _child_count) {
+            throw new IllegalStateException(
+                String.format(
+                    "Field Map Size: %d, Field Map Dup Count: %d, Child Count: %d",
+                    _field_map.size(),
+                    _field_map_duplicate_count,
+                    _child_count
+                )
+            );
+        }
+    }
+    
     @Override
     protected void transitionToLargeSize(int size)
     {
@@ -394,7 +408,9 @@ public class IonStructLite
     public void clear()
     {
         super.clear();
-        _field_map = null;
+        if (_field_map != null) {
+            _field_map.clear();
+        }
         _field_map_duplicate_count = 0;
     }
 
@@ -406,6 +422,7 @@ public class IonStructLite
         String field_name = child.getFieldName();
         add(field_name, child);
 
+        assertState();
         return true; // add always works, or throws, since we allow dupicate fields
     }
 
@@ -442,6 +459,7 @@ public class IonStructLite
         if (_field_map != null) {
             add_field(fieldName, concrete._elementid());
         }
+        assertState();
     }
 
     public ValueFactory put(final String fieldName)
@@ -541,6 +559,7 @@ public class IonStructLite
         if (value != null) {
             add(fieldName, value);
         }
+        assertState();
     }
 
     @Override
@@ -574,6 +593,7 @@ public class IonStructLite
                 if (_field_map != null) {
                     patch_map_elements_helper(idx);
                 }
+                assertState();
             }
         };
     }
@@ -604,6 +624,7 @@ public class IonStructLite
             patch_map_elements_helper(idx);
         }
 
+        assertState();
         return field;
     }
 
@@ -639,6 +660,7 @@ public class IonStructLite
             patch_map_elements_helper(idx);
         }
 
+        assertState();
         return true;
     }
 
@@ -658,6 +680,7 @@ public class IonStructLite
             }
         }
 
+        assertState();
         return removedAny;
     }
 
@@ -676,6 +699,8 @@ public class IonStructLite
                 removedAny = true;
             }
         }
+        
+        assertState();
         return removedAny;
     }
 
