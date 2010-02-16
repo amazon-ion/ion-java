@@ -123,6 +123,7 @@ public class IonSystemLite
         }
 
         IonValue copy = datagram.get(0);
+        copy.removeFromContainer();
         return (T) copy;
     }
 
