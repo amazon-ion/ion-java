@@ -490,8 +490,9 @@ public class SystemReaderImpl
 
         if (IonSystemImpl.valueIsLocalSymbolTable(curr))
         {
-            _currentSymbolTable =
-                UnifiedSymbolTable.makeNewLocalSymbolTable(_system.getSystemSymbolTable(), _catalog, (IonStruct) curr);
+            IonStruct struct = (IonStruct)curr;
+            SymbolTable sys = _system.getSystemSymbolTable();
+            _currentSymbolTable = UnifiedSymbolTable.makeNewLocalSymbolTable(sys, _catalog, struct);
             _currentIsHidden = true;
         }
         else if (_system.valueIsSystemId(curr))

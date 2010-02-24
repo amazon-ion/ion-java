@@ -1,7 +1,7 @@
 /*
  *  Copyright 2009 Amazon.com.  All rights reserved.
- *  $Id: //brazil/src/shared/platform/IonJava/development-almann/test/com/amazon/ion/HashCodeCorrectnessTest.java#6 $
- *  $Change: 2947922 $ $Author: almann $ $DateTime: 2010/02/16 04:43:37 $
+ *  $Id: //brazil/src/shared/platform/IonJava/development-almann/test/com/amazon/ion/HashCodeCorrectnessTest.java#7 $
+ *  $Change: 2963944 $ $Author: almann $ $DateTime: 2010/02/24 02:00:35 $
  */
 
 package com.amazon.ion;

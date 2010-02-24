@@ -51,19 +51,24 @@ public class IonStructLite
        IonStructLite clone = new IonStructLite(_context.getSystemLite(), false);
 
        try {
-          // copy over the field map first so that the
-          // call to transition to large in copyFrom
-          // doesn't do any unnecessary work
-          if (_field_map != null) {
-             clone._field_map = new HashMap<String, Integer>(_field_map);
-          }
-          clone._field_map_duplicate_count = _field_map_duplicate_count;
+          // copy from won't update the map, now call transition to large
+          // to construct the map.  So we'll do that once it's done
           clone.copyFrom(this);
+
+          // now force the field map to be built, or
+          // initialized to null
+          if (this._field_map != null) {
+              clone.build_field_map();
+          }
+          else {
+              // this should already be true
+              clone._field_map = null;
+              clone._field_map_duplicate_count = 0;
+          }
       }
        catch (IOException e) {
          throw new IonException(e);
       }
-       clone.assertState();
        return clone;
     }
 
@@ -73,25 +78,21 @@ public class IonStructLite
     public int                      _field_map_duplicate_count;
 
 
-    protected void assertState() {
-        if (_field_map != null && _field_map.size() + _field_map_duplicate_count != _child_count) {
-            throw new IllegalStateException(
-                String.format(
-                    "Field Map Size: %d, Field Map Dup Count: %d, Child Count: %d",
-                    _field_map.size(),
-                    _field_map_duplicate_count,
-                    _child_count
-                )
-            );
-        }
-    }
-    
     @Override
     protected void transitionToLargeSize(int size)
     {
         if (_field_map != null) return;
 
+        build_field_map();
+        return;
+    }
+    protected void build_field_map()
+    {
+        int size = _children.length;
+
         _field_map = new HashMap<String, Integer>(size);
+        _field_map_duplicate_count = 0;
+
         int count = get_child_count();
         for (int ii=0; ii<count; ii++) {
             IonValueLite v = get_child_lite(ii);
@@ -408,9 +409,7 @@ public class IonStructLite
     public void clear()
     {
         super.clear();
-        if (_field_map != null) {
-            _field_map.clear();
-        }
+        _field_map = null;
         _field_map_duplicate_count = 0;
     }
 
@@ -422,7 +421,6 @@ public class IonStructLite
         String field_name = child.getFieldName();
         add(field_name, child);
 
-        assertState();
         return true; // add always works, or throws, since we allow dupicate fields
     }
 
@@ -459,7 +457,6 @@ public class IonStructLite
         if (_field_map != null) {
             add_field(fieldName, concrete._elementid());
         }
-        assertState();
     }
 
     public ValueFactory put(final String fieldName)
@@ -559,7 +556,6 @@ public class IonStructLite
         if (value != null) {
             add(fieldName, value);
         }
-        assertState();
     }
 
     @Override
@@ -593,7 +589,6 @@ public class IonStructLite
                 if (_field_map != null) {
                     patch_map_elements_helper(idx);
                 }
-                assertState();
             }
         };
     }
@@ -624,7 +619,6 @@ public class IonStructLite
             patch_map_elements_helper(idx);
         }
 
-        assertState();
         return field;
     }
 
@@ -660,7 +654,6 @@ public class IonStructLite
             patch_map_elements_helper(idx);
         }
 
-        assertState();
         return true;
     }
 
@@ -680,7 +673,6 @@ public class IonStructLite
             }
         }
 
-        assertState();
         return removedAny;
     }
 
@@ -699,8 +691,6 @@ public class IonStructLite
                 removedAny = true;
             }
         }
-        
-        assertState();
         return removedAny;
     }
 

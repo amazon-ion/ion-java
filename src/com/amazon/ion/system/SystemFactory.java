@@ -17,7 +17,8 @@ import com.amazon.ion.impl.lite.IonSystemLite;
  */
 public final class SystemFactory
 {
-    private static SystemCapabilities DEFAULT_IMPLEMENTATION = SystemCapabilities.LITE;
+    private static SystemCapabilities DEFAULT_IMPLEMENTATION
+                 = SystemCapabilities.LITE; // .ORIGINAL; // .LITE;
 
     /**
      * This enum lists the various IonSystem implementations

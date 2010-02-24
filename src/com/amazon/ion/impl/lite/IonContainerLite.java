@@ -517,14 +517,12 @@ public abstract class IonContainerLite
     protected void add(int index, IonValue element)
         throws ContainedValueException, NullPointerException
     {
-        checkForLock();
-
         final IonValueLite concrete = (IonValueLite)element;
 
+        this.checkForLock();
         concrete.checkForLock();
 
         add_child(index, concrete);
-
         patch_elements_helper(index + 1);
 
         assert((index >= 0) && (index < get_child_count()) && (concrete == get_child(index)) && (concrete._elementid() == index));
@@ -576,7 +574,7 @@ public abstract class IonContainerLite
             // children
             int current_size = (source._children == null) ? 0 : source._children.length;
             if (current_size < source._children.length) {
-                int next_size = this.nextSize(current_size);
+                int next_size = this.nextSize(current_size, false);
                 this._children = new IonValueLite[next_size];
             }
 
@@ -646,7 +644,7 @@ public abstract class IonContainerLite
         default:       return 4;
         }
     }
-    final protected int nextSize(int current_size)
+    final protected int nextSize(int current_size, boolean call_transition)
     {
         if (current_size == 0) {
             int new_size = initialSize();
@@ -665,7 +663,9 @@ public abstract class IonContainerLite
         if (next_size > current_size) {
             // note that unrecognized sizes, either due to unrecognized type id
             // or some sort of custom size in the initial allocation, meh.
-            transitionToLargeSize(next_size);
+            if (call_transition) {
+                transitionToLargeSize(next_size);
+            }
         }
         else {
             next_size = current_size * 2;
@@ -736,7 +736,7 @@ public abstract class IonContainerLite
         _isNullValue(false); // if we add children we're not null anymore
         if (_children == null || _child_count >= _children.length) {
             int old_len = (_children == null) ? 0 : _children.length;
-            int new_len = this.nextSize(old_len);
+            int new_len = this.nextSize(old_len, true);
             assert(new_len > idx);
             IonValueLite[] temp = new IonValueLite[new_len];
             if (old_len > 0) {

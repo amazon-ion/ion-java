@@ -68,7 +68,6 @@ abstract public class IonReaderBinaryRawX
     int                 _value_lob_remaining;
     boolean             _value_lob_is_ready;
 
-    UnifiedSavePointManagerX _save_points;
     SavePoint           _annotations;
     int[]               _annotation_ids;
     int                 _annotation_count;
@@ -89,9 +88,8 @@ abstract public class IonReaderBinaryRawX
         _parent_tid = IonConstants.tidDATAGRAM;
         _value_field_id = UnifiedSymbolTable.UNKNOWN_SID;
         _state = State.S_BEFORE_TID; // this is where we always start
-        _save_points = new UnifiedSavePointManagerX(uis);
         _container_stack = new long[DEFAULT_CONTAINER_STACK_SIZE];
-        _annotations = _save_points.savePointAllocate();
+        _annotations = uis.savePointAllocate();
         _v = new ValueVariant();
         _annotation_ids = new int[DEFAULT_ANNOTATION_SIZE];
         _has_next_needed = true;
@@ -306,7 +304,7 @@ abstract public class IonReaderBinaryRawX
         case S_AFTER_VALUE:
             if (_annotations.isDefined()) {
                 int local_remaining_save = _local_remaining;
-                _save_points.savePointPushActive(_annotations, getPosition(), 0);
+                _input._save_points.savePointPushActive(_annotations, getPosition(), 0);
                 _local_remaining =  NO_LIMIT; // limit will be handled by the save point
                 _annotation_count = 0;
                 do {
@@ -316,7 +314,7 @@ abstract public class IonReaderBinaryRawX
                     }
                     load_annotation_append(a);
                 } while (!isEOF());
-                _save_points.savePointPopActive(_annotations);
+                _input._save_points.savePointPopActive(_annotations);
                 _local_remaining = local_remaining_save;
                 _annotations.clear();
             }

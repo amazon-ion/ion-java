@@ -970,6 +970,10 @@ public class StructTest
             _fieldName = name;
             _value = sys.newInt(_next_value++);
         }
+        TestField(String name, IonInt value) {
+            _fieldName = name;
+            _value = value;
+        }
         @Override
         public String toString()
         {
@@ -982,7 +986,7 @@ public class StructTest
     static final boolean _debug_print_flag = false;
 
 
-    static final int COMMAND_EXECUTION_COUNTER_MAX = 1000;
+    static final int COMMAND_EXECUTION_COUNTER_MAX = 10000;
     static final int C_ADD_UNIQUE         =  1;
     static final int C_ADD_DUPLICATE      =  2;
     static final int C_DELETE_UNIQUE      =  3;
@@ -995,7 +999,9 @@ public class StructTest
     static final int C_PUT_INVALID        = 10;
     static final int C_PUT_NULL_INVALID   = 11;
     static final int C_DELETE_ITERATOR    = 12;
-    static final int COMMAND_MAX          = 12;
+    static final int C_CLONE              = 13;
+    static final int C_CLEAR              = 14;
+    static final int COMMAND_MAX          = 14;
 
     public void testRandomChanges()
     {
@@ -1051,7 +1057,7 @@ public class StructTest
                     }
                     break;
                 case C_COMPARE:
-                    compare_field_lists(s1, s2);
+                    compare_field_lists(s1, s2, seed);
                     break;
                 case C_CHANGE_UNIQUE:
                     field = choose_unique(r, s2);
@@ -1097,13 +1103,28 @@ public class StructTest
                 case C_PUT_NULL_INVALID:
                     field = make_unique(s1);
                     s1.put(field._fieldName, null);
+                    // s2. nothing
                     break;
                 case C_DELETE_ITERATOR:
                     field = choose_any(r, s2);
                     if (field != null) {
-                        iterator_delete(field, s1);
-                        s2.remove(field);
+                        int removed = iterator_delete(r, field, s1);
+                        int idx = s2.indexOf(field);
+                        for (int ii = 0; ii < removed; ii++) {
+                            field = s2.get(idx);
+                            s2.remove(field);
+                        }
                     }
+                    break;
+                case C_CLONE:
+                    IonStruct struct_clone = s1.clone();
+                    ArrayList<TestField> array_clone = clone_array_list(s2, s1, struct_clone);
+                    s1 = struct_clone;
+                    s2 = array_clone;
+                    break;
+                case C_CLEAR:
+                    s1.clear();
+                    s2.clear();
                     break;
                 default:
                     assertEquals("we've encounterd an unexpeced", "command id"+command);
@@ -1115,7 +1136,7 @@ public class StructTest
                     dump(s1, s2);
                     System.out.println("---");
                 }
-                compare_field_lists(s1, s2);
+                compare_field_lists(s1, s2, seed);
             }
         }
         finally {
@@ -1146,6 +1167,8 @@ public class StructTest
             case C_COMPARE:
             case C_PUT_INVALID:
             case C_PUT_NULL_INVALID:
+            case C_CLONE:
+            case C_CLEAR:
             default: // who knows?
                 break loop;
             case C_ADD_DUPLICATE:
@@ -1298,19 +1321,42 @@ public class StructTest
         }
         return false;
     }
-    void iterator_delete(TestField field, IonStruct s1)
+    int iterator_delete(Random r, TestField field, IonStruct s1)
     {
+        int removed = -1, count = 0;
         Iterator<IonValue> it = s1.iterator();
         while (it.hasNext()) {
             IonValue v = it.next();
+            count++;
             if (v == field._value) {
-                it.remove();
-                return;
+                removed = remove_some(r, s1, count, it);
+                return removed;
             }
         }
         assertEquals("the iteration didn't find field ", field._fieldName);
+        return -1; // we can't get here, but Eclipse doesn't know that
     }
-    void compare_field_lists(IonStruct s1, ArrayList<TestField> s2)
+    int remove_some(Random r, IonStruct s1, int pos, Iterator<IonValue>it)
+    {
+        int size = s1.size();
+        assert(pos <= size);
+
+        int how_many = r.nextInt(size - pos + 1) + 1;
+        int removed = 0;
+
+        for(;;) {
+            it.remove();
+            removed++;
+            if (how_many <= removed) {
+                break;
+            }
+            assertTrue(it.hasNext());
+            it.next();
+        }
+        return removed;
+    }
+
+    void compare_field_lists(IonStruct s1, ArrayList<TestField> s2, long seed)
     {
         String  errors = "";
         boolean difference = false;
@@ -1371,6 +1417,10 @@ public class StructTest
             if (_debug_print_flag) {
                 System.out.println(errors);
             }
+            if (!difference) {
+                this.compare_field_lists(s1, s2, seed);
+            }
+            errors += "\nSEED: "+ seed;
             assertFalse(errors, difference);
         }
         return;
@@ -1396,6 +1446,51 @@ public class StructTest
         }
     }
 
+    ArrayList<TestField> clone_array_list(ArrayList<TestField> s2, IonStruct s1, IonStruct struct_clone)
+    {
+        ArrayList<TestField> array_clone = new ArrayList<TestField>();
+
+        Iterator<IonValue> it1 = s1.iterator();
+        Iterator<IonValue> itc = struct_clone.iterator();
+
+        // this tests the comparison between the struct and its clone
+        // while is populates a new array with the updated IonValues
+        // from the struct clone so that comparisons between the
+        // struct clone and array clone match with object identity
+        // which is needed for operations like remove from arraylist
+        while (it1.hasNext()) {
+            assertTrue(itc.hasNext());
+            IonValue v1 = it1.next();
+            IonValue vc = itc.next();
+            assertTrue(v1.equals(vc));
+            assertTrue(vc instanceof IonInt);
+
+            int idx = find_index(s2, v1);
+            if (idx < 0) {
+                assertTrue(idx >= 0);
+            }
+            TestField f = s2.get(idx);
+            TestField fc = new TestField(f._fieldName, (IonInt)vc);
+            array_clone.add(fc);
+            assertEquals(array_clone.size(), idx + 1);
+
+        }
+        assertFalse(itc.hasNext());
+
+        return array_clone;
+    }
+
+    int find_index(ArrayList<TestField> s2, IonValue v1)
+    {
+        for (int idx = 0; idx < s2.size(); idx++) {
+            TestField f = s2.get(idx);
+            if (f._value == v1) {
+                return idx;
+            }
+        }
+        return -1;
+    }
+
     public void testMultipleRandomChanges()
     {
         for (int ii=0; ii<20; ii++) {
@@ -1416,6 +1511,8 @@ public class StructTest
         case C_PUT_INVALID:        return "C_PUT_INVALID";
         case C_PUT_NULL_INVALID:   return "C_PUT_NULL_INVALID";
         case C_DELETE_ITERATOR:    return "C_DELETE_ITERATOR";
+        case C_CLONE:              return "C_CLONE";
+        case C_CLEAR:              return "C_CLEAR";
         default:                   return "<cmd: "+cmd+">";
         }
     }

@@ -310,7 +310,10 @@ public final
             }
             IonType t = reader.next();
             if (t != IonType.STRUCT) {
-                throw new IonException("invalid symbol table image passed in reader "+t+" encountered when a struct was expected");
+                String message = "invalid symbol table image passed in reader "
+                               + t.toString()
+                               + " encountered when a struct was expected";
+                throw new IonException(message);
             }
         }
 
