@@ -566,7 +566,7 @@ public class IonBinary
 
     public static int lenVarInt8(BigInteger bi, boolean force_zero_writes)
     {
-        int len = bi.bitLength() + 1; // add 1 for the sign bit (which must always be present)
+        int len = bi.abs().bitLength() + 1; // add 1 for the sign bit (which must always be present)
         int bytelen = 0;
 
         switch (bi.signum()) {
@@ -2818,7 +2818,9 @@ done:       for (;;) {
                                                    IonConstants.tidTimestamp
                                                    ,vlen);
 
-                returnlen += writeTimestamp(di);
+                int wroteLen = writeTimestamp(di);
+                assert wroteLen == vlen;
+                returnlen += wroteLen;
             }
             return returnlen;
         }
