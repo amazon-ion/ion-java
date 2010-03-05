@@ -1,7 +1,5 @@
 // Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
-
 package com.amazon.ion.impl;
-
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
@@ -18,8 +16,6 @@ import java.math.BigInteger;
 import java.math.MathContext;
 import java.util.Date;
 import java.util.Iterator;
-
-
 /**
  *  low level reader, base class, for reading Ion binary
  *  input sources.  This using the UnifiedInputStream just
@@ -42,7 +38,6 @@ abstract public class IonReaderBinaryRawX
     static final int DEFAULT_CONTAINER_STACK_SIZE = 12; // a multiple of 3
     static final int DEFAULT_ANNOTATION_SIZE = 10;
     static final int NO_LIMIT = Integer.MIN_VALUE;
-
     protected enum State {
         S_INVALID,
         S_BEFORE_FIELD, // only true in structs
@@ -51,9 +46,7 @@ abstract public class IonReaderBinaryRawX
         S_AFTER_VALUE,
         S_EOF
     }
-
     State               _state;
-
     UnifiedInputStreamX _input;
     int                 _local_remaining;
     boolean             _eof;
@@ -68,7 +61,6 @@ abstract public class IonReaderBinaryRawX
     int                 _value_lob_remaining;
     boolean             _value_lob_is_ready;
 
-    UnifiedSavePointManagerX _save_points;
     SavePoint           _annotations;
     int[]               _annotation_ids;
     int                 _annotation_count;
@@ -89,9 +81,8 @@ abstract public class IonReaderBinaryRawX
         _parent_tid = IonConstants.tidDATAGRAM;
         _value_field_id = UnifiedSymbolTable.UNKNOWN_SID;
         _state = State.S_BEFORE_TID; // this is where we always start
-        _save_points = new UnifiedSavePointManagerX(uis);
         _container_stack = new long[DEFAULT_CONTAINER_STACK_SIZE];
-        _annotations = _save_points.savePointAllocate();
+        _annotations = uis.savePointAllocate();
         _v = new ValueVariant();
         _annotation_ids = new int[DEFAULT_ANNOTATION_SIZE];
         _has_next_needed = true;
@@ -113,12 +104,10 @@ abstract public class IonReaderBinaryRawX
             _container_stack = temp;
         }
         _container_stack[_container_top + POS_OFFSET]  = position;
-
         long type_limit = local_remaining;
         type_limit <<= LIMIT_SHIFT;
         type_limit  |= (type & TYPE_MASK);
         _container_stack[_container_top + TYPE_LIMIT_OFFSET] = type_limit;
-
         _container_top += POS_STACK_STEP;
     }
     private final long get_top_position() {
@@ -145,7 +134,6 @@ abstract public class IonReaderBinaryRawX
         assert(_container_top > 0);
         _container_top -= POS_STACK_STEP;
     }
-
     public boolean hasNext()
     {
         if (!_eof && _has_next_needed) {
@@ -163,7 +151,6 @@ abstract public class IonReaderBinaryRawX
         if (_eof) {
             return null;
         }
-
         if (_has_next_needed) {
             try {
                 has_next_helper_raw();
@@ -172,14 +159,11 @@ abstract public class IonReaderBinaryRawX
                 error(e);
             }
         }
-
         _has_next_needed = true;
-
         // this should only be null here if we're at eof
         assert( _value_type != null || _eof == true);
         return _value_type;
     }
-
     //from IonConstants
     //public static final byte[] BINARY_VERSION_MARKER_1_0 =
     //    { (byte) 0xE0,
@@ -188,12 +172,9 @@ abstract public class IonReaderBinaryRawX
     //      (byte) 0xEA };
     private static final int BINARY_VERSION_MARKER_TID = IonConstants.getTypeCode(IonConstants.BINARY_VERSION_MARKER_1_0[0] & 0xff);
     private static final int BINARY_VERSION_MARKER_LEN = IonConstants.getLowNibble(IonConstants.BINARY_VERSION_MARKER_1_0[0] & 0xff);
-
-
     private final void has_next_helper_raw() throws IOException
     {
         clear_value();
-
         while (_value_tid == -1 && !_eof) {
             switch (_state) {
             case S_BEFORE_FIELD:
@@ -246,7 +227,6 @@ abstract public class IonReaderBinaryRawX
                 error("internal error: raw binary reader in invalid state!");
             }
         }
-
         // we always want to exit here
         _has_next_needed = false;
         return;
@@ -306,7 +286,7 @@ abstract public class IonReaderBinaryRawX
         case S_AFTER_VALUE:
             if (_annotations.isDefined()) {
                 int local_remaining_save = _local_remaining;
-                _save_points.savePointPushActive(_annotations, getPosition(), 0);
+                _input._save_points.savePointPushActive(_annotations, getPosition(), 0);
                 _local_remaining =  NO_LIMIT; // limit will be handled by the save point
                 _annotation_count = 0;
                 do {
@@ -316,7 +296,7 @@ abstract public class IonReaderBinaryRawX
                     }
                     load_annotation_append(a);
                 } while (!isEOF());
-                _save_points.savePointPopActive(_annotations);
+                _input._save_points.savePointPopActive(_annotations);
                 _local_remaining = local_remaining_save;
                 _annotations.clear();
             }
@@ -338,7 +318,6 @@ abstract public class IonReaderBinaryRawX
         }
         _annotation_ids[_annotation_count++] =  a;
     }
-
     private final void clear_value()
     {
         _value_type = null;
@@ -361,7 +340,6 @@ abstract public class IonReaderBinaryRawX
         if (td < 0) {
             return UnifiedInputStreamX.EOF;
         }
-
         int tid = IonConstants.getTypeCode(td);
         int len = IonConstants.getLowNibble(td);
         if (len == IonConstants.lnIsVarLen) {
@@ -402,10 +380,8 @@ abstract public class IonReaderBinaryRawX
                 len = readVarUInt();
             }
         }
-
         _value_tid = tid;
         _value_len = len;
-
         return tid;
     }
     private final IonType get_iontype_from_tid(int tid)
@@ -460,7 +436,6 @@ abstract public class IonReaderBinaryRawX
         }
         return t;
     }
-
     public void stepIn()
     {
         if (_value_type == null || _eof) {
@@ -484,7 +459,6 @@ abstract public class IonReaderBinaryRawX
                 assert( _state == State.S_BEFORE_VALUE );
             }
         }
-
         // first push place where we'll take up our next
         // value processing when we step out
         long curr_position = getPosition();
@@ -497,12 +471,10 @@ abstract public class IonReaderBinaryRawX
             }
         }
         push(_parent_tid, next_position, next_remaining);
-
         _is_in_struct = (_value_tid == IonConstants.tidStruct);
         _local_remaining = _value_len;
         _state = _is_in_struct ? State.S_BEFORE_FIELD : State.S_BEFORE_TID;
         _parent_tid = _value_tid;
-
         clear_value();
         _has_next_needed = true;
     }
@@ -511,15 +483,12 @@ abstract public class IonReaderBinaryRawX
         if (getDepth() < 1) {
             throw new IllegalStateException(IonMessages.CANNOT_STEP_OUT);
         }
-
         // first we get the top values, then we
         // pop them all off in one fell swoop.
         long next_position   = get_top_position();
         int  local_remaining = get_top_local_remaining();
         int  parent_tid      = get_top_type();
-
         pop();
-
         _eof = false;
         _parent_tid = parent_tid;
         _local_remaining = local_remaining;
@@ -532,7 +501,6 @@ abstract public class IonReaderBinaryRawX
             _state = State.S_BEFORE_TID;
         }
         _has_next_needed = true;
-
         long curr_position = getPosition();
         if (next_position > curr_position) {
             try {
@@ -563,7 +531,6 @@ abstract public class IonReaderBinaryRawX
     public int byteSize()
     {
         int len;
-
         switch (_value_type) {
         case BLOB:
         case CLOB:
@@ -602,9 +569,7 @@ abstract public class IonReaderBinaryRawX
         if (value_len > len) {
             value_len = len;
         }
-
         int read_len = readBytes(buffer, offset, value_len);
-
         return read_len;
     }
     public int readBytes(byte[] buffer, int offset, int len)
@@ -612,7 +577,6 @@ abstract public class IonReaderBinaryRawX
         if (offset < 0 || len < 0) {
             throw new IllegalArgumentException();
         }
-
         int value_len = byteSize(); // again validation
         if (_value_lob_remaining > len) {
             len = _value_lob_remaining;
@@ -620,7 +584,6 @@ abstract public class IonReaderBinaryRawX
         if (len < 1) {
             return 0;
         }
-
         int read_len;
         try {
             read_len = read(buffer, offset, value_len);
@@ -630,7 +593,6 @@ abstract public class IonReaderBinaryRawX
             read_len = -1;
             error(e);
         }
-
         if (_value_lob_remaining == 0) {
             _state = State.S_AFTER_VALUE;
         }
@@ -639,7 +601,6 @@ abstract public class IonReaderBinaryRawX
         }
         return read_len;
     }
-
     public int getDepth()
     {
         return (_container_top / POS_STACK_STEP);
@@ -659,7 +620,6 @@ abstract public class IonReaderBinaryRawX
     {
         return _value_is_null;
     }
-
     //
     //  helper read routines - these were lifted
     //  from SimpleByteBuffer.SimpleByteReader
@@ -730,12 +690,10 @@ abstract public class IonReaderBinaryRawX
         }
         return;
     }
-
     protected final long readULong(int len) throws IOException
     {
         long    retvalue = 0;
         int b;
-
         switch (len) {
         default:
             throw new IonException("value too large for Java long");
@@ -768,17 +726,14 @@ abstract public class IonReaderBinaryRawX
         }
         return retvalue;
     }
-
     // TODO: untested (as yet)
     protected final BigInteger readBigInteger(int len, boolean is_negative) throws IOException
     {
         int bitlen = len;
-
         BigInteger value;
         if (bitlen > 0) {
             byte[] bits = new byte[bitlen];
             read(bits, 0, bitlen);
-
             int signum = is_negative ? -1 : 1;
             value = new BigInteger(signum, bits);
         }
@@ -787,13 +742,11 @@ abstract public class IonReaderBinaryRawX
         }
         return value;
     }
-
     protected final int readVarInt() throws IOException
     {
         int     retvalue = 0;
         boolean is_negative = false;
         int     b;
-
         // synthetic label "done" (yuck)
 done:   for (;;) {
             // read the first byte - it has the sign bit
@@ -803,28 +756,23 @@ done:   for (;;) {
             }
             retvalue = (b & 0x3F);
             if ((b & 0x80) != 0) break done;
-
             // for the second byte we shift our eariler bits just as much,
             // but there are fewer of them there to shift
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break done;
-
             // for the rest, they're all the same
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break done;
-
             // for the rest, they're all the same
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break done;
-
             // for the rest, they're all the same
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break done;
-
             // if we get here we have more bits than we have room for :(
             throwIntOverflowExeption();
         }
@@ -833,13 +781,11 @@ done:   for (;;) {
         }
         return retvalue;
     }
-
     protected final long readVarLong() throws IOException
     {
         long    retvalue = 0;
         boolean is_negative = false;
         int     b;
-
         // synthetic label "done" (yuck)
 done:   for (;;) {
             // read the first byte - it has the sign bit
@@ -849,13 +795,11 @@ done:   for (;;) {
             }
             retvalue = (b & 0x3F);
             if ((b & 0x80) != 0) break done;
-
             // for the second byte we shift our eariler bits just as much,
             // but there are fewer of them there to shift
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break done;
-
             // for the rest, they're all the same
             for (;;) {
                 if ((b = read()) < 0) throwUnexpectedEOFException();
@@ -869,7 +813,6 @@ done:   for (;;) {
         }
         return retvalue;
     }
-
     /**
      * Reads an integer value, returning null to mean -0.
      * @throws IOException
@@ -879,7 +822,6 @@ done:   for (;;) {
         int     retvalue = 0;
         boolean is_negative = false;
         int     b;
-
         // Synthetic label "done" (yuck)
 done:   for (;;) {
             // read the first byte - it has the sign bit
@@ -889,32 +831,26 @@ done:   for (;;) {
             }
             retvalue = (b & 0x3F);
             if ((b & 0x80) != 0) break done;
-
             // for the second byte we shift our eariler bits just as much,
             // but there are fewer of them there to shift
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break done;
-
             // for the rest, they're all the same
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break done;
-
             // for the rest, they're all the same
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break done;
-
             // for the rest, they're all the same
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break done;
-
             // if we get here we have more bits than we have room for :(
             throwIntOverflowExeption();
         }
-
         Integer retInteger = null;
         if (is_negative) {
             if (retvalue != 0) {
@@ -926,73 +862,58 @@ done:   for (;;) {
         }
         return retInteger;
     }
-
     protected final int readVarUIntOrEOF() throws IOException
     {
         int retvalue = 0;
         int  b;
-
         for (;;) { // fake loop to create a "goto done"
             if ((b = read()) < 0) {
                 return UnifiedInputStreamX.EOF;
             }
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break;
-
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break;
-
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break;
-
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break;
-
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break;
-
             // if we get here we have more bits than we have room for :(
             throwIntOverflowExeption();
         }
         return retvalue;
     }
-
     protected final int readVarUInt() throws IOException
     {
         int retvalue = 0;
         int  b;
-
         for (;;) { // fake loop to create a "goto done"
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break;
-
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break;
-
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break;
-
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break;
-
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break;
-
             // if we get here we have more bits than we have room for :(
             throwIntOverflowExeption();
         }
         return retvalue;
     }
-
     protected final double readFloat(int len) throws IOException
     {
         if (len == 0)
@@ -1000,21 +921,17 @@ done:   for (;;) {
             // special case, return pos zero
             return 0.0d;
         }
-
         if (len != 8)
         {
             throw new IOException("Length of float read must be 0 or 8");
         }
-
         long dBits = this.readULong(len);
         return Double.longBitsToDouble(dBits);
     }
-
     protected final long readVarULong() throws IOException
     {
         long retvalue = 0;
         int  b;
-
         for (;;) {
             if ((b = read()) < 0) throwUnexpectedEOFException();
             if ((retvalue & 0xFE00000000000000L) != 0) throwIntOverflowExeption();
@@ -1023,7 +940,6 @@ done:   for (;;) {
         }
         return retvalue;
     }
-
     /**
      * Near clone of {@link SimpleByteBuffer.SimpleByteReader#readDecimal(int)}
      * and {@link IonBinary.Reader#readDecimalValue(IonDecimalImpl, int)}
@@ -1033,9 +949,7 @@ done:   for (;;) {
     {
         // TODO this doesn't seem like the right math context
         MathContext mathContext = MathContext.DECIMAL128;
-
         Decimal bd;
-
         // we only write out the '0' value as the nibble 0
         if (len == 0) {
             bd = Decimal.valueOf(0, mathContext);
@@ -1044,16 +958,13 @@ done:   for (;;) {
             // otherwise we to it the hard way ....
             int  save_limit = _local_remaining - len;
             _local_remaining = len;
-
             int  exponent = readVarInt();
-
             BigInteger value;
             int signum;
             if (_local_remaining > 0)
             {
                 byte[] bits = new byte[_local_remaining];
                 read(bits, 0, _local_remaining);
-
                 signum = 1;
                 if (bits[0] < 0)
                 {
@@ -1067,7 +978,6 @@ done:   for (;;) {
                 signum = 0;
                 value = BigInteger.ZERO;
             }
-
             // Ion stores exponent, BigDecimal uses the negation "scale"
             int scale = -exponent;
             if (value.signum() == 0 && signum == -1)
@@ -1079,59 +989,48 @@ done:   for (;;) {
             {
                 bd = Decimal.valueOf(value, scale, mathContext);
             }
-
             _local_remaining = save_limit;
         }
         return bd;
     }
-
     protected final Timestamp readTimestamp(int len) throws IOException
     {
         if (len < 1) {
             // nothing to do here - and the timestamp will be NULL
             return null;
         }
-
         Timestamp val;
         Precision   p = null;
         Integer     offset = null;
         int         year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
         BigDecimal  frac = null;
         int         save_limit = _local_remaining - len;
-
         _local_remaining = len;
-
         // first up is the offset, which requires a special int reader
         // to return the -0 as a null Integer
         offset = readVarInteger(); // this.readVarInt7WithNegativeZero();
-
         // now we'll read the struct values from the input stream
         if (_local_remaining > 0) {  // FIXME remove
             // year is from 0001 to 9999
             // or 0x1 to 0x270F or 14 bits - 1 or 2 bytes
             year  = readVarUInt();
             p = Precision.YEAR; // our lowest significant option
-
             // now we look for hours and minutes
             if (_local_remaining > 0) {
                 month = readVarUInt();
                 p = Precision.MONTH;
-
                 // now we look for hours and minutes
                 if (_local_remaining > 0) {
                     day   = readVarUInt();
                     p = Precision.DAY; // our lowest significant option
-
                     // now we look for hours and minutes
                     if (_local_remaining > 0) {
                         hour   = readVarUInt();
                         minute = readVarUInt();
                         p = Precision.MINUTE;
-
                         if (_local_remaining > 0) {
                         second = readVarUInt();
                         p = Precision.SECOND;
-
                         if (_local_remaining > 0) {
                             // now we read in our actual "milliseconds since the epoch"
                             frac = readDecimal(_local_remaining);
@@ -1144,12 +1043,10 @@ done:   for (;;) {
         }
         // restore out outer limit(s)
         _local_remaining  = save_limit;
-
         // now we let timestamp put it all together
         val = Timestamp.createFromUtcFields(p, year, month, day, hour, minute, second, frac, offset);
         return val;
     }
-
     protected final String readString(int len) throws IOException
     {
         // len is bytes, which is greater than or equal to java
@@ -1158,10 +1055,7 @@ done:   for (;;) {
         char[] chars = new char[len];
         int    c, ii = 0;
         int    save_limit = _local_remaining - len;
-
         _local_remaining = len;
-
-
         while (!isEOF()) {
             c = readUnicodeScalar();
             if (c < 0) throwUnexpectedEOFException();
@@ -1173,23 +1067,17 @@ done:   for (;;) {
                 chars[ii++] = (char)IonConstants.makeLowSurrogate(c);
             }
         }
-
         _local_remaining = save_limit;
-
         return new String(chars, 0, ii);
     }
-
     private final int readUnicodeScalar() throws IOException
     {
         int c = -1, b;
-
         b = read();
-
         // ascii is all good, even -1 (eof)
         if (IonUTF8.isOneByteUTF8(b)) {
             return b;
         }
-
         switch(IonUTF8.getUTF8LengthFromFirstByte(b)) {
         case 2:
             // now we start gluing the multi-byte value together
@@ -1237,8 +1125,6 @@ done:   for (;;) {
     private final void throwIntOverflowExeption() throws IOException {
         error_at("int in stream is too long for a Java int 32 use readLong()");
     }
-
-
     //
     // public methods that typically user level methods
     // these are filled in by either the system reader
@@ -1304,7 +1190,6 @@ done:   for (;;) {
     {
         throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
     }
-
     public String stringValue()
     {
         throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
@@ -1313,7 +1198,6 @@ done:   for (;;) {
     {
         throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
     }
-
     protected void error_at(String msg) {
         String msg2 = msg + " at position " + getPosition();
         throw new IonReaderBinaryExceptionX(msg2);
