@@ -593,7 +593,8 @@ loop:   for (;;) {
                 this._out.writer().writeByte(
                         castto.getHighNibble(),
                         size);
-                this._out.writer().writeVarUInt8Value(l, size);
+                int wroteLen = this._out.writer().writeVarUInt8Value(l, size);
+                assert wroteLen == size;
             }
             break;
         case constNegInt:
@@ -603,7 +604,8 @@ loop:   for (;;) {
                 this._out.writer().writeByte(
                         castto.getHighNibble(),
                         size);
-                this._out.writer().writeVarUInt8Value(l, size);
+                int wroteLen = this._out.writer().writeVarUInt8Value(l, size);
+                assert wroteLen == size;
             }
             break;
         case kwNan:
