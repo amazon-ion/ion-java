@@ -864,12 +864,11 @@ public abstract class IonValueImpl
      */
     public int addSymbol(String name)
     {
-        checkForLock();
-
         int sid = resolveSymbol(name);
         if (sid != UnifiedSymbolTable.UNKNOWN_SID) {
             return sid;
         }
+        checkForLock();
 
         SymbolTable symbols = getUpdatableSymbolTable();
         sid = symbols.addSymbol(name);
@@ -885,13 +884,13 @@ public abstract class IonValueImpl
      */
     protected SymbolTable addSymbol(String name, SymbolTable symbols)
     {
-        checkForLock();
         assert resolveSymbol(name) == UnifiedSymbolTable.UNKNOWN_SID;
         assert symbols == this.getSymbolTable();
 
         if (UnifiedSymbolTable.isLocalTable(symbols) == false) {
             symbols = getUpdatableSymbolTable();
         }
+        checkForLock();
         symbols.addSymbol(name);
 
         return symbols;

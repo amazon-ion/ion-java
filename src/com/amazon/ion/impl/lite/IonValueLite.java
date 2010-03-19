@@ -457,12 +457,11 @@ public abstract class IonValueLite
 
     public int addSymbol(String name)
     {
-        checkForLock();
-
         int sid = resolveSymbol(name);
         if (sid != UnifiedSymbolTable.UNKNOWN_SID) {
             return sid;
         }
+        checkForLock();
 
         SymbolTable symbols = getUpdatableSymbolTable();
         sid = symbols.addSymbol(name);
