@@ -81,7 +81,8 @@ public class IonReaderTextUserX
         else {
             _catalog = system.getCatalog();
         }
-        _symbols = system.getSystemSymbolTable();
+        // not needed, getSymbolTable will force this when necessary
+        //  _symbols = system.getSystemSymbolTable();
     }
 
     @Override
@@ -169,7 +170,7 @@ public class IonReaderTextUserX
     {
         IonType t = next();
         assert( IonType.SYMBOL.equals(t) );
-        _symbols = _symbols.getSystemSymbolTable();
+        _symbols = null; // was: _symbols.getSystemSymbolTable(); - the null is fixed in getSymbolTable()
         return;
     }
 
@@ -180,8 +181,9 @@ public class IonReaderTextUserX
             // TODO: should this be return IllegalStateException ?
             return SymbolTable.UNKNOWN_SYMBOL_ID;
         }
-        String fieldname = getFieldName();
-        int    id        = _symbols.findSymbol(fieldname);
+        String      fieldname = getFieldName();
+        SymbolTable symbols   = getSymbolTable();
+        int         id        = symbols.findSymbol(fieldname);
         return id;
     }
 
@@ -192,17 +194,18 @@ public class IonReaderTextUserX
             throw new IllegalStateException("only valid if the value is a symbol");
         }
         String symbol = stringValue();
-        if (!_symbols.isLocalTable()) {
-            UnifiedSymbolTable local;
-            if (_symbols.isSystemTable()) {
-                local = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _system.getSystemSymbolTable());
-            }
-            else { // if (_symbols.isSharedTable()) {
-                local = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _system.getSystemSymbolTable(), _symbols);
-            }
-            _symbols = local;
-        }
-        int    id     = _symbols.addSymbol(symbol);
+        SymbolTable symbols   = getSymbolTable();
+        // if (!_symbols.isLocalTable()) {
+        //     UnifiedSymbolTable local;
+        //     if (_symbols.isSystemTable()) {
+        //         local = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _system.getSystemSymbolTable());
+        //     }
+        //     else { // if (_symbols.isSharedTable()) {
+        //         local = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _system.getSystemSymbolTable(), _symbols);
+        //     }
+        //     _symbols = local;
+        // }
+        int    id     = symbols.addSymbol(symbol);
         return id;
     }
 
@@ -210,7 +213,8 @@ public class IonReaderTextUserX
     public SymbolTable getSymbolTable()
     {
         if (_symbols == null) {
-            _symbols = _system.getSystemSymbolTable();
+            SymbolTable system_symbols = _system.getSystemSymbolTable();
+            _symbols = UnifiedSymbolTable.makeNewLocalSymbolTable(system_symbols);
         }
         return _symbols;
     }
@@ -227,10 +231,11 @@ public class IonReaderTextUserX
             ids  = _empty_int_array;
         }
         else {
+            SymbolTable symbols = getSymbolTable();
             ids  = new int[len];
             for (int ii=0; ii<len; ii++) {
                 String sym = stringValue();
-                ids[ii] = _symbols.findSymbol(sym);
+                ids[ii] = symbols.findSymbol(sym);
             }
         }
         return ids;

@@ -584,6 +584,24 @@ public final
         return false;
     }
 
+    public static boolean isLocalTable(SymbolTable table)
+    {
+        if (table == null) return false;
+        return table.isLocalTable();
+    }
+
+    public static boolean isSharedTable(SymbolTable table)
+    {
+        if (table == null) return false;
+        return table.isSharedTable();
+    }
+
+    public static boolean isSystemTable(SymbolTable table)
+    {
+        if (table == null) return false;
+        return table.isSystemTable();
+    }
+
     public boolean isLocalTable() {
         // Not synchronized since this member never changes after construction.
         return _name == null;
@@ -629,6 +647,19 @@ public final
         }
         return false;
     }
+    // was:
+    //public static final boolean valueIsLocalSymbolTable(IonValue value)
+    //{
+    //    return (value instanceof IonStruct
+    //            && value.hasTypeAnnotation(ION_SYMBOL_TABLE));
+    //}
+
+    public final boolean valueIsSharedSymbolTable(IonValue value)
+    {
+        return (value instanceof IonStruct
+                && value.hasTypeAnnotation(ION_SHARED_SYMBOL_TABLE));
+    }
+
     public static boolean isLocalAndNonTrivial(SymbolTable symbolTable)
     {
         if (symbolTable == null) return false;
@@ -844,6 +875,23 @@ public final
             }
         }
         return sid;
+    }
+
+    public static int decodeIntegerSymbol(String name)
+    {
+        if (name == null) return UNKNOWN_SYMBOL_ID;
+        if (name.length() < 2) return UNKNOWN_SYMBOL_ID;
+        if (name.startsWith("$") == false) return UNKNOWN_SYMBOL_ID;
+        int id = 0;
+        for (int ii=1; ii<name.length(); ii++) {
+            char c = name.charAt(ii);
+            if (Character.isDigit(c) == false) {
+                return UNKNOWN_SYMBOL_ID;
+            }
+            id *= 10;
+            id += c - '0';
+        }
+        return id;
     }
 
     public

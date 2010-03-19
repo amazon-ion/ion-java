@@ -529,7 +529,7 @@ public final class IonStructImpl
     {
         assert _hasNativeValue();
 
-        if (_children == null) return IonConstants.lnIsNullStruct;
+        if (_isNullValue())    { return IonConstants.lnIsNullSequence; }
 
         if (get_child_count() == 0) return IonConstants.lnIsEmptyContainer;
 

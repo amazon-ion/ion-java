@@ -135,6 +135,7 @@ public class IonWriterUserText
         if (needs_ivm) {
             // system writer call won't recurse back on us
             _system_writer.writeIonVersionMarker();
+            _after_ion_version_marker = true;
             // and no other state needs updating as we're
             // about to write and set the local table next anyway
         }

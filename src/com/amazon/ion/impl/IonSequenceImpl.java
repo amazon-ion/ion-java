@@ -383,7 +383,8 @@ public abstract class IonSequenceImpl
     {
         assert _hasNativeValue();
 
-        if (_children == null) { return IonConstants.lnIsNullSequence; }
+        if (_isNullValue())    { return IonConstants.lnIsNullSequence; }
+        if (_children == null || _child_count == 0) { return IonConstants.lnIsEmptyContainer; }
 
         int contentLength = getNakedValueLength();
         if (contentLength > IonConstants.lnIsVarLen)

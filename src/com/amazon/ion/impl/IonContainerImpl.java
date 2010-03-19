@@ -275,7 +275,7 @@ abstract public class IonContainerImpl
         {
             assert _hasNativeValue() == true || _isPositionLoaded() == false;
             for (int ii=0; ii<get_child_count(); ii++) {
-                IonValueImpl aChild = (IonValueImpl) get_child(ii);;
+                IonValueImpl aChild = (IonValueImpl) get_child(ii);
                 length += aChild.getFullEncodedSize();
             }
         }
@@ -500,10 +500,10 @@ abstract public class IonContainerImpl
     public SymbolTable populateSymbolValues(SymbolTable symtab)
     {
         // the "super" copy of this method will check the lock
-        super.populateSymbolValues(symtab);
+        symtab = super.populateSymbolValues(symtab);
         for (int ii=0; ii<_child_count; ii++) {
             IonValue v = get_child(ii);
-            ((IonValueImpl)v).populateSymbolValues(symtab);
+            symtab = ((IonValueImpl)v).populateSymbolValues(symtab);
         }
         return symtab;
     }

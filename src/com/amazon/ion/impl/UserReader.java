@@ -49,7 +49,7 @@ public class UserReader
     public UserReader(SystemReader systemReader)
     {
         _systemReader = systemReader;
-        _localSymbolTable = systemReader.getLocalSymbolTable();
+        _localSymbolTable = null; // systemReader.getLocalSymbolTable();
     }
 
     public void setBufferToRecycle() {
@@ -86,6 +86,7 @@ public class UserReader
             assert _next != null;
 
             if (this._systemReader.currentIsHidden()) {
+                _localSymbolTable = null; // we'll be resetting this shortly
                 _next = null;
             }
         }
@@ -102,7 +103,7 @@ public class UserReader
             if (_next != null) {
                 IonValue retval = _next;
                 _next = null;
-                _localSymbolTable = _systemReader.getLocalSymbolTable();
+                _localSymbolTable = _systemReader.getSymbolTable();
                 if (this._recycle_buffer) {
                     ((IonValueImpl)retval).clear_position_and_buffer();
                 }
@@ -137,26 +138,29 @@ public class UserReader
 
     public SymbolTable getLocalSymbolTable()
     {
+        if (_localSymbolTable == null) {
+            _localSymbolTable = _systemReader.getLocalSymbolTable();
+        }
         return _localSymbolTable;
     }
 
-    /**
-     * This cannot be called between {@link #hasNext()} and {@link #next()}.
-     * @param symbols must be local, not shared.
-     */
-    public void setLocalSymbolTable(SymbolTable symbols)
-    {
-        if (_next != null) {
-            throw new IllegalStateException();
-        }
-        _systemReader.setLocalSymbolTable(symbols);
-        _localSymbolTable = symbols;
-    }
+//    /**
+//     * This cannot be called between {@link #hasNext()} and {@link #next()}.
+//     * @param symbols must be local, not shared.
+//     */
+//    public void setLocalSymbolTable(SymbolTable symbols)
+//    {
+//        if (_next != null) {
+//            throw new IllegalStateException();
+//        }
+//        _systemReader.setLocalSymbolTable(symbols);
+//        _localSymbolTable = symbols;
+//    }
 
-    public boolean canSetLocalSymbolTable()
-    {
-        return _systemReader.canSetLocalSymbolTable();
-    }
+//    public boolean canSetLocalSymbolTable()
+//    {
+//        return _systemReader.canSetLocalSymbolTable();
+//    }
 
     public void close()
     {

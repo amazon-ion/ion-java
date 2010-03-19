@@ -10,6 +10,7 @@ import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import com.amazon.ion.util.Equivalence;
 import com.amazon.ion.util.Printer;
 import java.io.BufferedInputStream;
@@ -50,6 +51,7 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
     {
         return new String[]
         {
+             "good/annotationIVM.ion",
 //             "equivs/stringU0001D11E.ion",
 //             "equivs/stringU0120.ion",
 //             "equivs/stringU2021.ion",
@@ -134,7 +136,12 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
         {
             IonReader in = makeIterator(buffer);
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-            IonWriter tw = system().newTextWriter(out, prettyPrint);
+            TextOptions options = new TextOptions(prettyPrint // boolean prettyPrint
+                                                 ,false // boolean printAscii
+                                                 ,false // boolean filterOutSymbolTables
+                                                 ,true  // boolean suppressIonVersionMarker
+                                  );
+            IonWriter tw = system().newTextWriter(out, options);
 
             tw.writeValues(in);
             tw.flush();
@@ -373,6 +380,7 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
         {
             roundTripBufferResults stream =
                 new roundTripBufferResults(pass + " stream");
+
             roundTripBufferResults tree =
                 new roundTripBufferResults(pass + " tree");
 
@@ -382,20 +390,20 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
             // load() takes ownership of the buffer
             IonDatagram inputDatagram = loader().load(testBuffer.clone());
 
-            // Turn the DOM back into text...
-            tree.string     = makeString(inputDatagram);
-            tree.utf8_buf   = tree.string.getBytes("UTF-8");
-            tree.utf8_pretty= tree.string.getBytes("UTF-8"); // FIXME hack
-            tree.binary     = makeBinary(inputDatagram);
-            tree.ion        = inputDatagram;
-            checkBinaryHeader(tree.binary);
-
-            stream.utf8_buf = makeText(testBuffer, false);
-            stream.utf8_pretty= makeText(testBuffer, true);
-            stream.string   = makeString(testBuffer);
-            stream.binary   = makeBinary(testBuffer);
-            stream.ion      = makeTree(testBuffer);
+            stream.utf8_buf    = makeText(testBuffer, false);
+            stream.utf8_pretty = makeText(testBuffer, true);
+            stream.string      = makeString(testBuffer);
+            stream.binary      = makeBinary(testBuffer);
+            stream.ion         = makeTree(testBuffer);
             checkBinaryHeader(stream.binary);
+
+            // Turn the DOM back into text...
+            tree.string        = makeString(inputDatagram);
+            tree.utf8_buf      = tree.string.getBytes("UTF-8");
+            tree.utf8_pretty   = tree.string.getBytes("UTF-8"); // FIXME hack
+            tree.binary        = makeBinary(inputDatagram);
+            tree.ion           = inputDatagram;
+            checkBinaryHeader(tree.binary);
 
             tree.compareResultsPass1(stream, myLoader);
 
@@ -455,10 +463,6 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
             int y = 2;
             int z;
             z = x + y;
-            roundTripBufferResults pass1 = roundTripBuffer("original buffer", myBuffer);
-            roundTripBufferResults pass2bin = roundTripBuffer("binary from pass 1",pass1.binary);
-            roundTripBufferResults pass2text = roundTripBuffer("utf8 from pass 1", pass1.utf8_buf);
-            roundTripBufferResults pass2pretty = roundTripBuffer("utf8 pretty from pass 1", pass1.utf8_pretty);
             return z;
         }
     }

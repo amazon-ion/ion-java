@@ -32,8 +32,10 @@ public class SystemReaderImpl
 
     private SymbolTable _currentSymbolTable;
 
+
     private boolean      _at_eof;
     private boolean      _currentIsHidden;
+    private boolean      _just_wrote_ivm;
     private IonValueImpl _curr;
     private IonValueImpl _next;
 
@@ -96,7 +98,8 @@ public class SystemReaderImpl
     {
         // TODO this should be an unmodifiable system symtab
         // but we can't yet replace it with a local symtab on-demand.
-        this(system, catalog, system.newLocalSymbolTable(), input);
+        // was: this(system, catalog, system.newLocalSymbolTable(), input);
+        this(system, catalog, null, input);
     }
 
     /**
@@ -115,7 +118,7 @@ public class SystemReaderImpl
         {
             throw new NullPointerException();
         }
-        assert initialSymboltable.isLocalTable();
+        assert initialSymboltable == null || initialSymboltable.isLocalTable();
 
         _system = system;
         _catalog = catalog;
@@ -171,7 +174,7 @@ public class SystemReaderImpl
 
         // TODO this should be an unmodifiable system symtab
         // but we can't yet replace it with a local symtab on-demand.
-        _currentSymbolTable = system.newLocalSymbolTable();
+        _currentSymbolTable = null; //  was: system.newLocalSymbolTable();
         _buffer = buffer;
         _buffer_offset = reader.position();
     }
@@ -211,7 +214,7 @@ public class SystemReaderImpl
 
         // TODO this should be an unmodifiable system symtab
         // but we can't yet replace it with a local symtab on-demand.
-        _currentSymbolTable = system.newLocalSymbolTable();
+        _currentSymbolTable = null; // system.newLocalSymbolTable();
         _buffer_offset = reader.position();
 
         return;
@@ -272,7 +275,7 @@ public class SystemReaderImpl
         // we'll try to read data in in reasonable sized chunks
         // (like a blocks worth)
         writer.setPosition(buffer_length);
-        int room_in_block = writer._curr.bytesAvailableToWrite(0); //         // .blockCapacity() - buffer_length;
+        int room_in_block = writer._curr.bytesAvailableToWrite(0); // .blockCapacity() - buffer_length;
         if (bytes_to_load < room_in_block) {
             bytes_to_load = room_in_block;
             // FIXME but now we may load too few bytes
@@ -344,30 +347,33 @@ public class SystemReaderImpl
         return _catalog;
     }
 
-    public SymbolTable getLocalSymbolTable() {
+    protected int addSymbol(String name)
+    {
+        SymbolTable symbols = this.getSymbolTable();
+        int sid = symbols.findSymbol(name);
+        if (sid < 1) {
+            symbols = this.getLocalSymbolTable();
+            sid = symbols.addSymbol(name);
+        }
+        return sid;
+    }
+
+    public SymbolTable getSymbolTable()
+    {
+        if (_currentSymbolTable == null) {
+            _currentSymbolTable = _system.getSystemSymbolTable();
+        }
         return _currentSymbolTable;
     }
 
-
-    public boolean canSetLocalSymbolTable()
+    public SymbolTable getLocalSymbolTable()
     {
-        // If parser is set, we're scanning binary data.
-        return (_parser != null);
-    }
-
-    /**
-     * Cannot be called between {@link #hasNext()} and {@link #next()}.
-     * @param symbolTable must be local, not shared.
-     */
-    public void setLocalSymbolTable(SymbolTable symbolTable) {
-        if (_parser == null) {
-            throw new UnsupportedOperationException();
+        SymbolTable symbols = this.getSymbolTable();
+        if (UnifiedSymbolTable.isLocalTable(symbols) == false) {
+            symbols = UnifiedSymbolTable.makeNewLocalSymbolTable(symbols);
+            _currentSymbolTable = symbols;
         }
-        if (_next != null) {
-            throw new IllegalStateException();
-        }
-        assert symbolTable.isLocalTable();
-        _currentSymbolTable = symbolTable;
+        return symbols;
     }
 
     /**
@@ -391,80 +397,87 @@ public class SystemReaderImpl
         BufferManager buffer = _buffer;
         // just to make the other code easier to read, and write
 
-        // ok, now we walk on ahead
-        if (_stream != null) {
-            // if we have a stream to read from this is reading streaming binary
-            // and we alway read 1 top level value at a time by prereading to get
-            // the length and the loading at least that much in from the stream
-            // in this case we don't care if there happens to be data in the
-            // buffer for us, since we might have over-read on the last value
-            // and we have a partial loaded - we'll check that out by looking
-            // at the length
+        try {
 
-            int len;
-            try {
-                len = peekLength();
+            // ok, now we walk on ahead
+            if (_stream != null) {
+                // if we have a stream to read from this is reading streaming binary
+                // and we alway read 1 top level value at a time by prereading to get
+                // the length and the loading at least that much in from the stream
+                // in this case we don't care if there happens to be data in the
+                // buffer for us, since we might have over-read on the last value
+                // and we have a partial loaded - we'll check that out by looking
+                // at the length
+
+                int len = peekLength();
                 if (len < 1) {
                     _at_eof = true;
                 }
                 else {
                     loadBuffer(len);
                 }
-            } catch (IOException e) {
-                throw new IonException(e);
+
             }
+            else if (buffer.buffer().size() <= _buffer_offset) {
+                // if the buffer has run out of data then we need to refill it
+                // this happens when we're parsing text (if we were reading
+                // binary either the data would be loaded or we're at eof)
 
-        }
-        else if (buffer.buffer().size() <= _buffer_offset) {
-            // if the buffer has run out of data then we need to refill it
-            // this happens when we're parsing text (if we were reading
-            // binary either the data would be loaded or we're at eof)
-
-            // we used up the buffer we've seen so far ...
-            // so parse another value out of the input
-            if (_parser != null) {
-                boolean freshBuffer = _buffer_offset == 0;
-                // cas 22 apr 2008:
-                freshBuffer = false; // this is really the "write magic cookie" flag
-                _parser.parse(_currentSymbolTable
-                              ,_buffer_offset
-                              ,freshBuffer
-                              ,0
-                );
-                if (freshBuffer) {
-                    // We wrote a magic cookie; skip it.
-                    _buffer_offset = BINARY_VERSION_MARKER_SIZE;
+                // we used up the buffer we've seen so far ...
+                // so parse another value out of the input
+                if (_parser != null)
+                {
+                    if (_buffer_offset == 0) {
+                        // Start the buffer with the BVM.
+                        IonBinary.Writer writer = buffer.openWriter();
+                         writer.setPosition(_buffer_offset);
+                        writer.write(IonConstants.BINARY_VERSION_MARKER_1_0);
+                        _just_wrote_ivm = true;
+                    }
+                    else {
+                        _parser.parse( this // was: getLocalSymbolTable() // _currentSymbolTable
+                                      ,_buffer_offset
+                                      ,_just_wrote_ivm
+                                      ,0
+                        );
+                    }
+                }
+                if (buffer.buffer().size() <= _buffer_offset) {
+                    // we didn't make any progress,
+                    // so there's no more data for us
+                    _at_eof = true;
                 }
             }
-            if (buffer.buffer().size() <= _buffer_offset) {
-                // we didn't make any progress,
-                // so there's no more data for us
-                _at_eof = true;
+
+            // now that we've got a value in the buffer (well we have one if we're not at eof)
+            if (!_at_eof) {
+                // there is some sort a value, we'll get it and check it out
+                // until we find something we like
+                IonBinary.Reader reader = buffer.reader();
+                reader.sync();
+                reader.setPosition(_buffer_offset);
+                IonValueImpl value = IonValueImpl.makeValueFromReader(0
+                                                        ,reader
+                                                        ,buffer
+                                                        ,_currentSymbolTable
+                                                        ,(IonContainerImpl)null
+                                                        ,_system
+                );
+
+                // move along on the buffer
+                _buffer_offset = value.pos_getOffsetofNextValue();
+
+                _next = value;
+                checkCurrentForHiddens(value);
             }
+
         }
-
-        // now that we've got a value in the buffer (well we have one if we're not at eof)
-        if (!_at_eof) {
-            // there is some sort a value, we'll get it and check it out
-            // until we find something we like
-            IonValueImpl value =
-                IonValueImpl.makeValueFromBuffer(0
-                                                 ,_buffer_offset
-                                                 ,buffer
-                                                 ,this._currentSymbolTable
-                                                 ,null
-                                                 ,_system
-            );
-
-            // move along on the buffer
-            _buffer_offset = value.pos_getOffsetofNextValue();
-
-            _next = value;
+        catch (IOException e) {
+            throw new IonException(e);
         }
 
         return _next;
     }
-
 
     public IonValueImpl next() {
         if (! _at_eof) {
@@ -475,39 +488,40 @@ public class SystemReaderImpl
             if (_next != null) {
                 _curr = _next;
                 _next = null;
-
-                checkCurrentForHiddens();
-
                 return _curr;
             }
         }
         throw new NoSuchElementException();
     }
 
-    private void checkCurrentForHiddens()
+    private void checkCurrentForHiddens(final IonValue curr)
     {
-        final IonValue curr = _curr;
-
         if (IonSystemImpl.valueIsLocalSymbolTable(curr))
         {
             IonStruct struct = (IonStruct)curr;
             SymbolTable sys = _system.getSystemSymbolTable();
             _currentSymbolTable = UnifiedSymbolTable.makeNewLocalSymbolTable(sys, _catalog, struct);
             _currentIsHidden = true;
+            _just_wrote_ivm = false;
         }
         else if (_system.valueIsSystemId(curr))
         {
-            assert curr.getSymbolTable().isLocalTable(); // Unfortunately
-            // This makes the value dirty:
+//            SymbolTable symbols = curr.getSymbolTable();
+// no longer true         assert symbols.isLocalTable(); // Unfortunately
+
+            // This makes the value dirty
+            // and clears the symbol table:
             _system.blessSystemIdSymbol((IonSymbolImpl) curr);
 
-            SymbolTable identifiedSystemTable = curr.getSymbolTable();
-            _currentSymbolTable =
-                _system.newLocalSymbolTable(identifiedSystemTable);
+            // we're leaving this for the next value since the
+            // parser put the local symbol table on the $ion_1_0 (in error)
+            _currentSymbolTable = ((IonValuePrivate)curr).getAssignedSymbolTable();
             _currentIsHidden = true;
+            _just_wrote_ivm = true;
         }
         else {
             _currentIsHidden = false;
+            _just_wrote_ivm = false;
         }
     }
 

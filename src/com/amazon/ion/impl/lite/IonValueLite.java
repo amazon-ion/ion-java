@@ -422,6 +422,53 @@ public abstract class IonValueLite
         return symbols;
     }
 
+    public SymbolTable getUpdatableSymbolTable()
+    {
+        SymbolTable symbols = getSymbolTable();
+        if (UnifiedSymbolTable.isLocalTable(symbols)) {
+            return symbols;
+        }
+        if (symbols == null) {
+            symbols = getSystem().getSystemSymbolTable();
+            symbols = UnifiedSymbolTable.makeNewLocalSymbolTable(symbols);
+        }
+        return symbols;
+    }
+
+    public int resolveSymbol(String name)
+    {
+        SymbolTable symbols = getSymbolTable();
+        if (symbols == null) {
+            return UnifiedSymbolTable.UNKNOWN_SID;
+        }
+        int sid = symbols.findSymbol(name);
+        return sid;
+    }
+
+    public String resolveSymbol(int sid)
+    {
+        SymbolTable symbols = getSymbolTable();
+        if (symbols == null) {
+            return null;
+        }
+        String name = symbols.findKnownSymbol(sid);
+        return name;
+    }
+
+    public int addSymbol(String name)
+    {
+        checkForLock();
+
+        int sid = resolveSymbol(name);
+        if (sid != UnifiedSymbolTable.UNKNOWN_SID) {
+            return sid;
+        }
+
+        SymbolTable symbols = getUpdatableSymbolTable();
+        sid = symbols.addSymbol(name);
+        return sid;
+    }
+
     public IonSystem getSystem()
     {
         return _context.getSystemLite();

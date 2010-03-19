@@ -663,7 +663,8 @@ public class IonWriterSystemBinary
         else {
             _writer.write((IonConstants.tidPosInt << 4) | len);
         }
-        _writer.writeVarUInt8Value(positive, len, false);
+        int wroteLen = _writer.writeVarUInt8Value(positive, len, false);
+        assert wroteLen == len;
         patch(1 + len);
 
     }
@@ -699,7 +700,9 @@ public class IonWriterSystemBinary
         if (len >= IonConstants.lnIsVarLen) {
             _writer.writeVarUInt7Value(len, true);
         }
-        patch_len += _writer.writeDecimalContent(value, false);
+        int wroteLen = _writer.writeDecimalContent(value, false);
+        assert wroteLen == len;
+        patch_len += wroteLen;
         patch(patch_len);
     }
     public void writeIonVersionMarker() throws IOException

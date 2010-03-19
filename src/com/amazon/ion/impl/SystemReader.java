@@ -52,10 +52,11 @@ public interface SystemReader
 
     public IonSystem getSystem();
     public IonCatalog getCatalog();
+    public SymbolTable getSymbolTable();
     public SymbolTable getLocalSymbolTable();
     public boolean currentIsHidden();
-    public boolean canSetLocalSymbolTable();
-    public void setLocalSymbolTable(SymbolTable symbolTable);
+//    public boolean canSetLocalSymbolTable();
+//    public void setLocalSymbolTable(SymbolTable symbolTable);
     public BufferManager getBuffer();
     public void resetBuffer();
     public void close() throws IOException;

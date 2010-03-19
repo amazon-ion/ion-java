@@ -4,6 +4,7 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.impl.IonSystemPrivate;
 import java.util.Iterator;
 
 /**
@@ -25,7 +26,9 @@ public class IteratorSystemProcessingTest
     protected Iterator<IonValue> systemIterate()
         throws Exception
     {
-        return system().systemIterate(myText);
+        IonSystemPrivate sys = system();
+        Iterator<IonValue> it = sys.systemIterate(myText);
+        return it;
     }
 
 

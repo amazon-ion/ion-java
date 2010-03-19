@@ -226,8 +226,13 @@ public class IonSystemImpl
             {
                 IonDatagramImpl dg =
                     new IonDatagramImpl(this, this.getCatalog(), (IonReader) null);
-                // Force symtab preparation  FIXME should not be necessary
-                dg.byteSize();
+// Force symtab preparation  FIXME should not be necessary
+
+
+// dg.byteSize();
+
+
+
                 return dg;
             }
             catch (IOException e)
@@ -335,7 +340,7 @@ public class IonSystemImpl
         //                        reader);
         SystemReader sysreader = SystemReaderImpl.makeSystemReader(this,
                                                                 getCatalog(),
-                                                                newLocalSymbolTable(),
+                                                                newLocalSymbolTable(),  // FIXME: should be null
                                                                 reader);
         return sysreader;
 
@@ -881,10 +886,23 @@ public class IonSystemImpl
         // TODO what if the symbol already has a symtab?
         // TODO what if the symbol already has a different system?
 
-        SymbolTable symtab = getSystemSymbolTable(systemId.stringValue());
+        SymbolTable symtab = systemId.getSymbolTable();
+
+        // generally we don't want the IVM holding the symbol
+        // table, but if it has an annotation it's another matter
+        if (systemId.getTypeAnnotations().length == 0) {
+            symtab = getSystemSymbolTable(systemId.stringValue());
+        }
+        else if (UnifiedSymbolTable.isLocalTable(symtab) == false) {
+            if (symtab == null) {
+                symtab = this.mySystemSymbols;
+            }
+            symtab = UnifiedSymbolTable.makeNewLocalSymbolTable(symtab);
+        }
 
         systemId.setSymbolTable(symtab);  // This clears the sid
         systemId.setIsIonVersionMarker(true);
+        systemId.setDirty();
         assert systemId.getSymbolId() == 2;
     }
 

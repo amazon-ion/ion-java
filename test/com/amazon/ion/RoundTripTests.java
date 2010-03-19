@@ -193,6 +193,7 @@ public class RoundTripTests
     {
         return new String[]
         {
+             "good/annotationIVM.ion",
              // "equivs/symbols.ion",
         };
     }

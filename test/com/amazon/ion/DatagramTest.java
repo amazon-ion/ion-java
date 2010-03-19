@@ -222,8 +222,10 @@ public class DatagramTest
         throws Exception
     {
         IonSystem system = system();
+
         IonInt i = system.newNullInt();
         i.setValue(65);
+
         IonStruct struct = system.newNullStruct();
         SymbolTable sym = struct.getSymbolTable();
         if (sym == null) {
@@ -231,7 +233,9 @@ public class DatagramTest
             ((IonValueImpl)struct).setSymbolTable(sym);
         }
         struct.put("ii", i);
+
         IonDatagram dg = system.newDatagram(struct);
+
         assertSame(struct, dg.get(0));
         IonStruct reloadedStruct = (IonStruct) dg.get(0);  // XXX
         assertEquals(struct, reloadedStruct);  // XXX
@@ -449,10 +453,13 @@ public class DatagramTest
         final int LOCAL_ID_OFFSET  = FRED_ID_OFFSET + FRED_MAX_IDS[1];
 
         SymbolTable fred1   = Symtabs.register("fred",   1, catalog());
+        IonSymbol   sym;
 
         IonDatagram dg = system().newDatagram(fred1);
-        dg.add(system().newSymbol("fred_2"));
-        dg.add(system().newSymbol("localSym"));
+        sym = system().newSymbol("fred_2");
+        dg.add(sym);
+        sym = system().newSymbol("localSym");
+        dg.add(sym);
 
 
         byte[] bytes = dg.getBytes();

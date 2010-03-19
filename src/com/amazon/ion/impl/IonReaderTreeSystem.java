@@ -511,7 +511,11 @@ public class IonReaderTreeSystem
         {
             if (parent instanceof IonContainerPrivate) {
                 _parent = (IonContainerPrivate)parent;
-                // _parent.makeReady();
+
+if (_parent instanceof IonValueImpl) {
+((IonValueImpl)_parent).makeReady();
+}
+
                 _next_idx = 0;
                 _curr = null;
                 if (_parent.isNullValue()) {

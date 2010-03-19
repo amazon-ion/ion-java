@@ -2,6 +2,7 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.impl.IonValuePrivate;
 import java.util.Iterator;
 
 /**
@@ -37,7 +38,8 @@ public class NewDatagramIteratorSystemProcessingTest
         writer.writeValues(reader);
         writer.flush();
 
-        datagram.deepMaterialize();
+        // not needed, used populateSymbolValue instead: datagram.deepMaterialize();
+        ((IonValuePrivate)datagram).populateSymbolValues(null);
 
         return datagram.iterator();
     }
@@ -53,6 +55,14 @@ public class NewDatagramIteratorSystemProcessingTest
         //      datagram.byteSize();
 
         IonDatagram datagram = system().newDatagram();
+
+        // FIXME: hack - maybe this is simply surpassed by the lite
+        //               but here we can have an extra $ion_1_0 if
+        //               it is present in the input text since the
+        //               newDatagram() forces one into the binary
+        //               buffer as well.
+
+
         IonWriter writer = system().newTreeSystemWriter(datagram);
         writer.writeValues(reader);
         writer.flush();

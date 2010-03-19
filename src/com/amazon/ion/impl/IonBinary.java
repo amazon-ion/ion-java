@@ -566,7 +566,7 @@ public class IonBinary
 
     public static int lenVarInt8(BigInteger bi, boolean force_zero_writes)
     {
-        int len = bi.bitLength() + 1; // add 1 for the sign bit (which must always be present)
+        int len = bi.abs().bitLength() + 1; // add 1 for the sign bit (which must always be present)
         int bytelen = 0;
 
         switch (bi.signum()) {
@@ -2712,12 +2712,12 @@ done:       for (;;) {
          */
 
         /**
-         * @param symtab must be local, not shared, not null.
+         * @param sid must be valid id (>=1)
          */
-        public int writeSymbolWithTD(String s, SymbolTable symtab)
+        public int writeSymbolWithTD(int sid) // was: (String s, SymbolTable symtab)
             throws IOException
         {
-            int sid = symtab.addSymbol(s);
+            // was: int sid = symtab.addSymbol(s);
             assert sid > 0;
 
             int vlen = lenVarUInt8(sid);
@@ -2818,7 +2818,9 @@ done:       for (;;) {
                                                    IonConstants.tidTimestamp
                                                    ,vlen);
 
-                returnlen += writeTimestamp(di);
+                int wroteLen = writeTimestamp(di);
+                assert wroteLen == vlen;
+                returnlen += wroteLen;
             }
             return returnlen;
         }

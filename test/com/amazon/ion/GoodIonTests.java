@@ -27,6 +27,10 @@ public class GoodIonTests
         public void runTest()
             throws Exception
         {
+            if (myTestFile.getName().startsWith("__")) {
+                System.out.println("debug file encountered: "+myTestFile.getName());
+            }
+
             // Pass 1: Use Loader to read the data
             IonDatagram datagram = load(myTestFile);
 
@@ -105,11 +109,7 @@ public class GoodIonTests
     {
         return new String[]
         {
-//            "equivs/stringU0001D11E.ion",
-//            "equivs/stringU0120.ion",
-//            "equivs/stringU2021.ion",
-//            "equivs/symbols.ion",
-//            "equivs/textNewlines.ion",
+            "good/annotationIVM.ion",
         };
     }
 }

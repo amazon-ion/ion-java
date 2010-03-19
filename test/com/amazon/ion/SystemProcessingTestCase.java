@@ -36,8 +36,8 @@ public abstract class SystemProcessingTestCase
         String classid = getDebugClassId();
 
 // FIXME: set these to null so we don't stop or print anything
-        String interesting_classid = "ReaderSystemProcessingTestCase";
-        String interesting_testid = "testLocalTableResetting";
+        String interesting_classid = "NewDatagramIteratorSystemProcessingTest";
+        String interesting_testid = "testSystemIterationShowsIvm";
 
 
         current_test = testid;
@@ -171,7 +171,8 @@ public abstract class SystemProcessingTestCase
 
         nextValue();
         checkSymbol("foo");
-        assertSame(table1, currentSymtab());
+        SymbolTable current = currentSymtab();
+        assertSame(table1, current);
 
         // The symbol table changes here ...
         nextValue();
@@ -187,6 +188,7 @@ public abstract class SystemProcessingTestCase
         // we should have reset to the system symbol table here
         SymbolTable table3 = currentSymtab();
         assertNotSame(table1, table3);
+        // nope, this may be the next local that will hold 'far' and 'boo': assertTrue("the reset table should be a trivial table (system or null)", UnifiedSymbolTable.isTrivialTable(table3));
 
         nextValue();
         checkSymbol("far");
@@ -207,7 +209,8 @@ if (table1 == table2) {
 
         nextValue();
         checkSymbol("boo");
-        assertSame(table2, currentSymtab());
+        SymbolTable table4 = currentSymtab();
+        assertSame(table2, table4);
     }
 
     public void testTrivialLocalTableResetting()
@@ -237,9 +240,9 @@ if (table1 == table2) {
 //           a number of readers and writers you might or
 //           might not preserve the $ion_1_0
         if (!IonType.INT.equals(currentValueType())) {
-            checkSymbol("$ion_1_0");  // if we didn't hit the int 1 then we should have the $ion_1_0
+            // if we didn't hit the int 2 then we should have the $ion_1_0
+            checkSymbol("$ion_1_0");
             nextValue();
-            // ???
         }
 
         checkInt(2);

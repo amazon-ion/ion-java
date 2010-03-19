@@ -108,10 +108,29 @@ public final class IonSymbolImpl
         if (this.isNullValue()) return null;
 
         makeReady();
+
+        String value = _get_value();
+
+        // this only decodes a valid value if the symbol
+        // is of the form $<digits>
+        int sid = UnifiedSymbolTable.decodeIntegerSymbol(value);
         if (this._hasNativeValue()) {
-            return _get_value();
+            if (sid != UnifiedSymbolTable.UNKNOWN_SYMBOL_ID) {
+                SymbolTable symbols = this.getSymbolTable();
+                if (symbols != null) {
+                     value = symbols.findSymbol(sid);
+                }
+            }
         }
-        return this.getSymbolTable().findSymbol(this.getSymbolId());
+        else {
+            // we have to look up the string for this
+            sid = this.getSymbolId();
+            SymbolTable symbols = this.getSymbolTable();
+            if (symbols != null) {
+                 value = symbols.findSymbol(sid);
+            }
+        }
+        return value;
     }
 
     @Deprecated
@@ -234,11 +253,17 @@ public final class IonSymbolImpl
         makeReady();
 
         // the super method will check for the lock
-        super.populateSymbolValues(symtab);
+        symtab = super.populateSymbolValues(symtab);
 
         if (mySid < 1 && this.isNullValue() == false) {
             assert _hasNativeValue() == true && isDirty();
-            mySid = symtab.addSymbol(this._get_value());
+
+            String s = this._get_value();
+            mySid = this.resolveSymbol(s);
+            if (mySid < 1) {
+                symtab = this.addSymbol(s, symtab);
+                mySid = this.resolveSymbol(s);
+            }
         }
 
         return symtab;
@@ -249,7 +274,7 @@ public final class IonSymbolImpl
     {
         int len;
 
-        if (this._is_IonVersionMarker) {
+        if (this._is_IonVersionMarker) {  // FIXME: WHAT IF THE ivm HAS ANNOTATIONS ??
             len = IonConstants.BINARY_VERSION_MARKER_SIZE - IonConstants.BB_TOKEN_LEN;
         }
         else {

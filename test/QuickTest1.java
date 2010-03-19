@@ -1,4 +1,6 @@
 import com.amazon.ion.IonBinaryWriter;
+import com.amazon.ion.IonDatagram;
+import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
@@ -6,10 +8,13 @@ import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.UnifiedSymbolTable;
+import com.amazon.ion.system.SimpleCatalog;
 import com.amazon.ion.system.SystemFactory;
 import com.amazon.ion.system.SystemFactory.SystemCapabilities;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -24,6 +29,53 @@ import java.util.zip.GZIPInputStream;
  */
 public class QuickTest1
 {
+
+    static void testIonV3Regression() throws Exception
+    {
+        // C:\src\brazil\src\shared\platform\IonTests\mainline\iontestdata\failed
+        //   iopg.ion is the symbol table
+
+        IonSystem sys = SystemFactory.newSystem(SystemCapabilities.ORIGINAL);
+        IonLoader loader = sys.getLoader();
+
+        String    path = "C:\\src\\brazil\\src\\shared\\platform\\IonTests\\mainline\\iontestdata\\failed\\";
+        String    symbolTableName = path + "iopg.ion";
+        File      symbolTableFile = new File(symbolTableName);
+
+        IonDatagram dg = loader.load(symbolTableFile);
+        IonValue    symbolTableStruct = dg.get(0);
+        assert(symbolTableStruct instanceof IonStruct && symbolTableStruct.hasTypeAnnotation(UnifiedSymbolTable.ION_SHARED_SYMBOL_TABLE));
+
+        SymbolTable   symbolTable = UnifiedSymbolTable.makeNewSharedSymbolTable((IonStruct)symbolTableStruct);
+        SimpleCatalog cat = new SimpleCatalog();
+        cat.putTable(symbolTable);
+
+        IonSystem sysWithCatalog = SystemFactory.newSystem(cat);
+        IonLoader loaderWithCatalog = sysWithCatalog.getLoader();
+
+        File dir = new File(path);
+        for (String filename : dir.list()) {
+            if (filename.contains(".10n") == false) {
+                continue;
+            }
+            File testFile = new File(path+filename);
+
+            System.out.println((testFile.canRead() ? "can read" : "NO READ ACCESS") +": "+ filename);
+
+            IonDatagram value = loaderWithCatalog.load(testFile);
+            if (value != null) System.out.println("ok");
+        }
+
+    }
+
+    public static void test128()
+    {
+        String value = "-1.28";
+
+        IonSystem sys = SystemFactory.newSystem(SystemCapabilities.ORIGINAL);
+        IonValue v = sys.getLoader().load(value);
+        IonValue currency = sys.singleValue(value);
+    }
 
     public static void ivsv3test2() {
         String value = "MarketplaceConfig::{schema:\"marketplaceConfig@1.0\",marketplace_id:12345678,marketplace_name:\"test marketplace\","
@@ -124,12 +176,15 @@ public class QuickTest1
     }
     public static void main(String[] args) throws Exception
     {
+
+        testIonV3Regression();
+
+        if (true) return;
+
+        test128();
         ivsv3test2();
-
         testStruct();
-
         test_doubles();
-
         ioncpputf8();
 
         String x = UnifiedSymbolTable.IMPORTS;

@@ -734,7 +734,8 @@ public abstract class IonWriterBaseImpl
         write_value_annotations_helper(reader);
 
         if (reader.isNullValue()) {
-            this.writeNull(reader.getType());  // TODO hoist getType
+            // TODO hoist getType
+            this.writeNull(reader.getType());
         }
         else {
             switch (reader.getType()) {
