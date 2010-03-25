@@ -386,43 +386,12 @@ public class IonReaderTextRawTokensX
         switch (lobToken) {
         case IonTokenConstsX.TOKEN_STRING_DOUBLE_QUOTE:
         case IonTokenConstsX.TOKEN_STRING_TRIPLE_QUOTE:
-        case IonTokenConstsX.TOKEN_OPEN_DOUBLE_BRACE:
             break;
         default:
             return;
         }
 
         int c = skip_over_whitespace();
-
-        switch (lobToken) {
-        case IonTokenConstsX.TOKEN_STRING_TRIPLE_QUOTE:
-            // read the next 2 closing single quotes
-            if (c == '\'') {
-                c = read_char();
-                if (c == '\'') {
-                    c = read_char();
-                }
-            }
-            if (c != '\'') {
-                error("invalid closing puctuation for CLOB, expected double quote");
-            }
-            // now read for what should be the first of two closing braces
-            c = skip_over_whitespace();
-            break;
-        case IonTokenConstsX.TOKEN_STRING_DOUBLE_QUOTE:
-            // we should have seen a closing double quote
-            if (c != '"') {
-                error("invalid closing puctuation for CLOB, expected double quote");
-            }
-            // now read for what should be the first of two closing braces
-            c = skip_over_whitespace();
-            break;
-        case IonTokenConstsX.TOKEN_OPEN_DOUBLE_BRACE:
-        default:
-            return;
-        }
-
-
         if (c == '}') {
             c = read_char();
             if (c == '}') {
@@ -1693,9 +1662,10 @@ public class IonReaderTextRawTokensX
                 return;
             case '\\':
                 c = read_char();
-                if (c == '\\') {
-                    c = read_char();
-                }
+// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+//                if (c == '\\') {
+//                    c = read_char();
+//                }
                 break;
             }
         }
@@ -1758,10 +1728,14 @@ public class IonReaderTextRawTokensX
                 return;
             case '\\':
                 c = read_char();
-                if (c == '\\') {
-                    // we don't want the escaped slash to be re-escaped
-                    c = read_char();
-                }
+
+// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+//if (c == '\\') {
+//// we don't want the escaped slash to be re-escaped
+//c = read_char();
+//}
+
                 break;
             }
         }
@@ -1855,10 +1829,11 @@ public class IonReaderTextRawTokensX
                 break;
             case '\\':
                 c = read_char();
-                if (c == '\\') {
-                    // we don't want the escaped slash to be re-escaped
-                    c = read_char();
-                }
+// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+//                if (c == '\\') {
+//                    // we don't want the escaped slash to be re-escaped
+//                    c = read_char();
+//                }
                 break;
             }
         }
