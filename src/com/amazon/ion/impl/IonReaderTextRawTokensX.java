@@ -386,13 +386,43 @@ public class IonReaderTextRawTokensX
         switch (lobToken) {
         case IonTokenConstsX.TOKEN_STRING_DOUBLE_QUOTE:
         case IonTokenConstsX.TOKEN_STRING_TRIPLE_QUOTE:
+        case IonTokenConstsX.TOKEN_OPEN_DOUBLE_BRACE:
             break;
         default:
             return;
         }
 
-        boolean any_whitespace = skip_whitespace();
-        int c = read_char();
+        int c = skip_over_whitespace();
+
+        switch (lobToken) {
+        case IonTokenConstsX.TOKEN_STRING_TRIPLE_QUOTE:
+            // read the next 2 closing single quotes
+            if (c == '\'') {
+                c = read_char();
+                if (c == '\'') {
+                    c = read_char();
+                }
+            }
+            if (c != '\'') {
+                error("invalid closing puctuation for CLOB, expected double quote");
+            }
+            // now read for what should be the first of two closing braces
+            c = skip_over_whitespace();
+            break;
+        case IonTokenConstsX.TOKEN_STRING_DOUBLE_QUOTE:
+            // we should have seen a closing double quote
+            if (c != '"') {
+                error("invalid closing puctuation for CLOB, expected double quote");
+            }
+            // now read for what should be the first of two closing braces
+            c = skip_over_whitespace();
+            break;
+        case IonTokenConstsX.TOKEN_OPEN_DOUBLE_BRACE:
+        default:
+            return;
+        }
+
+
         if (c == '}') {
             c = read_char();
             if (c == '}') {

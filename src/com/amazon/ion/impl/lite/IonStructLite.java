@@ -88,7 +88,7 @@ public class IonStructLite
     }
     protected void build_field_map()
     {
-        int size = _children.length;
+        int size = (_children == null) ? 0 : _children.length;
 
         _field_map = new HashMap<String, Integer>(size);
         _field_map_duplicate_count = 0;
