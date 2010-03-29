@@ -34,6 +34,8 @@ public class GoodIonTests
             // Pass 1: Use Loader to read the data
             IonDatagram datagram = load(myTestFile);
 
+            // Pass 1a: Use Loader to read the data as a Java String where applicable
+            loadAsJavaString(myTestFile);
 
             // Pass 2: Use IonReader
             IonReader treeReader = system().newReader(datagram);
