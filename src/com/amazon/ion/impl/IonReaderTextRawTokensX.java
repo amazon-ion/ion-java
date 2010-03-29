@@ -831,7 +831,9 @@ public class IonReaderTextRawTokensX
         int   read_char_count = 0;
         int   c;
 
-        assert(IonTokenConstsX.isDigit(c1));
+        if (!IonTokenConstsX.isDigit(c1)) {
+            error(String.format("Expected digit, got U+%04X", c1));
+        }
 
         // the caller needs to unread this if they want to: read_chars[read_char_count++] = c1;
 
