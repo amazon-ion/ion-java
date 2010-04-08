@@ -609,10 +609,11 @@ public final class Timestamp
 
         // check for 'null.timestamp'
         if (image.charAt(0) == 'n') {
-            if (NULL_TIMESTAMP_IMAGE.equals(image.subSequence(0, 13).toString())) {
+            if (length >= LEN_OF_NULL_IMAGE
+                && NULL_TIMESTAMP_IMAGE.equals(image.subSequence(0, 13).toString())) {
                 if (length > LEN_OF_NULL_IMAGE) {
                     if (!isValidFollowChar(image.charAt(LEN_OF_NULL_IMAGE + 1))) {
-                        throw new IllegalArgumentException("invalid excess characters encountered");
+                        throw new IllegalArgumentException("invalid timestamp: " + image);
                     }
                 }
                 return null;
