@@ -608,7 +608,7 @@ public class IonReaderTextRawTokensX
             // see if we have a number or what might be an extended symbol
             c2 = read_char();
             unread_char(c2);
-            if (Character.isDigit(c2)) {
+            if (IonTokenConstsX.isDigit(c2)) {
                 t = scan_negative_for_numeric_type(c);
                 unread_char(c);
                 return next_token_finish(t, true);
@@ -1377,7 +1377,7 @@ public class IonReaderTextRawTokensX
 
     private final int load_digits(StringBuilder sb, int c) throws IOException
     {
-        while (Character.isDigit(c)) {
+        while (IonTokenConstsX.isDigit(c)) {
             sb.append((char)c);
             c = read_char();
         }
@@ -1392,29 +1392,29 @@ public class IonReaderTextRawTokensX
         default:
             while (len > 4) {
                 c = read_char();
-                if (!Character.isDigit(c)) bad_token(c);
+                if (!IonTokenConstsX.isDigit(c)) bad_token(c);
                 sb.append((char)c);
                 len--;
             }
             // fall through
         case 4:
             c = read_char();
-            if (!Character.isDigit(c)) bad_token(c);
+            if (!IonTokenConstsX.isDigit(c)) bad_token(c);
             sb.append((char)c);
             // fall through
         case 3:
             c = read_char();
-            if (!Character.isDigit(c)) bad_token(c);
+            if (!IonTokenConstsX.isDigit(c)) bad_token(c);
             sb.append((char)c);
             // fall through
         case 2:
             c = read_char();
-            if (!Character.isDigit(c)) bad_token(c);
+            if (!IonTokenConstsX.isDigit(c)) bad_token(c);
             sb.append((char)c);
             // fall through
         case 1:
             c = read_char();
-            if (!Character.isDigit(c)) bad_token(c);
+            if (!IonTokenConstsX.isDigit(c)) bad_token(c);
             sb.append((char)c);
             break;
         }
@@ -1460,7 +1460,7 @@ public class IonReaderTextRawTokensX
         // hour
         sb.append((char)c);
         c = read_char();
-        if (!Character.isDigit(c)) {
+        if (!IonTokenConstsX.isDigit(c)) {
             return load_finish_number(c, IonTokenConstsX.TOKEN_TIMESTAMP);
         }
         sb.append((char)c);
