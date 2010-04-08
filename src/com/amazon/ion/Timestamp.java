@@ -583,7 +583,7 @@ public final class Timestamp
      */
     public static Timestamp valueOf(CharSequence image) {
         final String NULL_TIMESTAMP_IMAGE = "null.timestamp";
-        final int    LEN_OF_NULL_IMAGE    = 13;
+        final int    LEN_OF_NULL_IMAGE    = NULL_TIMESTAMP_IMAGE.length();
         final int    END_OF_YEAR          =  4;  // 1234T
         final int    END_OF_MONTH         =  7;  // 1234-67T
         final int    END_OF_DAY           = 10;  // 1234-67-90T
@@ -601,15 +601,16 @@ public final class Timestamp
         // check for 'null.timestamp'
         if (image.charAt(0) == 'n') {
             if (length >= LEN_OF_NULL_IMAGE
-                && NULL_TIMESTAMP_IMAGE.equals(image.subSequence(0, 13).toString())) {
+                && NULL_TIMESTAMP_IMAGE.equals(image.subSequence(0, LEN_OF_NULL_IMAGE).toString()))
+            {
                 if (length > LEN_OF_NULL_IMAGE) {
-                    if (!isValidFollowChar(image.charAt(LEN_OF_NULL_IMAGE + 1))) {
+                    if (!isValidFollowChar(image.charAt(LEN_OF_NULL_IMAGE))) {
                         throw new IllegalArgumentException("invalid timestamp: " + image);
                     }
                 }
                 return null;
             }
-            throw new IllegalArgumentException("invalid timestamp syntax: " + image);
+            throw new IllegalArgumentException("invalid timestamp: " + image);
         }
 
         int year  = 1;
