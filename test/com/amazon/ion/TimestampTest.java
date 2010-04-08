@@ -696,4 +696,43 @@ public class TimestampTest
         }
         catch (NullPointerException e) { }
     }
+
+    public void testValueOfNullTimestamp()
+    {
+        Timestamp nt = Timestamp.valueOf("null.timestamp");
+        assertEquals(null, nt);
+    }
+
+    public void testValueOfBadNullTimestamp()
+    {
+        try {
+            Timestamp.valueOf("null.timestam");
+            fail("Expected exception");
+        }
+        catch (IllegalArgumentException e) { }
+
+        try {
+            Timestamp.valueOf("null.timestamps");
+            fail("Expected exception");
+        }
+        catch (IllegalArgumentException e) { }
+    }
+
+    /**
+     * Trap for ION-124
+     */
+    public void testValueOfWithNonsenseText()
+    {
+        try {
+            Timestamp.valueOf("nomnomnom");      // shorter than null.timestamp
+            fail("Expected exception");
+        }
+        catch (IllegalArgumentException e) { }
+
+        try {
+            Timestamp.valueOf("nomnomnomnomnom"); // longer than null.timestamp
+            fail("Expected exception");
+        }
+        catch (IllegalArgumentException e) { }
+    }
 }
