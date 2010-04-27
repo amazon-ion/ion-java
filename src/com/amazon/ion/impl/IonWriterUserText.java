@@ -14,7 +14,7 @@ import java.io.OutputStream;
 /**
  *
  */
-public class IonWriterUserText
+class IonWriterUserText
     extends IonWriterUser
 {
     static public class TextOptions
@@ -65,12 +65,20 @@ public class IonWriterUserText
 
     final private boolean _filter_symbol_tables;
 
-    protected IonWriterUserText(IonSystem sys, OutputStream out, TextOptions options) {
-        super(new IonWriterSystemText(sys, out, options), null);
+    protected IonWriterUserText(IonSystem sys, OutputStream out,
+                                TextOptions options)
+    {
+        super(sys, new IonWriterSystemText(sys.getSystemSymbolTable(), out,
+                                           options),
+              null);
         _filter_symbol_tables = options.isFilterSymbolTablesOn();
     }
-    protected IonWriterUserText(IonSystem sys, Appendable out, TextOptions options) {
-        super(new IonWriterSystemText(sys, out, options), null);
+    protected IonWriterUserText(IonSystem sys, Appendable out,
+                                TextOptions options)
+    {
+        super(sys, new IonWriterSystemText(sys.getSystemSymbolTable(), out,
+                                           options),
+              null);
         _filter_symbol_tables = options.isFilterSymbolTablesOn();
     }
 

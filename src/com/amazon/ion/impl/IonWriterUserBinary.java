@@ -2,8 +2,8 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonIterationType;
+import com.amazon.ion.IonSystem;
 import com.amazon.ion.SymbolTable;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -22,7 +22,7 @@ public class IonWriterUserBinary
 
     protected IonWriterUserBinary(IonSystem system, IonWriterSystemBinary systemWriter)
     {
-        super(systemWriter, null);
+        super(system, systemWriter, null);
     }
 
     @Override

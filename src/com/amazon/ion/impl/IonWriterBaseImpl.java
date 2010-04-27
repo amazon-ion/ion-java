@@ -7,7 +7,6 @@ import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonNumber;
 import com.amazon.ion.IonReader;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
@@ -24,7 +23,7 @@ import java.util.Date;
  *  table is available (which it will not be if the underlying writer is a system
  *  writer).
  */
-public abstract class IonWriterBaseImpl
+abstract class IonWriterBaseImpl
     implements IonWriter
 {
     protected static final String ERROR_MISSING_FIELD_NAME =
@@ -32,12 +31,10 @@ public abstract class IonWriterBaseImpl
 
     private static final boolean _debug_on = false;
 
-
     /**
-     * this should be set by the concrete
-     * writers constructor.
+     * The system symtab used when resetting the stream.
      */
-    protected final IonSystem _system;
+    protected final SymbolTable _default_system_symbol_table;
 
 
     /**
@@ -58,9 +55,10 @@ public abstract class IonWriterBaseImpl
     protected String[]    _annotations = new String[DEFAULT_ANNOTATION_COUNT];
     protected int[]       _annotation_sids = new int[DEFAULT_ANNOTATION_COUNT];
 
-    protected IonWriterBaseImpl(IonSystem system)
+
+    protected IonWriterBaseImpl(SymbolTable defaultSystemSymbolTable)
     {
-        _system = system;
+        _default_system_symbol_table = defaultSystemSymbolTable;
     }
 
     protected void reset() throws IOException
@@ -68,11 +66,7 @@ public abstract class IonWriterBaseImpl
         if (getDepth() != 0) {
             throw new IllegalStateException("you can't reset a writer that is in the middle of writing a value");
         }
-        setSymbolTable(_system.getSystemSymbolTable());
-    }
-
-    public final IonSystem getSystem() {
-        return _system;
+        setSymbolTable(_default_system_symbol_table);
     }
 
     //
@@ -102,7 +96,7 @@ public abstract class IonWriterBaseImpl
     protected int add_symbol(String name) throws IOException
     {
         if (_symbol_table == null) {
-            _symbol_table = _system.getSystemSymbolTable();
+            _symbol_table = _default_system_symbol_table;
         }
 
         int sid = _symbol_table.findSymbol(name);

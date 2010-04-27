@@ -14,7 +14,7 @@ import com.amazon.ion.SymbolTable;
 /**
  *
  */
-public class IonReaderTreeUserX
+class IonReaderTreeUserX
     extends IonReaderTreeSystem
 {
 

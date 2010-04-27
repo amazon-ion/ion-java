@@ -5,6 +5,7 @@ package com.amazon.ion.impl;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonIterationType;
 import com.amazon.ion.IonStruct;
+import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
@@ -25,12 +26,16 @@ import java.math.BigInteger;
  *
  *
  */
-public abstract class IonWriterUser
+abstract class IonWriterUser
     extends IonWriterBaseImpl  // should be IonWriterSystem ?
 {
+    private final IonSystem _system;
+
     // these track the state needed to put version markers
     // in place as needed
-    boolean   _any_values_written; // we always write the version marker, but we also skip the users IVM it they write it as a symbol as the first value
+    // we always write the version marker, but we also skip the users IVM it
+    // they write it as a symbol as the first value
+    boolean   _any_values_written;
     boolean   _after_ion_version_marker;
     boolean   _is_tree_writer;
     boolean   _root_is_datagram;
@@ -53,9 +58,11 @@ public abstract class IonWriterUser
     IonWriterBaseImpl _current_writer_as_base;
 
 
-    protected IonWriterUser(IonWriter systemWriter, IonValue container)
+    protected IonWriterUser(IonSystem system, IonWriterBaseImpl systemWriter,
+                            IonValue container)
     {
-        super(systemWriter.getSystem());
+        super(system.getSystemSymbolTable());
+        _system = system;
         _system_writer = systemWriter;
         _current_writer = _system_writer;
         if (_system_writer instanceof IonWriterBaseImpl) {
@@ -83,7 +90,9 @@ public abstract class IonWriterUser
             if (_system_writer.getSymbolTable() == null) {
                 try {
                     writeIonVersionMarker();
-                    _any_values_written = false; // we don't count this one, so we have to clean up after writeIVM set this to true
+                    // we don't count this one, so we have to clean up after
+                    // writeIVM set this to true
+                    _any_values_written = false;
                 }
                 catch (IOException e) {
                     throw new IonException(e);
@@ -210,6 +219,7 @@ public abstract class IonWriterUser
     }
 
 
+    // TODO this method needs documentation, I have no idea what's going on.
     private void open_local_symbol_table_copy()
     {
         assert(!_symbol_table_being_copied);
@@ -341,7 +351,7 @@ public abstract class IonWriterUser
         _system_writer.writeIonVersionMarker();
         _after_ion_version_marker = true;
         _any_values_written = true;
-        setSymbolTable(_system.getSystemSymbolTable());
+        setSymbolTable(_default_system_symbol_table);
     }
 
     public void stepIn(IonType containerType) throws IOException
@@ -412,7 +422,7 @@ public abstract class IonWriterUser
     public void writeInt(int value) throws IOException
     {
         start_user_value();
-        _current_writer.writeInt(value);
+        _current_writer.writeInt((long)value);
     }
     public void writeInt(long value) throws IOException
     {
@@ -459,7 +469,7 @@ public abstract class IonWriterUser
         start_user_value();
         _current_writer.writeSymbol(symbolId);
         if (_root_is_datagram && symbolId == UnifiedSymbolTable.ION_1_0_SID && _current_writer.getDepth() == 0) {
-            _current_writer.setSymbolTable(getSystem().getSystemSymbolTable());
+            _current_writer.setSymbolTable(_default_system_symbol_table);
         }
     }
     public void writeSymbol(String value) throws IOException
@@ -475,7 +485,7 @@ public abstract class IonWriterUser
             start_user_value();
             _current_writer.writeSymbol(value);
             if (_root_is_datagram && _current_writer.getDepth() == 0 && UnifiedSymbolTable.ION_1_0.equals(value)) {
-                _current_writer.setSymbolTable(getSystem().getSystemSymbolTable());
+                _current_writer.setSymbolTable(_default_system_symbol_table);
             }
         }
     }

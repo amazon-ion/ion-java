@@ -15,12 +15,13 @@ import java.io.OutputStream;
  *  uses a BlockedBuffer for caching the bytes and
  *  offers the "get byte" methods.
  */
-public abstract class IonWriterBinaryCompatibility
+abstract class IonWriterBinaryCompatibility
     implements IonBinaryWriter
 {
     private static OutputStream make_output_stream()
     {
-        BlockedBuffer.BufferedOutputStream out = new BlockedBuffer.BufferedOutputStream();
+        BlockedBuffer.BufferedOutputStream out =
+            new BlockedBuffer.BufferedOutputStream();
         return out;
     }
 
@@ -33,7 +34,8 @@ public abstract class IonWriterBinaryCompatibility
 
         public System(IonSystem sys, boolean autoFlush)
         {
-            super(sys, make_output_stream(), autoFlush, true /* assure IVM */);
+            super(sys.getSystemSymbolTable(), make_output_stream(), autoFlush,
+                  true /* assure IVM */);
             assert(_user_output_stream instanceof BlockedBuffer.BufferedOutputStream);
         }
 

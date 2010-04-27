@@ -9,8 +9,8 @@ import static com.amazon.ion.impl.IonConstants.tidStruct;
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonIterationType;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.Base64Encoder.TextStream;
 import com.amazon.ion.impl.IonBinary.BufferManager;
@@ -45,9 +45,10 @@ public class IonWriterSystemText
     boolean[]   _stack_pending_comma = new boolean[10];
 
 
-    protected IonWriterSystemText(IonSystem sys, OutputStream out, TextOptions options)
+    protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
+                                  OutputStream out, TextOptions options)
     {
-        super(sys);
+        super(defaultSystemSymtab);
 
         if (out instanceof Appendable) {
             _output = (Appendable)out;
@@ -58,9 +59,10 @@ public class IonWriterSystemText
         _options = options;
         set_separator_character();
     }
-    protected IonWriterSystemText(IonSystem sys, Appendable out, TextOptions options)
+    protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
+                                  Appendable out, TextOptions options)
     {
-        super(sys);
+        super(defaultSystemSymtab);
 
         _output = out;
         _options = options;

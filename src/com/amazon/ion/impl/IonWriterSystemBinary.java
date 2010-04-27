@@ -9,7 +9,6 @@ import static com.amazon.ion.impl.IonConstants.tidStruct;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonIterationType;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
@@ -83,17 +82,15 @@ public class IonWriterSystemBinary
 
 
     /**
-     * This method does not require a symbol table because
-     * symbol table processing, including handling the
-     * IonVerionMarker, must be handled by the outer
-     * user writer.
-     *
      * @param out OutputStream the users output byte stream, if specified
-     * @param autoFlush when true the writer flushes to the output stream between top level values
+     * @param autoFlush when true the writer flushes to the output stream
+     *  between top level values
      */
-    public IonWriterSystemBinary(IonSystem sys, OutputStream out, boolean autoFlush, boolean assureIVM)
+    public IonWriterSystemBinary(SymbolTable defaultSystemSymtab,
+                                 OutputStream out, boolean autoFlush,
+                                 boolean assureIVM)
     {
-        super(sys);
+        super(defaultSystemSymtab);
         _user_output_stream = out;
         // the buffer manager and writer
         // are used to hold the buffered
@@ -1261,10 +1258,14 @@ public class IonWriterSystemBinary
 
     }
 
-    protected int write_symbol_table(OutputStream userstream, SymbolTable symtab) throws IOException
+    protected int write_symbol_table(OutputStream userstream,
+                                     SymbolTable symtab) throws IOException
     {
         CountingStream cs = new CountingStream(userstream);
-        IonWriterSystemBinary writer = new IonWriterSystemBinary(getSystem(), cs, false /* autoflush */ , false /* assure ivm */);
+        IonWriterSystemBinary writer =
+            new IonWriterSystemBinary(_default_system_symbol_table, cs,
+                                      false /* autoflush */ ,
+                                      false /* assure ivm */);
         symtab.writeTo(writer);
         writer.flush();
         int symtab_len = cs.getBytesWritten();

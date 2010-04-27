@@ -14,9 +14,13 @@ import java.util.Iterator;
 /**
  *
  */
-public class IonReaderBinaryUserX
+class IonReaderBinaryUserX
     extends IonReaderBinarySystemX
 {
+    /**
+     * This is a bad dependency.
+     * It should be replaced by a system Symtab and a Catalog.
+     */
     IonSystem   _system;
     SymbolTable _symbols;
 
@@ -40,12 +44,6 @@ public class IonReaderBinaryUserX
     private final void init_user(IonSystem system) {
         _system = system;
         _symbols = system.getSystemSymbolTable();
-    }
-
-    @Override
-    public IonSystem getSystem()
-    {
-        return _system;
     }
 
     @Override

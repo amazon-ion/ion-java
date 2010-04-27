@@ -83,15 +83,6 @@ public interface IonWriter
     public SymbolTable getSymbolTable();
 
     /**
-     * Get the IonSystem associated with this writer.  This
-     * may return null if no IonSystem is attached.  An IonSystem
-     * is required if the writer needs to construct a local
-     * symbol table.
-     * @return IonSystem attached IonSystem or null
-     */
-    public IonSystem getSystem();
-
-    /**
      * Returns the current depth of containers the writer is at.  This is
      * 0 if the writer is at the datagram level.
      * @return int depth of container nesting

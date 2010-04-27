@@ -4,7 +4,6 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonIterationType;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
@@ -20,7 +19,7 @@ import java.util.Iterator;
 /**
  *
  */
-public class IonReaderBinarySystemX
+class IonReaderBinarySystemX
     extends IonReaderBinaryRawX
 {
     // ValueVariant _v; actually owned by the raw reader so it can be cleared at appropriate times
@@ -54,11 +53,6 @@ public class IonReaderBinarySystemX
     public IonIterationType getIterationType()
     {
         return IonIterationType.SYSTEM_BINARY;
-    }
-
-    public IonSystem getSystem()
-    {
-        return null;
     }
 
 

@@ -35,7 +35,7 @@ import java.util.NoSuchElementException;
 /**
  *
  */
-public class IonReaderTreeSystem
+class IonReaderTreeSystem
     implements IonReader
 {
     protected IonSystem          _system;
@@ -113,12 +113,6 @@ public class IonReaderTreeSystem
     {
         return IonIterationType.USER_ION_VALUE;
     }
-
-    public IonSystem getSystem()
-    {
-        return _system;
-    }
-
 
     public boolean hasNext()
     {

@@ -9,7 +9,7 @@ import com.amazon.ion.IonIterationType;
 /**
  *
  */
-public class IonWriterUserTree
+class IonWriterUserTree
     extends IonWriterUser
 {
     /**
@@ -21,7 +21,7 @@ public class IonWriterUserTree
      */
     protected IonWriterUserTree(IonWriterSystemTree systemWriter)
     {
-        super(systemWriter, systemWriter.get_root());
+        super(systemWriter.getSystem(), systemWriter, systemWriter.get_root());
     }
 
     @Override
