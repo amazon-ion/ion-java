@@ -198,7 +198,7 @@ public class IonTokenConstsX
         }
         return hexValue[c];
     }
-
+/*
     public final static int[] decimalValue = makeDecimalValueArray();
     public final static boolean[] isDecimalDigit = makeDecimalDigitTestArray(decimalValue);
     private final static int[] makeDecimalValueArray() {
@@ -218,14 +218,15 @@ public class IonTokenConstsX
         }
         return is_hex;
     }
+*/
     public final static boolean isDigit(int c) {
-        return isDecimalDigit[c & 0xff] && is7bitValue(c);
+    	return (c >= '0' && c <= '9');
     }
     public final static int decimalDigitValue(int c) {
         if (!isDigit(c)) {
             throw new IllegalArgumentException("character '"+((char)c)+"' is not a hex digit");
         }
-        return decimalValue[c];
+        return c - '0'; // decimalValue[c];
     }
 
     public static final int CLOB_CHARACTER_LIMIT = 0xFF;
