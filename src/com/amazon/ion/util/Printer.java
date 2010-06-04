@@ -148,7 +148,7 @@ public class Printer
 
 
     /**
-     * Sets whether this printer renders blobs as Base64 strings.
+     * Indicates whether this printer renders blobs as Base64 strings.
      * By default, this is <code>false</code>.
      */
     public synchronized boolean getPrintBlobAsString()
@@ -156,6 +156,10 @@ public class Printer
         return myOptions.blobAsString;
     }
 
+    /**
+     * Sets whether this printer renders blobs as Base64 strings.
+     * By default, this is <code>false</code>.
+     */
     public synchronized void setPrintBlobAsString(boolean blobAsString)
     {
         myOptions.blobAsString = blobAsString;
@@ -163,7 +167,7 @@ public class Printer
 
 
     /**
-     * Sets whether this printer renders clobs as ASCII strings.
+     * Indicates whether this printer renders clobs as ASCII strings.
      * By default, this is <code>false</code>.
      */
     public synchronized boolean getPrintClobAsString()
@@ -171,6 +175,10 @@ public class Printer
         return myOptions.clobAsString;
     }
 
+    /**
+     * Sets whether this printer renders clobs as ASCII strings.
+     * By default, this is <code>false</code>.
+     */
     public synchronized void setPrintClobAsString(boolean clobAsString)
     {
         myOptions.clobAsString = clobAsString;
@@ -197,7 +205,7 @@ public class Printer
 
 
     /**
-     * Sets whether this printer renders decimals as floats, thus using 'e'
+     * Indicates whether this printer renders decimals as floats, thus using 'e'
      * notation for all real values.
      * By default, this is <code>false</code>.
      */
@@ -206,6 +214,11 @@ public class Printer
         return myOptions.decimalAsFloat;
     }
 
+    /**
+     * Sets whether this printer renders decimals as floats, thus using 'e'
+     * notation for all real values.
+     * By default, this is <code>false</code>.
+     */
     public synchronized void setPrintDecimalAsFloat(boolean decimalAsFloat)
     {
         myOptions.decimalAsFloat = decimalAsFloat;
@@ -213,7 +226,7 @@ public class Printer
 
 
     /**
-     * Sets whether this printer renders sexps as lists.
+     * Indicates whether this printer renders sexps as lists.
      * By default, this is <code>false</code>.
      */
     public synchronized boolean getPrintSexpAsList()
@@ -221,6 +234,10 @@ public class Printer
         return myOptions.sexpAsList;
     }
 
+    /**
+     * Sets whether this printer renders sexps as lists.
+     * By default, this is <code>false</code>.
+     */
     public synchronized void setPrintSexpAsList(boolean sexpAsList)
     {
         myOptions.sexpAsList = sexpAsList;
@@ -228,14 +245,18 @@ public class Printer
 
 
     /**
-     * Sets whether this printer renders strings using JSON escapes.
+     * Indicates whether this printer renders strings using JSON escapes.
      * By default, this is <code>false</code>.
      */
-    public synchronized boolean getPrintStringlAsJson()
+    public synchronized boolean getPrintStringAsJson()
     {
         return myOptions.stringAsJson;
     }
 
+    /**
+     * Sets whether this printer renders strings using JSON escapes.
+     * By default, this is <code>false</code>.
+     */
     public synchronized void setPrintStringAsJson(boolean stringAsJson)
     {
         myOptions.stringAsJson = stringAsJson;
@@ -243,7 +264,7 @@ public class Printer
 
 
     /**
-     * Sets whether this printer renders symbols as strings.
+     * Indicates whether this printer renders symbols as strings.
      * By default, this is <code>false</code>.
      */
     public synchronized boolean getPrintSymbolAsString()
@@ -251,13 +272,18 @@ public class Printer
         return myOptions.symbolAsString;
     }
 
+    /**
+     * Sets whether this printer renders symbols as strings.
+     * By default, this is <code>false</code>.
+     */
     public synchronized void setPrintSymbolAsString(boolean symbolAsString)
     {
         myOptions.symbolAsString = symbolAsString;
     }
 
+
     /**
-     * Sets whether this printer renders timestamps as millisecond values.
+     * Indicates whether this printer renders timestamps as millisecond values.
      * By default, this is <code>false</code>.
      */
     public synchronized boolean getPrintTimestampAsMillis()
@@ -265,13 +291,18 @@ public class Printer
         return myOptions.timestampAsMillis;
     }
 
+    /**
+     * Sets whether this printer renders timestamps as millisecond values.
+     * By default, this is <code>false</code>.
+     */
     public synchronized void setPrintTimestampAsMillis(boolean timestampAsMillis)
     {
         myOptions.timestampAsMillis = timestampAsMillis;
     }
 
+
     /**
-     * Sets whether this printer renders timestamps as strings.
+     * Indicates whether this printer renders timestamps as strings.
      * By default, this is <code>false</code>.
      */
     public synchronized boolean getPrintTimestampAsString()
@@ -279,6 +310,10 @@ public class Printer
         return myOptions.timestampAsString;
     }
 
+    /**
+     * Sets whether this printer renders timestamps as strings.
+     * By default, this is <code>false</code>.
+     */
     public synchronized void setPrintTimestampAsString(boolean timestampAsString)
     {
         myOptions.timestampAsString = timestampAsString;
@@ -286,7 +321,7 @@ public class Printer
 
 
     /**
-     * Sets whether this printer renders all null values as <code>null</code>
+     * Indicates whether this printer renders all null values as {@code null}
      * (<em>i.e.</em>, the same as an {@link IonNull}).
      * By default, this is <code>false</code>.
      */
@@ -295,6 +330,11 @@ public class Printer
         return myOptions.untypedNulls;
     }
 
+    /**
+     * Sets whether this printer renders all null values as {@code null}
+     * (<em>i.e.</em>, the same as an {@link IonNull}).
+     * By default, this is <code>false</code>.
+     */
     public synchronized void setPrintUntypedNulls(boolean untypedNulls)
     {
         myOptions.untypedNulls = untypedNulls;
