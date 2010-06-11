@@ -239,15 +239,15 @@ public abstract class IonWriterUser
         // local symbol table
         UnifiedSymbolTable symtab = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _catalog, _symbol_table_value);
 
-        // now make this symbol table the current symbol table
-        this.setSymbolTable(symtab);
-
         _symbol_table_being_copied = false;
         _symbol_table_value        = null;
         _symbol_table_writer       = null;
 
         _current_writer            = _system_writer;
         _current_writer_as_base    = _system_writer_as_base;
+
+        // now make this symbol table the current symbol table
+        this.setSymbolTable(symtab);
 
         return;
     }
