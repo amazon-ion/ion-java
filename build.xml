@@ -53,7 +53,7 @@
 
 
   <target name="build" depends="build.dirs">
-    <javac srcdir="${dir.src}" debug="on"
+    <javac srcdir="${dir.src}" debug="on" 
            destdir="${dir.classes}"
            source="1.5" target="1.5">
       <classpath>
@@ -66,7 +66,13 @@
 
 
   <target name="jars" depends="build">
-    <jar destfile="${jar.output.src}" basedir="${dir.classes}"/>
+    <jar destfile="${jar.output.src}"
+         basedir="${dir.classes}" 
+    >
+      <manifest>
+        <attribute name="Main-Class" value="com.amazon.ion.impl.IonBuild"/>
+      </manifest>
+    </jar>
 <!--
     <copy todir="${dir.release}">
       <fileset dir="lib">
