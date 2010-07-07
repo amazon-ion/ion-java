@@ -32,7 +32,9 @@ public class IonWriterSystemBinary
 
     BufferManager     _manager;
     IonBinary.Writer  _writer;
-    OutputStream      _user_output_stream;
+
+    /** Not null */
+    private final OutputStream _user_output_stream;
 
     boolean           _auto_flush;        // controls flushing in closeValue()
     boolean           _assure_ivm;        // forces IVM in the event the caller forgets to write an IVM or IVM symbol
@@ -85,13 +87,18 @@ public class IonWriterSystemBinary
      * @param out OutputStream the users output byte stream, if specified
      * @param autoFlush when true the writer flushes to the output stream
      *  between top level values
+     *
+     * @throws NullPointerException if any parameter is null.
      */
     public IonWriterSystemBinary(SymbolTable defaultSystemSymtab,
                                  OutputStream out, boolean autoFlush,
                                  boolean assureIVM)
     {
         super(defaultSystemSymtab);
+
+        out.getClass(); // Efficient null check
         _user_output_stream = out;
+
         // the buffer manager and writer
         // are used to hold the buffered
         // binary values pending flush().
@@ -502,15 +509,11 @@ public class IonWriterSystemBinary
 
     public void flush() throws IOException
     {
-        if (_user_output_stream == null) {
-            throw new IllegalArgumentException("the output stream must be specified");
+        if (this.atDatagramLevel() && _annotation_count == 0) {
+            writeBytes(_user_output_stream);
+            reset();
         }
-        if (!this.atDatagramLevel()) {
-            throw new IllegalStateException("flush in only valid at the datagram level");
-        }
-
-        writeBytes(_user_output_stream);
-        reset();
+        _user_output_stream.flush();
     }
 
     public void stepIn(IonType containerType) throws IOException

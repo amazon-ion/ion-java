@@ -179,17 +179,12 @@ abstract class IonWriterUser
 
     public void flush() throws IOException
     {
-        if (getDepth() != 0) {
-            throw new IllegalStateException("you can't reset a writer that is in the middle of writing a value");
-        }
-        if (_symbol_table_being_copied) {
-            throw new IllegalStateException("you can't reset a user writer while a local symbol table value is being written");
-        }
-        assert(_current_writer == _system_writer);
-
         _current_writer.flush();
 
-        reset();
+        if (getDepth() == 0) {
+            assert(_current_writer == _system_writer);
+            reset();
+        }
     }
 
     @Override

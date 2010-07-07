@@ -30,8 +30,10 @@ import java.nio.CharBuffer;
 public class IonWriterSystemText
     extends IonWriterBaseImpl
 {
-    final Appendable  _output;
-    final TextOptions _options;
+    /** Not null. */
+    final private Appendable _output;
+    /** Not null. */
+    final private TextOptions _options;
 
     BufferManager _manager;
 
@@ -45,10 +47,16 @@ public class IonWriterSystemText
     boolean[]   _stack_pending_comma = new boolean[10];
 
 
+    /**
+     * @throws NullPointerException if any parameter is null.
+     */
     protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
                                   OutputStream out, TextOptions options)
     {
         super(defaultSystemSymtab);
+
+        out.getClass(); // Efficient null check
+        options.getClass(); // Efficient null check
 
         if (out instanceof Appendable) {
             _output = (Appendable)out;
@@ -59,10 +67,17 @@ public class IonWriterSystemText
         _options = options;
         set_separator_character();
     }
+
+    /**
+     * @throws NullPointerException if any parameter is null.
+     */
     protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
                                   Appendable out, TextOptions options)
     {
         super(defaultSystemSymtab);
+
+        out.getClass(); // Efficient null check
+        options.getClass(); // Efficient null check
 
         _output = out;
         _options = options;
@@ -556,13 +571,12 @@ public class IonWriterSystemText
 
     public void flush() throws IOException
     {
-        if (_output == null) {
-            throw new IllegalStateException("flush() is invalid unless you specify an output in the constructor");
-        }
         if (_output instanceof Flushable) {
             ((Flushable)_output).flush();
         }
-        reset();
+        if (getDepth() == 0) {
+            reset();
+        }
     }
 }
 

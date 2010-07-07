@@ -1,8 +1,9 @@
-// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2010 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import com.amazon.ion.util.IonStreamUtils;
+import java.io.Flushable;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -46,6 +47,7 @@ import java.util.Date;
  * a user supplied buffer), or output to an output stream.
  */
 public interface IonWriter
+    extends Flushable
 {
 
     /**
@@ -95,19 +97,17 @@ public interface IonWriter
     public IonIterationType getIterationType();
 
     /**
-     * This forces any pending data to be written to the
-     * users output stream.  If not user output stream
-     * has been specified (in the constructor) this
-     * operation will simply reset state as if it had
-     * written the data.  The data will be written
-     * whenever the user later requests it through
-     * flush with a passed in value or through a call
-     * to getBytes.
+     * Flushes this writer by writing any buffered output to the underlying
+     * output target.
+     * <p>
+     * For some implementations this may have no effect even when some data is
+     * buffered, because it's not always possible to fully write partial data.
+     * In particular, if this is writing binary Ion data, Ion's length-prefixed
+     * encoding requires a complete top-level value to be written at once.
+     * Furthermore, if local symbol tables are being generated, nothing can be
+     * flushed until the the symbol context is reset.
      *
-     * @throws IllegalStateException if the writer is in the
-     *  midst of writing a value, this would be most common if
-     *  there is an unclosed container (a stepIn() without a
-     *  matching stepOut()).
+     * @throws IOException if thrown by the underlying output target.
      */
     public void flush() throws IOException;
 

@@ -15,6 +15,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonLob;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonString;
+import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonText;
@@ -39,6 +40,9 @@ public abstract class IonWriterTestCase
         return makeWriter((SymbolTable[])null);
     }
 
+    /**
+     * Extracts bytes from the current writer and loads it into a datagram.
+     */
     protected IonDatagram reload()
         throws Exception
     {
@@ -425,5 +429,26 @@ public abstract class IonWriterTestCase
         v.clearTypeAnnotations();
 
         assertEquals(expected, reload());
+    }
+
+    public void testFlushMidValue()
+        throws Exception
+    {
+        IonWriter iw = makeWriter();
+        iw.addTypeAnnotation("a");
+        iw.flush();
+        iw.stepIn(IonType.STRUCT);
+        iw.flush();
+        iw.setFieldName("f");
+        iw.flush();
+        iw.addTypeAnnotation("a");
+        iw.flush();
+        iw.writeNull();
+        iw.flush();
+        iw.stepOut();
+        iw.flush();
+
+        IonStruct expected = struct("a::{f:a::null}");
+        assertEquals(expected, reload().get(0));
     }
 }

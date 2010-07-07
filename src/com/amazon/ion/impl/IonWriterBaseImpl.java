@@ -6,13 +6,13 @@ import com.amazon.ion.Decimal;
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonNumber;
+import com.amazon.ion.IonNumber.Classification;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.IonNumber.Classification;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
@@ -33,6 +33,7 @@ abstract class IonWriterBaseImpl
 
     /**
      * The system symtab used when resetting the stream.
+     * Must not be null.
      */
     protected final SymbolTable _default_system_symbol_table;
 
@@ -56,13 +57,21 @@ abstract class IonWriterBaseImpl
     protected int[]       _annotation_sids = new int[DEFAULT_ANNOTATION_COUNT];
 
 
+    /**
+     *
+     * @param defaultSystemSymbolTable must not be null.
+     *
+     * @throws NullPointerException if the parameter is null.
+     */
     protected IonWriterBaseImpl(SymbolTable defaultSystemSymbolTable)
     {
+        defaultSystemSymbolTable.getClass(); // Efficient null check
         _default_system_symbol_table = defaultSystemSymbolTable;
     }
 
     protected void reset() throws IOException
     {
+        // FIXME this test is insufficient: we could have annotations in-flight
         if (getDepth() != 0) {
             throw new IllegalStateException("you can't reset a writer that is in the middle of writing a value");
         }
