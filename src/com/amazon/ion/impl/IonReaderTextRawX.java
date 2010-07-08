@@ -1,4 +1,4 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2010 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -281,6 +281,12 @@ public abstract class IonReaderTextRawX
         set_state(STATE_BEFORE_ANNOTATION_DATAGRAM);
         _eof = false;
         push_container_state(IonType.DATAGRAM);
+    }
+
+    public void close()
+        throws IOException
+    {
+        _scanner.close();
     }
 
     private final void set_state(int new_state) {

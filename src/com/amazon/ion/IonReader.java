@@ -1,7 +1,8 @@
-// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2010 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
+import java.io.Closeable;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.Iterator;
@@ -27,6 +28,7 @@ import java.util.Iterator;
  * {@link IonSymbol#stringValue()}.
  */
 public interface IonReader
+    extends Closeable
 {
 
     /**

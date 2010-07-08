@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2010 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -280,6 +280,11 @@ public final class IonTextReaderImpl
         _state = IonTextReaderImpl.State_read_datagram;
     }
 
+    public void close()
+        throws IOException
+    {
+        _scanner.close();
+    }
 
     public IonIterationType getIterationType()
     {

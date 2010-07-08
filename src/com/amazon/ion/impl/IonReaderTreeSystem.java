@@ -75,6 +75,11 @@ class IonReaderTreeSystem
         }
     }
 
+    public void close()
+    {
+        _eof = true;
+    }
+
     protected void set_symbol_table(SymbolTable symtab)
     {
         _symbols = symtab;

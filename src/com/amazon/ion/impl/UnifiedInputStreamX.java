@@ -1,13 +1,17 @@
+// Copyright (c) 2009-2010 Amazon.com, Inc.  All rights reserved.
+
 package com.amazon.ion.impl;
 
 import com.amazon.ion.impl.IonReaderTextRawTokensX.IonReaderTextTokenException;
 import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 
 
 public abstract class UnifiedInputStreamX
+    implements Closeable
 {
     public  static final int     EOF = -1;
 
@@ -82,6 +86,12 @@ public abstract class UnifiedInputStreamX
         _eof = false;
         _max_char_value = _buffer.maxValue();
         _save_points = new UnifiedSavePointManagerX(this);
+    }
+
+    public void close()
+        throws IOException
+    {
+        _eof = true;
     }
 
     public final boolean isEOF() {
@@ -537,6 +547,15 @@ public abstract class UnifiedInputStreamX
             _buffer = UnifiedInputBufferX.makePageBuffer(UnifiedInputBufferX.BufferType.BYTES, DEFAULT_PAGE_SIZE);
             super.init();
             _limit = refill();
+        }
+
+        @Override
+        public void close()
+            throws IOException
+        {
+            super.close();
+            _stream.close();
+            _buffer.clear();
         }
     }
 }
