@@ -433,10 +433,13 @@ public class IonUTF8 {
             }
             _byte_stream.flush();
         }
+
         public final void close() throws IOException
         {
             flush();
+            _byte_stream.close();
         }
+
         public final Appendable append(CharSequence csq) throws IOException
         {
             return append(csq, 0, csq.length());

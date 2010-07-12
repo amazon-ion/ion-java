@@ -17,6 +17,7 @@ import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import com.amazon.ion.util.IonTextUtils;
 import java.io.ByteArrayInputStream;
+import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -576,6 +577,14 @@ public class IonWriterSystemText
         }
         if (getDepth() == 0) {
             reset();
+        }
+    }
+
+    public void close() throws IOException
+    {
+        flush();
+        if (_output instanceof Closeable) {
+            ((Closeable)_output).close();
         }
     }
 }

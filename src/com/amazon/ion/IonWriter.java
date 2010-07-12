@@ -3,6 +3,7 @@
 package com.amazon.ion;
 
 import com.amazon.ion.util.IonStreamUtils;
+import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -47,7 +48,7 @@ import java.util.Date;
  * a user supplied buffer), or output to an output stream.
  */
 public interface IonWriter
-    extends Flushable
+    extends Closeable, Flushable
 {
 
     /**

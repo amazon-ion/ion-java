@@ -187,6 +187,12 @@ abstract class IonWriterUser
         }
     }
 
+    public void close() throws IOException
+    {
+        _current_writer.close();
+        _system_writer.close();
+    }
+
     @Override
     protected void reset() throws IOException
     {

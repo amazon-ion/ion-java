@@ -516,6 +516,13 @@ public class IonWriterSystemBinary
         _user_output_stream.flush();
     }
 
+    public void close() throws IOException
+    {
+        flush();
+        _user_output_stream.close();
+    }
+
+
     public void stepIn(IonType containerType) throws IOException
     {
         startValue(containerType, UNKNOWN_LENGTH);

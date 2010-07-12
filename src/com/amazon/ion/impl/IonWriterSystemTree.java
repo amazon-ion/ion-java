@@ -360,9 +360,15 @@ class IonWriterSystemTree
         append(v);
     }
 
-    public void flush() throws IOException
+    public void flush()
     {
         // flush is not meaningful for a tree writer
+        return;
+    }
+
+    public void close()
+    {
+        // close is not meaningful for a tree writer
         return;
     }
 
