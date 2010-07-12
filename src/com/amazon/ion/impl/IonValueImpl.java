@@ -4,6 +4,7 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.util.Equivalence.ionEquals;
 
 import com.amazon.ion.IonContainer;
@@ -1146,8 +1147,9 @@ public abstract class IonValueImpl
             if (symtab == null) {
                 symtab = this._system.getSystemSymbolTable();
             }
+            assert symtab.isSystemTable();
             synchronized (this) {
-                symtab = UnifiedSymbolTable.makeNewLocalSymbolTable(symtab);
+                symtab = makeNewLocalSymbolTable(_system, symtab);
                 this.setSymbolTable(symtab);
             }
         }

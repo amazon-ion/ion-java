@@ -360,8 +360,6 @@ public final class IonDatagramImpl
                 // FIXME this uses an unpredictable system symtab
                 // TODO can we delay this until later?
                 symtab = _system.newLocalSymbolTable();
-                IonStructImpl ionsymtab = (IonStructImpl)symtab.getIonRepresentation();
-                ionsymtab.setSymbolTable(symtab);  // XXX wrong
             }
             // NOTE: this doesn't reset any extant encoded data
             ((IonValueImpl)element).setSymbolTable(symtab);
@@ -919,6 +917,7 @@ public final class IonDatagramImpl
                         // that (if it's got any useful symbols in it) it's serialized
                         // in the datagram *before* the value that needs it.
                         if (isNeededLocalSymbolTable(symtab)) {
+                            ((UnifiedSymbolTable)symtab).setSystem(_system);
                             IonValue ionsymtab = symtab.getIonRepresentation();
                             if (ionsymtab.getContainer() == null) {
 //                                assert ionsysmtab.getSymbolTable() == null;
