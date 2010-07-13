@@ -208,9 +208,9 @@ public final class UnifiedSymbolTable
     private UnifiedSymbolTable(IonSystem sys)
     {
         _sys_holder = sys;
-if (sys == null) {
-    System.out.println("UnifiedSymbolTable base constructor, line 214");
-}
+//if (sys == null) {
+//    System.out.println("UnifiedSymbolTable base constructor, line 214");
+//}
         _name = null;
         _version = 0;
         _sid_base = 0;
