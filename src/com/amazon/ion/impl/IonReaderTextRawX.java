@@ -1186,7 +1186,7 @@ public abstract class IonReaderTextRawX
     }
     public int getSymbolId()
     {
-        throw new UnsupportedOperationException("not supported - use UserReader");
+        return SymbolTable.UNKNOWN_SYMBOL_ID;
     }
     public int getFieldId()
     {
