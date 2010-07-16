@@ -4,7 +4,6 @@ package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
 import static com.amazon.ion.util.IonTextUtils.printString;
-
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonBlob;
@@ -164,28 +163,28 @@ public class IonSystemLite
     public Iterator<IonValue> iterate(Reader ionText)
     {
         IonReader reader = IonReaderFactoryX.makeReader(this, ionText);
-        ReaderIterator iterator = new ReaderIterator(reader);
+        ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
 
     public Iterator<IonValue> iterate(InputStream ionData)
     {
         IonReader reader = IonReaderFactoryX.makeReader(this, ionData);
-        ReaderIterator iterator = new ReaderIterator(reader);
+        ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
 
     public Iterator<IonValue> iterate(String ionText)
     {
         IonReader reader = IonReaderFactoryX.makeReader(this, ionText);
-        ReaderIterator iterator = new ReaderIterator(reader);
+        ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
 
     public Iterator<IonValue> iterate(byte[] ionData)
     {
         IonReader reader = IonReaderFactoryX.makeReader(this, ionData);
-        ReaderIterator iterator = new ReaderIterator(reader);
+        ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
 
@@ -730,14 +729,10 @@ public class IonSystemLite
         // TODO: do we need catalog, import support for this?
         //       we are creating ion values which might want
         //       a local symbol table in some cases.
-        protected ReaderIterator(IonReader reader)
+        protected ReaderIterator(IonSystemLite system, IonReader reader)
         {
             _reader = reader;
-            IonSystem system = reader.getSystem();
-            if (system != null && !(system instanceof IonSystemLite)) {
-                throw new IllegalArgumentException("this iterator factory only supports IonSystemLite values");
-            }
-            _system = (IonSystemLite)system;
+            _system = system;
             _previous_symbols = _system.getSystemSymbolTable();
         }
 
@@ -1112,7 +1107,7 @@ public class IonSystemLite
     {
         // TODO: do something with the catalog - update readers
         IonReader reader = IonReaderFactoryX.makeReader(ionBinary);
-        SystemReader sysreader = new ReaderIterator(reader);
+        SystemReader sysreader = new ReaderIterator(this, reader);
         return sysreader;
     }
 
@@ -1127,7 +1122,7 @@ public class IonSystemLite
     {
         // TODO: do something with the catalog - update readers
         IonReader reader = IonReaderFactoryX.makeReader(ionData);
-        SystemReader sysreader = new ReaderIterator(reader);
+        SystemReader sysreader = new ReaderIterator(this, reader);
         return sysreader;
     }
 
@@ -1136,7 +1131,7 @@ public class IonSystemLite
         throws IOException
     {
         IonReader reader = IonReaderFactoryX.makeReader(ionBinary);
-        ReaderIterator iterator = new ReaderIterator(reader);
+        ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
 

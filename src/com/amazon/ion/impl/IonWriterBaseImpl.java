@@ -7,7 +7,6 @@ import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonNumber;
 import com.amazon.ion.IonReader;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
@@ -24,7 +23,7 @@ import java.util.Date;
  *  table is available (which it will not be if the underlying writer is a system
  *  writer).
  */
-public abstract class IonWriterBaseImpl
+abstract class IonWriterBaseImpl
     implements IonWriter, IonReaderWriterPrivate
 
 {
@@ -33,13 +32,11 @@ public abstract class IonWriterBaseImpl
 
     private static final boolean _debug_on = false;
 
-
     /**
-     * this should be set by the concrete
-     * writers constructor.
+     * The system symtab used when resetting the stream.
+     * Must not be null.
      */
-    protected final IonSystem  _system;
-
+    protected final SymbolTable _default_system_symbol_table;
 
     /**
      * Must be either local or system table.  It can be null
@@ -59,10 +56,19 @@ public abstract class IonWriterBaseImpl
     protected String[]    _annotations = new String[DEFAULT_ANNOTATION_COUNT];
     protected int[]       _annotation_sids = new int[DEFAULT_ANNOTATION_COUNT];
 
-    protected IonWriterBaseImpl(IonSystem system)
+
+    /**
+     *
+     * @param defaultSystemSymbolTable must not be null.
+     *
+     * @throws NullPointerException if the parameter is null.
+     */
+    protected IonWriterBaseImpl(SymbolTable defaultSystemSymbolTable)
     {
-        _system = system;
+        defaultSystemSymbolTable.getClass(); // Efficient null check
+        _default_system_symbol_table = defaultSystemSymbolTable;
     }
+
 
     abstract void reset() throws IOException;
     //protected void reset() throws IOException
@@ -72,10 +78,6 @@ public abstract class IonWriterBaseImpl
     //    }
     //    setSymbolTable(_system.getSystemSymbolTable());
     //}
-
-    public final IonSystem getSystem() {
-        return _system;
-    }
 
     //
     // symbol table support methods.  These handle the
@@ -113,7 +115,7 @@ public abstract class IonWriterBaseImpl
     protected int add_symbol(String name) throws IOException
     {
         if (_symbol_table == null) {
-            _symbol_table = _system.getSystemSymbolTable();
+            _symbol_table = _default_system_symbol_table;
         }
 
         int sid = _symbol_table.findSymbol(name);
@@ -133,7 +135,7 @@ public abstract class IonWriterBaseImpl
         SymbolTable symbol_table = _symbol_table;
         if (symbol_table == null) {
             if (sid <= UnifiedSymbolTable.MAX_ID_SID) {
-                symbol_table = getSystem().getSystemSymbolTable();
+                symbol_table = _default_system_symbol_table;
             }
             else {
                 throw new UnsupportedOperationException("a user supplied symbol table is required for MIXED id and string use");

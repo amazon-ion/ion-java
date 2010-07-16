@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2010 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -326,6 +326,12 @@ static final boolean _debug = false;
     {
         _r = IonTextBufferedStream.makeStream(ionText);
         reset();
+    }
+
+    public void close()
+        throws IOException
+    {
+        _r.close();
     }
 
     public final void reset() {

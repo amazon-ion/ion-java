@@ -2,9 +2,9 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonSystem;
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonIterationType;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
@@ -20,7 +20,7 @@ import java.util.Iterator;
 /**
  *
  */
-public class IonReaderBinarySystemX
+class IonReaderBinarySystemX
     extends IonReaderBinaryRawX
     implements IonReaderWriterPrivate
 {
@@ -54,12 +54,6 @@ public class IonReaderBinarySystemX
     {
         return IonIterationType.SYSTEM_BINARY;
     }
-
-    public IonSystem getSystem()
-    {
-        return _system;
-    }
-
 
     //
     // public methods that typically user level methods

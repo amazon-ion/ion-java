@@ -6,6 +6,7 @@ import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonIterationType;
 import com.amazon.ion.IonStruct;
+import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
@@ -26,14 +27,13 @@ import java.math.BigInteger;
  *
  *
  */
-public abstract class IonWriterUser
+abstract class IonWriterUser
     extends IonWriterBaseImpl  // should be IonWriterSystem ?
 {
+    private final IonSystem _system;
     // needed to make correct local symbol tables
     IonCatalog _catalog;
 
-    // these track the state needed to put version markers
-    // in place as needed
     boolean   _after_ion_version_marker;
     boolean   _is_tree_writer;
     boolean   _root_is_datagram;
@@ -56,9 +56,10 @@ public abstract class IonWriterUser
     IonWriterBaseImpl _current_writer_as_base;
 
 
-    protected IonWriterUser(IonWriter systemWriter, IonCatalog catalog, IonValue container, boolean suppressIVM)
+    protected IonWriterUser(IonSystem system, IonWriterBaseImpl systemWriter, IonCatalog catalog, IonValue container, boolean suppressIVM)
     {
-        super(systemWriter.getSystem());
+        super(system.getSystemSymbolTable());
+        _system = system;
         _catalog = catalog;
         _system_writer = systemWriter;
         _current_writer = _system_writer;
@@ -175,17 +176,18 @@ public abstract class IonWriterUser
 
     public void flush() throws IOException
     {
-        if (getDepth() != 0) {
-            throw new IllegalStateException("you can't reset a writer that is in the middle of writing a value");
-        }
-        if (_symbol_table_being_copied) {
-            throw new IllegalStateException("you can't reset a user writer while a local symbol table value is being written");
-        }
-        assert(_current_writer == _system_writer);
-
         _current_writer.flush();
 
-        reset();
+        if (getDepth() == 0) {
+            assert(_current_writer == _system_writer);
+            reset();
+        }
+    }
+
+    public void close() throws IOException
+    {
+        _current_writer.close();
+        _system_writer.close();
     }
 
     @Override
@@ -215,6 +217,7 @@ public abstract class IonWriterUser
     }
 
 
+    // TODO this method needs documentation, I have no idea what's going on.
     private void open_local_symbol_table_copy()
     {
         assert(!_symbol_table_being_copied);
@@ -448,7 +451,7 @@ public abstract class IonWriterUser
     }
     public void writeInt(int value) throws IOException
     {
-        _current_writer.writeInt(value);
+        _current_writer.writeInt((long)value);
         finish_value();
     }
     public void writeInt(long value) throws IOException

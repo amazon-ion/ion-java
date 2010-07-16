@@ -3,7 +3,6 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
-
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;

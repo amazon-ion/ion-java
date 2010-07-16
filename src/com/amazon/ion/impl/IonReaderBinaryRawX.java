@@ -1,5 +1,6 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2010 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion.impl;
+
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
@@ -16,6 +17,8 @@ import java.math.BigInteger;
 import java.math.MathContext;
 import java.util.Date;
 import java.util.Iterator;
+
+
 /**
  *  low level reader, base class, for reading Ion binary
  *  input sources.  This using the UnifiedInputStream just
@@ -86,6 +89,12 @@ abstract public class IonReaderBinaryRawX
         _v = new ValueVariant();
         _annotation_ids = new int[DEFAULT_ANNOTATION_SIZE];
         _has_next_needed = true;
+    }
+
+    public void close()
+        throws IOException
+    {
+        _input.close();
     }
 
     static private final int  POS_OFFSET        = 0;

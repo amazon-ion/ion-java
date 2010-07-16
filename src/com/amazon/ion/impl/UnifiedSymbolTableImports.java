@@ -1,4 +1,4 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2010 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -177,6 +177,7 @@ public class UnifiedSymbolTableImports
     }
     SymbolTable getSystemSymbolTable() {
         if (hasSystemSymbolsImported()) {
+            assert _imports[0].isSystemTable();
             return _imports[0];
         }
         return null;

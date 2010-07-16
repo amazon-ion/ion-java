@@ -75,6 +75,12 @@ public class IonReaderTextRawTokensX
         _line_count = 1;
     }
 
+    public void close()
+        throws IOException
+    {
+        _stream.close();
+    }
+
     public int  getToken()      { return _token; }
     public long getLineNumber() { return _line_count; }
     public long getLineOffset() { return _stream.getPosition() - _line_starting_position; }

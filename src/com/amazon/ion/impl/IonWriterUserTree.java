@@ -14,7 +14,7 @@ import java.io.IOException;
 /**
  *
  */
-public class IonWriterUserTree
+class IonWriterUserTree
     extends IonWriterUser
 {
     /**
@@ -26,7 +26,7 @@ public class IonWriterUserTree
      */
     protected IonWriterUserTree(IonWriterSystemTree systemWriter, IonCatalog catalog, boolean suppressIVM)
     {
-        super(systemWriter, catalog, systemWriter.get_root(), suppressIVM);
+        super(systemWriter.getSystem(), systemWriter, catalog, systemWriter.get_root(), suppressIVM);
     }
 
     @Override

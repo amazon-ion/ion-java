@@ -9,7 +9,6 @@ import static com.amazon.ion.impl.IonConstants.tidStruct;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonIterationType;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
@@ -33,7 +32,9 @@ public class IonWriterSystemBinary
 
     BufferManager     _manager;
     IonBinary.Writer  _writer;
-    OutputStream      _user_output_stream;
+
+    /** Not null */
+    private final OutputStream _user_output_stream;
 
     boolean           _auto_flush;        // controls flushing in closeValue()
     boolean           _assure_ivm;        // forces IVM in the event the caller forgets to write an IVM or IVM symbol
@@ -83,18 +84,19 @@ public class IonWriterSystemBinary
 
 
     /**
-     * This method does not require a symbol table because
-     * symbol table processing, including handling the
-     * IonVerionMarker, must be handled by the outer
-     * user writer.
-     *
      * @param out OutputStream the users output byte stream, if specified
-     * @param autoFlush when true the writer flushes to the output stream between top level values
+     * @param autoFlush when true the writer flushes to the output stream
+     *  between top level values
+     *
+     * @throws NullPointerException if any parameter is null.
      */
-    public IonWriterSystemBinary(IonSystem sys, OutputStream out, boolean autoFlush , boolean suppressIVM)
+    public IonWriterSystemBinary(SymbolTable defaultSystemSymtab, OutputStream out, boolean autoFlush , boolean suppressIVM)
     {
-        super(sys);
+        super(defaultSystemSymtab);
+
+        out.getClass(); // Efficient null check
         _user_output_stream = out;
+
         // the buffer manager and writer
         // are used to hold the buffered
         // binary values pending flush().
@@ -355,7 +357,7 @@ public class IonWriterSystemBinary
         // no catalog since it doesn't matter as this is a
         // pure local table, with no imports
         UnifiedSymbolTable symbols
-            = UnifiedSymbolTable.makeNewLocalSymbolTable(_system.getSystemSymbolTable());
+            = UnifiedSymbolTable.makeNewLocalSymbolTable(_default_system_symbol_table);
         set_symbol_table_prepend_new_local_table(symbols);
         return symbols;
     }
@@ -534,16 +536,19 @@ public class IonWriterSystemBinary
 
     public void flush() throws IOException
     {
-        if (_user_output_stream == null) {
-            throw new IllegalArgumentException("the output stream must be specified");
+        if (this.atDatagramLevel() && _annotation_count == 0) {
+            writeBytes(_user_output_stream);
+            reset();
         }
-        if (!this.atDatagramLevel()) {
-            throw new IllegalStateException("flush in only valid at the datagram level");
-        }
-
-        writeBytes(_user_output_stream);
-        reset();
+        _user_output_stream.flush();
     }
+
+    public void close() throws IOException
+    {
+        flush();
+        _user_output_stream.close();
+    }
+
 
     public void stepIn(IonType containerType) throws IOException
     {
@@ -1290,10 +1295,11 @@ public class IonWriterSystemBinary
 
     }
 
-    protected int write_symbol_table(OutputStream userstream, SymbolTable symtab) throws IOException
+    protected int write_symbol_table(OutputStream userstream,
+                                     SymbolTable symtab) throws IOException
     {
         CountingStream cs = new CountingStream(userstream);
-        IonWriterSystemBinary writer = new IonWriterSystemBinary(getSystem(), cs, false /* autoflush */ , true /* suppress ivm */);
+        IonWriterSystemBinary writer = new IonWriterSystemBinary(_default_system_symbol_table, cs, false /* autoflush */ , true /* suppress ivm */);
         symtab.writeTo(writer);
         writer.flush();
         int symtab_len = cs.getBytesWritten();

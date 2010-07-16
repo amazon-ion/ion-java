@@ -4,10 +4,11 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
-import com.amazon.ion.IonSystem;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.Reader;
 import com.amazon.ion.impl.IonWriterUserText.TextOptions;
+import com.amazon.ion.system.SystemFactory;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -163,8 +164,12 @@ public final class IonImplUtils // TODO this class shouldn't be public
     {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         TextOptions options = new TextOptions(false, true, false); // pretty print, ascii only, filter symbol tables
-        IonSystem sys = reader.getSystem(); // this may be null, if it is we can only hope we don't need a symbol table
-        IonWriterSystemText writer = new IonWriterSystemText(sys, out, options);
+
+        // This is vaguely inappropriate.
+        SymbolTable systemSymtab =
+            SystemFactory.newSystem().getSystemSymbolTable();
+        IonWriterSystemText writer =
+            new IonWriterSystemText(systemSymtab, out, options);
         // IonWriter writer = IonWriterUserText new IonTextWriter(out);
 
         try

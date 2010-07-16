@@ -1,11 +1,10 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2010 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.SymbolTableType.LOCAL;
 import static com.amazon.ion.impl.SymbolTableType.SHARED;
 import static com.amazon.ion.util.IonTextUtils.printQuotedSymbol;
-
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.InvalidSystemSymbolException;
 import com.amazon.ion.IonCatalog;
@@ -44,9 +43,7 @@ import java.util.Iterator;
  *
  */
 
-public final
-
- class UnifiedSymbolTable
+public final class UnifiedSymbolTable
     implements SymbolTable
 {
 
@@ -209,6 +206,7 @@ public final
     private UnifiedSymbolTable(IonSystem sys)
     {
         _sys_holder = sys;
+
         _name = null;
         _version = 0;
         _sid_base = 0;
@@ -227,9 +225,9 @@ public final
      *
      * @param systemSymbols must be a system symbol table or null.
      */
-    private UnifiedSymbolTable(IonSystem sys, SymbolTable systemSymbols)
+    private UnifiedSymbolTable(SymbolTable systemSymbols)
     {
-        this(sys);
+        this((IonSystem)null);
         init(systemSymbols);
 
         if (systemSymbols != null) {
@@ -402,10 +400,9 @@ public final
         return table;
     }
 
-    static public UnifiedSymbolTable makeNewLocalSymbolTable(SymbolTable systemSymbolTable)
+    static public UnifiedSymbolTable
+    makeNewLocalSymbolTable(SymbolTable systemSymbolTable)
     {
-        IonSystem sys = systemSymbolTable.getSystem();
-
         if (!systemSymbolTable.isSystemTable()) {
             throw new IllegalArgumentException();
         }
@@ -413,9 +410,7 @@ public final
             throw new IllegalArgumentException();
         }
 
-        UnifiedSymbolTable table = new UnifiedSymbolTable(sys);
-        table.init(systemSymbolTable);
-        // done in init: table._sid_base = systemSymbolTable.getMaxId();
+        UnifiedSymbolTable table = new UnifiedSymbolTable(systemSymbolTable);
 
         return table;
     }
@@ -450,7 +445,7 @@ public final
             systemSymbolTable = sys.getSystemSymbolTable();
         }
 
-        UnifiedSymbolTable table = new UnifiedSymbolTable(sys, systemSymbolTable);
+        UnifiedSymbolTable table = new UnifiedSymbolTable(systemSymbolTable);
 
         if (imports != null) {
             for (int ii=0; ii<imports.length; ii++) {
@@ -463,7 +458,6 @@ public final
 
         return table;
     }
-
 
     static public UnifiedSymbolTable makeNewLocalSymbolTable(IonStruct ionRep)
     {
@@ -486,8 +480,9 @@ public final
     }
 
     static public UnifiedSymbolTable makeNewLocalSymbolTable(SymbolTable systemSymbolTable, IonCatalog catalog, IonStruct ionRep)
+
     {
-        IonSystem sys = systemSymbolTable.getSystem();
+        IonSystem sys = ionRep.getSystem();
         IonReader reader = new IonReaderTreeSystem(ionRep);
         UnifiedSymbolTable table = makeNewLocalSymbolTable(sys, systemSymbolTable, catalog, reader, false);
         table._ion_rep = ionRep;
@@ -499,13 +494,7 @@ public final
         IonCatalog  catalog = sys.getCatalog();
         SymbolTable sys_table = sys.getSystemSymbolTable();
         UnifiedSymbolTable table = makeNewLocalSymbolTable(sys, sys_table, catalog, reader, alreadyInStruct);
-        return table;
-    }
 
-    static public UnifiedSymbolTable makeNewLocalSymbolTable(SymbolTable systemSymbolTable, IonCatalog catalog, IonReader reader)
-    {
-        IonSystem sys = systemSymbolTable.getSystem();
-        UnifiedSymbolTable table = makeNewLocalSymbolTable(sys, systemSymbolTable, catalog, reader, true);
         return table;
     }
 
@@ -516,16 +505,18 @@ public final
         return table;
     }
 
-    static public UnifiedSymbolTable makeNewLocalSymbolTable(SymbolTable systemSymbolTable, IonCatalog catalog, IonReader reader, boolean alreadyInStruct)
+    static public UnifiedSymbolTable makeNewLocalSymbolTable(SymbolTable systemSymbolTable,
+                                                             IonCatalog catalog,
+                                                             IonReader reader)
     {
-        IonSystem sys = systemSymbolTable.getSystem();
-        UnifiedSymbolTable table = makeNewLocalSymbolTable(sys, systemSymbolTable, catalog, reader, alreadyInStruct);
+        UnifiedSymbolTable table = new UnifiedSymbolTable(systemSymbolTable);
+        table.readIonRep(SymbolTableType.LOCAL, reader, catalog);
         return table;
     }
 
     static private UnifiedSymbolTable makeNewLocalSymbolTable(IonSystem sys, SymbolTable systemSymbolTable, IonCatalog catalog, IonReader reader, boolean alreadyInStruct)
     {
-        UnifiedSymbolTable table = new UnifiedSymbolTable(sys, systemSymbolTable);
+        UnifiedSymbolTable table = new UnifiedSymbolTable(systemSymbolTable);
         table.loadLocalSymbolTable(reader, catalog, alreadyInStruct);
         return table;
     }
@@ -552,9 +543,6 @@ public final
         assert this._import_list == null || this._import_list.getMaxId() == 0;
     }
 
-    public IonSystem getSystem() {
-        return _sys_holder;
-    }
 
     public static final boolean isRealLocalTable(SymbolTable table)
     {
@@ -742,10 +730,13 @@ public final
     {
         SymbolTable system_table = this;
         if (!system_table.isSystemTable()) {
-            system_table = _import_list.getSystemSymbolTable();
-            if (system_table == null || !system_table.isSystemTable()) {
-                system_table = _sys_holder.getSystemSymbolTable();
+            if (isSharedTable()) {
+                // As per spec, shared tables aren't tied to an Ion version.
+                return null;
             }
+            // else this is a local table, which always has a system symtab
+            system_table = _import_list.getSystemSymbolTable();
+            assert system_table != null;
         }
         int id = system_table.getVersion();
         if (id != 1) {
@@ -1070,6 +1061,10 @@ public final
     void setSystem(IonSystem sys) {
         // Not synchronized since this member is only called from system when
         // the symtab is created.
+        if (_sys_holder != null) {
+            // Changing system will cause problems!
+            assert _sys_holder == sys;
+        }
         _sys_holder = sys;
     }
 
@@ -1111,6 +1106,7 @@ public final
         writer.writeValue(rep);
     }
 
+    @Deprecated
     public
     synchronized
     IonStruct getIonRepresentation()
@@ -1134,9 +1130,7 @@ public final
     IonReader getReader()
     {
         IonStruct rep = this.getIonRepresentation();
-        IonSystem sys = this.getSystem();
-        assert(sys instanceof IonSystemPrivate);
-        IonReader reader =((IonSystemPrivate)sys).newSystemReader(rep);
+        IonReader reader = new IonReaderTreeSystem(rep);
         return reader;
     }
 
@@ -1507,7 +1501,7 @@ public final
             assert maxid >= 0;
 
             // Construct dummy table with max_id undefined symbols
-            itab = new UnifiedSymbolTable(this.getSystem());
+            itab = new UnifiedSymbolTable((IonSystem)null);
             itab._local_symbol_count = maxid;
             itab.share(name, version);
         }

@@ -6,6 +6,7 @@ import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonSystem;
+import com.amazon.ion.impl.BlockedBuffer.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
@@ -21,11 +22,11 @@ public abstract class IonWriterBinaryCompatibility
 {
     private static OutputStream make_output_stream()
     {
-        BlockedBuffer.BufferedOutputStream out = new BlockedBuffer.BufferedOutputStream();
+        BufferedOutputStream out = new BufferedOutputStream();
         return out;
     }
 
-    abstract BlockedBuffer.BufferedOutputStream get_output_stream();
+    abstract BufferedOutputStream get_output_stream();
 
     public static class System
         extends IonWriterSystemBinary
@@ -34,15 +35,15 @@ public abstract class IonWriterBinaryCompatibility
 
         public System(IonSystem sys, boolean autoFlush)
         {
-            super(sys, make_output_stream(), autoFlush, false /* suppressIVM */);
-            assert(_user_output_stream instanceof BlockedBuffer.BufferedOutputStream);
+            super(sys.getSystemSymbolTable(), make_output_stream(), autoFlush, false /* suppressIVM */);
+            assert(getOutputStream() instanceof BlockedBuffer.BufferedOutputStream);
         }
 
-        BlockedBuffer.BufferedOutputStream get_output_stream()
+        BufferedOutputStream get_output_stream()
         {
             OutputStream out = this.getOutputStream();
-            assert(out instanceof BlockedBuffer.BufferedOutputStream);
-            return (BlockedBuffer.BufferedOutputStream)out;
+            assert(out instanceof BufferedOutputStream);
+            return (BufferedOutputStream)out;
         }
 
         // we have to put these in twice since we don't have multiple inheritance
@@ -82,14 +83,14 @@ public abstract class IonWriterBinaryCompatibility
         {
             super(system, catalog, new System(system, false /* autoflush */ ), false /* suppressIVM */);
 
-            assert(getOutputStream() instanceof BlockedBuffer.BufferedOutputStream);
+            assert(getOutputStream() instanceof BufferedOutputStream);
         }
 
-        BlockedBuffer.BufferedOutputStream get_output_stream()
+        BufferedOutputStream get_output_stream()
         {
             OutputStream out = this.getOutputStream();
-            assert(out instanceof BlockedBuffer.BufferedOutputStream);
-            return (BlockedBuffer.BufferedOutputStream)out;
+            assert(out instanceof BufferedOutputStream);
+            return (BufferedOutputStream)out;
         }
 
         // we have to put these in twice since we don't have multiple inheritance

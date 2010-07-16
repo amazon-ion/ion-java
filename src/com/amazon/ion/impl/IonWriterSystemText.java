@@ -9,14 +9,15 @@ import static com.amazon.ion.impl.IonConstants.tidStruct;
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonIterationType;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.Base64Encoder.TextStream;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import com.amazon.ion.util.IonTextUtils;
 import java.io.ByteArrayInputStream;
+import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -30,8 +31,10 @@ import java.nio.CharBuffer;
 public class IonWriterSystemText
     extends IonWriterBaseImpl
 {
-    final Appendable  _output;
-    final TextOptions _options;
+    /** Not null. */
+    final private Appendable _output;
+    /** Not null. */
+    final private TextOptions _options;
 
     BufferManager _manager;
 
@@ -45,9 +48,16 @@ public class IonWriterSystemText
     boolean[]   _stack_pending_comma = new boolean[10];
 
 
-    protected IonWriterSystemText(IonSystem sys, OutputStream out, TextOptions options)
+    /**
+     * @throws NullPointerException if any parameter is null.
+     */
+    protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
+                                  OutputStream out, TextOptions options)
     {
-        super(sys);
+        super(defaultSystemSymtab);
+
+        out.getClass(); // Efficient null check
+        options.getClass(); // Efficient null check
 
         if (out instanceof Appendable) {
             _output = (Appendable)out;
@@ -58,9 +68,17 @@ public class IonWriterSystemText
         _options = options;
         set_separator_character();
     }
-    protected IonWriterSystemText(IonSystem sys, Appendable out, TextOptions options)
+
+    /**
+     * @throws NullPointerException if any parameter is null.
+     */
+    protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
+                                  Appendable out, TextOptions options)
     {
-        super(sys);
+        super(defaultSystemSymtab);
+
+        out.getClass(); // Efficient null check
+        options.getClass(); // Efficient null check
 
         _output = out;
         _options = options;
@@ -82,7 +100,7 @@ public class IonWriterSystemText
         if (getDepth() != 0) {
             throw new IllegalStateException("you can't reset a writer that is in the middle of writing a value");
         }
-        setSymbolTable(_system.getSystemSymbolTable());
+        setSymbolTable(_default_system_symbol_table);
     }
 
     @Override
@@ -653,13 +671,20 @@ public class IonWriterSystemText
 
     public void flush() throws IOException
     {
-        if (_output == null) {
-            throw new IllegalStateException("flush() is invalid unless you specify an output in the constructor");
-        }
         if (_output instanceof Flushable) {
             ((Flushable)_output).flush();
         }
-        reset();
+        if (getDepth() == 0) {
+            reset();
+        }
+    }
+
+    public void close() throws IOException
+    {
+        flush();
+        if (_output instanceof Closeable) {
+            ((Closeable)_output).close();
+        }
     }
 }
 

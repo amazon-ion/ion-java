@@ -24,7 +24,7 @@ public class IonWriterUserBinary
 
     protected IonWriterUserBinary(IonSystem system, IonCatalog catalog, IonWriterSystemBinary systemWriter, boolean suppressIVM)
     {
-        super(systemWriter, catalog, (IonContainer)null, suppressIVM);
+        super(system, systemWriter, catalog, (IonContainer)null, suppressIVM);
     }
 
     @Override

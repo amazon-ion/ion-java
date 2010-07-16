@@ -91,13 +91,6 @@ public interface SymbolTable
     @Deprecated
     public String getSystemId();
 
-    /**
-     * Gets the IonSystem that this symbol table is constructed against.
-     * This may return null if there is no IonSystem associated with
-     * this particular table.
-     * @return IonSystem IonSystem associated with this symbol table or null
-     */
-    public IonSystem getSystem();
 
     /**
      * Gets the identifier for the Ion version (and thus the system symbol

@@ -1,4 +1,4 @@
 .eclipseout
 .p4config
 build
-
+junit*.properties

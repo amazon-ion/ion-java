@@ -15,11 +15,10 @@ import java.util.Iterator;
 /**
  *
  */
-public class IonReaderBinaryUserX
+class IonReaderBinaryUserX
     extends IonReaderBinarySystemX
     implements IonReaderWriterPrivate
 {
-    // IonSystem   _system; // now in IonReaderBinarySystemX
     SymbolTable _symbols;
     IonCatalog  _catalog;
 
@@ -40,12 +39,6 @@ public class IonReaderBinaryUserX
     {
         _symbols = _system.getSystemSymbolTable();
         _catalog = catalog;
-    }
-
-    @Override
-    public IonSystem getSystem()
-    {
-        return _system;
     }
 
     @Override

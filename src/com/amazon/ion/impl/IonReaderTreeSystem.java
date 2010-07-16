@@ -35,7 +35,7 @@ import java.util.NoSuchElementException;
 /**
  *
  */
-public class IonReaderTreeSystem
+class IonReaderTreeSystem
     implements IonReader, IonReaderWriterPrivate
 {
     protected IonSystem           _system;
@@ -78,6 +78,11 @@ public class IonReaderTreeSystem
         }
     }
 
+    public void close()
+    {
+        _eof = true;
+    }
+
     protected void set_symbol_table(SymbolTable symtab)
     {
         _symbols = symtab;
@@ -116,12 +121,6 @@ public class IonReaderTreeSystem
     {
         return IonIterationType.USER_ION_VALUE;
     }
-
-    public IonSystem getSystem()
-    {
-        return _system;
-    }
-
 
     public boolean hasNext()
     {

@@ -91,11 +91,11 @@ public class IonWriterUserText
     final private boolean _filter_symbol_tables;
 
     protected IonWriterUserText(IonSystem sys, IonCatalog catalog, OutputStream out, TextOptions options) {
-        super(new IonWriterSystemText(sys, out, options), catalog, (IonContainer)null, options.issuppressIonVersionMarkerOn());
+        super(sys, new IonWriterSystemText(sys.getSystemSymbolTable(), out, options), catalog, (IonContainer)null, options.issuppressIonVersionMarkerOn());
         _filter_symbol_tables = options.isFilterSymbolTablesOn();
     }
     protected IonWriterUserText(IonSystem sys, IonCatalog catalog, Appendable out, TextOptions options) {
-        super(new IonWriterSystemText(sys, out, options), catalog, (IonContainer)null, options.issuppressIonVersionMarkerOn());
+        super(sys, new IonWriterSystemText(sys.getSystemSymbolTable(), out, options), catalog, (IonContainer)null, options.issuppressIonVersionMarkerOn());
         _filter_symbol_tables = options.isFilterSymbolTablesOn();
     }
 

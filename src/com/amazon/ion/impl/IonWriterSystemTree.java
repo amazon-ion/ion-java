@@ -31,9 +31,10 @@ import java.math.BigInteger;
  * the output of the this writer is one or more IonValues,
  * typically an IonDatagram with contents.
  */
-public class IonWriterSystemTree
+class IonWriterSystemTree
     extends IonWriterBaseImpl
 {
+    private final IonSystem _system;
     IonCatalog          _catalog;
     boolean             _in_struct;
     IonContainer        _current_parent;
@@ -46,10 +47,17 @@ public class IonWriterSystemTree
 
     protected IonWriterSystemTree(IonSystem sys, IonCatalog catalog, IonContainer rootContainer)
     {
-        super(sys);
+        super(sys.getSystemSymbolTable());
+        _system = sys;
         _catalog = catalog;
         _current_parent = rootContainer;
         _in_struct = (_current_parent instanceof IonStruct);
+    }
+
+    // not public
+    IonSystem getSystem()
+    {
+        return _system;
     }
 
     @Override
@@ -60,7 +68,6 @@ public class IonWriterSystemTree
         }
         setSymbolTable(_system.getSystemSymbolTable());
     }
-
 
     //
     // informational methods
@@ -379,9 +386,15 @@ public class IonWriterSystemTree
         append(v);
     }
 
-    public void flush() throws IOException
+    public void flush()
     {
         // flush is not meaningful for a tree writer
+        return;
+    }
+
+    public void close()
+    {
+        // close is not meaningful for a tree writer
         return;
     }
 
