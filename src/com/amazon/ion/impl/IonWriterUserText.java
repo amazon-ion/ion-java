@@ -141,7 +141,8 @@ public class IonWriterUserText
         }
 
         if (requires_this_local_table) {
-            IonReader reader = new_symbols.getReader();
+        	// TODO: remove cast below with update IonReader over symbol table
+            IonReader reader = ((UnifiedSymbolTable)new_symbols).getReader(this._system);
             // move onto and write the struct header
             IonType t = reader.next();
             assert(IonType.STRUCT.equals(t));

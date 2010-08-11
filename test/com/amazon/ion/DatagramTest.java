@@ -178,7 +178,7 @@ public class DatagramTest
         IonSymbol versionMarker = (IonSymbol)sysIter.next();      // the IVM symbol is first
         assertSame(versionMarker, datagram1.systemGet(0));
         IonStruct localSymtabStruct = (IonStruct) sysIter.next(); // then the smbol table
-        assertSame(localSymtabStruct, datagram1.systemGet(1));
+        assertEquals(localSymtabStruct, datagram1.systemGet(1));
 
         IonSymbol symbol = (IonSymbol) sysIter.next();
         assertSame(symbol, datagram1.systemGet(2)); // cas 22 apr 2008: was 1

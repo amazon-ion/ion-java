@@ -1180,7 +1180,10 @@ public class IonDatagramLite
                 SymbolTable new_symbol_table = curr_symtab;
                 while (new_symbol_table != null)
                 {
-                    IonValue rep = new_symbol_table.getIonRepresentation();
+                	if ((new_symbol_table instanceof UnifiedSymbolTable) == false) {
+                		throw new IonException("only UnifiedSymbolTable instances are currently supported by IonDatagramLite");
+                	}
+                    IonValue rep = ((UnifiedSymbolTable)new_symbol_table).getIonRepresentation(this.__iterator.get_datagram_system());
                     assert(rep != null && __iterator.get_datagram_system() == rep.getSystem());
 
                     if (rep == prev_value || (is_ivm(curr_value) && new_symbol_table.isSystemTable())) {

@@ -5,10 +5,13 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.impl.SymbolTableType.LOCAL;
 import static com.amazon.ion.impl.SymbolTableType.SHARED;
 import static com.amazon.ion.util.IonTextUtils.printQuotedSymbol;
+
+import com.amazon.ion.Decimal;
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.InvalidSystemSymbolException;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonIterationType;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
@@ -18,10 +21,14 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
+import com.amazon.ion.Timestamp;
+import com.amazon.ion.impl.IonScalarConversionsX.ValueVariant;
 import com.amazon.ion.system.SystemFactory;
 import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 
@@ -1107,7 +1114,7 @@ public final class UnifiedSymbolTable
     }
 
     @Deprecated
-    public
+	public
     synchronized
     IonStruct getIonRepresentation()
     {
@@ -1122,6 +1129,26 @@ public final class UnifiedSymbolTable
         return _ion_rep;
     }
 
+    public
+    synchronized
+    IonStruct getIonRepresentation(IonSystem sys)
+    {
+    	if (sys == this._sys_holder) {
+    		return getIonRepresentation();
+    	}
+    	else if (_ion_rep != null && _ion_rep.getSystem() == sys) {
+        	return _ion_rep;
+        }
+
+        if (sys == null) {
+            throw new IonException("can't create representation without a system");
+        }
+
+        IonStruct rep = makeIonRepresentation(sys);
+        
+        return rep;
+    }
+
     // TODO: optimize this.  this is a quick and dirty version
     //       to provide users the "correct" alternative.  Later
     //       we should make a real synthetic read that does this
@@ -1131,9 +1158,24 @@ public final class UnifiedSymbolTable
     {
         IonStruct rep = this.getIonRepresentation();
         IonReader reader = new IonReaderTreeSystem(rep);
+// cas FIXME:        IonReader reader = new USTReader(this);
         return reader;
     }
 
+    // TODO: optimize this.  this is a quick and dirty version
+    //       to provide users the "correct" alternative.  Later
+    //       we should make a real synthetic read that does this
+    //       without requiring the underlying struct.
+    protected
+    IonReader getReader(IonSystem sys)
+    {
+        IonStruct rep = this.getIonRepresentation(sys);
+        IonReader reader = new IonReaderTreeSystem(rep);
+// cas FIXME:        IonReader reader = new USTReader(this);
+        return reader;
+    }
+
+    
     /**
      * NOT SYNCHRONIZED! Call only from a synch'd method.
      */
@@ -1538,5 +1580,5 @@ public final class UnifiedSymbolTable
         buf.append(" max_id::"+this.getMaxId());
         buf.append(')');
         return buf.toString();
-    }
+    }    
 }
