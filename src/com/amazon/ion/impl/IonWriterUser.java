@@ -30,7 +30,7 @@ import java.math.BigInteger;
 abstract class IonWriterUser
     extends IonWriterBaseImpl  // should be IonWriterSystem ?
 {
-    private final IonSystem _system;
+    /*package*/ final IonSystem _system;
     // needed to make correct local symbol tables
     IonCatalog _catalog;
 
