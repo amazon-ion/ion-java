@@ -325,8 +325,7 @@ class IonReaderBinarySystemX
             return null;
         }
         if (IonType.SYMBOL.equals(_value_type)) {
-            return null;
-//            throw new UnsupportedOperationException("not supported - use UserReader");
+            throw new UnsupportedOperationException("not supported - use UserReader");
         }
         prepare_value(AS_TYPE.string_value);
         return _v.getString();

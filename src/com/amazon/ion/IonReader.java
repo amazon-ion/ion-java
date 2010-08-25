@@ -95,11 +95,6 @@ public interface IonReader
      */
     public int getDepth();
 
-    /**
-     * Returns the type of iteration this writer is performing.
-     */
-    public IonIterationType getIterationType();
-
 
     /**
      * Returns the symbol table that is applicable to the current value.
@@ -264,6 +259,9 @@ public interface IonReader
      * Returns the current value as an int symbol id.  This is only valid if
      * there is
      * an underlying value and the value is an Ion symbol.
+     * <p>
+     * If the reader cannot determine the symbol ID, this method returns
+     * {@link SymbolTable#UNKNOWN_SYMBOL_ID}.
      *
      * @see #stringValue()
      */

@@ -6,6 +6,7 @@ import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
+import com.amazon.ion.IonTextReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -141,8 +142,8 @@ public class LoaderImpl
             boolean isBinary = IonBinary.matchBinaryVersionMarker(ionData);
             if (USE_NEW_READERS && !isBinary) {
                 IonReader reader = mySystem.newSystemReader(ionData);
-// assert reader instanceof IonTextReaderImpl;
-                assert reader.getIterationType().isText();
+                assert reader instanceof IonTextReaderImpl;
+
                 dg = new IonDatagramImpl(mySystem, myCatalog, reader);
             }
             else {
@@ -185,8 +186,7 @@ public class LoaderImpl
         if (USE_NEW_READERS)
         {
             IonReader reader = mySystem.newSystemReader(pushback);
-            assert reader.getIterationType().isText();
-            //assert reader instanceof IonTextReaderImpl;
+            assert reader instanceof IonTextReader;
             try
             {
                 IonDatagramImpl dg = new IonDatagramImpl(mySystem, myCatalog, reader);

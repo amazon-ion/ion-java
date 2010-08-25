@@ -2,6 +2,8 @@
 
 package com.amazon.ion;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+
 import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.TreeReaderTest;
 
@@ -126,20 +128,19 @@ public abstract class ReaderSystemProcessingTestCase
         // we'll use this to make sure we did check something here
         boolean was_checked = false;
 
-        IonIterationType reader_type = myReader.getIterationType();
-
         // first we check the text representation which all
         // user readers and any non-binary readers will have
-        if (reader_type.isText() || reader_type.isUser()) {
+        try {
             String reader_name = myReader.stringValue();
             assertEquals(expected, reader_name);
             was_checked = true;
         }
+        catch (UnsupportedOperationException e) { }
 
         // now we check the binary value, which user readers
         // and any non-text readers should understand
-        if (reader_type.isUser() || !reader_type.isText()) {
-            int sid = myReader.getSymbolId();
+        int sid = myReader.getSymbolId();
+        if (sid != UNKNOWN_SYMBOL_ID) {
             if (expectedSid != sid) {
                 int reader_sid = myReader.getSymbolId();
                 assertEquals(expectedSid, reader_sid);
@@ -149,7 +150,7 @@ public abstract class ReaderSystemProcessingTestCase
 
         // finally we make sure we checked at least one of the
         // two representations (symbol text or symbol id)
-        assert(was_checked);
+        assertTrue("Didn't check symbol text or id", was_checked);
     }
 
 

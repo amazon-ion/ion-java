@@ -221,7 +221,8 @@ public final class IonDatagramImpl
     /**
      * @param ionData must be in system mode
      */
-    public IonDatagramImpl(IonSystemImpl system, IonCatalog catalog, IonReader ionData)
+    public IonDatagramImpl(IonSystemImpl system, IonCatalog catalog,
+                           IonReader ionData)
         throws IOException
     {
         super(system, DATAGRAM_TYPEDESC, false);
@@ -238,13 +239,7 @@ public final class IonDatagramImpl
 
         if (ionData != null)  // FIXME refactor, we don't throw in this case
         {
-            IonWriter treeWriter;
-            if (ionData.getIterationType().isSystem()) {
-                treeWriter = system.newTreeSystemWriter(this);
-            }
-            else {
-                treeWriter = system.newTreeWriter(this);
-            }
+            IonWriter treeWriter = system.newTreeSystemWriter(this);
 
             treeWriter.writeValues(ionData);
 

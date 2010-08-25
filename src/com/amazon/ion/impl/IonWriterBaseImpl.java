@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.Decimal;
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonException;
@@ -713,7 +714,6 @@ abstract class IonWriterBaseImpl
     {
         String [] a = reader.getTypeAnnotations();
         if (a == null) {
-            assert(reader.getIterationType().isBinary());
             int[] a_sids = reader.getTypeAnnotationIds();
             if (a_sids.length > 1) {
                 a = new String[a_sids.length];
@@ -772,7 +772,6 @@ abstract class IonWriterBaseImpl
             case SYMBOL:
                 String name = reader.stringValue();
                 if (name == null) {
-                    assert(reader.getIterationType().isBinary());
                     int sid = reader.getSymbolId();
                     name = find_symbol(sid);
                 }
