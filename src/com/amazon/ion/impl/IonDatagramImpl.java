@@ -822,7 +822,7 @@ public final class IonDatagramImpl
                 // that (if it's got any useful symbols in it) it's serialized
                 // in the datagram *before* the value that needs it.
                 if (isNeededLocalSymbolTable(symtab)) {
-                    IonValue ionsymtab = symtab.getIonRepresentation();
+                    IonValue ionsymtab = ((UnifiedSymbolTable)symtab).getIonRepresentation(this._system);
                     if (ionsymtab.getContainer() == null) {
 //                        assert ionsysmtab.getSymbolTable() == null;
 

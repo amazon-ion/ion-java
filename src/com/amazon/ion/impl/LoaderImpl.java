@@ -142,8 +142,8 @@ public class LoaderImpl
             boolean isBinary = IonBinary.matchBinaryVersionMarker(ionData);
             if (USE_NEW_READERS && !isBinary) {
                 IonReader reader = mySystem.newSystemReader(ionData);
-                assert reader instanceof IonTextReaderImpl;
-
+                // unneeded and incorrect: assert reader instanceof IonTextReaderImpl;
+                
                 dg = new IonDatagramImpl(mySystem, myCatalog, reader);
             }
             else {

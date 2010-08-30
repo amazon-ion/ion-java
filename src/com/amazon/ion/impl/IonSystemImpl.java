@@ -277,6 +277,7 @@ public class IonSystemImpl
         IonWriter newWriter = newWriter(datagram);
         try
         {
+        	lst.setSystem(this);  // FIXME: this binding should not be necessary
             lst.writeTo(newWriter);
             // FIXME there's no need for the writeTo approach
             //       we can just set the symbol table on the

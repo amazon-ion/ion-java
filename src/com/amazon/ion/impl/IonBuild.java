@@ -14,13 +14,14 @@ public class IonBuild
 {
     static final int Major = 1;
     static final int Minor = 8;
-    static final int Patch = 4;
+    static final int Patch = 5;
     
-    static final String CheckInDate    = "2010-08-11T08:38+07:00";
-    static final String CheckInComment = "fixed symbol table related asserts from integration - csuver";
+    static final String CheckInDate    = "2010-08-30T10:05+07:00";
+    static final String CheckInComment = "fixed symbol table ion struct binding (half way) - csuver";
 
     static final String[] History = {
-    	 "{major_version:1,minor_version:8,patch:4,check_in_date:2010-06-24T09:56+07:00,check_in_comment:'''fixed symbol table related asserts from integration - csuver'''}"
+        "{major_version:1,minor_version:8,patch:5,check_in_date:2010-08-30T10:05+07:00,check_in_comment:'''fixed symbol table ion struct binding (half way) - csuver'''}"
+    	,"{major_version:1,minor_version:8,patch:4,check_in_date:2010-06-24T09:56+07:00,check_in_comment:'''fixed symbol table related asserts from integration - csuver'''}"
         ,"{major_version:1,minor_version:8,patch:3,check_in_date:2010-06-24T09:56+07:00,check_in_comment:'''fixed binary stepOut bug Jira 133 - csuver'''}"
         ,"{major_version:1,minor_version:8,patch:2,check_in_date:2010-06-07T08:10+07:00,check_in_comment:'''Initial identified JAR - with lite and fix for reading local symbol table - csuver'''}"
     };
