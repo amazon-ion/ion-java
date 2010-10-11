@@ -17,12 +17,12 @@ public class OneForDebuggingTest
     public void testOneRoundTripStreamingTest()
     {
         String code_dir = getProjectHome().getAbsolutePath();
-        String root_name = "\\IonJava\\";
+        String root_name = File.separator + "IonJava";
         int root = code_dir.indexOf(root_name);
         String test_dir = code_dir.substring(0, root);
         String remainder = code_dir.substring(root + root_name.length());
-        test_dir += "\\IonTests\\"+ remainder + "\\iontestdata\\";
-        String test_file_path = test_dir + "equivs\\symbols.ion";
+        test_dir += File.separator + "IonTests" + File.separator + remainder + ( remainder.isEmpty() ? "" : File.separator ) + "iontestdata";
+        String test_file_path = test_dir + File.separator + "equivs" + File.separator + "symbols.ion";
         File f = new File(test_file_path);
         FileTestCase test = makeTest(f);
         test.run();

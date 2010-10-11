@@ -1068,7 +1068,7 @@ public class IonSystemLite
         return ionValue;
     }
 
-    public IonSexp newSexp(Collection<? extends IonValue> values)
+    public IonSexpLite newSexp(Collection<? extends IonValue> values)
         throws ContainedValueException, NullPointerException
     {
         IonSexpLite ionValue = newEmptySexp();

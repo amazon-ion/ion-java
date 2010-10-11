@@ -1153,11 +1153,9 @@ public class IonReaderTextRawTokensX
     }
     private int skip_over_timestamp(SavePoint sp) throws IOException
     {
-        int c = read_char();
-
         // we know we have dddd- or ddddT we don't know what follows
         // is should be dddd-mm
-        skip_timestamp_past_digits(4);
+        int c = skip_timestamp_past_digits(4);
         if (c == 'T') {
             // yyyyT
             if (sp != null) {
@@ -1190,27 +1188,32 @@ public class IonReaderTextRawTokensX
         }
         skip_timestamp_validate(c, '-');
         c = skip_timestamp_past_digits(2);
-        c = read_char();
-        if (!IonTokenConstsX.isDigit(c)) {
-            // yyyy-mm-ddT?
+        if ( c != 'T' ) {
+            // yyyy-mm-dd
             return skip_timestamp_offset(c, sp);
         }
-        c = skip_timestamp_past_digits(1);
         c = read_char();
+        if (!IonTokenConstsX.isDigit(c)) {
+            // yyyy-mm-ddT
+            return skip_timestamp_offset(c, sp);
+        }
+        // one hour digit already read above
+        c = skip_timestamp_past_digits(0, 1);
         if (c != ':') {
             // yyyy-mm-ddThh?
             return skip_timestamp_offset(c, sp);
         }
-        c = skip_timestamp_past_digits(2);
+        c = skip_timestamp_past_digits(1, 2);
         if (c != ':') {
             // yyyy-mm-ddThh:mm?
             return skip_timestamp_offset(c, sp);
         }
-        c = skip_timestamp_past_digits(2);
+        c = skip_timestamp_past_digits(1, 2);
         if (c != '.') {
             // yyyy-mm-ddThh:mm:ss?
             return skip_timestamp_offset(c, sp);
         }
+        c = read_char();
         if (IonTokenConstsX.isDigit(c)) {
             c = skip_over_digits(c);
         }
@@ -1218,6 +1221,7 @@ public class IonReaderTextRawTokensX
 
         return skip_timestamp_offset(c, sp);
     }
+
     private int skip_timestamp_offset(int c, SavePoint sp) throws IOException
     {
         if (c == '-' || c == '+') {
@@ -1242,19 +1246,41 @@ public class IonReaderTextRawTokensX
             error("invalid character '"+(char)c+"' encountered in timestamp (when '"+(char)expected+"' was expected");
         }
     }
+
+    // helper method for skipping embedded digits inside a timestamp value
+    // this overload skips exactly the number indicated, and errors if a non-digit is encountered
     private final int skip_timestamp_past_digits(int len) throws IOException
+    {
+        // special case of the other overload
+        return skip_timestamp_past_digits(len, len);
+    }
+
+    // helper method for skipping embedded digits inside a timestamp value
+    // this overload skips at least min and at most max digits, and errors
+    // if a non-digit is encountered in the first min characters read
+    private final int skip_timestamp_past_digits(int min, int max) throws IOException
     {
         int c;
 
-        while (len > 0) {
+        // scan the first min characters insuring they're digits
+        while (min > 0) {
             c = read_char();
             if (!IonTokenConstsX.isDigit(c)) {
                 error("invalid character '"+(char)c+"' encountered in timestamp");
             }
-            len--;
+            --min;
+            --max;
         }
-        c = read_char();
-        return c;
+        // stop at the first non digit between min and max
+        while (max > 0) {
+            c = read_char();
+            if (!IonTokenConstsX.isDigit(c)) {
+                return c;
+            }
+            --max;
+        }
+        // max characters reached; stop
+        return read_char();
     }
     protected IonType load_number(StringBuilder sb) throws IOException
     {

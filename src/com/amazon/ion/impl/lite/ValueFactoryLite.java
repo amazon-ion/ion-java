@@ -299,7 +299,7 @@ public abstract class ValueFactoryLite
         return ionValue;
     }
 
-    public IonSexpLite newSexp(Collection<? extends IonValueLite> values)
+    public IonSexpLite newSexp(Collection<? extends IonValue> values)
         throws ContainedValueException, NullPointerException
     {
         IonSexpLite ionValue = newEmptySexp();
