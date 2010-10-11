@@ -2,17 +2,18 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.Decimal;
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonNumber;
-import com.amazon.ion.IonNumber.Classification;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.IonNumber.Classification;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
@@ -24,7 +25,8 @@ import java.util.Date;
  *  writer).
  */
 abstract class IonWriterBaseImpl
-    implements IonWriter
+    implements IonWriter, IonReaderWriterPrivate
+
 {
     protected static final String ERROR_MISSING_FIELD_NAME =
         "IonWriter.setFieldName() must be called before writing a value into a struct.";
@@ -36,7 +38,6 @@ abstract class IonWriterBaseImpl
      * Must not be null.
      */
     protected final SymbolTable _default_system_symbol_table;
-
 
     /**
      * Must be either local or system table.  It can be null
@@ -69,14 +70,15 @@ abstract class IonWriterBaseImpl
         _default_system_symbol_table = defaultSystemSymbolTable;
     }
 
-    protected void reset() throws IOException
-    {
-        // FIXME this test is insufficient: we could have annotations in-flight
-        if (getDepth() != 0) {
-            throw new IllegalStateException("you can't reset a writer that is in the middle of writing a value");
-        }
-        setSymbolTable(_default_system_symbol_table);
-    }
+
+    abstract void reset() throws IOException;
+    //protected void reset() throws IOException
+    //{
+    //    if (getDepth() != 0) {
+    //        throw new IllegalStateException("you can't reset a writer that is in the middle of writing a value");
+    //    }
+    //    setSymbolTable(_system.getSystemSymbolTable());
+    //}
 
     //
     // symbol table support methods.  These handle the
@@ -86,22 +88,31 @@ abstract class IonWriterBaseImpl
     //
     public void setSymbolTable(SymbolTable symbols) throws IOException
     {
-        if (symbols != null
-            && ! symbols.isLocalTable()
-            && ! symbols.isSystemTable())
-        {
-            throw new IllegalArgumentException("table must be local or system");
+        if (UnifiedSymbolTable.isAssignableTable(symbols) == false) {
+            throw new IllegalArgumentException("symbol table must be local or system to be set, or reset");
         }
         if (getDepth() > 0) {
             throw new IllegalStateException("the symbol table cannot be set, or reset, while a container is open");
         }
         _symbol_table = symbols;
     }
+
     // note that system writer will overload this and return a null.
     public SymbolTable getSymbolTable()
     {
         return _symbol_table;
     }
+
+    abstract UnifiedSymbolTable inject_local_symbol_table() throws IOException;
+/*    {
+        // no catalog since it doesn't matter as this is a
+        // pure local table, with no imports
+        UnifiedSymbolTable symbols
+            = UnifiedSymbolTable.makeNewLocalSymbolTable(_symbol_table);
+        setSymbolTable(symbols);
+        return symbols;
+    }
+*/
     protected int add_symbol(String name) throws IOException
     {
         if (_symbol_table == null) {
@@ -112,23 +123,29 @@ abstract class IonWriterBaseImpl
         if (sid > 0) return sid;
 
         if (_symbol_table.isSystemTable()) {
-            UnifiedSymbolTable symbols = UnifiedSymbolTable.makeNewLocalSymbolTable(_symbol_table);
-            setSymbolTable(symbols);
+            _symbol_table = inject_local_symbol_table();
         }
         assert _symbol_table.isLocalTable();
 
         sid = _symbol_table.addSymbol(name);
         return sid;
     }
+
     private String find_symbol(int sid)
     {
-        if (_symbol_table == null) {
-            throw new UnsupportedOperationException("a symbol table is required for MIXED id and string use");
+        SymbolTable symbol_table = _symbol_table;
+        if (symbol_table == null) {
+            if (sid <= UnifiedSymbolTable.MAX_ID_SID) {
+                symbol_table = _default_system_symbol_table;
+            }
+            else {
+                throw new UnsupportedOperationException("a user supplied symbol table is required for MIXED id and string use");
+            }
         }
-        String name = _symbol_table.findSymbol(sid);
+        String name = symbol_table.findSymbol(sid);
+        assert(name != null && name.length() > 0);
         return name;
     }
-
 
     //
     // field name support.  This handles converting
@@ -242,6 +259,17 @@ abstract class IonWriterBaseImpl
         }
         System.arraycopy(annotations, 0, _annotations, 0, annotations.length);
         _annotation_count = annotations.length;
+        assert(no_illegal_annotations() == true);
+    }
+    private final boolean no_illegal_annotations()
+    {
+        for (int ii=0; ii<_annotation_count; ii++) {
+            String a = _annotations[ii];
+            if (a == null || a.length() < 1) {
+                return false;
+            }
+        }
+        return true;
     }
     public void setTypeAnnotationIds(int[] annotationIds)
     {
@@ -619,21 +647,63 @@ abstract class IonWriterBaseImpl
 
     public void writeValues(IonReader reader) throws IOException
     {
+        if (reader.getDepth() == 0) {
+            clear_system_value_stack();
+        }
+
+        if (reader instanceof IonReaderWriterPrivate) {
+            IonReaderWriterPrivate private_reader = (IonReaderWriterPrivate)reader;
+            for (;;) {
+                IonType type = reader.next();
+                if (type == null) {
+                    break;
+                }
+                transfer_symbol_tables(private_reader);
+                writeValue(reader);
+            }
+        }
+        else {
+            write_values_helper(reader);
+        }
+        return;
+    }
+    public void write_values_helper(IonReader reader) throws IOException
+    {
         while (reader.next() != null) {
             writeValue(reader);
         }
         return;
     }
+
+    private final void transfer_symbol_tables(IonReaderWriterPrivate private_reader) throws IOException
+    {
+        SymbolTable reader_symbols = null;
+        reader_symbols = private_reader.pop_passed_symbol_table();
+        if (reader_symbols != null) {
+            clear_system_value_stack();
+            setSymbolTable(reader_symbols);
+            while (reader_symbols != null) {
+                push_symbol_table(reader_symbols);
+                reader_symbols = private_reader.pop_passed_symbol_table();
+            }
+        }
+        return;
+    }
     private final void write_value_field_name_helper(IonReader reader)
     {
-        String fieldname;
-
-        if (this.isInStruct() && !isFieldNameSet()) {
-            fieldname = reader.getFieldName();
-            if (fieldname == null) {
-                throw new IllegalStateException(ERROR_MISSING_FIELD_NAME);
+        if (this.isInStruct() && !isFieldNameSet())
+        {
+            String field_name = reader.getFieldName();
+            if (field_name == null) {
+                int field_sid = reader.getFieldId();
+                if (field_sid > 0) {
+                    field_name = find_symbol(field_sid);
+                }
             }
-            setFieldName(fieldname);
+            if (field_name == null) {
+                throw new IllegalStateException("a field name is required for members of a struct");
+            }
+            setFieldName(field_name);
             if (_debug_on) System.out.print(":");
         }
 
@@ -643,19 +713,31 @@ abstract class IonWriterBaseImpl
     private final void write_value_annotations_helper(IonReader reader)
     {
         String [] a = reader.getTypeAnnotations();
-        if (a != null && a.length > 0) {
-            setTypeAnnotations(a);
-            if (_debug_on) System.out.print(";");
+        if (a == null) {
+            int[] a_sids = reader.getTypeAnnotationIds();
+            if (a_sids.length > 1) {
+                a = new String[a_sids.length];
+                for (int ii=0; ii<a.length; ii++) {
+                    a[ii] = find_symbol(a_sids[ii]);
+                }
+            }
+            else {
+                a = EMPTY_STRING_ARRAY;
+            }
         }
+        setTypeAnnotations(a);
+        if (_debug_on) System.out.print(";");
         return;
     }
+
     public void writeValue(IonReader reader) throws IOException
     {
         write_value_field_name_helper(reader);
         write_value_annotations_helper(reader);
 
         if (reader.isNullValue()) {
-            this.writeNull(reader.getType());  // TODO hoist getType
+            // TODO hoist getType
+            this.writeNull(reader.getType());
         }
         else {
             switch (reader.getType()) {
@@ -688,14 +770,12 @@ abstract class IonWriterBaseImpl
                 if (_debug_on) System.out.print("$");
                 break;
             case SYMBOL:
-//                if (reader.getIterationType().isBinary() && this.getIterationType().isBinary()) {
-//                    int sid = reader.getSymbolId();
-//                    writeSymbol(sid);
-//                }
-//                else {
-                    String name = reader.stringValue();
-                    writeSymbol(name);
-//                }
+                String name = reader.stringValue();
+                if (name == null) {
+                    int sid = reader.getSymbolId();
+                    name = find_symbol(sid);
+                }
+                writeSymbol(name);
                 if (_debug_on) System.out.print("y");
                 break;
             case BLOB:
@@ -710,7 +790,7 @@ abstract class IonWriterBaseImpl
                 if (_debug_on) System.out.print("{");
                 stepIn(IonType.STRUCT);
                 reader.stepIn();
-                writeValues(reader);
+                write_values_helper(reader);
                 reader.stepOut();
                 stepOut();
                 if (_debug_on) System.out.print("}");
@@ -719,7 +799,7 @@ abstract class IonWriterBaseImpl
                 if (_debug_on) System.out.print("[");
                 stepIn(IonType.LIST);
                 reader.stepIn();
-                writeValues(reader);
+                write_values_helper(reader);
                 reader.stepOut();
                 stepOut();
                 if (_debug_on) System.out.print("]");
@@ -728,7 +808,7 @@ abstract class IonWriterBaseImpl
                 if (_debug_on) System.out.print("(");
                 stepIn(IonType.SEXP);
                 reader.stepIn();
-                writeValues(reader);
+                write_values_helper(reader);
                 reader.stepOut();
                 stepOut();
                 if (_debug_on) System.out.print(")");
@@ -737,5 +817,44 @@ abstract class IonWriterBaseImpl
                 throw new IllegalStateException();
             }
         }
+    }
+
+    //
+    //  This code handles the skipped symbol table
+    //  support - it is cloned in IonReaderTextUserX,
+    //  IonReaderBinaryUserX and IonWriterBaseImpl
+    //
+    //  SO ANY FIXES HERE WILL BE NEEDED IN THOSE
+    //  THREE LOCATIONS AS WELL.
+    //
+    private int _symbol_table_top = 0;
+    private SymbolTable[] _symbol_table_stack = new SymbolTable[3]; // 3 is rare, IVM followed by a local sym tab with open content
+    private void clear_system_value_stack()
+    {
+        while (_symbol_table_top > 0) {
+            _symbol_table_top--;
+            _symbol_table_stack[_symbol_table_top] = null;
+        }
+    }
+    private void push_symbol_table(SymbolTable symbols)
+    {
+        assert(symbols != null);
+        if (_symbol_table_top >= _symbol_table_stack.length) {
+            int new_len = _symbol_table_stack.length * 2;
+            SymbolTable[] temp = new SymbolTable[new_len];
+            System.arraycopy(_symbol_table_stack, 0, temp, 0, _symbol_table_stack.length);
+            _symbol_table_stack = temp;
+        }
+        _symbol_table_stack[_symbol_table_top++] = symbols;
+    }
+    public SymbolTable pop_passed_symbol_table()
+    {
+        if (_symbol_table_top <= 0) {
+            return null;
+        }
+        _symbol_table_top--;
+        SymbolTable symbols = _symbol_table_stack[_symbol_table_top];
+        _symbol_table_stack[_symbol_table_top] = null;
+        return symbols;
     }
 }

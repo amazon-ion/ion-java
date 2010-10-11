@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonIterationType;
 import com.amazon.ion.IonStruct;
@@ -29,13 +30,10 @@ import java.math.BigInteger;
 abstract class IonWriterUser
     extends IonWriterBaseImpl  // should be IonWriterSystem ?
 {
-    private final IonSystem _system;
+    /*package*/ final IonSystem _system;
+    // needed to make correct local symbol tables
+    IonCatalog _catalog;
 
-    // these track the state needed to put version markers
-    // in place as needed
-    // we always write the version marker, but we also skip the users IVM it
-    // they write it as a symbol as the first value
-    boolean   _any_values_written;
     boolean   _after_ion_version_marker;
     boolean   _is_tree_writer;
     boolean   _root_is_datagram;
@@ -58,11 +56,11 @@ abstract class IonWriterUser
     IonWriterBaseImpl _current_writer_as_base;
 
 
-    protected IonWriterUser(IonSystem system, IonWriterBaseImpl systemWriter,
-                            IonValue container)
+    protected IonWriterUser(IonSystem system, IonWriterBaseImpl systemWriter, IonCatalog catalog, IonValue container, boolean suppressIVM)
     {
         super(system.getSystemSymbolTable());
         _system = system;
+        _catalog = catalog;
         _system_writer = systemWriter;
         _current_writer = _system_writer;
         if (_system_writer instanceof IonWriterBaseImpl) {
@@ -87,15 +85,14 @@ abstract class IonWriterUser
                 throw new IllegalArgumentException("container is invalid except on IonValue writers");
             }
             _root_is_datagram = true;
-            if (_system_writer.getSymbolTable() == null) {
-                try {
-                    writeIonVersionMarker();
-                    // we don't count this one, so we have to clean up after
-                    // writeIVM set this to true
-                    _any_values_written = false;
-                }
-                catch (IOException e) {
-                    throw new IonException(e);
+            if (suppressIVM == false) {
+                if (_current_writer.getSymbolTable() == null) {
+                    try {
+                        setSymbolTable(_system.getSystemSymbolTable());
+                    }
+                    catch (IOException e) {
+                        throw new IonException(e);
+                    }
                 }
             }
         }
@@ -200,8 +197,8 @@ abstract class IonWriterUser
             throw new IllegalStateException("you can't reset a user writer while a local symbol table value is being written");
         }
 
-        super.reset();
-        _any_values_written       = false;
+        _system_writer.flush();
+
         _after_ion_version_marker = false;
         _current_writer           = _system_writer;
         _current_writer_as_base   = _system_writer_as_base;
@@ -224,33 +221,26 @@ abstract class IonWriterUser
     private void open_local_symbol_table_copy()
     {
         assert(!_symbol_table_being_copied);
-        assert(_system != null && _system instanceof IonSystemImpl);
+        assert(_system != null);
 
         _symbol_table_value = _system.newEmptyStruct();
         _symbol_table_value.addTypeAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE);
 
-        _symbol_table_writer       = new IonWriterSystemTree(_system, _symbol_table_value);
+        _symbol_table_writer       = new IonWriterSystemTree(_system, _catalog, _symbol_table_value);
 
         _symbol_table_being_copied = true;
         _current_writer            = _symbol_table_writer;
         _current_writer_as_base    = _symbol_table_writer;
     }
+
     private void close_local_symbol_table_copy() throws IOException
     {
         assert(_symbol_table_being_copied);
-        assert(_system != null && _system instanceof IonSystemImpl);
+        assert(_system != null && _system instanceof IonSystemPrivate);
 
         // convert the struct we just wrote with the TreeWriter to a
         // local symbol table
-        UnifiedSymbolTable symtab = UnifiedSymbolTable.makeNewLocalSymbolTable(_symbol_table_value);
-
-        // and we have to write the symbol table out to the
-        // system writer, since we diverted the events up
-        // to this point
-        symtab.writeTo(_system_writer);
-
-        // now make this symbol table the current symbol table
-        this.setSymbolTable(symtab);
+        UnifiedSymbolTable symtab = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _catalog, _symbol_table_value);
 
         _symbol_table_being_copied = false;
         _symbol_table_value        = null;
@@ -259,21 +249,62 @@ abstract class IonWriterUser
         _current_writer            = _system_writer;
         _current_writer_as_base    = _system_writer_as_base;
 
-
+        // now make this symbol table the current symbol table
+        this.setSymbolTable(symtab);
 
         return;
     }
-    private final void start_user_value() throws IOException
-    {
-        _any_values_written = true;
-    }
+
+    abstract void set_symbol_table_helper(SymbolTable prev_symbols, SymbolTable new_symbols) throws IOException;
 
     @Override
-    public void setSymbolTable(SymbolTable symbols) throws IOException
+    public final void setSymbolTable(SymbolTable symbols) throws IOException
     {
+        SymbolTable prev = _symbol_table;
+
+        // checks validity and set the member variable
         super.setSymbolTable(symbols);
+
+        // the subclass should do what they want to on
+        // this transition often nothing, sometimes we
+        // write the symbol table to the system writer
+        // comparing prev and new prevents recursing
+        // on writeIVM calls
+        set_symbol_table_helper(prev, symbols);
+
         _system_writer.setSymbolTable(symbols);
     }
+
+    /**
+     * to do when they are called on to now actually write the
+     * symbol table.  The symbol table has already been "captured"
+     * and constructed and is will be set as the current symbol
+     * table upon return.
+     *
+     * @param symbols
+     */
+    protected final void xxx_writeUserSymbolTable(SymbolTable symbols) throws IOException
+    {
+        // if our symbol table changed we need to write it out
+        // to the system writer ... IF, and only if, this is binary writer
+        if (symbols.isSystemTable()) {
+            if (!_after_ion_version_marker) {
+                // writing to the system writer keeps us from
+                // recursing on the writeIonVersionMarker call
+                _system_writer.writeIonVersionMarker();
+            }
+        }
+        else if (symbols.isLocalTable()) {
+            //really we have to patch in symbol tables, not write them
+            //since they will may get updated as the value is
+            //built up
+            symbols.writeTo(_system_writer);
+        }
+        else {
+            assert("symbol table must be a system or a local table".length() < 0);
+        }
+    }
+
     @Override
     public SymbolTable getSymbolTable()
     {
@@ -347,18 +378,15 @@ abstract class IonWriterUser
         return _current_writer.getTypeAnnotationIds();
     }
 
-    public void writeIonVersionMarker() throws IOException
+    private final void finish_value()
     {
-        _system_writer.writeIonVersionMarker();
-        _after_ion_version_marker = true;
-        _any_values_written = true;
-        setSymbolTable(_default_system_symbol_table);
+        // note that as we finish most values we aren't after
+        // an IVM - except when it's an IVM.  In that case the
+        // caller (writeIVM) sets this back to true.
+        _after_ion_version_marker = false;  // this will gets set back to true when we really write an IVM
     }
-
     public void stepIn(IonType containerType) throws IOException
     {
-        start_user_value();
-
         // see if it looks like we're starting a local symbol table
         if (IonType.STRUCT.equals(containerType)
          && getDepth() == 0
@@ -372,6 +400,7 @@ abstract class IonWriterUser
             // writer is currently in scope
             _current_writer.stepIn(containerType);
         }
+        finish_value();
     }
     public void stepOut() throws IOException
     {
@@ -388,21 +417,21 @@ abstract class IonWriterUser
         if (value == null || start < 0 || len < 0 || start+len > value.length) {
             throw new IllegalArgumentException("the start and len must be contained in the byte array");
         }
-        start_user_value();
         _current_writer.writeBlob(value, start, len);
+        finish_value();
     }
     public void writeBool(boolean value) throws IOException
     {
-        start_user_value();
         _current_writer.writeBool(value);
+        finish_value();
     }
     public void writeClob(byte[] value, int start, int len) throws IOException
     {
         if (value == null || start < 0 || len < 0 || start+len > value.length) {
             throw new IllegalArgumentException("the start and len must be contained in the byte array");
         }
-        start_user_value();
         _current_writer.writeClob(value, start, len);
+        finish_value();
     }
     @Override
     public void writeDecimal(BigDecimal value) throws IOException
@@ -411,24 +440,24 @@ abstract class IonWriterUser
             writeNull(IonType.DECIMAL);
         }
         else {
-            start_user_value();
             _current_writer.writeDecimal(value);
         }
+        finish_value();
     }
     public void writeFloat(double value) throws IOException
     {
-        start_user_value();
         _current_writer.writeFloat(value);
+        finish_value();
     }
     public void writeInt(int value) throws IOException
     {
-        start_user_value();
         _current_writer.writeInt((long)value);
+        finish_value();
     }
     public void writeInt(long value) throws IOException
     {
-        start_user_value();
         _current_writer.writeInt(value);
+        finish_value();
     }
     public void writeInt(BigInteger value) throws IOException
     {
@@ -436,9 +465,9 @@ abstract class IonWriterUser
             writeNull(IonType.INT);
         }
         else {
-            start_user_value();
             _current_writer.writeInt(value);
         }
+        finish_value();
     }
     public void writeNull(IonType type) throws IOException
     {
@@ -446,9 +475,9 @@ abstract class IonWriterUser
             writeNull(IonType.NULL);
         }
         else {
-            start_user_value();
             _current_writer.writeNull(type);
         }
+        finish_value();
     }
     public void writeString(String value) throws IOException
     {
@@ -456,39 +485,88 @@ abstract class IonWriterUser
             writeNull(IonType.STRING);
         }
         else {
-            start_user_value();
             _current_writer.writeString(value);
         }
+        finish_value();
     }
     public void writeSymbol(int symbolId) throws IOException
     {
-        if (symbolId == UnifiedSymbolTable.ION_1_0_SID && !_any_values_written) {
-            // we already did this writeIonVersionMarker();
-            assert(_after_ion_version_marker);
+        if (write_as_ivm(symbolId)) {
+            if (need_to_write_ivm()) {
+                writeIonVersionMarker();
+            }
+            // since writeIVM calls finish and when
+            // we don't write the IVM we don't want
+            // to call finish, we're done here.
             return;
         }
-        start_user_value();
         _current_writer.writeSymbol(symbolId);
-        if (_root_is_datagram && symbolId == UnifiedSymbolTable.ION_1_0_SID && _current_writer.getDepth() == 0) {
-            _current_writer.setSymbolTable(_default_system_symbol_table);
-        }
+        finish_value();
     }
     public void writeSymbol(String value) throws IOException
     {
         if (value == null) {
             writeNull(IonType.SYMBOL);
         }
-        else if (!_any_values_written && UnifiedSymbolTable.ION_1_0.equals(value)) {
-            // we already did this writeIonVersionMarker();
-            assert(_after_ion_version_marker);
+        else if (value.equals(UnifiedSymbolTable.ION_1_0)
+              && write_as_ivm(UnifiedSymbolTable.ION_1_0_SID)
+        ) {
+            if (need_to_write_ivm()) {
+                writeIonVersionMarker();
+            }
+            // since writeIVM calls finish and when
+            // we don't write the IVM we don't want
+            // to call finish, we're done here.
+            return;
         }
         else {
-            start_user_value();
             _current_writer.writeSymbol(value);
-            if (_root_is_datagram && _current_writer.getDepth() == 0 && UnifiedSymbolTable.ION_1_0.equals(value)) {
-                _current_writer.setSymbolTable(_default_system_symbol_table);
-            }
         }
+        finish_value();
+    }
+    private final boolean write_as_ivm(int sid)
+    {
+        // we only treat the $ion_1_0 symbol as an IVM
+        // if we're at the top level in a datagram
+        boolean treat_as_ivm = false;
+
+        if (sid == UnifiedSymbolTable.ION_1_0_SID
+         && _root_is_datagram
+         && _current_writer.getDepth() == 0
+         ) {
+            treat_as_ivm = true;
+        }
+        return treat_as_ivm;
+    }
+    private final boolean need_to_write_ivm()
+    {
+        // we skip this IVM symbol if it is a redundant IVM
+        // either at the beginning (which is common if this
+        // is a binary writer) or at any other time.
+        boolean write_it;
+        write_it = (_after_ion_version_marker == false);
+        return write_it;
+    }
+    public void writeIonVersionMarker() throws IOException
+    {
+        if (getDepth() != 0 || _root_is_datagram == false) {
+            throw new IllegalStateException("IonVersionMarkers are only value at the top level of a datagram");
+        }
+        assert(_current_writer == _system_writer);
+
+        _current_writer.writeIonVersionMarker();
+        _after_ion_version_marker = true;
+
+        setSymbolTable(_system.getSystemSymbolTable());
+
+        finish_value();
+        // we reset this after our call to finish since
+        // finish sets this to false (which is the correct
+        // behavior except here)  We could add a flag to
+        // finish to tell it whether we were finishing a
+        // IVM or not, but since this is the only time
+        // it's the case it's easier to just patch it here
+        _after_ion_version_marker = true;
     }
     public void writeTimestamp(Timestamp value) throws IOException
     {
@@ -496,10 +574,10 @@ abstract class IonWriterUser
             writeNull(IonType.TIMESTAMP);
         }
         else {
-            start_user_value();
             _current_writer.writeTimestamp(value);
 
         }
+        finish_value();
     }
 
     //
@@ -520,9 +598,9 @@ abstract class IonWriterUser
             writeNull(IonType.LIST);
         }
         else {
-            start_user_value();
             _current_writer.writeBoolList(values);
         }
+        finish_value();
     }
     @Override
     public void writeIntList(byte[] values) throws IOException
@@ -531,9 +609,9 @@ abstract class IonWriterUser
             writeNull(IonType.LIST);
         }
         else {
-            start_user_value();
             _current_writer.writeIntList(values);
         }
+        finish_value();
     }
     @Override
     public void writeIntList(short[] values) throws IOException
@@ -542,9 +620,9 @@ abstract class IonWriterUser
             writeNull(IonType.LIST);
         }
         else {
-            start_user_value();
             _current_writer.writeIntList(values);
         }
+        finish_value();
     }
     @Override
     public void writeIntList(int[] values) throws IOException
@@ -553,9 +631,9 @@ abstract class IonWriterUser
             writeNull(IonType.LIST);
         }
         else {
-            start_user_value();
             _current_writer.writeIntList(values);
         }
+        finish_value();
     }
     @Override
     public void writeIntList(long[] values) throws IOException
@@ -564,9 +642,9 @@ abstract class IonWriterUser
             writeNull(IonType.LIST);
         }
         else {
-            start_user_value();
             _current_writer.writeIntList(values);
         }
+        finish_value();
     }
     @Override
     public void writeFloatList(float[] values) throws IOException
@@ -575,9 +653,9 @@ abstract class IonWriterUser
             writeNull(IonType.LIST);
         }
         else {
-            start_user_value();
             _current_writer.writeFloatList(values);
         }
+        finish_value();
     }
     @Override
     public void writeFloatList(double[] values) throws IOException
@@ -586,9 +664,9 @@ abstract class IonWriterUser
             writeNull(IonType.LIST);
         }
         else {
-            start_user_value();
             _current_writer.writeFloatList(values);
         }
+        finish_value();
     }
     @Override
     public void writeStringList(String[] values) throws IOException
@@ -597,8 +675,8 @@ abstract class IonWriterUser
             writeNull(IonType.LIST);
         }
         else {
-            start_user_value();
             _current_writer.writeStringList(values);
         }
+        finish_value();
     }
 }

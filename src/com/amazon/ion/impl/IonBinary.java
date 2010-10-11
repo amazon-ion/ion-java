@@ -2712,12 +2712,12 @@ done:       for (;;) {
          */
 
         /**
-         * @param symtab must be local, not shared, not null.
+         * @param sid must be valid id (>=1)
          */
-        public int writeSymbolWithTD(String s, SymbolTable symtab)
+        public int writeSymbolWithTD(int sid) // was: (String s, SymbolTable symtab)
             throws IOException
         {
-            int sid = symtab.addSymbol(s);
+            // was: int sid = symtab.addSymbol(s);
             assert sid > 0;
 
             int vlen = lenVarUInt8(sid);

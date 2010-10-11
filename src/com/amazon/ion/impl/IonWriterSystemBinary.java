@@ -38,7 +38,7 @@ public class IonWriterSystemBinary
 
     boolean           _auto_flush;        // controls flushing in closeValue()
     boolean           _assure_ivm;        // forces IVM in the event the caller forgets to write an IVM or IVM symbol
-    boolean           _any_values_written;
+//    boolean           _any_values_written;
 
     boolean           _in_struct;
 
@@ -90,9 +90,7 @@ public class IonWriterSystemBinary
      *
      * @throws NullPointerException if any parameter is null.
      */
-    public IonWriterSystemBinary(SymbolTable defaultSystemSymtab,
-                                 OutputStream out, boolean autoFlush,
-                                 boolean assureIVM)
+    public IonWriterSystemBinary(SymbolTable defaultSystemSymtab, OutputStream out, boolean autoFlush , boolean suppressIVM)
     {
         super(defaultSystemSymtab);
 
@@ -105,7 +103,7 @@ public class IonWriterSystemBinary
         _manager = new BufferManager();
         _writer = _manager.openWriter();
         _auto_flush = autoFlush;
-        _assure_ivm = assureIVM;
+        _assure_ivm = (suppressIVM == false);
     }
 
     /**
@@ -129,6 +127,11 @@ public class IonWriterSystemBinary
         }
         catch (IOException e) {
             throw new IonException(e);
+        }
+
+        if (_symbol_table != null && !_symbol_table.isSystemTable()) {
+            _assure_ivm = true;
+            _symbol_table = null;
         }
 
     }
@@ -249,10 +252,14 @@ public class IonWriterSystemBinary
 //        }
     }
 
-    @Override
-    public void setSymbolTable(SymbolTable symbols) throws IOException
+    // @ Override
+    // wrong impl - writeruser calls symbol table helper with writes
+    //              the symbol tables
+    // when used alone, as a system writer, the caller needs to take
+    // care of all the symbol table writing on their own.
+    public void xxx_setSymbolTable(SymbolTable symbols) throws IOException
     {
-        if (symbols == null || !(symbols.isSystemTable() || symbols.isLocalTable())) {
+        if (UnifiedSymbolTable.isAssignableTable(symbols) == false) {
             throw new IllegalArgumentException("symbol table can only be set to a local or system symbol table");
         }
         if (symbols == _symbol_table) {
@@ -274,7 +281,8 @@ public class IonWriterSystemBinary
         }
         _symbol_table = symbols;
     }
-    protected void set_symbol_table_and_patch(SymbolTable symbols) throws IOException
+
+    protected void xxx_set_symbol_table_and_patch(SymbolTable symbols) throws IOException
     {
         if (!(symbols.isSystemTable() || symbols.isLocalTable())) {
             throw new IllegalArgumentException("symbol table can only be set to a local or system symbol table");
@@ -305,12 +313,19 @@ public class IonWriterSystemBinary
         // patch this symbol table in "here" at the end
         // which will grow the arrays as necessary
         patchInSymbolTable(symbols);
+        
+        if (_top == 0) {
+            // if we're at the datagram level already
+            // we don't need to back-track to our parent
+            // so we're done
+            return;
+        }
 
         // grab the patch values we'll need to set
+        int target_idx       = _patch_stack[0];
+        int pos              = _patch_offsets[target_idx]; // the offset of our top most patch point
         int symbol_patch_idx = _patch_symbol_table_count - 1;
-        int patch_idx = _patch_count - 1;
-        int target_idx = _patch_stack[0];
-        int pos = _patch_offsets[target_idx]; // the offset of our top most patch point
+        int patch_idx        = _patch_count - 1;
 
         // the top level open container is at _patch_stack[0]
         // so we move everything from that point down one
@@ -335,9 +350,21 @@ public class IonWriterSystemBinary
             _patch_stack[ii]++;
         }
     }
-    void patchInSymbolTable(SymbolTable symbols) throws IOException
+
+    @Override
+    UnifiedSymbolTable inject_local_symbol_table() throws IOException
     {
-        if (_assure_ivm && !_any_values_written) {
+        // no catalog since it doesn't matter as this is a
+        // pure local table, with no imports
+        UnifiedSymbolTable symbols
+            = UnifiedSymbolTable.makeNewLocalSymbolTable(_default_system_symbol_table);
+        set_symbol_table_prepend_new_local_table(symbols);
+        return symbols;
+    }
+
+    protected void patchInSymbolTable(SymbolTable symbols) throws IOException
+    {
+        if (_assure_ivm) { //  && !_any_values_written) {
             // we have to check for this here since we
             // may be patching a symbol table in before
             // the version marker has been written
@@ -406,7 +433,7 @@ public class IonWriterSystemBinary
     {
         int patch_len = 0;
 
-        if (_assure_ivm && !_any_values_written) {
+        if (_assure_ivm) { //  && !_any_values_written) {
             writeIonVersionMarker();
         }
 
@@ -689,7 +716,7 @@ public class IonWriterSystemBinary
             throw new IllegalStateException("you can only write Ion Version Markers when you are at the datagram level");
         }
         _writer.write(IonConstants.BINARY_VERSION_MARKER_1_0);
-        _any_values_written = true;
+//        _any_values_written = true;
         _assure_ivm = false;  // we've done our job, we can turn this off now
     }
     public void writeTimestamp(Timestamp value) throws IOException
@@ -1272,10 +1299,7 @@ public class IonWriterSystemBinary
                                      SymbolTable symtab) throws IOException
     {
         CountingStream cs = new CountingStream(userstream);
-        IonWriterSystemBinary writer =
-            new IonWriterSystemBinary(_default_system_symbol_table, cs,
-                                      false /* autoflush */ ,
-                                      false /* assure ivm */);
+        IonWriterSystemBinary writer = new IonWriterSystemBinary(_default_system_symbol_table, cs, false /* autoflush */ , true /* suppress ivm */);
         symtab.writeTo(writer);
         writer.flush();
         int symtab_len = cs.getBytesWritten();

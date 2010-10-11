@@ -4,6 +4,7 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.impl.IonSystemPrivate;
 import java.util.Iterator;
 
 /**
@@ -25,7 +26,9 @@ public class IteratorSystemProcessingTest
     protected Iterator<IonValue> systemIterate()
         throws Exception
     {
-        return system().systemIterate(myText);
+        IonSystemPrivate sys = system();
+        Iterator<IonValue> it = sys.systemIterate(myText);
+        return it;
     }
 
 
@@ -52,6 +55,15 @@ public class IteratorSystemProcessingTest
     protected void nextValue() throws Exception
     {
         myCurrentValue = myIterator.next();
+    }
+
+    @Override
+    protected IonType currentValueType() throws Exception
+    {
+        if (myCurrentValue == null) {
+            return null;
+        }
+        return myCurrentValue.getType();
     }
 
     @Override
@@ -110,7 +122,7 @@ public class IteratorSystemProcessingTest
     protected boolean checkMissingSymbol(String expected, int expectedSymbolTableSid, int expectedLocalSid)
         throws Exception
     {
-        checkSymbol(expected, myCurrentValue);
+        checkSymbol(expected, expectedLocalSid, myCurrentValue);
 
         // when missing from a shared table the symbol
         // will have been added to the local symbols

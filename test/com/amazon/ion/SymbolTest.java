@@ -7,6 +7,7 @@ package com.amazon.ion;
 public class SymbolTest
     extends TextTestCase
 {
+
     public static void checkNullSymbol(IonSymbol value)
     {
         assertSame(IonType.SYMBOL, value.getType());
@@ -83,6 +84,9 @@ public class SymbolTest
         modifySymbol(value);
     }
 
+    public void testPlusInfinitySymbol() {
+        system().singleValue("{value:special::'+infinity'}");
+    }
 
     public void testSymbols()
     {

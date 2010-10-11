@@ -259,9 +259,9 @@ public abstract class UnifiedInputStreamX
 
     public final void skip(int skipDistance) throws IOException
     {
-        int remaining;
+        int remaining = _limit - _pos;
 
-        if (_pos <= _limit - skipDistance) {
+        if (remaining >= skipDistance) {
             _pos += skipDistance;
             remaining = 0;
         }
@@ -272,6 +272,7 @@ public abstract class UnifiedInputStreamX
                 if (ready > remaining) {
                     ready = remaining;
                 }
+                _pos += ready;
                 remaining -= ready;
                 if (remaining > 0) {
                     if (refill_helper()) {

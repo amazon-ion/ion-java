@@ -80,6 +80,8 @@ public class GoodIonStreamingTests extends DirectoryTestSuite {
 
             IonReader reader = system().newReader(buf);
             TestUtils.deepRead(reader);
+            IonReader reader2 = system().newReader(buf);
+            TestUtils.deepRead(reader2, false);
         }
     }
 }

@@ -59,10 +59,12 @@ public class IterationTest
 
 
         Iterator<IonValue> iterator = system().systemIterate("");
+iterator.next(); // skip $ion_1_0, this is a system iterator after all
         checkEmptyIterator(iterator);
 
         // Try calling next before hasNext
         iterator = system().systemIterate("1");
+iterator.next(); // skip $ion_1_0, this is a system iterator after all
         iterator.next();
         checkEmptyIterator(iterator);
     }

@@ -18,6 +18,8 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.IonTokenReader;
+import com.amazon.ion.system.SystemFactory;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -918,5 +920,71 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         if (! IonImplUtils.READER_HASNEXT_REMOVED) assertFalse(ir.hasNext());
         assertEquals(null, ir.next());
     }
+    
 
+    public void testBinaryStepOut() throws IOException {
+    	// Jira issue 133
+        
+    	IonReader       r  = system().newReader("{s:{a:1, b:2}, c:3}");
+        IonBinaryWriter wr = system().newBinaryWriter();
+        
+        IonType t = r.next();
+        assertEquals(IonType.STRUCT, t);
+        wr.writeValue(r);
+        
+        byte[] bytes = wr.getBytes();
+        
+        IonReader br = system().newReader(bytes);
+        
+        t = br.next();
+        assertEquals(IonType.STRUCT, t);
+        
+        br.stepIn();
+        t = br.next();
+        assertEquals(IonType.STRUCT, t);
+
+        br.stepIn();
+        t = br.next();
+        assertEquals(IonType.INT, t);
+        assertEquals(1, br.intValue());
+        
+        br.stepOut();  // this used to throw
+        
+        t = r.next();
+        assertEquals(null, t);
+    }
+    
+    public void testBinaryStepOut2() throws IOException {
+
+        IonSystem ionSystem = SystemFactory.newSystem();
+        IonValue value = ionSystem.singleValue("{a:{b:1,c:2},d:false}");
+
+        IonReader r = ionSystem.newReader(value);
+        r.next();
+        r.stepIn();
+        r.next();
+        System.out.println(r.getFieldName()); // a
+        r.stepIn();
+        r.next();
+        System.out.println(r.getFieldName()); // b
+        r.stepOut(); // skip c
+        r.next();
+        System.out.println(r.getFieldName()); // d
+        System.out.println("------------");
+
+        IonBinaryWriter writer = ionSystem.newBinaryWriter();
+        writer.writeValue(value);
+        r = ionSystem.newReader(writer.getBytes());
+        r.next();
+        r.stepIn();
+        r.next();
+        System.out.println(r.getFieldName()); //a
+        r.stepIn();
+        r.next();
+        System.out.println(r.getFieldName()); // b
+        r.stepOut(); // skip c
+        r.next();
+        System.out.println(r.getFieldName()); //d 
+    }
+    
 }

@@ -8,13 +8,12 @@ import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.UnifiedSymbolTable.ION_SHARED_SYMBOL_TABLE;
-import com.amazon.ion.IonMutableCatalog;
-import com.amazon.ion.system.SystemFactory;
 
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
+import com.amazon.ion.IonMutableCatalog;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonStruct;
@@ -26,6 +25,9 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
 import com.amazon.ion.system.SimpleCatalog;
+import com.amazon.ion.system.SystemFactory;
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -194,7 +196,7 @@ public class SymbolTableTest
         value = scanner.next();
         checkSymbol("imported 1", import1id, value);
     }
-    
+
     public IonStruct synthesizeSharedSymbolTableIon(final String name,
                                                     final int version,
                                                     final String... symbols) {
@@ -209,7 +211,7 @@ public class SymbolTableTest
         }
         return tableStruct;
     }
-    
+
     public void testDomSharedSymbolTable() {
         // JIRA ION-72
         final SymbolTable table = system().newSharedSymbolTable(
@@ -476,27 +478,27 @@ public class SymbolTableTest
 
     // JIRA ION-75
     public void XXXtestDupLocalSymbolOnDatagram() throws Exception {
-        final IonSystem ion1 = SystemFactory.newSystem(); 
+        final IonSystem ion1 = SystemFactory.newSystem();
         final SymbolTable st = ion1.newSharedSymbolTable("foobar", 1, Arrays.asList("s1").iterator());
         final IonMutableCatalog cat = new SimpleCatalog();
         cat.putTable(st);
-        
+
         // ION-75 has the datagram producing something like:
         // $ion_1_0 $ion_symbol_table::{imports:[{name: "foobar", version: 1, max_id: 1}], symbols: ["s1", "l1"]} $11 $12
         // local table should not have "s1", user values should be $10 $11
         IonDatagram dg = ion1.newDatagram(st);
         dg.add().newSymbol("s1");
         dg.add().newSymbol("l1");
-        
+
         final IonSystem ion2 = SystemFactory.newSystem(cat);
-        
+
         dg = ion2.getLoader().load(dg.getBytes());
         final IonSymbol sym1 = (IonSymbol) dg.get(0);
         final IonSymbol sym2 = (IonSymbol) dg.get(1);
         assertEquals(10, sym1.getSymbolId());
         assertEquals(11, sym2.getSymbolId());
     }
-    
+
 
     public void testMalformedImportsField()
     {
@@ -745,7 +747,13 @@ public class SymbolTableTest
 
       // Try a bit of round-trip action
       StringBuilder buf = new StringBuilder();
-      IonWriter out = system().newTextWriter(buf);
+      IonWriterUserText.TextOptions options = new IonWriterUserText.TextOptions(
+             false // prettyPrint,
+           , true // printAscii,
+           , false // filterOutSymbolTables,
+           , true // suppressIonVersionMarker
+      );
+      IonWriter out = system().newTextWriter(buf, options);
       stFromReader.writeTo(out);
       reader = system().newReader(buf.toString());
       SymbolTable reloaded = system().newSharedSymbolTable(reader);
@@ -791,7 +799,7 @@ public class SymbolTableTest
         SymbolTable ginger1 = Symtabs.CATALOG.getTable("ginger", 1);
 
         String[] syms = { "a", "fred_1", "b" };
-        UnifiedSymbolTable st =
+        SymbolTable st =
             system().newSharedSymbolTable("ST", 1,
                                           Arrays.asList(syms).iterator(),
                                           fred1);
@@ -1058,13 +1066,13 @@ public class SymbolTableTest
         IonSexp v = oneSexp(text);
         checkSymbol(ION_1_0, v.get(0));
     }
-    
+
     public IonList serialize(final SymbolTable table) throws IOException {
         final IonList container = system().newEmptyList();
         table.writeTo(system().newWriter(container));
         return container;
     }
-    
+
     public void testDoubleWrite() throws IOException {
         // JIRA ION-73
         final SymbolTable table =
@@ -1116,6 +1124,53 @@ public class SymbolTableTest
         assert value.length() > 0;
 
         return fieldName + ':' + value;
+    }
+    
+
+    public void testWriteWithSymbolTable() throws IOException 
+    {
+        // this example code is the fix for JIRA IMSVT-2573
+        // which resulted in an assertion due to a but in 
+        // IonWriterUser.close_local_symbol_table_copy
+        
+        IonDatagram data;
+        
+        data = system().newDatagram();
+        
+        insert_local_symbol_table(data);
+        append_some_data(data);
+        
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonWriter writer = system().newTextWriter(out);
+        writer.writeValue(data);
+        writer.flush();
+        out.close();
+        // dataMap.put("value", out.toByteArray());
+        byte[] bytes = out.toByteArray();
+        assertNotNull(bytes);
+    }
+    
+    private void insert_local_symbol_table(IonDatagram data)
+    {
+        IonStruct local_symbol_table = system().newEmptyStruct();
+        local_symbol_table.addTypeAnnotation("$ion_symbol_table");
+        
+        IonList symbols = system().newEmptyList();
+        symbols.add(system().newString("one"));
+        symbols.add(system().newString("two"));
+        
+        local_symbol_table.add("symbols", symbols);
+    
+        data.add(local_symbol_table);
+    }
+
+    private void append_some_data(IonDatagram data)
+    {
+        IonStruct contents = system().newEmptyStruct();
+        contents.add("one", system().newInt(1));
+        contents.add("two", system().newInt(2));
+        
+        data.add(contents);
     }
 
 }

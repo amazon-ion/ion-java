@@ -21,10 +21,17 @@ public class EquivsTests
         public void runTest()
             throws Exception
         {
-            IonDatagram sequences = load(myTestFile);
+            runEquivs("Datagram Load", load(myTestFile));
+            final IonDatagram dgFromString = loadAsJavaString(myTestFile);
+            if (dgFromString != null) {
+                runEquivs("Datagram Java String Load", dgFromString);
+            }
+        }
+        
+        private void runEquivs(final String type, final IonDatagram sequences) {
             int sequenceCount = sequences.size();
 
-            assertTrue("File must have at least one sequence",
+            assertTrue(type + ": File must have at least one sequence",
                        sequenceCount > 0);
 
             for (int i = 0; i < sequenceCount; i++)
@@ -33,7 +40,7 @@ public class EquivsTests
 
                 int valueCount = sequence.size();
 
-                assertTrue("Each sequence must have at least two values",
+                assertTrue(type + ": Each sequence must have at least two values",
                            valueCount > 1);
 
                 for (int j = 0; j < valueCount - 1; j++)
@@ -45,15 +52,16 @@ public class EquivsTests
                     {
                         // the extra if allows us (me) to set a break point on failures here, specifically here.
                         if (current == null || next == null || current.equals(next) == false) {
-                            assertEquals("Equivalent Ion not equal", current, next);
+                            assertEquals(type + ": Equivalent Ion not equal", current, next);
                         }
-                        assertEquals("Equal values have unequal hashes",
+                        assertEquals(type + ": Equal values have unequal hashes",
                                      current.hashCode(), next.hashCode());
                     }
                     catch (Throwable e)
                     {
                         String message =
-                            "Error comparing children " + j + " and " + (j+1) +
+                            type +
+                            ": Error comparing children " + j + " and " + (j+1) +
                             " of equivalence sequence " + i + " (zero-based)";
                         Error wrap = new AssertionFailedError(message);
                         wrap.initCause(e);
@@ -62,6 +70,7 @@ public class EquivsTests
                 }
             }
         }
+
     }
 
 

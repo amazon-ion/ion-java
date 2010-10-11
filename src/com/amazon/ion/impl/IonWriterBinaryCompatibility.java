@@ -3,6 +3,7 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonBinaryWriter;
+import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.impl.BlockedBuffer.BufferedOutputStream;
@@ -16,7 +17,7 @@ import java.io.OutputStream;
  *  uses a BlockedBuffer for caching the bytes and
  *  offers the "get byte" methods.
  */
-abstract class IonWriterBinaryCompatibility
+public abstract class IonWriterBinaryCompatibility
     implements IonBinaryWriter
 {
     private static OutputStream make_output_stream()
@@ -34,9 +35,8 @@ abstract class IonWriterBinaryCompatibility
 
         public System(IonSystem sys, boolean autoFlush)
         {
-            super(sys.getSystemSymbolTable(), make_output_stream(), autoFlush,
-                  true /* assure IVM */);
-            assert(getOutputStream() instanceof BufferedOutputStream);
+            super(sys.getSystemSymbolTable(), make_output_stream(), autoFlush, false /* suppressIVM */);
+            assert(getOutputStream() instanceof BlockedBuffer.BufferedOutputStream);
         }
 
         BufferedOutputStream get_output_stream()
@@ -79,9 +79,9 @@ abstract class IonWriterBinaryCompatibility
         extends IonWriterUserBinary
         implements IonBinaryWriter
     {
-        public User(IonSystem system)
+        public User(IonSystem system, IonCatalog catalog)
         {
-            super(system, new System(system, false /* autoflush */ ));
+            super(system, catalog, new System(system, false /* autoflush */ ), false /* suppressIVM */);
 
             assert(getOutputStream() instanceof BufferedOutputStream);
         }

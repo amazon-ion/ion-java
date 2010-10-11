@@ -135,6 +135,17 @@ public class UnifiedSymbolTableImports
     int getMaxId() {
         return _max_id;
     }
+    int getMaxIdForExportAdjusted(int idx) {
+        int adjusted_idx = idx;
+        if (this.hasSystemSymbolsImported()) {
+            adjusted_idx++;
+        }
+        if (idx < 0 || adjusted_idx >= _import_count) {
+            throw new ArrayIndexOutOfBoundsException();
+        }
+        int max_id = _imports_max_id[adjusted_idx];
+        return max_id;
+    }
     int getMaxIdForExport(int idx) {
         if (idx < 0 || idx >= _import_count) {
             throw new ArrayIndexOutOfBoundsException();

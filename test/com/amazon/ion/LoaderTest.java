@@ -2,7 +2,6 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl.IonSystemImpl;
 import com.amazon.ion.impl.UserReader;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.ByteArrayInputStream;
@@ -260,7 +259,7 @@ public class LoaderTest
 
     public void testSingleValue()
     {
-        IonSystemImpl sys = new IonSystemImpl();
+        IonSystem sys = system();
 
         String image = "(this is a single sexp)";
         IonValue v1 =  sys.singleValue(image);
@@ -289,7 +288,7 @@ public class LoaderTest
     }
 
     public void testCatalogOnLoader() throws Exception {
-        IonSystem sys = new IonSystemImpl(Symtabs.CATALOG);
+        IonSystem sys = system(Symtabs.CATALOG);
         IonDatagram dg = sys.newDatagram(Symtabs.CATALOG.getTable("fred", 1));
         dg.add().newSymbol("fred_1");
         byte[] raw = dg.getBytes();
@@ -304,7 +303,11 @@ public class LoaderTest
         // a different v1 fred symtab
         IonMutableCatalog newCatalog = new SimpleCatalog();
         newCatalog.putTable(sys.newSharedSymbolTable("fred", 1, Arrays.asList("barney_1").iterator()));
-        assertEquals("barney_1", ((IonSymbol) sys.newLoader(newCatalog).load(raw).get(0)).stringValue());
+        IonLoader new_loader = sys.newLoader(newCatalog);
+        IonDatagram new_dg = new_loader.load(raw);
+        IonSymbol sym = (IonSymbol)new_dg.get(0);
+        String found = sym.stringValue();
+        assertEquals("barney_1", found);
     }
 
 final static boolean _debug_long_test = false;

@@ -30,6 +30,17 @@ public class BadIonTests
                      + myTestFile.getAbsolutePath());
             }
             catch (IonException e) { /* good */ }
+
+            try
+            {
+                // attempt to load as a string
+                final IonDatagram dg = loadAsJavaString(myTestFile);
+                if (dg != null) {
+                    fail("Expected IonException parsing as a Java String "
+                         + myTestFile.getAbsolutePath());
+                }
+            }
+            catch (IonException e) { /* good */ }
         }
     }
 
