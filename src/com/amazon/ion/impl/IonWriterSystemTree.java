@@ -3,6 +3,7 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonBlob;
+import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
@@ -34,7 +35,7 @@ class IonWriterSystemTree
     extends IonWriterBaseImpl
 {
     private final IonSystem _system;
-
+    IonCatalog          _catalog;
     boolean             _in_struct;
     IonContainer        _current_parent;
     int                 _parent_stack_top = 0;
@@ -44,10 +45,11 @@ class IonWriterSystemTree
     IonWriter           _binary_image;
     byte[]              _byte_image;
 
-    protected IonWriterSystemTree(IonSystem sys, IonContainer rootContainer)
+    protected IonWriterSystemTree(IonSystem sys, IonCatalog catalog, IonContainer rootContainer)
     {
         super(sys.getSystemSymbolTable());
         _system = sys;
+        _catalog = catalog;
         _current_parent = rootContainer;
         _in_struct = (_current_parent instanceof IonStruct);
     }
@@ -56,6 +58,15 @@ class IonWriterSystemTree
     IonSystem getSystem()
     {
         return _system;
+    }
+
+    @Override
+    void reset() throws IOException
+    {
+        if (getDepth() != 0) {
+            throw new IllegalStateException("you can't reset a writer that is in the middle of writing a value");
+        }
+        setSymbolTable(_system.getSystemSymbolTable());
     }
 
     //
@@ -107,6 +118,18 @@ class IonWriterSystemTree
             _has_binary_image = false;
         }
     }
+
+    @Override
+    UnifiedSymbolTable inject_local_symbol_table() throws IOException
+    {
+        // no catalog since it doesn't matter as this is a
+        // pure local table, with no imports
+        // we let the system writer handle this work
+        UnifiedSymbolTable symbols
+            = UnifiedSymbolTable.makeNewLocalSymbolTable(getSystem().getSystemSymbolTable());
+        return symbols;
+    }
+
     void pushParent(IonContainer newParent) {
         if (_current_parent == null) {
             // TODO document this behavior
@@ -160,17 +183,24 @@ class IonWriterSystemTree
         if (_current_parent == null) {
             _current_parent = _system.newDatagram();
         }
+        if (_symbol_table != null) {
+            ((IonValuePrivate)_current_parent).setSymbolTable(_symbol_table);
+            _symbol_table = null;
+        }
         if (_in_struct) {
             String name = this.getFieldName();
             ((IonStruct)_current_parent).add(name, value);
             this.clearFieldName();
         }
         else {
-            if (_current_parent instanceof IonDatagram) {
-                ((IonValueImpl)value).setSymbolTable(_symbol_table);
-            }
             ((IonSequence)_current_parent).add(value);
         }
+    }
+
+    protected void appendSymbolTableValue(IonStruct symbol_table_struct)
+    {
+        assert(symbol_table_struct != null);
+        append(symbol_table_struct);
     }
 
     public void stepIn(IonType containerType) throws IOException
@@ -198,11 +228,7 @@ class IonWriterSystemTree
             if (UnifiedSymbolTable.valueIsLocalSymbolTable(prior))
             {
                 SymbolTable symbol_table;
-                symbol_table = UnifiedSymbolTable.makeNewLocalSymbolTable(
-                                    _system.getSystemSymbolTable()
-                                  , (IonStruct) prior
-                                  , _system.getCatalog()
-                                );
+                symbol_table = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _catalog, (IonStruct) prior);
                 setSymbolTable(symbol_table);
                 clearBinaryImage(); // changing the symbol table is likely to invalidate the image - so to be safe we do
             }

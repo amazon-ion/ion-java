@@ -500,7 +500,7 @@ abstract public class IonReaderBinaryRawX
         pop();
         _eof = false;
         _parent_tid = parent_tid;
-        _local_remaining = local_remaining;
+        // later, only after we've skipped to our new location: _local_remaining = local_remaining;
         if (_parent_tid == IonConstants.tidStruct) {
             _is_in_struct = true;
             _state = State.S_BEFORE_FIELD;
@@ -536,6 +536,7 @@ abstract public class IonReaderBinaryRawX
             error(message);
         }
         assert(next_position == getPosition());
+        _local_remaining = local_remaining;
     }
     public int byteSize()
     {

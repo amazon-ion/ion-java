@@ -628,7 +628,7 @@ loop:   for (;;) {
                 // see if we have a number or what might be an extended symbol
                 c2 = this.read_char();
                 this.unread_char(c2);
-                if (Character.isDigit(c2)) {
+                if (IonTokenConstsX.isDigit(c2)) {
                     t = read_number(c);
                 }
                 else {
@@ -1290,7 +1290,7 @@ loop:   for (;;) {
             // here and get whatever is next in line
             c = this.read_char();
         }
-        if (!Character.isDigit(c)) {
+        if (!IonTokenConstsX.isDigit(c)) {
             // if it's not a digit, this isn't a number
             // the only non-digit it could have been was a
             // sign character, and we'll have read past that
@@ -1314,7 +1314,7 @@ loop:   for (;;) {
         // leading digits
         for (;;) {
             c = this.read_char();
-            if (!Character.isDigit(c)) break;
+            if (!IonTokenConstsX.isDigit(c)) break;
         }
 
         if (c == '.') {
@@ -1330,7 +1330,7 @@ loop:   for (;;) {
             // read the "fraction" digits
             for (;;) {
                 c = this.read_char();
-                if (!Character.isDigit(c)) break;
+                if (!IonTokenConstsX.isDigit(c)) break;
             }
             t = IonTextTokenizer.TOKEN_DECIMAL;
         }
@@ -1383,13 +1383,13 @@ loop:   for (;;) {
         if (c == '-' || c == '+') {
             c = read_char();
         }
-        while (Character.isDigit(c)) {
+        while (IonTokenConstsX.isDigit(c)) {
             c = read_char();
         }
         if (c != '.') {
             return c;
         }
-        while (Character.isDigit(c)) {
+        while (IonTokenConstsX.isDigit(c)) {
             c = read_char();
         }
         return c;
@@ -1436,9 +1436,9 @@ endofdate:
 
             // read month
             c1 = read_char();
-            if (!Character.isDigit(c1)) bad_token(c1);
+            if (!IonTokenConstsX.isDigit(c1)) bad_token(c1);
             c2 = read_char();
-            if (!Character.isDigit(c2)) bad_token(c2);
+            if (!IonTokenConstsX.isDigit(c2)) bad_token(c2);
             int month = (c1 - '0') * 10 + (c2 - '0');
             if (month < 1 || month > 12) bad_token();
 
@@ -1451,9 +1451,9 @@ endofdate:
 
             // read day
             c1 = read_char();
-            if (!Character.isDigit(c1)) bad_token(c1);
+            if (!IonTokenConstsX.isDigit(c1)) bad_token(c1);
             c2 = read_char();
-            if (!Character.isDigit(c2)) bad_token(c2);
+            if (!IonTokenConstsX.isDigit(c2)) bad_token(c2);
             c = read_char();
 
             /// now we validate the day values
@@ -1494,13 +1494,13 @@ endofdate:
 
                 // hour
                 c1 = read_char();
-                if (!Character.isDigit(c1)) {
+                if (!IonTokenConstsX.isDigit(c1)) {
                     // This should be a normal stopper or EOF
                     c = c1;
                     break endofdate;
                 }
                 c2 = read_char();
-                if (!Character.isDigit(c2)) bad_token();
+                if (!IonTokenConstsX.isDigit(c2)) bad_token();
                 int tmp = (c1 - '0')*10 + (c2 - '0');
                 if (tmp < 0 || tmp > 23) bad_token();
                 c = read_char();
@@ -1508,9 +1508,9 @@ endofdate:
 
                 // minutes
                 c1 = read_char();
-                if (!Character.isDigit(c1)) bad_token();
+                if (!IonTokenConstsX.isDigit(c1)) bad_token();
                 c2 = read_char();
-                if (!Character.isDigit(c2)) bad_token();
+                if (!IonTokenConstsX.isDigit(c2)) bad_token();
                 tmp = (c1 - '0')*10 + (c2 - '0');
                 if (tmp < 0 || tmp > 59) bad_token();
                 c = read_char();
@@ -1518,9 +1518,9 @@ endofdate:
                     // seconds are optional
                     // and first we'll have the whole seconds
                     c1 = read_char();
-                    if (!Character.isDigit(c1)) bad_token();
+                    if (!IonTokenConstsX.isDigit(c1)) bad_token();
                     c2 = read_char();
-                    if (!Character.isDigit(c2)) bad_token();
+                    if (!IonTokenConstsX.isDigit(c2)) bad_token();
                     tmp = (c1 - '0')*10 + (c2 - '0');
                     if (tmp < 0 || tmp > 59) bad_token();
                     c = read_char();
@@ -1528,7 +1528,7 @@ endofdate:
                         // then the optional fractional seconds
                         do {
                             c = read_char();
-                        } while (Character.isDigit(c));
+                        } while (IonTokenConstsX.isDigit(c));
                     }
                 }
 
@@ -1546,9 +1546,9 @@ endofdate:
                 else {
                     // then ... hours of time offset
                     c1 = read_char();
-                    if (!Character.isDigit(c1)) bad_token();
+                    if (!IonTokenConstsX.isDigit(c1)) bad_token();
                     c2 = read_char();
-                    if (!Character.isDigit(c2)) bad_token();
+                    if (!IonTokenConstsX.isDigit(c2)) bad_token();
                     tmp = (c1 - '0')*10 + (c2 - '0');
                     if (tmp < 0 || tmp > 23) bad_token();
                     c = read_char();
@@ -1558,9 +1558,9 @@ endofdate:
                     }
                     // and finally the *not* optional minutes of time offset
                     c1 = read_char();
-                    if (!Character.isDigit(c1)) bad_token();
+                    if (!IonTokenConstsX.isDigit(c1)) bad_token();
                     c2 = read_char();
-                    if (!Character.isDigit(c2)) bad_token();
+                    if (!IonTokenConstsX.isDigit(c2)) bad_token();
                     tmp = (c1 - '0')*10 + (c2 - '0');
                     if (tmp < 0 || tmp > 59) bad_token();
                     c = read_char();

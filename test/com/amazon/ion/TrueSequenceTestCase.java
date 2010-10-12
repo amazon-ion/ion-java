@@ -2,7 +2,7 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl.IonValueImpl;
+import com.amazon.ion.impl.IonValuePrivate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -178,7 +178,7 @@ public abstract class TrueSequenceTestCase
         assertSame(origElement, removed);
         assertEquals(null, removed.getContainer());
 
-        assertEquals(index, ((IonValueImpl)newElement).getElementId());
+        assertEquals(index, ((IonValuePrivate)newElement).getElementId());
 
         assertEquals(expectedElements, s);
     }

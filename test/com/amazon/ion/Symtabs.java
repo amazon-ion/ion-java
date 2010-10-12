@@ -8,7 +8,7 @@ import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertSame;
 import static junit.framework.Assert.assertTrue;
 
-import com.amazon.ion.impl.IonSystemImpl;
+import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.system.SimpleCatalog;
 import com.amazon.ion.system.SystemFactory;
 import java.util.Arrays;
@@ -89,7 +89,7 @@ public class Symtabs
     {
         int[] maxIds = new int[serializedTables.length];
 
-        IonSystemImpl system = (IonSystemImpl) SystemFactory.newSystem(CATALOG);
+        IonSystemPrivate system = (IonSystemPrivate)SystemFactory.newSystem(CATALOG);
 
         for (int i = 1; i < serializedTables.length; i++)
         {

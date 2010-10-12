@@ -15,6 +15,7 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.IonReaderTextRawTokensX.IonReaderTextTokenException;
 import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
@@ -41,30 +42,30 @@ import java.util.Iterator;
  */
 public class IonReaderTextSystemX
     extends IonReaderTextRawX
+    implements IonReaderWriterPrivate
 {
+    private static int UNSIGNED_BYTE_MAX_VALUE = 255;
 
     Iterator<String> EMPTY_ITERATOR = new StringIterator(null);
+    IonSystem _system;
 
-    protected IonReaderTextSystemX(char[] chars) {
-        this(chars, 0, chars.length);
-    }
-    protected IonReaderTextSystemX(char[] chars, int offset, int length) {
+    protected IonReaderTextSystemX(IonSystem system, char[] chars, int offset, int length) {
         super();
+        _system = system;
         UnifiedInputStreamX iis;
         iis = UnifiedInputStreamX.makeStream(chars, offset, length);
         init(iis);
     }
-    protected IonReaderTextSystemX(CharSequence chars) {
-        this(chars, 0, chars.length());
-    }
-    protected IonReaderTextSystemX(CharSequence chars, int offset, int length) {
+    protected IonReaderTextSystemX(IonSystem system, CharSequence chars, int offset, int length) {
         super();
+        _system = system;
         UnifiedInputStreamX iis;
         iis = UnifiedInputStreamX.makeStream(chars, offset, length);
         init(iis);
     }
-    protected IonReaderTextSystemX(Reader userChars) {
+    protected IonReaderTextSystemX(IonSystem system, Reader userChars) {
         super();
+        _system = system;
         UnifiedInputStreamX iis;
         try {
             iis = UnifiedInputStreamX.makeStream(userChars);
@@ -74,17 +75,16 @@ public class IonReaderTextSystemX
         }
         init(iis);
     }
-    protected IonReaderTextSystemX(byte[] bytes) {
-        this(bytes, 0, bytes.length);
-    }
-    protected IonReaderTextSystemX(byte[] bytes, int offset, int length) {
+    protected IonReaderTextSystemX(IonSystem system, byte[] bytes, int offset, int length) {
         super();
+        _system = system;
         UnifiedInputStreamX iis;
         iis = UnifiedInputStreamX.makeStream(bytes, offset, length);
         init(iis);
     }
-    protected IonReaderTextSystemX(InputStream userBytes) {
+    protected IonReaderTextSystemX(IonSystem system, InputStream userBytes) {
         super();
+        _system = system;
         UnifiedInputStreamX iis;
         try {
             iis = UnifiedInputStreamX.makeStream(userBytes);
@@ -94,8 +94,9 @@ public class IonReaderTextSystemX
         }
         init(iis);
     }
-    protected IonReaderTextSystemX(File file) {
+    protected IonReaderTextSystemX(IonSystem system, File file) {
         super();
+        _system = system;
         UnifiedInputStreamX iis;
         try {
             InputStream userBytes = new FileInputStream(file);
@@ -106,8 +107,9 @@ public class IonReaderTextSystemX
         }
         init(iis);
     }
-    protected IonReaderTextSystemX(UnifiedInputStreamX iis) {
+    protected IonReaderTextSystemX(IonSystem system, UnifiedInputStreamX iis) {
         super();
+        _system = system;
         init(iis);
     }
 
@@ -118,7 +120,7 @@ public class IonReaderTextSystemX
 
     public IonSystem getSystem()
     {
-        return null;
+        return _system;
     }
 
 
@@ -672,7 +674,7 @@ public class IonReaderTextSystemX
                     }
                     break;
                 }
-                assert(c >= 0 && c <= Byte.MAX_VALUE);
+                assert(c >= 0 && c <= UNSIGNED_BYTE_MAX_VALUE);
                 buffer[offset++] = (byte)c;
             }
             break;
@@ -685,7 +687,7 @@ public class IonReaderTextSystemX
                     }
                     break;
                 }
-                assert(c >= 0 && c <= Byte.MAX_VALUE);
+                assert(c >= 0 && c <= UNSIGNED_BYTE_MAX_VALUE);
                 buffer[offset++] = (byte)c;
             }
             break;
@@ -778,5 +780,11 @@ public class IonReaderTextSystemX
             struct.add(name, v);
         }
         this.stepOut();
+    }
+
+    // system readers don't skip any symbol tables
+    public SymbolTable pop_passed_symbol_table()
+    {
+        return null;
     }
 }

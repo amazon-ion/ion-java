@@ -243,9 +243,6 @@ public final class IonStructImpl
 
     public IonValue get(String fieldName)
     {
-// FIXME: remove this once perf testing is done
-//if (this._child_count > 4) return get_longlist(fieldName);
-
         validateFieldName(fieldName);
 
         if (isNullValue()) return null;
@@ -273,35 +270,6 @@ public final class IonStructImpl
         }
         return field;
     }
-
-    private final IonValue get_longlist(String fieldName)
-    {
-        validateFieldName(fieldName);
-
-        if (isNullValue()) return null;
-
-        makeReady();
-
-        for (IonValue field : this) {
-            if (fieldName.equals(field.getFieldName())) {
-                return field;
-            }
-        }
-        return null;
-    }
-
-//    public IonValueImpl findField(String name, IonValueImpl prev)
-//    {
-//        makeReady();
-//
-//        int sid = this.getSymbolTable().findSymbol(name);
-//        for (IonValue v : this) {
-//            IonValueImpl vi = (IonValueImpl)v;
-//            if (vi._fieldSid == sid) return vi;
-//        }
-//
-//        return null;
-//    }
 
     public void put(String fieldName, IonValue value)
     {
@@ -529,7 +497,7 @@ public final class IonStructImpl
     {
         assert _hasNativeValue();
 
-        if (_children == null) return IonConstants.lnIsNullStruct;
+        if (_isNullValue())    { return IonConstants.lnIsNullSequence; }
 
         if (get_child_count() == 0) return IonConstants.lnIsEmptyContainer;
 

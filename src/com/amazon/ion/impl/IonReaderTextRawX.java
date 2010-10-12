@@ -806,7 +806,8 @@ public abstract class IonReaderTextRawX
                         case IonTokenConstsX.KEYWORD_LIST:      _null_type = IonType.LIST;       break;
                         case IonTokenConstsX.KEYWORD_SEXP:      _null_type = IonType.SEXP;       break;
                         case IonTokenConstsX.KEYWORD_STRUCT:    _null_type = IonType.STRUCT;     break;
-                        default:                                _null_type = IonType.NULL;       break; // this happens when there isn't a '.' otherwise peek throws the error
+                        case IonTokenConstsX.KEYWORD_none:      _null_type = IonType.NULL;       break; // this happens when there isn't a '.' otherwise peek throws the error or returns none
+                        default: parse_error("invalid keyword id ("+kwt+") encountered while parsing a null");
                         }
                         // at this point we've consumed a dot '.' and it's preceding whitespace
                         // clear_value();
@@ -984,8 +985,9 @@ public abstract class IonReaderTextRawX
                 clob_chars_only = (IonType.CLOB == _value_type);
                 c = _scanner.load_single_quoted_string(sb, clob_chars_only);
                 if (c == UnifiedInputStreamX.EOF) {
-                    String message = "EOF encountered before closing single quote";
-                   parse_error(message);
+                    //String message = "EOF encountered before closing single quote";
+                    //parse_error(message);
+                    _scanner.unexpected_eof();
                 }
                 _value_type = IonType.SYMBOL;
                 break;
@@ -993,8 +995,9 @@ public abstract class IonReaderTextRawX
                 clob_chars_only = (IonType.CLOB == _value_type);
                 c = _scanner.load_double_quoted_string(sb, clob_chars_only);
                 if (c == UnifiedInputStreamX.EOF) {
-                    String message = "EOF encountered before closing single quote";
-                   parse_error(message);
+                    // String message = "EOF encountered before closing single quote";
+                    // parse_error(message);
+                    _scanner.unexpected_eof();
                 }
                 _value_type = IonType.STRING;
                 break;
@@ -1002,8 +1005,9 @@ public abstract class IonReaderTextRawX
                 clob_chars_only = (IonType.CLOB == _value_type);
                 c = _scanner.load_triple_quoted_string(sb, clob_chars_only);
                 if (c == UnifiedInputStreamX.EOF) {
-                    String message = "EOF encountered before closing single quote";
-                   parse_error(message);
+                    //String message = "EOF encountered before closing single quote";
+                    //parse_error(message);
+                    _scanner.unexpected_eof();
                 }
                 _value_type = IonType.STRING;
                 break;
@@ -1025,10 +1029,19 @@ public abstract class IonReaderTextRawX
      * called by super classes to tell us that the
      * current token has been consumed.
      */
-    protected void tokenValueIsFinished() {
+    protected void tokenValueIsFinished()
+    {
         _scanner.tokenIsFinished();
-        int state_after_scalar = get_state_after_value();
-        set_state(state_after_scalar);
+        if (IonType.BLOB.equals(_value_type) || IonType.CLOB.equals(_value_type))
+        {
+            int state_after_scalar = get_state_after_value();
+            set_state(state_after_scalar);
+        }
+//
+//  fix during IMS 3 integration - unnecessary (and in 1 circumstance harmful)
+//
+//        int state_after_scalar = get_state_after_value();
+//        set_state(state_after_scalar);
     }
 
     private final void push_container_state(IonType newContainer)
@@ -1190,15 +1203,18 @@ public abstract class IonReaderTextRawX
     }
     public int getFieldId()
     {
-        throw new UnsupportedOperationException("not supported - use UserReader");
+        return -1;
+        // throw new UnsupportedOperationException("not supported - use UserReader");
     }
     public int[] getTypeAnnotationIds()
     {
-        throw new UnsupportedOperationException("not supported - use UserReader");
+        return null;
+//        throw new UnsupportedOperationException("not supported - use UserReader");
     }
     public Iterator<Integer> iterateTypeAnnotationIds()
     {
-        throw new UnsupportedOperationException("not supported - use UserReader");
+        return null;
+//        throw new UnsupportedOperationException("not supported - use UserReader");
     }
     //
     // value getters - also inactive in this parser

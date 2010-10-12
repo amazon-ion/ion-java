@@ -36,8 +36,8 @@ public abstract class SystemProcessingTestCase
         String classid = getDebugClassId();
 
 // FIXME: set these to null so we don't stop or print anything
-        String interesting_classid = "ReaderSystemProcessingTestCase";
-        String interesting_testid = "testLocalTableResetting";
+        String interesting_classid = "NewDatagramIteratorSystemProcessingTest";
+        String interesting_testid = "testSystemIterationShowsIvm";
 
 
         current_test = testid;
@@ -71,6 +71,9 @@ public abstract class SystemProcessingTestCase
         throws Exception;
 
     protected abstract void nextValue()
+        throws Exception;
+
+    protected abstract IonType currentValueType()
         throws Exception;
 
     protected abstract SymbolTable currentSymtab()
@@ -168,12 +171,24 @@ public abstract class SystemProcessingTestCase
 
         nextValue();
         checkSymbol("foo");
-        assertSame(table1, currentSymtab());
+        SymbolTable current = currentSymtab();
+        assertSame(table1, current);
 
-        // The symbol table changes here
-
+        // The symbol table changes here ...
         nextValue();
+
+        // FIXME --- how should this work?
+        if (!IonType.INT.equals(currentValueType())) {
+            checkSymbol("$ion_1_0");  // if we didn't hit the int 1 then we should have the $ion_1_0
+            nextValue();
+            // ???
+        }
         checkInt(1);
+
+        // we should have reset to the system symbol table here
+        SymbolTable table3 = currentSymtab();
+        assertNotSame(table1, table3);
+        // nope, this may be the next local that will hold 'far' and 'boo': assertTrue("the reset table should be a trivial table (system or null)", UnifiedSymbolTable.isTrivialTable(table3));
 
         nextValue();
         checkSymbol("far");
@@ -194,7 +209,8 @@ if (table1 == table2) {
 
         nextValue();
         checkSymbol("boo");
-        assertSame(table2, currentSymtab());
+        SymbolTable table4 = currentSymtab();
+        assertSame(table2, table4);
     }
 
     public void testTrivialLocalTableResetting()
@@ -212,7 +228,23 @@ if (table1 == table2) {
         SymbolTable table1 = currentSymtab();
         checkTrivialLocalTable(table1);
 
+        // move from the 1 to either the $ion_1_0 or the 2
         nextValue();
+
+// FIXME --- how should this work?
+//           since there is no symbol table other than
+//           the default system the $ion_1_0 in the middle
+//           of this sequence isn't meaningful, but if
+//           you're asking for system values with a system
+//           reader you will see it.  If you convert through
+//           a number of readers and writers you might or
+//           might not preserve the $ion_1_0
+        if (!IonType.INT.equals(currentValueType())) {
+            // if we didn't hit the int 2 then we should have the $ion_1_0
+            checkSymbol("$ion_1_0");
+            nextValue();
+        }
+
         checkInt(2);
 
         SymbolTable table2 = currentSymtab();

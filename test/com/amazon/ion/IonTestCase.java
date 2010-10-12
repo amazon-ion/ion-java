@@ -2,13 +2,22 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl.IonSystemImpl;
+import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.system.SimpleCatalog;
+import com.amazon.ion.system.SystemFactory;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CodingErrorAction;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
@@ -22,8 +31,8 @@ public abstract class IonTestCase
     extends TestCase
 {
     private static boolean ourSystemPropertiesLoaded = false;
-    protected IonSystemImpl mySystem;
-    protected IonLoader myLoader;
+    protected IonSystemPrivate mySystem;
+    protected IonLoader        myLoader;
 
 
     public IonTestCase()
@@ -152,6 +161,45 @@ public abstract class IonTestCase
         return dg;
     }
 
+    /** Returns the file decoded as UTF-8 as an IonDatagram loaded as a Java String, or <tt>null</tt> if the file is not UTF-8. */
+    public IonDatagram loadAsJavaString(File ionFile)
+        throws IonException, IOException
+    {
+        // slurp file into a byte sink
+        final ByteArrayOutputStream sink = new ByteArrayOutputStream();
+        final InputStream in = new BufferedInputStream(new FileInputStream(ionFile));
+        try {
+            final byte[] buf = new byte[131072];
+            int read = 0;
+            while ((read = in.read(buf)) != -1) {
+                sink.write(buf, 0, read);
+            }
+        } finally {
+            in.close();
+        }
+        
+        String ionText = null;
+        try {
+            // we jump through these hoops because the default decoding is to put replacement characters
+            // which is NOT useful for this purpose
+            final CharsetDecoder decoder =
+                Charset.forName("UTF-8")
+                       .newDecoder()
+                       .onMalformedInput(CodingErrorAction.REPORT)
+                       .onUnmappableCharacter(CodingErrorAction.REPORT)
+                       ;
+            ionText = decoder.decode(ByteBuffer.wrap(sink.toByteArray())).toString();
+        } catch (CharacterCodingException e) {
+            return null;
+        }
+        final IonDatagram dg = loader().load(ionText);
+
+        // Flush out any encoding problems in the data.
+        forceMaterialization(dg);
+
+        return dg;
+    }
+
     @SuppressWarnings("deprecation")
     public void forceMaterialization(IonValue value)
     {
@@ -161,13 +209,23 @@ public abstract class IonTestCase
     // ========================================================================
     // Fixture Helpers
 
-    protected IonSystemImpl system()
+
+    protected IonSystemPrivate system()
     {
         if (mySystem == null)
         {
-            mySystem = new IonSystemImpl();
+            mySystem = (IonSystemPrivate)SystemFactory.newSystem(); // was: new IonSystemImpl();
         }
         return mySystem;
+    }
+
+    // added helper, this returns a separate system
+    // every time since the user is passing in a catalog
+    // which changes the state of the system object
+    protected IonSystemPrivate system(IonCatalog catalog)
+    {
+        IonSystemPrivate system = (IonSystemPrivate)SystemFactory.newSystem(catalog);
+        return system;
     }
 
     protected SimpleCatalog catalog()

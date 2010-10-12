@@ -15,6 +15,7 @@ public abstract class ReaderSystemProcessingTestCase
     extends SystemProcessingTestCase
 {
     private IonReader myReader;
+    private IonType   myValueType;
 
 
     protected abstract IonReader read()
@@ -28,18 +29,26 @@ public abstract class ReaderSystemProcessingTestCase
     protected void startIteration() throws Exception
     {
         myReader = read();
+        myValueType = null;
     }
 
     @Override
     protected void startSystemIteration() throws Exception
     {
         myReader = systemRead();
+        myValueType = null;
     }
 
     @Override
     protected void nextValue() throws Exception
     {
-        myReader.next();
+        myValueType = myReader.next();
+    }
+
+    @Override
+    protected IonType currentValueType() throws Exception
+    {
+        return myValueType;
     }
 
     @Override
@@ -271,7 +280,8 @@ public abstract class ReaderSystemProcessingTestCase
 
         IonReader reader = myReader;
 //        reader.hasNext();
-        reader.next();
+        IonType ts = reader.next();
+        assertEquals(IonType.STRUCT, ts);
         assertEquals("A", reader.getTypeAnnotations()[0]);
         reader.stepIn();
         {
