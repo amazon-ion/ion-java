@@ -4,6 +4,7 @@ package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
 import static com.amazon.ion.util.IonTextUtils.printString;
+
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonBlob;
@@ -31,15 +32,15 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.UnsupportedIonVersionException;
+import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonReaderFactoryX;
 import com.amazon.ion.impl.IonReaderWriterPrivate;
 import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.impl.IonWriterBinaryCompatibility;
 import com.amazon.ion.impl.IonWriterFactory;
+import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import com.amazon.ion.impl.SystemReader;
 import com.amazon.ion.impl.UnifiedSymbolTable;
-import com.amazon.ion.impl.IonBinary.BufferManager;
-import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.IOException;
 import java.io.InputStream;
@@ -47,7 +48,6 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -1064,19 +1064,6 @@ public class IonSystemLite
         }
         else {
             ionValue.addAll(e);
-        }
-        return ionValue;
-    }
-
-    public IonSexp newSexp(Collection<? extends IonValue> values)
-        throws ContainedValueException, NullPointerException
-    {
-        IonSexpLite ionValue = newEmptySexp();
-        if (values == null) {
-            ionValue.makeNull();
-        }
-        else {
-            ionValue.addAll(values);
         }
         return ionValue;
     }
