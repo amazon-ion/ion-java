@@ -70,6 +70,7 @@ class IonReaderTreeSystem
                 _next = value;
                 if (value instanceof IonContainerPrivate) {
                     _root = (IonContainerPrivate)value;
+                    // FIXME ION-145 this goes way up above the value we're iterating! why?
                     while (_root.getContainer() != null) {
                         _root = (IonContainerPrivate)_root.getContainer();
                     }
