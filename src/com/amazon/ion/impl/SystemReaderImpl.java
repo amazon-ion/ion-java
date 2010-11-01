@@ -327,7 +327,13 @@ public class SystemReaderImpl
         else {
             int ln = IonConstants.getLowNibble(b);
             int hn = IonConstants.getTypeCode(b);
-            len = 1 + _buffer._reader.readLength(hn, ln);
+            len = _buffer._reader.readLength(hn, ln);
+            if (ln == IonConstants.lnIsVarLen) {
+                // we need to count the length of the variable int len field too
+                // fixed ion binary reader bug manifesting in good/submission.10n
+                len += IonBinary.lenVarUInt7(len);
+            }
+            len += 1; // add in the type desc byte length
         }
         _buffer._reader.setPosition(_buffer_offset);
 
