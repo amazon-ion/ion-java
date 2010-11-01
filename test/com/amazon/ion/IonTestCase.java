@@ -5,6 +5,7 @@ package com.amazon.ion;
 import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.system.SimpleCatalog;
 import com.amazon.ion.system.SystemFactory;
+import com.amazon.ion.system.SystemFactory.SystemCapabilities;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -33,6 +34,22 @@ public abstract class IonTestCase
     private static boolean ourSystemPropertiesLoaded = false;
     protected IonSystemPrivate mySystem;
     protected IonLoader        myLoader;
+
+    //  FIXME: needs java docs
+    private static SystemCapabilities desiredSystemType = SystemCapabilities.DEFAULT;
+
+    public synchronized static SystemCapabilities setSystemCapabilities(SystemCapabilities systype)
+    {
+        SystemCapabilities old = desiredSystemType;
+        if (desiredSystemType != systype) {
+            desiredSystemType = systype;
+        }
+        return old;
+    }
+    public static SystemCapabilities getSystemCapabilities()
+    {
+        return desiredSystemType;
+    }
 
 
     public IonTestCase()
@@ -177,7 +194,7 @@ public abstract class IonTestCase
         } finally {
             in.close();
         }
-        
+
         String ionText = null;
         try {
             // we jump through these hoops because the default decoding is to put replacement characters
@@ -214,7 +231,7 @@ public abstract class IonTestCase
     {
         if (mySystem == null)
         {
-            mySystem = (IonSystemPrivate)SystemFactory.newSystem(); // was: new IonSystemImpl();
+            mySystem = (IonSystemPrivate)SystemFactory.newSystem(getSystemCapabilities()); // was: new IonSystemImpl();
         }
         return mySystem;
     }
@@ -224,7 +241,7 @@ public abstract class IonTestCase
     // which changes the state of the system object
     protected IonSystemPrivate system(IonCatalog catalog)
     {
-        IonSystemPrivate system = (IonSystemPrivate)SystemFactory.newSystem(catalog);
+        IonSystemPrivate system = (IonSystemPrivate)SystemFactory.newSystem(getSystemCapabilities(), catalog);
         return system;
     }
 
