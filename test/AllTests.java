@@ -17,6 +17,7 @@ import com.amazon.ion.HashCodeCorrectnessTest;
 import com.amazon.ion.HashCodeDistributionTest;
 import com.amazon.ion.IntTest;
 import com.amazon.ion.IonSystemTest;
+import com.amazon.ion.IonTestCase;
 import com.amazon.ion.JavaNumericsTest;
 import com.amazon.ion.ListTest;
 import com.amazon.ion.LoaderTest;
@@ -45,11 +46,13 @@ import com.amazon.ion.streaming.GoodIonStreamingTests;
 import com.amazon.ion.streaming.MiscStreamingTests;
 import com.amazon.ion.streaming.RoundTripStreamingTests;
 import com.amazon.ion.system.SimpleCatalogTest;
+import com.amazon.ion.system.SystemFactory;
 import com.amazon.ion.util.EquivalenceTest;
 import com.amazon.ion.util.PrinterTest;
 import com.amazon.ion.util.TextTest;
 import junit.framework.JUnit4TestAdapter;
 import junit.framework.Test;
+import junit.framework.TestResult;
 import junit.framework.TestSuite;
 
 
@@ -60,10 +63,37 @@ public class AllTests
 {
     public static Test suite()
     {
+
         TestSuite suite =
-            new TestSuite("AllTests for Ion");
+            new TestSuite("AllTests for Ion using Default IonSystem");
+
+        addTests(suite);
+
+        TestResult result = new TestResult();
 
         //$JUnit-BEGIN$
+        IonTestCase.setSystemCapabilities(SystemFactory.SystemCapabilities.ORIGINAL);
+        suite.run(result);
+        if (result.errorCount() > 0) {
+            return suite;
+        }
+
+        IonTestCase.setSystemCapabilities(SystemFactory.SystemCapabilities.LITE);
+        suite.run(result);
+        if (result.errorCount() > 0) {
+            return suite;
+        }
+
+        IonTestCase.setSystemCapabilities(SystemFactory.SystemCapabilities.DEFAULT);
+
+        //$JUnit-END$
+
+        return suite;
+    }
+
+
+    private static TestSuite addTests(TestSuite suite)
+    {
 
         // Low-level facilities.
         suite.addTestSuite(ByteBufferTest.class);
@@ -137,8 +167,6 @@ public class AllTests
         suite.addTest(new RoundTripStreamingTests());
 
         suite.addTestSuite(IonSystemTest.class);
-
-        //$JUnit-END$
 
         return suite;
     }

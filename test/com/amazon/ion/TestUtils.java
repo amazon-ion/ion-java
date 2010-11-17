@@ -137,10 +137,12 @@ public class TestUtils
                                          Iterator<?> actualValues)
     {
         Object expected;
+        Object actual;
         while (expectedValues.hasNext())
         {
             expected = expectedValues.next();
-            Assert.assertEquals(expected, actualValues.next());
+            actual = actualValues.next();
+            Assert.assertEquals(expected, actual);
         }
         Assert.assertFalse("unexpected next value", actualValues.hasNext());
     }

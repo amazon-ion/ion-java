@@ -199,9 +199,10 @@ abstract class BaseApp
             try
             {
                 IonReader reader = mySystem.newReader(fis);
-                while (reader.hasNext())
+                while (reader.next() != null)
                 {
-                    SymbolTable symtab = mySystem.newSharedSymbolTable(reader);
+                    SymbolTable symtab =
+                        mySystem.newSharedSymbolTable(reader, true);
                     myCatalog.putTable(symtab);
                 }
             }
