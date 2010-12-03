@@ -1153,16 +1153,14 @@ public class IonReaderTextRawTokensX
     }
     private int skip_over_timestamp(SavePoint sp) throws IOException
     {
-        int c = read_char();
-
         // we know we have dddd- or ddddT we don't know what follows
         // is should be dddd-mm
-        skip_timestamp_past_digits(4);
+        int c = skip_timestamp_past_digits(4);
         if (c == 'T') {
             // yyyyT
             if (sp != null) {
                 sp.markEnd(0);
-             }
+            }
             return skip_over_whitespace(); // prefetch
         }
         if (c != '-') {
@@ -1171,64 +1169,55 @@ public class IonReaderTextRawTokensX
         // yyyy-mmT
         // yyyy-mm-ddT
         // yyyy-mm-ddT+hh:mm
-        // yyyy-mm-ddThh+hh:mm
         // yyyy-mm-ddThh:mm+hh:mm
         // yyyy-mm-ddThh:mm:ss+hh:mm
         // yyyy-mm-ddThh:mm:ss.dddd+hh:mm
-        // yyyy-mm-ddThhZ
         // yyyy-mm-ddThh:mmZ
         // yyyy-mm-ddThh:mm:ssZ
         // yyyy-mm-ddThh:mm:ss.ddddZ
-        // yyyy-.
         c = skip_timestamp_past_digits(2);
         if (c == 'T') {
             // yyyy-mmT
             if (sp != null) {
                 sp.markEnd(0);
-             }
+            }
             return skip_over_whitespace(); // prefetch
         }
         skip_timestamp_validate(c, '-');
         c = skip_timestamp_past_digits(2);
+        if ( c != 'T' ) {
+            return skip_timestamp_finish(c, sp);
+        }
         c = read_char();
         if (!IonTokenConstsX.isDigit(c)) {
-            // yyyy-mm-ddT?
-            return skip_timestamp_offset(c, sp);
+            // yyyy-mm-ddT
+            return skip_timestamp_finish(skip_optional_timestamp_offset(c), sp);
         }
+        // one hour digit already read above
         c = skip_timestamp_past_digits(1);
-        c = read_char();
         if (c != ':') {
-            // yyyy-mm-ddThh?
-            return skip_timestamp_offset(c, sp);
+            bad_token(c);
         }
         c = skip_timestamp_past_digits(2);
         if (c != ':') {
             // yyyy-mm-ddThh:mm?
-            return skip_timestamp_offset(c, sp);
+            return skip_timestamp_offset_or_z(c, sp);
         }
         c = skip_timestamp_past_digits(2);
         if (c != '.') {
             // yyyy-mm-ddThh:mm:ss?
-            return skip_timestamp_offset(c, sp);
+            return skip_timestamp_offset_or_z(c, sp);
         }
+        c = read_char();
         if (IonTokenConstsX.isDigit(c)) {
             c = skip_over_digits(c);
         }
         // yyyy-mm-ddThh:mm:ss.ddd?
 
-        return skip_timestamp_offset(c, sp);
+        return skip_timestamp_offset_or_z(c, sp);
     }
-    private int skip_timestamp_offset(int c, SavePoint sp) throws IOException
-    {
-        if (c == '-' || c == '+') {
-            c = skip_timestamp_past_digits(2);
-            if (c == ':') {
-                c = skip_timestamp_past_digits(2);
-            }
-        }
-        else if (c == 'Z' || c == 'z') {
-            c = read_char();
-        }
+
+    private int skip_timestamp_finish(int c, SavePoint sp) throws IOException {
         if (!is_value_terminating_character(c)) {
             bad_token(c);
         }
@@ -1237,24 +1226,73 @@ public class IonReaderTextRawTokensX
         }
         return c;
     }
+    private int skip_optional_timestamp_offset(int c) throws IOException
+    {
+        if (c == '-' || c == '+') {
+            c = skip_timestamp_past_digits(2);
+            if (c != ':') {
+                bad_token( c );
+            }
+            c = skip_timestamp_past_digits(2);
+        }
+        return c;
+    }
+    private int skip_timestamp_offset_or_z(int c, SavePoint sp) throws IOException
+    {
+        if (c == '-' || c == '+') {
+            c = skip_timestamp_past_digits(2);
+            if (c != ':') {
+                bad_token( c );
+            }
+            c = skip_timestamp_past_digits(2);
+        }
+        else if (c == 'Z' || c == 'z') {
+            c = read_char();
+        } else {
+            bad_token(c);
+        }
+        return skip_timestamp_finish(c, sp);
+    }
     private final void skip_timestamp_validate(int c, int expected) {
         if (c != expected) {
             error("invalid character '"+(char)c+"' encountered in timestamp (when '"+(char)expected+"' was expected");
         }
     }
+
+    // helper method for skipping embedded digits inside a timestamp value
+    // this overload skips exactly the number indicated, and errors if a non-digit is encountered
     private final int skip_timestamp_past_digits(int len) throws IOException
+    {
+        // special case of the other overload
+        return skip_timestamp_past_digits(len, len);
+    }
+
+    // helper method for skipping embedded digits inside a timestamp value
+    // this overload skips at least min and at most max digits, and errors
+    // if a non-digit is encountered in the first min characters read
+    private final int skip_timestamp_past_digits(int min, int max) throws IOException
     {
         int c;
 
-        while (len > 0) {
+        // scan the first min characters insuring they're digits
+        while (min > 0) {
             c = read_char();
             if (!IonTokenConstsX.isDigit(c)) {
                 error("invalid character '"+(char)c+"' encountered in timestamp");
             }
-            len--;
+            --min;
+            --max;
         }
-        c = read_char();
-        return c;
+        // stop at the first non digit between min and max
+        while (max > 0) {
+            c = read_char();
+            if (!IonTokenConstsX.isDigit(c)) {
+                return c;
+            }
+            --max;
+        }
+        // max characters reached; stop
+        return read_char();
     }
     protected IonType load_number(StringBuilder sb) throws IOException
     {

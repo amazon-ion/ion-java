@@ -23,6 +23,10 @@ public class TestUtils
      */
     public static void deepRead(IonReader reader)
     {
+        deepRead( reader, true );
+    }
+    public static void deepRead(IonReader reader, boolean flgMaterializeScalars)
+    {
         IonType t = null;
         while ((t = doNext(reader)) != null )
         {
@@ -38,14 +42,15 @@ public class TestUtils
                 case SYMBOL:
                 case BLOB:
                 case CLOB:
-                    materializeScalar(reader);
+                    if ( flgMaterializeScalars )
+                        materializeScalar(reader);
                     break;
 
                 case STRUCT:
                 case LIST:
                 case SEXP:
                     reader.stepIn();
-                    deepRead(reader);
+                    deepRead( reader, flgMaterializeScalars );
                     reader.stepOut();
                     break;
 

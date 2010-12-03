@@ -14,58 +14,56 @@ import junit.framework.TestSuite;
 
 public class BadIonStreamingTests extends DirectoryTestSuite {
     private static class BadIonStreamingTestCase
-    	extends FileTestCase
+        extends FileTestCase
     {
-    	private final static boolean _debug_output_errors = false;
-    	private final boolean myFileIsBinary;
+        private final static boolean _debug_output_errors = false;
 
-    	public BadIonStreamingTestCase(File ionFile, boolean binary)
-    	{
-    	    super(ionFile);
-    	    myFileIsBinary = binary;
-    	}
+        public BadIonStreamingTestCase(File ionFile, boolean binary)
+        {
+            super(ionFile);
+        }
 
-    	@Override
+        @Override
         public void runTest()
-    	    throws Exception
-    	{
-    	    try {
-    	        iterateIon();
-    	        fail("Expected IonException parsing "
-    	             + myTestFile.getAbsolutePath());
-    	    } catch (IonException e) {
-    	        /* good - we're expecting an error, there are testing bad input */
-    	        if (_debug_output_errors) {
-    	            System.out.print(this.myTestFile.getName());
-    	            System.out.print(": ");
-    	            System.out.println(e.getMessage());
-    	        }
-    	    }
-    	}
+            throws Exception
+        {
+            iterateIon( true );
+            iterateIon( false );
+        }
 
-        void iterateIon() {
-            IonReader it;
-            int len = (int)myTestFile.length();
-            byte[] buf = new byte[len];
-
-            FileInputStream in;
-            BufferedInputStream bin;
+        void iterateIon(boolean materializeScalars) {
             try {
-                in = new FileInputStream(myTestFile);
-                bin = new BufferedInputStream(in);
-                bin.read(buf);
-            } catch (FileNotFoundException e) {
-                throw new RuntimeException(e);
-            } catch (IOException ioe) {
-                throw new RuntimeException(ioe);
-            }
-            it = system().newReader(buf);
-            // Do we want to check the type of "it" here
-            // to make sure the iterator made the right
-            // choice of binary or text?  Or should be test
-            // that somewhere else?
-
-            TestUtils.deepRead(it);
+                int len = (int)myTestFile.length();
+                byte[] buf = new byte[len];
+    
+                FileInputStream in;
+                BufferedInputStream bin;
+                try {
+                    in = new FileInputStream(myTestFile);
+                    bin = new BufferedInputStream(in);
+                    bin.read(buf);
+                } catch (FileNotFoundException e) {
+                    throw new RuntimeException(e);
+                } catch (IOException ioe) {
+                    throw new RuntimeException(ioe);
+                }
+    
+                // Do we want to check the type of "it" here
+                // to make sure the iterator made the right
+                // choice of binary or text?  Or should be test
+                // that somewhere else?
+                IonReader it = system().newReader(buf);
+                TestUtils.deepRead(it, materializeScalars);
+                fail("Expected IonException parsing "
+                    + myTestFile.getAbsolutePath() + " (" + ( materializeScalars ? "" : "not " ) + "materializing scalars)");
+           } catch (IonException e) {
+               /* good - we're expecting an error, there are testing bad input */
+               if (_debug_output_errors) {
+                   System.out.print(this.myTestFile.getName());
+                   System.out.print(": ");
+                   System.out.println(e.getMessage());
+               }
+           }
         }
     }
 
