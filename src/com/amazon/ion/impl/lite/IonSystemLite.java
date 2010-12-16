@@ -1058,46 +1058,6 @@ public class IonSystemLite
         return result;
     }
 
-    public <T extends IonValue> IonList newList(T... values)
-        throws ContainedValueException, NullPointerException
-    {
-        List<T> e = (values == null ? null : Arrays.asList(values));
-        IonListLite ionValue = newEmptyList();
-        if (e == null) {
-            ionValue.makeNull();
-        }
-        else {
-            ionValue.addAll(e);
-        }
-        return ionValue;
-    }
-
-    public IonSexpLite newSexp(Collection<? extends IonValue> values)
-        throws ContainedValueException, NullPointerException
-    {
-        IonSexpLite ionValue = newEmptySexp();
-        if (values == null) {
-            ionValue.makeNull();
-        }
-        else {
-            ionValue.addAll(values);
-        }
-        return ionValue;
-    }
-
-    public <T extends IonValue> IonSexp newSexp(T... values)
-        throws ContainedValueException, NullPointerException
-    {
-        List<T> e = (values == null ? null : Arrays.asList(values));
-        IonSexpLite ionValue = newEmptySexp();
-        if (e == null) {
-            ionValue.makeNull();
-        }
-        else {
-            ionValue.addAll(e);
-        }
-        return ionValue;
-    }
 
     /*************************************************************
      *

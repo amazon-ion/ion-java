@@ -21,7 +21,7 @@ import java.util.List;
  *  instance construction.
  *
  */
-public abstract class ValueFactoryLite
+public class ValueFactoryLite
     implements ValueFactory
 {
     private IonSystemLite _system;
@@ -173,7 +173,7 @@ public abstract class ValueFactoryLite
         return ionValue;
     }
 
-    public <T extends IonValueLite> IonListLite newList(T... values)
+    public <T extends IonValue> IonListLite newList(T... values)
         throws ContainedValueException, NullPointerException
     {
         List<T> e = (values == null ? null : Arrays.asList(values));
@@ -312,7 +312,7 @@ public abstract class ValueFactoryLite
         return ionValue;
     }
 
-    public <T extends IonValueLite> IonSexp newSexp(T... values)
+    public <T extends IonValue> IonSexp newSexp(T... values)
         throws ContainedValueException, NullPointerException
     {
         List<T> e = (values == null ? null : Arrays.asList(values));
