@@ -539,77 +539,74 @@ public class IonDatagramLite
     //////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////
 
+    /**
+     * This doesn't wrap IOException because some callers need to propagate it.
+     */
     private IonBinaryWriter make_filled_binary_writer()
+    throws IOException
     {
-        IonWriterBinaryCompatibility.User writer = new IonWriterBinaryCompatibility.User(_system, _catalog);
+        IonWriterBinaryCompatibility.User writer = 
+            new IonWriterBinaryCompatibility.User(_system, _catalog);
         IonReader reader = IonReaderFactoryX.makeSystemReader(this);
+        writer.writeValues(reader);
+        writer.flush();
+        return writer;
+    }
+    
+    @SuppressWarnings("deprecation")
+    public int byteSize() throws IonException
+    {
         try {
-            writer.writeValues(reader);
-            writer.flush();
+            IonBinaryWriter writer = make_filled_binary_writer();
+            int size = writer.byteSize();
+            return size;
         }
         catch (IOException e) {
             throw new IonException(e);
         }
-        return writer;
-    }
-    @SuppressWarnings("deprecation")
-    public int byteSize() throws IonException
-    {
-        IonBinaryWriter writer = make_filled_binary_writer();
-        int size = writer.byteSize();
-        return size;
     }
 
     @SuppressWarnings("deprecation")
     public byte[] getBytes() throws IonException
     {
-        IonBinaryWriter writer = make_filled_binary_writer();
-        byte[] bytes;
         try {
-            bytes = writer.getBytes();
+            IonBinaryWriter writer = make_filled_binary_writer();
+            byte[] bytes = writer.getBytes();
+            return bytes;
         }
         catch (IOException e) {
             throw new IonException(e);
         }
-        return bytes;
     }
 
     public int getBytes(byte[] dst) throws IonException
     {
-        IonBinaryWriter writer = make_filled_binary_writer();
-        int size;
         try {
-            size = writer.getBytes(dst, 0, dst.length);
+            IonBinaryWriter writer = make_filled_binary_writer();
+            int size = writer.getBytes(dst, 0, dst.length);
+            return size;
         }
         catch (IOException e) {
             throw new IonException(e);
         }
-        return size;
     }
 
     public int getBytes(byte[] dst, int offset) throws IonException
     {
-        IonBinaryWriter writer = make_filled_binary_writer();
-        int size;
         try {
-            size = writer.getBytes(dst, offset, dst.length - offset);
+            IonBinaryWriter writer = make_filled_binary_writer();
+            int size = writer.getBytes(dst, offset, dst.length - offset);
+            return size;
         }
         catch (IOException e) {
             throw new IonException(e);
         }
-        return size;
     }
 
     public int getBytes(OutputStream out) throws IOException, IonException
     {
         IonBinaryWriter writer = make_filled_binary_writer();
-        int size;
-        try {
-            size = writer.writeBytes(out);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
+        int size = writer.writeBytes(out);
         return size;
     }
 
@@ -683,9 +680,9 @@ public class IonDatagramLite
 
     public byte[] toBytes() throws IonException
     {
-        IonBinaryWriter writer = make_filled_binary_writer();
         byte[] bytes;
         try {
+            IonBinaryWriter writer = make_filled_binary_writer();
             bytes = writer.getBytes();
         }
         catch (IOException e) {

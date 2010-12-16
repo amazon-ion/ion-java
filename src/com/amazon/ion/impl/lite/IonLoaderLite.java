@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl.lite;
 
+import static com.amazon.ion.impl.IonReaderFactoryX.makeReader;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
@@ -37,16 +38,15 @@ public class IonLoaderLite
         return _system;
     }
 
+    /**
+     * This doesn't wrap IOException because some callers need to propagate it.
+     */
     private IonDatagramLite load_helper(IonReader reader)
+    throws IOException
     {
         IonDatagramLite datagram = new IonDatagramLite(_system, _catalog);
         IonWriter writer = IonWriterFactory.makeWriter(datagram);
-        try {
-            writer.writeValues(reader);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
+        writer.writeValues(reader);
         datagram.populateSymbolValues(null);
         return datagram;
     }
@@ -60,23 +60,33 @@ public class IonLoaderLite
 
     public IonDatagram load(String ionText) throws IonException
     {
-        IonReader reader = IonReaderFactoryX.makeReader(_system, _catalog, ionText);
-        IonDatagramLite datagram = load_helper(reader);
-        return datagram;
+        try {
+            IonReader reader = makeReader(_system, _catalog, ionText);
+            IonDatagramLite datagram = load_helper(reader);
+            return datagram;
+        }
+        catch (IOException e) {
+            throw new IonException(e);
+        }
     }
 
     public IonDatagram load(Reader ionText) throws IonException, IOException
     {
-        IonReader reader = IonReaderFactoryX.makeReader(_system, _catalog, ionText);
+        IonReader reader = makeReader(_system, _catalog, ionText);
         IonDatagramLite datagram = load_helper(reader);
         return datagram;
     }
 
     public IonDatagram load(byte[] ionData) throws IonException
     {
-        IonReader reader = IonReaderFactoryX.makeReader(_system, _catalog, ionData, 0, ionData.length);
-        IonDatagramLite datagram = load_helper(reader);
-        return datagram;
+        try {
+            IonReader reader = makeReader(_system, _catalog, ionData, 0, ionData.length);
+            IonDatagramLite datagram = load_helper(reader);
+            return datagram;
+        }
+        catch (IOException e) {
+            throw new IonException(e);
+        }
     }
 
     public IonDatagram load(InputStream ionData)
