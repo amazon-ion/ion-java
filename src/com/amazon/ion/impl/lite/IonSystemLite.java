@@ -751,8 +751,12 @@ public class IonSystemLite
         public IonValue next()
         {
             if (!hasNext()) {
-                throw new NoSuchElementException();  // IterationTest.testSimpleIteration() wants this
-                // return null;  // LoaderTest.testSingleValue is expecting null so IonSystemLite.singleValue can throw an IonException - or should we change testSingleValue ??
+                // IterationTest.testSimpleIteration() wants this
+                throw new NoSuchElementException();  
+                // LoaderTest.testSingleValue is expecting null so 
+                // IonSystemLite.singleValue can throw an IonException - or
+                // should we change testSingleValue ??
+                // return null;  
             }
 
             // make an ion value from our reader
@@ -1068,7 +1072,7 @@ public class IonSystemLite
         return ionValue;
     }
 
-    public IonSexp newSexp(Collection<? extends IonValue> values)
+    public IonSexpLite newSexp(Collection<? extends IonValue> values)
         throws ContainedValueException, NullPointerException
     {
         IonSexpLite ionValue = newEmptySexp();
