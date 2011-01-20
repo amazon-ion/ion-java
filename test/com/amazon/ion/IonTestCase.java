@@ -36,9 +36,11 @@ public abstract class IonTestCase
     protected IonLoader        myLoader;
 
     //  FIXME: needs java docs
-    private static SystemCapabilities desiredSystemType = SystemCapabilities.DEFAULT;
+    private static SystemCapabilities desiredSystemType =
+        SystemCapabilities.DEFAULT;
 
-    public synchronized static SystemCapabilities setSystemCapabilities(SystemCapabilities systype)
+    public synchronized static
+    SystemCapabilities setSystemCapabilities(SystemCapabilities systype)
     {
         SystemCapabilities old = desiredSystemType;
         if (desiredSystemType != systype) {
@@ -46,7 +48,8 @@ public abstract class IonTestCase
         }
         return old;
     }
-    public static SystemCapabilities getSystemCapabilities()
+
+    public static synchronized SystemCapabilities getSystemCapabilities()
     {
         return desiredSystemType;
     }
