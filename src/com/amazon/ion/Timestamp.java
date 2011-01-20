@@ -324,7 +324,7 @@ public final class Timestamp
     }
 
 
-    void validate_fields()
+    private void validate_fields()
     {
         if (_year < 1  || _year > 9999) error_in_field("year must be between 1 and 9999 inclusive GMT, and local time");
         if (_month < 1 || _month > 12) error_in_field("month is between 1 and 12 inclusive");
@@ -346,7 +346,8 @@ public final class Timestamp
             }
         }
     }
-    static void error_in_field(String message)
+
+    private static void error_in_field(String message)
     {
         IllegalArgumentException e = new IllegalArgumentException(message);
         //throw new IonException(e);
