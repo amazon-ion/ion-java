@@ -1525,6 +1525,11 @@ public class IonReaderTextRawTokensX
             if (c == '.') {
                 sb.append((char)c);
                 c = read_char();
+                // Per spec and W3C Note http://www.w3.org/TR/NOTE-datetime
+                // We require at least one digit after the decimal point.
+                if (!IonTokenConstsX.isDigit(c)) {
+                    expected_but_found("at least one digit after timestamp's decimal point", c);
+                }
                 c = load_digits(sb,c);
             }
         }
@@ -2423,6 +2428,15 @@ public class IonReaderTextRawTokensX
         String message = "a bad character " + charStr + " was encountered "+input_position();
         throw new IonReaderTextTokenException(message);
     }
+
+    protected final void expected_but_found(String expected, int c)
+    {
+        String charStr = IonTextUtils.printCodePointAsString(c);
+        String message =
+            "Expected " + expected + " but found " + charStr + input_position();
+        throw new IonReaderTextTokenException(message);
+    }
+
     static public class IonReaderTextTokenException extends IonException {
         private static final long serialVersionUID = 1L;
         IonReaderTextTokenException(String msg) {
