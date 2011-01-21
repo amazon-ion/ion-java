@@ -26,11 +26,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
 import com.amazon.ion.system.SimpleCatalog;
 import com.amazon.ion.system.SystemFactory;
-
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1081,43 +1077,6 @@ public class SymbolTableTest
     }
 
 
-    static byte[] openFileForBuffer(Object arg) {
-        FileInputStream is = null;
-        byte[] buf = null;
-
-        if (arg instanceof String) {
-            String filename = (String)arg;
-            File f = new File(filename);
-            if (!f.canRead()) {
-                throw new IllegalArgumentException("can't read the file " + filename);
-            }
-            try {
-                is =  new FileInputStream(f);
-                if (f.length() < 1 || f.length() > Integer.MAX_VALUE) {
-                    throw new IllegalArgumentException("file is too long to load into a buffer: " + filename + " len = "+f.length());
-                }
-                int len = (int)f.length();
-                buf = new byte[len];
-                try {
-                    if (is.read(buf) != len) {
-                        throw new IOException ("failed to read file into buffer: " + filename);
-                    }
-                }
-                catch (IOException e) {
-                    throw new IllegalArgumentException(e);
-                }
-            }
-            catch (FileNotFoundException e){
-                throw new IllegalArgumentException("can't read the file " + filename);
-            }
-        }
-        else {
-            throw new IllegalArgumentException("string routines need a filename");
-        }
-        return buf;
-    }
-
-
     private static String fieldText(String fieldName, String value)
     {
         if (value == null) return "";
@@ -1125,21 +1084,21 @@ public class SymbolTableTest
 
         return fieldName + ':' + value;
     }
-    
 
-    public void testWriteWithSymbolTable() throws IOException 
+
+    public void testWriteWithSymbolTable() throws IOException
     {
         // this example code is the fix for JIRA IMSVT-2573
-        // which resulted in an assertion due to a but in 
+        // which resulted in an assertion due to a but in
         // IonWriterUser.close_local_symbol_table_copy
-        
+
         IonDatagram data;
-        
+
         data = system().newDatagram();
-        
+
         insert_local_symbol_table(data);
         append_some_data(data);
-        
+
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonWriter writer = system().newTextWriter(out);
         writer.writeValue(data);
@@ -1149,18 +1108,18 @@ public class SymbolTableTest
         byte[] bytes = out.toByteArray();
         assertNotNull(bytes);
     }
-    
+
     private void insert_local_symbol_table(IonDatagram data)
     {
         IonStruct local_symbol_table = system().newEmptyStruct();
         local_symbol_table.addTypeAnnotation("$ion_symbol_table");
-        
+
         IonList symbols = system().newEmptyList();
         symbols.add(system().newString("one"));
         symbols.add(system().newString("two"));
-        
+
         local_symbol_table.add("symbols", symbols);
-    
+
         data.add(local_symbol_table);
     }
 
@@ -1169,7 +1128,7 @@ public class SymbolTableTest
         IonStruct contents = system().newEmptyStruct();
         contents.add("one", system().newInt(1));
         contents.add("two", system().newInt(2));
-        
+
         data.add(contents);
     }
 
