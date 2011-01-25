@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.streaming;
 
@@ -6,10 +6,8 @@ import com.amazon.ion.DirectoryTestSuite;
 import com.amazon.ion.FileTestCase;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.TestUtils;
-import java.io.BufferedInputStream;
+import com.amazon.ion.impl.IonImplUtils;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import junit.framework.TestSuite;
 
@@ -62,21 +60,10 @@ public class GoodIonStreamingTests extends DirectoryTestSuite {
             iterateIon(myTestFile);
         }
 
-        void iterateIon(File myTestFile) {
-            int len = (int)myTestFile.length();
-            byte[] buf = new byte[len];
-
-            FileInputStream in;
-            BufferedInputStream bin;
-            try {
-                in = new FileInputStream(myTestFile);
-                bin = new BufferedInputStream(in);
-                bin.read(buf);
-            } catch (FileNotFoundException e) {
-                throw new RuntimeException(e);
-            } catch (IOException ioe) {
-                throw new RuntimeException(ioe);
-            }
+        void iterateIon(File myTestFile)
+        throws IOException
+        {
+            byte[] buf = IonImplUtils.loadFileBytes(myTestFile);
 
             IonReader reader = system().newReader(buf);
             TestUtils.deepRead(reader);

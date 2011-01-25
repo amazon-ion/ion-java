@@ -1,8 +1,9 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.impl.IonReaderFactoryX.makeReader;
+
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
@@ -54,8 +55,15 @@ public class IonLoaderLite
     public IonDatagram load(File ionFile) throws IonException, IOException
     {
         InputStream ionData = new FileInputStream(ionFile);
-        IonDatagram datagram = load(ionData);
-        return datagram;
+        try
+        {
+            IonDatagram datagram = load(ionData);
+            return datagram;
+        }
+        finally
+        {
+            ionData.close();
+        }
     }
 
     public IonDatagram load(String ionText) throws IonException

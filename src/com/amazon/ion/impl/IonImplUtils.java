@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -9,7 +9,6 @@ import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.Reader;
 import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import com.amazon.ion.system.SystemFactory;
-import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -85,19 +84,20 @@ public final class IonImplUtils // TODO this class shouldn't be public
     public static byte[] loadFileBytes(File file)
         throws IOException
     {
-        int len = (int)file.length();
-        byte[] buf = new byte[len];
+        long len = file.length();
+        if (len < 0 || len > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("File too long: " + file);
+        }
+
+        byte[] buf = new byte[(int) len];
 
         FileInputStream in = new FileInputStream(file);
         try {
-            // TODO I don't think buffering here is helpful since we are
-            // doing a bulk read into our own buffer.
-            BufferedInputStream bin = new BufferedInputStream(in);
-            try {
-                bin.read(buf);
-            }
-            finally {
-                bin.close();
+            int readBytesCount = in.read(buf);
+            if (readBytesCount != len || in.read() != -1)
+            {
+                throw new IOException("Read the wrong number of bytes from "
+                                       + file);
             }
         }
         finally {

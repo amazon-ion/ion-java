@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.apps;
 
@@ -9,6 +9,7 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.system.SimpleCatalog;
 import com.amazon.ion.system.SystemFactory;
+import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -195,10 +196,11 @@ abstract class BaseApp
         File catalogFile = new File(catalogPath);
         try
         {
-            FileInputStream fis = new FileInputStream(catalogFile);
+            InputStream in =
+                new BufferedInputStream(new FileInputStream(catalogFile));
             try
             {
-                IonReader reader = mySystem.newReader(fis);
+                IonReader reader = mySystem.newReader(in);
                 while (reader.next() != null)
                 {
                     SymbolTable symtab =
@@ -208,7 +210,7 @@ abstract class BaseApp
             }
             finally
             {
-                fis.close();
+                in.close();
             }
         }
         catch (Exception e)

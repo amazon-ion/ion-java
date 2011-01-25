@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.streaming;
 
@@ -10,14 +10,12 @@ import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import com.amazon.ion.util.Equivalence;
 import com.amazon.ion.util.Printer;
-import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Iterator;
 import junit.framework.TestSuite;
@@ -71,22 +69,6 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
         public StreamingRoundTripTest(File ionFile)
         {
             super(ionFile);
-
-            FileInputStream in;
-            BufferedInputStream bin;
-            long len = ionFile.length();
-            if (len < 0 || len > Integer.MAX_VALUE) throw new IllegalArgumentException("file too long for test");
-            myBuffer = new byte[(int)len];
-            try {
-                in = new FileInputStream(myTestFile);
-                bin = new BufferedInputStream(in);
-                bin.read(myBuffer);
-            } catch (FileNotFoundException e) {
-                throw new RuntimeException(e);
-            } catch (IOException ioe) {
-                throw new RuntimeException(ioe);
-            }
-
         }
 
         @Override
@@ -96,6 +78,7 @@ public class RoundTripStreamingTests extends DirectoryTestSuite
             super.setUp();
             myPrinter = new Printer();
             myBuilder = new StringBuilder();
+            myBuffer = IonImplUtils.loadFileBytes(myTestFile);
         }
 
         @Override

@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -6,7 +6,6 @@ import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.system.SimpleCatalog;
 import com.amazon.ion.system.SystemFactory;
 import com.amazon.ion.system.SystemFactory.SystemCapabilities;
-import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -187,7 +186,8 @@ public abstract class IonTestCase
     {
         // slurp file into a byte sink
         final ByteArrayOutputStream sink = new ByteArrayOutputStream();
-        final InputStream in = new BufferedInputStream(new FileInputStream(ionFile));
+        // BufferedInputStream isn't needed, we are reading in bulk.
+        final InputStream in = new FileInputStream(ionFile);
         try {
             final byte[] buf = new byte[131072];
             int read = 0;
