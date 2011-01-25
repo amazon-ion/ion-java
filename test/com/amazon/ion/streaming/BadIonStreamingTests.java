@@ -29,7 +29,7 @@ public class BadIonStreamingTests extends DirectoryTestSuite {
         {
             iterateIon( true );
 
-            if (getSystemCapabilities() == SystemCapabilities.LITE)
+            if (getSystemCapabilities() != SystemCapabilities.LITE)
             {
                 // "Lite" system doesn't validate while skipping scalars
                 // so we won't throw exceptions for all bad files.
