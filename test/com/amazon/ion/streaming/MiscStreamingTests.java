@@ -235,4 +235,25 @@ public class MiscStreamingTests
         assertTrue(reader.isNullValue());
         assertEquals(null, reader.stringValue());
     }
+
+    public void testSkippingListWithQuotedSymbol()
+    {
+        IonReader reader = system().newReader("['\\']'] 2");
+        assertEquals(IonType.LIST, reader.next());
+        assertEquals(IonType.INT, reader.next());
+        assertEquals(2, reader.intValue());
+        assertEquals(null, reader.next());
+    }
+
+    public void testSkippingOperator()
+    {
+        IonReader reader = system().newReader("(+()) 2");
+        assertEquals(IonType.SEXP, reader.next());
+        reader.stepIn();
+        assertEquals(IonType.SYMBOL, reader.next());
+        reader.stepOut();
+        assertEquals(IonType.INT, reader.next());
+        assertEquals(2, reader.intValue());
+        assertEquals(null, reader.next());
+    }
 }

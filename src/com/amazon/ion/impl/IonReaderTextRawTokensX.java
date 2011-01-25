@@ -424,6 +424,10 @@ public class IonReaderTextRawTokensX
     {
         int c;
 
+        // FIXME lots of inconsistency here!
+        // Sometimes the token's first character is still on the stream,
+        // sometimes it's already been consumed.
+
         switch (_token) {
         case IonTokenConstsX.TOKEN_UNKNOWN_NUMERIC:
             c = skip_over_number(sp);
@@ -432,8 +436,7 @@ public class IonReaderTextRawTokensX
             c = skip_over_int(sp);
             break;
         case IonTokenConstsX.TOKEN_HEX:
-            skip_over_hex(sp);
-            c = skip_over_whitespace();
+            c = skip_over_hex(sp);
             break;
         case IonTokenConstsX.TOKEN_DECIMAL:
             c = skip_over_decimal(sp);
@@ -445,20 +448,19 @@ public class IonReaderTextRawTokensX
             c = skip_over_timestamp(sp);
             break;
         case IonTokenConstsX.TOKEN_SYMBOL_BASIC:
-            skip_over_symbol(sp);
-            c = skip_over_whitespace();
+            c = skip_over_symbol(sp);
             break;
         case IonTokenConstsX.TOKEN_SYMBOL_QUOTED:
+            // Initial single-quote has been consumed!
             assert(!is_2_single_quotes_helper());
-            skip_single_quoted_string(sp);
-            c = skip_over_whitespace();
+            c = skip_single_quoted_string(sp);
             break;
         case IonTokenConstsX.TOKEN_SYMBOL_OPERATOR:
-            skip_over_symbol_operator(sp);
-            c = skip_over_whitespace();
+            // Initial operator char has NOT been consumed
+            c = skip_over_symbol_operator(sp);
             break;
         case IonTokenConstsX.TOKEN_STRING_DOUBLE_QUOTE:
-            skip_double_quoted_string_helper();
+            skip_double_quoted_string_helper(); // FIXME Why no sp here?
             c = skip_over_whitespace();
             break;
         case IonTokenConstsX.TOKEN_STRING_TRIPLE_QUOTE:
@@ -1010,7 +1012,8 @@ public class IonReaderTextRawTokensX
                     skip_triple_quoted_string(null);
                 }
                 else {
-                    skip_single_quoted_string(null);
+                    c = skip_single_quoted_string(null);
+                    unread_char(c);
                 }
                 break;
             case '(':
@@ -1581,7 +1584,7 @@ public class IonReaderTextRawTokensX
         return c;
     }
 
-    private final void skip_over_symbol(SavePoint sp) throws IOException
+    private final int skip_over_symbol(SavePoint sp) throws IOException
     {
         int c = read_char();
 
@@ -1589,11 +1592,10 @@ public class IonReaderTextRawTokensX
             c = read_char();
         }
 
-        unread_char(c);
         if (sp != null) {
             sp.markEnd(0);
          }
-        return;
+        return c;
     }
     protected void load_symbol(StringBuilder sb) throws IOException
     {
@@ -1647,7 +1649,7 @@ public class IonReaderTextRawTokensX
         return;
     }
 
-    private void skip_over_symbol_operator(SavePoint sp) throws IOException
+    private int skip_over_symbol_operator(SavePoint sp) throws IOException
     {
         //int token_type;
         int c = read_char();
@@ -1657,6 +1659,7 @@ public class IonReaderTextRawTokensX
         {
             // do nothing, peek_inf did all the work for us
             // (such as it is)
+            c = read_char();
         }
         else {
             assert(IonTokenConstsX.isValidExtendedSymbolCharacter(c));
@@ -1665,12 +1668,11 @@ public class IonReaderTextRawTokensX
             while (IonTokenConstsX.isValidExtendedSymbolCharacter(c)) {
                 c = read_char();
             }
-            unread_char(c);
         }
         if (sp != null) {
             sp.markEnd(0);
         }
-        return;
+        return c;
     }
     protected void load_symbol_operator(StringBuilder sb) throws IOException
     {
@@ -1694,7 +1696,7 @@ public class IonReaderTextRawTokensX
 
         return;
     }
-    private final void skip_single_quoted_string(SavePoint sp) throws IOException
+    private final int skip_single_quoted_string(SavePoint sp) throws IOException
     {
         int c;
 
@@ -1710,7 +1712,7 @@ public class IonReaderTextRawTokensX
                 if (sp != null) {
                    sp.markEnd(-1);
                 }
-                return;
+                return read_char(); // Return the next character beyond the token
             case '\\':
                 c = read_char();
 // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
