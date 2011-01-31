@@ -1,7 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
-
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion;
 
 import java.io.IOException;
@@ -9,6 +6,7 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import org.junit.Test;
 
 
 
@@ -116,6 +114,7 @@ public class ClobTest
     //=========================================================================
     // Test cases
 
+    @Test
     public void testFactoryClob()
         throws Exception
     {
@@ -129,6 +128,7 @@ public class ClobTest
     }
 
 
+    @Test
     public void testNullClob()
         throws Exception
     {
@@ -141,6 +141,7 @@ public class ClobTest
         checkAnnotation("a", value);
     }
 
+    @Test
     public void testEmptyClob()
         throws IOException
     {
@@ -154,6 +155,7 @@ public class ClobTest
         checkUtf8("", value);
     }
 
+    @Test
     public void testEmptyClobLongString()
         throws Exception
     {
@@ -162,6 +164,7 @@ public class ClobTest
         checkUtf8("", value);
     }
 
+    @Test
     public void testConcatenatedClob()
         throws Exception
     {
@@ -170,12 +173,14 @@ public class ClobTest
         checkUtf8("ab", value);
     }
 
+    @Test
     public void testClobData()
         throws Exception
     {
         checkUtf8("abc", "{{\"abc\"}}");
     }
 
+    @Test
     public void testByteSize()
     {
         IonClob value = system().newNullClob();
@@ -188,12 +193,15 @@ public class ClobTest
                      SAMPLE_ASCII_AS_UTF8.length);
     }
 
+    @Test
     public void testHighUnicodeEscapes()
     {
         badValue("{{\"\\U0000003f\"}}");
     }
 
+    @Test
     public void testParseTripleQuoteLoader() {
+        @SuppressWarnings("unused")
         IonValue c = oneValue("{aws_id:a, aws_key:b, aes_key:{{'''c'''}}, bucket:d, bucket_suffix:e, flush_timeout:1}");
     }
 

@@ -1,12 +1,11 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
-
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonTestCase;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import org.junit.Ignore;
+import org.junit.Test;
 
 /**
  *
@@ -32,6 +31,7 @@ public class ReaderTest
     //=========================================================================
     // Test cases
 
+    @Test @Ignore
     public void testNothing()
     {
     }

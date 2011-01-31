@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -32,6 +32,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import org.junit.Ignore;
+import org.junit.Test;
 
 /**
  *
@@ -121,6 +123,7 @@ public class SymbolTableTest
     //=========================================================================
     // Test cases
 
+    @Test
     public void testInitialSystemSymtab()
     {
         final SymbolTable systemTable = system().getSystemSymbolTable(ION_1_0);
@@ -141,6 +144,7 @@ public class SymbolTableTest
         assertSame(systemTable, st.getSystemSymbolTable());
     }
 
+    @Test
     public void testLocalTable()
     {
         String text =
@@ -160,6 +164,7 @@ public class SymbolTableTest
         assertEquals("$33", symbolTable.findSymbol(33));
     }
 
+    @Test
     public void testImportsFollowSymbols()
     {
         registerImportedV1();
@@ -208,6 +213,7 @@ public class SymbolTableTest
         return tableStruct;
     }
 
+    @Test
     public void testDomSharedSymbolTable() {
         // JIRA ION-72
         final SymbolTable table = system().newSharedSymbolTable(
@@ -221,6 +227,7 @@ public class SymbolTableTest
     /**
      * Attempts to override system symbols are ignored.
      */
+    @Test
     public void testOverridingSystemSymbolId()
     {
         int nameSid =
@@ -241,6 +248,7 @@ public class SymbolTableTest
     }
 
 
+    @Test
     public void testOverridingImportedSymbolId()
     {
         registerImportedV1();
@@ -270,7 +278,8 @@ public class SymbolTableTest
     }
 
 
-    public void XXXtestInjectingMaxIdIntoImport() // TODO implement
+    @Test @Ignore
+    public void testInjectingMaxIdIntoImport() // TODO implement
     {
         SymbolTable importedTable = registerImportedV1();
 
@@ -303,6 +312,7 @@ public class SymbolTableTest
     }
 
 
+    @Test
     public void testLocalTableWithMissingImport()
     {
         // Use a big symtab to get beyond any default allocation within the
@@ -364,6 +374,7 @@ public class SymbolTableTest
     /**
      * Import v2 but catalog has v1.
      */
+    @Test
     public void testLocalTableWithLesserImport()
     {
         final int import1id = ION_1_0_MAX_ID + 1;
@@ -400,6 +411,7 @@ public class SymbolTableTest
     /**
      * Import v2 but catalog has v3.
      */
+    @Test
     public void testLocalTableWithGreaterImport()
     {
         final int import1id = ION_1_0_MAX_ID + 1;
@@ -440,6 +452,7 @@ public class SymbolTableTest
         checkSymbol("fred5", local3id, dg.get(5));
     }
 
+    @Test
     public void testRepeatedImport()
     {
         SymbolTable importedV1 = registerImportedV1();
@@ -473,7 +486,8 @@ public class SymbolTableTest
     }
 
     // JIRA ION-75
-    public void XXXtestDupLocalSymbolOnDatagram() throws Exception {
+    @Test @Ignore
+    public void testDupLocalSymbolOnDatagram() throws Exception {
         final IonSystem ion1 = SystemFactory.newSystem();
         final SymbolTable st = ion1.newSharedSymbolTable("foobar", 1, Arrays.asList("s1").iterator());
         final IonMutableCatalog cat = new SimpleCatalog();
@@ -496,6 +510,7 @@ public class SymbolTableTest
     }
 
 
+    @Test
     public void testMalformedImportsField()
     {
         testMalformedImportsField("[]");
@@ -530,6 +545,7 @@ public class SymbolTableTest
     }
 
 
+    @Test
     public void testImportWithMalformedName()
     {
         SymbolTable importedV1 = registerImportedV1();
@@ -569,6 +585,7 @@ public class SymbolTableTest
     // TODO test getUsedTable(null)
     // TODO test getImportedTable(null)
 
+    @Test
     public void testImportWithZeroMaxId()
     {
         SymbolTable importedV1 = registerImportedV1();
@@ -586,6 +603,7 @@ public class SymbolTableTest
         assertEquals(ION_1_0_MAX_ID + 1, symbolTable.findSymbol("local"));
     }
 
+    @Test
     public void testImportWithBadMaxId()
     {
         SymbolTable importedV1 = registerImportedV1();
@@ -629,6 +647,7 @@ public class SymbolTableTest
     //-------------------------------------------------------------------------
     // Local symtab creation
 
+    @Test
     public void testEmptyLocalSymtabCreation()
     {
         SymbolTable st = system().newLocalSymbolTable();
@@ -661,6 +680,7 @@ public class SymbolTableTest
         assertEquals(0, st.getImportedTables().length);
     }
 
+    @Test
     public void testBasicLocalSymtabCreation()
     {
         SymbolTable systemTable = system().getSystemSymbolTable();
@@ -680,6 +700,7 @@ public class SymbolTableTest
         checkEmptyLocalSymtab(st);
     }
 
+    @Test
     public void testBadLocalSymtabCreation()
     {
         SymbolTable systemTable = system().getSystemSymbolTable();
@@ -715,6 +736,7 @@ public class SymbolTableTest
     //-------------------------------------------------------------------------
     // Shared symtab creation
 
+    @Test
     public void testSystemNewSharedSymtab()
         throws Exception
     {
@@ -758,6 +780,7 @@ public class SymbolTableTest
     }
 
 
+    @Test
     public void testBasicSharedSymtabCreation()
     {
         String[] syms = { "a", null, "b" };
@@ -777,6 +800,7 @@ public class SymbolTableTest
         checkSharedTable("ST", 2, new String[]{"a", "b", "c"}, st2);
     }
 
+    @Test
     public void testEmptySharedSymtabCreation()
     {
         String[] noStrings = new String[0];
@@ -789,6 +813,7 @@ public class SymbolTableTest
         checkSharedTable("ST", 1, noStrings, st);
     }
 
+    @Test
     public void testSharedSymtabCreationWithImports()
     {
         SymbolTable fred1   = Symtabs.CATALOG.getTable("fred", 1);
@@ -814,6 +839,7 @@ public class SymbolTableTest
                          st);
     }
 
+    @Test
     public void testBadSharedSymtabCreation()
     {
         String[] syms = { "a" };
@@ -884,6 +910,7 @@ public class SymbolTableTest
     //-------------------------------------------------------------------------
     // Testing name field
 
+    @Test
     public void testMalformedSymtabName()
     {
         testMalformedSymtabName(null);     // missing field
@@ -917,6 +944,7 @@ public class SymbolTableTest
     //-------------------------------------------------------------------------
     // Testing version field
 
+    @Test
     public void testSharedTableMissingVersion()
     {
         String text =
@@ -931,6 +959,7 @@ public class SymbolTableTest
         assertEquals(1, symbolTable.getVersion());
     }
 
+    @Test
     public void testMalformedVersionField()
     {
         testMalformedVersionField("-1");
@@ -973,6 +1002,7 @@ public class SymbolTableTest
     //-------------------------------------------------------------------------
     // Testing symbols field
 
+    @Test
     public void testMalformedSymbolsField()
     {
         testMalformedSymbolsField("[]");
@@ -1007,6 +1037,7 @@ public class SymbolTableTest
         assertEquals(ION_1_0_MAX_ID, table.getMaxId());
     }
 
+    @Test
     public void testMalformedSymbolDeclarations()
     {
         testMalformedSymbolDeclaration(" \"\" ");      // empty string
@@ -1042,6 +1073,7 @@ public class SymbolTableTest
     }
 
 
+    @Test
     public void testSystemIdOnNonStruct()
     {
         String text = "$ion_1_0::12";
@@ -1049,6 +1081,7 @@ public class SymbolTableTest
         checkInt(12, v);
     }
 
+    @Test
     public void testSymbolTableOnNonStruct()
     {
         String text = "$ion_symbol_table::12";
@@ -1056,6 +1089,7 @@ public class SymbolTableTest
         checkInt(12, v);
     }
 
+    @Test
     public void testNestedSystemId()
     {
         String text = "($ion_1_0)";
@@ -1069,6 +1103,7 @@ public class SymbolTableTest
         return container;
     }
 
+    @Test
     public void testDoubleWrite() throws IOException {
         // JIRA ION-73
         final SymbolTable table =
@@ -1086,6 +1121,7 @@ public class SymbolTableTest
     }
 
 
+    @Test
     public void testWriteWithSymbolTable() throws IOException
     {
         // this example code is the fix for JIRA IMSVT-2573

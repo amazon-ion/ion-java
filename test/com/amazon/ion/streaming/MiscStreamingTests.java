@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.streaming;
 
@@ -15,6 +15,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.system.SystemFactory;
+import org.junit.Test;
 
 /**
  *
@@ -33,6 +34,8 @@ public class MiscStreamingTests
     static final String _QuotingString1_java = "s\"t1";
     static final String _QuotingString2_ion  = "s\\\'t2";  // 5 bytes
     static final String _QuotingString2_java = "s\'t2";
+
+    @Test
     public void testQuoting()
     throws Exception
     {
@@ -78,6 +81,7 @@ public class MiscStreamingTests
     }
 
 
+    @Test
     public void testValue2()
     throws Exception
     {
@@ -128,6 +132,7 @@ public class MiscStreamingTests
                 tree_count, bin_count);
     }
 
+    @Test
     public void testBinaryAnnotation()
     throws Exception
     {
@@ -170,12 +175,14 @@ public class MiscStreamingTests
     }
 
 
+    @Test
     public void testTextNullStringValue()
     {
         IonReader reader = system().newReader("null.string");
         testNullStringValue(reader);
     }
 
+    @Test
     public void testBinaryNullStringValue()
     {
         // TODO load this from test file
@@ -185,6 +192,7 @@ public class MiscStreamingTests
         testNullStringValue(reader);
     }
 
+    @Test
     public void testTreeNullStringValue()
     {
         IonString nullString = system().newNullString();
@@ -193,12 +201,14 @@ public class MiscStreamingTests
     }
 
 
+    @Test
     public void testTextNullSymbolValue()
     {
         IonReader reader = system().newReader("null.symbol");
         testNullSymbolValue(reader);
     }
 
+    @Test
     public void testBinaryNullSymbolValue()
     {
         // TODO load this from test file
@@ -208,6 +218,7 @@ public class MiscStreamingTests
         testNullSymbolValue(reader);
     }
 
+    @Test
     public void testTreeNullSymbolValue()
     {
         IonSymbol nullSymbol = system().newNullSymbol();
@@ -236,6 +247,7 @@ public class MiscStreamingTests
         assertEquals(null, reader.stringValue());
     }
 
+    @Test
     public void testSkippingListWithQuotedSymbol()
     {
         IonReader reader = system().newReader("['\\']'] 2");
@@ -245,6 +257,7 @@ public class MiscStreamingTests
         assertEquals(null, reader.next());
     }
 
+    @Test
     public void testSkippingOperator()
     {
         IonReader reader = system().newReader("(+()) 2");

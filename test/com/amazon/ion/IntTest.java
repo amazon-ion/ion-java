@@ -1,10 +1,8 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
-
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion;
 
 import java.math.BigInteger;
+import org.junit.Test;
 
 
 
@@ -59,6 +57,7 @@ public class IntTest
     //=========================================================================
     // Test cases
 
+    @Test
     public void testFactoryInt()
     {
         IonInt value = system().newNullInt();
@@ -66,6 +65,7 @@ public class IntTest
         modifyInt(value);
     }
 
+    @Test
     public void testTextNullInt()
     {
         IonInt value = (IonInt) oneValue("null.int");
@@ -74,7 +74,7 @@ public class IntTest
     }
 
 
-
+    @Test
     public void testNegInt()
     {
         IonInt value = (IonInt) oneValue("-1");
@@ -94,6 +94,7 @@ public class IntTest
     }
 
 
+    @Test
     public void testInts()
     {
         IonInt value = (IonInt) oneValue("1");
@@ -119,6 +120,7 @@ public class IntTest
     }
 
 
+    @Test
     public void testPositiveSign()
     {
         // Array keeps this from parsing as datagram "+ 1"
@@ -127,6 +129,7 @@ public class IntTest
     }
 
 
+    @Test
     public void testNegativeIntRoundTrip()
     {
         IonInt i = system().newInt(-20);
@@ -135,6 +138,7 @@ public class IntTest
     }
 
 
+    @Test
     public void testNegativeLongRoundTrip()
     {
         // FIXME: encoder can't handle Long.MIN_VALUE
@@ -153,7 +157,7 @@ public class IntTest
         assertEquals(v, result.bigIntegerValue());
     }
 
-
+    @Test
     public void testNegNumberRoundTrip()
     {
         testRoundTrip(BigInteger.valueOf(Long.MAX_VALUE));
@@ -164,6 +168,7 @@ public class IntTest
         // testRoundTrip(BigInteger.valueOf(Long.MIN_VALUE));
     }
 
+    @Test
     public void testLongs()
     {
         IonInt value = (IonInt) oneValue(String.valueOf(A_LONG_INT));
@@ -184,17 +189,20 @@ public class IntTest
     // TODO test BigInteger
 
 
+    @Test
     public void testStopChars()
     {
         badValue("12/");
     }
 
+    @Test
     public void testHexadecimal()
     {
         checkInt(-3, oneValue("-0x3"));
         checkInt(-3, oneValue("-0x0003"));
     }
 
+    @Test
     public void testIntsFromSuite()
         throws Exception
     {
@@ -209,6 +217,7 @@ public class IntTest
     }
 
 
+    @Test
     public void testReadOnlyInt()
     {
         IonInt v = system().newInt(1);

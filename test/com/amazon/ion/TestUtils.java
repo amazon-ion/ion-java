@@ -1,11 +1,15 @@
-// Copyright (c) 2008-2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import static com.amazon.ion.impl.IonImplUtils.READER_HASNEXT_REMOVED;
 
+import java.io.File;
+import java.io.FilenameFilter;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import junit.framework.Assert;
 
@@ -14,6 +18,56 @@ import junit.framework.Assert;
  */
 public class TestUtils
 {
+    public static final FilenameFilter TEXT_ONLY_FILTER = new FilenameFilter()
+    {
+        public boolean accept(File dir, String name)
+        {
+            return name.endsWith(".ion");
+        }
+    };
+
+
+    public static File[] testdataFiles(FilenameFilter filter,
+                                       String... testdataDirs)
+    {
+        ArrayList<File> files = new ArrayList<File>();
+
+        for (String testdataDir : testdataDirs)
+        {
+            File dir = IonTestCase.getTestdataFile(testdataDir);
+
+            String[] fileNames = dir.list();
+            if (fileNames == null)
+            {
+                String message =
+                    "testdataDir is not a directory: "
+                    + dir.getAbsolutePath();
+                throw new IllegalArgumentException(message);
+            }
+
+            // Sort the fileNames so they are listed in order.
+            Arrays.sort(fileNames);
+            for (String fileName : fileNames)
+            {
+                if (filter == null || filter.accept(dir, fileName))
+                {
+                    File testFile = new File(dir, fileName);
+                    files.add(testFile);
+                }
+            }
+        }
+
+        return files.toArray(new File[files.size()]);
+    }
+
+
+    public static File[] testdataFiles(String... testdataDirs)
+    {
+        return testdataFiles(null, testdataDirs);
+    }
+
+
+    //========================================================================
 
     /**
      * Reads everything until the end of the current container, traversing

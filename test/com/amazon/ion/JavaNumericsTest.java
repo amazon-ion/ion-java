@@ -1,9 +1,10 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import org.junit.Test;
 
 /**
  * Tests illustrating semantics of built-in Java numeric types.
@@ -11,6 +12,7 @@ import java.math.BigInteger;
 public class JavaNumericsTest
     extends IonTestCase
 {
+    @Test
     public void testDoubleEquality()
     {
         Double posZeroDotZero = new Double( 0.0d);
@@ -31,6 +33,7 @@ public class JavaNumericsTest
         assertTrue(0.0d == 0.00000d);
     }
 
+    @Test
     public void testDoubleNegativeZeroResult()
     {
         assertTrue(Double.compare(-1 * 0.0d, 0.0d) < 0);
@@ -39,6 +42,7 @@ public class JavaNumericsTest
         assertEquals(0, Double.compare(-1 * 0.0d, -0.0d));
     }
 
+    @Test
     public void testDoublePrinting()
     {
         assertEquals("-0.0", "" + -0.d);
@@ -53,12 +57,14 @@ public class JavaNumericsTest
     /**
      * BigInteger doesn't distinguish negative zero.
      */
+    @Test
     public void testBigIntegerSignum()
     {
         BigInteger bi = new BigInteger(-1, new byte[]{ 0 });
         assertEquals(0, bi.signum());
     }
 
+    @Test
     public void testBigDecimalScale()
     {
         BigDecimal val = new BigDecimal("1.00");
@@ -97,6 +103,7 @@ public class JavaNumericsTest
     /**
      * Creating a BigDecimal from negative-zero double loses the negative.
      */
+    @Test
     public void testBigDecimalNegativeZero()
     {
         BigDecimal bd = new BigDecimal(-0.0d);
@@ -106,6 +113,7 @@ public class JavaNumericsTest
         assertEquals(0, bd.compareTo(new BigDecimal(0.0d)));
     }
 
+    @Test
     public void testBigDecimalParsing()
     {
         badBigDecimalFormat(" 0");

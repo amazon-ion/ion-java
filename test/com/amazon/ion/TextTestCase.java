@@ -1,6 +1,7 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
-
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion;
+
+import org.junit.Test;
 
 /**
  *
@@ -20,6 +21,7 @@ public abstract class TextTestCase
         return ((IonText) value).stringValue();
     }
 
+    @Test
     public void testUnicodeEscapes()
     {
         final String u = "\\" + "u";

@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -11,6 +11,8 @@ import com.amazon.ion.impl.IonReaderTextRawTokensX;
 import com.amazon.ion.impl.IonUTF8;
 import com.amazon.ion.impl.SymbolTableTest;
 import com.amazon.ion.system.SimpleCatalog;
+import org.junit.Ignore;
+import org.junit.Test;
 
 
 
@@ -153,6 +155,7 @@ public abstract class SystemProcessingTestCase
 
     //=========================================================================
 
+    @Test
     public void testLocalTableResetting()
         throws Exception
     {
@@ -213,6 +216,7 @@ if (table1 == table2) {
         assertSame(table2, table4);
     }
 
+    @Test
     public void testTrivialLocalTableResetting()
         throws Exception
     {
@@ -256,6 +260,7 @@ if (table1 == table2) {
         assertEquals(SystemSymbolTable.ION_1_0_MAX_ID, table2.getMaxId());
     }
 
+    @Test
     public void testLocalTableReplacement()
         throws Exception
     {
@@ -299,6 +304,7 @@ if (table1 == table2) {
         assertSame(table2, currentSymtab());
     }
 
+    @Test
     public void testTrivialLocalTableReplacement()
         throws Exception
     {
@@ -330,6 +336,7 @@ if (table1 == table2) {
     }
 
 
+    @Test
     public void testLocalSymtabWithOpenContent()
         throws Exception
     {
@@ -354,6 +361,7 @@ if (table1 == table2) {
     /**
      * Import v2 but catalog has v1.
      */
+    @Test
     public void testLocalTableWithLesserImport()
         throws Exception
     {
@@ -439,6 +447,7 @@ if (table1 == table2) {
     /**
      * Import v2 but catalog has v3.
      */
+    @Test
     public void testLocalTableWithGreaterImport()
         throws Exception
     {
@@ -531,6 +540,7 @@ if (table1 == table2) {
     }
 
 
+    @Test
     public void testSharedTableNotAddedToCatalog()
         throws Exception
     {
@@ -544,9 +554,10 @@ if (table1 == table2) {
 
         startIteration(text);
         try {
-        nextValue();
+            nextValue();
         }
         catch (IonReaderTextRawTokensX.IonReaderTextTokenException e) {
+            // FIXME what the heck?
             testSharedTableNotAddedToCatalog();
         }
         checkType(IonType.STRUCT);
@@ -558,6 +569,7 @@ if (table1 == table2) {
         checkSymbol("imported 1");
     }
 
+    @Test
     public void testObsoleteSharedTableFormat()
         throws Exception
     {
@@ -598,6 +610,7 @@ if (table1 == table2) {
         checkEof();
     }
 
+    @Test
     public void testUnicodeCharacters()
         throws Exception
     {
@@ -631,6 +644,7 @@ if (table1 == table2) {
     }
 
 
+    @Test
     public void testSurrogateGluing()
         throws Exception
     {
@@ -660,6 +674,7 @@ if (table1 == table2) {
         }
     }
 
+    @Test
     public void testQuotesInLongStrings()
         throws Exception
     {
@@ -674,7 +689,8 @@ if (table1 == table2) {
 
     // TODO similar tests on clob
 
-    public void XXXtestPosInt() // TODO rework?
+    @Test @Ignore
+    public void testPosInt() // TODO rework?
         throws Exception
     {
         startTestCheckpoint("XXXtestPosInt");
@@ -687,7 +703,8 @@ if (table1 == table2) {
         checkEof();
     }
 
-    public void XXXtestPosDecimal() // TODO rework?
+    @Test @Ignore
+    public void testPosDecimal() // TODO rework?
         throws Exception
     {
         startTestCheckpoint("XXXtestPosDecimal");
@@ -700,6 +717,7 @@ if (table1 == table2) {
         checkEof();
     }
 
+    @Test
     public void testNegativeZeroDecimal()
         throws Exception
     {
@@ -711,7 +729,8 @@ if (table1 == table2) {
         checkEof();
     }
 
-    public void XXXtestPosFloat() // TODO rework?
+    @Test @Ignore
+    public void testPosFloat() // TODO rework?
         throws Exception
     {
         startTestCheckpoint("XXXtestPosFloat");
@@ -724,7 +743,8 @@ if (table1 == table2) {
         checkEof();
     }
 
-    public void XXXtestPosTimestamp() // TODO rework?
+    @Test @Ignore
+    public void testPosTimestamp() // TODO rework?
         throws Exception
     {
         startTestCheckpoint("XXXtestPosTimestamp");
@@ -738,6 +758,7 @@ if (table1 == table2) {
     }
 
     // JIRA ION-71
+    @Test
     public void testTimestampWithRolloverOffset()
         throws Exception
     {
@@ -751,6 +772,7 @@ if (table1 == table2) {
     }
 
 
+    @Test
     public void testShortTimestamps()
         throws Exception
     {
@@ -770,6 +792,7 @@ if (table1 == table2) {
         checkEof();
     }
 
+    @Test
     public void testTimestampWithZeroFraction()
         throws Exception
     {
@@ -782,6 +805,7 @@ if (table1 == table2) {
         checkEof();
     }
 
+    @Test
     public void testNullTimestamp()
         throws Exception
     {
@@ -794,6 +818,7 @@ if (table1 == table2) {
         checkEof();
     }
 
+    @Test
     public void testSpecialFloats()
         throws Exception
     {
@@ -812,6 +837,7 @@ if (table1 == table2) {
 
     //=========================================================================
 
+    @Test
     public void testSystemIterationShowsIvm()
         throws Exception
     {
@@ -834,6 +860,7 @@ if (table1 == table2) {
         checkEof();
     }
 
+    @Test
     public void testHighUnicodeDirectInBlob()
     {
         startTestCheckpoint("testHighUnicodeDirectInBlob");
@@ -846,7 +873,8 @@ if (table1 == table2) {
     }
 
     // TODO test injected symtabs's symtab
-    public void XXXtestSymtabOnInjectedSymtab()
+    @Test @Ignore
+    public void testSymtabOnInjectedSymtab()
         throws Exception
     {
         startTestCheckpoint("XXXtestSymtabOnInjectedSymtab");

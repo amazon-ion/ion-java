@@ -1,4 +1,4 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -8,6 +8,7 @@ import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
+import org.junit.Test;
 
 /**
  *
@@ -15,6 +16,7 @@ import com.amazon.ion.IonType;
 public class TreeReaderTest
     extends IonTestCase
 {
+    @Test
     public void testInitialStateForScalar()
     {
         IonInt value = system().newInt(23);
@@ -24,6 +26,7 @@ public class TreeReaderTest
         assertEquals(IonType.INT, r.next());
     }
 
+    @Test
     public void testInitialStateForList()
     {
         IonList list = system().newEmptyList();
@@ -43,6 +46,7 @@ public class TreeReaderTest
         assertFalse(r.hasNext());
     }
 
+    @Test
     public void testInitialStateForStruct()
     {
         IonStruct value = system().newEmptyStruct();

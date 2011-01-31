@@ -1,21 +1,25 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import static com.amazon.ion.Decimal.negativeZero;
 import static java.math.MathContext.DECIMAL64;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 
 /**
  * @see JavaNumericsTest
  */
 public class ExtendedDecimalTest
-    extends TestCase
 {
     private static final Decimal ZERO_0 = Decimal.valueOf("0.");
     private static final Decimal ZERO_1 = Decimal.valueOf("0.0");
@@ -25,6 +29,8 @@ public class ExtendedDecimalTest
     private static final Decimal NEG_ZERO_1 = negativeZero(1);
     private static final Decimal NEG_ZERO_3 = negativeZero(3);
 
+
+    @Test
     public void testCommonEquals()
     {
         Decimal ibd = Decimal.valueOf(3);
@@ -34,6 +40,8 @@ public class ExtendedDecimalTest
         assertEquals(bd, ibd);
     }
 
+
+    @Test
     public void testStaticEquals()
     {
         assertTrue(Decimal.equals(BigDecimal.ZERO, Decimal.ZERO));
@@ -51,6 +59,7 @@ public class ExtendedDecimalTest
     }
 
 
+    @Test
     public void testCreationFromDouble()
     {
         testPositiveZero(0, new BigDecimal(0.0d));
@@ -64,6 +73,8 @@ public class ExtendedDecimalTest
         testNegativeZero(1, Decimal.valueOf(-0.0d, DECIMAL64));
     }
 
+
+    @Test
     public void testCreationFromBigDecimal()
     {
         assertSame(Decimal.ZERO, Decimal.valueOf(Decimal.ZERO));
@@ -75,6 +86,8 @@ public class ExtendedDecimalTest
         assertTrue(Decimal.equals(val, converted));
     }
 
+
+    @Test
     public void testToString()
     {
         assertEquals("-0", NEG_ZERO_0.toString());
@@ -88,6 +101,8 @@ public class ExtendedDecimalTest
         assertEquals("-0", negativeZero(0, MathContext.DECIMAL128).toString());
     }
 
+
+    @Test
     public void testFloatAndDoubleValue()
     {
         testNegativeZero(0, NEG_ZERO_0);
@@ -102,9 +117,11 @@ public class ExtendedDecimalTest
         testNegativeZero(-1, negativeZero(-1));
     }
 
+
     /**
      * @see JavaNumericsTest#testBigDecimalParsing()
      */
+    @Test
     public void testParsing()
     {
         // The BigDecimal parser doesn't allow whitespace, which makes our

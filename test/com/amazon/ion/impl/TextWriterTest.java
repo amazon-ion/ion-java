@@ -8,6 +8,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import org.junit.Test;
 
 /**
  *
@@ -79,6 +80,7 @@ public class TextWriterTest
         return new String(utf8Bytes, "UTF-8");
     }
 
+    @Test
     public void testNotWritingSymtab()
         throws Exception
     {

@@ -1,5 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
-
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion;
 
 import com.amazon.ion.impl.lite.IonStructLite;
@@ -9,7 +8,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.Random;
-
+import org.junit.Test;
 
 
 public class StructTest
@@ -180,6 +179,7 @@ public class StructTest
     //=========================================================================
     // Test cases
 
+    @Test
     public void testFactoryNullStruct()
     {
         IonStruct value = system().newNullStruct();
@@ -189,6 +189,7 @@ public class StructTest
         modifyStruct(value);
     }
 
+    @Test
     public void testTextNullStruct()
     {
         IonStruct value = (IonStruct) oneValue("null.struct");
@@ -197,6 +198,7 @@ public class StructTest
         modifyStruct(value);
     }
 
+    @Test
     public void testTextAnnotatedNullStruct()
     {
         IonStruct value = (IonStruct) oneValue("test::null.struct");
@@ -205,6 +207,7 @@ public class StructTest
         modifyStruct(value);
     }
 
+    @Test
     public void testMakeNullStruct()
     {
         IonStruct value = (IonStruct) oneValue("{foo:bar}");
@@ -214,12 +217,14 @@ public class StructTest
         checkNullStruct(value);
     }
 
+    @Test
     public void testClearNonMaterializedStruct()
     {
         IonStruct value = (IonStruct) oneValue("{foo:bar}");
         testClearContainer(value);
     }
 
+    @Test
     public void testEmptyStruct()
     {
         IonStruct value = (IonStruct) oneValue("{}");
@@ -233,6 +238,7 @@ public class StructTest
         assertEquals("{}", value.toString());
     }
 
+    @Test
     public void testStructs()
     {
         IonStruct value = (IonStruct) oneValue("{a:b}");
@@ -252,6 +258,7 @@ public class StructTest
      * adding annotations.
      * @see ListTest#testModsCausingHeaderOverlap()
      */
+    @Test
     public void testModsCausingHeaderOverlap()
         throws Exception
     {
@@ -270,6 +277,7 @@ public class StructTest
         checkString("this is a string to overlap", f);
     }
 
+    @Test
     public void testContainsKey()
     {
         IonStruct value = struct("{a:b}");
@@ -299,6 +307,7 @@ public class StructTest
         catch (ClassCastException e) { }
     }
 
+    @Test
     public void testContainsValue()
     {
         IonStruct value = struct("{a:b}");
@@ -329,6 +338,7 @@ public class StructTest
         catch (ClassCastException e) { }
     }
 
+    @Test
     public void testGetTwiceReturnsSame()
     {
         IonStruct value = (IonStruct) oneValue("{a:b}");
@@ -337,6 +347,7 @@ public class StructTest
         assertSame(fieldA1, fieldA2);
     }
 
+    @Test
     public void testDeepPut()
     {
         IonStruct value = (IonStruct) oneValue("{a:{b:bv}}");
@@ -346,6 +357,7 @@ public class StructTest
         assertSame(inserted, ((IonStruct)value.get("a")).get("c"));
     }
 
+    @Test
     public void testPutAll()
     {
         IonStruct value = struct("{}");
@@ -377,6 +389,7 @@ public class StructTest
     }
 
 
+    @Test
     public void testExtraCommas()
     {
         IonStruct value = (IonStruct) oneValue("{a:b,}");
@@ -389,6 +402,7 @@ public class StructTest
     }
 
 
+    @Test
     public void testLongFieldName()
     {
         IonStruct value = (IonStruct) oneValue("{ '''a''' : b}");
@@ -399,6 +413,7 @@ public class StructTest
         assertEquals("{a:b}", value.toString());
     }
 
+    @Test
     public void testConcatenatedFieldName()
     {
         IonStruct value = (IonStruct) oneValue("{ '''a''' '''a''' : b}");
@@ -410,6 +425,7 @@ public class StructTest
     }
 
 
+    @Test
     public void testMediumSymbolFieldNames()
     {
         IonStruct value = (IonStruct) oneValue("{'123456789ABCDEF':b}");
@@ -420,6 +436,7 @@ public class StructTest
     }
 
 
+    @Test
     public void testMediumStringFieldNames()
     {
         IonStruct value = (IonStruct) oneValue("{\"123456789ABCDEF\":b}");
@@ -430,6 +447,7 @@ public class StructTest
     }
 
 
+    @Test
     public void testNewlineInStringFieldName()
     {
         badValue("{ \"123\n4\" : v }");
@@ -438,6 +456,7 @@ public class StructTest
     }
 
 
+    @Test
     public void testNewlineInLongStringFieldName()
     {
         IonStruct value = (IonStruct) oneValue("{ '''123\n4''' : v }");
@@ -448,6 +467,7 @@ public class StructTest
         checkSymbol("v", value.get("123456789ABCDEF\nGHI"));
     }
 
+    @Test
     public void testConcatenatedFieldValue()
     {
         IonStruct value = (IonStruct) oneValue("{a:'''a''' '''a'''}");
@@ -458,6 +478,7 @@ public class StructTest
         assertEquals("{a:\"aa\"}", value.toString());
     }
 
+    @Test
     public void testBadGets()
     {
         IonStruct value = (IonStruct) oneValue("{a:b}");
@@ -475,6 +496,7 @@ public class StructTest
         catch (IllegalArgumentException e) { }
     }
 
+    @Test
     public void testGetFromNull()
     {
         IonValue n = system().newNull();
@@ -489,6 +511,7 @@ public class StructTest
         assertNull(s.get("g"));
     }
 
+    @Test
     public void testPutNull()
     {
         IonStruct value = system().newNullStruct();
@@ -513,6 +536,7 @@ public class StructTest
         assertEquals(1, value.size());
     }
 
+    @Test
     public void testBadPuts()
     {
         IonStruct value = system().newNullStruct();
@@ -531,6 +555,7 @@ public class StructTest
         catch (IllegalArgumentException e) { }
     }
 
+    @Test
     public void testBadAdds()
     {
         IonStruct value = system().newNullStruct();
@@ -555,6 +580,7 @@ public class StructTest
         catch (NullPointerException e) { }
     }
 
+    @Test
     public void testStructIteratorRemove()
     {
         IonStruct value = (IonStruct) oneValue("{a:b,c:d,e:f}");
@@ -562,6 +588,7 @@ public class StructTest
     }
 
 
+    @Test
     public void testClearRemovesChildsContainer()
     {
         IonValue val = system().newString("test");
@@ -572,6 +599,7 @@ public class StructTest
                    val.getContainer());
     }
 
+    @Test
     public void testMakeNullRemovesChildsContainer()
     {
         IonValue val = system().newString("test");
@@ -582,6 +610,7 @@ public class StructTest
                    val.getContainer());
     }
 
+    @Test
     public void testRemoveAfterClone()
     {
         IonStruct s1 = (IonStruct) oneValue("{a:1,b:2}");
@@ -592,6 +621,7 @@ public class StructTest
         assertNull(s2.get("b"));
     }
 
+    @Test
     public void testPutOfClone()
     {
         IonStruct s = system().newEmptyStruct();
@@ -607,6 +637,7 @@ public class StructTest
     }
 
 
+    @Test
     public void testRemove()
     {
         IonStruct s = (IonStruct) oneValue("{a:1,b:2,b:3,c:4}");
@@ -646,6 +677,7 @@ public class StructTest
         assertTrue(s.isNullValue());
     }
 
+    @Test
     public void testRemoveOnReadOnlyStruct()
     {
         IonStruct s = (IonStruct) oneValue("{a:1}");
@@ -659,6 +691,7 @@ public class StructTest
         checkInt(1, s.get("a"));
     }
 
+    @Test
     public void testRemoveAll()
     {
         IonStruct s = (IonStruct) oneValue("{a:1,b:2,b:3,c:4,d:5}");
@@ -702,6 +735,7 @@ public class StructTest
         assertTrue(s.isNullValue());
     }
 
+    @Test
     public void testRemoveAllOnReadOnlyStruct()
     {
         IonStruct s = (IonStruct) oneValue("{a:1}");
@@ -715,6 +749,7 @@ public class StructTest
         checkInt(1, s.get("a"));
     }
 
+    @Test
     public void testRetainAll()
     {
         IonStruct s = (IonStruct) oneValue("{a:1,b:2,b:3,c:4,d:5}");
@@ -760,6 +795,7 @@ public class StructTest
         assertTrue(s.isNullValue());
     }
 
+    @Test
     public void testRetainAllOnReadOnlyStruct()
     {
         IonStruct s = (IonStruct) oneValue("{a:1}");
@@ -773,6 +809,7 @@ public class StructTest
         checkInt(1, s.get("a"));
     }
 
+    @Test
     public void testRemoveViaIteratorThenDirect()
     {
         IonStruct s = system().newEmptyStruct();
@@ -798,6 +835,7 @@ public class StructTest
         s.remove(v0);
     }
 
+    @Test
     public void testPutMaintainsIndexes()
     {
         IonStruct s = system().newEmptyStruct();
@@ -811,6 +849,7 @@ public class StructTest
         s.remove(s.get("b"));
     }
 
+    @Test
     public void testBinaryStruct()
     {
         IonSystem ionSystem = system();
@@ -844,6 +883,7 @@ public class StructTest
         assertEquals(i3, i4);
     }
 
+    @Test
     public void testStructClone()
         throws Exception
     {
@@ -865,6 +905,7 @@ public class StructTest
         testSimpleClone("{f:2008-07-11T14:49:26.000-07:00}"); // timestamp
     }
 
+    @Test
     public void testClonedFieldHasNoName()
     {
         IonStruct s = (IonStruct) oneValue("{f:12}");
@@ -878,6 +919,7 @@ public class StructTest
     }
 
 
+    @Test
     public void testPutFactory()
     {
         IonStruct s = system().newNullStruct();
@@ -892,6 +934,7 @@ public class StructTest
     }
 
 
+    @Test
     public void testAddFactory()
     {
         IonStruct s = system().newNullStruct();
@@ -908,6 +951,7 @@ public class StructTest
         assertTrue((f == i) || (f == str));
     }
 
+    @Test
     public void testReplacingReadOnlyChild()
     {
         IonStruct c = system().newEmptyStruct();
@@ -932,6 +976,7 @@ public class StructTest
         assertEquals(null, n2.getContainer());
     }
 
+    @Test
     public void testCloneAndRemove()
     {
         IonStruct s1 = struct("a::b::{c:1,d:2,e:3,d:3}");
@@ -946,6 +991,7 @@ public class StructTest
         assertEquals(struct("x::y::null.struct"), n2);
     }
 
+    @Test
     public void testCloneAndRetain()
     {
         IonStruct s1 = struct("a::b::{c:1,d:2,e:3,d:3}");
@@ -1003,6 +1049,7 @@ public class StructTest
     static final int C_CLEAR              = 14;
     static final int COMMAND_MAX          = 14;
 
+    @Test
     public void testRandomChanges()
     {
         IonSystem           sys = system();
@@ -1491,6 +1538,7 @@ public class StructTest
         return -1;
     }
 
+    @Test
     public void testMultipleRandomChanges()
     {
         for (int ii=0; ii<20; ii++) {
@@ -1517,37 +1565,40 @@ public class StructTest
         }
     }
 
-     public void testStructClear() throws Exception
-     {
-         IonStruct data = (IonStruct) oneValue("{a:1,b:2,c:2,d:3,e:4,f:5,g:6}");
-         data.clear();
-         data.put("z").newInt(100);
-         assertNull(data.get("a"));
-     }
+    @Test
+    public void testStructClear() throws Exception
+    {
+        IonStruct data = (IonStruct) oneValue("{a:1,b:2,c:2,d:3,e:4,f:5,g:6}");
+        data.clear();
+        data.put("z").newInt(100);
+        assertNull(data.get("a"));
+    }
 
-     public void testStructRemove() throws Exception
-     {
-         IonStruct data = (IonStruct) oneValue("{a:1,b:2,c:2,d:3,e:4,f:5,g:6}");
-         data.remove("d");
-         assertEquals(system().newInt(5), data.get("f"));
-     }
+    @Test
+    public void testStructRemove() throws Exception
+    {
+        IonStruct data = (IonStruct) oneValue("{a:1,b:2,c:2,d:3,e:4,f:5,g:6}");
+        data.remove("d");
+        assertEquals(system().newInt(5), data.get("f"));
+    }
 
-     public void testRemoveIter() throws Exception
-     {
-         IonStruct data = (IonStruct) oneValue("{a:1,b:2,c:2,d:3,e:4,f:5,g:6}");
-         final Iterator<IonValue> iter = data.iterator();
-         iter.next();
-         iter.remove();
-         assertNull(data.get("a"));
-         assertNotNull(data.get("b"));
-     }
+    @Test
+    public void testRemoveIter() throws Exception
+    {
+        IonStruct data = (IonStruct) oneValue("{a:1,b:2,c:2,d:3,e:4,f:5,g:6}");
+        final Iterator<IonValue> iter = data.iterator();
+        iter.next();
+        iter.remove();
+        assertNull(data.get("a"));
+        assertNotNull(data.get("b"));
+    }
 
-     public void testGetContainer() {
-         final IonStruct container = system().newEmptyStruct();
-         final IonValue child = oneValue("{}");
-         container.put("a", child);
-         child.getContainer().remove(child);
-     }
-
+    @Test
+    public void testGetContainer() {
+        final IonStruct container = system().newEmptyStruct();
+        final IonValue child = oneValue("{}");
+        container.put("a", child);
+        child.getContainer().remove(child);
+    }
 
 }

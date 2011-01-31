@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -12,6 +12,8 @@ import com.amazon.ion.impl.IonValueImpl;
 import java.io.ByteArrayOutputStream;
 import java.util.Collection;
 import java.util.Iterator;
+import org.junit.Before;
+import org.junit.Test;
 
 
 public class DatagramTest
@@ -21,6 +23,7 @@ public class DatagramTest
 
 
     @Override
+    @Before
     public void setUp()
         throws Exception
     {
@@ -105,6 +108,7 @@ public class DatagramTest
     }
 
 
+    @Test
     public void testAutomaticSystemId()
         throws Exception
     {
@@ -125,6 +129,7 @@ public class DatagramTest
         assertSame(systemSymtab_1_0, v.getSymbolTable());
     }
 
+    @Test
     public void testManualSystemId()
         throws Exception
     {
@@ -152,6 +157,7 @@ public class DatagramTest
     //               dg.systemGet(0).hasTypeAnnotation(ION_1_0));
     //}
 
+    @Test
     public void testBinaryData()
         throws Exception
     {
@@ -190,6 +196,7 @@ public class DatagramTest
         // TODO if we keep max_id in the struct, should validate it here.
     }
 
+    @Test
     public void testBinaryDataWithNegInt()
         throws Exception
     {
@@ -218,6 +225,7 @@ public class DatagramTest
         s = ""+s;
     }
 
+    @Test
     public void testSystemDatagram()
         throws Exception
     {
@@ -268,6 +276,7 @@ public class DatagramTest
     }
 
 
+    @Test
     public void testGetBytes()
         throws Exception
     {
@@ -316,6 +325,7 @@ public class DatagramTest
     }
 
 
+    @Test
     public void testEncodingAnnotatedSymbol()
     {
         IonSystem system = system();
@@ -325,6 +335,7 @@ public class DatagramTest
         dg.getBytes();
     }
 
+    @Test
     public void testEncodingSymbolInList()
     {
         IonSystem system = system();
@@ -337,6 +348,7 @@ public class DatagramTest
         dg.getBytes();
     }
 
+    @Test
     public void testEncodingSymbolInStruct()
     {
         IonSystem system = system();
@@ -351,6 +363,7 @@ public class DatagramTest
         dg.getBytes();
     }
 
+    @Test
     public void testEncodingStructInStruct()
     {
         IonSystem system = system();
@@ -371,6 +384,7 @@ public class DatagramTest
     }
 
 
+    @Test
     public void testNewSingletonDatagramWithSymbolTable()
     {
         IonSystem system = system();
@@ -389,6 +403,7 @@ public class DatagramTest
         assertTrue(v.hasTypeAnnotation("ann"));
     }
 
+    @Test
     public void testNoSymbols()
         throws Exception
     {
@@ -399,6 +414,7 @@ public class DatagramTest
         checkInt(123, value);
     }
 
+    @Test
     public void testNullField()
         throws Exception
     {
@@ -413,6 +429,7 @@ public class DatagramTest
         assertTrue(s.get("a").isNullValue());
     }
 
+    @Test
     public void testAddingDatagramToDatagram()
     {
         IonDatagram dg1 = loader().load("one");
@@ -435,6 +452,7 @@ public class DatagramTest
 //        catch (IllegalArgumentException e) { }
     }
 
+    @Test
     public void testNewDatagramFromDatagram()
     {
         IonDatagram dg1 = loader().load("one");
@@ -447,6 +465,7 @@ public class DatagramTest
     }
 
 
+    @Test
     public void testNewDatagramWithImports()
     {
         final int FRED_ID_OFFSET   = ION_1_0_MAX_ID;
@@ -481,6 +500,7 @@ public class DatagramTest
         assertSame(fred1, importedTables[0]);
     }
 
+    @Test
     public void testEmptyDatagram()
     {
         IonDatagram dg = loader().load("");
@@ -491,12 +511,14 @@ public class DatagramTest
 
 
     @Override
+    @Test
     public void testRemoveViaIteratorThenDirect()
     {
         // TODO JIRA ION-91 implement remove on datagram iterator
     }
 
 
+    @Test
     public void testCloningDatagram()
     {
         IonDatagram dg1 = loader().load("one 1 [1.0]");
@@ -512,6 +534,7 @@ public class DatagramTest
     /**
      * Catches a simple case that failed for some time.
      */
+    @Test
     public void testToString()
     {
         IonDatagram dg = loader().load("1");
@@ -534,6 +557,7 @@ public class DatagramTest
     }
 
 
+    @Test
     public void testReadOnlyDatagram()
     {
         IonInt one = system().newInt(1);
@@ -553,6 +577,7 @@ public class DatagramTest
     /**
      * Verifies that detachment from binary buffer does deep materialization.
      */
+    @Test
     public void testMaterializationOnRemove()
     {
         IonDatagram dg = loader().load("[[1]]");

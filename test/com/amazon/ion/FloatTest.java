@@ -1,6 +1,8 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
+
+import org.junit.Test;
 
 
 
@@ -57,6 +59,7 @@ public class FloatTest
     //=========================================================================
     // Test cases
 
+    @Test
     public void testFactoryFloat()
     {
         IonFloat value = system().newNullFloat();
@@ -64,6 +67,7 @@ public class FloatTest
         modifyFloat(value);
     }
 
+    @Test
     public void testTextNullFloat()
     {
         IonFloat value = (IonFloat) oneValue("null.float");
@@ -71,6 +75,7 @@ public class FloatTest
         modifyFloat(value);
     }
 
+    @Test
     public void testFloats()
     {
         IonFloat value = (IonFloat) oneValue("1.0e0");
@@ -93,6 +98,7 @@ public class FloatTest
         // TODO test BigDecimal
     }
 
+    @Test
     public void testParsingSpecialFloats()
     {
         IonFloat value = (IonFloat) oneValue("nan");
@@ -105,6 +111,7 @@ public class FloatTest
         checkNegInf(value);
     }
 
+    @Test
     public void testCreatingSpecialFloats()
     {
         IonFloat value = system().newFloat(Double.NaN);

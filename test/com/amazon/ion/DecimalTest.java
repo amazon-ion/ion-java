@@ -1,11 +1,9 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
-
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion;
 
 import com.amazon.ion.IonNumber.Classification;
 import java.math.BigDecimal;
+import org.junit.Test;
 
 
 
@@ -60,6 +58,7 @@ public class DecimalTest
     //=========================================================================
     // Test cases
 
+    @Test
     public void testFactoryDecimal()
     {
         IonDecimal value = system().newNullDecimal();
@@ -67,6 +66,7 @@ public class DecimalTest
         modifyDecimal(value);
     }
 
+    @Test
     public void testTextNullDecimal()
     {
         IonDecimal value = (IonDecimal) oneValue("null.decimal");
@@ -74,6 +74,7 @@ public class DecimalTest
         modifyDecimal(value);
     }
 
+    @Test
     public void testDecimals()
     {
         IonDecimal value = (IonDecimal) oneValue("1.0");
@@ -95,6 +96,7 @@ public class DecimalTest
         checkAnnotation("a", value);
     }
 
+    @Test
     public void testDFormat()
     {
         IonDecimal value = (IonDecimal) oneValue("0d0");
@@ -134,6 +136,7 @@ public class DecimalTest
         assertEquals(-12.3D, value.doubleValue());
     }
 
+    @Test
     public void testPrinting()
     {
         testPrinting("0d0", "0.");
@@ -181,6 +184,7 @@ public class DecimalTest
     }
 
 
+    @Test
     public void testNegativeZero()
     {
         IonDecimal value = decimal("-0.");
@@ -228,12 +232,14 @@ public class DecimalTest
                      scale, actual.scale());
     }
 
+    @Test
     public void testNegativeZeroEquality()
     {
         checkEquality(false, "0.",  "-0.");
         checkEquality(false, "0.000",  "-0.000");
     }
 
+    @Test
     public void testPrecisionEquality()
     {
         checkEquality(true, "1.",  "1.");
@@ -257,6 +263,7 @@ public class DecimalTest
     }
 
 
+    @Test
     public void testBinaryDecimals()
         throws Exception
     {
@@ -278,6 +285,7 @@ public class DecimalTest
     }
 
 
+    @Test
     public void testScale()
     {
         final BigDecimal one_00 = new BigDecimal("1.00");
@@ -290,6 +298,8 @@ public class DecimalTest
         assertEquals(one_00, value.bigDecimalValue());
     }
 
+
+    @Test
     public void testSetValue()
     {
         IonDecimal value = decimal("1.23");

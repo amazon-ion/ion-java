@@ -1,7 +1,4 @@
-/*
- * Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
- */
-
+// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion.streaming;
 
 import com.amazon.ion.Decimal;
@@ -19,13 +16,13 @@ import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.IonTokenReader;
 import com.amazon.ion.system.SystemFactory;
-
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
 import java.util.Date;
 import java.util.Iterator;
+import org.junit.Test;
 
 /**
  *
@@ -34,13 +31,6 @@ public class BinaryStreamingTest
     extends IonTestCase
 {
     static final boolean _debug_flag = false;
-
-    @Override
-    public void setUp()
-        throws Exception
-    {
-        super.setUp();
-    }
 
     static boolean bytesEqual(byte[] v1, byte[] v2) {
         if (v1 == null || v2 == null) {
@@ -361,6 +351,7 @@ public class BinaryStreamingTest
         }
     }
 
+    @Test
     public void testAllValues()
     throws Exception
     {
@@ -553,6 +544,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         }
     }
 
+    @Test
     public void testValue1()
     throws Exception
     {
@@ -570,6 +562,8 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         byte[] buffer = wr.getBytes();
         dumpBuffer(buffer, buffer.length);
     }
+
+    @Test
     public void testValue2()
     throws Exception
     {
@@ -627,9 +621,9 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
             System.out.print(y+" ");
         }
         System.out.println();
-
-
     }
+
+    @Test
     public void testBoolValue()
         throws Exception
     {
@@ -663,6 +657,8 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         }
     }
 
+
+    @Test
     public void testTwoMagicCookies() {
         IonBinaryWriter wr = system().newBinaryWriter();
         byte[] buffer = null;
@@ -714,6 +710,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
     }
 
 
+    @Test
     public void testBoolean() {
         IonBinaryWriter wr = system().newBinaryWriter();
         byte[] buffer = null;
@@ -749,6 +746,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
 
     //Test Sample map.
     //{hello=true, Almost Done.=true, This is a test String.=true, 12242.124598129=12242.124598129, Something=null, false=false, true=true, long=9326, 12=-12}
+    @Test
     public void testSampleMap() {
         IonBinaryWriter wr = system().newBinaryWriter();
         byte[] buffer = null;
@@ -836,6 +834,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         }
     }
 
+    @Test
     public void testBenchmarkDirect() throws IOException {
 
         byte[] bytes ;
@@ -920,25 +919,26 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         if (! IonImplUtils.READER_HASNEXT_REMOVED) assertFalse(ir.hasNext());
         assertEquals(null, ir.next());
     }
-    
 
+
+    @Test
     public void testBinaryStepOut() throws IOException {
     	// Jira issue 133
-        
+
     	IonReader       r  = system().newReader("{s:{a:1, b:2}, c:3}");
         IonBinaryWriter wr = system().newBinaryWriter();
-        
+
         IonType t = r.next();
         assertEquals(IonType.STRUCT, t);
         wr.writeValue(r);
-        
+
         byte[] bytes = wr.getBytes();
-        
+
         IonReader br = system().newReader(bytes);
-        
+
         t = br.next();
         assertEquals(IonType.STRUCT, t);
-        
+
         br.stepIn();
         t = br.next();
         assertEquals(IonType.STRUCT, t);
@@ -947,13 +947,14 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         t = br.next();
         assertEquals(IonType.INT, t);
         assertEquals(1, br.intValue());
-        
+
         br.stepOut();  // this used to throw
-        
+
         t = r.next();
         assertEquals(null, t);
     }
-    
+
+    @Test
     public void testBinaryStepOut2() throws IOException {
 
         IonSystem ionSystem = SystemFactory.newSystem();
@@ -984,7 +985,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         System.out.println(r.getFieldName()); // b
         r.stepOut(); // skip c
         r.next();
-        System.out.println(r.getFieldName()); //d 
+        System.out.println(r.getFieldName()); //d
     }
-    
+
 }

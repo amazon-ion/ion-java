@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.system;
 
@@ -12,9 +12,10 @@ import com.amazon.ion.SymbolTable;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.Map.Entry;
+import org.junit.Test;
 
 /**
  *
@@ -22,6 +23,7 @@ import java.util.Map.Entry;
 public class SimpleCatalogTest
     extends IonTestCase
 {
+    @Test
     public void testGetMissingVersion()
     {
         SimpleCatalog cat = new SimpleCatalog();
@@ -70,6 +72,7 @@ public class SimpleCatalogTest
 
 
     @SuppressWarnings("unchecked")
+    @Test
     public void testBenchmark() {
         Map m = new HashMap();
         String s = "hello";

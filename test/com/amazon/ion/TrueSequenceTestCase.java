@@ -1,4 +1,4 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import org.junit.Test;
 
 
 /**
@@ -23,6 +24,7 @@ public abstract class TrueSequenceTestCase
     protected abstract IonSequence makeNull();
 
 
+    @Test
     public void testNullSequenceBadAdds()
     {
         IonSequence value = makeNull();
@@ -30,6 +32,7 @@ public abstract class TrueSequenceTestCase
     }
 
 
+    @Test
     public void testNullSequenceBadRemoves()
     {
         IonSequence value = makeNull();
@@ -37,6 +40,7 @@ public abstract class TrueSequenceTestCase
     }
 
 
+    @Test
     public void testNullSequenceAddAll()
     {
         IonSequence seq = makeNull();
@@ -50,6 +54,7 @@ public abstract class TrueSequenceTestCase
     }
 
 
+    @Test
     public void testNullSequenceIndexedAddAll()
     {
         IonSequence seq = makeNull();
@@ -62,10 +67,12 @@ public abstract class TrueSequenceTestCase
         testIndexedAddAll(seq);
     }
 
+
     /**
      *  TODO JIRA ION-83  Implement indexed addAll for datagram
      *  Hoist this up to SequencenceTestCase.
      */
+    @Test
     public void testIndexedAddAll()
     {
         IonSequence seq = makeEmpty();
@@ -133,10 +140,12 @@ public abstract class TrueSequenceTestCase
         assertSame(seq.get(3), v3);
     }
 
+
     /**
      *  TODO JIRA ION-90 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
+    @Test
     public void testSet()
     {
         IonSequence s = wrapAndParse("e0", "e1", "e3");
@@ -148,6 +157,7 @@ public abstract class TrueSequenceTestCase
         assertEquals(wrapAndParse("0", "1", "2"), s);
     }
 
+    @Test
     public void testSetInsideDatagramForcesEncode()
     {
         IonSequence s = wrapAndParse("e0", "'''text'''", "e3");
@@ -183,20 +193,24 @@ public abstract class TrueSequenceTestCase
         assertEquals(expectedElements, s);
     }
 
+
     /**
      *  TODO JIRA ION-90 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
+    @Test
     public void testSetNullElement()
     {
         IonSequence s = wrapAndParse("e0");
         testSetThrows(s, 0, null, NullPointerException.class);
     }
 
+
     /**
      *  TODO JIRA ION-90 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
+    @Test
     public void testSetContainedValue()
     {
         IonSequence s0 = wrapAndParse("e0");
@@ -205,10 +219,12 @@ public abstract class TrueSequenceTestCase
         testSetThrows(s0, 0, s1.get(0), ContainedValueException.class);
     }
 
+
     /**
      *  TODO JIRA ION-90 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
+    @Test
     public void testSetDatagram()
     {
         IonSequence s = wrapAndParse("e0");
@@ -216,10 +232,12 @@ public abstract class TrueSequenceTestCase
         testSetThrows(s, 0, dg, IllegalArgumentException.class);
     }
 
+
     /**
      *  TODO JIRA ION-90 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
+    @Test
     public void testSetReadOnlyChild()
     {
         IonSequence s = wrapAndParse("e0");
@@ -228,10 +246,12 @@ public abstract class TrueSequenceTestCase
         testSetThrows(s, 0, v, ReadOnlyValueException.class);
     }
 
+
     /**
      *  TODO JIRA ION-90 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
+    @Test
     public void testSetReadOnlyContainer()
     {
         IonSequence s = wrapAndParse("e0");
@@ -240,10 +260,12 @@ public abstract class TrueSequenceTestCase
         testSetThrows(s, 0, v, ReadOnlyValueException.class);
     }
 
+
     /**
      *  TODO JIRA ION-90 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
+    @Test
     public void testSetOutOfBounds()
     {
         IonSequence s = makeNull();
@@ -293,6 +315,8 @@ public abstract class TrueSequenceTestCase
         assertEquals(orig, s);
     }
 
+
+    @Test
     public void testNullSequenceContains()
     {
         IonNull nullValue1 = system().newNull();
@@ -314,6 +338,7 @@ public abstract class TrueSequenceTestCase
     }
 
 
+    @Test
     public void testNullSequenceContainsAll()
     {
         IonNull nullValue = system().newNull();
@@ -351,6 +376,7 @@ public abstract class TrueSequenceTestCase
     }
 
 
+    @Test
     public void testNullSequenceRemoveAll()
     {
         IonNull nullValue1 = system().newNull();
@@ -389,6 +415,7 @@ public abstract class TrueSequenceTestCase
     }
 
 
+    @Test
     public void testNullSequenceRetainAll()
     {
         IonNull nullValue1 = system().newNull();
@@ -426,6 +453,8 @@ public abstract class TrueSequenceTestCase
 //        catch (ClassCastException e) { }
     }
 
+
+    @Test
     public void testNullSequenceToArray()
     {
         IonSequence seq = makeNull();
@@ -457,6 +486,7 @@ public abstract class TrueSequenceTestCase
     }
 
 
+    @Test
     public void testNullSequenceIndexOf()
     {
         IonSequence s = makeNull();
@@ -475,6 +505,7 @@ public abstract class TrueSequenceTestCase
         assertEquals(-1, s.indexOf(nullValue1));
     }
 
+    @Test
     public void testMakeNullRemovesChildsContainer()
     {
         IonValue val = system().newString("test");

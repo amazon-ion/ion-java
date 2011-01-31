@@ -2,73 +2,50 @@
 
 package com.amazon.ion.streaming;
 
-import com.amazon.ion.DirectoryTestSuite;
-import com.amazon.ion.FileTestCase;
+import static com.amazon.ion.TestUtils.testdataFiles;
+
 import com.amazon.ion.IonReader;
+import com.amazon.ion.IonTestCase;
 import com.amazon.ion.TestUtils;
 import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.junit.Injected.Inject;
 import java.io.File;
 import java.io.IOException;
-import junit.framework.TestSuite;
+import org.junit.Test;
 
 
 
-public class GoodIonStreamingTests extends DirectoryTestSuite {
+public class GoodIonStreamingTests
+extends IonTestCase
+{
+    @Inject("testFile")
+    public static final File[] FILES = testdataFiles("good", "equivs");
 
-    public static TestSuite suite()
+
+    private File myTestFile;
+
+    public void setTestFile(File file)
     {
-        return new GoodIonStreamingTests();
+        myTestFile = file;
     }
 
-    public GoodIonStreamingTests()
+
+
+    @Test
+    public void test()
+    throws Exception
     {
-        super("good", "equivs");
+        iterateIon(myTestFile);
     }
 
-    @Override
-    protected FileTestCase makeTest(File ionFile)
+    void iterateIon(File myTestFile)
+    throws IOException
     {
-        String fileName = ionFile.getName();
-        // this test is here to get rid of the warning, and ... you never know
-        if (fileName == null || fileName.length() < 1) throw new IllegalArgumentException("files should have names");
-        return new GoodIonTestCase(ionFile);
-    }
+        byte[] buf = IonImplUtils.loadFileBytes(myTestFile);
 
-    @Override
-    protected String[] getFilesToSkip()
-    {
-        return new String[]
-        {
-            //"equivs/stringU0001D11E.ion",
-            //"equivs/symbols.ion",
-        };
-    }
-
-    private static class GoodIonTestCase
-        extends FileTestCase
-    {
-
-        public GoodIonTestCase(File ionFile)
-        {
-            super(ionFile);
-        }
-
-        @Override
-        public void runTest()
-            throws Exception
-        {
-            iterateIon(myTestFile);
-        }
-
-        void iterateIon(File myTestFile)
-        throws IOException
-        {
-            byte[] buf = IonImplUtils.loadFileBytes(myTestFile);
-
-            IonReader reader = system().newReader(buf);
-            TestUtils.deepRead(reader);
-            IonReader reader2 = system().newReader(buf);
-            TestUtils.deepRead(reader2, false);
-        }
+        IonReader reader = system().newReader(buf);
+        TestUtils.deepRead(reader);
+        IonReader reader2 = system().newReader(buf);
+        TestUtils.deepRead(reader2, false);
     }
 }

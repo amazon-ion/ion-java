@@ -1,23 +1,19 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
-import junit.framework.Test;
-import junit.framework.TestSuite;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 
 /**
  *
  */
+@RunWith(Suite.class)
+@Suite.SuiteClasses({
+    TextWriterTest.class,
+    BinaryWriterTest.class,
+    ValueWriterTest.class
+})
 public class IonWriterTests
 {
-    public static Test suite()
-    {
-        TestSuite suite = new TestSuite("IonWriterTests");
-
-        suite.addTestSuite(TextWriterTest.class);
-        suite.addTestSuite(BinaryWriterTest.class);
-        suite.addTestSuite(ValueWriterTest.class);
-
-        return suite;
-    }
 }

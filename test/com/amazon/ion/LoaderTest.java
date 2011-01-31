@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -18,6 +18,8 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Iterator;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  *
@@ -29,6 +31,7 @@ public class LoaderTest
 
 
     @Override
+    @Before
     public void setUp()
         throws Exception
     {
@@ -68,6 +71,7 @@ public class LoaderTest
     //=========================================================================
     // Test cases
 
+    @Test
     public void testLoadingNonexistentFile()
         throws IOException
     {
@@ -79,6 +83,7 @@ public class LoaderTest
         catch (FileNotFoundException e) { }
     }
 
+    @Test
     public void testLoadingBlankTextFiles()
         throws Exception
     {
@@ -89,6 +94,7 @@ public class LoaderTest
         assertEquals(0, contents.size());
     }
 
+    @Test
     public void testLoadingSimpleFile()
         throws Exception
     {
@@ -111,6 +117,7 @@ public class LoaderTest
         assertNotNull(nullValue);
     }
 
+    @Test
     public void testIteratingSimpleFile()
         throws Exception
     {
@@ -133,6 +140,7 @@ public class LoaderTest
         }
     }
 
+    @Test
     public void testLoadOneValue()
     {
         IonList value = (IonList) loadOneValue("[1]");
@@ -143,6 +151,7 @@ public class LoaderTest
         checkInt(1, elt);
     }
 
+    @Test
     public void testIgnoreHeaderSymbol()
     {
         String text = SystemSymbolTable.ION_1_0 + " 123";
@@ -151,6 +160,7 @@ public class LoaderTest
         checkInt(123, value);
     }
 
+    @Test
     public void testClone()
         throws Exception
     {
@@ -174,6 +184,7 @@ public class LoaderTest
     }
 
     // TODO move to ScannerTest
+    @Test
     public void testCloneWithAnnotation() {
         String s = "some_annotation::{foo:\"test\"}";
         IonStruct v = system().newNullStruct();
@@ -185,6 +196,7 @@ public class LoaderTest
         bar.get("foo");
     }
 
+    @Test
     public void testCloneChildWithAnnotation()
     {
         String s = "some_annotation::{foo:\"test\"}";
@@ -213,6 +225,7 @@ public class LoaderTest
     }
 
 
+    @Test
     public void testReloadingTextSeveralWays()
         throws IOException
     {
@@ -257,6 +270,7 @@ public class LoaderTest
         assertEquals("value", value.stringValue());
     }
 
+    @Test
     public void testSingleValue()
     {
         IonSystem sys = system();
@@ -287,6 +301,7 @@ public class LoaderTest
         catch (IonException ie) { /* ok */ }
     }
 
+    @Test
     public void testCatalogOnLoader() throws Exception {
         IonSystem sys = system(Symtabs.CATALOG);
         IonDatagram dg = sys.newDatagram(Symtabs.CATALOG.getTable("fred", 1));
@@ -312,6 +327,7 @@ public class LoaderTest
 
 final static boolean _debug_long_test = false;
 
+    @Test
     public void testIteratingVeryLongFile()
     throws Exception
 	{

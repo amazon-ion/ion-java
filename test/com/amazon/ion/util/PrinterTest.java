@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
@@ -24,6 +24,8 @@ import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonValue;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  *
@@ -34,7 +36,7 @@ public class PrinterTest
     private Printer myPrinter;
 
 
-    @Override
+    @Before @Override
     public void setUp()
         throws Exception
     {
@@ -76,6 +78,7 @@ public class PrinterTest
     //=========================================================================
     // Test cases
 
+    @Test
     public void testPrintingAnnotations()
         throws Exception
     {
@@ -107,6 +110,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingBlob()
         throws Exception
     {
@@ -133,6 +137,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingBool()
         throws Exception
     {
@@ -150,6 +155,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingClob()
         throws Exception
     {
@@ -184,6 +190,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingDatagram()
         throws Exception
     {
@@ -223,6 +230,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingDecimal()
         throws Exception
     {
@@ -261,6 +269,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingFloat()
         throws Exception
     {
@@ -292,6 +301,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingInt()
         throws Exception
     {
@@ -315,6 +325,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingList()
         throws Exception
     {
@@ -340,6 +351,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingNull()
         throws Exception
     {
@@ -351,6 +363,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingSexp()
         throws Exception
     {
@@ -384,6 +397,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingString()
         throws Exception
     {
@@ -408,6 +422,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingStruct()
         throws Exception
     {
@@ -441,6 +456,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingSymbol()
         throws Exception
     {
@@ -495,6 +511,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingTimestamp()
         throws Exception
     {
@@ -529,6 +546,7 @@ public class PrinterTest
         // TODO test printTimestampAsMillis
     }
 
+    @Test
     public void testJsonEscapeNonBmp() throws Exception {
         // JIRA ION-33
         // JIRA ION-64

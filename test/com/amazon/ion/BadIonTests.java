@@ -1,65 +1,47 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
-
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion;
 
+import com.amazon.ion.junit.Injected.Inject;
 import java.io.File;
-import junit.framework.TestSuite;
+import org.junit.Test;
 
 
 public class BadIonTests
-    extends DirectoryTestSuite
+    extends IonTestCase
 {
-    private static class BadIonTestCase
-        extends FileTestCase
-    {
-        public BadIonTestCase(File ionFile)
-        {
-            super(ionFile);
-        }
+    @Inject("testFile")
+    public static final File[] FILES = TestUtils.testdataFiles("bad");
 
-        @Override
-        public void runTest()
-            throws Exception
+
+    private File myTestFile;
+
+    public void setTestFile(File file)
+    {
+        myTestFile = file;
+    }
+
+
+    @Test
+    public void test()
+    throws Exception
+    {
+        try
         {
-            try
-            {
-                load(myTestFile);
-                fail("Expected IonException parsing "
+            load(myTestFile);
+            fail("Expected IonException parsing "
+                 + myTestFile.getAbsolutePath());
+        }
+        catch (IonException e) { /* good */ }
+
+        try
+        {
+            // attempt to load as a string
+            final IonDatagram dg = loadAsJavaString(myTestFile);
+            if (dg != null) {
+                fail("Expected IonException parsing as a Java String "
                      + myTestFile.getAbsolutePath());
             }
-            catch (IonException e) { /* good */ }
-
-            try
-            {
-                // attempt to load as a string
-                final IonDatagram dg = loadAsJavaString(myTestFile);
-                if (dg != null) {
-                    fail("Expected IonException parsing as a Java String "
-                         + myTestFile.getAbsolutePath());
-                }
-            }
-            catch (IonException e) { /* good */ }
         }
-    }
-
-
-    public static TestSuite suite()
-    {
-        return new BadIonTests();
-    }
-
-
-    public BadIonTests()
-    {
-        super("bad");
-    }
-
-
-    @Override
-    protected BadIonTestCase makeTest(File ionFile)
-    {
-        return new BadIonTestCase(ionFile);
+        catch (IonException e) { /* good */ }
     }
 }

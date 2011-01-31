@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -7,6 +7,8 @@ import com.amazon.ion.IonTestCase;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import java.io.IOException;
 import java.util.Random;
+import org.junit.After;
+import org.junit.Test;
 
 /**
  *
@@ -14,7 +16,7 @@ import java.util.Random;
 public class ByteBufferTest
     extends IonTestCase
 {
-    @Override
+    @Override @After
     public void tearDown()
         throws Exception
     {
@@ -22,7 +24,7 @@ public class ByteBufferTest
         BlockedBuffer.resetParameters();
     }
 
-
+    @Test
     public void testSmallInsertion()
     {
         BufferManager buf = new BufferManager();
@@ -42,6 +44,7 @@ public class ByteBufferTest
         }
     }
 
+    @Test
     public void testLargeInsertion()
     {
         BufferManager buf = new BufferManager ();
@@ -61,41 +64,47 @@ public class ByteBufferTest
         }
     }
 
+    @Test
     public void testRandomUpdatesSmall() throws Exception
     {
         testRandomUpdates(7, 19, 100);
     }
 
+    @Test
     public void testRandomUpdatesMedium() throws Exception
     {
         testRandomUpdates(128, 4096, 1000);
     }
 
+    @Test
     public void testRandomUpdatesLarge()  throws Exception
     {
         testRandomUpdates(32*1024, 32*1024, 1000);
     }
-    
-final static boolean _debug_long_test = false;
-	public void testRandomUpdatesLargeAndLong()  throws Exception
-	{
-	    // TODO: turn on a long test, maybe not this long, when we can know it's
-	    //       not going to be oppressive
-		if (!_debug_long_test) return;
-		testRandomUpdates(7, 19, 100000);
-	}
 
+    final static boolean _debug_long_test = false;
+
+    @Test
+    public void testRandomUpdatesLargeAndLong()  throws Exception
+    {
+        // TODO: turn on a long test, maybe not this long, when we can know it's
+        //       not going to be oppressive
+        if (!_debug_long_test) return;
+        testRandomUpdates(7, 19, 100000);
+    }
+
+    @Test
     public void testPreviousFailuresInRandomUpdates() throws Exception
     {
         testRandomUpdates(128, 4096, 1000, 1230074384739L);
     }
-    
+
     private void testRandomUpdates(int min, int max, int count) throws Exception
     {
     	long seed = System.currentTimeMillis();
     	testRandomUpdates(min, max, count, seed);
     }
-    
+
     private void testRandomUpdates(int min, int max, int count, long seed) throws Exception
     {
         BlockedBuffer.setBlockSizeParameters(min, max); // make it work hard
@@ -247,12 +256,10 @@ final static boolean _debug_long_test = false;
             }
         }
         catch (Exception e) {
-            System.out.println(getName() + " FAILED with seed: " + seed);
-            throw e;
+            throw new RuntimeException("FAILED with seed: " + seed, e);
         }
         catch (Error e) {
-            System.out.println(getName() + " FAILED with seed: " + seed);
-            throw e;
+            throw new RuntimeException("FAILED with seed: " + seed, e);
         }
     }
 

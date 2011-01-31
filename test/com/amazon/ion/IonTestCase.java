@@ -3,6 +3,8 @@
 package com.amazon.ion;
 
 import com.amazon.ion.impl.IonSystemPrivate;
+import com.amazon.ion.junit.Injected;
+import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.system.SimpleCatalog;
 import com.amazon.ion.system.SystemFactory;
 import com.amazon.ion.system.SystemFactory.SystemCapabilities;
@@ -23,44 +25,36 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 import junit.framework.TestCase;
+import org.junit.runner.RunWith;
 
 /**
  * Base class with helpers for Ion unit tests.
  */
+@RunWith(Injected.class)
 public abstract class IonTestCase
     extends TestCase
 {
+    @Inject("systemCapabilities")
+    public static final SystemCapabilities[] TEST_DIMENSION =
+    { SystemCapabilities.ORIGINAL, SystemCapabilities.LITE };
+
+
     private static boolean ourSystemPropertiesLoaded = false;
     protected IonSystemPrivate mySystem;
     protected IonLoader        myLoader;
 
     //  FIXME: needs java docs
-    private static SystemCapabilities desiredSystemType =
+    private SystemCapabilities desiredSystemType =
         SystemCapabilities.DEFAULT;
 
-    public synchronized static
-    SystemCapabilities setSystemCapabilities(SystemCapabilities systype)
+    public void setSystemCapabilities(SystemCapabilities systype)
     {
-        SystemCapabilities old = desiredSystemType;
-        if (desiredSystemType != systype) {
-            desiredSystemType = systype;
-        }
-        return old;
+        desiredSystemType = systype;
     }
 
-    public static synchronized SystemCapabilities getSystemCapabilities()
+    public SystemCapabilities getSystemCapabilities()
     {
         return desiredSystemType;
-    }
-
-
-    public IonTestCase()
-    {
-    }
-
-    public IonTestCase(String name)
-    {
-        super(name);
     }
 
 

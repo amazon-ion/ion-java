@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -6,6 +6,7 @@ import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 
 import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.TreeReaderTest;
+import org.junit.Test;
 
 
 /**
@@ -185,6 +186,7 @@ public abstract class ReaderSystemProcessingTestCase
 
     //=========================================================================
 
+    @Test
     public void testNextAtEnd()
         throws Exception
     {
@@ -212,6 +214,7 @@ public abstract class ReaderSystemProcessingTestCase
      * When this is working,
      * remove {@link TreeReaderTest#testInitialStateForStruct()}
      */
+    @Test
     public void testIsInStruct()
         throws Exception
     {
@@ -245,6 +248,7 @@ public abstract class ReaderSystemProcessingTestCase
     }
 
 
+    @Test
     public void testHasNextLeavesCurrentData()
         throws Exception
     {
@@ -269,6 +273,7 @@ public abstract class ReaderSystemProcessingTestCase
     }
 
     // JIRA ION-79 reported by Scott Barber
+    @Test
     public void testDeepNesting()
         throws Exception
     {

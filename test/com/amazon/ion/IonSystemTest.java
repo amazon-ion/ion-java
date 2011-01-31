@@ -1,8 +1,9 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import com.amazon.ion.system.SystemFactory;
+import org.junit.Test;
 
 /**
  *
@@ -13,6 +14,7 @@ public class IonSystemTest
     /**
      * Ensure that singleValue() can handle Unicode.
      */
+    @Test
     public void testSingleValueUtf8()
     {
         String utf8Text = "Tivoli Audio Model One weiß/silber";
@@ -31,6 +33,7 @@ public class IonSystemTest
      * detach the child from the datagram constructing
      * the clone
      */
+    @Test
     public void testTwoSystemsClone()
     {
         IonSystem system1 = system();
@@ -42,6 +45,4 @@ public class IonSystemTest
         IonStruct s = system2.newEmptyStruct();
         s.add("field1", v2);
     }
-
-
 }

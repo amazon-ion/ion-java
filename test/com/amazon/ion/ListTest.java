@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved. */
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import org.junit.Test;
 
 
 public class ListTest
@@ -69,6 +70,7 @@ public class ListTest
     //=========================================================================
     // Test cases
 
+    @Test
     public void testFactoryNullList()
     {
         IonList value = system().newNullList();
@@ -77,6 +79,7 @@ public class ListTest
         testFreshNullSequence(value);
     }
 
+    @Test
     public void testTextNullList()
     {
         IonList value = (IonList) oneValue("null.list");
@@ -84,6 +87,7 @@ public class ListTest
         testFreshNullSequence(value);
     }
 
+    @Test
     public void testMakeNullList()
     {
         IonList value = (IonList) oneValue("[6,9]");
@@ -93,12 +97,14 @@ public class ListTest
         testFreshNullSequence(value);
     }
 
+    @Test
     public void testClearNonMaterializedList()
     {
         IonList value = (IonList) oneValue("[6,9]");
         testClearContainer(value);
     }
 
+    @Test
     public void testEmptyList()
     {
         IonList value = (IonList) oneValue("[]");
@@ -107,6 +113,7 @@ public class ListTest
     }
 
 
+    @Test
     public void testListParsing()
     {
         IonValue nine = oneValue("9");
@@ -133,6 +140,7 @@ public class ListTest
     }
 
 
+    @Test
     public void testGetTwiceReturnsSame()
     {
         IonList value = (IonList) oneValue("[a,b]");
@@ -141,6 +149,7 @@ public class ListTest
         assertSame(elt1, elt2);
     }
 
+    @Test
     public void testRemovalFromParsedWithAnnot()
     {
         IonList value = (IonList) oneValue("[a::4]");
@@ -158,6 +167,7 @@ public class ListTest
      * Ensure that removal from a parsed list maintains its state.
      * It can no longer share the same backing store.
      */
+    @Test
     public void testRemoveFromParsedListKeepsState()
     {
         IonList value = (IonList) oneValue("[1]");
@@ -168,6 +178,7 @@ public class ListTest
     }
 
     /** Ensure that triple-quote concatenation works inside lists. */
+    @Test
     public void testConcatenation()
     {
         IonList value = (IonList) oneValue("[a, '''a''' '''b''', '''c''']");
@@ -177,12 +188,14 @@ public class ListTest
         assertEquals(3, value.size());
     }
 
+    @Test
     public void testListIteratorRemove()
     {
         IonList value = (IonList) oneValue("[a,b,c]");
         testIteratorRemove(value);
     }
 
+    @Test
     public void testCreatingNullList()
     {
         IonList list1 = system().newNullList();
@@ -192,6 +205,7 @@ public class ListTest
         assertIonEquals(list1, list2);
     }
 
+    @Test
     public void testCreatingListFromCollection()
     {
         IonSystem system = system();
@@ -227,6 +241,7 @@ public class ListTest
         catch (NullPointerException e) { }
     }
 
+    @Test
     public void testCreatingListFromIntArray()
     {
         IonSystem system = system();
@@ -248,6 +263,7 @@ public class ListTest
         elements = new int[]{ 12, 13, 14 };
     }
 
+    @Test
     public void testCreatingListFromLongArray()
     {
         IonSystem system = system();
@@ -268,6 +284,7 @@ public class ListTest
         checkInt(14, v.get(2));
     }
 
+    @Test
     public void testCreatingListFromValueArray()
     {
         IonSystem system = system();
@@ -305,6 +322,7 @@ public class ListTest
         catch (NullPointerException e) { }
     }
 
+    @Test
     public void testCreatingListWithString()
     {
         IonList list1 = system().newNullList();

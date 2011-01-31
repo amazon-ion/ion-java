@@ -1,4 +1,4 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -27,6 +27,7 @@ import com.amazon.ion.Symtabs;
 import com.amazon.ion.TestUtils;
 import java.math.BigDecimal;
 import java.util.Arrays;
+import org.junit.Test;
 
 /**
  *
@@ -76,6 +77,7 @@ public abstract class IonWriterTestCase
         throws Exception;
 
 
+    @Test
     public void testWritingWithImports()
         throws Exception
     {
@@ -112,6 +114,7 @@ public abstract class IonWriterTestCase
         assertSame(ginger1, importedTables[1]);
     }
 
+    @Test
     public void testWritingWithSystemImport()
         throws Exception
     {
@@ -147,6 +150,7 @@ public abstract class IonWriterTestCase
     /**
      * Trap for JIRA ION-52
      */
+    @Test
     public void testWritingNonAscii()
         throws Exception
     {
@@ -164,6 +168,7 @@ public abstract class IonWriterTestCase
         assertEquals(text, t.stringValue());
     }
 
+    @Test
     public void testWritingBadSurrogates()
         throws Exception
     {
@@ -175,6 +180,7 @@ public abstract class IonWriterTestCase
         testBadText(highFermata + "x");
     }
 
+    @Test
     public void testWritingEmptySymbol()
         throws Exception
     {
@@ -222,6 +228,7 @@ public abstract class IonWriterTestCase
      * Trap for JIRA ION-53
      * @throws Exception
      */
+    @Test
     public void testWritingClob()
         throws Exception
     {
@@ -254,6 +261,7 @@ public abstract class IonWriterTestCase
         assertEqualBytes(data, 20, 30, lob.getBytes());
     }
 
+    @Test
     public void testWritingDeepNestedList() throws Exception {
         // JIRA ION-60
         IonDatagram dg = loader().load("[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]");
@@ -263,6 +271,7 @@ public abstract class IonWriterTestCase
 
     // TODO test failure of getBytes before stepping all the way out
 
+    @Test
     public void testBadSetFieldName()
         throws Exception
     {
@@ -282,6 +291,7 @@ public abstract class IonWriterTestCase
         catch (EmptySymbolException e) { }
     }
 
+    @Test
     public void testWriteValueMissingFieldName()
         throws Exception
     {
@@ -298,6 +308,7 @@ public abstract class IonWriterTestCase
         catch (IllegalStateException e) { }
     }
 
+    @Test
     public void testWriteValueCopiesFieldName()
         throws Exception
     {
@@ -316,6 +327,7 @@ public abstract class IonWriterTestCase
         assertEquals(data, reloadSingleValue().toString());
     }
 
+    @Test
     public void testWriteValueDifferentFieldName()
         throws Exception
     {
@@ -335,6 +347,7 @@ public abstract class IonWriterTestCase
         assertEquals("{c:{b:10}}", reloadSingleValue().toString());
     }
 
+    @Test
     public void testWritingNulls()
         throws Exception
     {
@@ -362,6 +375,7 @@ public abstract class IonWriterTestCase
         assertEquals(expected, reload());
     }
 
+    @Test
     public void testWritingAnnotations()
         throws Exception
     {
@@ -410,6 +424,7 @@ public abstract class IonWriterTestCase
         assertEquals(expected, reload());
     }
 
+    @Test
     public void testWritingAnnotationIds()
         throws Exception
     {
@@ -431,6 +446,7 @@ public abstract class IonWriterTestCase
         assertEquals(expected, reload());
     }
 
+    @Test
     public void testFlushMidValue()
         throws Exception
     {

@@ -1,8 +1,10 @@
-/* Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved. */
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import java.util.Iterator;
+import org.junit.Ignore;
+import org.junit.Test;
 
 
 
@@ -58,6 +60,8 @@ public abstract class ContainerTestCase
         catch (NullValueException e) { }
     }
 
+
+    @Test
     public void testNullMakeReadOnly()
     {
         IonContainer c = makeNull();
@@ -78,6 +82,8 @@ public abstract class ContainerTestCase
         assertTrue(c.isReadOnly());
     }
 
+
+    @Test
     public void testEmptyMakeReadOnly()
     {
         IonContainer c = makeEmpty();
@@ -96,6 +102,8 @@ public abstract class ContainerTestCase
         assertTrue(c.isReadOnly());
     }
 
+
+    @Test
     public void testNonEmptyMakeReadOnly()
     {
         IonSystem s = system();
@@ -181,6 +189,7 @@ public abstract class ContainerTestCase
         // (should throw IllegalStateException)
     }
 
+    @Test
     public void testRemoveFromNull()
     {
         IonValue n = system().newNull();
@@ -197,6 +206,7 @@ public abstract class ContainerTestCase
     }
 
 
+    @Test
     public void testRemoveFromContainer()
     {
         IonValue n = system().newNull();
@@ -218,6 +228,7 @@ public abstract class ContainerTestCase
     }
 
 
+    @Test
     public void testDetachHasDifferentSymtab()
     {
         String data = wrap("sym1", "[sym2]", "{f:sym3}", "a::3");
@@ -277,6 +288,7 @@ it.next();
     /**
      * Isolates issue ION-25.
      */
+    @Test
     public void testUnmaterializedInsert()
     {
         IonContainer c = wrapAndParse((String[])null);
@@ -285,6 +297,7 @@ it.next();
     }
 
 
+    @Test
     public void testAddingReadOnlyChild()
     {
         IonContainer c = makeEmpty();
@@ -304,6 +317,8 @@ it.next();
         assertTrue(c.isEmpty());
     }
 
+
+    @Test
     public void testRemovingReadOnlyChild()
     {
         IonContainer c = makeEmpty();
@@ -325,7 +340,8 @@ it.next();
     }
 
     /** TODO ION-117 */
-    public void XXXtestSelfContainment()
+    @Test @Ignore
+    public void testSelfContainment()
     {
         IonContainer c = makeEmpty();
         try {
