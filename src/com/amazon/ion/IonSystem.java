@@ -321,7 +321,6 @@ public interface IonSystem
 
 //  public IonReader newReader(Reader ionText); // TODO add newReader(Reader)
 
-
     /**
      * Creates an new {@link IonTextReader} instance over Ion text data.
      * <p>
@@ -371,6 +370,7 @@ public interface IonSystem
      * @param ionData must not be null.
      *
      * @return a new reader instance.
+     * Callers must call {@link IonReader#close()} when finished with it.
      */
     public IonReader newReader(InputStream ionData);
 

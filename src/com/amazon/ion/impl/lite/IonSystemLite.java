@@ -5,7 +5,6 @@ package com.amazon.ion.impl.lite;
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
-import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonBool;
@@ -47,10 +46,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.List;
 import java.util.NoSuchElementException;
 
 /**
@@ -752,11 +749,11 @@ public class IonSystemLite
         {
             if (!hasNext()) {
                 // IterationTest.testSimpleIteration() wants this
-                throw new NoSuchElementException();  
-                // LoaderTest.testSingleValue is expecting null so 
+                throw new NoSuchElementException();
+                // LoaderTest.testSingleValue is expecting null so
                 // IonSystemLite.singleValue can throw an IonException - or
                 // should we change testSingleValue ??
-                // return null;  
+                // return null;
             }
 
             // make an ion value from our reader
@@ -1162,6 +1159,9 @@ public class IonSystemLite
         return iterator;
     }
 
+    /**
+     * FIXME ION-160 This method consumes the entire stream!
+     */
     public Iterator<IonValue> systemIterate(InputStream ionData)
     {
         IonReader reader = IonReaderFactoryX.makeReader(this, ionData);
@@ -1169,6 +1169,9 @@ public class IonSystemLite
         return iterator;
     }
 
+    /**
+     * FIXME This method consumes the entire stream!
+     */
     private Iterator<IonValue> make_system_iterator(IonReader reader)
     {
         IonDatagram datagram = newDatagram();
