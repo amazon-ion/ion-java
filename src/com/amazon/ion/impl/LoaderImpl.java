@@ -113,20 +113,23 @@ public class LoaderImpl
     public IonDatagramImpl load(Reader ionText)
         throws IonException, IOException
     {
-        if (USE_NEW_READERS)
+        try
         {
-            IonReader reader = mySystem.newSystemReader(ionText);
-            try
+            if (USE_NEW_READERS)
             {
-                IonDatagramImpl dg = new IonDatagramImpl(mySystem, myCatalog, reader);
+                IonReader reader = mySystem.newSystemReader(ionText);
+                IonDatagramImpl dg =
+                    new IonDatagramImpl(mySystem, myCatalog, reader);
                 return dg;
             }
-            catch (IOException e)
-            {
-                throw new IonException(e);
-            }
+            return new IonDatagramImpl(mySystem, myCatalog, ionText);
         }
-        return new IonDatagramImpl(mySystem, myCatalog, ionText);
+        catch (IonException e)
+        {
+            IOException io = e.causeOfType(IOException.class);
+            if (io != null) throw io;
+            throw e;
+        }
     }
 
 
@@ -142,8 +145,7 @@ public class LoaderImpl
             boolean isBinary = IonBinary.matchBinaryVersionMarker(ionData);
             if (USE_NEW_READERS && !isBinary) {
                 IonReader reader = mySystem.newSystemReader(ionData);
-                // unneeded and incorrect: assert reader instanceof IonTextReaderImpl;
-                
+
                 dg = new IonDatagramImpl(mySystem, myCatalog, reader);
             }
             else {
@@ -153,7 +155,7 @@ public class LoaderImpl
             // Force symtab preparation  FIXME should not be necessary
             dg.byteSize();
         }
-        catch (IOException e)
+        catch (IOException e)  // Not expected since we're reading a buffer.
         {
             throw new IonException(e);
         }
@@ -168,39 +170,43 @@ public class LoaderImpl
     public IonDatagramImpl load(InputStream ionData)
         throws IonException, IOException
     {
-        PushbackInputStream pushback = new PushbackInputStream(ionData, 8);
-        if (IonImplUtils.streamIsIonBinary(pushback)) {
-            if (USE_NEW_READERS)
-            {
-                // Nothing special to do. SystemReader works fine to
-                // materialize the top layer of the datagram.
-                // The streaming APIs add no benefit.
+        try
+        {
+            PushbackInputStream pushback = new PushbackInputStream(ionData, 8);
+            if (IonImplUtils.streamIsIonBinary(pushback)) {
+                if (USE_NEW_READERS)
+                {
+                    // Nothing special to do. SystemReader works fine to
+                    // materialize the top layer of the datagram.
+                    // The streaming APIs add no benefit.
+                }
+
+                SystemReader systemReader =
+                    mySystem.newBinarySystemReader(myCatalog, pushback);
+                return new IonDatagramImpl(mySystem, systemReader);
             }
 
-            SystemReader systemReader =
-                mySystem.newBinarySystemReader(myCatalog, pushback);
-            return new IonDatagramImpl(mySystem, systemReader);
-        }
-
-        // Input is text
-        if (USE_NEW_READERS)
-        {
-            IonReader reader = mySystem.newSystemReader(pushback);
-            assert reader instanceof IonTextReader;
-            try
+            // Input is text
+            if (USE_NEW_READERS)
             {
-                IonDatagramImpl dg = new IonDatagramImpl(mySystem, myCatalog, reader);
+                IonReader reader = mySystem.newSystemReader(pushback);
+                assert reader instanceof IonTextReader;
+
+                IonDatagramImpl dg =
+                    new IonDatagramImpl(mySystem, myCatalog, reader);
                 // Force symtab preparation  FIXME should not be necessary
                 dg.byteSize();
                 return dg;
             }
-            catch (IOException e)
-            {
-                throw new IonException(e);
-            }
-        }
 
-        Reader reader = new InputStreamReader(pushback, "UTF-8");
-        return load(reader);
+            Reader reader = new InputStreamReader(pushback, "UTF-8");
+            return load(reader);
+        }
+        catch (IonException e)
+        {
+            IOException io = e.causeOfType(IOException.class);
+            if (io != null) throw io;
+            throw e;
+        }
     }
 }

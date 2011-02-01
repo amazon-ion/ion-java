@@ -16,6 +16,7 @@ import com.amazon.ion.GoodIonTests;
 import com.amazon.ion.HashCodeCorrectnessTest;
 import com.amazon.ion.HashCodeDistributionTest;
 import com.amazon.ion.IntTest;
+import com.amazon.ion.IonExceptionTest;
 import com.amazon.ion.IonSystemTest;
 import com.amazon.ion.JavaNumericsTest;
 import com.amazon.ion.ListTest;
@@ -57,6 +58,7 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     // Low-level facilities.
+    IonExceptionTest.class,
     ByteBufferTest.class,
     TextTest.class,
     CharacterReaderTest.class,

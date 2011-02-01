@@ -18,7 +18,6 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Iterator;
-import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -27,19 +26,6 @@ import org.junit.Test;
 public class LoaderTest
     extends IonTestCase
 {
-    private IonLoader myLoader;
-
-
-    @Override
-    @Before
-    public void setUp()
-        throws Exception
-    {
-        super.setUp();
-        myLoader = system().newLoader();
-    }
-
-
     /**
      * Parses text as a single Ion value.  If the text contains more than that,
      * a failure is thrown.
@@ -49,7 +35,7 @@ public class LoaderTest
      */
     public IonValue loadOneValue(String text)
     {
-        IonDatagram dg = myLoader.load(text);
+        IonDatagram dg = loader().load(text);
 
         if (dg.size() == 0)
         {
@@ -159,6 +145,100 @@ public class LoaderTest
         IonInt value = (IonInt) loadOneValue(text);
         checkInt(123, value);
     }
+
+
+    private static class FailingInputStream extends InputStream
+    {
+        final int len;
+        int pos = 0;
+
+        FailingInputStream(int length) { len = length; }
+
+        @Override
+        public int read() throws IOException
+        {
+            if (pos++ < len) return ' ';
+            throw new IOException("boom");
+        }
+    }
+
+
+    @Test(expected = IOException.class)
+    public void testInputStreamFailsImmediately()
+    throws IOException
+    {
+        InputStream in = new FailingInputStream(0);
+        loader().load(in);
+    }
+
+    @Test(expected = IOException.class)
+    public void testInputStreamFailsSoon()
+    throws IOException
+    {
+        // Fail within the version-marker prefetch.
+        InputStream in = new FailingInputStream(1);
+        loader().load(in);
+    }
+
+    @Test(expected = IOException.class)
+    public void testInputStreamFailsLater()
+    throws IOException
+    {
+        // Fail after the version-marker prefetch.
+        InputStream in = new FailingInputStream(5);
+        loader().load(in);
+    }
+
+
+    private static class FailingReader extends Reader
+    {
+        final int len;
+        int pos = 0;
+
+        FailingReader(int length) { len = length; }
+
+        @Override
+        public int read(char[] cbuf, int off, int l) throws IOException
+        {
+            if (pos++ < len)
+            {
+                cbuf[off] = ' ';
+                return 1;
+            }
+            throw new IOException("boom");
+        }
+
+        @Override
+        public void close() { }
+    }
+
+
+    @Test(expected = IOException.class)
+    public void testReaderFailsImmediately()
+    throws IOException
+    {
+        Reader in = new FailingReader(0);
+        loader().load(in);
+    }
+
+    @Test(expected = IOException.class)
+    public void testReaderFailsSoon()
+    throws IOException
+    {
+        // Fail within the version-marker prefetch.
+        Reader in = new FailingReader(1);
+        loader().load(in);
+    }
+
+    @Test(expected = IOException.class)
+    public void testReaderFailsLater()
+    throws IOException
+    {
+        // Fail after the version-marker prefetch.
+        Reader in = new FailingReader(5);
+        loader().load(in);
+    }
+
 
     @Test
     public void testClone()

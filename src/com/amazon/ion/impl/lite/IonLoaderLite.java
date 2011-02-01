@@ -11,7 +11,6 @@ import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.impl.IonReaderFactoryX;
 import com.amazon.ion.impl.IonWriterFactory;
 import java.io.File;
 import java.io.FileInputStream;
@@ -80,9 +79,16 @@ public class IonLoaderLite
 
     public IonDatagram load(Reader ionText) throws IonException, IOException
     {
-        IonReader reader = makeReader(_system, _catalog, ionText);
-        IonDatagramLite datagram = load_helper(reader);
-        return datagram;
+        try {
+            IonReader reader = makeReader(_system, _catalog, ionText);
+            IonDatagramLite datagram = load_helper(reader);
+            return datagram;
+        }
+        catch (IonException e) {
+            IOException io = e.causeOfType(IOException.class);
+            if (io != null) throw io;
+            throw e;
+        }
     }
 
     public IonDatagram load(byte[] ionData) throws IonException
@@ -100,9 +106,16 @@ public class IonLoaderLite
     public IonDatagram load(InputStream ionData)
         throws IonException, IOException
     {
-        IonReader reader = IonReaderFactoryX.makeReader(_system, _catalog, ionData);
-        IonDatagramLite datagram = load_helper(reader);
-        return datagram;
+        try {
+            IonReader reader = makeReader(_system, _catalog, ionData);
+            IonDatagramLite datagram = load_helper(reader);
+            return datagram;
+        }
+        catch (IonException e) {
+            IOException io = e.causeOfType(IOException.class);
+            if (io != null) throw io;
+            throw e;
+        }
     }
 
 }
