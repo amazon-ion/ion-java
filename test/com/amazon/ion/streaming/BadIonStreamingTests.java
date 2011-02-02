@@ -10,6 +10,7 @@ import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.system.SystemFactory.SystemCapabilities;
 import java.io.File;
 import java.io.IOException;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class BadIonStreamingTests
@@ -30,41 +31,45 @@ extends IonTestCase
     }
 
 
-    @Test
-    public void testReading()
+    @Test(expected = IonException.class)
+    public void testReadingScalars()
     throws Exception
     {
-        iterateIon( true );
+        readFile( true );
+    }
 
+
+    @Ignore // TODO ION-161
+    @Test(expected = IonException.class)
+    public void testSkippingScalars()
+    throws Exception
+    {
         if (getSystemCapabilities() != SystemCapabilities.LITE)
         {
-            // "Lite" system doesn't validate while skipping scalars
+            // Newer readers don't validate while skipping scalars
             // so we won't throw exceptions for all bad files.
-            iterateIon( false );
+            readFile( false );
         }
     }
 
-    void iterateIon(boolean materializeScalars)
+    private void readFile(boolean materializeScalars)
     throws IOException
     {
-        try {
+        try
+        {
             byte[] buf = IonImplUtils.loadFileBytes(myTestFile);
-
-            // Do we want to check the type of "it" here
-            // to make sure the iterator made the right
-            // choice of binary or text?  Or should be test
-            // that somewhere else?
             IonReader it = system().newReader(buf);
             TestUtils.deepRead(it, materializeScalars);
-            fail("Expected IonException parsing "
-                 + myTestFile.getAbsolutePath() + " (" + ( materializeScalars ? "" : "not " ) + "materializing scalars)");
-        } catch (IonException e) {
+        }
+        catch (IonException e)
+        {
             /* good - we're expecting an error, there are testing bad input */
             if (_debug_output_errors) {
                 System.out.print(this.myTestFile.getName());
                 System.out.print(": ");
                 System.out.println(e.getMessage());
             }
+            throw e;
         }
     }
 }
