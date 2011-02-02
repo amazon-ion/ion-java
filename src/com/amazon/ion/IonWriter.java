@@ -46,6 +46,15 @@ import java.util.Date;
  * caller can use getBytes() or writeBytes() to get the cached output
  * as a byte array (either a new one allocated by the writer or
  * a user supplied buffer), or output to an output stream.
+ *
+ * <h2>Exception Handling</h2>
+ * {@code IonWriter} is a generic interface for generating Ion data, and it's
+ * not possible to fully specify the set of exceptions that could be thrown
+ * from the underlying data sink.  Thus all failures are thrown as instances
+ * of {@link IonException}, wrapping the originating cause.  If an application
+ * wants to handle (say) {@link IOException}s specially, then it needs to
+ * extract that from the wrappers; the documentation of {@link IonException}
+ * explains how to do that.
  */
 public interface IonWriter
     extends Closeable, Flushable

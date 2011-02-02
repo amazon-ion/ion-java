@@ -1,8 +1,9 @@
-// Copyright (c) 2008-2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import java.io.Closeable;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.Iterator;
@@ -26,6 +27,14 @@ import java.util.Iterator;
  * {@link IonValue} hierarchy.  For example, to get the text of a symbol one
  * would use {@link #stringValue()} which mirrors
  * {@link IonSymbol#stringValue()}.
+ * <h2>Exception Handling</h2>
+ * {@code IonReader} is a generic interface for traversion Ion data, and it's
+ * not possible to fully specify the set of exceptions that could be thrown
+ * from the underlying data source.  Thus all failures are thrown as instances
+ * of {@link IonException}, wrapping the originating cause.  If an application
+ * wants to handle (say) {@link IOException}s specially, then it needs to
+ * extract that from the wrappers; the documentation of {@link IonException}
+ * explains how to do that.
  */
 public interface IonReader
     extends Closeable

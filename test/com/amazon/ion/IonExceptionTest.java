@@ -38,6 +38,18 @@ public class IonExceptionTest
         assertSame(io, ion.externalCause());
     }
 
+
+    @Test
+    public void testExternalCauseWithCycle()
+    {
+        IonException ie1 = new IonException();
+        IonException ie2 = new IonException(ie1);
+        ie1.initCause(ie2);
+        IonException ion = new IonException(ie1);
+        assertNull(ion.externalCause());
+    }
+
+
     @Test
     public void testCauseOfType()
     {
@@ -66,5 +78,15 @@ public class IonExceptionTest
         assertSame(io, ion.causeOfType(IOException.class));
         ion = wrap(ion);
         assertSame(io, ion.causeOfType(IOException.class));
+    }
+
+    @Test
+    public void testCauseOfTypeWithCycle()
+    {
+        IonException ie1 = new IonException();
+        IonException ie2 = new IonException(ie1);
+        ie1.initCause(ie2);
+        IonException ion = new IonException(ie1);
+        assertNull(ion.causeOfType(IOException.class));
     }
 }

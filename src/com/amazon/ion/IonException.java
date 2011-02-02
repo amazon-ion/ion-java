@@ -1,9 +1,31 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
+import java.io.IOException;
+import java.util.IdentityHashMap;
+
 /**
- * Base class for exceptions thrown throughout this library.
+ * Base class for exceptions thrown throughout this library.  In most cases,
+ * external exceptions (a common example being {@link IOException}) are not
+ * propagated directly but are instead wrapped in one or more
+ * {@link IonException}s.
+ * <p>
+ * This library does not promise that such an "external cause" will be the
+ * direct {@link IonException#getCause() cause} of the thrown exception: there
+ * there may be a chain of multiple {@link IonException} before getting to the
+ * external cause.  Here's an example of how to deal with this in a situation
+ * where the caller wants to propagate {@link IOException}s:
+ * <pre>
+ *    try {
+ *        // Call some API
+ *    }
+ *    catch (IonException e) {
+ *        IOException io = e.causeOfType(IOException.class);
+ *        if (io != null) throw io;
+ *        throw e;
+ *    }
+ * </pre>
  */
 public class IonException extends RuntimeException
 {
@@ -32,9 +54,16 @@ public class IonException extends RuntimeException
      */
     Throwable externalCause()
     {
+        IdentityHashMap<Throwable, Throwable> seen =
+            new IdentityHashMap<Throwable, Throwable>();
+
         Throwable cause = getCause();
-        while (cause != null && cause instanceof IonException)
+        while (cause instanceof IonException)
         {
+            if (seen.put(cause, cause) != null)  // cycle check
+            {
+                return null;
+            }
             cause = cause.getCause();
         }
         return cause;
@@ -50,9 +79,16 @@ public class IonException extends RuntimeException
     @SuppressWarnings("unchecked")
     public <T extends Throwable> T causeOfType(Class<T> type)
     {
+        IdentityHashMap<Throwable, Throwable> seen =
+            new IdentityHashMap<Throwable, Throwable>();
+
         Throwable cause = getCause();
         while (cause != null && ! type.isInstance(cause))
         {
+            if (seen.put(cause, cause) != null)  // cycle check
+            {
+                return null;
+            }
             cause = cause.getCause();
         }
         return (T) cause;
