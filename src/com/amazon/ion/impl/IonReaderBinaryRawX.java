@@ -5,7 +5,6 @@ import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
-import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.Timestamp.Precision;
 import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
@@ -15,8 +14,6 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
-import java.util.Date;
-import java.util.Iterator;
 
 
 /**
@@ -1135,87 +1132,15 @@ done:   for (;;) {
     private final void throwIntOverflowExeption() throws IOException {
         error_at("int in stream is too long for a Java int 32 use readLong()");
     }
-    //
-    // public methods that typically user level methods
-    // these are filled in by either the system reader
-    // or the user reader.  Here they just fail.
-    //
-    public BigInteger bigIntegerValue()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public BigDecimal bigDecimalValue()
-  {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public boolean booleanValue()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public Date dateValue()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public double doubleValue()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public int getFieldId()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public String getFieldName()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public int getSymbolId()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public SymbolTable getSymbolTable()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public int[] getTypeAnnotationIds()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public String[] getTypeAnnotations()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public int intValue()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public Iterator<Integer> iterateTypeAnnotationIds()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public Iterator<String> iterateTypeAnnotations()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public long longValue()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public String stringValue()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public Timestamp timestampValue()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
+
     protected void error_at(String msg) {
         String msg2 = msg + " at position " + getPosition();
-        throw new IonReaderBinaryExceptionX(msg2);
+        throw new IonException(msg2);
     }
     protected void error(String msg) {
-        throw new IonReaderBinaryExceptionX(msg);
+        throw new IonException(msg);
     }
     protected void error(Exception e) {
-        throw new IonReaderBinaryExceptionX(e);
+        throw new IonException(e);
     }
 }

@@ -2,9 +2,10 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.Decimal;
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonIterationType;
+import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
@@ -39,7 +40,7 @@ class IonReaderBinarySystemX
             uis = UnifiedInputStreamX.makeStream(userBytes);
         }
         catch (IOException e) {
-            throw new IonReaderBinaryExceptionX(e);
+            throw new IonException(e);
         }
         init(uis);
         _system = system;
@@ -61,20 +62,18 @@ class IonReaderBinarySystemX
     // or the user reader.  Here they just fail.
     //
 
-    @Override
     public int getFieldId()
     {
         return _value_field_id;
     }
 
-    @Override
     public Iterator<Integer> iterateTypeAnnotationIds()
     {
         Iterator<Integer> it = new IonReaderTextUserX.IntIterator(_annotation_ids, 0, _annotation_count);
         return it;
     }
     private static int[] _empty_int_array = new int[0];
-    @Override
+
     public int[] getTypeAnnotationIds()
     {
         try {
@@ -248,36 +247,36 @@ class IonReaderBinarySystemX
     //
     // public value routines
     //
-    @Override
+
     public boolean isNullValue()
     {
         return _value_is_null;
     }
-    @Override
+
     public boolean booleanValue()
     {
         prepare_value(AS_TYPE.boolean_value);
         return _v.getBoolean();
     }
-    @Override
+
     public double doubleValue()
     {
         prepare_value(AS_TYPE.double_value);
         return _v.getDouble();
     }
-    @Override
+
     public int intValue()
     {
         prepare_value(AS_TYPE.int_value);
         return _v.getInt();
     }
-    @Override
+
     public long longValue()
     {
         prepare_value(AS_TYPE.long_value);
         return _v.getLong();
     }
-    @Override
+
     public BigInteger bigIntegerValue()
     {
         if (_value_is_null) {
@@ -286,7 +285,7 @@ class IonReaderBinarySystemX
         prepare_value(AS_TYPE.bigInteger_value);
         return _v.getBigInteger();
     }
-    @Override
+
     public BigDecimal bigDecimalValue()
     {
         if (_value_is_null) {
@@ -295,12 +294,13 @@ class IonReaderBinarySystemX
         prepare_value(AS_TYPE.decimal_value);
         return _v.getBigDecimal();
     }
+
     public Decimal decimalValue()
     {
         prepare_value(AS_TYPE.decimal_value);
         return _v.getDecimal();
     }
-    @Override
+
     public Date dateValue()
     {
         if (_value_is_null) {
@@ -309,7 +309,7 @@ class IonReaderBinarySystemX
         prepare_value(AS_TYPE.date_value);
         return _v.getDate();
     }
-    @Override
+
     public Timestamp timestampValue()
     {
         if (_value_is_null) {
@@ -318,7 +318,7 @@ class IonReaderBinarySystemX
         prepare_value(AS_TYPE.timestamp_value);
         return _v.getTimestamp();
     }
-    @Override
+
     public String stringValue()
     {
         if (_value_is_null) {
@@ -331,7 +331,6 @@ class IonReaderBinarySystemX
         return _v.getString();
     }
 
-    @Override
     public int getSymbolId()
     {
         if (!IonType.SYMBOL.equals(_value_type)) {
@@ -348,25 +347,24 @@ class IonReaderBinarySystemX
     // unsupported public methods that require a symbol table
     // to operate - which is only supported on a user reader
     //
-    @Override
     public String getFieldName()
     {
         return null;
 //        throw new UnsupportedOperationException("not supported - use UserReader");
     }
-    @Override
+
     public Iterator<String> iterateTypeAnnotations()
     {
         return null;
 //        throw new UnsupportedOperationException("not supported - use UserReader");
     }
-    @Override
+
     public String[] getTypeAnnotations()
     {
         return null;
 //        throw new UnsupportedOperationException("not supported - use UserReader");
     }
-    @Override
+
     public SymbolTable getSymbolTable()
     {
         return null;
