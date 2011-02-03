@@ -30,30 +30,29 @@ import java.math.BigInteger;
 abstract class IonWriterUser
     extends IonWriterBaseImpl  // should be IonWriterSystem ?
 {
-    /*package*/ final IonSystem _system;
+    protected final IonSystem _system;
     // needed to make correct local symbol tables
-    IonCatalog _catalog;
+    private   final IonCatalog _catalog;
 
-    boolean   _after_ion_version_marker;
-    boolean   _is_tree_writer;
-    boolean   _root_is_datagram;
+    protected       boolean   _after_ion_version_marker;
+    protected final boolean   _root_is_datagram;
 
     // this is the underlying system writer that writes to the
     // raw format (text, binary, or ion values)
-    IonWriter         _system_writer;
-    IonWriterBaseImpl _system_writer_as_base;
+    protected final IonWriter         _system_writer;
+    private   final IonWriterBaseImpl _system_writer_as_base;
 
     // values to manage the diversion of the users input
     // to a local symbol table
-    boolean           _symbol_table_being_copied;
-    IonStruct         _symbol_table_value;
-    IonWriterBaseImpl _symbol_table_writer;
+    private boolean           _symbol_table_being_copied;
+    private IonStruct         _symbol_table_value;
+    private IonWriterBaseImpl _symbol_table_writer;
 
     // this will be either the system writer or the symbol table writer
     // depending on whether we're diverting the user values to a
     // local symbol table ... or not.
-    IonWriter         _current_writer;
-    IonWriterBaseImpl _current_writer_as_base;
+    protected IonWriter         _current_writer;
+    private   IonWriterBaseImpl _current_writer_as_base;
 
 
     protected IonWriterUser(IonSystem system, IonWriterBaseImpl systemWriter, IonCatalog catalog, IonValue container, boolean suppressIVM)
@@ -67,18 +66,19 @@ abstract class IonWriterUser
             _current_writer_as_base = (IonWriterBaseImpl)_system_writer;
             _system_writer_as_base = (IonWriterBaseImpl)_system_writer;
         }
+        else {
+            _system_writer_as_base = null;
+        }
 
         IonIterationType ot = systemWriter.getIterationType();
-        _is_tree_writer = ot.isIonValue();
+        boolean _is_tree_writer = ot.isIonValue();
         if (_is_tree_writer) {
             if (container == null) {
                 throw new IllegalArgumentException("container is required for IonValue writers");
             }
             // Datagrams have an implicit initial IVM
             _after_ion_version_marker = true;
-            if (IonType.DATAGRAM.equals(container.getType())) {
-                _root_is_datagram = true;
-            }
+            _root_is_datagram = IonType.DATAGRAM.equals(container.getType());
         }
         else {
             if (container != null) {
