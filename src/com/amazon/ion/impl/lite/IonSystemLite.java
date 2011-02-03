@@ -1,8 +1,9 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
+import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
 import com.amazon.ion.IonBinaryWriter;
@@ -933,7 +934,8 @@ public class IonSystemLite
 
     public IonDatagram newDatagram(IonCatalog catalog, SymbolTable... imports)
     {
-        UnifiedSymbolTable symbols = UnifiedSymbolTable.makeNewLocalSymbolTable(this, catalog, this.getSystemSymbolTable(), imports);
+        UnifiedSymbolTable symbols =
+            makeNewLocalSymbolTable(this, this.getSystemSymbolTable(), imports);
         IonDatagramLite dg = new IonDatagramLite(this, catalog);
         dg.setSymbolTable(symbols);
         return dg;

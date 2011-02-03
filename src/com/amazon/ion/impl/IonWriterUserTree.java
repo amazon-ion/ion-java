@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -22,7 +22,8 @@ class IonWriterUserTree
      * user writer is constructed with the right type of
      * system writer - a tree writer.
      *
-     * @param systemWriter a System Tree writer to back this
+     * @param systemWriter a System Tree writer to back this.
+     *   Must not be null.
      */
     protected IonWriterUserTree(IonWriterSystemTree systemWriter, IonCatalog catalog, boolean suppressIVM)
     {

@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -9,7 +9,6 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import java.io.IOException;
@@ -37,10 +36,11 @@ abstract class IonWriterUser
     protected       boolean   _after_ion_version_marker;
     protected final boolean   _root_is_datagram;
 
-    // this is the underlying system writer that writes to the
-    // raw format (text, binary, or ion values)
-    protected final IonWriter         _system_writer;
-    private   final IonWriterBaseImpl _system_writer_as_base;
+    /**
+     * The underlying system writer that writing the raw format (text, binary,
+     * or ion values).  Not null.
+     */
+    protected final IonWriterBaseImpl _system_writer;
 
     // values to manage the diversion of the users input
     // to a local symbol table
@@ -48,28 +48,35 @@ abstract class IonWriterUser
     private IonStruct         _symbol_table_value;
     private IonWriterBaseImpl _symbol_table_writer;
 
-    // this will be either the system writer or the symbol table writer
-    // depending on whether we're diverting the user values to a
-    // local symbol table ... or not.
-    protected IonWriter         _current_writer;
-    private   IonWriterBaseImpl _current_writer_as_base;
+    /**
+     * This will be either our {@link #_system_writer} or a symbol table writer
+     * depending on whether we're diverting the user values to a
+     * local symbol table ... or not.
+     * Not null.
+     */
+    protected IonWriterBaseImpl _current_writer;
 
 
-    protected IonWriterUser(IonSystem system, IonWriterBaseImpl systemWriter, IonCatalog catalog, IonValue container, boolean suppressIVM)
+    /**
+     * @param system must not be null.
+     * @param systemWriter must not be null.
+     * @param catalog
+     * @param container
+     * @param suppressIVM
+     */
+    protected IonWriterUser(IonSystem system, IonWriterBaseImpl systemWriter,
+                            IonCatalog catalog, IonValue container,
+                            boolean suppressIVM)
     {
         super(system.getSystemSymbolTable());
         _system = system;
         _catalog = catalog;
-        _system_writer = systemWriter;
-        _current_writer = _system_writer;
-        if (_system_writer instanceof IonWriterBaseImpl) {
-            _current_writer_as_base = (IonWriterBaseImpl)_system_writer;
-            _system_writer_as_base = (IonWriterBaseImpl)_system_writer;
-        }
-        else {
-            _system_writer_as_base = null;
-        }
 
+        assert systemWriter != null;
+        _system_writer = systemWriter;
+        _current_writer = systemWriter;
+
+        // FIXME get rid of iteration type
         IonIterationType ot = systemWriter.getIterationType();
         boolean _is_tree_writer = ot.isIonValue();
         if (_is_tree_writer) {
@@ -101,40 +108,7 @@ abstract class IonWriterUser
     @Override
     protected boolean has_annotation(String name, int id)
     {
-        // mostly our current writer is one we can peek into
-        if (_current_writer_as_base != null) {
-            return _current_writer_as_base.has_annotation(name, id);
-        }
-
-        // otherwise we have to do this the hard way
-        int[] ids = null;
-        String[] names = null;
-        if (_current_writer.getIterationType().isBinary()
-         || _current_writer.getIterationType().isUser()
-        ) {
-            ids = _current_writer.getTypeAnnotationIds();
-        }
-        if (ids == null) {
-            names = _current_writer.getTypeAnnotations();
-        }
-        if (names == null) {
-            ids = _current_writer.getTypeAnnotationIds();
-        }
-
-        if (ids != null) {
-            for (int ii=0; ii<ids.length; ii++) {
-                if (ids[ii] == id) return true;
-            }
-            return false;
-        }
-        else if (names != null) {
-            for (int ii=0; ii<names.length; ii++) {
-                if (name.equals(names[ii])) return true;
-            }
-            return false;
-        }
-
-        return false;
+        return _current_writer.has_annotation(name, id);
     }
 
     public int getDepth()
@@ -201,7 +175,6 @@ abstract class IonWriterUser
 
         _after_ion_version_marker = false;
         _current_writer           = _system_writer;
-        _current_writer_as_base   = _system_writer_as_base;
 
 
         // Note:
@@ -230,7 +203,6 @@ abstract class IonWriterUser
 
         _symbol_table_being_copied = true;
         _current_writer            = _symbol_table_writer;
-        _current_writer_as_base    = _symbol_table_writer;
     }
 
     private void close_local_symbol_table_copy() throws IOException
@@ -247,7 +219,6 @@ abstract class IonWriterUser
         _symbol_table_writer       = null;
 
         _current_writer            = _system_writer;
-        _current_writer_as_base    = _system_writer_as_base;
 
         // now make this symbol table the current symbol table
         this.setSymbolTable(symtab);
@@ -341,9 +312,7 @@ abstract class IonWriterUser
     }
     @Override
     protected void clearFieldName() {
-        if (_current_writer_as_base != null) {
-            _current_writer_as_base.clearFieldName();
-        }
+        _current_writer.clearFieldName();
     }
 
 
@@ -390,7 +359,8 @@ abstract class IonWriterUser
         // see if it looks like we're starting a local symbol table
         if (IonType.STRUCT.equals(containerType)
          && getDepth() == 0
-         && has_annotation(UnifiedSymbolTable.ION_SYMBOL_TABLE, UnifiedSymbolTable.ION_SYMBOL_TABLE_SID)
+         && has_annotation(UnifiedSymbolTable.ION_SYMBOL_TABLE,
+                           UnifiedSymbolTable.ION_SYMBOL_TABLE_SID)
          ) {
             // if so we'll divert all the data until it's finished
             open_local_symbol_table_copy();
