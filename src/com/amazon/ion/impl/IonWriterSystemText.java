@@ -84,6 +84,21 @@ public class IonWriterSystemText
         _options = options;
         set_separator_character();
     }
+    
+    /**
+     * FIXME HACK for IMSv3 that WILL NOT BE MAINTAINED
+     */
+    @Deprecated
+    Appendable getOutput()
+    {
+        return _output;
+    }
+    
+    TextOptions getOptions()
+    {
+        return _options;
+    }
+    
     void set_separator_character()
     {
         if (_options.isPrettyPrintOn()) {
