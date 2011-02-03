@@ -84,7 +84,9 @@ package com.amazon.ion;
  * <p>
  * <b>Mutable instances of {@code IonValue} are not thread-safe!</b>
  * Your application must perform its own synchronization if you need to access
- * nodes from multiple threads.  Alternatively, you can invoke
+ * nodes from multiple threads. This is true even for read-only use cases,
+ * since implementations may perform lazy materialization or other state
+ * changes under the covers.  Alternatively, you can invoke
  * {@link #makeReadOnly()} from a single thread, after which point the value
  * (and all contained values, recursively) will be both immutable and
  * thread-safe.
