@@ -2,18 +2,17 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.Decimal;
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonNumber;
+import com.amazon.ion.IonNumber.Classification;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.IonNumber.Classification;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
@@ -70,8 +69,15 @@ abstract class IonWriterBaseImpl
         _default_system_symbol_table = defaultSystemSymbolTable;
     }
 
+    /**
+     * Returns the current depth of containers the writer is at.  This is
+     * 0 if the writer is at the datagram level.
+     * @return int depth of container nesting
+     */
+    protected abstract int getDepth();
 
     abstract void reset() throws IOException;
+
     //protected void reset() throws IOException
     //{
     //    if (getDepth() != 0) {

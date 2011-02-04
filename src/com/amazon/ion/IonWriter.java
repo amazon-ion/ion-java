@@ -94,13 +94,6 @@ public interface IonWriter
      */
     public SymbolTable getSymbolTable();
 
-    /**
-     * Returns the current depth of containers the writer is at.  This is
-     * 0 if the writer is at the datagram level.
-     * @return int depth of container nesting
-     */
-    public int getDepth();
-
 
     /**
      * Flushes this writer by writing any buffered output to the underlying
