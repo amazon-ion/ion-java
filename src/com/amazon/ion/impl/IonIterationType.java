@@ -1,6 +1,8 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
-package com.amazon.ion;
+package com.amazon.ion.impl;
+
+import com.amazon.ion.IonException;
 
 /**
  *
