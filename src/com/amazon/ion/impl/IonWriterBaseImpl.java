@@ -180,6 +180,14 @@ abstract class IonWriterBaseImpl
         _field_name_type = IonType.INT;
         _field_name_sid = id;
     }
+
+    /**
+     * Returns the symbol id of the current field name, if the field name
+     * has been set.  If the name has not been set, either as either a String
+     * or a symbol id value, this returns -1 (undefined symbol).
+     * @return symbol id of the name of the field about to be written or -1 if
+     * it is not set
+     */
     public int getFieldId()
     {
         int id;
@@ -205,6 +213,15 @@ abstract class IonWriterBaseImpl
 
         return id;
     }
+
+    /**
+     * This returns the field name of the value about to be written
+     * if the field name has been set.  If the field name has not been
+     * defined this will return null.
+     *
+     * @return String name of the field about to be written or null if it is
+     * not yet set.
+     */
     public String getFieldName()
     {
         String name;
@@ -225,6 +242,15 @@ abstract class IonWriterBaseImpl
 
         return name;
     }
+
+    /**
+     * Returns true if the field name has been set either through setFieldName or
+     * setFieldId.  This is generally more efficient than calling getFieldName or
+     * getFieldId and checking the return type as it does not need to resolve the
+     * name through a symbol table.  This returns false if the field name has not
+     * been set.
+     * @return true if a field name has been set false otherwise
+     */
     public boolean isFieldNameSet()
     {
         if (_field_name_type != null) {
@@ -323,6 +349,19 @@ abstract class IonWriterBaseImpl
         }
     }
 
+    /**
+     * Gets the current list of pending annotations.
+     * This is the contents of the current {@code annotations} array
+     * of this writer.
+     * <p>
+     * If the annotations were set as IDs they
+     * will be converted if a symbol table is available.  In the event
+     * a symbol table is not available a null array will be returned.
+     * If no annotations are set a 0 length array will be returned.
+     * <p>
+     * @return pending type annotations as strings, null if the
+     * annotations cannot be expressed as strings.
+     */
     public String[] getTypeAnnotations()
     {
         if (_annotation_count < 1) {
@@ -344,6 +383,20 @@ abstract class IonWriterBaseImpl
         return user_copy;
     }
 
+    /**
+     * Gets the current list of pending annotations.
+     * This is the contents of the current {@code annotations} array
+     * of this writer.
+     * <p>
+     * If the annotations were set as string they
+     * will be converted to symbol IDs (ints) if a symbol table is
+     * available.  In the event a symbol table is not available a
+     * null array will be returned.
+     * If no annotations are set a 0 length array will be returned.
+     * <p>
+     * @return pending type annotations as symbol ID ints, null if the
+     * annotations cannot be expressed as IDs.
+     */
     public int[] getTypeAnnotationIds()
     {
         if (_annotation_count < 1) {
