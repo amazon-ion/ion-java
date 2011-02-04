@@ -3,7 +3,6 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonCatalog;
-import com.amazon.ion.IonIterationType;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
@@ -100,11 +99,6 @@ public class IonWriterUserText
         _filter_symbol_tables = options.isFilterSymbolTablesOn();
     }
 
-    @Override
-    public IonIterationType getIterationType()
-    {
-        return IonIterationType.USER_TEXT;
-    }
 
     @Override
     public void set_symbol_table_helper(SymbolTable prev_symbols, SymbolTable new_symbols) throws IOException

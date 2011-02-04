@@ -1,9 +1,8 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonCatalog;
-import com.amazon.ion.IonIterationType;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
@@ -41,11 +40,6 @@ class IonReaderBinaryUserX
         _catalog = catalog;
     }
 
-    @Override
-    public IonIterationType getIterationType()
-    {
-        return IonIterationType.USER_BINARY;
-    }
 
     @Override
     public IonType next()

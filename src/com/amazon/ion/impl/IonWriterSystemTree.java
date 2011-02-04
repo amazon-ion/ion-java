@@ -11,7 +11,6 @@ import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonDecimal;
 import com.amazon.ion.IonFloat;
-import com.amazon.ion.IonIterationType;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
@@ -82,10 +81,6 @@ class IonWriterSystemTree
     //
     // informational methods
     //
-    public IonIterationType getIterationType()
-    {
-        return IonIterationType.SYSTEM_ION_VALUE;
-    }
     public int getDepth()
     {
         return _parent_stack_top;

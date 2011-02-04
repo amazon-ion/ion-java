@@ -1,10 +1,9 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
-import com.amazon.ion.IonIterationType;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
@@ -25,12 +24,6 @@ class IonReaderTreeUserX
     {
         super(value);
         _catalog = catalog;
-    }
-
-    @Override
-    public IonIterationType getIterationType()
-    {
-        return IonIterationType.USER_ION_VALUE;
     }
 
     @Override

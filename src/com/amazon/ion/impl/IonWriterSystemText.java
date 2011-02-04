@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -8,7 +8,6 @@ import static com.amazon.ion.impl.IonConstants.tidStruct;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonIterationType;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
@@ -84,7 +83,7 @@ public class IonWriterSystemText
         _options = options;
         set_separator_character();
     }
-    
+
     /**
      * FIXME HACK for IMSv3 that WILL NOT BE MAINTAINED
      */
@@ -93,12 +92,12 @@ public class IonWriterSystemText
     {
         return _output;
     }
-    
+
     TextOptions getOptions()
     {
         return _options;
     }
-    
+
     void set_separator_character()
     {
         if (_options.isPrettyPrintOn()) {
@@ -135,10 +134,6 @@ public class IonWriterSystemText
     // for the system text writer since it doesn't
     // need any work beyond the base method
 
-    public IonIterationType getIterationType()
-    {
-        return IonIterationType.SYSTEM_TEXT;
-    }
     public int getDepth()
     {
         return _top;

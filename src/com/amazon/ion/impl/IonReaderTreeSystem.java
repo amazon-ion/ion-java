@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -12,7 +12,6 @@ import com.amazon.ion.IonDecimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonInt;
-import com.amazon.ion.IonIterationType;
 import com.amazon.ion.IonLob;
 import com.amazon.ion.IonNull;
 import com.amazon.ion.IonReader;
@@ -116,11 +115,6 @@ class IonReaderTreeSystem
 
         // We don't know if we're at the end of the container, so check again.
         _eof = false;
-    }
-
-    public IonIterationType getIterationType()
-    {
-        return IonIterationType.USER_ION_VALUE;
     }
 
     public boolean hasNext()

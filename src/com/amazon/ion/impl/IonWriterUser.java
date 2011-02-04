@@ -7,7 +7,6 @@ import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonIterationType;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
@@ -150,33 +149,6 @@ abstract class IonWriterUser
         return _current_writer.isInStruct();
     }
 
-    public IonIterationType getIterationType()
-    {
-        assert(_system_writer != null);
-
-        IonIterationType systype = _system_writer.getIterationType();
-        IonIterationType usertype = null;
-        switch (systype) {
-        case SYSTEM_TEXT:
-            usertype = IonIterationType.USER_TEXT;
-            break;
-        case SYSTEM_BINARY:
-            usertype = IonIterationType.USER_BINARY;
-            break;
-        case SYSTEM_ION_VALUE:
-            usertype = IonIterationType.USER_ION_VALUE;
-            break;
-        case USER_TEXT:
-        case USER_BINARY:
-        case USER_ION_VALUE:
-            // do we want to assert or throw here with the
-            // expectation (demand) that the underlying
-            // system writer be, in fact, a system writer?
-            usertype = systype;
-            break;
-        }
-        return usertype;
-    }
 
     public void flush() throws IOException
     {

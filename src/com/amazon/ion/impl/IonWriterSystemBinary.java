@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -8,7 +8,6 @@ import static com.amazon.ion.impl.IonConstants.tidSexp;
 import static com.amazon.ion.impl.IonConstants.tidStruct;
 
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonIterationType;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
@@ -135,10 +134,7 @@ public class IonWriterSystemBinary
         }
 
     }
-    public IonIterationType getIterationType()
-    {
-        return IonIterationType.SYSTEM_BINARY;
-    }
+
     protected OutputStream getOutputStream()
     {
         return _user_output_stream;
@@ -313,7 +309,7 @@ public class IonWriterSystemBinary
         // patch this symbol table in "here" at the end
         // which will grow the arrays as necessary
         patchInSymbolTable(symbols);
-        
+
         if (_top == 0) {
             // if we're at the datagram level already
             // we don't need to back-track to our parent

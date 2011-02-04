@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -10,7 +10,6 @@ import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonIterationType;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonSexp;
@@ -286,10 +285,6 @@ public final class IonTextReaderImpl
         _scanner.close();
     }
 
-    public IonIterationType getIterationType()
-    {
-        return IonIterationType.USER_TEXT;
-    }
     public IonSystem getSystem()
     {
         return _system;

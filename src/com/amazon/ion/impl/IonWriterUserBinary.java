@@ -3,7 +3,6 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonCatalog;
-import com.amazon.ion.IonIterationType;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.SymbolTable;
 import java.io.IOException;
@@ -26,11 +25,6 @@ public class IonWriterUserBinary
         super(system, systemWriter, catalog, suppressIVM);
     }
 
-    @Override
-    public IonIterationType getIterationType()
-    {
-        return IonIterationType.USER_BINARY;
-    }
 
     protected OutputStream getOutputStream()
     {

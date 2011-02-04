@@ -1,4 +1,4 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -6,7 +6,6 @@ import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonIterationType;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonSexp;
@@ -111,11 +110,6 @@ public class IonReaderTextSystemX
         super();
         _system = system;
         init(iis);
-    }
-
-    public IonIterationType getIterationType()
-    {
-        return IonIterationType.SYSTEM_TEXT;
     }
 
     public IonSystem getSystem()

@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -101,10 +101,6 @@ public interface IonWriter
      */
     public int getDepth();
 
-    /**
-     * Returns the type of output this writer is generating.
-     */
-    public IonIterationType getIterationType();
 
     /**
      * Flushes this writer by writing any buffered output to the underlying

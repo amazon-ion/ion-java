@@ -4,7 +4,6 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
-import com.amazon.ion.IonIterationType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import java.io.IOException;
@@ -31,11 +30,6 @@ class IonWriterUserTree
         super(systemWriter.getSystem(), catalog, systemWriter, systemWriter.get_root());
     }
 
-    @Override
-    public IonIterationType getIterationType()
-    {
-        return IonIterationType.USER_ION_VALUE;
-    }
 
     @Override
     public void set_symbol_table_helper(SymbolTable prev_symbols, SymbolTable new_symbols) throws IOException
