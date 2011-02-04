@@ -1,6 +1,8 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
+
+import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonCatalog;
@@ -35,17 +37,25 @@ class IonWriterSystemTree
     extends IonWriterBaseImpl
 {
     private final IonSystem _system;
-    IonCatalog          _catalog;
-    boolean             _in_struct;
-    IonContainer        _current_parent;
-    int                 _parent_stack_top = 0;
-    IonContainer[]      _parent_stack = new IonContainer[10];
 
-    boolean             _has_binary_image;
-    IonWriter           _binary_image;
-    byte[]              _byte_image;
+    /** Used to construct new local symtabs. May be null */
+    private final IonCatalog    _catalog;
+    private boolean             _in_struct;
+    private IonContainer        _current_parent;
+    private int                 _parent_stack_top = 0;
+    private IonContainer[]      _parent_stack = new IonContainer[10];
 
-    protected IonWriterSystemTree(IonSystem sys, IonCatalog catalog, IonContainer rootContainer)
+    private boolean             _has_binary_image;
+    private IonWriter           _binary_image;
+    private byte[]              _byte_image;
+
+    /**
+     * @param sys
+     * @param catalog may be null.
+     * @param rootContainer
+     */
+    protected IonWriterSystemTree(IonSystem sys, IonCatalog catalog,
+                                  IonContainer rootContainer)
     {
         super(sys.getSystemSymbolTable());
         _system = sys;
@@ -228,7 +238,8 @@ class IonWriterSystemTree
             if (UnifiedSymbolTable.valueIsLocalSymbolTable(prior))
             {
                 SymbolTable symbol_table;
-                symbol_table = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _catalog, (IonStruct) prior);
+                symbol_table =
+                    makeNewLocalSymbolTable(_system, _catalog, (IonStruct) prior);
                 setSymbolTable(symbol_table);
                 clearBinaryImage(); // changing the symbol table is likely to invalidate the image - so to be safe we do
             }

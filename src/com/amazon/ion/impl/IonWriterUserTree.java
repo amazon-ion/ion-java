@@ -24,10 +24,11 @@ class IonWriterUserTree
      *
      * @param systemWriter a System Tree writer to back this.
      *   Must not be null.
+     * @param catalog may be null.
      */
     protected IonWriterUserTree(IonWriterSystemTree systemWriter, IonCatalog catalog, boolean suppressIVM)
     {
-        super(systemWriter.getSystem(), systemWriter, catalog, systemWriter.get_root(), suppressIVM);
+        super(systemWriter.getSystem(), catalog, systemWriter, systemWriter.get_root());
     }
 
     @Override

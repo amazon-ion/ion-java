@@ -2,6 +2,9 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.IonType.DATAGRAM;
+import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
+
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonIterationType;
@@ -30,7 +33,8 @@ abstract class IonWriterUser
     extends IonWriterBaseImpl  // should be IonWriterSystem ?
 {
     protected final IonSystem _system;
-    // needed to make correct local symbol tables
+
+    /** Used to make correct local symbol tables. May be null. */
     private   final IonCatalog _catalog;
 
     protected       boolean   _after_ion_version_marker;
@@ -58,15 +62,16 @@ abstract class IonWriterUser
 
 
     /**
+     * Constructor for text and binary writers.
+     *
      * @param system must not be null.
+     * @param catalog may be null.
      * @param systemWriter must not be null.
-     * @param catalog
-     * @param container
-     * @param suppressIVM
      */
-    protected IonWriterUser(IonSystem system, IonWriterBaseImpl systemWriter,
-                            IonCatalog catalog, IonValue container,
-                            boolean suppressIVM)
+    private IonWriterUser(IonSystem system,
+                          IonCatalog catalog,
+                          IonWriterBaseImpl systemWriter,
+                          boolean rootIsDatagram)
     {
         super(system.getSystemSymbolTable());
         _system = system;
@@ -75,35 +80,60 @@ abstract class IonWriterUser
         assert systemWriter != null;
         _system_writer = systemWriter;
         _current_writer = systemWriter;
+        _root_is_datagram = rootIsDatagram;
+    }
 
-        // FIXME get rid of iteration type
-        IonIterationType ot = systemWriter.getIterationType();
-        boolean _is_tree_writer = ot.isIonValue();
-        if (_is_tree_writer) {
-            if (container == null) {
-                throw new IllegalArgumentException("container is required for IonValue writers");
-            }
-            // Datagrams have an implicit initial IVM
-            _after_ion_version_marker = true;
-            _root_is_datagram = IonType.DATAGRAM.equals(container.getType());
-        }
-        else {
-            if (container != null) {
-                throw new IllegalArgumentException("container is invalid except on IonValue writers");
-            }
-            _root_is_datagram = true;
-            if (suppressIVM == false) {
-                if (_current_writer.getSymbolTable() == null) {
-                    try {
-                        setSymbolTable(_system.getSystemSymbolTable());
-                    }
-                    catch (IOException e) {
-                        throw new IonException(e);
-                    }
+    /**
+     * Constructor for text and binary writers.
+     *
+     * @param system must not be null.
+     * @param systemWriter must not be null.
+     * @param catalog may be null.
+     */
+    protected IonWriterUser(IonSystem system, IonWriterBaseImpl systemWriter,
+                            IonCatalog catalog,
+                            boolean suppressIVM)
+    {
+        this(system, catalog, systemWriter, /* rootIsDatagram */ true);
+
+        // TODO Why is root_is_datagram always true?  Can we not construct a
+        // text writer that injects into an existing data stream?
+
+        assert ! (systemWriter instanceof IonWriterUserTree);
+
+        if (suppressIVM == false) {
+            if (_current_writer.getSymbolTable() == null) {
+                try {
+                    setSymbolTable(_system.getSystemSymbolTable());
+                }
+                catch (IOException e) {
+                    throw new IonException(e);
                 }
             }
         }
     }
+
+    /**
+     * Constructor for Tree writer.
+     *
+     * @param system must not be null.
+     * @param catalog may be null.
+     * @param systemWriter must not be null.
+     * @param container must not be null.
+     */
+    protected IonWriterUser(IonSystem system,
+                            IonCatalog catalog,
+                            IonWriterSystemTree systemWriter,
+                            IonValue container)
+    {
+        this(system, catalog, systemWriter,
+             /* rootIsDatagram */ DATAGRAM.equals(container.getType()));
+
+        // Datagrams have an implicit initial IVM
+        _after_ion_version_marker = true;
+    }
+
+    //========================================================================
 
     @Override
     protected boolean has_annotation(String name, int id)
@@ -212,7 +242,8 @@ abstract class IonWriterUser
 
         // convert the struct we just wrote with the TreeWriter to a
         // local symbol table
-        UnifiedSymbolTable symtab = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _catalog, _symbol_table_value);
+        UnifiedSymbolTable symtab =
+            makeNewLocalSymbolTable(_system, _catalog, _symbol_table_value);
 
         _symbol_table_being_copied = false;
         _symbol_table_value        = null;

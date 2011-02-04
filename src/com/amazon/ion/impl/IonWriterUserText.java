@@ -1,9 +1,8 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonCatalog;
-import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonIterationType;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
@@ -91,11 +90,13 @@ public class IonWriterUserText
     final private boolean _filter_symbol_tables;
 
     protected IonWriterUserText(IonSystem sys, IonCatalog catalog, OutputStream out, TextOptions options) {
-        super(sys, new IonWriterSystemText(sys.getSystemSymbolTable(), out, options), catalog, (IonContainer)null, options.issuppressIonVersionMarkerOn());
+        super(sys, new IonWriterSystemText(sys.getSystemSymbolTable(), out, options),
+              catalog, options.issuppressIonVersionMarkerOn());
         _filter_symbol_tables = options.isFilterSymbolTablesOn();
     }
     protected IonWriterUserText(IonSystem sys, IonCatalog catalog, Appendable out, TextOptions options) {
-        super(sys, new IonWriterSystemText(sys.getSystemSymbolTable(), out, options), catalog, (IonContainer)null, options.issuppressIonVersionMarkerOn());
+        super(sys, new IonWriterSystemText(sys.getSystemSymbolTable(), out, options),
+              catalog, options.issuppressIonVersionMarkerOn());
         _filter_symbol_tables = options.isFilterSymbolTablesOn();
     }
 

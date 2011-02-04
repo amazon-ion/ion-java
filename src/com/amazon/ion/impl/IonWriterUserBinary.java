@@ -1,9 +1,8 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonCatalog;
-import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonIterationType;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.SymbolTable;
@@ -24,7 +23,7 @@ public class IonWriterUserBinary
 
     protected IonWriterUserBinary(IonSystem system, IonCatalog catalog, IonWriterSystemBinary systemWriter, boolean suppressIVM)
     {
-        super(system, systemWriter, catalog, (IonContainer)null, suppressIVM);
+        super(system, systemWriter, catalog, suppressIVM);
     }
 
     @Override
