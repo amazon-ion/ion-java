@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -23,7 +23,7 @@ import java.util.Date;
  *  table is available (which it will not be if the underlying writer is a system
  *  writer).
  */
-abstract class IonWriterBaseImpl
+public abstract class IonWriterBaseImpl
     implements IonWriter, IonReaderWriterPrivate
 
 {
@@ -92,6 +92,25 @@ abstract class IonWriterBaseImpl
     // except to return an UnsupportedOperationException
     // when they are not supported by a system writer.
     //
+
+    /**
+     * Sets the symbol table to use for encoding to be the passed
+     * in symbol table.  The can only be done outside an Ion value,
+     * that is at the datagram level.  As symbols are written
+     * this symbol table is used to resolve them.  If the symbols
+     * are undefined this symbol table is updated to include them
+     * as local symbols.  The updated symbol table will be
+     * written before any of the local values are emitted.
+     * <p>
+     * If the symbol table is the system symbol table an Ion
+     * version marker will be written to the output.  If symbols
+     * not in the system symbol table are written a local
+     * symbol table will be created and written before the
+     * current top level value.
+     *
+     * @param symbols base symbol table for encoding
+     * @throws IllegalArgumentException if symbols is null or a shared symbol table
+     */
     public void setSymbolTable(SymbolTable symbols) throws IOException
     {
         if (UnifiedSymbolTable.isAssignableTable(symbols) == false) {

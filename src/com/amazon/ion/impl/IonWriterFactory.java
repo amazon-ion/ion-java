@@ -68,7 +68,7 @@ public class IonWriterFactory
         check_for_excess_properties();
         construct_derived_properties();
 
-        IonWriter writer;
+        IonWriterBaseImpl writer;
 
         // check to make
         switch (_type) {
@@ -385,26 +385,26 @@ public class IonWriterFactory
         IonWriter writer = new IonWriterUserBinary(system, catalog, system_writer, true);
         return writer;
     }
-    public static IonWriter makeWriter(IonSystem system, Appendable output, TextOptions options)
+    public static IonWriterBaseImpl makeWriter(IonSystem system, Appendable output, TextOptions options)
     {
         IonCatalog catalog = system.getCatalog();
-        IonWriter writer = makeWriter(system, catalog, output, options);
+        IonWriterBaseImpl writer = makeWriter(system, catalog, output, options);
         return writer;
     }
-    public static IonWriter makeWriter(IonSystem system, IonCatalog catalog, Appendable output, TextOptions options)
+    public static IonWriterBaseImpl makeWriter(IonSystem system, IonCatalog catalog, Appendable output, TextOptions options)
     {
-        IonWriter writer = new IonWriterUserText(system, catalog, output, options);
+        IonWriterBaseImpl writer = new IonWriterUserText(system, catalog, output, options);
         return writer;
     }
-    public static IonWriter makeWriter(IonSystem system, OutputStream output, TextOptions options)
+    public static IonWriterBaseImpl makeWriter(IonSystem system, OutputStream output, TextOptions options)
     {
         IonCatalog catalog = system.getCatalog();
-        IonWriter writer = makeWriter(system, catalog, output, options);
+        IonWriterBaseImpl writer = makeWriter(system, catalog, output, options);
         return writer;
     }
-    public static IonWriter makeWriter(IonSystem system, IonCatalog catalog, OutputStream output, TextOptions options)
+    public static IonWriterBaseImpl makeWriter(IonSystem system, IonCatalog catalog, OutputStream output, TextOptions options)
     {
-        IonWriter writer = new IonWriterUserText(system, catalog, output, options);
+        IonWriterBaseImpl writer = new IonWriterUserText(system, catalog, output, options);
         return writer;
     }
 

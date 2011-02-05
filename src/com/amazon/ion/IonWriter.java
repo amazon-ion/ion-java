@@ -59,28 +59,6 @@ import java.util.Date;
 public interface IonWriter
     extends Closeable, Flushable
 {
-
-    /**
-     * Sets the symbol table to use for encoding to be the passed
-     * in symbol table.  The can only be done outside an Ion value,
-     * that is at the datagram level.  As symbols are written
-     * this symbol table is used to resolve them.  If the symbols
-     * are undefined this symbol table is updated to include them
-     * as local symbols.  The updated symbol table will be
-     * written before any of the local values are emitted.
-     * <p>
-     * If the symbol table is the system symbol table an Ion
-     * version marker will be written to the output.  If symbols
-     * not in the system symbol table are written a local
-     * symbol table will be created and written before the
-     * current top level value.
-     *
-     * @param symbols base symbol table for encoding
-     * @throws IllegalArgumentException if symbols is null or a shared symbol table
-
-     */
-     public void setSymbolTable(SymbolTable symbols) throws IOException;
-
     /**
      * Gets the symbol table that is currently in use by the writer.
      * While writing a number of values the symbol table will be

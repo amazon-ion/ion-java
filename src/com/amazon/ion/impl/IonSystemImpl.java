@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -277,7 +277,7 @@ public class IonSystemImpl
         IonWriter newWriter = newWriter(datagram);
         try
         {
-        	lst.setSystem(this);  // FIXME: this binding should not be necessary
+            lst.setSystem(this);  // FIXME: this binding should not be necessary
             lst.writeTo(newWriter);
             // FIXME there's no need for the writeTo approach
             //       we can just set the symbol table on the
@@ -690,7 +690,7 @@ public class IonSystemImpl
         throws IOException
     {
         UnifiedSymbolTable lst = newLocalSymbolTable(imports);
-        IonWriter writer = IonWriterFactory.makeWriter(this, out, options);
+        IonWriterBaseImpl writer = IonWriterFactory.makeWriter(this, out, options);
         writer.setSymbolTable(lst);
         return writer;
     }
@@ -720,7 +720,7 @@ public class IonSystemImpl
         throws IOException
     {
         UnifiedSymbolTable lst = newLocalSymbolTable(imports);
-        IonWriter writer = IonWriterFactory.makeWriter(this, out, options);
+        IonWriterBaseImpl writer = IonWriterFactory.makeWriter(this, out, options);
         writer.setSymbolTable(lst);
         return writer;
     }
@@ -747,7 +747,8 @@ public class IonSystemImpl
     public IonBinaryWriter newBinaryWriter(SymbolTable... imports)
     {
         UnifiedSymbolTable lst = newLocalSymbolTable(imports);
-        IonBinaryWriter user_writer = new IonWriterBinaryCompatibility.User(this, myCatalog);
+        IonWriterBinaryCompatibility.User user_writer =
+            new IonWriterBinaryCompatibility.User(this, myCatalog);
         try {
             user_writer.setSymbolTable(lst);
         }

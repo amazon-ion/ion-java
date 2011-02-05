@@ -3,6 +3,7 @@
 package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
+import static com.amazon.ion.impl.IonWriterFactory.makeWriter;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
@@ -36,6 +37,7 @@ import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonReaderFactoryX;
 import com.amazon.ion.impl.IonReaderWriterPrivate;
 import com.amazon.ion.impl.IonSystemPrivate;
+import com.amazon.ion.impl.IonWriterBaseImpl;
 import com.amazon.ion.impl.IonWriterBinaryCompatibility;
 import com.amazon.ion.impl.IonWriterFactory;
 import com.amazon.ion.impl.IonWriterUserText.TextOptions;
@@ -195,7 +197,8 @@ public class IonSystemLite
     public IonBinaryWriter newBinaryWriter(SymbolTable... imports)
     {
         UnifiedSymbolTable symbols = UnifiedSymbolTable.makeNewLocalSymbolTable(this, this.getSystemSymbolTable(), imports);
-        IonBinaryWriter writer = new IonWriterBinaryCompatibility.User(this, _catalog);
+        IonWriterBinaryCompatibility.User writer =
+            new IonWriterBinaryCompatibility.User(this, _catalog);
         try {
             writer.setSymbolTable(symbols);
         }
@@ -219,9 +222,9 @@ public class IonSystemLite
         return userWriter;
     }
 
-    public IonWriter newTextWriter(Appendable out, TextOptions options)
+    public IonWriterBaseImpl newTextWriter(Appendable out, TextOptions options)
     {
-        IonWriter userWriter = IonWriterFactory.makeWriter(this, out, options);
+        IonWriterBaseImpl userWriter = makeWriter(this, out, options);
         return userWriter;
     }
 
@@ -237,7 +240,7 @@ public class IonSystemLite
         throws IOException
     {
         UnifiedSymbolTable lst = newLocalSymbolTable(imports);
-        IonWriter writer = newTextWriter(out, options);
+        IonWriterBaseImpl writer = newTextWriter(out, options);
         writer.setSymbolTable(lst);
         return writer;
     }
@@ -249,9 +252,9 @@ public class IonSystemLite
         return userWriter;
     }
 
-    public IonWriter newTextWriter(OutputStream out, TextOptions options)
+    public IonWriterBaseImpl newTextWriter(OutputStream out, TextOptions options)
     {
-        IonWriter userWriter = IonWriterFactory.makeWriter(this, out, options);
+        IonWriterBaseImpl userWriter = makeWriter(this, out, options);
         return userWriter;
     }
 
@@ -267,7 +270,7 @@ public class IonSystemLite
         throws IOException
     {
         UnifiedSymbolTable lst = newLocalSymbolTable(imports);
-        IonWriter writer = newTextWriter(out, options);
+        IonWriterBaseImpl writer = newTextWriter(out, options);
         writer.setSymbolTable(lst);
         return writer;
     }
