@@ -15,6 +15,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
@@ -467,6 +468,24 @@ public abstract class IonTestCase
     }
 
 
+
+    /**
+     * Checks that the value is an IonInt with the given value.
+     * @param expected may be null to check for null.int
+     */
+    public void checkInt(BigInteger expected, IonValue actual)
+    {
+        assertSame(IonType.INT, actual.getType());
+        IonInt i = (IonInt) actual;
+
+        if (expected == null) {
+            assertTrue("expected null value", actual.isNullValue());
+        }
+        else
+        {
+            assertEquals("int content", expected, i.bigIntegerValue());
+        }
+    }
 
     /**
      * Checks that the value is an IonInt with the given value.
