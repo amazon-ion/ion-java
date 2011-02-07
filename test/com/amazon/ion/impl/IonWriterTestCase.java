@@ -26,7 +26,9 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
 import com.amazon.ion.TestUtils;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Arrays;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -60,6 +62,16 @@ public abstract class IonWriterTestCase
         }
         dg = loader().load(bytes);
         return dg;
+    }
+
+    /**
+     * Extracts bytes from the current writer and loads it into a datagram.
+     */
+    protected IonReader reread()
+        throws Exception
+    {
+        byte[] bytes = outputByteArray();
+        return system().newReader(bytes);
     }
 
     protected IonValue reloadSingleValue()
@@ -146,6 +158,43 @@ public abstract class IonWriterTestCase
     }
 
     // TODO test stepOut() when at top-level
+
+
+    @Test @Ignore  // FIXME ION-163
+    public void testWriteInt()
+    throws Exception
+    {
+        BigInteger bigPos = new BigInteger(Long.MAX_VALUE + "0");
+        BigInteger bigNeg = new BigInteger(Long.MIN_VALUE + "0");
+
+        IonWriter writer = makeWriter();
+
+        writer.writeNull(IonType.INT);
+        writer.writeInt(Long.MAX_VALUE);
+        writer.writeInt(Long.MIN_VALUE);
+/* FIXME ION-65
+        writer.writeInt(null);
+        writer.writeInt(bigPos);
+        writer.writeInt(bigNeg);
+*/
+        IonReader r = reread();
+        assertEquals(IonType.INT, r.next());
+        assertTrue(r.isNullValue());
+        assertEquals(IonType.INT, r.next());
+        assertEquals(Long.MAX_VALUE, r.longValue());
+        assertEquals(IonType.INT, r.next());
+        assertEquals(Long.MIN_VALUE, r.longValue());
+/*
+        assertEquals(IonType.INT, r.next());
+        assertTrue(r.isNullValue());
+        assertEquals(IonType.INT, r.next());
+        assertEquals(bigPos, r.bigIntegerValue());
+        assertEquals(IonType.INT, r.next());
+        assertEquals(bigNeg, r.bigIntegerValue());
+*/
+        assertNull(r.next());
+    }
+
 
     /**
      * Trap for JIRA ION-52
