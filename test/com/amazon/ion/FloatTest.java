@@ -177,4 +177,18 @@ public class FloatTest
         }
         catch (NumberFormatException e) { }
     }
+
+    /**
+     * Trap for the JDK defect parsing doubles.  ION-162
+     *
+     * http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4421494
+     * http://www.exploringbinary.com/java-hangs-when-converting-2-2250738585072012e-308/
+     */
+    @Test
+    public void testJavaDblMinBug()
+    {
+        double d = 2.2250738585072012e-308;
+        IonFloat f = (IonFloat) system().singleValue("2.2250738585072012e-308");
+        assertEquals(d, f.doubleValue());
+    }
 }
