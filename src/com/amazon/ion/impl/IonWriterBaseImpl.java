@@ -94,6 +94,20 @@ public abstract class IonWriterBaseImpl
     //
 
     /**
+     * Write an Ion version marker symbol to the output.  This
+     * is the $ion_1_0 value currently (in later versions the
+     * number may change).  In text output this appears as the
+     * text symbol.  In binary this will be the symbol id if
+     * the writer is in a list, sexp or struct.  If the writer
+     * is currently at the top level this will write the
+     * "magic cookie" value.
+     *
+     *  Writing a version marker will reset the symbol table
+     *  to be the system symbol table.
+     */
+    abstract void writeIonVersionMarker() throws IOException;
+
+    /**
      * Sets the symbol table to use for encoding to be the passed
      * in symbol table.  The can only be done outside an Ion value,
      * that is at the datagram level.  As symbols are written

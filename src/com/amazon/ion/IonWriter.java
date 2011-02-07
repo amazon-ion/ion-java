@@ -443,7 +443,7 @@ public interface IonWriter
      *
      * @throws IOException
      */
-    public void writeIonVersionMarker() throws IOException;
+//    public void writeIonVersionMarker() throws IOException;
 
     /**
      * Writes a {@link java.lang.String} as an Ion string. Since Ion strings are
