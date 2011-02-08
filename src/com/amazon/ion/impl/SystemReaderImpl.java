@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -353,6 +353,12 @@ public class SystemReaderImpl
         return _catalog;
     }
 
+    /**
+     * Finds or adds a symbol to our symtab context, creating a new local
+     * symtab if necessary.
+     *
+     * @return a value greater than zero.
+     */
     protected int addSymbol(String name)
     {
         SymbolTable symbols = this.getSymbolTable();
@@ -364,6 +370,9 @@ public class SystemReaderImpl
         return sid;
     }
 
+    /**
+     * @return not null.
+     */
     public SymbolTable getSymbolTable()
     {
         if (_currentSymbolTable == null) {
@@ -375,7 +384,7 @@ public class SystemReaderImpl
     public SymbolTable getLocalSymbolTable()
     {
         SymbolTable symbols = this.getSymbolTable();
-        if (UnifiedSymbolTable.isLocalTable(symbols) == false) {
+        if (! symbols.isLocalTable()) {
             symbols = UnifiedSymbolTable.makeNewLocalSymbolTable(symbols);
             _currentSymbolTable = symbols;
         }

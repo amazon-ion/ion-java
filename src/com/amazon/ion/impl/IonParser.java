@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved. */
+/* Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion.impl;
 
@@ -180,10 +180,6 @@ public class IonParser
             throw new IonException("symbols must be at least 1 character long");
         }
         int sid = this._reader_for_symbols.addSymbol(annotation);
-        // int sid = this._symboltable.addSymbol(annotation);
-if (sid <= 0) {
-    sid = this._reader_for_symbols.addSymbol(annotation);
-}
         assert sid > 0;
         _annotationList.add(new Integer(sid));
     }

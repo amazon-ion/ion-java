@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -52,8 +52,20 @@ public interface SystemReader
 
     public IonSystem getSystem();
     public IonCatalog getCatalog();
+
+    /**
+     * Returns the current symtab, either system or local.
+     * @return may be null.
+     */
     public SymbolTable getSymbolTable();
+
+    /**
+     * Gets the current symtab if its local, otherwise creates a local symtab
+     * and makes it current.
+     * @return not null.
+     */
     public SymbolTable getLocalSymbolTable();
+
     public boolean currentIsHidden();
 //    public boolean canSetLocalSymbolTable();
 //    public void setLocalSymbolTable(SymbolTable symbolTable);
