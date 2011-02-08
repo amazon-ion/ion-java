@@ -1223,6 +1223,7 @@ public final class UnifiedSymbolTable
     //       to provide users the "correct" alternative.  Later
     //       we should make a real synthetic read that does this
     //       without requiring the underlying struct.
+    @Deprecated
     public
     IonReader getReader()
     {

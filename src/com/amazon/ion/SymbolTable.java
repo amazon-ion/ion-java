@@ -249,7 +249,13 @@ public interface SymbolTable
      *
      * @return a non-null IonReader
      *
+     * @deprecated
+     * Besides being misnamed (this isn't a property accessor), this method
+     * has undefined and problematic behavior when called on a local table
+     * that may be modified while its being read.
+     * Use {@link #writeTo(IonWriter)} instead.
      */
+    @Deprecated
     public IonReader getReader();
 
 
