@@ -509,7 +509,7 @@ public class IonTextUtils
         String s = Integer.toHexString(c);
         out.append("\\x");
         if (s.length() < 2) {
-        	out.append(ZERO_PADDING[2-s.length()]);
+            out.append(ZERO_PADDING[2-s.length()]);
         }
         out.append(s);
     }
@@ -958,38 +958,4 @@ public class IonTextUtils
     //     \xhh ASCII character in hexadecimal notation (1-2 digits)
     //    \\uhhhh Unicode character in hexadecimal
     //     \Uhhhhhhhh Unicode character in hexadecimal
-
-
-    public static final class StringPeekReader
-    {
-        private CharSequence _cs;
-        private int          _pos;
-        private int          _len;
-
-        public StringPeekReader(CharSequence cs) {
-            this(cs, 0, cs.length());
-        }
-        public StringPeekReader(CharSequence cs, int length) {
-            this(cs, 0, length);
-        }
-        public StringPeekReader(CharSequence cs, int offset, int length) {
-            _cs = cs;
-            _pos = offset;
-            _len = (cs == null) ? -1 : (offset + length);
-        }
-        public final int next() {
-            if (_pos >= _len) {
-                return -1;
-            }
-            return _cs.charAt(_pos++);
-        }
-        public final int peek() {
-            if (_pos >= _len) {
-                return -1;
-            }
-            return _cs.charAt(_pos);
-        }
-    }
-
-
 }
