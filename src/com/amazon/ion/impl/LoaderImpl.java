@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved. */
+/* Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion.impl;
 
@@ -181,7 +181,7 @@ public class LoaderImpl
                     // The streaming APIs add no benefit.
                 }
 
-                SystemReader systemReader =
+                SystemValueIterator systemReader =
                     mySystem.newBinarySystemReader(myCatalog, pushback);
                 return new IonDatagramImpl(mySystem, systemReader);
             }

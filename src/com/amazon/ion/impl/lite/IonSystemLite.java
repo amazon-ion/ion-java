@@ -41,9 +41,10 @@ import com.amazon.ion.impl.IonWriterBaseImpl;
 import com.amazon.ion.impl.IonWriterBinaryCompatibility;
 import com.amazon.ion.impl.IonWriterFactory;
 import com.amazon.ion.impl.IonWriterUserText.TextOptions;
-import com.amazon.ion.impl.SystemReader;
+import com.amazon.ion.impl.SystemValueIterator;
 import com.amazon.ion.impl.UnifiedSymbolTable;
 import com.amazon.ion.system.SimpleCatalog;
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -719,7 +720,7 @@ public class IonSystemLite
     }
 
     static class ReaderIterator
-        implements SystemReader // Iterator<IonValue>, Closeable
+        implements SystemValueIterator, Iterator<IonValue>, Closeable
     {
         private final IonReader        _reader;
         private final IonSystemLite    _system;
@@ -1067,13 +1068,13 @@ public class IonSystemLite
      *
      */
 
-    public SystemReader newBinarySystemReader(IonCatalog catalog,
-                                              InputStream ionBinary)
+    public SystemValueIterator newBinarySystemReader(IonCatalog catalog,
+                                                     InputStream ionBinary)
         throws IOException
     {
         // TODO: do something with the catalog - update readers
         IonReader reader = IonReaderFactoryX.makeReader(ionBinary);
-        SystemReader sysreader = new ReaderIterator(this, reader);
+        SystemValueIterator sysreader = new ReaderIterator(this, reader);
         return sysreader;
     }
 
@@ -1083,17 +1084,17 @@ public class IonSystemLite
         return writer;
     }
 
-    public SystemReader newLegacySystemReader(IonCatalog catalog,
-                                              byte[] ionData)
+    public SystemValueIterator newLegacySystemReader(IonCatalog catalog,
+                                                     byte[] ionData)
     {
         // TODO: do something with the catalog - update readers
         IonReader reader = IonReaderFactoryX.makeReader(ionData);
-        SystemReader sysreader = new ReaderIterator(this, reader);
+        SystemValueIterator sysreader = new ReaderIterator(this, reader);
         return sysreader;
     }
 
-    public SystemReader newPagedBinarySystemReader(IonCatalog catalog,
-                                                   InputStream ionBinary)
+    public SystemValueIterator newPagedBinarySystemReader(IonCatalog catalog,
+                                                          InputStream ionBinary)
         throws IOException
     {
         IonReader reader = IonReaderFactoryX.makeReader(ionBinary);

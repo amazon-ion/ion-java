@@ -25,7 +25,7 @@ public class IonParser
     private IonTokenReader      _in;
     private BufferManager       _out;
     // private SymbolTable         _symboltable;
-    private SystemReaderImpl    _reader_for_symbols;
+    private SystemValueIteratorImpl _reader_for_symbols;
 
     private IonTokenReader.Type _t;
     private ArrayList<Integer>  _annotationList;
@@ -98,7 +98,7 @@ public class IonParser
      * @param consume the preferred number of characters to consume.  More than
      * this number may be read, but we won't stop until we pass this threshold.
      */
-    public void parse(SystemReaderImpl readerForSymbols // was SymbolTable symboltable
+    public void parse(SystemValueIteratorImpl readerForSymbols // was SymbolTable symboltable
                     , int startPosition
                     , boolean just_wrote_ivm
                     , long consume)
@@ -538,13 +538,14 @@ loop:   for (;;) {
         this._out.writer().writeVarUInt7Value(sid, true);
     }
 
+    private static final int ION_1_0_LENGTH = UnifiedSymbolTable.ION_1_0.length();
+
     /**
      * Encodes symbols (does not include keywords like true/false/null*).
      *
      * @param is_in_expression
      * @throws IOException
      */
-    private static final int ION_1_0_LENGTH = UnifiedSymbolTable.ION_1_0.length();
     void processSymbolValue(boolean is_in_expression) throws IOException
     {
         assert this._in.keyword == null;

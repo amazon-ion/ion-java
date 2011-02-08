@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -72,12 +72,12 @@ public interface IonSystemPrivate
 
     public IonWriter newTreeSystemWriter(IonContainer container);
 
-    public SystemReader newLegacySystemReader(IonCatalog catalog, byte[] ionData);
+    public SystemValueIterator newLegacySystemReader(IonCatalog catalog, byte[] ionData);
 
-    public SystemReader newBinarySystemReader(IonCatalog catalog, InputStream ionBinary)
+    public SystemValueIterator newBinarySystemReader(IonCatalog catalog, InputStream ionBinary)
         throws IOException;
 
-    public SystemReader newPagedBinarySystemReader(IonCatalog catalog, InputStream ionBinary)
+    public SystemValueIterator newPagedBinarySystemReader(IonCatalog catalog, InputStream ionBinary)
         throws IOException;
 
     public boolean valueIsSharedSymbolTable(IonValue value);

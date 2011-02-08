@@ -1,8 +1,10 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemReader;
+
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
@@ -47,7 +49,7 @@ public final class IonDatagramImpl
     /**
      * Used while constructing, then set to null.
      */
-    private SystemReader _rawStream;
+    private SystemValueIterator _rawStream;
 
     /**
      * Superset of {@link #_contents}; contains only user values.
@@ -100,7 +102,7 @@ public final class IonDatagramImpl
      */
     public IonDatagramImpl(IonSystemImpl system, IonCatalog catalog, BufferManager buffer)
     {
-        this(system, SystemReaderImpl.makeSystemReader(system, catalog, buffer));
+        this(system, makeSystemReader(system, catalog, buffer));
     }
 
 
@@ -163,7 +165,7 @@ public final class IonDatagramImpl
                            Reader ionText)
     {
         this(system,
-             SystemReaderImpl.makeSystemReader(system,
+             makeSystemReader(system,
                               catalog,
                               initialSymbolTable, ionText));
     }
@@ -174,7 +176,7 @@ public final class IonDatagramImpl
      * @throws NullPointerException if any parameter is null.
      */
     IonDatagramImpl(IonSystemImpl system,
-                    SystemReader rawStream)
+                    SystemValueIterator rawStream)
     {
         super(system, DATAGRAM_TYPEDESC, false);
 

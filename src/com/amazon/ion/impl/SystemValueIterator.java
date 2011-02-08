@@ -12,7 +12,7 @@ import java.io.IOException;
 import java.util.Iterator;
 
 
-public interface SystemReader
+public interface SystemValueIterator
     extends Iterator<IonValue>, Closeable
 {
     /********************************************************************

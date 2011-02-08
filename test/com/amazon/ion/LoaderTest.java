@@ -2,7 +2,7 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl.UserReader;
+import com.amazon.ion.impl.UserValueIterator;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -422,7 +422,7 @@ if (!_debug_long_test) return;
 
 	    LongInputStream longStream = new LongInputStream("$ion_1_0 { this:is, a:struct } ");
         Reader reader = new InputStreamReader(longStream, "UTF-8");
-        UserReader r = (UserReader)system().iterate(reader);
+        UserValueIterator r = (UserValueIterator)system().iterate(reader);
         r.setBufferToRecycle();
 
         Iterator<IonValue> i = r;

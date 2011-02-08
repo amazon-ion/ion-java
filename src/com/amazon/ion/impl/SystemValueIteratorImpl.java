@@ -18,8 +18,8 @@ import java.io.StringReader;
 import java.util.NoSuchElementException;
 
 
-public class SystemReaderImpl
-    implements SystemReader
+public class SystemValueIteratorImpl
+    implements SystemValueIterator
 {
     private final IonSystemImpl _system;
     private final IonCatalog    _catalog;
@@ -39,40 +39,40 @@ public class SystemReaderImpl
     private IonValueImpl _curr;
     private IonValueImpl _next;
 
-    public static SystemReader makeSystemReader(IonSystemImpl system, String s)
+    public static SystemValueIterator makeSystemReader(IonSystemImpl system, String s)
     {
-        SystemReader reader = new SystemReaderImpl(system, s);
+        SystemValueIterator reader = new SystemValueIteratorImpl(system, s);
         return reader;
     }
 
-    public static SystemReader makeSystemReader(IonSystemImpl system,
+    public static SystemValueIterator makeSystemReader(IonSystemImpl system,
                                          IonCatalog catalog, Reader input)
     {
-        SystemReader reader = new SystemReaderImpl(system, catalog, input);
+        SystemValueIterator reader = new SystemValueIteratorImpl(system, catalog, input);
         return reader;
     }
 
-    public static SystemReader makeSystemReader(IonSystemImpl system,
+    public static SystemValueIterator makeSystemReader(IonSystemImpl system,
                                          IonCatalog catalog,
                                          SymbolTable initialSymboltable,
                                          Reader input)
     {
-        SystemReader reader = new SystemReaderImpl(system, catalog, initialSymboltable, input);
+        SystemValueIterator reader = new SystemValueIteratorImpl(system, catalog, initialSymboltable, input);
         return reader;
     }
 
-    public static SystemReader makeSystemReader(IonSystemImpl system,
+    public static SystemValueIterator makeSystemReader(IonSystemImpl system,
                                          IonCatalog catalog,
                                          BufferManager buffer)
     {
-        SystemReader reader = new SystemReaderImpl(system, catalog, buffer);
+        SystemValueIterator reader = new SystemValueIteratorImpl(system, catalog, buffer);
         return reader;
     }
 
-    public static SystemReader makeSystemReader(IonSystemImpl system,
+    public static SystemValueIterator makeSystemReader(IonSystemImpl system,
                                          IonCatalog catalog, InputStream stream)
     {
-        SystemReader reader = new SystemReaderImpl(system, catalog, stream);
+        SystemValueIterator reader = new SystemValueIteratorImpl(system, catalog, stream);
         return reader;
     }
 
@@ -82,7 +82,7 @@ public class SystemReaderImpl
 
      * @throws NullPointerException if any parameter is null.
      */
-    private SystemReaderImpl(IonSystemImpl system, String s) {
+    private SystemValueIteratorImpl(IonSystemImpl system, String s) {
         this(system, system.getCatalog(), new StringReader(s));
     }
 
@@ -92,7 +92,7 @@ public class SystemReaderImpl
      *
      * @throws NullPointerException if any parameter is null.
      */
-    private SystemReaderImpl(IonSystemImpl system,
+    private SystemValueIteratorImpl(IonSystemImpl system,
                         IonCatalog catalog,
                         Reader input)
     {
@@ -109,7 +109,7 @@ public class SystemReaderImpl
      * @param initialSymboltable must be local, not shared.
      * @throws NullPointerException if any parameter is null.
      */
-    private SystemReaderImpl(IonSystemImpl system,
+    private SystemValueIteratorImpl(IonSystemImpl system,
                         IonCatalog catalog,
                         SymbolTable initialSymboltable,
                         Reader input)
@@ -150,7 +150,7 @@ public class SystemReaderImpl
      * @throws NullPointerException if any parameter is null.
      */
     @Deprecated
-    private SystemReaderImpl(IonSystemImpl system,
+    private SystemValueIteratorImpl(IonSystemImpl system,
                         IonCatalog catalog,
                         BufferManager buffer)
     {
@@ -187,7 +187,7 @@ public class SystemReaderImpl
      * @param stream user byte input source
      * @throws NullPointerException if any parameter is null.
      */
-    private SystemReaderImpl(IonSystemImpl system,
+    private SystemValueIteratorImpl(IonSystemImpl system,
                         IonCatalog catalog,
                         InputStream stream)
     {

@@ -1,8 +1,7 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
-
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion.impl;
+
+import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemReader;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonValue;
@@ -13,12 +12,13 @@ import java.io.Reader;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-public class UserReader
+public class UserValueIterator
     implements Iterator<IonValue>
 {
-	private boolean		 _recycle_buffer; // if true we reset the system reader for each user value
+    /** if true we reset the system reader for each user value */
+    private boolean		_recycle_buffer;
 
-    private SystemReader _systemReader;
+    private SystemValueIterator _systemReader;
 
     /**
      * The system reader changes it's local symtab on next(), but we call
@@ -36,17 +36,17 @@ public class UserReader
      * @param initialSymbolTable must be local, not shared.
      * @throws NullPointerException if input is null.
      */
-    public UserReader(IonSystemImpl system,
-                      SymbolTable initialSymbolTable,
-                      Reader input)
+    public UserValueIterator(IonSystemImpl system,
+                             SymbolTable initialSymbolTable,
+                             Reader input)
     {
-        this(SystemReaderImpl.makeSystemReader(system,
+        this(makeSystemReader(system,
                               system.getCatalog(),
                               initialSymbolTable,
                               input));
     }
 
-    public UserReader(SystemReader systemReader)
+    public UserValueIterator(SystemValueIterator systemReader)
     {
         _systemReader = systemReader;
         _localSymbolTable = null; // systemReader.getLocalSymbolTable();

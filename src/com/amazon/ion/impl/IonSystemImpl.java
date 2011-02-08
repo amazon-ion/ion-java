@@ -5,6 +5,7 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.SystemSymbolTable.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
+import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemReader;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
 import com.amazon.ion.ContainedValueException;
@@ -68,14 +69,6 @@ public class IonSystemImpl
     public static final int SYSTEM_VERSION = 1;
 
     private final UnifiedSymbolTable mySystemSymbols;
-    // FIXME: REMOVE
-    //= makeSystemSymbols();
-    //private UnifiedSymbolTable makeSystemSymbols() {
-    //    UnifiedSymbolTable sys_sym = UnifiedSymbolTable .getSystemSymbolTableInstance();
-    //    sys_sym.setSystem(this);
-    //    return sys_sym;
-    //}
-
 
     private IonCatalog  myCatalog;
     private IonLoader   myLoader;
@@ -323,8 +316,8 @@ public class IonSystemImpl
         // TODO optimize to use IonTextReader, but first that must truly stream
         // instead of requiring a full-stream buffer.
         // See https://issue-tracking.amazon.com/browse/ION-31
-        UserReader userReader =
-            new UserReader(this, this.newLocalSymbolTable(), reader);
+        UserValueIterator userReader =
+            new UserValueIterator(this, this.newLocalSymbolTable(), reader);
         userReader.setBufferToRecycle();
         return userReader;
     }
@@ -333,16 +326,12 @@ public class IonSystemImpl
      * FIXME Can't yet add this to public API, unclear how to do buffer recycling
      * since that's currently done by the UserReader.
      */
-    protected SystemReader systemIterate(Reader reader)
+    protected SystemValueIterator systemIterate(Reader reader)
     {
-        //return new SystemReader(this,
-        //                        getCatalog(),
-        //                        newLocalSymbolTable(),
-        //                        reader);
-        SystemReader sysreader = SystemReaderImpl.makeSystemReader(this,
-                                                                getCatalog(),
-                                                                newLocalSymbolTable(),  // FIXME: should be null
-                                                                reader);
+        SystemValueIterator sysreader = makeSystemReader(this,
+                                                         getCatalog(),
+                                                         newLocalSymbolTable(),  // FIXME: should be null
+                                                         reader);
         return sysreader;
 
     }
@@ -355,9 +344,10 @@ public class IonSystemImpl
             return new IonIteratorImpl(this, reader);
         }
 
-        UserReader userReader = new UserReader(this,
-                                               this.newLocalSymbolTable(),
-                                               new StringReader(ionText));
+        UserValueIterator userReader =
+            new UserValueIterator(this,
+                                  this.newLocalSymbolTable(),
+                                  new StringReader(ionText));
         userReader.setBufferToRecycle();
         return userReader;
     }
@@ -370,15 +360,15 @@ public class IonSystemImpl
         }
 
         // return new SystemReader(this, ionText);
-        SystemReader reader = SystemReaderImpl.makeSystemReader(this, ionText);
+        SystemValueIterator reader = makeSystemReader(this, ionText);
         return reader;
     }
 
 
     public Iterator<IonValue> iterate(byte[] ionData)
     {
-        SystemReader systemReader = newLegacySystemReader(getCatalog(), ionData);
-        UserReader userReader = new UserReader(systemReader);
+        SystemValueIterator systemReader = newLegacySystemReader(getCatalog(), ionData);
+        UserValueIterator userReader = new UserValueIterator(systemReader);
         // Don't use buffer-clearing!
         return userReader;
     }
@@ -401,7 +391,7 @@ public class IonSystemImpl
 
     private Iterator<IonValue> iterate(InputStream ionData, boolean system)
     {
-        SystemReader systemReader;
+        SystemValueIterator systemReader;
         boolean binaryData;
         try
         {
@@ -424,7 +414,7 @@ public class IonSystemImpl
 
         if (system) return systemReader;
 
-        UserReader userReader = new UserReader(systemReader);
+        UserValueIterator userReader = new UserValueIterator(systemReader);
         if (!binaryData)
         {
             userReader.setBufferToRecycle();
@@ -791,12 +781,12 @@ public class IonSystemImpl
      *
      * @throws NullPointerException if <code>ionData</code> is null.
      */
-    public SystemReader newLegacySystemReader(IonCatalog catalog, byte[] ionData)
+    public SystemValueIterator newLegacySystemReader(IonCatalog catalog, byte[] ionData)
     {
         boolean isBinary =
             IonBinary.matchBinaryVersionMarker(ionData);
 
-        SystemReader sysReader;
+        SystemValueIterator sysReader;
         if (isBinary) {
             sysReader = newBinarySystemReader(catalog, ionData);
         }
@@ -818,12 +808,12 @@ public class IonSystemImpl
      *
      * @throws NullPointerException if <code>ionBinary</code> is null.
      */
-    private SystemReader newBinarySystemReader(IonCatalog catalog, byte[] ionBinary)
+    private SystemValueIterator newBinarySystemReader(IonCatalog catalog, byte[] ionBinary)
     {
         BlockedBuffer bb = new BlockedBuffer(ionBinary);
         BufferManager buffer = new BufferManager(bb);
         //return new SystemReader(this, catalog, buffer);
-        SystemReader reader = SystemReaderImpl.makeSystemReader(this, catalog, buffer);
+        SystemValueIterator reader = makeSystemReader(this, catalog, buffer);
         return reader;
     }
 
@@ -838,7 +828,7 @@ public class IonSystemImpl
      *
      * @throws NullPointerException if <code>ionText</code> is null.
      */
-    private SystemReader newTextSystemReader(IonCatalog catalog, byte[] ionText)
+    private SystemValueIterator newTextSystemReader(IonCatalog catalog, byte[] ionText)
     {
         ByteArrayInputStream stream = new ByteArrayInputStream(ionText);
         Reader reader;
@@ -850,24 +840,24 @@ public class IonSystemImpl
         }
 
         // return new SystemReader(this, catalog, reader);
-        SystemReader sysreader = SystemReaderImpl.makeSystemReader(this, catalog, reader);
+        SystemValueIterator sysreader = makeSystemReader(this, catalog, reader);
         return sysreader;
     }
 
 
-    public SystemReader newBinarySystemReader(IonCatalog catalog, InputStream ionBinary)
+    public SystemValueIterator newBinarySystemReader(IonCatalog catalog, InputStream ionBinary)
         throws IOException
     {
         BufferManager buffer = new BufferManager(ionBinary);
         //return new SystemReader(this, catalog, buffer);
-        SystemReader reader = SystemReaderImpl.makeSystemReader(this, catalog, buffer);
+        SystemValueIterator reader = makeSystemReader(this, catalog, buffer);
         return reader;
     }
 
-    public SystemReader newPagedBinarySystemReader(IonCatalog catalog, InputStream ionBinary)
+    public SystemValueIterator newPagedBinarySystemReader(IonCatalog catalog, InputStream ionBinary)
         throws IOException
     {
-        SystemReader reader = SystemReaderImpl.makeSystemReader(this, catalog, ionBinary);
+        SystemValueIterator reader = makeSystemReader(this, catalog, ionBinary);
         return reader;
     }
 
