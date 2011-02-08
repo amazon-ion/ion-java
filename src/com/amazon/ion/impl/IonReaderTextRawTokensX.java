@@ -1392,10 +1392,10 @@ public class IonReaderTextRawTokensX
         }
         return load_finish_number(c, t);
     }
-    private final IonType load_finish_number(int c, int t)
+    private final IonType load_finish_number(int c, int t) throws IOException
     {
         // all forms of numeric need to stop someplace rational
-        if (!IonTextUtils.isNumericStop(c)) bad_token(c);
+        if (! is_value_terminating_character(c)) bad_token(c);
 
         // we read off the end of the number, so put back
         // what we don't want, but what ever we have is an int

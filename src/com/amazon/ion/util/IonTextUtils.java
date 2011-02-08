@@ -90,6 +90,21 @@ public class IonTextUtils
         }
     }
 
+    /**
+     * Determines whether a given code point is one of the valid Ion numeric
+     * terminators.
+     * <p>
+     * The slash character {@code '/'} is not itself a valid terminator, but
+     * if the next character is {@code '/'} or {@code '*'} then the number is
+     * followed by a comment.  Since this method cannot perform the look-ahead
+     * necessary to make that determination, it returns {@code false} for the
+     * slash.
+     *
+     * @param codePoint the Unicode scalar to test.
+     *
+     * @return true when the scalar can legally follow an Ion number.
+     * Returns false for the slash character {@code '/'}.
+     */
     public static boolean isNumericStop(int codePoint)
     {
         switch (codePoint) {
@@ -99,7 +114,6 @@ public class IonTextUtils
         case '(':  case ')':
         case ',':
         case '\"': case '\'':
-        case '/':
         case ' ':  case '\t':  case '\n':  case '\r':  // Whitespace
         // case '/': // we check start of comment in the caller where we
         //              can peek ahead for the following slash or asterisk
