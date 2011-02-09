@@ -6,6 +6,8 @@ import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0_SID;
+import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbolTable.SYMBOLS;
 
 import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.impl.IonValueImpl;
@@ -554,6 +556,26 @@ public class DatagramTest
                    text.startsWith(SystemSymbolTable.ION_1_0 + ' '));
         assertTrue("missing data",
                    text.endsWith(" {a:b}"));
+    }
+
+    @Test
+    public void testToStringWithoutSymbols()
+    {
+        IonDatagram dg = system().newDatagram();
+        dg.add().newInt(1);
+        assertEquals(ION_1_0 + " 1", dg.toString());
+    }
+
+    @Test
+    public void testToStringWithSymbols()
+    {
+        IonDatagram dg = system().newDatagram();
+        dg.add().newSymbol("x");
+        dg.getBytes();  // Force encoding and symtab construction
+        assertEquals(ION_1_0 + ' '
+                     + ION_SYMBOL_TABLE + "::{" + SYMBOLS + ":[\"x\"]}"
+                     + " x",
+                     dg.toString());
     }
 
 

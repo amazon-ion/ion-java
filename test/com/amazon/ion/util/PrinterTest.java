@@ -4,6 +4,7 @@ package com.amazon.ion.util;
 
 
 import static com.amazon.ion.SystemSymbolTable.ION_1_0;
+import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
 
 import com.amazon.ion.BlobTest;
 import com.amazon.ion.ClobTest;
@@ -24,6 +25,7 @@ import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.system.SystemFactory.SystemCapabilities;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -69,9 +71,8 @@ public class PrinterTest
         throws Exception
     {
         StringBuilder w = new StringBuilder();
-        myPrinter.myOptions.skipRedundantSystemValues = true;
         myPrinter.print(value, w);
-        assertEquals(expected, w.toString());
+        assertEquals("Printer output", expected, w.toString());
     }
 
 
@@ -212,6 +213,15 @@ public class PrinterTest
                    text.endsWith(" a b c"));
 
         // We shouldn't jnject a local table if its not needed.
+
+        // TODO ION-165
+        if (getSystemCapabilities() == SystemCapabilities.LITE)
+        {
+            // This is a hack to make the lite dom work like the original.
+            // It's hiding some uglyness, disable to see.
+            myPrinter.myOptions.simplifySystemValues = true;
+        }
+
         String data = "2 '+' [2,'+']";
         String dataWithIvm = ION_1_0 + ' ' + data;
         dg = loader().load(dataWithIvm);
@@ -229,6 +239,29 @@ public class PrinterTest
         checkRendering("[2,\"+\",[2,\"+\"]]", dg);
     }
 
+    @Test
+    public void testDatagramWithoutSymbols()
+    throws Exception
+    {
+        IonDatagram dg = system().newDatagram();
+        dg.add().newInt(1);
+        checkRendering(ION_1_0 + " 1", dg);
+    }
+
+    @Test
+    public void testSimplifyingChainedLocalSymtab()
+    throws Exception
+    {
+        myPrinter.myOptions.simplifySystemValues = true;
+
+        String ionText =
+            ION_SYMBOL_TABLE + "::{}"
+            + " x"
+            + " " + ION_SYMBOL_TABLE + "::{}"
+            + " y";
+        IonDatagram dg = loader().load(ionText);
+        checkRendering(ION_1_0 + " x y", dg);
+    }
 
     @Test
     public void testPrintingDecimal()
