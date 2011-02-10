@@ -35,7 +35,12 @@ public class IonWriterSystemBinary
     /** Not null */
     private final OutputStream _user_output_stream;
 
-    boolean           _auto_flush;        // controls flushing in closeValue()
+    /**
+     * Do we {@link #flush()} after each top-level value?
+     * @see #closeValue()
+     */
+    private final boolean _auto_flush;
+
     boolean           _assure_ivm;        // forces IVM in the event the caller forgets to write an IVM or IVM symbol
 //    boolean           _any_values_written;
 
@@ -106,14 +111,17 @@ public class IonWriterSystemBinary
     }
 
     /**
-     * this is for internal use only.  It is called by flush to
+     * this is for internal use only.  It is called by {@link #finish()} to
      * reset the member variables.  The only reason it's not private
      * is so that the child class IonBinaryWriterUser can
      * handle its work then let this class finish up.
      */
     @Override
     protected void reset()
+    throws IOException
     {
+        writeBytes(_user_output_stream);
+
         _annotation_count = 0;
         _field_name_type = null;
         _in_struct = false;
@@ -153,10 +161,13 @@ public class IonWriterSystemBinary
         boolean is_datagram = (topType() == IonConstants.tidDATAGRAM);
         return is_datagram;
     }
+
+    @Override
     public int getDepth()
     {
         return _user_depth;
     }
+
     protected IonType getContainer()
     {
         IonType type;
@@ -524,24 +535,24 @@ public class IonWriterSystemBinary
                 this.flush();
             }
             catch (IOException e) {
+                // FIXME should not swallow this
                 throw new IonException(e);
             }
         }
 
     }
 
+
     public void flush() throws IOException
     {
-        if (this.atDatagramLevel() && _annotation_count == 0) {
-            writeBytes(_user_output_stream);
-            reset();
-        }
         _user_output_stream.flush();
     }
 
     public void close() throws IOException
     {
-        flush();
+        if (getDepth() == 0) {
+            finish();
+        }
         _user_output_stream.close();
     }
 
@@ -706,6 +717,8 @@ public class IonWriterSystemBinary
         patch_len += wroteLen;
         patch(patch_len);
     }
+
+    @Override
     public void writeIonVersionMarker() throws IOException
     {
         if (!atDatagramLevel()) {
@@ -715,6 +728,7 @@ public class IonWriterSystemBinary
 //        _any_values_written = true;
         _assure_ivm = false;  // we've done our job, we can turn this off now
     }
+
     public void writeTimestamp(Timestamp value) throws IOException
     {
         if (value == null) {
@@ -1156,6 +1170,7 @@ public class IonWriterSystemBinary
         patch(patch_len);
     }
 
+    // TODO make private?
     public int writeBytes(OutputStream userstream) throws IOException
     {
         int pos = 0;
@@ -1297,7 +1312,7 @@ public class IonWriterSystemBinary
         CountingStream cs = new CountingStream(userstream);
         IonWriterSystemBinary writer = new IonWriterSystemBinary(_default_system_symbol_table, cs, false /* autoflush */ , true /* suppress ivm */);
         symtab.writeTo(writer);
-        writer.flush();
+        writer.finish();
         int symtab_len = cs.getBytesWritten();
         return symtab_len;
     }

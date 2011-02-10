@@ -76,15 +76,23 @@ public abstract class IonWriterBaseImpl
      */
     protected abstract int getDepth();
 
+    /**
+     * Must only be called at top-level!
+     */
     abstract void reset() throws IOException;
 
-    //protected void reset() throws IOException
-    //{
-    //    if (getDepth() != 0) {
-    //        throw new IllegalStateException("you can't reset a writer that is in the middle of writing a value");
-    //    }
-    //    setSymbolTable(_system.getSystemSymbolTable());
-    //}
+    public final void finish() throws IOException
+    {
+        if (getDepth() != 0) {
+            String message =
+                "IonWriter.finish() can only be called at top-level.";
+            throw new IllegalStateException(message);
+        }
+
+        reset();
+        flush();
+    }
+
 
     //
     // symbol table support methods.  These handle the

@@ -36,7 +36,7 @@ public class NewDatagramIteratorSystemProcessingTest
         IonWriter writer = system().newTreeWriter(datagram);
 
         writer.writeValues(reader);
-        writer.flush();
+        writer.close();
 
         // not needed, used populateSymbolValue instead: datagram.deepMaterialize();
         ((IonValuePrivate)datagram).populateSymbolValues(null);
@@ -65,7 +65,7 @@ public class NewDatagramIteratorSystemProcessingTest
 
         IonWriter writer = system().newTreeSystemWriter(datagram);
         writer.writeValues(reader);
-        writer.flush();
+        writer.close();
 
         return datagram.systemIterator();
     }

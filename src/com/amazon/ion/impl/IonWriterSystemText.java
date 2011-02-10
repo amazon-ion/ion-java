@@ -27,7 +27,7 @@ import java.nio.CharBuffer;
 /**
  *
  */
-public class IonWriterSystemText
+public final class IonWriterSystemText
     extends IonWriterBaseImpl
 {
     /** Not null. */
@@ -597,6 +597,7 @@ public class IonWriterSystemText
         closeValue();
     }
 
+    @Override
     public void writeIonVersionMarker() throws IOException
     {
         writeSymbol(UnifiedSymbolTable.ION_1_0);
@@ -684,14 +685,13 @@ public class IonWriterSystemText
         if (_output instanceof Flushable) {
             ((Flushable)_output).flush();
         }
-        if (getDepth() == 0) {
-            reset();
-        }
     }
 
     public void close() throws IOException
     {
-        flush();
+        if (getDepth() == 0) {
+            finish();
+        }
         if (_output instanceof Closeable) {
             ((Closeable)_output).close();
         }

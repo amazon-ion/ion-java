@@ -545,14 +545,14 @@ public class IonDatagramLite
     private IonBinaryWriter make_filled_binary_writer()
     throws IOException
     {
-        IonWriterBinaryCompatibility.User writer = 
+        IonWriterBinaryCompatibility.User writer =
             new IonWriterBinaryCompatibility.User(_system, _catalog);
         IonReader reader = IonReaderFactoryX.makeSystemReader(this);
         writer.writeValues(reader);
-        writer.flush();
+        writer.finish();
         return writer;
     }
-    
+
     @SuppressWarnings("deprecation")
     public int byteSize() throws IonException
     {
@@ -1177,9 +1177,9 @@ public class IonDatagramLite
                 SymbolTable new_symbol_table = curr_symtab;
                 while (new_symbol_table != null)
                 {
-                	if ((new_symbol_table instanceof UnifiedSymbolTable) == false) {
-                		throw new IonException("only UnifiedSymbolTable instances are currently supported by IonDatagramLite");
-                	}
+                    if ((new_symbol_table instanceof UnifiedSymbolTable) == false) {
+                        throw new IonException("only UnifiedSymbolTable instances are currently supported by IonDatagramLite");
+                    }
                     IonValue rep = ((UnifiedSymbolTable)new_symbol_table).getIonRepresentation(this.__iterator.get_datagram_system());
                     assert(rep != null && __iterator.get_datagram_system() == rep.getSystem());
 

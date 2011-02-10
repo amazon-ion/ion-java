@@ -15,7 +15,6 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.math.BigInteger;
 
 /**
  * This writer handles the symbol table processing and
@@ -140,6 +139,7 @@ abstract class IonWriterUser
         return _current_writer.has_annotation(name, id);
     }
 
+    @Override
     public int getDepth()
     {
         return _current_writer.getDepth();
@@ -153,15 +153,14 @@ abstract class IonWriterUser
     public void flush() throws IOException
     {
         _current_writer.flush();
-
-        if (getDepth() == 0) {
-            assert(_current_writer == _system_writer);
-            reset();
-        }
     }
 
     public void close() throws IOException
     {
+        if (getDepth() == 0) {
+            assert(_current_writer == _system_writer);
+            finish();
+        }
         _current_writer.close();
         _system_writer.close();
     }
@@ -172,11 +171,11 @@ abstract class IonWriterUser
         if (_symbol_table_being_copied) {
             throw new IllegalStateException("you can't reset a user writer while a local symbol table value is being written");
         }
+        assert(_current_writer == _system_writer);
 
-        _system_writer.flush();
+        _system_writer.finish();
 
         _after_ion_version_marker = false;
-        _current_writer           = _system_writer;
 
 
         // Note:
@@ -526,6 +525,8 @@ abstract class IonWriterUser
         write_it = (_after_ion_version_marker == false);
         return write_it;
     }
+
+    @Override
     public void writeIonVersionMarker() throws IOException
     {
         if (getDepth() != 0 || _root_is_datagram == false) {

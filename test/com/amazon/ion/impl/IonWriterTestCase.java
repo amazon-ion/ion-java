@@ -516,4 +516,54 @@ public abstract class IonWriterTestCase
         IonStruct expected = struct("a::{f:a::null}");
         assertEquals(expected, reload().get(0));
     }
+
+    @Test
+    public void testFlushDoesNotReset()
+    throws Exception
+    {
+        SymbolTable fred1 = Symtabs.register("fred",   1, catalog());
+        IonWriter iw = makeWriter(fred1);
+        iw.writeSymbol("hey");
+        iw.flush();
+        iw.writeSymbol("now");
+        iw.close();
+
+        // Should have:  IVM SYMTAB hey now
+        IonDatagram dg = reload();
+        assertEquals(4, dg.systemSize());
+    }
+
+    @Test @Ignore
+    public void testFinishDoesReset()
+    throws Exception
+    {
+        SymbolTable fred1 = Symtabs.register("fred",   1, catalog());
+        IonWriter iw = makeWriter(fred1);
+        iw.writeSymbol("hey");
+        iw.finish();
+        iw.writeSymbol("now");
+        iw.close();
+
+        // Should have: IMV SYMTAB hey IMV SYMTAB? now
+        IonDatagram dg = reload();
+        assertTrue("not enough system values", 5 <= dg.systemSize());
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testFinishInContainer()
+    throws Exception
+    {
+        IonWriter iw = makeWriter();
+        iw.stepIn(IonType.LIST);
+        iw.finish();
+    }
+
+    @Test
+    public void testCloseInContainer()
+    throws Exception
+    {
+        IonWriter iw = makeWriter();
+        iw.stepIn(IonType.LIST);
+        iw.close();
+    }
 }

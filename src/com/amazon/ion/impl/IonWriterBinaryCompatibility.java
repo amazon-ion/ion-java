@@ -51,7 +51,7 @@ public abstract class IonWriterBinaryCompatibility
         public int byteSize()
         {
             try {
-                flush();
+                finish();
             }
             catch (IOException e) {
                 throw new IonException(e);
@@ -62,7 +62,7 @@ public abstract class IonWriterBinaryCompatibility
 
         public byte[] getBytes() throws IOException
         {
-            flush();
+            finish();
             byte[] bytes = get_output_stream().getBytes();
             return bytes;
         }
@@ -70,7 +70,7 @@ public abstract class IonWriterBinaryCompatibility
         public int getBytes(byte[] bytes, int offset, int len)
             throws IOException
         {
-            flush();
+            finish();
             int written = get_output_stream().getBytes(bytes, offset, len);
             return written;
         }
@@ -97,7 +97,7 @@ public abstract class IonWriterBinaryCompatibility
         public int byteSize()
         {
             try {
-                flush();
+                finish();
             }
             catch (IOException e) {
                 throw new IonException(e);
@@ -108,7 +108,7 @@ public abstract class IonWriterBinaryCompatibility
 
         public byte[] getBytes() throws IOException
         {
-            flush();
+            finish();
             byte[] bytes = get_output_stream().getBytes();
             return bytes;
         }
@@ -116,14 +116,14 @@ public abstract class IonWriterBinaryCompatibility
         public int getBytes(byte[] bytes, int offset, int len)
             throws IOException
         {
-            flush();
+            finish();
             int written = get_output_stream().getBytes(bytes, offset, len);
             return written;
         }
 
         public int writeBytes(OutputStream userstream) throws IOException
         {
-            flush();
+            finish();
             int written = get_output_stream().writeBytes(userstream);
             return written;
         }

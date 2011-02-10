@@ -1,7 +1,5 @@
 package com.amazon.ion.impl;
 
-import java.io.IOException;
-
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
@@ -9,46 +7,47 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.system.SystemFactory;
+import java.io.IOException;
 
-public class IonBuild 
+public class IonBuild
 {
     static final int Major = 1;
     static final int Minor = 8;
     static final int Patch = 5;
-    
+
     static final String CheckInDate    = "2010-08-30T10:05+07:00";
     static final String CheckInComment = "fixed symbol table ion struct binding (half way) - csuver";
 
     static final String[] History = {
         "{major_version:1,minor_version:8,patch:5,check_in_date:2010-08-30T10:05+07:00,check_in_comment:'''fixed symbol table ion struct binding (half way) - csuver'''}"
-    	,"{major_version:1,minor_version:8,patch:4,check_in_date:2010-06-24T09:56+07:00,check_in_comment:'''fixed symbol table related asserts from integration - csuver'''}"
+        ,"{major_version:1,minor_version:8,patch:4,check_in_date:2010-06-24T09:56+07:00,check_in_comment:'''fixed symbol table related asserts from integration - csuver'''}"
         ,"{major_version:1,minor_version:8,patch:3,check_in_date:2010-06-24T09:56+07:00,check_in_comment:'''fixed binary stepOut bug Jira 133 - csuver'''}"
         ,"{major_version:1,minor_version:8,patch:2,check_in_date:2010-06-07T08:10+07:00,check_in_comment:'''Initial identified JAR - with lite and fix for reading local symbol table - csuver'''}"
     };
-    
+
     static final String BrazilBuild = "@BRAZIL_VERSION@"; // someday we'll make this work
 
     static final int argid_HISTORY = 1;
     static final int argid_VERSION = 2;
     static final int argid_HELP    = 3;
     static final int argid_INVALID = -1;
-   
+
     static boolean printHelp    = false;
     static boolean printHistory = false;
     static boolean printVersion = false;
     static String  errorMessage = null;
 
-    
+
     /**
      * This main simply prints the version information to
      * allow users to identify the build version of the Jar.
-     * 
+     *
      * @param args user command line flags
      */
-    public static void main(String[] args) throws IOException 
+    public static void main(String[] args) throws IOException
     {
         process_command_line(args);
-        
+
         if (printVersion || printHistory) {
             doPrintVersion();
         }
@@ -56,9 +55,9 @@ public class IonBuild
             doPrintHelp();
         }
     }
-    
+
     private static void process_command_line(String[] args)
-    {        
+    {
         for (int ii=0; ii<args.length; ii++) {
             String arg = args[ii];
             if (arg == null || arg.length() < 1) continue;
@@ -80,11 +79,11 @@ public class IonBuild
         }
         return;
     }
-    private static int getArgumentId(String arg) 
+    private static int getArgumentId(String arg)
     {
         if (arg.startsWith("-") && arg.length() == 2) {
             switch (arg.charAt(1)) {
-            case 'h': case '?': 
+            case 'h': case '?':
                 return argid_HELP;
             case 'a':
                 return argid_HISTORY;
@@ -99,7 +98,7 @@ public class IonBuild
                 return argid_HELP;
             }
             if (arg.equals("history")) {
-                return argid_HISTORY;    
+                return argid_HISTORY;
             }
             if (arg.equals("version")) {
                 return argid_VERSION;
@@ -112,7 +111,7 @@ public class IonBuild
         errorMessage += "\narg["+ii+"] \""+arg+"\" is unrecognized or invalid.";
         printHelp = true;
     }
-    
+
     private static void doPrintHelp() {
         System.out.println("IonJava JAR - CSuver");
         System.out.println("Copyright (c) 2010 Amazon.com");
@@ -131,7 +130,7 @@ public class IonBuild
     {
         IonSystem sys = SystemFactory.newSystem();
         IonStruct v = sys.newEmptyStruct();
-        
+
         if (printVersion) {
             v.add("major_version", sys.newInt(Major));
             v.add("minor_version", sys.newInt(Minor));
@@ -140,7 +139,7 @@ public class IonBuild
             v.add("check_in_date", t);
             v.add("check_in_comment", sys.newString(CheckInComment));
         }
-        
+
         if (printHistory) {
             IonList h = sys.newEmptyList();
             for (int ii=0; ii<History.length; ii++) {
@@ -156,12 +155,12 @@ public class IonBuild
                 ,false // boolean suppressIonVersionMarker
         );
         v.addTypeAnnotation("IonJava");
-        
+
         IonWriter w = IonWriterFactory.makeWriter(sys, (Appendable)System.out, options);
         IonReader r = sys.newReader(v);
         w.writeValues(r);
-        w.flush();
+        w.finish();
         System.out.println();
     }
-    
+
 }

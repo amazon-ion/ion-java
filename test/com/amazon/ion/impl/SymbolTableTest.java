@@ -1138,8 +1138,8 @@ public class SymbolTableTest
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonWriter writer = system().newTextWriter(out);
         writer.writeValue(data);
-        writer.flush();
-        out.close();
+        writer.close();
+
         // dataMap.put("value", out.toByteArray());
         byte[] bytes = out.toByteArray();
         assertNotNull(bytes);

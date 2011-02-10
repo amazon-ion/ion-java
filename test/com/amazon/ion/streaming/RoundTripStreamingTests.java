@@ -103,7 +103,7 @@ extends IonTestCase
         IonWriter tw = system().newTextWriter(out, options);
 
         tw.writeValues(in);
-        tw.flush();
+        tw.close();
 
         byte[] buf = out.toByteArray(); // this is utf-8
         return buf;

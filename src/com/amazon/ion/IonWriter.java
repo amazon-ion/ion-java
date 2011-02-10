@@ -84,8 +84,34 @@ public interface IonWriter
      * flushed until the the symbol context is reset.
      *
      * @throws IOException if thrown by the underlying output target.
+     *
+     * @see #finish()
      */
     public void flush() throws IOException;
+
+
+    /**
+     * Indicates that writing is completed and all buffered data should be
+     * written and flushed as if this were the end of the Ion data stream.
+     * For example, an Ion binary writer will finalize any local symbol table,
+     * write all top-level values, and then flush.
+     * <p>
+     * This method may only be called when all top-level values are
+     * completely written and {@link #stepOut() stepped-out}.
+     * <p>
+     * Implementations should allow the application to continue writing further
+     * top-level values following the semantics for concatenating Ion data
+     * streams. If another top-level value is written, it must be preceded by
+     * an Ion version marker in order to reset the stream context as if this
+     * were a new stream.
+     *
+     * @throws IOException if thrown by the underlying output target.
+     * @throws IllegalStateException when not between top-level values.
+     *
+     * @see #flush
+     */
+    public void finish() throws IOException;
+
 
     /**
      * Sets the pending field name to the given symbol id.
