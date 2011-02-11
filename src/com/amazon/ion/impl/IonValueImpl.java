@@ -1357,7 +1357,7 @@ public abstract class IonValueImpl
             }
             assert symtab.isSystemTable();
             synchronized (this) {
-                symtab = makeNewLocalSymbolTable(_system, symtab);
+                symtab = makeNewLocalSymbolTable(symtab);
                 this.setSymbolTable(symtab);
             }
         }

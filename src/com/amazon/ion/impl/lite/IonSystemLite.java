@@ -40,6 +40,7 @@ import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.impl.IonWriterBaseImpl;
 import com.amazon.ion.impl.IonWriterBinaryCompatibility;
 import com.amazon.ion.impl.IonWriterFactory;
+import com.amazon.ion.impl.IonWriterUserBinary;
 import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import com.amazon.ion.impl.SystemValueIterator;
 import com.amazon.ion.impl.UnifiedSymbolTable;
@@ -66,7 +67,7 @@ public class IonSystemLite
     private final UnifiedSymbolTable _system_symbol_table = UnifiedSymbolTable.makeSystemSymbolTable(this, 1);
     private       IonCatalog         _catalog;
     private       ValueFactoryLite   _value_factory;
-    private       IonLoader          _loader;
+    private final IonLoader          _loader;
 
 
     public IonSystemLite()
@@ -76,10 +77,10 @@ public class IonSystemLite
 
     public IonSystemLite(IonCatalog catalog)
     {
-        init_system(catalog, DEFAULT_CONTEXT_FREE_LIST_SIZE);
+        this(catalog, DEFAULT_CONTEXT_FREE_LIST_SIZE);
     }
 
-    private void init_system(IonCatalog catalog, int context_free_list_size)
+    private IonSystemLite(IonCatalog catalog, int context_free_list_size)
     {
         set_context_free_list_max(context_free_list_size);
 
@@ -89,8 +90,6 @@ public class IonSystemLite
         // whacked but I'm not going to figure this out right now
         _value_factory = this;
         _value_factory.set_system(this);
-
-        return;
     }
 
     /**
@@ -147,7 +146,7 @@ public class IonSystemLite
         return new IonLoaderLite(this, catalog);
     }
 
-    public SymbolTable getSystemSymbolTable()
+    public final SymbolTable getSystemSymbolTable()
     {
         return _system_symbol_table;
     }
@@ -189,15 +188,18 @@ public class IonSystemLite
         return iterator;
     }
 
+    @Deprecated
     public IonBinaryWriter newBinaryWriter()
     {
         IonBinaryWriter writer = new IonWriterBinaryCompatibility.User(this, _catalog);
         return writer;
     }
 
+    @Deprecated
     public IonBinaryWriter newBinaryWriter(SymbolTable... imports)
     {
-        UnifiedSymbolTable symbols = UnifiedSymbolTable.makeNewLocalSymbolTable(this, this.getSystemSymbolTable(), imports);
+        UnifiedSymbolTable symbols =
+            makeNewLocalSymbolTable(this.getSystemSymbolTable(), imports);
         IonWriterBinaryCompatibility.User writer =
             new IonWriterBinaryCompatibility.User(this, _catalog);
         try {
@@ -206,6 +208,14 @@ public class IonSystemLite
         catch (IOException e) {
             throw new IonException(e);
         }
+        return writer;
+    }
+
+
+    public IonWriter newBinaryWriter(OutputStream out, SymbolTable... imports)
+    {
+        IonWriterUserBinary writer =
+            IonWriterFactory.makeWriter(this, getCatalog(), out, imports);
         return writer;
     }
 
@@ -278,35 +288,8 @@ public class IonSystemLite
 
     public UnifiedSymbolTable newLocalSymbolTable(SymbolTable... imports)
     {
-        if (imports == null || imports.length == 0)
-        {
-            UnifiedSymbolTable st = UnifiedSymbolTable.makeNewLocalSymbolTable(this, getSystemSymbolTable());
-            return st;
-        }
-
-        SymbolTable systemTable;
-        if (imports[0].isSystemTable())
-        {
-            systemTable = imports[0];
-
-            if (imports.length != 0)
-            {
-                SymbolTable[] others = new SymbolTable[imports.length - 1];
-                System.arraycopy(imports, 1, others, 0, imports.length - 1);
-                imports = others;
-            }
-            else
-            {
-                imports = null;
-            }
-        }
-        else
-        {
-            systemTable = getSystemSymbolTable();
-        }
-
-        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewLocalSymbolTable(this, systemTable, imports);
-        // done in makeNewLocalSymbolTable():  st.setSystem(this);
+        UnifiedSymbolTable st =
+            makeNewLocalSymbolTable(getSystemSymbolTable(), imports);
         return st;
     }
 
@@ -939,7 +922,7 @@ public class IonSystemLite
     public IonDatagram newDatagram(IonCatalog catalog, SymbolTable... imports)
     {
         UnifiedSymbolTable symbols =
-            makeNewLocalSymbolTable(this, this.getSystemSymbolTable(), imports);
+            makeNewLocalSymbolTable(this.getSystemSymbolTable(), imports);
         IonDatagramLite dg = new IonDatagramLite(this, catalog);
         dg.setSymbolTable(symbols);
         return dg;

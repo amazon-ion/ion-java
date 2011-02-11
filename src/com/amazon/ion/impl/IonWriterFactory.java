@@ -2,6 +2,8 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
+
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonException;
@@ -376,13 +378,33 @@ public class IonWriterFactory
         IonWriter writer = makeWriter(system, catalog, output);
         return writer;
     }
-    public static IonWriter makeWriter(IonSystem system, IonCatalog catalog, OutputStream output)
+
+    public static IonWriterUserBinary makeWriter(IonSystem system,
+                                                 IonCatalog catalog,
+                                                 OutputStream output,
+                                                 SymbolTable... imports)
     {
-        IonWriterSystemBinary system_writer = new IonWriterSystemBinary(system.getSystemSymbolTable(), output,
-                                                            /* autoFlush */    false,
-                                                            /* suppressIVM */  false
-                                                            );
-        IonWriter writer = new IonWriterUserBinary(system, catalog, system_writer, true);
+        UnifiedSymbolTable symbols =
+            makeNewLocalSymbolTable(system.getSystemSymbolTable(), imports);
+
+        // The imports may override the system's default.
+        SymbolTable initialSystemSymtab = symbols.getSystemSymbolTable();
+
+        IonWriterSystemBinary system_writer =
+            new IonWriterSystemBinary(initialSystemSymtab,
+                                      output,
+                                      /* autoFlush */    false,
+                                      /* suppressIVM */  false);
+        IonWriterUserBinary writer =
+            new IonWriterUserBinary(system, catalog, system_writer,
+                                    /* suppressIVM */ true);
+        try {
+            writer.setSymbolTable(symbols);
+        }
+        catch (IOException e) {
+            throw new IonException(e);
+        }
+
         return writer;
     }
     public static IonWriterBaseImpl makeWriter(IonSystem system, Appendable output, TextOptions options)

@@ -6,6 +6,7 @@ import static com.amazon.ion.SystemSymbolTable.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
 import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemReader;
+import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
 import com.amazon.ion.ContainedValueException;
@@ -71,7 +72,7 @@ public class IonSystemImpl
     private final UnifiedSymbolTable mySystemSymbols;
 
     private IonCatalog  myCatalog;
-    private IonLoader   myLoader;
+    private final IonLoader myLoader;
 
     /**
      * If true, this system will create the newer, faster, second-generation
@@ -126,35 +127,8 @@ public class IonSystemImpl
 
     public UnifiedSymbolTable newLocalSymbolTable(SymbolTable... imports)
     {
-        if (imports == null || imports.length == 0)
-        {
-            UnifiedSymbolTable st = UnifiedSymbolTable.makeNewLocalSymbolTable(this, mySystemSymbols);
-            return st;
-        }
-
-        SymbolTable systemTable;
-        if (imports[0].isSystemTable())
-        {
-            systemTable = imports[0];
-
-            if (imports.length != 0)
-            {
-                SymbolTable[] others = new SymbolTable[imports.length - 1];
-                System.arraycopy(imports, 1, others, 0, imports.length - 1);
-                imports = others;
-            }
-            else
-            {
-                imports = null;
-            }
-        }
-        else
-        {
-            systemTable = mySystemSymbols;
-        }
-
-        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewLocalSymbolTable(this, systemTable, imports);
-        // done in makeNewLocalSymbolTable():  st.setSystem(this);
+        UnifiedSymbolTable st =
+            makeNewLocalSymbolTable(mySystemSymbols, imports);
         return st;
     }
 
@@ -301,7 +275,7 @@ public class IonSystemImpl
         return new LoaderImpl(this, catalog);
     }
 
-    public synchronized IonLoader getLoader()
+    public IonLoader getLoader()
     {
         return myLoader;
     }
@@ -727,13 +701,14 @@ public class IonSystemImpl
         return userWriter;
     }
 
-    @SuppressWarnings("deprecation")
+    @Deprecated
     public IonBinaryWriter newBinaryWriter()
     {
         IonBinaryWriter user_writer = new IonWriterBinaryCompatibility.User(this, myCatalog);
         return user_writer;
     }
 
+    @Deprecated
     public IonBinaryWriter newBinaryWriter(SymbolTable... imports)
     {
         UnifiedSymbolTable lst = newLocalSymbolTable(imports);
@@ -746,6 +721,13 @@ public class IonSystemImpl
             throw new IonException(e);
         }
         return user_writer;
+    }
+
+    public IonWriter newBinaryWriter(OutputStream out, SymbolTable... imports)
+    {
+        IonWriterUserBinary writer =
+            IonWriterFactory.makeWriter(this, getCatalog(), out, imports);
+        return writer;
     }
 
     public IonBinaryWriter newBinarySystemWriter()

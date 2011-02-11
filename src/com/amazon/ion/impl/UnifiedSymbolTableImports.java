@@ -32,6 +32,10 @@ public class UnifiedSymbolTableImports
         }
     }
 
+    /**
+     * @throws IllegalArgumentException if the table is local or system.
+     * @throws NullPointerException if the table is null.
+     */
     void addImport(UnifiedSymbolTable symtab, int maxId)
     {
         if (symtab.isLocalTable() || symtab.isSystemTable()) {

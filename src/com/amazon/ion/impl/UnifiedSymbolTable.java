@@ -416,11 +416,16 @@ public final class UnifiedSymbolTable
         }
 
         SymbolTable sys_table = sys.getSystemSymbolTable();
-        UnifiedSymbolTable table = makeNewLocalSymbolTable(sys, sys_table);
+        UnifiedSymbolTable table = makeNewLocalSymbolTable(sys_table);
 
         return table;
     }
 
+    /**
+     * Creates a new local symtab with no imports.
+     *
+     * @param systemSymbolTable the system symtab. Must not be null.
+     */
     static public UnifiedSymbolTable
     makeNewLocalSymbolTable(SymbolTable systemSymbolTable)
     {
@@ -436,29 +441,44 @@ public final class UnifiedSymbolTable
         return table;
     }
 
+    /**
+     * Creates a new local symtab with given imports.
+     *
+     * @param systemSymbolTable the default system symtab, if one doesn't
+     * exist in the imports. Must not be null.
+     * @param imports the set of shared symbol tables to import.
+     * The first (and only the first) may be a system table, in which case the
+     * default is ignored.
+     *
+     * @throws IllegalArgumentException if any import is a local table,
+     * or if any but the first is a system table.
+     * @throws NullPointerException if any import is null.
+     */
     static public UnifiedSymbolTable
-    makeNewLocalSymbolTable(IonSystem sys, SymbolTable systemSymbolTable,
-                            SymbolTable... imports)
+    makeNewLocalSymbolTable(SymbolTable systemSymbolTable, SymbolTable... imports)
     {
-        if (imports != null && imports.length > 0 && imports[0].isSystemTable()) {
-            if (systemSymbolTable == null) {
-                systemSymbolTable = imports[0];
-            }
-            SymbolTable[] temp = new SymbolTable[imports.length - 1];
-            System.arraycopy(imports, 1, temp, 0, imports.length - 1);
-            imports = temp;
+        if (!systemSymbolTable.isSystemTable()) {
+            throw new IllegalArgumentException();
         }
 
-        if (systemSymbolTable != null) {
-            if (!systemSymbolTable.isSystemTable()) {
-                throw new IllegalArgumentException();
+        if (imports != null && imports.length > 0 && imports[0].isSystemTable()) {
+            systemSymbolTable = imports[0];
+
+            if (imports.length != 0)
+            {
+                SymbolTable[] others = new SymbolTable[imports.length - 1];
+                System.arraycopy(imports, 1, others, 0, imports.length - 1);
+                imports = others;
             }
-            if (! (systemSymbolTable instanceof UnifiedSymbolTable)) {
-                throw new IllegalArgumentException();
+            else
+            {
+                imports = null;
             }
         }
-        else {
-            systemSymbolTable = sys.getSystemSymbolTable();
+
+        // TODO check all imports?
+        if (! (systemSymbolTable instanceof UnifiedSymbolTable)) {
+            throw new IllegalArgumentException("Symbol tables must be UnifiedSymbolTable");
         }
 
         UnifiedSymbolTable table = new UnifiedSymbolTable(systemSymbolTable);
@@ -468,9 +488,8 @@ public final class UnifiedSymbolTable
                 UnifiedSymbolTable symbolTable = (UnifiedSymbolTable) imports[ii];
                 table._import_list.addImport(symbolTable, symbolTable.getMaxId());
             }
+            table._sid_base = table._import_list.getMaxId();
         }
-
-        table._sid_base = table._import_list.getMaxId();
 
         return table;
     }

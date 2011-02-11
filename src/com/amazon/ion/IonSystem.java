@@ -30,6 +30,8 @@ public interface IonSystem
 {
     /**
      * Gets the default system symbol table.
+     *
+     * @return not null.
      */
     public SymbolTable getSystemSymbolTable();
 
@@ -70,7 +72,7 @@ public interface IonSystem
      * Creates a new local symbol table based on specific imported tables.
      * If the first imported table is a system table, then the local table will
      * use it appropriately. Otherwise, the local table will use this system's
-     * {@linkplain #getCatalog() default catalog}.
+     * {@linkplain #getSystemSymbolTable() default system symbol table}.
      *
      * @param imports the set of shared symbol tables to import.
      * The first (and only the first) may be a system table.
@@ -457,11 +459,34 @@ public interface IonSystem
     public IonWriter newTextWriter(Appendable out, SymbolTable... imports)
         throws IOException;
 
+
+    /**
+     * Creates a new writer that will encode binary Ion data,
+     * using the given shared symbol tables as imports.
+     * <p>
+     * The output stream will start with an Ion Version Marker and a
+     * local symbol table that uses the given {@code imports}.
+     *
+     * @param out the stream to receive binary Ion data; not null.
+     * @param imports a sequence of shared symbol tables to import.
+     * The first (and only the first) may be a system table.
+     *
+     * @return a new {@link IonWriter} instance; not null.
+     *
+     * @throws IllegalArgumentException if any import is a local table,
+     * or if any but the first is a system table.
+     * @throws NullPointerException if any import is null.
+     */
+    public IonWriter newBinaryWriter(OutputStream out, SymbolTable... imports);
+
     /**
      * Creates a new writer that will encode binary Ion data.
      *
      * @return a new {@link IonBinaryWriter} instance; not {@code null}.
+     *
+     * @deprecated Use {@link #newBinaryWriter(OutputStream, SymbolTable...)}.
      */
+    @Deprecated
     public IonBinaryWriter newBinaryWriter();
 
     /**
@@ -474,7 +499,10 @@ public interface IonSystem
      * @param imports a sequence of shared symbol tables
      *
      * @return a new {@link IonBinaryWriter} instance; not {@code null}.
+     *
+     * @deprecated Use {@link #newBinaryWriter(OutputStream, SymbolTable...)}.
      */
+    @Deprecated
     public IonBinaryWriter newBinaryWriter(SymbolTable... imports);
 
 
