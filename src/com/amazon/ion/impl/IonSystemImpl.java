@@ -1004,18 +1004,12 @@ public final class IonSystemImpl
 
     public IonValue singleValue(String ionText)
     {
-//        return singleValue(newReader(ionText));
-// FIXME ION-113 Use IonReader to avoid binary transcoding
-        Iterator<IonValue> iterator = iterate(ionText);
-        return singleValue(iterator);
+        return singleValue(newReader(ionText));
     }
 
     public IonValue singleValue(byte[] ionData)
     {
-//      return singleValue(newReader(ionData));
-// FIXME ION-113 Use IonReader to avoid binary transcoding
-        Iterator<IonValue> iterator = iterate(ionData);
-        return singleValue(iterator);
+        return singleValue(newReader(ionData));
     }
 
 
