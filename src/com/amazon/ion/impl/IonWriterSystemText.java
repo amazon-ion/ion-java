@@ -27,7 +27,7 @@ import java.nio.CharBuffer;
 /**
  *
  */
-public final class IonWriterSystemText
+public class IonWriterSystemText
     extends IonWriterBaseImpl
 {
     /** Not null. */
