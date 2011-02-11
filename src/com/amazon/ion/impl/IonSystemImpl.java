@@ -11,7 +11,6 @@ import static com.amazon.ion.util.IonTextUtils.printString;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.Decimal;
-import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonCatalog;
@@ -64,7 +63,7 @@ import java.util.List;
 /**
  * The standard implementation of Ion.
  */
-public class IonSystemImpl
+public final class IonSystemImpl
     implements IonSystemPrivate
 {
     public static final int SYSTEM_VERSION = 1;
@@ -94,21 +93,19 @@ public class IonSystemImpl
     }
 
 
-    public UnifiedSymbolTable getSystemSymbolTable()
+    public final UnifiedSymbolTable getSystemSymbolTable()
     {
         return mySystemSymbols;
     }
 
 
-    public UnifiedSymbolTable getSystemSymbolTable(String systemId)
+    public UnifiedSymbolTable getSystemSymbolTable(String ionVersionId)
         throws UnsupportedIonVersionException
     {
-        if (systemId.equals(SystemSymbolTable.ION_1_0))
-        {
-            return mySystemSymbols;
+        if (!UnifiedSymbolTable.ION_1_0.equals(ionVersionId)) {
+            throw new UnsupportedIonVersionException(ionVersionId);
         }
-
-        throw new UnsupportedIonVersionException(systemId);
+        return getSystemSymbolTable();
     }
 
 
@@ -702,14 +699,15 @@ public class IonSystemImpl
     }
 
     @Deprecated
-    public IonBinaryWriter newBinaryWriter()
+    public com.amazon.ion.IonBinaryWriter newBinaryWriter()
     {
-        IonBinaryWriter user_writer = new IonWriterBinaryCompatibility.User(this, myCatalog);
-        return user_writer;
+        IonWriterBinaryCompatibility.User writer =
+            new IonWriterBinaryCompatibility.User(this, myCatalog);
+        return writer;
     }
 
     @Deprecated
-    public IonBinaryWriter newBinaryWriter(SymbolTable... imports)
+    public com.amazon.ion.IonBinaryWriter newBinaryWriter(SymbolTable... imports)
     {
         UnifiedSymbolTable lst = newLocalSymbolTable(imports);
         IonWriterBinaryCompatibility.User user_writer =
@@ -730,11 +728,6 @@ public class IonSystemImpl
         return writer;
     }
 
-    public IonBinaryWriter newBinarySystemWriter()
-    {
-        IonBinaryWriter system_writer = new IonWriterBinaryCompatibility.System(this, false /* autoflush */);
-        return system_writer;
-    }
 
     public IonWriter newTreeWriter(IonContainer container)
     {

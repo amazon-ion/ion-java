@@ -9,6 +9,7 @@ import com.amazon.ion.SymbolTable;
 /**
  *
  */
+@SuppressWarnings("deprecation")
 public class OldBinaryWriterTest
     extends IonWriterTestCase
 {

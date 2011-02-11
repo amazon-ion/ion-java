@@ -2,7 +2,6 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonReader;
@@ -65,8 +64,6 @@ public interface IonSystemPrivate
     public IonWriter newTextWriter(OutputStream out, SymbolTable... imports) throws IOException;
 
     public IonWriter newTextWriter(OutputStream out, TextOptions options, SymbolTable... imports) throws IOException;
-
-    public IonBinaryWriter newBinarySystemWriter();
 
     public IonWriter newTreeWriter(IonContainer container);
 

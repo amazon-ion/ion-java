@@ -7,7 +7,6 @@ import static com.amazon.ion.impl.IonWriterFactory.makeWriter;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
-import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonCatalog;
@@ -58,7 +57,7 @@ import java.util.NoSuchElementException;
 /**
  *
  */
-public class IonSystemLite
+public final class IonSystemLite
     extends ValueFactoryLite
     implements IonSystemPrivate, IonContext
 {
@@ -155,7 +154,7 @@ public class IonSystemLite
         throws UnsupportedIonVersionException
     {
         if (!UnifiedSymbolTable.ION_1_0.equals(ionVersionId)) {
-            throw new UnsupportedIonVersionException("only Ion version 1 is supported currently");
+            throw new UnsupportedIonVersionException(ionVersionId);
         }
         return getSystemSymbolTable();
     }
@@ -189,14 +188,15 @@ public class IonSystemLite
     }
 
     @Deprecated
-    public IonBinaryWriter newBinaryWriter()
+    public com.amazon.ion.IonBinaryWriter newBinaryWriter()
     {
-        IonBinaryWriter writer = new IonWriterBinaryCompatibility.User(this, _catalog);
+        IonWriterBinaryCompatibility.User writer =
+            new IonWriterBinaryCompatibility.User(this, _catalog);
         return writer;
     }
 
     @Deprecated
-    public IonBinaryWriter newBinaryWriter(SymbolTable... imports)
+    public com.amazon.ion.IonBinaryWriter newBinaryWriter(SymbolTable... imports)
     {
         UnifiedSymbolTable symbols =
             makeNewLocalSymbolTable(this.getSystemSymbolTable(), imports);
@@ -1059,12 +1059,6 @@ public class IonSystemLite
         IonReader reader = IonReaderFactoryX.makeReader(ionBinary);
         SystemValueIterator sysreader = new ReaderIterator(this, reader);
         return sysreader;
-    }
-
-    public IonBinaryWriter newBinarySystemWriter()
-    {
-        IonBinaryWriter writer = new IonWriterBinaryCompatibility.System(this, false);
-        return writer;
     }
 
     public SystemValueIterator newLegacySystemReader(IonCatalog catalog,
