@@ -17,7 +17,10 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.util.NoSuchElementException;
 
-
+/**
+ * WARNING: Unless {@link #resetBuffer()} is called, this class will
+ * incrementally accumulate data in its internal buffer!
+ */
 public class SystemValueIteratorImpl
     implements SystemValueIterator
 {
@@ -52,6 +55,9 @@ public class SystemValueIteratorImpl
         return reader;
     }
 
+    /**
+     * TODO Must correct ION-160 before exposing this or using from public API.
+     */
     public static SystemValueIterator makeSystemReader(IonSystemImpl system,
                                          IonCatalog catalog,
                                          SymbolTable initialSymboltable,

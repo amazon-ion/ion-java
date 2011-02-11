@@ -95,6 +95,7 @@ public final class IonDatagramImpl
 
 
     /**
+     * Materializes the top-level values in the buffer.
      *
      * @param buffer is filled with Ion data.
      *
@@ -106,6 +107,9 @@ public final class IonDatagramImpl
     }
 
 
+    /**
+     * Loads the whole stream into memory.
+     */
     public IonDatagramImpl(IonSystemImpl system, IonCatalog catalog, Reader ionText)
     {
         this(system
@@ -155,6 +159,8 @@ public final class IonDatagramImpl
     }
 
     /**
+     * Loads the whole stream into memory.
+     *
      * @param initialSymbolTable must be local, not shared.
      *
      * @throws NullPointerException if any parameter is null.
@@ -171,7 +177,8 @@ public final class IonDatagramImpl
     }
 
     /**
-     * Workhorse constructor this does the actual work.
+     * Workhorse constructor this loads the whole stream into memory and
+     * materializes all top-level values.
      *
      * @throws NullPointerException if any parameter is null.
      */

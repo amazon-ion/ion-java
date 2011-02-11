@@ -29,8 +29,14 @@ public interface IonSystemPrivate
 
     public UnifiedSymbolTable newSharedSymbolTable(IonStruct ionRep);
 
+    /**
+     * TODO Must correct ION-160 before exposing this or using from public API.
+     */
     public Iterator<IonValue> systemIterate(String ionText);
 
+    /**
+     * TODO Must correct ION-160 before exposing this or using from public API.
+     */
     public Iterator<IonValue> systemIterate(InputStream ionData);
 
     public IonTextReader newSystemReader(String ionText);

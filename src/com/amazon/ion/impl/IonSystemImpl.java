@@ -294,8 +294,9 @@ public final class IonSystemImpl
     }
 
     /**
-     * FIXME Can't yet add this to public API, unclear how to do buffer recycling
-     * since that's currently done by the UserReader.
+     * TODO Must correct ION-160 before exposing this or using from public API.
+     * Unclear how to do buffer recycling since that's currently done by the
+     * {@link UserValueIterator} an not by the system level.
      */
     protected SystemValueIterator systemIterate(Reader reader)
     {
@@ -304,7 +305,6 @@ public final class IonSystemImpl
                                                          newLocalSymbolTable(),  // FIXME: should be null
                                                          reader);
         return sysreader;
-
     }
 
     public Iterator<IonValue> iterate(String ionText)
@@ -351,9 +351,10 @@ public final class IonSystemImpl
     }
 
     /**
-     * FIXME If data is text, the resulting reader will NOT flush the buffer
+     * TODO Must correct ION-160 before exposing this or using from public API
+     * If data is text, the resulting reader will NOT flush the buffer
      * and will accumulate memory!
-     * See comment on systemIterate(Reader) before adding to public APIs!
+     * See comment on {@link #systemIterate(Reader)} before adding to public APIs!
      */
     public Iterator<IonValue> systemIterate(InputStream ionData)
     {
@@ -375,6 +376,10 @@ public final class IonSystemImpl
             else
             {
                 Reader reader = new InputStreamReader(pushback, "UTF-8");
+                // This incrementally transcodes the whole stream into
+                // a buffer. However, when system==false we wrap this with a
+                // UserReader below, and then flip a switch to recycle the
+                // buffer.
                 systemReader = systemIterate(reader);
             }
         }
@@ -388,6 +393,7 @@ public final class IonSystemImpl
         UserValueIterator userReader = new UserValueIterator(systemReader);
         if (!binaryData)
         {
+            // This prevents us from accumulating all the transcoded data.
             userReader.setBufferToRecycle();
         }
         return userReader;

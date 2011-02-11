@@ -16,7 +16,7 @@ public class UserValueIterator
     implements Iterator<IonValue>
 {
     /** if true we reset the system reader for each user value */
-    private boolean		_recycle_buffer;
+    private boolean        _recycle_buffer;
 
     private SystemValueIterator _systemReader;
 
@@ -33,6 +33,9 @@ public class UserValueIterator
 
 
     /**
+     * Unless {@link #setBufferToRecycle()} is called, this iterator will
+     * intrementally load the encode the whole input stream into a buffer!
+     *
      * @param initialSymbolTable must be local, not shared.
      * @throws NullPointerException if input is null.
      */
@@ -53,10 +56,10 @@ public class UserValueIterator
     }
 
     public void setBufferToRecycle() {
-    	this._recycle_buffer = true;
+        this._recycle_buffer = true;
     }
     public void clearBufferRecycling() {
-    	this._recycle_buffer = false;
+        this._recycle_buffer = false;
     }
 
     //Returns true if the iteration has more elements.
