@@ -908,7 +908,22 @@ public final class IonSystemLite
     public IonDatagram newDatagram(IonCatalog catalog, IonValue initialChild)
     {
         IonDatagram dg = new IonDatagramLite(this, catalog);
-        dg.add(initialChild);
+
+        if (initialChild != null) {
+            if (initialChild.getSystem() != this) {
+                throw new IonException("this Ion system can't mix with instances from other system impl's");
+            }
+
+            // This is an API anomaly but it's documented so here we go.
+            if (initialChild.getContainer() != null) {
+                initialChild = clone(initialChild);
+            }
+
+            // This will fail if initialChild instanceof IonDatagram:
+            dg.add(initialChild);
+        }
+
+        assert dg.getSystem() == this;
         return dg;
     }
 

@@ -190,13 +190,6 @@ public final class IonSystemImpl
             {
                 IonDatagramImpl dg =
                     new IonDatagramImpl(this, this.getCatalog(), (IonReader) null);
-// Force symtab preparation  FIXME should not be necessary
-
-
-// dg.byteSize();
-
-
-
                 return dg;
             }
             catch (IOException e)
@@ -211,19 +204,18 @@ public final class IonSystemImpl
 
     public IonDatagram newDatagram(IonValue initialChild)
     {
+        IonDatagramImpl datagram = newDatagram();
+
         if (initialChild != null) {
             if (initialChild.getSystem() != this) {
                 throw new IonException("this Ion system can't mix with instances from other system impl's");
             }
-            // FIXME we shouldn't do this, it violates expectations
+
+            // This is an API anomaly but it's documented so here we go.
             if (initialChild.getContainer() != null) {
                 initialChild = clone(initialChild);
             }
-        }
 
-        IonDatagramImpl datagram = newDatagram();
-
-        if (initialChild != null) {
             // This will fail if initialChild instanceof IonDatagram:
             datagram.add(initialChild);
         }

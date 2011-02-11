@@ -454,18 +454,34 @@ public class DatagramTest
 //        catch (IllegalArgumentException e) { }
     }
 
-    @Test
+
+    @Test(expected = IllegalArgumentException.class)
     public void testNewDatagramFromDatagram()
     {
         IonDatagram dg1 = loader().load("one");
-        try
-        {
-            system().newDatagram(dg1);
-            fail("Expected IllegalArgumentException");
-        }
-        catch (IllegalArgumentException e) { }
+        system().newDatagram(dg1);
     }
 
+    @Test
+    public void testNewDatagramWithNoValue()
+    {
+        IonValue v = null;
+
+        IonDatagram dg = system().newDatagram(v);
+        assertEquals("datagram size", 0, dg.size());
+    }
+
+    @Test
+    public void testNewDatagramWithContainedValue()
+    {
+        IonList list = system().newEmptyList();
+        IonNull n = list.add().newNull();
+        n.addTypeAnnotation("ann");
+
+        IonDatagram dg = system().newDatagram(n);
+        assertNotSame(n, dg.get(0));
+        assertEquals(n, dg.get(0));
+    }
 
     @Test
     public void testNewDatagramWithImports()
