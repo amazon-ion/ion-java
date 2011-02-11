@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.system;
 
@@ -14,6 +12,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
 
+
 /**
  * A basic implementation of {@link IonCatalog} as a hash table.  There is no
  * automatic removal of entries.
@@ -24,7 +23,7 @@ public class SimpleCatalog
     /*  CAVEATS AND LIMITATIONS
      *
      *  - When getTable can't find an exact match, it does a linear scan of
-     *    all tables with the same name to find the greatest version.
+     *    all tables with the same name to find the best match.
      *  - Synchonization could probably be tighter using read/write locks
      *    instead of simple monitors.
      */
@@ -91,45 +90,45 @@ public class SimpleCatalog
                 // asked for (see CAVEAT above)
                 assert !versions.isEmpty();
 
-                // In Java 5 this works:
-                // OK it doesn't seem to work
-                //Integer last_version = versions.lastKey();
-                //st = versions.get(last_version);
-                int best = version;
-                Integer ibest = null;
-                for (Integer v : versions.keySet())
-                {
-                    if (best > version) {
-                        if (v.intValue() < best) {
-                            best = v.intValue();
-                            ibest = v;
-                        }
-                    }
-                    else if (best < version) {
-                        if (v.intValue() > best) {
-                            best = v.intValue();
-                            ibest = v;
-                        }
-                    }
-                    else {
-                        best = v.intValue();
-                        ibest = v;
-                    }
-                }
+                Integer ibest = bestMatch(version, versions.keySet());
                 assert(ibest != null);
                 st = versions.get(ibest);
-
-                // TODO in Java 6 this is probably faster:
-                //Map.Entry<Integer, UnifiedSymbolTable> entry;
-                //entry = versions.lastEntry();
-                //assert entry != null;
-                //st = entry.getValue();
-
                 assert st != null;
             }
 
             return st;
         }
+    }
+
+    static Integer bestMatch(int requestedVersion,
+                             Iterable<Integer> availableVersions)
+    {
+        int best = requestedVersion;
+        Integer ibest = null;
+        for (Integer available : availableVersions)
+        {
+            assert available != requestedVersion;
+
+            int v = available.intValue();
+
+            if (requestedVersion < best) {
+                if (requestedVersion < v && v < best) {
+                    best = v;
+                    ibest = available;
+                }
+            }
+            else if (best < requestedVersion) {
+                if (best < v) {
+                    best = v;
+                    ibest = available;
+                }
+            }
+            else {
+                best = v;
+                ibest = available;
+            }
+        }
+        return ibest;
     }
 
     public void putTable(SymbolTable table)

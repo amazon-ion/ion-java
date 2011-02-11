@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -22,8 +22,14 @@ import com.amazon.ion.system.SystemFactory;
  * This interface defines two methods with subtly different semantics.
  * The first variant takes only a symbol table name, and returns the highest
  * version possible. The second takes a version number and attempts to match it
- * exactly, and if that's not possible falls back to the the highest version
- * possible
+ * exactly, and if that's not possible falls back to the the "best match"
+ * possible:
+ * <ul>
+ *   <li>If any versions <em>larger</em> than the requested version are
+ *     available, select the smallest among them (still larger than requested).
+ *   <li>Otherwise all available versions are <em>smaller</em> than the
+ *     requested version, so return the largest of them.
+ * </ul>
  * <p>
  * When encoding Ion binary data, its always best to use an exact match to the
  * requested version whenever possible.  Earlier versions are very likely to be
@@ -43,8 +49,7 @@ import com.amazon.ion.system.SystemFactory;
  * It's expected that many if not most applications will implement a dynamic
  * catalog that can fetch symtabs from some source.  In such cases the catalog
  * should make its best effort to find an exact match, and if that's not
- * possible fall back to the highest version it can acquire.
- *
+ * possible fall back to the best match it can acquire.
  */
 public interface IonCatalog
 {
@@ -65,11 +70,12 @@ public interface IonCatalog
      * <p>
      * Implentations must make a best effort to find an exact match.
      * If an exact match cannot be found, then this method must make a best
-     * effort to find the highest available version.
+     * effort to find the best match available.
      *
      * @return the shared symbol table with the given name and version, when an
-     * exact match is possible. Otherwise, returns the highest possible version
-     * of the requested table.  If no table with the name can be found, then
+     * exact match is possible. Otherwise, returns the lowest possible version
+     * larger than requested.  Otherwise, return the largest possible version
+     * lower than requested.  If no table with the name can be found, then
      * this method returns {@code null}.
      */
     public SymbolTable getTable(String name, int version);

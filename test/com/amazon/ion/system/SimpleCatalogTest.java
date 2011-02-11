@@ -9,8 +9,10 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -69,6 +71,39 @@ public class SimpleCatalogTest
         assertSame(t2, cat.getTable("T", 2));
         assertSame(t2, cat.getTable("T", 5));
     }
+
+
+    @Test
+    public void testBestMatch()
+    {
+        // Only available versions are less-than requested
+        checkBestMatch(1, 5, 1);
+        checkBestMatch(2, 5, 1, 2);
+        checkBestMatch(3, 5, 2, 1, 3);
+        checkBestMatch(3, 5, 3, 1, 2);
+        checkBestMatch(3, 5, 3, 2, 1);
+        checkBestMatch(3, 5, 2, 3, 1);
+
+        // Only available versions are greater-than requested
+        checkBestMatch(6, 5, 6);
+        checkBestMatch(6, 5, 6, 9);
+        checkBestMatch(6, 5, 9, 6);
+
+        // Mix of less-than and greater-than
+        checkBestMatch(6, 5, 9, 6, 4);
+        checkBestMatch(6, 5, 3, 9, 6);
+        checkBestMatch(6, 5, 3, 9, 6, 4);
+        checkBestMatch(6, 5, 3, 9, 2, 6, 4);
+    }
+
+    private void checkBestMatch(int expected, int requested, Integer... available)
+    {
+        SimpleCatalog cat = new SimpleCatalog();
+        List<Integer> asList = Arrays.asList(available);
+        Integer best = SimpleCatalog.bestMatch(requested, asList);
+        assertEquals("best match", expected, best.intValue());
+    }
+
 
 
     @SuppressWarnings("unchecked")
