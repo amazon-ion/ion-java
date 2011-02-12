@@ -52,6 +52,8 @@ public interface IonSystem
     /**
      * Gets the catalog used by this system.  Unless otherwise noted,
      * all objects derived from this system will use this catalog.
+     *
+     * @return this system's default catalog; not null.
      */
     public IonCatalog getCatalog();
 
@@ -194,12 +196,16 @@ public interface IonSystem
     public IonDatagram newDatagram(SymbolTable... imports);
 
     /**
-     * Constructs a new loader instance using the system catalog.
+     * Constructs a new loader instance using the
+     * {@linkplain #getCatalog() default system catalog}.
      */
     public IonLoader newLoader();
 
     /**
      * Constructs a new loader instance using the given catalog.
+     *
+     * @param catalog may be null, in which case the loader will use the
+     * {@linkplain #getCatalog() default system catalog}.
      *
      * @see #newLoader()
      */

@@ -25,10 +25,19 @@ public class IonLoaderLite
     implements IonLoader
 {
     private final IonSystemLite _system;
+
+    /** Not null. */
     private final IonCatalog    _catalog;
 
+    /**
+     * @param system must not be null.
+     * @param catalog must not be null.
+     */
     public IonLoaderLite(IonSystemLite system, IonCatalog catalog)
     {
+        assert system != null;
+        assert catalog != null;
+
         _system = system;
         _catalog = catalog;
     }
@@ -37,6 +46,12 @@ public class IonLoaderLite
     {
         return _system;
     }
+
+    public IonCatalog getCatalog()
+    {
+        return _catalog;
+    }
+
 
     /**
      * This doesn't wrap IOException because some callers need to propagate it.

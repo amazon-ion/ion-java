@@ -27,10 +27,19 @@ public class LoaderImpl
     static final boolean USE_NEW_READERS = true;
 
     private final IonSystemImpl mySystem;
+
+    /** Not null. */
     private final IonCatalog    myCatalog;
 
+    /**
+     * @param system must not be null.
+     * @param catalog must not be null.
+     */
     public LoaderImpl(IonSystemImpl system, IonCatalog catalog)
     {
+        assert system != null;
+        assert catalog != null;
+
         mySystem = system;
         myCatalog = catalog;
     }
@@ -39,6 +48,11 @@ public class LoaderImpl
     public IonSystemImpl getSystem()
     {
         return mySystem;
+    }
+
+    public IonCatalog getCatalog()
+    {
+        return myCatalog;
     }
 
 

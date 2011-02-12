@@ -45,4 +45,25 @@ public class IonSystemTest
         IonStruct s = system2.newEmptyStruct();
         s.add("field1", v2);
     }
+
+    @Test
+    public void testNewLoaderNullCatalog()
+    {
+        Symtabs.register("fred", 1, catalog());
+
+        IonCatalog catalog = null;
+        IonLoader loader = system().newLoader(catalog);
+
+        String data =
+            "$ion_symbol_table::{imports:[{name:\"fred\",version:1}]}" +
+            " something";
+        loader.load(data);
+    }
+
+    @Deprecated
+    @Test(expected = NullPointerException.class)
+    public void testSetCatalogNull()
+    {
+        system().setCatalog(null);
+    }
 }

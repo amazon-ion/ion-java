@@ -43,7 +43,6 @@ import com.amazon.ion.impl.IonWriterUserBinary;
 import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import com.amazon.ion.impl.SystemValueIterator;
 import com.amazon.ion.impl.UnifiedSymbolTable;
-import com.amazon.ion.system.SimpleCatalog;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
@@ -64,23 +63,29 @@ public final class IonSystemLite
     private static int DEFAULT_CONTEXT_FREE_LIST_SIZE = 1000;
 
     private final UnifiedSymbolTable _system_symbol_table = UnifiedSymbolTable.makeSystemSymbolTable(this, 1);
+
+    /** Not null. */
     private       IonCatalog         _catalog;
     private       ValueFactoryLite   _value_factory;
     private final IonLoader          _loader;
 
 
-    public IonSystemLite()
-    {
-        this(new SimpleCatalog());
-    }
-
+    /**
+     * @param catalog must not be null.
+     */
     public IonSystemLite(IonCatalog catalog)
     {
         this(catalog, DEFAULT_CONTEXT_FREE_LIST_SIZE);
     }
 
+    /**
+     * @param catalog must not be null.
+     * @param context_free_list_size
+     */
     private IonSystemLite(IonCatalog catalog, int context_free_list_size)
     {
+        assert catalog != null;
+
         set_context_free_list_max(context_free_list_size);
 
         _catalog = catalog;
@@ -142,6 +147,7 @@ public final class IonSystemLite
 
     public IonLoader newLoader(IonCatalog catalog)
     {
+        if (catalog == null) catalog = getCatalog();
         return new IonLoaderLite(this, catalog);
     }
 
@@ -528,6 +534,7 @@ public final class IonSystemLite
 
     public void setCatalog(IonCatalog catalog)
     {
+        if (catalog == null) throw new NullPointerException();
         this._catalog = catalog;
     }
 
@@ -893,21 +900,22 @@ public final class IonSystemLite
         return dg;
     }
 
-    public IonDatagram newDatagram(IonCatalog catalog)
+    public IonDatagramLite newDatagram(IonCatalog catalog)
     {
-        IonDatagram dg = new IonDatagramLite(this, catalog);
+        if (catalog == null) catalog = getCatalog();
+        IonDatagramLite dg = new IonDatagramLite(this, catalog);
         return dg;
     }
 
     public IonDatagram newDatagram(IonValue initialChild)
     {
-        IonDatagram dg = newDatagram(this.getCatalog(), initialChild);
+        IonDatagram dg = newDatagram(null, initialChild);
         return dg;
     }
 
     public IonDatagram newDatagram(IonCatalog catalog, IonValue initialChild)
     {
-        IonDatagram dg = new IonDatagramLite(this, catalog);
+        IonDatagram dg = newDatagram(catalog);
 
         if (initialChild != null) {
             if (initialChild.getSystem() != this) {
@@ -929,8 +937,7 @@ public final class IonSystemLite
 
     public IonDatagram newDatagram(SymbolTable... imports)
     {
-        IonCatalog catalog = this.getCatalog();
-        IonDatagram dg = newDatagram(catalog, imports);
+        IonDatagram dg = newDatagram(null, imports);
         return dg;
     }
 
@@ -938,7 +945,7 @@ public final class IonSystemLite
     {
         UnifiedSymbolTable symbols =
             makeNewLocalSymbolTable(this.getSystemSymbolTable(), imports);
-        IonDatagramLite dg = new IonDatagramLite(this, catalog);
+        IonDatagramLite dg = newDatagram(catalog);
         dg.setSymbolTable(symbols);
         return dg;
     }
@@ -989,6 +996,7 @@ public final class IonSystemLite
 
     public IonReader newReader(IonCatalog catalog, byte[] ionData, int offset, int len)
     {
+        if (catalog == null) catalog = getCatalog();
         IonReader reader = IonReaderFactoryX.makeReader(this, catalog, ionData, offset, len);
         return reader;
     }
@@ -1001,6 +1009,7 @@ public final class IonSystemLite
 
     public IonReader newReader(IonCatalog catalog, InputStream ionData)
     {
+        if (catalog == null) catalog = getCatalog();
         IonReader reader = IonReaderFactoryX.makeReader(this, catalog, ionData);
         return reader;
     }
@@ -1013,6 +1022,7 @@ public final class IonSystemLite
 
     public IonReader newReader(IonCatalog catalog, IonValue value)
     {
+        if (catalog == null) catalog = getCatalog();
         IonReader reader = IonReaderFactoryX.makeReader(this, catalog, value);
         return reader;
     }
@@ -1070,6 +1080,7 @@ public final class IonSystemLite
                                                      InputStream ionBinary)
         throws IOException
     {
+        if (catalog == null) catalog = getCatalog();
         // TODO: do something with the catalog - update readers
         IonReader reader = IonReaderFactoryX.makeReader(ionBinary);
         SystemValueIterator sysreader = new ReaderIterator(this, reader);
@@ -1079,6 +1090,7 @@ public final class IonSystemLite
     public SystemValueIterator newLegacySystemReader(IonCatalog catalog,
                                                      byte[] ionData)
     {
+        if (catalog == null) catalog = getCatalog();
         // TODO: do something with the catalog - update readers
         IonReader reader = IonReaderFactoryX.makeReader(ionData);
         SystemValueIterator sysreader = new ReaderIterator(this, reader);
@@ -1089,6 +1101,7 @@ public final class IonSystemLite
                                                           InputStream ionBinary)
         throws IOException
     {
+        if (catalog == null) catalog = getCatalog();
         IonReader reader = IonReaderFactoryX.makeReader(ionBinary);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;

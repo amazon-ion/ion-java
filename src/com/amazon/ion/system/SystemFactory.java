@@ -97,24 +97,7 @@ public final class SystemFactory
      */
     public static IonSystem newSystem(SystemCapabilities implementation)
     {
-        IonSystem sys = null;
-        if (implementation == null
-         || implementation.equals(SystemCapabilities.DEFAULT)
-        ) {
-            implementation = DEFAULT_IMPLEMENTATION;
-        }
-        switch (implementation) {
-        case DEFAULT:
-            throw new IllegalStateException("internal failure: default state is set to default");
-        case ORIGINAL:
-            sys = new IonSystemImpl();
-            break;
-        case LITE:
-            sys = new IonSystemLite();
-            break;
-        default:
-            throw new IllegalArgumentException("SystemType "+implementation.toString()+" is not recognized");
-        }
+        IonSystem sys = newSystem(implementation, new SimpleCatalog());
         return sys;
     }
 
