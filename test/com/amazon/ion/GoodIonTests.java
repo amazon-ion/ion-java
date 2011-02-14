@@ -16,7 +16,9 @@ public class GoodIonTests
     extends IonTestCase
 {
     @Inject("testFile")
-    public static final File[] FILES = testdataFiles("good", "equivs");
+    public static final File[] FILES =
+        testdataFiles(TestUtils.GLOBAL_SKIP_LIST,
+                      "good", "equivs");
 
 
     private File myTestFile;

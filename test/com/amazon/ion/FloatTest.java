@@ -2,6 +2,7 @@
 
 package com.amazon.ion;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 
@@ -184,11 +185,12 @@ public class FloatTest
      * http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4421494
      * http://www.exploringbinary.com/java-hangs-when-converting-2-2250738585072012e-308/
      */
-    @Test
+    @Test @Ignore
     public void testJavaDblMinBug()
     {
-        double d = 2.2250738585072012e-308;
-        IonFloat f = (IonFloat) system().singleValue("2.2250738585072012e-308");
+        String breakingValue = "2.2250738585072012e-308";
+        double d = Double.valueOf(breakingValue);
+        IonFloat f = (IonFloat) system().singleValue(breakingValue);
         assertEquals(d, f.doubleValue());
     }
 }

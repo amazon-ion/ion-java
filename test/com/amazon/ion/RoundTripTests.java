@@ -5,6 +5,7 @@ package com.amazon.ion;
 import static com.amazon.ion.TestUtils.TEXT_ONLY_FILTER;
 import static com.amazon.ion.TestUtils.testdataFiles;
 
+import com.amazon.ion.TestUtils.And;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.util.Printer;
 import java.io.File;
@@ -27,7 +28,8 @@ public class RoundTripTests
      */
     @Inject("testFile")
     public static final File[] FILES =
-        testdataFiles(TEXT_ONLY_FILTER, "good", "equivs");
+        testdataFiles(new And(TEXT_ONLY_FILTER, TestUtils.GLOBAL_SKIP_LIST),
+                      "good", "equivs");
 
 
     private File myTestFile;

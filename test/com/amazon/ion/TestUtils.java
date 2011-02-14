@@ -26,6 +26,43 @@ public class TestUtils
         }
     };
 
+    public static final class And implements FilenameFilter
+    {
+        private final FilenameFilter[] myFilters;
+
+        public And(FilenameFilter... filters) { myFilters = filters; }
+
+        public boolean accept(File dir, String name)
+        {
+            for (FilenameFilter filter : myFilters)
+            {
+                if (! filter.accept(dir, name)) return false;
+            }
+            return true;
+        }
+    }
+
+    public static final class NameIsNot implements FilenameFilter
+    {
+        private final String[] mySkips;
+
+        public NameIsNot(String... filesToSkip) { mySkips = filesToSkip; }
+
+        public boolean accept(File dir, String name)
+        {
+            for (String skip : mySkips)
+            {
+                if (skip.equals(name)) return false;
+            }
+            return true;
+        }
+    }
+
+    public static final FilenameFilter GLOBAL_SKIP_LIST =
+        new NameIsNot(
+                      // "floatDblMin.ion"   // Still broken on Mac JRE
+                      );
+
 
     public static File[] testdataFiles(FilenameFilter filter,
                                        String... testdataDirs)
@@ -74,6 +111,8 @@ public class TestUtils
      * down nested containers.
      *
      * @param reader
+     *
+     * @see SexpTest#readAll(IonReader)
      */
     public static void deepRead(IonReader reader)
     {
@@ -170,10 +209,9 @@ public class TestUtils
                 break;
             case BLOB:
             case CLOB:
-                // getting the size is close enough since the
-                // reader has to evaluate the contents to know
-                // the length the user needs for new.
                 int bs = reader.byteSize();
+                // Extract the content to dig up encoding issues (could be text).
+                reader.newBytes();
                 break;
 
             case STRUCT:

@@ -11,6 +11,7 @@ import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.TestUtils;
 import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import com.amazon.ion.junit.Injected.Inject;
@@ -31,7 +32,9 @@ extends IonTestCase
     static final boolean _debug_flag = true;
 
     @Inject("testFile")
-    public static final File[] FILES = testdataFiles("good", "equivs");
+    public static final File[] FILES =
+        testdataFiles(TestUtils.GLOBAL_SKIP_LIST,
+                      "good", "equivs");
 
 
     private File myTestFile;
