@@ -8,6 +8,7 @@ import static com.amazon.ion.impl.IonConstants.tidStruct;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
@@ -50,10 +51,11 @@ public class IonWriterSystemText
     /**
      * @throws NullPointerException if any parameter is null.
      */
-    protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
+    protected IonWriterSystemText(IonSystem system,
+                                  SymbolTable defaultSystemSymtab,
                                   OutputStream out, TextOptions options)
     {
-        super(defaultSystemSymtab);
+        super(system, defaultSystemSymtab);
 
         out.getClass(); // Efficient null check
         options.getClass(); // Efficient null check
@@ -71,10 +73,11 @@ public class IonWriterSystemText
     /**
      * @throws NullPointerException if any parameter is null.
      */
-    protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
+    protected IonWriterSystemText(IonSystem system,
+                                  SymbolTable defaultSystemSymtab,
                                   Appendable out, TextOptions options)
     {
-        super(defaultSystemSymtab);
+        super(system, defaultSystemSymtab);
 
         out.getClass(); // Efficient null check
         options.getClass(); // Efficient null check
@@ -123,7 +126,7 @@ public class IonWriterSystemText
         // no catalog since it doesn't matter as this is a
         // pure local table, with no imports
         UnifiedSymbolTable symbols
-            = UnifiedSymbolTable.makeNewLocalSymbolTable(_symbol_table);
+            = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _symbol_table);
         return symbols;
     }
 

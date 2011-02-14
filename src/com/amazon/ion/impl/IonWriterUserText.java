@@ -89,12 +89,12 @@ public class IonWriterUserText
     final private boolean _filter_symbol_tables;
 
     protected IonWriterUserText(IonSystem sys, IonCatalog catalog, OutputStream out, TextOptions options) {
-        super(sys, new IonWriterSystemText(sys.getSystemSymbolTable(), out, options),
+        super(sys, new IonWriterSystemText(sys, sys.getSystemSymbolTable(), out, options),
               catalog, options.issuppressIonVersionMarkerOn());
         _filter_symbol_tables = options.isFilterSymbolTablesOn();
     }
     protected IonWriterUserText(IonSystem sys, IonCatalog catalog, Appendable out, TextOptions options) {
-        super(sys, new IonWriterSystemText(sys.getSystemSymbolTable(), out, options),
+        super(sys, new IonWriterSystemText(sys, sys.getSystemSymbolTable(), out, options),
               catalog, options.issuppressIonVersionMarkerOn());
         _filter_symbol_tables = options.isFilterSymbolTablesOn();
     }
@@ -136,7 +136,7 @@ public class IonWriterUserText
         }
 
         if (requires_this_local_table) {
-        	// TODO: remove cast below with update IonReader over symbol table
+            // TODO: remove cast below with update IonReader over symbol table
             IonReader reader = ((UnifiedSymbolTable)new_symbols).getReader(this._system);
             // move onto and write the struct header
             IonType t = reader.next();

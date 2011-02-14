@@ -205,7 +205,7 @@ public final class IonSystemLite
     public com.amazon.ion.IonBinaryWriter newBinaryWriter(SymbolTable... imports)
     {
         UnifiedSymbolTable symbols =
-            makeNewLocalSymbolTable(this.getSystemSymbolTable(), imports);
+            makeNewLocalSymbolTable(this, this.getSystemSymbolTable(), imports);
         IonWriterBinaryCompatibility.User writer =
             new IonWriterBinaryCompatibility.User(this, _catalog);
         try {
@@ -295,7 +295,7 @@ public final class IonSystemLite
     public UnifiedSymbolTable newLocalSymbolTable(SymbolTable... imports)
     {
         UnifiedSymbolTable st =
-            makeNewLocalSymbolTable(getSystemSymbolTable(), imports);
+            makeNewLocalSymbolTable(this, getSystemSymbolTable(), imports);
         return st;
     }
 
@@ -944,7 +944,7 @@ public final class IonSystemLite
     public IonDatagram newDatagram(IonCatalog catalog, SymbolTable... imports)
     {
         UnifiedSymbolTable symbols =
-            makeNewLocalSymbolTable(this.getSystemSymbolTable(), imports);
+            makeNewLocalSymbolTable(this, this.getSystemSymbolTable(), imports);
         IonDatagramLite dg = newDatagram(catalog);
         dg.setSymbolTable(symbols);
         return dg;

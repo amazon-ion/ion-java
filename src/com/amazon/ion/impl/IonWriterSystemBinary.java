@@ -6,8 +6,10 @@ import static com.amazon.ion.impl.IonConstants.tidDATAGRAM;
 import static com.amazon.ion.impl.IonConstants.tidList;
 import static com.amazon.ion.impl.IonConstants.tidSexp;
 import static com.amazon.ion.impl.IonConstants.tidStruct;
+import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
@@ -27,7 +29,6 @@ public class IonWriterSystemBinary
     // private static final boolean _verbose_debug = false;
 
     static final int UNKNOWN_LENGTH = -1;
-
 
     BufferManager     _manager;
     IonBinary.Writer  _writer;
@@ -94,9 +95,13 @@ public class IonWriterSystemBinary
      *
      * @throws NullPointerException if any parameter is null.
      */
-    public IonWriterSystemBinary(SymbolTable defaultSystemSymtab, OutputStream out, boolean autoFlush , boolean suppressIVM)
+    public IonWriterSystemBinary(IonSystem system,
+                                 SymbolTable defaultSystemSymtab,
+                                 OutputStream out,
+                                 boolean autoFlush,
+                                 boolean suppressIVM)
     {
-        super(defaultSystemSymtab);
+        super(system, defaultSystemSymtab);
 
         out.getClass(); // Efficient null check
         _user_output_stream = out;
@@ -364,7 +369,7 @@ public class IonWriterSystemBinary
         // no catalog since it doesn't matter as this is a
         // pure local table, with no imports
         UnifiedSymbolTable symbols
-            = UnifiedSymbolTable.makeNewLocalSymbolTable(_default_system_symbol_table);
+            = makeNewLocalSymbolTable(_system, _default_system_symbol_table);
         set_symbol_table_prepend_new_local_table(symbols);
         return symbols;
     }
@@ -1310,7 +1315,10 @@ public class IonWriterSystemBinary
                                      SymbolTable symtab) throws IOException
     {
         CountingStream cs = new CountingStream(userstream);
-        IonWriterSystemBinary writer = new IonWriterSystemBinary(_default_system_symbol_table, cs, false /* autoflush */ , true /* suppress ivm */);
+        IonWriterSystemBinary writer =
+            new IonWriterSystemBinary(_system, _default_system_symbol_table,
+                                      cs, false /* autoflush */ , true
+                                      /* suppress ivm */);
         symtab.writeTo(writer);
         writer.finish();
         int symtab_len = cs.getBytesWritten();

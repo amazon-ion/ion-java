@@ -56,7 +56,7 @@ class IonWriterSystemTree
     protected IonWriterSystemTree(IonSystem sys, IonCatalog catalog,
                                   IonContainer rootContainer)
     {
-        super(sys.getSystemSymbolTable());
+        super(sys, sys.getSystemSymbolTable());
         _system = sys;
         _catalog = catalog;
         _current_parent = rootContainer;
@@ -131,7 +131,7 @@ class IonWriterSystemTree
         // pure local table, with no imports
         // we let the system writer handle this work
         UnifiedSymbolTable symbols
-            = UnifiedSymbolTable.makeNewLocalSymbolTable(getSystem().getSystemSymbolTable());
+            = makeNewLocalSymbolTable(_system, _system.getSystemSymbolTable());
         return symbols;
     }
 

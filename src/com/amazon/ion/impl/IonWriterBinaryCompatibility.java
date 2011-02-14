@@ -35,7 +35,7 @@ public abstract class IonWriterBinaryCompatibility
 
         public System(IonSystem sys, boolean autoFlush)
         {
-            super(sys.getSystemSymbolTable(), make_output_stream(), autoFlush, false /* suppressIVM */);
+            super(sys, sys.getSystemSymbolTable(), make_output_stream(), autoFlush, false /* suppressIVM */);
             assert(getOutputStream() instanceof BlockedBuffer.BufferedOutputStream);
         }
 

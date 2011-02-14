@@ -4,6 +4,8 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
+
 import com.amazon.ion.IonLob;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSequence;
@@ -90,7 +92,9 @@ public class IonIteratorImpl
             if (UnifiedSymbolTable.isRealLocalTable(symbols) == false) {
                 // so we have to make it a real
                 assert(symbols == null || symbols.isSharedTable() || symbols.isSystemTable());
-                SymbolTable local = UnifiedSymbolTable.makeNewLocalSymbolTable(_next.getSystem().getSystemSymbolTable());
+                IonSystemImpl system = _next.getSystem();
+                SymbolTable local =
+                    makeNewLocalSymbolTable(system, system.getSystemSymbolTable());
                 _next.setSymbolTable(local);
                 symbols = local;
             }

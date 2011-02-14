@@ -807,7 +807,7 @@ public abstract class IonValueImpl
             symbols = _system.getSystemSymbolTable();
         }
 
-        symbols = UnifiedSymbolTable.makeNewLocalSymbolTable(symbols);
+        symbols = makeNewLocalSymbolTable(_system, symbols);
         parent.setSymbolTable(symbols);
 
         return symbols;
@@ -1357,7 +1357,7 @@ public abstract class IonValueImpl
             }
             assert symtab.isSystemTable();
             synchronized (this) {
-                symtab = makeNewLocalSymbolTable(symtab);
+                symtab = makeNewLocalSymbolTable(_system, symtab);
                 this.setSymbolTable(symtab);
             }
         }

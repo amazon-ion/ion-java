@@ -2,6 +2,8 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
+
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
@@ -207,7 +209,7 @@ public class IonReaderTextUserX
     {
         if (_symbols == null) {
             SymbolTable system_symbols = _system.getSystemSymbolTable();
-            _symbols = UnifiedSymbolTable.makeNewLocalSymbolTable(system_symbols);
+            _symbols = makeNewLocalSymbolTable(_system, system_symbols);
         }
         return _symbols;
     }

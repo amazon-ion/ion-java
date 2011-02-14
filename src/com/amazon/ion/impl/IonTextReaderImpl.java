@@ -3,6 +3,7 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_ITERATOR;
+import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.util.IonTextUtils.printQuotedSymbol;
 
 import com.amazon.ion.Decimal;
@@ -563,12 +564,10 @@ public final class IonTextReaderImpl
         SymbolTable temp = _current_symtab;
         _current_symtab = _current_symtab.getSystemSymbolTable();
 
-        this.stepIn();
-
         UnifiedSymbolTable table =
-            UnifiedSymbolTable.makeNewLocalSymbolTable(_current_symtab.getSystemSymbolTable(), _catalog, this);
-
-        this.stepOut();
+            makeNewLocalSymbolTable(_system, 
+                                    _current_symtab.getSystemSymbolTable(),
+                                    _catalog, this, /*alreadyInStruct*/ false);
         _current_symtab = temp;
         return table;
     }
@@ -963,7 +962,7 @@ public final class IonTextReaderImpl
             int sid = syms.findSymbol(value);
             if (sid <= 0) {
                 if (syms.isSystemTable()) {
-                    _current_symtab = UnifiedSymbolTable.makeNewLocalSymbolTable(syms);
+                    _current_symtab = makeNewLocalSymbolTable(_system, syms);
                     syms = _current_symtab;
                 }
                 assert syms.isLocalTable();

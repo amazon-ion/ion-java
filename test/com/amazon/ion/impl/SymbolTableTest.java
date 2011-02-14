@@ -24,6 +24,7 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
+import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.system.SimpleCatalog;
 import com.amazon.ion.system.SystemFactory;
 import java.io.ByteArrayOutputStream;
@@ -699,6 +700,27 @@ public class SymbolTableTest
         st = system().newLocalSymbolTable(new SymbolTable[]{ systemTable });
         checkEmptyLocalSymtab(st);
     }
+
+    @Test
+    public void testSymtabImageMaintenance()
+    {
+        SymbolTable st = system().newLocalSymbolTable();
+        st.addSymbol("foo");
+        IonStruct image = st.getIonRepresentation();
+        st.addSymbol("bar");
+        image = st.getIonRepresentation();
+        IonList symbols = (IonList) image.get(SystemSymbolTable.SYMBOLS);
+        assertEquals("[\"foo\",\"bar\"]", symbols.toString());
+    }
+
+    @Deprecated @Test
+    public void testGetReader()
+    {
+        SymbolTable st = system().newLocalSymbolTable();
+        IonReader r = st.getReader();
+        assertNotSame("reader", null, r);
+    }
+
 
     @Test
     public void testBadLocalSymtabCreation()

@@ -124,7 +124,8 @@ public final class IonSystemImpl
     public UnifiedSymbolTable newLocalSymbolTable(SymbolTable... imports)
     {
         UnifiedSymbolTable st =
-            makeNewLocalSymbolTable(mySystemSymbols, imports);
+            makeNewLocalSymbolTable(this, mySystemSymbols, imports);
+        st.setSystem(this);
         return st;
     }
 
@@ -867,7 +868,7 @@ public final class IonSystemImpl
             if (symtab == null) {
                 symtab = this.mySystemSymbols;
             }
-            symtab = UnifiedSymbolTable.makeNewLocalSymbolTable(symtab);
+            symtab = UnifiedSymbolTable.makeNewLocalSymbolTable(this, symtab);
         }
 
         systemId.setSymbolTable(symtab);  // This clears the sid

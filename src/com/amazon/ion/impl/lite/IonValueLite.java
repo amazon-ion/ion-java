@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl.lite;
 
+import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.util.Equivalence.ionEquals;
 
 import com.amazon.ion.IonContainer;
@@ -429,8 +430,9 @@ public abstract class IonValueLite
             return symbols;
         }
         if (symbols == null) {
-            symbols = getSystem().getSystemSymbolTable();
-            symbols = UnifiedSymbolTable.makeNewLocalSymbolTable(symbols);
+            IonSystem system = getSystem();
+            symbols = system.getSystemSymbolTable();
+            symbols = makeNewLocalSymbolTable(system, symbols);
         }
         return symbols;
     }

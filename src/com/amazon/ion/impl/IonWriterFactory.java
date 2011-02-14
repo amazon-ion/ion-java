@@ -75,21 +75,26 @@ public class IonWriterFactory
         // check to make
         switch (_type) {
         case SYSTEM_TEXT:
-            writer = new IonWriterSystemText(_system.getSystemSymbolTable(),
+            writer = new IonWriterSystemText(_system,
+                                             _system.getSystemSymbolTable(),
                                              _chars, _options);
             break;
         case SYSTEM_BINARY:
-            writer = new IonWriterSystemBinary(_system.getSystemSymbolTable(), _out, _auto_flush, !_assure_ivm);
+            writer = new IonWriterSystemBinary(_system, 
+                                               _system.getSystemSymbolTable(), 
+                                               _out, _auto_flush, !_assure_ivm);
             break;
         case SYSTEM_ION_VALUE:
             writer = new IonWriterSystemTree(_system, _catalog, _container);
             break;
         case USER_TEXT:
             if (_out != null) {
-                writer = new IonWriterUserText(_system, _catalog, _out, _options);
+                writer = new IonWriterUserText(_system, _catalog, _out, 
+                                               _options);
             }
             else if (_chars != null) {
-                writer = new IonWriterUserText(_system, _catalog, _chars, _options);
+                writer = new IonWriterUserText(_system, _catalog, _chars, 
+                                               _options);
             }
             else {
                 assert("this should never be allowed by the previous checks".length() < 0);
@@ -97,12 +102,18 @@ public class IonWriterFactory
             }
             break;
         case USER_BINARY:
-            IonWriterSystemBinary binary_system = new IonWriterSystemBinary(_system.getSystemSymbolTable(), _out, _auto_flush, !_assure_ivm);
-            writer = new IonWriterUserBinary(_system, _catalog, binary_system, !_assure_ivm);
+            IonWriterSystemBinary binary_system = 
+                new IonWriterSystemBinary(_system, 
+                                          _system.getSystemSymbolTable(), _out,
+                                          _auto_flush, !_assure_ivm);
+            writer = new IonWriterUserBinary(_system, _catalog, binary_system, 
+                                             !_assure_ivm);
             break;
         case USER_ION_VALUE:
-            IonWriterSystemTree tree_system = new IonWriterSystemTree(_system, _catalog, _container);
-            writer = new IonWriterUserTree(tree_system, _catalog, !_assure_ivm);
+            IonWriterSystemTree tree_system = 
+                new IonWriterSystemTree(_system, _catalog, _container);
+            writer = 
+                new IonWriterUserTree(tree_system, _catalog, !_assure_ivm);
             break;
         default:
             throw new IonException("unexpected writer type encountered "+_type.toString());
@@ -385,13 +396,14 @@ public class IonWriterFactory
                                                  SymbolTable... imports)
     {
         UnifiedSymbolTable symbols =
-            makeNewLocalSymbolTable(system.getSystemSymbolTable(), imports);
+            makeNewLocalSymbolTable(system, system.getSystemSymbolTable(), imports);
 
         // The imports may override the system's default.
         SymbolTable initialSystemSymtab = symbols.getSystemSymbolTable();
 
         IonWriterSystemBinary system_writer =
-            new IonWriterSystemBinary(initialSystemSymtab,
+            new IonWriterSystemBinary(system,
+                                      initialSystemSymtab,
                                       output,
                                       /* autoFlush */    false,
                                       /* suppressIVM */  false);
@@ -439,7 +451,8 @@ public class IonWriterFactory
     }
     public static IonWriter makeSystemWriter(IonSystem system, OutputStream output)
     {
-        IonWriter writer = new IonWriterSystemBinary(system.getSystemSymbolTable(), output,
+        IonWriter writer = new IonWriterSystemBinary(system,
+                                                     system.getSystemSymbolTable(), output,
                                                      /* autoFlush */ false,
                                                      /*suppressIVM*/ false
                                                      );
@@ -447,12 +460,12 @@ public class IonWriterFactory
     }
     public static IonWriter makeSystemWriter(IonSystem system, Appendable output, TextOptions options)
     {
-        IonWriter writer = new IonWriterSystemText(system.getSystemSymbolTable(), output, options);
+        IonWriter writer = new IonWriterSystemText(system, system.getSystemSymbolTable(), output, options);
         return writer;
     }
     public static IonWriter makeSystemWriter(IonSystem system, OutputStream output, TextOptions options)
     {
-        IonWriter writer = new IonWriterSystemText(system.getSystemSymbolTable(), output, options);
+        IonWriter writer = new IonWriterSystemText(system, system.getSystemSymbolTable(), output, options);
         return writer;
     }
 

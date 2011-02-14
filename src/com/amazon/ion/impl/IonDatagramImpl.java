@@ -1136,7 +1136,7 @@ public final class IonDatagramImpl
                 symtab = currentSymtab;
                 ichild.setSymbolTable(symtab);
             }
-
+            // TODO why would this change currentSymtab?
             currentSymtab = ichild.populateSymbolValues(currentSymtab);
 
             priorIsLocalSymtab = IonSystemImpl.valueIsLocalSymbolTable(ichild);

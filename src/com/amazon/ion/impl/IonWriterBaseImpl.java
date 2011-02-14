@@ -8,6 +8,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonNumber;
 import com.amazon.ion.IonNumber.Classification;
 import com.amazon.ion.IonReader;
+import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
@@ -31,6 +32,9 @@ public abstract class IonWriterBaseImpl
         "IonWriter.setFieldName() must be called before writing a value into a struct.";
 
     private static final boolean _debug_on = false;
+
+    /** Really only needed to create local symtabs. Not null. */
+    protected final IonSystem _system;
 
     /**
      * The system symtab used when resetting the stream.
@@ -63,9 +67,12 @@ public abstract class IonWriterBaseImpl
      *
      * @throws NullPointerException if the parameter is null.
      */
-    protected IonWriterBaseImpl(SymbolTable defaultSystemSymbolTable)
+    protected IonWriterBaseImpl(IonSystem system,
+                                SymbolTable defaultSystemSymbolTable)
     {
+        system.getClass();
         defaultSystemSymbolTable.getClass(); // Efficient null check
+        _system = system;
         _default_system_symbol_table = defaultSystemSymbolTable;
     }
 

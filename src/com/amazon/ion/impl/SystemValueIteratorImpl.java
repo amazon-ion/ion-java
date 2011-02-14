@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_1_0;
 import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
+import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
@@ -391,7 +392,7 @@ public class SystemValueIteratorImpl
     {
         SymbolTable symbols = this.getSymbolTable();
         if (! symbols.isLocalTable()) {
-            symbols = UnifiedSymbolTable.makeNewLocalSymbolTable(symbols);
+            symbols = makeNewLocalSymbolTable(_system, symbols);
             _currentSymbolTable = symbols;
         }
         return symbols;
