@@ -770,4 +770,14 @@ public class TimestampTest
         }
         catch (IllegalArgumentException e) { }
     }
+
+    /**
+     * TODO This replicates a file in the test data suite.
+     * We should really be scanning all relevant data files.
+     */
+    @Test(expected = IllegalArgumentException.class)
+    public void testValueOfWithMissingFraction()
+    {
+        Timestamp.valueOf("2010-11-17T12:34:56.Z");
+    }
 }

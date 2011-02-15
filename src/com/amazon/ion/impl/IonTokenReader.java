@@ -1537,9 +1537,11 @@ sizedloop:
     /**
      * Scans a timestamp after reading <code>yyyy-</code>.
      *
+     * We can be a little lenient here since the result will be reparsed and
+     * validated more thoroughly by {@link Timestamp#valueOf(CharSequence)}.
+     *
      * @param c the last character scanned; must be <code>'-'</code>.
      * @return {@link Type#constTime}
-     * @throws IOException
      */
     Type scanTimestamp(int c) throws IOException {
 
@@ -1592,6 +1594,7 @@ check4timezone:
                     // so read the hours
                     c = readDigits(2, "hours");
                     if (length_before_reading_hours == value.length()) {
+                        // FIXME I don't think there should be a timezone here
                         break check4timezone;
                     }
                     if (c != ':') {
@@ -1617,6 +1620,7 @@ check4timezone:
                     }
                     value.append((char)c);
                     // so read the fractional seconds
+                    // FIXME ION-169 precision should be unlimited
                     c = readDigits(32, "fractional seconds");
                     break check4timezone;
                 }//check4timezone

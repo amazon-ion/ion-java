@@ -696,7 +696,9 @@ public final class Timestamp
             while (length > pos && Character.isDigit(image.charAt(pos))) {
                 pos++;
             }
-            if (pos <= END_OF_SECONDS + 1) break;
+            if (pos <= END_OF_SECONDS + 1) {
+                throw new IllegalArgumentException("Timestamp must have at least one digit after decimal point: " + image);
+            }
             precision = Precision.FRACTION;
             fraction = new BigDecimal(image.subSequence(19, pos).toString());
         } while (false);
