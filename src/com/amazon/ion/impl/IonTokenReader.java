@@ -118,7 +118,7 @@ public class IonTokenReader
         public static class timeinfo {  // TODO remove vestigial class timeinfo
 
             static public Timestamp parse(String s) {
-            	Timestamp t = null;
+                Timestamp t = null;
                 s = s.trim(); // TODO why is this necessary?
                 try {
                     t = Timestamp.valueOf(s);  // TODO should Timestamp just throw an IonException?
@@ -309,12 +309,12 @@ public class IonTokenReader
 
     // easy to use number types
     static enum NumberType {
-    	NT_POSINT,
-    	NT_NEGINT,
-    	NT_HEX, // pos or neg
-    	NT_FLOAT,
-    	NT_DECIMAL,
-    	NT_DECIMAL_NEGATIVE_ZERO
+        NT_POSINT,
+        NT_NEGINT,
+        NT_HEX, // pos or neg
+        NT_FLOAT,
+        NT_DECIMAL,
+        NT_DECIMAL_NEGATIVE_ZERO
     }
 
     /**
@@ -684,7 +684,12 @@ public class IonTokenReader
                                 char uc = value.charAt(ii);
                                 unread(uc);
                             }
-                            this.keyword = Type.kwNull;
+
+                            String message =
+                                position()
+                                + ": Expected Ion type after 'null.' but found: "
+                                + value;
+                            throw new IonException(message);
                         }
                     }
                     else {
