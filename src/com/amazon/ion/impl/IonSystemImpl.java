@@ -320,10 +320,12 @@ public final class IonSystemImpl
     {
         if (LoaderImpl.USE_NEW_READERS)
         {
-            // TODO use IonIteratorImpl
+            // TODO sadly this doesn't pass all tests yet
+            // There's some strangeness with symbol tables
+//            IonReader reader = newSystemReader(ionText);
+//            return new IonIteratorImpl(this, reader);
         }
 
-        // return new SystemReader(this, ionText);
         SystemValueIterator reader = makeSystemReader(this, ionText);
         return reader;
     }

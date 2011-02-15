@@ -854,7 +854,7 @@ if (table1 == table2) {
         // system readers don't necessarily support symbol tables
         // but if they do it better be the system table at this point
         if (st != null) {
-            assertTrue(st.isSystemTable());
+            assertTrue("expected system table", st.isSystemTable());
             assertEquals(ION_1_0, st.getIonVersionId());
         }
         checkEof();

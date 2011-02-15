@@ -136,6 +136,7 @@ public class LoaderImpl
                     new IonDatagramImpl(mySystem, myCatalog, reader);
                 return dg;
             }
+            // TODO This does transcoding to binary first!
             return new IonDatagramImpl(mySystem, myCatalog, ionText);
         }
         catch (IonException e)
@@ -208,8 +209,6 @@ public class LoaderImpl
 
                 IonDatagramImpl dg =
                     new IonDatagramImpl(mySystem, myCatalog, reader);
-                // Force symtab preparation  FIXME should not be necessary
-                dg.byteSize();
                 return dg;
             }
 
