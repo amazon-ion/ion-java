@@ -167,7 +167,8 @@ public abstract class IonTestCase
     public IonDatagram load(File ionFile)
         throws IonException, IOException
     {
-        IonDatagram dg = loader().load(ionFile);
+        IonLoader loader = loader();
+        IonDatagram dg = loader.load(ionFile);
 
         // Flush out any encoding problems in the data.
         forceMaterialization(dg);
