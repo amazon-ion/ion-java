@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -229,6 +229,10 @@ public interface IonSystem
      * <p>
      * This method is suitable for use over unbounded streams with a reasonable
      * schema.
+     * <p>
+     * Applications should generally use {@link #iterate(InputStream)}
+     * whenever possible, since this library has much faster UTF-8 decoding
+     * than the Java IO framework.
      *
      * @param ionText a stream of Ion text data.  The caller is responsible for
      * closing the Reader after iteration is complete.
@@ -327,6 +331,11 @@ public interface IonSystem
     //-------------------------------------------------------------------------
     // IonReader creation
 
+    /*
+    * Applications should generally us {@link #newReader(InputStream)}
+    * whenever possible, since this library has much faster UTF-8 decoding
+    * than the Java IO framework.
+    */
 //  public IonReader newReader(Reader ionText); // TODO add newReader(Reader)
 
     /**
@@ -371,9 +380,6 @@ public interface IonSystem
      * detecting whether it's text or binary data. If the input data is
      * text this may return an (@link IonTextReader) which can report the
      * line and offset position of the parser for error reporting.
-     * <p>
-     * <b>NOTE:</b> The current implementation of this method reads the entire
-     * contents of the input stream into memory.
      *
      * @param ionData must not be null.
      *
