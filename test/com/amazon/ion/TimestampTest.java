@@ -50,6 +50,20 @@ public class TimestampTest
         return (IonTimestamp) oneValue(text);
     }
 
+
+    @Override
+    public void badValue(String text)
+    {
+        super.badValue(text);
+
+        try {
+            Timestamp.valueOf(text);
+            fail("Expected exception parsing text: " + text);
+        }
+        catch (IllegalArgumentException e) { }
+    }
+
+
     private void checkTimestamp(Date expected, IonTimestamp actual)
     {
         assertSame(IonType.TIMESTAMP, actual.getType());
@@ -286,10 +300,31 @@ public class TimestampTest
 
 
     @Test
-    public void testBadDates()
+    public void testBadYears()
     {
         badValue("1969-");
         badValue("1969t");
+
+        // No timezone allowed
+        badValue("2000TZ");
+        badValue("2000T-00:00");
+    }
+
+    @Test
+    public void testBadMonths()
+    {
+        badValue("1696-02");
+        badValue("1969-02-");
+        badValue("1969-02t");
+
+        // No timezone allowed
+        badValue("2000-01TZ");
+        badValue("2000-01T-00:00");
+    }
+
+    @Test
+    public void testBadDates()
+    {
         badValue("1696-02");
         badValue("1969-02-");
         badValue("1969-02t");
@@ -298,6 +333,10 @@ public class TimestampTest
         badValue("1969-02-23T00:00z");      // bad TZD
 
         badValue("1969-1x-23");
+
+        // No timezone allowed
+        badValue("2000-01-01TZ");
+        badValue("2000-01-01T+00:00");
     }
 
     @Test
