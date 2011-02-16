@@ -642,7 +642,7 @@ public final class Timestamp
             }
             pos = END_OF_YEAR;
             precision = Precision.YEAR;
-            year  = read_digits(image, 0, 4, -1, "invalid timestamp image: year field ");
+            year  = read_digits(image, 0, 4, -1, "year");
 
             char c = image.charAt(END_OF_YEAR);
             if (c == 'T') break;
@@ -654,7 +654,7 @@ public final class Timestamp
             }
             pos = END_OF_MONTH;
             precision = Precision.MONTH;
-            month = read_digits(image, END_OF_YEAR + 1, 2, -1, "invalid timestamp image: month field ");
+            month = read_digits(image, END_OF_YEAR + 1, 2, -1, "month");
 
             c = image.charAt(END_OF_MONTH);
             if (c == 'T') break;
@@ -666,7 +666,7 @@ public final class Timestamp
             }
             pos = END_OF_DAY;
             precision = Precision.DAY;
-            day   = read_digits(image, END_OF_MONTH + 1, 2, -1, "invalid timestamp image: day field");
+            day   = read_digits(image, END_OF_MONTH + 1, 2, -1, "day");
             if (length == END_OF_DAY) break;
             c = image.charAt(END_OF_DAY);
             if (c != 'T') {
@@ -678,8 +678,8 @@ public final class Timestamp
             if (length < END_OF_MINUTES) {
                 throw new IllegalArgumentException("invalid timestamp image: too short for yyyy-mm-ddThh:mm");
             }
-            hour   = read_digits(image, 11, 2, ':', "invalid timestamp image: hour field ");
-            minute = read_digits(image, 14, 2, -1, "invalid timestamp image: minute field ");
+            hour   = read_digits(image, 11, 2, ':', "hour");
+            minute = read_digits(image, 14, 2, -1, "minutes");
             pos = END_OF_MINUTES;
             precision = Precision.MINUTE;
 
@@ -688,7 +688,7 @@ public final class Timestamp
             if (length < END_OF_SECONDS) {
                 throw new IllegalArgumentException("invalid timestamp imagetoo short for yyyy-mm-ddThh:mm:ss");
             }
-            seconds = read_digits(image, 17, 2, -1, "invalid timestamp image: seconds field ");
+            seconds = read_digits(image, 17, 2, -1, "seconds");
             pos = END_OF_SECONDS;
             precision = Precision.SECOND;
 
@@ -719,9 +719,9 @@ public final class Timestamp
             }
             // +/- hh:mm
             pos++;
-            temp = read_digits(image, pos, 2, ':', "invalid timestamp image: offset hours field ");
+            temp = read_digits(image, pos, 2, ':', "local offset hours");
             pos += 3;
-            temp = temp * 60 + read_digits(image, pos, 2, -1, "invalid timestamp image: offset mintues field ");
+            temp = temp * 60 + read_digits(image, pos, 2, -1, "local offset minutes");
             pos += 2;
             if (temp >= 24*60) throw new IllegalArgumentException("invalid timezone offset: timezone offset must not be more than 1 day");
             if (timezone_start == '-') {
@@ -742,7 +742,7 @@ public final class Timestamp
                 case DAY:
                     break;
                 default:
-                    error_in_field("invalid timezone offset: missing timezone offset");
+                    error_in_field("Timestamp must have local offsetinvalid timezone offset: missing timezone offset");
             }
             offset = null;
         }
@@ -760,25 +760,46 @@ public final class Timestamp
         return ts;
     }
 
-    private static int read_digits(CharSequence in, int start, int length, int terminator, String msg) {
+    private static int read_digits(CharSequence in, int start, int length,
+                                   int terminator, String field)
+    {
         int ii, value = 0;
         int end = start + length;
 
         if (in.length() < end) {
-            throw new IllegalArgumentException(msg+" too short");
+            error_in_field("Malformed timestamp, " + field
+                           + " requires " + length + " digits: " + in);
         }
 
         for (ii=start; ii<end; ii++) {
             char c = in.charAt(ii);
-            if (!Character.isDigit(c)) error_in_field(msg+" has an invalid character: '"+c+"' encountered");
+            if (!Character.isDigit(c)) {
+                // FIXME this will give incorrect message if c is a surrogate
+                error_in_field("Malformed timestamp, " + field
+                               + " has non-digit character "
+                               + printCodePointAsString(c)
+                               + "\": " + in);
+            }
             value *= 10;
             value += c - '0';
         }
+
+        // Check the terminator if requested.
         if (terminator != -1) {
             if (ii >= in.length() || in.charAt(ii) != terminator) {
-                error_in_field(msg+" has a bad terminator character: '"+terminator+"' expected");
+                error_in_field("Malformed timestamp, " + field
+                               + " should end with "
+                               + printCodePointAsString(terminator)
+                               + "\": " + in);
             }
         }
+        // Otherwise make sure we don't have too many digits.
+        else if (ii < in.length() && Character.isDigit(in.charAt(ii))) {
+            error_in_field("Malformed timestamp, " + field
+                           + " requires " + length + " digits but has more: "
+                           + in);
+        }
+
         return value;
     }
 
