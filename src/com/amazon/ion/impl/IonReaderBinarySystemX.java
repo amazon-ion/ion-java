@@ -112,7 +112,7 @@ class IonReaderBinarySystemX
                     +IonScalarConversionsX.getValueTypeName(_v.getAuthoritativeType())
                     +" to "
                     +IonScalarConversionsX.getValueTypeName(as_type);
-                error_at(message);
+                throwErrorAt(message);
             }
             int fnid = _v.get_conversion_fnid(as_type);
             _v.cast(fnid);
@@ -224,7 +224,7 @@ class IonReaderBinarySystemX
                                + "(1-"
                                + Integer.MAX_VALUE
                                + ")";
-                error_at(message);
+                throwErrorAt(message);
             }
             // TODO: is treating this as an int too misleading?
             _v.setValue((int)sid);
@@ -332,7 +332,7 @@ class IonReaderBinarySystemX
             String message = "can't cast from "
                 +IonScalarConversionsX.getValueTypeName(_v.getAuthoritativeType())
                 +" to SYMBOL ID";
-            error_at(message);
+            throwErrorAt(message);
         }
         int sid = intValue();
         return sid;

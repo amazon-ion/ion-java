@@ -10,8 +10,8 @@ import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.Timestamp.Precision;
+import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.impl.IonConstants.HighNibble;
 import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
@@ -1687,10 +1687,15 @@ done:       for (;;) {
             }
 
             // now we let timestamp put it all together
-            val = Timestamp.createFromUtcFields(p, year, month, day,
-                                                hour, minute, second,
-                                                frac, offset);
-            return val;
+            try {
+                val = Timestamp.createFromUtcFields(p, year, month, day,
+                                                    hour, minute, second,
+                                                    frac, offset);
+                return val;
+            }
+            catch (IllegalArgumentException e) {
+                throw new IonException(e.getMessage() + " at: " + position());
+            }
         }
 
         public String readString(int len) throws IOException

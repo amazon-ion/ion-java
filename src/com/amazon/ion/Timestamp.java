@@ -329,7 +329,9 @@ public final class Timestamp
         if (_year < 1  || _year > 9999) error_in_field("year must be between 1 and 9999 inclusive GMT, and local time");
         if (_month < 1 || _month > 12) error_in_field("month is between 1 and 12 inclusive");
         if (_day < 1   || _day > last_day_in_month(_year, _month)) {
-            error_in_field("day is between 1 and "+last_day_in_month(_year, _month)+" inclusive");
+            error_in_field("Day in month " + _year + "-" + _month
+                           + " must between 1 and "
+                           + last_day_in_month(_year, _month) + " inclusive");
         }
 
         if (_hour < 0 || _hour > 23)     error_in_field("hour is between 0 and 23 inclusive");

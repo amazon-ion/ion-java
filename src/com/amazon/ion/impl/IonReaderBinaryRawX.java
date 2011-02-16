@@ -131,7 +131,7 @@ abstract public class IonReaderBinaryRawX
         long type_limit = _container_stack[(_container_top - POS_STACK_STEP) + TYPE_LIMIT_OFFSET];
         int type = (int)(type_limit & TYPE_MASK);
         if (type < 0 || type > IonConstants.tidDATAGRAM) {
-            error_at("invalid type id in parent stack");
+            throwErrorAt("invalid type id in parent stack");
         }
         return type;
     }
@@ -250,7 +250,7 @@ abstract public class IonReaderBinaryRawX
         for (int ii=1; ii<IonConstants.BINARY_VERSION_MARKER_1_0.length; ii++) {
             int b = read();
             if (b != (IonConstants.BINARY_VERSION_MARKER_1_0[ii] & 0xff)) {
-                error_at("invalid binary image");
+                throwErrorAt("invalid binary image");
             }
         }
         // so it's a 4 byte version marker - make it look like
@@ -286,7 +286,7 @@ abstract public class IonReaderBinaryRawX
         // that is there now, before the call)
         _value_tid = read_type_id();
         if (_value_tid == UnifiedInputStreamX.EOF) {
-            error_at("unexpected EOF encountered where a type descriptor byte was expected");
+            throwErrorAt("unexpected EOF encountered where a type descriptor byte was expected");
         }
 
         value_type = get_iontype_from_tid(_value_tid);
@@ -365,7 +365,7 @@ abstract public class IonReaderBinaryRawX
         }
         else if (tid == IonConstants.tidNull) {
             if (len != IonConstants.lnIsNull) {
-                error_at("invalid null type descriptor");
+                throwErrorAt("invalid null type descriptor");
             }
             _value_is_null = true;
             len = 0;
@@ -385,7 +385,7 @@ abstract public class IonReaderBinaryRawX
                     _value_is_true = true;
                     break;
                 default:
-                    error_at("invalid length nibble in boolean value: "+len);
+                    throwErrorAt("invalid length nibble in boolean value: "+len);
                     break;
             }
             len = 0;
@@ -1018,7 +1018,6 @@ done:   for (;;) {
             // nothing to do here - and the timestamp will be NULL
             return null;
         }
-        Timestamp val;
         Precision   p = null;
         Integer     offset = null;
         int         year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
@@ -1063,8 +1062,17 @@ done:   for (;;) {
         // restore out outer limit(s)
         _local_remaining  = save_limit;
         // now we let timestamp put it all together
-        val = Timestamp.createFromUtcFields(p, year, month, day, hour, minute, second, frac, offset);
-        return val;
+        try {
+            Timestamp val =
+                Timestamp.createFromUtcFields(p, year, month, day, hour,
+                                              minute, second, frac, offset);
+            return val;
+        }
+        catch (IllegalArgumentException e)
+        {
+            // Rewrap to the expected type.
+            throw newErrorAt(e.getMessage());
+        }
     }
     protected final String readString(int len) throws IOException
     {
@@ -1136,18 +1144,21 @@ done:   for (;;) {
     }
     private final void throwUTF8Exception() throws IOException
     {
-        error_at("Invalid UTF-8 character encounter in a string at position ");
+        throwErrorAt("Invalid UTF-8 character encounter in a string at position ");
     }
     private final void throwUnexpectedEOFException() throws IOException {
-        error_at("unexpected EOF in value");
+        throwErrorAt("unexpected EOF in value");
     }
     private final void throwIntOverflowExeption() throws IOException {
-        error_at("int in stream is too long for a Java int 32 use readLong()");
+        throwErrorAt("int in stream is too long for a Java int 32 use readLong()");
     }
 
-    protected void error_at(String msg) {
+    protected IonException newErrorAt(String msg) {
         String msg2 = msg + " at position " + getPosition();
-        throw new IonException(msg2);
+        return new IonException(msg2);
+    }
+    protected void throwErrorAt(String msg) {
+        throw newErrorAt(msg);
     }
     protected void error(String msg) {
         throw new IonException(msg);
