@@ -47,17 +47,18 @@ public class IonSystemTest
     }
 
     @Test
+    public void testNewLoaderDefaultCatalog()
+    {
+        IonLoader loader = system().newLoader();
+        assertSame(catalog(), loader.getCatalog());
+    }
+
+    @Test
     public void testNewLoaderNullCatalog()
     {
-        Symtabs.register("fred", 1, catalog());
-
         IonCatalog catalog = null;
         IonLoader loader = system().newLoader(catalog);
-
-        String data =
-            "$ion_symbol_table::{imports:[{name:\"fred\",version:1}]}" +
-            " something";
-        loader.load(data);
+        assertSame(catalog(), loader.getCatalog());
     }
 
     @Deprecated
