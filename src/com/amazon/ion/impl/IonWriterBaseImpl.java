@@ -820,6 +820,10 @@ public abstract class IonWriterBaseImpl
     private final void write_value_annotations_helper(IonReader reader)
     {
         String [] a = reader.getTypeAnnotations();
+        // FIXME ION-172 this is broken
+        // First, array `a` will never be null per spec of getTypeAnnotations.
+        // Second, we need to check each individual annotation, not the list
+        // as a whole.
         if (a == null) {
             int[] a_sids = reader.getTypeAnnotationIds();
             if (a_sids.length > 1) {

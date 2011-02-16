@@ -5,6 +5,7 @@
 package com.amazon.ion;
 
 import com.amazon.ion.impl.IonSystemPrivate;
+import java.util.Arrays;
 import java.util.Iterator;
 
 /**
@@ -67,12 +68,21 @@ public class IteratorSystemProcessingTest
     }
 
     @Override
-    protected void checkAnnotation(String expected)
+    protected void checkAnnotation(String expected, int expectedSid)
     {
         if (! myCurrentValue.hasTypeAnnotation(expected))
         {
             fail("Didn't find expected annotation: " + expected);
         }
+
+        String[] typeAnnotations = myCurrentValue.getTypeAnnotations();
+        if (! Arrays.asList(typeAnnotations).contains(expected))
+        {
+            fail("Didn't find expected annotation: " + expected);
+        }
+
+        int foundSid = myCurrentValue.getSymbolTable().findSymbol(expected);
+        assertEquals("symbol id", expectedSid, foundSid);
     }
 
     @Override

@@ -81,7 +81,7 @@ public abstract class SystemProcessingTestCase
     protected abstract SymbolTable currentSymtab()
         throws Exception;
 
-    protected abstract void checkAnnotation(String expected)
+    protected abstract void checkAnnotation(String expected, int expectedSid)
         throws Exception;
 
     protected abstract void checkType(IonType expected)
@@ -561,7 +561,8 @@ if (table1 == table2) {
             testSharedTableNotAddedToCatalog();
         }
         checkType(IonType.STRUCT);
-        checkAnnotation(SystemSymbolTable.ION_SHARED_SYMBOL_TABLE);
+        checkAnnotation(SystemSymbolTable.ION_SHARED_SYMBOL_TABLE,
+                        SystemSymbolTable.ION_SHARED_SYMBOL_TABLE_SID);
 
         assertNull(system().getCatalog().getTable("imported"));
 

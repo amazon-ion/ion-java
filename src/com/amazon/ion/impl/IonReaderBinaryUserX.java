@@ -113,16 +113,19 @@ class IonReaderBinaryUserX
         }
     }
 
-    //
-    // unsupported public methods that require a symbol table
-    // to operate - which is only supported on a user reader
-    //
     @Override
     public String getFieldName()
     {
-        String name = _symbols.findKnownSymbol(_value_field_id);
+        String name;
+        if (_value_field_id == UnifiedSymbolTable.UNKNOWN_SID) {
+            name = null;
+        }
+        else {
+            name = _symbols.findKnownSymbol(_value_field_id);
+        }
         return name;
     }
+
     @Override
     public Iterator<String> iterateTypeAnnotations()
     {
@@ -131,7 +134,6 @@ class IonReaderBinaryUserX
         return it;
     }
 
-    private static String[] _empty_string_array = new String[0];
     @Override
     public String[] getTypeAnnotations()
     {
@@ -143,7 +145,7 @@ class IonReaderBinaryUserX
         }
         String[] anns;
         if (_annotation_count < 1) {
-            anns = _empty_string_array;
+            anns = IonImplUtils.EMPTY_STRING_ARRAY;
         }
         else {
             anns = new String[_annotation_count];
@@ -153,6 +155,7 @@ class IonReaderBinaryUserX
         }
         return anns;
     }
+
     @Override
     public String stringValue()
     {

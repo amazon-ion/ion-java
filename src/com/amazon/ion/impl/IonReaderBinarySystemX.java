@@ -57,7 +57,7 @@ class IonReaderBinarySystemX
     // or the user reader.  Here they just fail.
     //
 
-    public int getFieldId()
+    public final int getFieldId()
     {
         return _value_field_id;
     }

@@ -1107,7 +1107,6 @@ public abstract class IonReaderTextRawX
         return new StringIterator(ids);
     }
 
-    private static String[] _empty_string_array = new String[0];
     public String[] getTypeAnnotations()
     {
         String[] annotations;
@@ -1116,7 +1115,7 @@ public abstract class IonReaderTextRawX
             System.arraycopy(_annotations, 0, annotations, 0, _annotation_count);
         }
         else {
-            annotations = _empty_string_array;
+            annotations = IonImplUtils.EMPTY_STRING_ARRAY;
         }
         return annotations;
     }

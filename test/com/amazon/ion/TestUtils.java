@@ -123,6 +123,12 @@ public class TestUtils
         IonType t = null;
         while ((t = doNext(reader)) != null )
         {
+            reader.getTypeAnnotationIds();
+            reader.getTypeAnnotations();
+
+            reader.getFieldName();
+            reader.getFieldId();
+
             switch (t)
             {
                 case NULL:

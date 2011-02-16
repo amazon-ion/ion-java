@@ -55,6 +55,11 @@ abstract public class IonReaderBinaryRawX
     IonType             _value_type;
     boolean             _value_is_null;
     boolean             _value_is_true;   // cached boolean value (since we step on the length)
+
+    /**
+     * {@link UnifiedSymbolTable#UNKNOWN_SID} means "not on a struct field"
+     * since otherwise we always know the SID.
+     */
     int                 _value_field_id;
     int                 _value_tid;
     int                 _value_len;
@@ -184,8 +189,11 @@ abstract public class IonReaderBinaryRawX
         while (_value_tid == -1 && !_eof) {
             switch (_state) {
             case S_BEFORE_FIELD:
+                assert _value_field_id == UnifiedSymbolTable.UNKNOWN_SID;
                 _value_field_id = read_field_id();
                 if (_value_field_id == UnifiedInputStreamX.EOF) {
+                    // FIXME why is EOF ever okay in the middle of a struct?
+                    assert UnifiedInputStreamX.EOF == UnifiedSymbolTable.UNKNOWN_SID;
                     _eof = true;
                     break;
                 }
@@ -335,6 +343,10 @@ abstract public class IonReaderBinaryRawX
         _annotation_count = 0;
         _value_field_id = UnifiedSymbolTable.UNKNOWN_SID;
     }
+
+    /**
+     * @return the field SID, or -1 if at EOF.
+     */
     private final int read_field_id() throws IOException
     {
         int field_id = readVarUIntOrEOF();

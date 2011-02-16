@@ -214,7 +214,6 @@ public class IonReaderTextUserX
         return _symbols;
     }
 
-    private static int[] _empty_int_array = new int[0];
     @Override
     public int[] getTypeAnnotationIds()
     {
@@ -223,13 +222,13 @@ public class IonReaderTextUserX
         int      len  = syms.length;
 
         if (len == 0) {
-            ids  = _empty_int_array;
+            ids = IonImplUtils.EMPTY_INT_ARRAY;
         }
         else {
             SymbolTable symbols = getSymbolTable();
             ids  = new int[len];
             for (int ii=0; ii<len; ii++) {
-                String sym = stringValue();
+                String sym = syms[ii];
                 ids[ii] = symbols.findSymbol(sym);
             }
         }
