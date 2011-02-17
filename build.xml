@@ -163,13 +163,16 @@
 
 
   <target name="javadoc" depends="build.properties">
+    <tstamp>
+      <format property="javadoc.year" pattern="yyyy" />
+    </tstamp>
     <javadoc
         overview= "${dir.src}/com/amazon/ion/overview.html"
         windowtitle="IonJava API"
         doctitle="The IonJava API Reference"
         header="IonJava API Reference"
-        bottom="&lt;center>Copyright (C) 2007-2009 Amazon.com. All Rights Reserved.&lt;/center>"
-        docencoding="UTF-8">
+        docencoding="UTF-8"
+        useexternalfile="true">
       <fileset dir="${dir.src}">
         <include name="**/*.java"/>
         <exclude name="com/amazon/ion/apps/**" />
@@ -179,6 +182,8 @@
         <pathelement path="${build.classpath}"/>
         <pathelement path="${run.classpath}"/>
       </classpath>
+      <bottom><![CDATA[<center>Copyright &#169; 2007&ndash;${javadoc.year} 
+        Amazon.com. All Rights Reserved.</center>]]></bottom>
     </javadoc>
   </target>
 
