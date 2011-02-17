@@ -27,7 +27,7 @@ package.IonJava = {
 
   build-tools = {
     1.0 = {
-      ApacheAnt = 1.7;
+      ApacheAnt = 1.8;
       BrazilJavadoc = 1.0;
       HappyTrails = 2.0;
       JDK = 1.5;
