@@ -3,9 +3,12 @@
 package com.amazon.ion;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+import static com.amazon.ion.impl.IonImplUtils.EMPTY_INT_ARRAY;
+import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
 
 import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.TreeReaderTest;
+import org.junit.Assert;
 import org.junit.Test;
 
 
@@ -192,6 +195,20 @@ public abstract class ReaderSystemProcessingTestCase
 
 
     //=========================================================================
+
+
+    @Test
+    public void testNoAnnotations()
+    throws Exception
+    {
+        startIteration("null");
+        myReader.next();
+        assertArrayEquals(EMPTY_STRING_ARRAY,
+                          myReader.getTypeAnnotations());
+        Assert.assertArrayEquals(EMPTY_INT_ARRAY,
+                                 myReader.getTypeAnnotationIds());
+    }
+
 
     @Test
     public void testNextAtEnd()
