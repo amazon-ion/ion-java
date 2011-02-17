@@ -1,9 +1,10 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.Decimal;
+import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
@@ -173,10 +174,18 @@ public class ValueFactoryLite
         return ionValue;
     }
 
-    public <T extends IonValue> IonListLite newList(T... values)
+    public IonListLite newList(IonSequence child)
         throws ContainedValueException, NullPointerException
     {
-        List<T> e = (values == null ? null : Arrays.asList(values));
+        IonListLite ionValue = newEmptyList();
+        ionValue.add(child);
+        return ionValue;
+    }
+
+    public IonListLite newList(IonValue... values)
+        throws ContainedValueException, NullPointerException
+    {
+        List<IonValue> e = (values == null ? null : Arrays.asList(values));
         IonListLite ionValue = newEmptyList();
         if (e == null) {
             ionValue.makeNull();
@@ -312,10 +321,18 @@ public class ValueFactoryLite
         return ionValue;
     }
 
-    public <T extends IonValue> IonSexp newSexp(T... values)
+    public IonSexpLite newSexp(IonSequence child)
         throws ContainedValueException, NullPointerException
     {
-        List<T> e = (values == null ? null : Arrays.asList(values));
+        IonSexpLite ionValue = newEmptySexp();
+        ionValue.add(child);
+        return ionValue;
+    }
+
+    public IonSexp newSexp(IonValue... values)
+        throws ContainedValueException, NullPointerException
+    {
+        List<IonValue> e = (values == null ? null : Arrays.asList(values));
         IonSexpLite ionValue = newEmptySexp();
         if (e == null) {
             ionValue.makeNull();

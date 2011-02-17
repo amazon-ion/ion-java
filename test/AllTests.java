@@ -32,6 +32,7 @@ import com.amazon.ion.SurrogateEscapeTest;
 import com.amazon.ion.SymbolTest;
 import com.amazon.ion.SystemProcessingTests;
 import com.amazon.ion.TimestampTest;
+import com.amazon.ion.ValueFactorySequenceTest;
 import com.amazon.ion.impl.ByteBufferTest;
 import com.amazon.ion.impl.CharacterReaderTest;
 import com.amazon.ion.impl.IonEqualsTest;
@@ -129,7 +130,8 @@ import org.junit.runners.Suite;
     GoodIonStreamingTests.class,  // TODO misnamed
     RoundTripStreamingTests.class,  // TODO misnamed
 
-    IonSystemTest.class
+    IonSystemTest.class,
+    ValueFactorySequenceTest.class
 })
 public class AllTests
 {

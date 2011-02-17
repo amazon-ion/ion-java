@@ -25,6 +25,7 @@ import com.amazon.ion.IonList;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonNull;
 import com.amazon.ion.IonReader;
+import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
@@ -55,6 +56,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -1179,10 +1181,16 @@ public final class IonSystemImpl
         return new IonListImpl(this, elements);
     }
 
-    public <T extends IonValue> IonList newList(T... elements)
+    public IonList newList(IonSequence child)
         throws ContainedValueException, NullPointerException
     {
-        List<T> e = (elements == null ? null : Arrays.asList(elements));
+        return new IonListImpl(this, Collections.singletonList(child));
+    }
+
+    public IonList newList(IonValue... elements)
+        throws ContainedValueException, NullPointerException
+    {
+        List<IonValue> e = (elements == null ? null : Arrays.asList(elements));
         return new IonListImpl(this, e);
     }
 
@@ -1254,10 +1262,17 @@ public final class IonSystemImpl
         return new IonSexpImpl(this, elements);
     }
 
-    public <T extends IonValue> IonSexp newSexp(T... elements)
+    public IonSexp newSexp(IonSequence child)
         throws ContainedValueException, NullPointerException
     {
-        List<T> e = (elements == null ? null : Arrays.asList(elements));
+        return new IonSexpImpl(this, Collections.singletonList(child));
+    }
+
+
+    public IonSexp newSexp(IonValue... elements)
+        throws ContainedValueException, NullPointerException
+    {
+        List<IonValue> e = (elements == null ? null : Arrays.asList(elements));
         return new IonSexpImpl(this, e);
     }
 
