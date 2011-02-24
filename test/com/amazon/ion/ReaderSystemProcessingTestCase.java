@@ -8,6 +8,7 @@ import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
 
 import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.TreeReaderTest;
+import java.util.Date;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -97,9 +98,9 @@ public abstract class ReaderSystemProcessingTestCase
     {
         assertSame(IonType.DECIMAL, myReader.getType());
         Decimal dec = myReader.decimalValue();
-        // TODO also test bigDecimalValue equivalence (not just double)
-//        assertEquals("decimal content", (long)expected, myReader.longValue());
-//        assertEquals("decimal content", expected, myReader.doubleValue());
+
+        assertEquals("decimal content", (long)expected, myReader.longValue());
+        assertEquals("decimal content", expected, myReader.doubleValue());
         assertEquals("float value compared",
                      0, Float.compare((float)expected, dec.floatValue()));
         assertEquals("double value compared",
@@ -170,12 +171,13 @@ public abstract class ReaderSystemProcessingTestCase
     {
         assertSame(IonType.TIMESTAMP, myReader.getType());
         assertEquals("timestamp", expected, myReader.timestampValue());
-        // TODO also check date
-//        Date expectedDate = (expected == null ? null : expected.dateValue());
-//        assertEquals("date", expectedDate, myReader.dateValue());
+
+        Date expectedDate = (expected == null ? null : expected.dateValue());
+        assertEquals("date", expectedDate, myReader.dateValue());
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     protected void checkEof()
     {
         // Doing this twice is intentional.
@@ -273,6 +275,7 @@ public abstract class ReaderSystemProcessingTestCase
 
 
     @Test
+    @SuppressWarnings("deprecation")
     public void testHasNextLeavesCurrentData()
         throws Exception
     {
@@ -298,6 +301,7 @@ public abstract class ReaderSystemProcessingTestCase
 
     // JIRA ION-79 reported by Scott Barber
     @Test
+    @SuppressWarnings("deprecation")
     public void testDeepNesting()
         throws Exception
     {
@@ -339,36 +343,38 @@ public abstract class ReaderSystemProcessingTestCase
                                 {
                                     reader.next();
                                     assertEquals("12.5", reader.stringValue());
-//                                    assertFalse(reader.hasNext());
+                                    assertFalse(reader.hasNext());
+                                    assertNull(reader.next());
                                 }
                                 reader.stepOut();
-//                                assertFalse(reader.hasNext());
+                                assertFalse(reader.hasNext());
+                                assertNull(reader.next());
                             }
                             reader.stepOut();
-//                            boolean hasNext3 = reader.hasNext(); // FIXME this returns true, should return false (Text version does this correctly)
-//                            assertFalse(reader.hasNext()); // TODO uncomment
-//                            try {
+                            assertFalse(reader.hasNext());
                             IonType t = reader.next();
                             assertNull("reader should not find a value", t);
-//                                fail("expected exception"); // TODO uncomment
-//                            }
-//                            catch (NoSuchElementException e) { }
-//                            assertFalse(reader.hasNext());
+                            assertFalse(reader.hasNext());
                         }
-                        reader.stepOut(); // FIXME fails here...
-//                        assertFalse(reader.hasNext());
+                        reader.stepOut();
+                        assertFalse(reader.hasNext());
+                        assertNull(reader.next());
                     }
                     reader.stepOut(); //
-//                    assertFalse(reader.hasNext());
+                    assertFalse(reader.hasNext());
+                    assertNull(reader.next());
                 }
                 reader.stepOut();
-//                assertFalse(reader.hasNext());
+                assertFalse(reader.hasNext());
+                assertNull(reader.next());
             }
             reader.stepOut();
-//            assertFalse(reader.hasNext());
+            assertFalse(reader.hasNext());
+            assertNull(reader.next());
         }
         reader.stepOut();
-//        assertFalse(reader.hasNext());
+        assertFalse(reader.hasNext());
+        assertNull(reader.next());
         assertEquals(0, reader.getDepth());
         try {
             reader.stepOut();
