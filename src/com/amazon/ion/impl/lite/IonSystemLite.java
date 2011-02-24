@@ -32,7 +32,6 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.UnsupportedIonVersionException;
-import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonReaderFactoryX;
 import com.amazon.ion.impl.IonReaderWriterPrivate;
 import com.amazon.ion.impl.IonSystemPrivate;
@@ -40,9 +39,11 @@ import com.amazon.ion.impl.IonWriterBaseImpl;
 import com.amazon.ion.impl.IonWriterBinaryCompatibility;
 import com.amazon.ion.impl.IonWriterFactory;
 import com.amazon.ion.impl.IonWriterUserBinary;
-import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import com.amazon.ion.impl.SystemValueIterator;
 import com.amazon.ion.impl.UnifiedSymbolTable;
+import com.amazon.ion.impl.IonBinary.BufferManager;
+import com.amazon.ion.impl.IonScalarConversionsX.CantConvertException;
+import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
@@ -389,8 +390,11 @@ public final class IonSystemLite
                 v = newBool(reader.booleanValue());
                 break;
             case INT:
-                // TODO: how can the reader tell us the int is longer than a long?
-                v = newInt(reader.longValue());
+                try {
+                    v = newInt(reader.longValue());
+                } catch (CantConvertException e) {
+                    v = newInt(reader.bigIntegerValue());
+                }
                 break;
             case FLOAT:
                 v = newFloat(reader.doubleValue());

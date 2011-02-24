@@ -676,6 +676,28 @@ abstract public class IonReaderBinaryRawX
         }
         return read;
     }
+    /**
+     * Uses {@link #read(byte[], int, int)} until the entire length is read.
+     * This method will block until the request is satisfied.
+     *
+     * @param buf       The buffer to read to.
+     * @param offset    The offset of the buffer to read from.
+     * @param len       The length of the data to read.
+     */
+    public void readAll(byte[] buf, int offset, int len) throws IOException
+    {
+        int rem = len;
+        while (rem > 0)
+        {
+            int amount = read(buf, offset, rem);
+            if (amount <= 0)
+            {
+                throwUnexpectedEOFException();
+            }
+            rem -= amount;
+            offset += amount;
+        }
+    }
     private final boolean isEOF() {
         if (_local_remaining > 0) return false;
         if (_local_remaining == NO_LIMIT) {
@@ -745,14 +767,12 @@ abstract public class IonReaderBinaryRawX
         }
         return retvalue;
     }
-    // TODO: untested (as yet)
     protected final BigInteger readBigInteger(int len, boolean is_negative) throws IOException
     {
-        int bitlen = len;
         BigInteger value;
-        if (bitlen > 0) {
-            byte[] bits = new byte[bitlen];
-            read(bits, 0, bitlen);
+        if (len > 0) {
+            byte[] bits = new byte[len];
+            readAll(bits, 0, len);
             int signum = is_negative ? -1 : 1;
             value = new BigInteger(signum, bits);
         }
@@ -983,7 +1003,7 @@ done:   for (;;) {
             if (_local_remaining > 0)
             {
                 byte[] bits = new byte[_local_remaining];
-                read(bits, 0, _local_remaining);
+                readAll(bits, 0, _local_remaining);
                 signum = 1;
                 if (bits[0] < 0)
                 {

@@ -7,6 +7,7 @@ import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Date;
 
 /**
@@ -324,8 +325,7 @@ public interface IonWriter
      * BigInteger value is null this writes a null int.
      * @param value BigInteger to write
      */
-//    public void writeInt(BigInteger value) throws IOException;
-    // FIXME ION-65
+    public void writeInt(BigInteger value) throws IOException;
 
 
     /**

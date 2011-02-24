@@ -414,8 +414,6 @@ public class SystemValueIteratorImpl
     {
         assert !_at_eof && _next == null;
 
-        assert _buffer_offset <= _buffer.buffer().size();
-
         BufferManager buffer = _buffer;
         // just to make the other code easier to read, and write
 

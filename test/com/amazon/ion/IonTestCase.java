@@ -2,6 +2,7 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.impl.IonSystemImpl;
 import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.junit.Injected;
 import com.amazon.ion.junit.Injected.Inject;
@@ -39,6 +40,17 @@ public abstract class IonTestCase
     public static final SystemCapabilities[] TEST_DIMENSION =
     { SystemCapabilities.ORIGINAL, SystemCapabilities.LITE };
 
+    public static enum StreamingMode {
+        OLD_STREAMING,
+        NEW_STREAMING
+    }
+
+    @Inject("streamingMode")
+    public static final StreamingMode[] STREAMING_DIMENSION =
+        //StreamingMode.values();  // ION-180 the old streaming fails numerous regressions.
+    { StreamingMode.NEW_STREAMING };
+
+
 
     private static boolean ourSystemPropertiesLoaded = false;
     protected IonSystemPrivate mySystem;
@@ -48,6 +60,9 @@ public abstract class IonTestCase
     private SystemCapabilities desiredSystemType =
         SystemCapabilities.DEFAULT;
 
+    private StreamingMode desiredStreamingMode =
+        StreamingMode.NEW_STREAMING;
+
     public void setSystemCapabilities(SystemCapabilities systype)
     {
         desiredSystemType = systype;
@@ -56,6 +71,14 @@ public abstract class IonTestCase
     public SystemCapabilities getSystemCapabilities()
     {
         return desiredSystemType;
+    }
+
+    public void setStreamingMode(StreamingMode mode) {
+        desiredStreamingMode = mode;
+    }
+
+    public StreamingMode getStreamingMode() {
+        return desiredStreamingMode;
     }
 
 
@@ -231,6 +254,11 @@ public abstract class IonTestCase
         if (mySystem == null)
         {
             mySystem = (IonSystemPrivate)SystemFactory.newSystem(getSystemCapabilities()); // was: new IonSystemImpl();
+            if (mySystem instanceof IonSystemImpl)
+            {
+                // TODO we really should phase this out...
+                ((IonSystemImpl) mySystem).useNewReaders_UNSUPPORTED_MAGIC = getStreamingMode() == StreamingMode.NEW_STREAMING;
+            }
         }
         return mySystem;
     }
@@ -241,6 +269,11 @@ public abstract class IonTestCase
     protected IonSystemPrivate system(IonCatalog catalog)
     {
         IonSystemPrivate system = (IonSystemPrivate)SystemFactory.newSystem(getSystemCapabilities(), catalog);
+        if (system instanceof IonSystemImpl)
+        {
+            // TODO we really should phase this out...
+            ((IonSystemImpl) system).useNewReaders_UNSUPPORTED_MAGIC = getStreamingMode() == StreamingMode.NEW_STREAMING;
+        }
         return system;
     }
 
@@ -299,7 +332,12 @@ public abstract class IonTestCase
         byte[] bytes = dg.getBytes();
         checkBinaryHeader(bytes);
 
-        dg = loader().load(bytes);
+        try {
+            dg = loader().load(bytes);
+        } catch (final IonException e) {
+            final String hex = BinaryTest.bytesToHex(bytes);
+            throw new IonException("Bad bytes: " + hex, e);
+        }
         assertEquals(1, dg.size());
         return dg.get(0);
     }

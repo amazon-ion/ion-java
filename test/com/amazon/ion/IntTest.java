@@ -1,6 +1,7 @@
 // Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import org.junit.Test;
 
@@ -141,8 +142,7 @@ public class IntTest
     @Test
     public void testNegativeLongRoundTrip()
     {
-        // FIXME: encoder can't handle Long.MIN_VALUE
-        final long v = Long.MIN_VALUE + 1;
+        final long v = Long.MIN_VALUE;
 
         IonInt i = system().newInt(v);
         IonInt result = (IonInt) reload(i);
@@ -186,8 +186,39 @@ public class IntTest
         checkAnnotation("a", value);
     }
 
-    // TODO test BigInteger
+    private static final BigInteger SUPER_BIG = new BigInteger("10123456789ABCDEF", 16);
+    private static final long SUPER_BIG_TRUNC_64 = 0x0123456789ABCDEFL;
+    private static final int SUPER_BIG_TRUNC_32 = 0x89ABCDEF;
 
+    @Test
+    public void testBigIntegers() {
+        IonInt val = system().newInt(SUPER_BIG);
+        assertEquals(SUPER_BIG, val.bigIntegerValue());
+        assertEquals(SUPER_BIG_TRUNC_64, val.longValue());
+        assertEquals(SUPER_BIG_TRUNC_32, val.intValue());
+
+        assertEquals(SUPER_BIG.hashCode(), val.hashCode());
+
+        testRoundTrip(SUPER_BIG);
+    }
+
+    @Test
+    public void testBigDecimals() {
+        BigDecimal big = new BigDecimal(SUPER_BIG.multiply(BigInteger.TEN), 1);
+        IonInt val = system().newInt(big);
+        assertEquals(SUPER_BIG, val.bigIntegerValue());
+        assertEquals(SUPER_BIG_TRUNC_64, val.longValue());
+        assertEquals(SUPER_BIG_TRUNC_32, val.intValue());
+
+        assertEquals(SUPER_BIG.hashCode(), val.hashCode());
+    }
+
+    @Test
+    public void testSetLongAfterSetBig() {
+        IonInt val = system().newInt(SUPER_BIG);
+        val.setValue(1);
+        assertEquals(BigInteger.valueOf(1), val.bigIntegerValue());
+    }
 
     @Test
     public void testStopChars()

@@ -205,7 +205,7 @@ public abstract class IonLobImpl
             // fall through to default:
         default:
             _lob_value = new byte[ln];
-            reader.read(_lob_value, 0, ln);
+            IonBinary.readAll(reader, _lob_value, 0, ln);
             _isNullValue(false);
             break;
         }

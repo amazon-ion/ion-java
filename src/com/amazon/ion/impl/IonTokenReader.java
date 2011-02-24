@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.io.PushbackReader;
 import java.io.Reader;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Stack;
 
 /**
@@ -204,19 +205,19 @@ public class IonTokenReader
             case constNegInt:
             case constPosInt:
                 if (NumberType.NT_HEX.equals(tr.numberType)) {
-                    tr.intValue = Long.parseLong(s, 16);
+                    tr.intValue = new BigInteger(s, 16);
                     // In hex case we've discarded the prefix [+-]?0x so
                     // reconstruct the sign
-                    if (this == constNegInt) tr.intValue = -tr.intValue;
+                    if (this == constNegInt) tr.intValue = tr.intValue.negate();
                 }
                 else {
-                    tr.intValue = Long.parseLong(s);
+                    tr.intValue = new BigInteger(s, 10);
 
                     // Make sure that sign aligns with type.
                     // Note that this allows negative zero.
-                    assert (tr.intValue == 0
+                    assert (BigInteger.ZERO.equals(tr.intValue)
                              ? true
-                             : this == (tr.intValue < 0 ? constNegInt : constPosInt));
+                             : this == (tr.intValue.signum() < 0 ? constNegInt : constPosInt));
                 }
                 return this;
             case constFloat:
@@ -374,7 +375,7 @@ public class IonTokenReader
 
     public String           stringValue;
     public Double           doubleValue;
-    public Long             intValue;
+    public BigInteger       intValue;
 
     public Timestamp        dateValue;
     public BigDecimal       decimalValue;

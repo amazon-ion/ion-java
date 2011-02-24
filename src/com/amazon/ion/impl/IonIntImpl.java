@@ -10,6 +10,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 
 
@@ -22,6 +23,14 @@ public final class IonIntImpl
     extends IonValueImpl
     implements IonInt
 {
+    static private final BigInteger LONG_MIN_VALUE =
+        BigInteger.valueOf(Long.MIN_VALUE);
+
+    static private final BigInteger LONG_MAX_VALUE =
+        BigInteger.valueOf(Long.MAX_VALUE);
+
+    static private final BigInteger LONG_ABS_MIN_VALUE =
+        LONG_MIN_VALUE.abs();
 
     static final int NULL_INT_TYPEDESC =
         IonConstants.makeTypeDescriptor(IonConstants.tidPosInt,
@@ -30,21 +39,11 @@ public final class IonIntImpl
         IonConstants.makeTypeDescriptor(IonConstants.tidPosInt,
                                         IonConstants.lnNumericZero);
 
-    static private final Long ZERO_LONG = Long.valueOf(0);
-
-    // FIXME We can't handle Long.MIN_VALUE at encoding time.
-    static private final BigInteger MIN_VALUE =
-        BigInteger.valueOf(Long.MIN_VALUE + 1);
-
-    static private final BigInteger MAX_VALUE =
-        BigInteger.valueOf(Long.MAX_VALUE);
-
     private static final int HASH_SIGNATURE =
         IonType.INT.toString().hashCode();
 
-    //private Long _int_value;
     private long _long_value;
-
+    private BigInteger _big_int_value;
 
 
     /**
@@ -99,15 +98,21 @@ public final class IonIntImpl
     {
         int hash = HASH_SIGNATURE;
         if (!isNullValue())  {
-            // FIXME if/when IonIntImpl is extended to support values bigger
-            // than a long,
-            long lv = longValue();
-            // jonker memorial bug:  throw away top 32 bits if they're not
-            // interesting.  Other n and -(n+1) get the same hash code.
-            hash ^= (int) lv;
-            int hi_word = (int) (lv >>> 32);
-            if (hi_word != 0 && hi_word != -1)  {
-                hash ^= hi_word;
+            makeReady();
+            if (_big_int_value == null)
+            {
+                long lv = longValue();
+                // jonker memorial bug:  throw away top 32 bits if they're not
+                // interesting.  Other n and -(n+1) get the same hash code.
+                hash ^= (int) lv;
+                int hi_word = (int) (lv >>> 32);
+                if (hi_word != 0 && hi_word != -1)  {
+                    hash ^= hi_word;
+                }
+            }
+            else
+            {
+                hash = _big_int_value.hashCode();
             }
         }
         return hash;
@@ -124,7 +129,11 @@ public final class IonIntImpl
     {
         makeReady();
         if (_isNullValue()) throw new NullValueException();
-        return (int)_long_value;
+        if (_big_int_value == null)
+        {
+            return (int)_long_value;
+        }
+        return _big_int_value.intValue();
     }
 
     public long longValue()
@@ -132,7 +141,11 @@ public final class IonIntImpl
     {
         makeReady();
         if (_isNullValue()) throw new NullValueException();
-        return _long_value;
+        if (_big_int_value == null)
+        {
+            return _long_value;
+        }
+        return _big_int_value.longValue();
     }
 
     public BigInteger bigIntegerValue()
@@ -140,7 +153,11 @@ public final class IonIntImpl
     {
         makeReady();
         if (_isNullValue()) return null;
-        return BigInteger.valueOf(_long_value);
+        if (_big_int_value == null)
+        {
+            return BigInteger.valueOf(_long_value);
+        }
+        return _big_int_value;
     }
 
     @Deprecated
@@ -174,24 +191,46 @@ public final class IonIntImpl
             if (value instanceof BigInteger)
             {
                 BigInteger big = (BigInteger) value;
-                if ((big.compareTo(MIN_VALUE) < 0) ||
-                    (big.compareTo(MAX_VALUE) > 0))
-                {
-                    String message =
-                        "int too large for this implementation: " + big;
-                    throw new IonException(message);
-                }
+                doSetValue(big);
             }
-            doSetValue(value.longValue(), false);
+            else if (value instanceof BigDecimal)
+            {
+                BigDecimal bd = (BigDecimal) value;
+                doSetValue(bd.toBigInteger());
+            }
+            else
+            {
+                // XXX this is essentially a narrowing conversion
+                // for some types of numbers
+                doSetValue(value.longValue(), false);
+            }
         }
     }
 
     private void doSetValue(long value, boolean isNull)
     {
         _long_value = value;
+        _big_int_value = null;
         _isNullValue(isNull);
         _hasNativeValue(true);
         setDirty();
+    }
+
+    private void doSetValue(BigInteger value) {
+        if ((value.compareTo(LONG_MIN_VALUE) < 0) ||
+            (value.compareTo(LONG_MAX_VALUE) > 0))
+        {
+            _long_value = 0L;
+            _big_int_value = value;
+            _isNullValue(false);
+            _hasNativeValue(true);
+            setDirty();
+        }
+        else
+        {
+            // fits in long
+            doSetValue(value.longValue(), false);
+        }
     }
 
     //public boolean oldisNullValue()
@@ -206,6 +245,10 @@ public final class IonIntImpl
         assert _hasNativeValue() == true;
         if (_isNullValue()) return 0;
         // TODO streamline following; this is only call site.
+        if (_big_int_value != null)
+        {
+            return IonBinary.lenIonInt(_big_int_value);
+        }
         return IonBinary.lenIonInt(_long_value);
     }
 
@@ -214,23 +257,46 @@ public final class IonIntImpl
     {
         assert _hasNativeValue() == true;
 
-        if (_isNullValue()) {
+        if (_isNullValue())
+        {
             return NULL_INT_TYPEDESC;
         }
 
-        long content = _long_value;
-        if (content == 0) {
-            return ZERO_INT_TYPEDESC;
+        int hn = 0;
+        int ln = valuelen;
+        if (_big_int_value != null)
+        {
+            BigInteger content = _big_int_value;
+            switch (content.signum())
+            {
+            case 0:
+                return ZERO_INT_TYPEDESC;
+            case -1:
+                hn = IonConstants.tidNegInt;
+                break;
+            case 1:
+                hn = IonConstants.tidPosInt;
+                break;
+            default:
+                // should never happen
+                throw new IllegalStateException("Bad signum");
+            }
+
+        }
+        else
+        {
+            long content = _long_value;
+            if (content == 0)
+            {
+                return ZERO_INT_TYPEDESC;
+            }
+            hn = (content > 0 ? IonConstants.tidPosInt : IonConstants.tidNegInt);
         }
 
-        int hn =
-            (content > 0 ? IonConstants.tidPosInt : IonConstants.tidNegInt);
-
-        int ln = valuelen;
         if (ln > IonConstants.lnIsVarLen) {
             ln = IonConstants.lnIsVarLen;
         }
-
+        assert hn == IonConstants.tidPosInt || hn == IonConstants.tidNegInt;
         return IonConstants.makeTypeDescriptor(hn, ln);
     }
 
@@ -242,7 +308,6 @@ public final class IonIntImpl
     {
         throw new UnsupportedOperationException();
     }
-
 
     @Override
     protected void doMaterializeValue(IonBinary.Reader reader)
@@ -269,31 +334,47 @@ public final class IonIntImpl
             throw new IonException("invalid type desc encountered for int");
         }
 
+        // reset internal reified state to zero
+        _big_int_value = null;
+        _long_value = 0;
+        _isNullValue(false);
+
         int ln = this.pos_getLowNibble();
         switch ((0xf & ln)) {
         case IonConstants.lnIsNullAtom:
-            _long_value = 0;
             _isNullValue(true);
             break;
         case 0:
-            //_int_value = ZERO_LONG;
-            _long_value = 0;
-            _isNullValue(false);
+            // no-op, we're already zeroed
             break;
         case IonConstants.lnIsVarLen:
             ln = reader.readVarUInt7IntValue();
             // fall through to default:
         default:
-            long l = reader.readVarUInt8LongValue(ln);
-            if (type == IonConstants.tidNegInt) {
-                l = - l;
+            int signum = type == IonConstants.tidNegInt ? -1 : 1;
+            if (ln <= 8)
+            {
+                long val = reader.readVarUInt8LongValue(ln);
+                if (val < 0)
+                {
+                    // we really can't fit this magnitude properly into a Java long
+                    _big_int_value = IonBinary.unsignedLongToBigInteger(signum, val);
+                }
+                else
+                {
+                    if (type == IonConstants.tidNegInt) {
+                        val = -val;
+                    }
+                    _long_value = val;
+                }
             }
-            //_int_value = Long.valueOf(l);
-            _long_value = l;
-            _isNullValue(false);
+            else
+            {
+                _big_int_value = reader.readVarUInt8BigIntegerValue(ln, signum);
+
+            }
             break;
         }
-
         _hasNativeValue(true);
     }
 
@@ -305,12 +386,28 @@ public final class IonIntImpl
         assert valueLen == this.getNakedValueLength();
         assert valueLen > 0;
 
-        long l = (_long_value < 0) ? -_long_value : _long_value;
-
-        int wlen = writer.writeVarUInt8Value(l, valueLen);
+        int wlen = 0;
+        if (_big_int_value != null)
+        {
+            BigInteger big = _big_int_value;
+            if (big.signum() < 0)
+            {
+                big = _big_int_value.negate();
+            }
+            wlen = writer.writeVarUInt8Value(big, valueLen);
+        }
+        else if (_long_value == Long.MIN_VALUE)
+        {
+            // Long.MIN_VALUE is a bit special since we can't negate it (overflow truncation)
+            wlen = writer.writeVarUInt8Value(LONG_ABS_MIN_VALUE, valueLen);
+        }
+        else
+        {
+            // emit the native long
+            long l = (_long_value < 0) ? -_long_value : _long_value;
+            wlen = writer.writeVarUInt8Value(l, valueLen);
+        }
         assert wlen == valueLen;
-
-        return;
     }
 
 

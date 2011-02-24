@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -60,7 +61,10 @@ public class TestUtils
 
     public static final FilenameFilter GLOBAL_SKIP_LIST =
         new NameIsNot(
-                      // "floatDblMin.ion"   // Still broken on Mac JRE
+                      "floatDblMin.ion"                 // Still broken on Mac JRE/Windows JRE
+                     ,"annotationNested.10n"            // ION-178
+                     ,"emptyAnnotatedInt.10n"           // ION-178
+                     ,"paddedInts.10n"                  // ION-179
                       );
 
 
@@ -195,7 +199,7 @@ public class TestUtils
                 boolean b = reader.booleanValue();
                 break;
             case INT:
-                long l = reader.longValue();
+                BigInteger big = reader.bigIntegerValue();
                 break;
             case FLOAT:
                 double f = reader.doubleValue();

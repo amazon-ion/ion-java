@@ -139,7 +139,7 @@ public class ReaderCompare
                 assertEquals(it1.booleanValue(), it2.booleanValue());
                 break;
             case INT:
-                assertEquals(it1.longValue(), it2.longValue());
+                assertEquals(it1.bigIntegerValue(), it2.bigIntegerValue());
                 break;
             case FLOAT: {
                 double v1 = it1.doubleValue();

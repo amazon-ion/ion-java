@@ -11,8 +11,8 @@ public class EquivsTests
     extends IonTestCase
 {
     @Inject("testFile")
-    public static final File[] FILES = TestUtils.testdataFiles("equivs");
-
+    public static final File[] FILES =
+        TestUtils.testdataFiles(TestUtils.GLOBAL_SKIP_LIST, "equivs");
 
     private File myTestFile;
 

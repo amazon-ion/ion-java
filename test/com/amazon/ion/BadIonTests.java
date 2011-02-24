@@ -3,6 +3,7 @@ package com.amazon.ion;
 
 import com.amazon.ion.junit.Injected.Inject;
 import java.io.File;
+import java.io.IOException;
 import org.junit.Test;
 
 
@@ -10,7 +11,7 @@ public class BadIonTests
     extends IonTestCase
 {
     @Inject("testFile")
-    public static final File[] FILES = TestUtils.testdataFiles("bad");
+    public static final File[] FILES = TestUtils.testdataFiles(TestUtils.GLOBAL_SKIP_LIST, "bad");
 
 
     private File myTestFile;
@@ -32,6 +33,7 @@ public class BadIonTests
                  + myTestFile.getAbsolutePath());
         }
         catch (IonException e) { /* good */ }
+        catch (IOException e) { /* good?  (e.g. EOF error) */ }
 
         try
         {

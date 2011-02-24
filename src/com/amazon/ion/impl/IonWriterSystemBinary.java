@@ -669,20 +669,29 @@ public class IonWriterSystemBinary
             positive = value.negate();
         }
 
-        int len = IonBinary.lenIonInt(value);
-
-        startValue(IonType.INT, len + 1); // int's are always less than varlen long
+        int len = IonBinary.lenIonInt(positive);
+        int ln = len;
+        int patch_len = 1 + len;
+        if (len >= IonConstants.lnIsVarLen) {
+            ln = IonConstants.lnIsVarLen;
+            patch_len += IonBinary.lenVarUInt7(len);
+        }
+        startValue(IonType.INT, patch_len);
 
         if (is_negative) {
-            _writer.write((IonConstants.tidNegInt << 4) | len);
+            _writer.write((IonConstants.tidNegInt << 4) | ln);
 
         }
         else {
-            _writer.write((IonConstants.tidPosInt << 4) | len);
+            _writer.write((IonConstants.tidPosInt << 4) | ln);
         }
-        int wroteLen = _writer.writeVarUInt8Value(positive, len, false);
+        if (ln == IonConstants.lnIsVarLen) {
+            _writer.writeVarUInt7Value(len, false);
+        }
+
+        int wroteLen = _writer.writeVarUInt8Value(positive, len);
         assert wroteLen == len;
-        patch(1 + len);
+        patch(patch_len);
 
     }
 

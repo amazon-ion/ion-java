@@ -28,7 +28,7 @@ public class BinaryTest extends IonTestCase
         return data;
     }
 
-    private static String bytesToHex(final byte[] bytes)
+    public static String bytesToHex(final byte[] bytes)
     {
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < bytes.length; i++)

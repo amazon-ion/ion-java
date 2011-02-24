@@ -351,6 +351,9 @@ public final class IonSymbolImpl
                 // fall through to default:
             default:
                 mySid = reader.readVarUInt8IntValue(ln);
+                if (mySid == 0) {
+                    throw new IonException("invalid symbol id for value, must be > 0");
+                }
                 _set_value(getSymbolTable().findSymbol(mySid));
                 break;
             }

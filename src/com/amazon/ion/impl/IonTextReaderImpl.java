@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Date;
 import java.util.Iterator;
 
@@ -565,7 +566,7 @@ public final class IonTextReaderImpl
         _current_symtab = _current_symtab.getSystemSymbolTable();
 
         UnifiedSymbolTable table =
-            makeNewLocalSymbolTable(_system, 
+            makeNewLocalSymbolTable(_system,
                                     _current_symtab.getSystemSymbolTable(),
                                     _catalog, this, /*alreadyInStruct*/ false);
         _current_symtab = temp;
@@ -844,6 +845,50 @@ public final class IonTextReaderImpl
                 return (long)d;
             case DECIMAL:
                 return decimalValue().longValue();
+            default:
+                break;
+        }
+        throw new IllegalStateException("current value is not an ion int, float, or decimal");
+    }
+
+    public BigInteger bigIntegerValue()
+    {
+        if (_is_null) {
+            // TODO ION-176 should this throw in the case of not null? If so, what?
+            return null;
+        }
+
+        switch (_value_type) {
+            case INT:
+                String s;
+                BigInteger bigvalue = null;
+                if (this._value_token == IonTextTokenizer.TOKEN_INT) {
+                    s = _scanner.getValueAsString(_value_start, _value_end);
+                    bigvalue = new BigInteger(s, 10);
+                }
+                else if (this._value_token == IonTextTokenizer.TOKEN_HEX) {
+                    int start = _value_start + 2; // skip over the "0x" header
+                    int c1 = _scanner.getByte(_value_start);
+                    boolean is_negative = false;
+                    if (c1 == '-') {
+                        start++;
+                        is_negative = true;
+                    } else if (c1 == '+') {
+                        start++;
+                    }
+                    s = _scanner.getValueAsString(start, _value_end);
+                    bigvalue = new BigInteger(s, 16);
+                    if (is_negative) bigvalue = bigvalue.negate();
+                }
+                else {
+                    throw new IllegalStateException("unexpected token created an int");
+                }
+                return bigvalue;
+            case FLOAT:
+                double d = doubleValue();
+                return BigInteger.valueOf((long)d);
+            case DECIMAL:
+                return decimalValue().toBigInteger();
             default:
                 break;
         }

@@ -2,11 +2,11 @@
 
 package com.amazon.ion.impl.lite;
 
-import com.amazon.ion.IonException;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ValueVisitor;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 
 
@@ -17,17 +17,17 @@ public class IonIntLite
     extends IonValueLite
     implements IonInt
 {
-    // FIXME We can't handle Long.MIN_VALUE at encoding time.
-    static private final BigInteger MIN_VALUE =
-        BigInteger.valueOf(Long.MIN_VALUE + 1);
+    static private final BigInteger LONG_MIN_VALUE =
+        BigInteger.valueOf(Long.MIN_VALUE);
 
-    static private final BigInteger MAX_VALUE =
+    static private final BigInteger LONG_MAX_VALUE =
         BigInteger.valueOf(Long.MAX_VALUE);
 
     private static final int HASH_SIGNATURE =
         IonType.INT.toString().hashCode();
 
     private long _long_value;
+    private BigInteger _big_int_value;
 
 
     /**
@@ -52,7 +52,14 @@ public class IonIntLite
         IonIntLite clone = new IonIntLite(this._context.getSystemLite(), false);
 
         clone.copyValueContentFrom(this);
-        clone.doSetValue(this._long_value, this._isNullValue());
+        if (this._big_int_value != null)
+        {
+            clone.doSetValue(this._big_int_value);
+        }
+        else
+        {
+            clone.doSetValue(this._long_value, this._isNullValue());
+        }
 
         return clone;
     }
@@ -67,15 +74,20 @@ public class IonIntLite
     {
         int hash = HASH_SIGNATURE;
         if (!isNullValue())  {
-            // FIXME if/when IonIntImpl is extended to support values bigger
-            // than a long,
-            long lv = longValue();
-            // jonker memorial bug:  throw away top 32 bits if they're not
-            // interesting.  Other n and -(n+1) get the same hash code.
-            hash ^= (int) lv;
-            int hi_word = (int) (lv >>> 32);
-            if (hi_word != 0 && hi_word != -1)  {
-                hash ^= hi_word;
+            if (_big_int_value == null)
+            {
+                long lv = longValue();
+                // jonker memorial bug:  throw away top 32 bits if they're not
+                // interesting.  Other n and -(n+1) get the same hash code.
+                hash ^= (int) lv;
+                int hi_word = (int) (lv >>> 32);
+                if (hi_word != 0 && hi_word != -1)  {
+                    hash ^= hi_word;
+                }
+            }
+            else
+            {
+                hash = _big_int_value.hashCode();
             }
         }
         return hash;
@@ -91,14 +103,22 @@ public class IonIntLite
         throws NullValueException
     {
         validateThisNotNull();
-        return (int)_long_value;
+        if (_big_int_value == null)
+        {
+            return (int)_long_value;
+        }
+        return _big_int_value.intValue();
     }
 
     public long longValue()
         throws NullValueException
     {
         validateThisNotNull();
-        return _long_value;
+        if (_big_int_value == null)
+        {
+            return _long_value;
+        }
+        return _big_int_value.longValue();
     }
 
     public BigInteger bigIntegerValue()
@@ -107,7 +127,11 @@ public class IonIntLite
         if (isNullValue()) {
             return null;
         }
-        return BigInteger.valueOf(_long_value);
+        if (_big_int_value == null)
+        {
+            return BigInteger.valueOf(_long_value);
+        }
+        return _big_int_value;
     }
 
     @Deprecated
@@ -141,22 +165,42 @@ public class IonIntLite
             if (value instanceof BigInteger)
             {
                 BigInteger big = (BigInteger) value;
-                if ((big.compareTo(MIN_VALUE) < 0) ||
-                    (big.compareTo(MAX_VALUE) > 0))
-                {
-                    String message =
-                        "int too large for this implementation: " + big;
-                    throw new IonException(message);
-                }
+                doSetValue(big);
             }
-            doSetValue(value.longValue(), false);
+            else if (value instanceof BigDecimal)
+            {
+                BigDecimal bd = (BigDecimal) value;
+                doSetValue(bd.toBigInteger());
+            }
+            else
+            {
+                // XXX this is essentially a narrowing conversion
+                // for some types of numbers
+                doSetValue(value.longValue(), false);
+            }
         }
     }
 
     private void doSetValue(long value, boolean isNull)
     {
         _long_value = value;
+        _big_int_value = null;
         _isNullValue(isNull);
+    }
+
+    private void doSetValue(BigInteger value) {
+        if ((value.compareTo(LONG_MIN_VALUE) < 0) ||
+            (value.compareTo(LONG_MAX_VALUE) > 0))
+        {
+            _long_value = 0L;
+            _big_int_value = value;
+            _isNullValue(false);
+        }
+        else
+        {
+            // fits in long
+            doSetValue(value.longValue(), false);
+        }
     }
 
     @Override

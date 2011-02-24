@@ -5,6 +5,7 @@ package com.amazon.ion;
 import java.io.Closeable;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Date;
 import java.util.Iterator;
 
@@ -206,11 +207,11 @@ public interface IonReader
     public long longValue();
 
     /**
-     * Returns the current value as a BigDecimal.  This is only valid if there
+     * Returns the current value as a {@link BigInteger}.  This is only valid if there
      * is an underlying value and the value is of a numeric type (int, float, or
      * decimal).
-     */  // TODO implement bigIntegerValue
-//    public BigInteger bigIntegerValue();
+     */
+    public BigInteger bigIntegerValue();
 
     /**
      * Returns the current value as a double.  This is only valid if there is

@@ -160,7 +160,7 @@ public abstract class IonWriterTestCase
     // TODO test stepOut() when at top-level
 
 
-    @Test @Ignore  // FIXME ION-163
+    @Test
     public void testWriteInt()
     throws Exception
     {
@@ -172,11 +172,10 @@ public abstract class IonWriterTestCase
         writer.writeNull(IonType.INT);
         writer.writeInt(Long.MAX_VALUE);
         writer.writeInt(Long.MIN_VALUE);
-/* FIXME ION-65
         writer.writeInt(null);
         writer.writeInt(bigPos);
         writer.writeInt(bigNeg);
-*/
+
         IonReader r = reread();
         assertEquals(IonType.INT, r.next());
         assertTrue(r.isNullValue());
@@ -184,14 +183,14 @@ public abstract class IonWriterTestCase
         assertEquals(Long.MAX_VALUE, r.longValue());
         assertEquals(IonType.INT, r.next());
         assertEquals(Long.MIN_VALUE, r.longValue());
-/*
+
         assertEquals(IonType.INT, r.next());
         assertTrue(r.isNullValue());
         assertEquals(IonType.INT, r.next());
         assertEquals(bigPos, r.bigIntegerValue());
         assertEquals(IonType.INT, r.next());
         assertEquals(bigNeg, r.bigIntegerValue());
-*/
+
         assertNull(r.next());
     }
 

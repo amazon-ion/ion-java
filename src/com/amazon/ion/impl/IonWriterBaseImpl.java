@@ -6,7 +6,6 @@ import com.amazon.ion.Decimal;
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonNumber;
-import com.amazon.ion.IonNumber.Classification;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
@@ -14,6 +13,7 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.IonNumber.Classification;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
@@ -861,7 +861,7 @@ public abstract class IonWriterBaseImpl
                 if (_debug_on) System.out.print("b");
                 break;
             case INT:
-                writeInt(reader.longValue());  // FIXME should use bigInteger
+                writeInt(reader.bigIntegerValue());
                 if (_debug_on) System.out.print("i");
                 break;
             case FLOAT:

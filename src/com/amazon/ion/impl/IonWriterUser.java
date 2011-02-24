@@ -15,6 +15,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 
 /**
  * This writer handles the symbol table processing and
@@ -432,9 +433,7 @@ abstract class IonWriterUser
         finish_value();
     }
 
-    /* jonker 2011-02-04  FIXME ION-65
-     * Disabled this since support for BigInteger is inconsistent making this
-     * impossible to test.
+
     public void writeInt(BigInteger value) throws IOException
     {
         if (value == null) {
@@ -445,7 +444,6 @@ abstract class IonWriterUser
         }
         finish_value();
     }
-    */
 
     public void writeNull(IonType type) throws IOException
     {

@@ -13,6 +13,7 @@ import java.io.PushbackReader;
 import java.io.Reader;
 import java.io.StringReader;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 
 
@@ -625,23 +626,29 @@ loop:   for (;;) {
         switch (castto) {
         case constPosInt:
             {
-                long l = this._in.intValue.longValue();
-                int size = IonBinary.lenVarUInt8(l);
+                BigInteger val = this._in.intValue;
+                int size = IonBinary.lenVarUInt8(val);
                 this._out.writer().writeByte(
                         castto.getHighNibble(),
                         size);
-                int wroteLen = this._out.writer().writeVarUInt8Value(l, size);
+                if (size >= IonConstants.lnIsVarLen) {
+                    this._out.writer().writeVarUInt7Value(size, false);
+                }
+                int wroteLen = this._out.writer().writeVarUInt8Value(val, size);
                 assert wroteLen == size;
             }
             break;
         case constNegInt:
             {
-                long l = 0 - this._in.intValue.longValue();
-                int size = IonBinary.lenVarUInt8(l);
+                BigInteger val = this._in.intValue.negate();
+                int size = IonBinary.lenVarUInt8(val);
                 this._out.writer().writeByte(
                         castto.getHighNibble(),
                         size);
-                int wroteLen = this._out.writer().writeVarUInt8Value(l, size);
+                if (size >= IonConstants.lnIsVarLen) {
+                    this._out.writer().writeVarUInt7Value(size, false);
+                }
+                int wroteLen = this._out.writer().writeVarUInt8Value(val, size);
                 assert wroteLen == size;
             }
             break;

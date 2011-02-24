@@ -137,8 +137,8 @@ class IonReaderBinarySystemX
         }
     }
 
-    static final int MAX_BINARY_LENGTH_INT = Integer.SIZE;
-    static final int MAX_BINARY_LENGTH_LONG = Long.SIZE;
+    static final int MAX_BINARY_LENGTH_INT = 4;
+    static final int MAX_BINARY_LENGTH_LONG = 8;
 
     private final void load_scalar_value() throws IOException
     {
@@ -180,11 +180,20 @@ class IonReaderBinarySystemX
             }
             else if (_value_len <= MAX_BINARY_LENGTH_LONG) {
                 long v = readULong(_value_len);
-                if (_value_tid == IonConstants.tidNegInt) {
-                    v = -v;
+
+                if (v < 0) {
+                    // we really can't fit this magnitude properly into a Java long
+                    int signum = _value_tid == IonConstants.tidPosInt ? 1 : -1;
+                    BigInteger big = IonBinary.unsignedLongToBigInteger(signum, v);
+                    _v.setValue(big);
+                    _v.setAuthoritativeType(AS_TYPE.bigInteger_value);
+                } else {
+                    if (_value_tid == IonConstants.tidNegInt) {
+                        v = -v;
+                    }
+                    _v.setValue(v);
+                    _v.setAuthoritativeType(AS_TYPE.long_value);
                 }
-                _v.setValue(v);
-                _v.setAuthoritativeType(AS_TYPE.long_value);
             }
             else {
                 boolean is_negative = (_value_tid == IonConstants.tidNegInt);

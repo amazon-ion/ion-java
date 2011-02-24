@@ -20,7 +20,7 @@ extends IonTestCase
 
 
     @Inject("testFile")
-    public static final File[] FILES = TestUtils.testdataFiles("bad");
+    public static final File[] FILES = TestUtils.testdataFiles(TestUtils.GLOBAL_SKIP_LIST, "bad");
 
 
     private File myTestFile;

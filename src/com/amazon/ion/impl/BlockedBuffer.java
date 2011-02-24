@@ -1,5 +1,6 @@
 // Copyright (c) 2007-2010 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion.impl;
+import com.amazon.ion.IonException;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -1641,7 +1642,7 @@ static final boolean test_with_no_version_checking = false;
             }
         }
     }
-    public static class BlockedBufferException extends RuntimeException
+    public static class BlockedBufferException extends IonException
     {
         private static final long serialVersionUID = 1582507845614969389L;
         public BlockedBufferException() { super(); }

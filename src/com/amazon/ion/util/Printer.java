@@ -942,8 +942,7 @@ public class Printer
             }
             else
             {
-                // FIXME broken for over-long values
-                myOut.append(Long.toString(value.longValue()));
+                myOut.append(value.bigIntegerValue().toString(10));
             }
         }
 

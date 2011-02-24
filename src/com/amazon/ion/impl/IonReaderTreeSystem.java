@@ -27,6 +27,7 @@ import com.amazon.ion.Timestamp;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -325,6 +326,20 @@ class IonReaderTreeSystem
         }
         if (_curr instanceof IonDecimal)  {
             return (long)((IonDecimal)_curr).doubleValue();
+        }
+        throw new IllegalStateException("current value is not an ion int, float, or decimal");
+    }
+
+    public BigInteger bigIntegerValue()
+    {
+        if (_curr instanceof IonInt)  {
+            return ((IonInt)_curr).bigIntegerValue();
+        }
+        if (_curr instanceof IonFloat)  {
+            return BigInteger.valueOf(longValue());
+        }
+        if (_curr instanceof IonDecimal)  {
+            return ((IonDecimal)_curr).bigDecimalValue().toBigInteger();
         }
         throw new IllegalStateException("current value is not an ion int, float, or decimal");
     }
