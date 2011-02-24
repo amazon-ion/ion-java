@@ -32,8 +32,8 @@ public class TextWriterTest
     public void testNotWritingSymtab()
         throws Exception
     {
-        IonWriter writer = makeWriter();
-        writer.writeSymbol("holla");
+        iw = makeWriter();
+        iw.writeSymbol("holla");
         String ionText = outputString();
 
         if (! ionText.startsWith(UnifiedSymbolTable.ION_1_0)) {

@@ -64,10 +64,16 @@ public abstract class OutputStreamWriterTestCase
     protected byte[] outputByteArray() throws Exception
     {
         myWriter.close();
-        assertTrue("output stream not flushed", myOutputStreamWrapper.flushed);
-        assertTrue("output stream not closed",  myOutputStreamWrapper.closed);
+        checkClosed();
 
         byte[] bytes = myOutputStream.toByteArray();
         return bytes;
+    }
+
+    @Override
+    protected void checkClosed()
+    {
+        assertTrue("output stream not flushed", myOutputStreamWrapper.flushed);
+        assertTrue("output stream not closed",  myOutputStreamWrapper.closed);
     }
 }

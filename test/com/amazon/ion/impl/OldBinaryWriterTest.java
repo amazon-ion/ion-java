@@ -30,4 +30,10 @@ public class OldBinaryWriterTest
     {
         return myWriter.getBytes();
     }
+
+    @Override
+    protected void checkClosed()
+    {
+        // Nothing to do.
+    }
 }

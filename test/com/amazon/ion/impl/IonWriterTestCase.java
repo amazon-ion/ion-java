@@ -25,9 +25,11 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
 import com.amazon.ion.TestUtils;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Arrays;
+import org.junit.After;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -37,6 +39,17 @@ import org.junit.Test;
 public abstract class IonWriterTestCase
     extends IonTestCase
 {
+    protected IonWriter iw;
+
+    @After
+    public void closeWriter()
+    throws IOException
+    {
+        if (iw != null) iw.close();
+    }
+
+    //=========================================================================
+
     protected IonWriter makeWriter()
         throws Exception
     {
@@ -88,6 +101,13 @@ public abstract class IonWriterTestCase
     protected abstract byte[] outputByteArray()
         throws Exception;
 
+    /**
+     * Validate that the output stream has been closed.
+     */
+    protected abstract void checkClosed();
+
+
+    //=========================================================================
 
     @Test
     public void testWritingWithImports()
@@ -100,10 +120,10 @@ public abstract class IonWriterTestCase
         SymbolTable fred1   = Symtabs.register("fred",   1, catalog());
         SymbolTable ginger1 = Symtabs.register("ginger", 1, catalog());
 
-        IonWriter writer = makeWriter(fred1, ginger1);
-        writer.writeSymbol("fred_2");
-        writer.writeSymbol("g1");
-        writer.writeSymbol("localSym");
+        iw = makeWriter(fred1, ginger1);
+        iw.writeSymbol("fred_2");
+        iw.writeSymbol("g1");
+        iw.writeSymbol("localSym");
 
         byte[] bytes = outputByteArray();
         IonDatagram dg = loader().load(bytes);
@@ -135,9 +155,9 @@ public abstract class IonWriterTestCase
 
         SymbolTable fred1   = Symtabs.register("fred",   1, catalog());
 
-        IonWriter writer = makeWriter(system().getSystemSymbolTable(), fred1);
-        writer.writeSymbol("fred_2");
-        writer.writeSymbol("localSym");
+        iw = makeWriter(system().getSystemSymbolTable(), fred1);
+        iw.writeSymbol("fred_2");
+        iw.writeSymbol("localSym");
 
         byte[] bytes = outputByteArray();
         IonDatagram dg = loader().load(bytes);
@@ -167,11 +187,11 @@ public abstract class IonWriterTestCase
         BigInteger bigPos = new BigInteger(Long.MAX_VALUE + "0");
         BigInteger bigNeg = new BigInteger(Long.MIN_VALUE + "0");
 
-        IonWriter writer = makeWriter();
+        iw = makeWriter();
 
-        writer.writeNull(IonType.INT);
-        writer.writeInt(Long.MAX_VALUE);
-        writer.writeInt(Long.MIN_VALUE);
+        iw.writeNull(IonType.INT);
+        iw.writeInt(Long.MAX_VALUE);
+        iw.writeInt(Long.MIN_VALUE);
         writer.writeInt(null);
         writer.writeInt(bigPos);
         writer.writeInt(bigNeg);
@@ -204,9 +224,9 @@ public abstract class IonWriterTestCase
     {
         String text = TestUtils.YEN_SIGN + FERMATA;
 
-        IonWriter writer = makeWriter();
-        writer.writeString(text);
-        writer.writeSymbol(text);
+        iw = makeWriter();
+        iw.writeString(text);
+        iw.writeSymbol(text);
 
         IonDatagram dg = reload();
         IonText t = (IonString) dg.get(0);
@@ -232,10 +252,10 @@ public abstract class IonWriterTestCase
     public void testWritingEmptySymbol()
         throws Exception
     {
-        IonWriter writer = makeWriter();
+        iw = makeWriter();
         try
         {
-            writer.writeSymbol("");
+            iw.writeSymbol("");
             fail("expected exception");
         }
         catch (EmptySymbolException e) { }
@@ -251,10 +271,10 @@ public abstract class IonWriterTestCase
     public void testBadString(String text)
         throws Exception
     {
-        IonWriter writer = makeWriter();
+        iw = makeWriter();
         try
         {
-            writer.writeString(text);
+            iw.writeString(text);
             fail("expected exception");
         }
         catch (IllegalArgumentException e) { }
@@ -263,10 +283,10 @@ public abstract class IonWriterTestCase
     public void testBadSymbol(String text)
         throws Exception
     {
-        IonWriter writer = makeWriter();
+        iw = makeWriter();
         try
         {
-            writer.writeSymbol(text);
+            iw.writeSymbol(text);
             fail("expected exception");
         }
         catch (IllegalArgumentException e) { }
@@ -286,11 +306,11 @@ public abstract class IonWriterTestCase
             data[i] = (byte) i;
         }
 
-        IonWriter writer = makeWriter();
-        writer.writeBlob(data);
-        writer.writeBlob(data, 10, 90);
-        writer.writeClob(data);
-        writer.writeClob(data, 20, 30);
+        iw = makeWriter();
+        iw.writeBlob(data);
+        iw.writeBlob(data, 10, 90);
+        iw.writeClob(data);
+        iw.writeClob(data, 20, 30);
 
         byte[] bytes = outputByteArray();
         IonDatagram dg = loader().load(bytes);
@@ -313,8 +333,8 @@ public abstract class IonWriterTestCase
     public void testWritingDeepNestedList() throws Exception {
         // JIRA ION-60
         IonDatagram dg = loader().load("[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]");
-        IonWriter writer = makeWriter();
-        writer.writeValue(dg);
+        iw = makeWriter();
+        iw.writeValue(dg);
     }
 
     // TODO test failure of getBytes before stepping all the way out
@@ -323,7 +343,7 @@ public abstract class IonWriterTestCase
     public void testBadSetFieldName()
         throws Exception
     {
-        IonWriter iw = makeWriter();
+        iw = makeWriter();
         iw.stepIn(IonType.STRUCT);
 
         try {
@@ -344,7 +364,7 @@ public abstract class IonWriterTestCase
         throws Exception
     {
         IonReader ir = system().newReader("{a:{b:10}}");
-        IonWriter iw = makeWriter();
+        iw = makeWriter();
         ir.next();
         iw.stepIn(IonType.STRUCT);
 
@@ -367,7 +387,7 @@ public abstract class IonWriterTestCase
         ir.next();
         // Reader is now positioned at field a
 
-        IonWriter iw = makeWriter();
+        iw = makeWriter();
         iw.stepIn(IonType.STRUCT);
         iw.writeValue(ir);
         iw.stepOut();
@@ -386,7 +406,7 @@ public abstract class IonWriterTestCase
         ir.next();
         // Reader is now positioned at field a
 
-        IonWriter iw = makeWriter();
+        iw = makeWriter();
         iw.stepIn(IonType.STRUCT);
         iw.setFieldName("c");
         iw.writeValue(ir);
@@ -399,7 +419,7 @@ public abstract class IonWriterTestCase
     public void testWritingNulls()
         throws Exception
     {
-        IonWriter iw = makeWriter();
+        iw = makeWriter();
         IonDatagram expected = system().newDatagram();
 
         iw.writeBlob(null);
@@ -427,7 +447,7 @@ public abstract class IonWriterTestCase
     public void testWritingAnnotations()
         throws Exception
     {
-        IonWriter iw = makeWriter();
+        iw = makeWriter();
         IonDatagram expected = system().newDatagram();
 
         iw.addTypeAnnotation("a");
@@ -476,7 +496,7 @@ public abstract class IonWriterTestCase
     public void testWritingAnnotationIds()
         throws Exception
     {
-        IonWriter iw = makeWriter();
+        iw = makeWriter();
         IonDatagram expected = system().newDatagram();
 
         iw.addTypeAnnotation("b");
@@ -498,7 +518,7 @@ public abstract class IonWriterTestCase
     public void testFlushMidValue()
         throws Exception
     {
-        IonWriter iw = makeWriter();
+        iw = makeWriter();
         iw.addTypeAnnotation("a");
         iw.flush();
         iw.stepIn(IonType.STRUCT);
@@ -521,7 +541,7 @@ public abstract class IonWriterTestCase
     throws Exception
     {
         SymbolTable fred1 = Symtabs.register("fred",   1, catalog());
-        IonWriter iw = makeWriter(fred1);
+        iw = makeWriter(fred1);
         iw.writeSymbol("hey");
         iw.flush();
         iw.writeSymbol("now");
@@ -537,7 +557,7 @@ public abstract class IonWriterTestCase
     throws Exception
     {
         SymbolTable fred1 = Symtabs.register("fred",   1, catalog());
-        IonWriter iw = makeWriter(fred1);
+        iw = makeWriter(fred1);
         iw.writeSymbol("hey");
         iw.finish();
         iw.writeSymbol("now");
@@ -552,7 +572,7 @@ public abstract class IonWriterTestCase
     public void testFinishInContainer()
     throws Exception
     {
-        IonWriter iw = makeWriter();
+        iw = makeWriter();
         iw.stepIn(IonType.LIST);
         iw.finish();
     }
@@ -561,8 +581,50 @@ public abstract class IonWriterTestCase
     public void testCloseInContainer()
     throws Exception
     {
-        IonWriter iw = makeWriter();
+        iw = makeWriter();
         iw.stepIn(IonType.LIST);
         iw.close();
+        checkClosed();
+    }
+
+    @Test
+    public void testCloseAfterAnnotation()
+    throws Exception
+    {
+        iw = makeWriter();
+        iw.addTypeAnnotation("ann");
+        iw.close();
+        checkClosed();
+    }
+
+    @Test
+    public void testCloseAfterFieldName()
+    throws Exception
+    {
+        iw = makeWriter();
+        iw.stepIn(IonType.STRUCT);
+        iw.setFieldName("f");
+        iw.close();
+        checkClosed();
+    }
+
+    @Test
+    public void testCloseAfterFieldAnnotation()
+    throws Exception
+    {
+        iw = makeWriter();
+        iw.stepIn(IonType.STRUCT);
+        iw.setFieldName("f");
+        iw.addTypeAnnotation("ann");
+        iw.close();
+        checkClosed();
+
+        if (false) // See ION-80
+        {
+            IonDatagram dg = reload();
+            assertEquals("datagram size", 1, dg.size());
+            IonStruct s = (IonStruct) dg.get(0);
+            assertTrue("struct not empty", s.isEmpty());
+        }
     }
 }
