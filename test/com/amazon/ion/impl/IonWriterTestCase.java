@@ -192,9 +192,9 @@ public abstract class IonWriterTestCase
         iw.writeNull(IonType.INT);
         iw.writeInt(Long.MAX_VALUE);
         iw.writeInt(Long.MIN_VALUE);
-        writer.writeInt(null);
-        writer.writeInt(bigPos);
-        writer.writeInt(bigNeg);
+        iw.writeInt(null);
+        iw.writeInt(bigPos);
+        iw.writeInt(bigNeg);
 
         IonReader r = reread();
         assertEquals(IonType.INT, r.next());
@@ -462,7 +462,7 @@ public abstract class IonWriterTestCase
         v.addTypeAnnotation("b");
         v.addTypeAnnotation("c");
 
-        // TODO ugh, writer and ionvalue behave differently
+        // TODO ugh, writer and ionvalue behave differently  ION-173
 //        iw.addTypeAnnotation("b");
 //        iw.addTypeAnnotation("b");
 //        iw.writeNull();
@@ -619,7 +619,7 @@ public abstract class IonWriterTestCase
         iw.close();
         checkClosed();
 
-        if (false) // See ION-80
+        if (false) // TODO ION-181
         {
             IonDatagram dg = reload();
             assertEquals("datagram size", 1, dg.size());
