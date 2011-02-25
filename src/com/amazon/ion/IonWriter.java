@@ -17,6 +17,11 @@ import java.util.Date;
  * the user to logically write the values as they view the data
  * without being concerned about which output format is needed.
  * <p>
+ * <b>WARNING:</b> This interface should not be implemented by applications.
+ * We still have some work to do before this interface is stable.
+ * See <a href="https://issue-tracking.amazon.com/browse/ION-182">JIRA issue
+ * ION-182</a>
+ * <p>
  * A value is written via the set of typed {@code write*()} methods such as
  * {@link #writeBool(boolean)} and {@link #writeInt(long)}.
  * Each of these methods outputs a single Ion value, and afterwards the writer

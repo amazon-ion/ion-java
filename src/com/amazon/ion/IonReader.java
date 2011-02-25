@@ -24,6 +24,11 @@ import java.util.Iterator;
  * Provides stream-based access to Ion data independent of its underlying
  * representation (text, binary, or {@link IonValue} tree).
  * <p>
+ * <b>WARNING:</b> This interface should not be implemented by applications.
+ * We still have some work to do before this interface is stable.
+ * See <a href="https://issue-tracking.amazon.com/browse/ION-183">JIRA issue
+ * ION-183</a>
+ * <p>
  * In general, method names are intended to parallel similar methods in the
  * {@link IonValue} hierarchy.  For example, to get the text of a symbol one
  * would use {@link #stringValue()} which mirrors
