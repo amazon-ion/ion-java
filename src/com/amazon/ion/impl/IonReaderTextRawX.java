@@ -1084,7 +1084,6 @@ public abstract class IonReaderTextRawX
     }
     public IonType getContainerType()
     {
-        if (_eof) return IonType.DATAGRAM;
         if (_container_state_top == 0) return IonType.DATAGRAM;
         return _container_state_stack[_container_state_top - 1];
     }

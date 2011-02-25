@@ -7,7 +7,6 @@ import static com.amazon.ion.impl.IonImplUtils.EMPTY_INT_ARRAY;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
 
 import com.amazon.ion.impl.IonImplUtils;
-import com.amazon.ion.impl.TreeReaderTest;
 import java.util.Date;
 import org.junit.Assert;
 import org.junit.Test;
@@ -236,41 +235,74 @@ public abstract class ReaderSystemProcessingTestCase
         badNext();
     }
 
-    /**
-     * When this is working,
-     * remove {@link TreeReaderTest#testInitialStateForStruct()}
-     */
+
     @Test
+    @SuppressWarnings("deprecation")
     public void testIsInStruct()
         throws Exception
     {
         startTestCheckpoint("testIsInStruct"); // uses simple constants since the number just has to be unique for matching on the break point
 
-        String text = "{}";
+        String text = "{f:[]}";
         startIteration(text);
         assertFalse(myReader.isInStruct());
+        assertEquals(0, myReader.getDepth());
 
-        // hasNext is depreciated: assertTrue(myReader.hasNext());
+        assertTrue(myReader.hasNext());
         assertFalse(myReader.isInStruct());
-
+        assertEquals(0, myReader.getDepth());
 
         assertEquals(IonType.STRUCT, myReader.next());
-        if (0 != myReader.getDepth()) {
-            assertEquals(0, myReader.getDepth());
-        }
         assertFalse(myReader.isInStruct());
+        assertEquals(0, myReader.getDepth());
 
         myReader.stepIn();
-        assertTrue(myReader.isInStruct());
-        assertEquals(1, myReader.getDepth());
+        {
+            assertTrue(myReader.isInStruct());
+            assertEquals(1, myReader.getDepth());
 
-        // assertFalse(myReader.hasNext());
-        assertTrue(myReader.isInStruct());
+            assertTrue(myReader.hasNext());    // List is coming up
+            assertTrue(myReader.isInStruct()); // but we're still at struct level
+            assertEquals(1, myReader.getDepth());
 
+            assertSame(IonType.LIST, myReader.next());
+            assertTrue(myReader.isInStruct());  // still in struct until we stepIn()
+            assertEquals(1, myReader.getDepth());
+            myReader.stepIn();
+            {
+                assertFalse(myReader.isInStruct());
+                assertEquals(2, myReader.getDepth());
+
+                assertFalse(myReader.hasNext());
+                assertFalse(myReader.isInStruct());
+                assertEquals(2, myReader.getDepth());
+
+                assertEquals(null, myReader.next());
+                assertFalse(myReader.isInStruct());
+                assertEquals(2, myReader.getDepth());
+            }
+            myReader.stepOut();
+
+            assertFalse(myReader.hasNext());
+            assertTrue(myReader.isInStruct());
+            assertEquals(1, myReader.getDepth());
+
+            assertEquals(null, myReader.next());
+            assertTrue(myReader.isInStruct());
+            assertEquals(1, myReader.getDepth());
+        }
         myReader.stepOut();
-        assertFalse(myReader.isInStruct());
 
-        // hasNext is depreciated: assertFalse(myReader.hasNext());
+        assertFalse(myReader.isInStruct());
+        assertEquals(0, myReader.getDepth());
+
+        assertFalse(myReader.hasNext());
+        assertFalse(myReader.isInStruct());
+        assertEquals(0, myReader.getDepth());
+
+        assertEquals(null, myReader.next());
+        assertFalse(myReader.isInStruct());
+        assertEquals(0, myReader.getDepth());
     }
 
 
