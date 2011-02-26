@@ -790,8 +790,6 @@ public final class IonTextReaderImpl
                     if (c1 == '-') {
                         start++;
                         is_negative = true;
-                    } else if (c1 == '+') {
-                        start++;
                     }
                     s = _scanner.getValueAsString(start, _value_end);
                     intvalue = Integer.parseInt(s, 16);
@@ -829,8 +827,6 @@ public final class IonTextReaderImpl
                     if (c1 == '-') {
                         start++;
                         is_negative = true;
-                    } else if (c1 == '+') {
-                        start++;
                     }
                     s = _scanner.getValueAsString(start, _value_end);
                     longvalue = Long.parseLong(s, 16);
@@ -873,8 +869,6 @@ public final class IonTextReaderImpl
                     if (c1 == '-') {
                         start++;
                         is_negative = true;
-                    } else if (c1 == '+') {
-                        start++;
                     }
                     s = _scanner.getValueAsString(start, _value_end);
                     bigvalue = new BigInteger(s, 16);
