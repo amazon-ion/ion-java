@@ -232,26 +232,7 @@ public final class IonSystemImpl
         UnifiedSymbolTable lst = newLocalSymbolTable(imports);
 
         IonDatagramImpl datagram = newDatagram();
-        IonWriter newWriter = newWriter(datagram);
-        try
-        {
-            lst.setSystem(this);  // FIXME: this binding should not be necessary
-            lst.writeTo(newWriter);
-            // FIXME there's no need for the writeTo approach
-            //       we can just set the symbol table on the
-            //       writer now.
-            // but for the moment I'm leaving it like this
-            // to test test the more demanding writer functionality
-            // newWriter.setSymbolTable(lst);
-            // and why not just modify the symbol table of the
-            // datagram directly?  Like this:
-            // datagram.setSymbolTable(lst);
-        }
-        catch (IOException e)
-        {
-            // Shouldn't happen
-            throw new Error(e);
-        }
+        datagram.setSymbolTable(lst); // This is the "pending" symtab
         return datagram;
     }
 

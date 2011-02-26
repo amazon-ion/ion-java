@@ -3,6 +3,9 @@
 package com.amazon.ion;
 
 import com.amazon.ion.system.SystemFactory;
+import com.amazon.ion.system.SystemFactory.SystemCapabilities;
+import java.util.Arrays;
+import java.util.Iterator;
 import org.junit.Test;
 
 /**
@@ -66,5 +69,39 @@ public class IonSystemTest
     public void testSetCatalogNull()
     {
         system().setCatalog(null);
+    }
+
+    @Test
+    public void testNewDatagramImporting()
+    {
+        // FIXME ION-75
+        if (getSystemCapabilities() == SystemCapabilities.LITE)
+        {
+            logSkippedTest();
+            return;
+        }
+
+        IonSystem ion = system();
+        SymbolTable st =
+            ion.newSharedSymbolTable("foobar", 1,
+                                     Arrays.asList("s1").iterator());
+        // st is not in the system catalog, but that shouldn't matter.
+
+        IonDatagram dg = ion.newDatagram(st);
+        dg.add().newSymbol("s1");
+        dg.add().newSymbol("l1");
+        byte[] bytes = dg.getBytes();
+
+
+        IonDatagram dg2 = loader().load(bytes);
+        IonSymbol s1 = (IonSymbol) dg2.get(0);
+        assertEquals(SystemSymbolTable.ION_1_0_MAX_ID + 1, s1.getSymbolId());
+
+        SymbolTable symbolTable = s1.getSymbolTable();
+        assertEquals("foobar", symbolTable.getImportedTables()[0].getName());
+
+        Iterator<String> declared = symbolTable.iterateDeclaredSymbolNames();
+        assertEquals("local symbol", "l1", declared.next());
+        assertFalse(declared.hasNext());
     }
 }
