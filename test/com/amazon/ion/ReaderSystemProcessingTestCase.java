@@ -417,4 +417,23 @@ public abstract class ReaderSystemProcessingTestCase
             // Can't do that right now due to permissions
         }
     }
+
+    @Test
+    public void testStepOutInMiddle() // ION-133
+    throws Exception
+    {
+        startIteration("{a:{b:1,c:2},d:false}");
+
+        IonReader r = myReader;
+        r.next();
+        r.stepIn();
+        r.next();
+        assertEquals("a", r.getFieldName());
+        r.stepIn();
+        r.next();
+        assertEquals("b", r.getFieldName());
+        r.stepOut(); // skip c
+        r.next();
+        assertEquals("d", r.getFieldName());
+    }
 }
