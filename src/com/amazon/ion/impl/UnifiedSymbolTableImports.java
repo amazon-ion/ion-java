@@ -3,6 +3,7 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.SymbolTable;
+import java.util.Arrays;
 
 /**
  * This class managed the referenced system symbol table and
@@ -200,5 +201,11 @@ public class UnifiedSymbolTableImports
             non_system_base_offset++;
         }
         System.arraycopy(_imports, non_system_base_offset, imports, 0, count);
+    }
+
+    @Override
+    public String toString()
+    {
+        return Arrays.toString(_imports);
     }
 }
