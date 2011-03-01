@@ -46,6 +46,7 @@ import com.amazon.ion.streaming.BinaryStreamingTest;
 import com.amazon.ion.streaming.GoodIonStreamingTests;
 import com.amazon.ion.streaming.MiscStreamingTests;
 import com.amazon.ion.streaming.RoundTripStreamingTests;
+import com.amazon.ion.system.IonSystemBuilderTest;
 import com.amazon.ion.system.SimpleCatalogTest;
 import com.amazon.ion.util.EquivalenceTest;
 import com.amazon.ion.util.PrinterTest;
@@ -131,7 +132,8 @@ import org.junit.runners.Suite;
     RoundTripStreamingTests.class,  // TODO misnamed
 
     IonSystemTest.class,
-    ValueFactorySequenceTest.class
+    ValueFactorySequenceTest.class,
+    IonSystemBuilderTest.class
 })
 public class AllTests
 {

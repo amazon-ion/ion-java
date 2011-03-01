@@ -1,11 +1,10 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.system;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
-import com.amazon.ion.impl.IonSystemImpl;
-import com.amazon.ion.impl.lite.IonSystemLite;
+import com.amazon.ion.IonValue;
 
 /**
  * The bootstrap factory to create an application's {@link IonSystem}.
@@ -14,7 +13,11 @@ import com.amazon.ion.impl.lite.IonSystemLite;
  * Most long-lived applications will want to provide a custom
  * {@link IonCatalog} implementation rather than using the default
  * {@link SimpleCatalog}.
+ *
+ * @deprecated This class is being replaced by {@link IonSystemBuilder}, but
+ * see its documentation for important limitations.
  */
+@Deprecated
 public final class SystemFactory
 {
     private static SystemCapabilities DEFAULT_IMPLEMENTATION
@@ -26,7 +29,9 @@ public final class SystemFactory
      * used to select the variant of IonSystem that is
      * returned by this factory.
      *
+     * @deprecated This will be removed before R10 is released!
      */
+    @Deprecated
     public enum SystemCapabilities {
         /**
          * returns the IonSystem implementation is currently
@@ -61,7 +66,12 @@ public final class SystemFactory
      * class.
      *
      * @return a new {@link IonSystem} instance; not null.
+     *
+     * @deprecated Use the more configurable {@link IonSystemBuilder} instead
+     * (assuming your application can use the new lightweight {@link IonValue}
+     * implementation).
      */
+    @Deprecated
     public static IonSystem newSystem()
     {
         IonSystem sys = newSystem(DEFAULT_IMPLEMENTATION);
@@ -74,7 +84,12 @@ public final class SystemFactory
      * @return a new {@link IonSystem} instance; not null.
      *
      * @throws NullPointerException if {@code catalog} is null.
+     *
+     * @deprecated Use the more configurable {@link IonSystemBuilder} instead
+     * (assuming your application can use the new lightweight {@link IonValue}
+     * implementation).
      */
+    @Deprecated
     public static IonSystem newSystem(IonCatalog catalog)
     {
         IonSystem sys = newSystem(DEFAULT_IMPLEMENTATION, catalog);
@@ -94,7 +109,10 @@ public final class SystemFactory
      * @return a new {@link IonSystem} instance; not null.
      *
      * @throws NullPointerException if {@code catalog} is null.
+     *
+     * @deprecated This method will be removed before R10 is released!
      */
+    @Deprecated
     public static IonSystem newSystem(SystemCapabilities implementation)
     {
         IonSystem sys = newSystem(implementation, new SimpleCatalog());
@@ -114,31 +132,27 @@ public final class SystemFactory
      * @return a new {@link IonSystem} instance; not null.
      *
      * @throws NullPointerException if {@code catalog} is null.
+     *
+     * @deprecated This method will be removed before R10 is released!
      */
+    @Deprecated
     public static IonSystem newSystem(SystemCapabilities implementation, IonCatalog catalog)
     {
         if (catalog == null) {
             throw new NullPointerException("catalog is null");
         }
 
-        IonSystem sys = null;
         if (implementation == null
             || implementation.equals(SystemCapabilities.DEFAULT)
            ) {
             implementation = DEFAULT_IMPLEMENTATION;
         }
-        switch (implementation) {
-        case DEFAULT:
-            throw new IllegalStateException("internal failure: default state is set to default");
-        case ORIGINAL:
-            sys = new IonSystemImpl(catalog);
-            break;
-        case LITE:
-            sys = new IonSystemLite(catalog);
-            break;
-        default:
-            throw new IllegalArgumentException("SystemType "+implementation.toString()+" is not recognized");
-        }
+
+        IonSystemBuilder builder = IonSystemBuilder.defaultBuilder().copy();
+        builder.setCatalog(catalog);
+        builder.setBinaryBacked(implementation == SystemCapabilities.ORIGINAL);
+
+        IonSystem sys = builder.build();
         return sys;
     }
 }
