@@ -2,11 +2,14 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonReader;
+import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
+import com.amazon.ion.TestUtils;
 import org.junit.Test;
 
 /**
@@ -43,5 +46,27 @@ public class TreeReaderTest
         r.stepOut();
 
         assertFalse(r.hasNext());
+    }
+
+    @Test
+    public void testReadingReadOnly()
+    {
+        IonDatagram dg = loader().load("{hello:hello}");
+
+        // Make just part of the datagram read-only
+        IonStruct s = (IonStruct) dg.get(0);
+        s.makeReadOnly();
+
+        IonReader r = system().newReader(s);
+        TestUtils.deepRead(r);
+
+        r = system().newReader(dg);
+        TestUtils.deepRead(r);
+
+        // Now the whole thing
+        dg.makeReadOnly();
+
+        r = system().newReader(dg);
+        TestUtils.deepRead(r);
     }
 }

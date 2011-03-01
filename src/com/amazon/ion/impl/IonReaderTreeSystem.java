@@ -41,7 +41,6 @@ class IonReaderTreeSystem
     protected IonSystem           _system;
     protected SymbolTable         _symbols;
     protected Iterator<IonValue>  _iter;
-    protected IonContainerPrivate _root;
     protected IonValue            _parent;
     protected IonValue            _next;
     protected IonValue            _curr;
@@ -63,18 +62,10 @@ class IonReaderTreeSystem
                 assert(value instanceof IonContainerPrivate);
                 IonDatagram dg = (IonDatagram) value;
                 _parent = dg;
-                _root = (IonContainerPrivate)dg;
                 _iter = dg.systemIterator(); // we want a system reader not: new Children(dg);
             }
             else {
                 _next = value;
-                if (value instanceof IonContainerPrivate) {
-                    _root = (IonContainerPrivate)value;
-                    // FIXME ION-145 this goes way up above the value we're iterating! why?
-                    while (_root.getContainer() != null) {
-                        _root = (IonContainerPrivate)_root.getContainer();
-                    }
-                }
             }
         }
     }

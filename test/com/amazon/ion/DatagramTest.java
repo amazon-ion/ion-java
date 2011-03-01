@@ -588,10 +588,22 @@ public class DatagramTest
         IonDatagram dg = system().newDatagram();
         dg.add().newSymbol("x");
         dg.getBytes();  // Force encoding and symtab construction
-        assertEquals(ION_1_0 + ' '
-                     + ION_SYMBOL_TABLE + "::{" + SYMBOLS + ":[\"x\"]}"
-                     + " x",
-                     dg.toString());
+
+        String result = dg.toString();
+
+        // Not all DOM impls will inject the symtab after getBytes()
+        if (dg.systemGet(1) instanceof IonStruct)
+        {
+            assertEquals(ION_1_0 + ' '
+                         + ION_SYMBOL_TABLE + "::{" + SYMBOLS + ":[\"x\"]}"
+                         + " x",
+                         result);
+        }
+        else
+        {
+            assertEquals(ION_1_0 + " x", result);
+
+        }
     }
 
 

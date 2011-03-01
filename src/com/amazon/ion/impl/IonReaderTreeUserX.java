@@ -40,13 +40,6 @@ class IonReaderTreeUserX
         }
         this._curr = this._next;
         this._next = null;
-
-        if (this._symbols != null) {
-            if (this._root != null) {
-                _root.setSymbolTable(this._symbols);
-            }
-        }
-
         return this._curr.getType();
     }
 

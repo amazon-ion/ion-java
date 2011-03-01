@@ -660,7 +660,10 @@ public class IonDatagramLite
 
     public ListIterator<IonValue> systemIterator()
     {
-        populateSymbolValues(null);
+        if (false)
+        {
+            populateSymbolValues(null);  // FIXME Fails if read-only!
+        }
         ListIterator<IonValue> iterator = new SystemContentIterator(this.isReadOnly());
         return iterator;
     }
