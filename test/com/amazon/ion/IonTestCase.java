@@ -27,6 +27,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 import junit.framework.TestCase;
+import org.junit.Assert;
 import org.junit.runner.RunWith;
 
 /**
@@ -694,7 +695,7 @@ public abstract class IonTestCase
     }
 
 
-    public void checkAnnotation(String expectedAnnot, IonValue value)
+    public static void checkAnnotation(String expectedAnnot, IonValue value)
     {
         assertTrue("missing annotation",
                    value.hasTypeAnnotation(expectedAnnot));
@@ -777,7 +778,7 @@ public abstract class IonTestCase
      * @deprecated use {@link #assertEquals(Object, Object)} instead.
      */
     @Deprecated
-    public void assertIonEquals(IonValue expected, final IonValue found)
+    public static void assertIonEquals(IonValue expected, final IonValue found)
     {
         assertSame("element classes", expected.getClass(), found.getClass());
 
@@ -800,9 +801,9 @@ public abstract class IonTestCase
                 {
                     public void visit(IonBlob expected) throws Exception
                     {
-                        assertEquals("blob data",
-                                     expected.getBytes(),
-                                     ((IonBlob)found).getBytes());
+                        Assert.assertArrayEquals("blob data",
+                                                 expected.getBytes(),
+                                                 ((IonBlob)found).getBytes());
                     }
 
                     public void visit(IonBool expected) throws Exception
@@ -814,9 +815,9 @@ public abstract class IonTestCase
 
                     public void visit(IonClob expected) throws Exception
                     {
-                        assertEquals("clob data",
-                                     expected.getBytes(),
-                                     ((IonClob)found).getBytes());
+                        Assert.assertArrayEquals("clob data",
+                                                 expected.getBytes(),
+                                                 ((IonClob)found).getBytes());
                     }
 
                     /**
@@ -845,13 +846,13 @@ public abstract class IonTestCase
                     public void visit(IonFloat expected) throws Exception
                     {
                         assertEquals("float value",
-                                     expected.bigDecimalValue(),
-                                     ((IonFloat)found).bigDecimalValue());
+                                     expected.doubleValue(),
+                                     ((IonFloat)found).doubleValue());
                     }
 
                     public void visit(IonInt expected) throws Exception
                     {
-                        assertEquals("float value",
+                        assertEquals("int value",
                                      expected.bigIntegerValue(),
                                      ((IonInt)found).bigIntegerValue());
                     }
