@@ -14,9 +14,13 @@ import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.TestUtils;
 import com.amazon.ion.impl.IonImplUtils;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Iterator;
+import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -38,6 +42,7 @@ public class MiscStreamingTests
     static final String _QuotingString2_java = "s\'t2";
 
     @Test
+    @SuppressWarnings("deprecation")
     public void testQuoting()
     throws Exception
     {
@@ -271,6 +276,34 @@ public class MiscStreamingTests
         assertEquals(IonType.INT, reader.next());
         assertEquals(2, reader.intValue());
         assertEquals(null, reader.next());
+    }
+
+
+    @Test @Ignore // FIXME ION-184
+    public void testReaderDataMangling()
+    throws Exception
+    {
+        String dataText = "a/**/b";
+        byte[] dataBytes = dataText.getBytes("UTF-8");
+
+        IonReader reader = system().newReader(dataBytes);
+        TestUtils.deepRead(reader);
+
+        Assert.assertArrayEquals(dataText.getBytes("UTF-8"), dataBytes);
+    }
+
+
+    @Test @Ignore // FIXME ION-184
+    public void testIteratorDataMangling()
+    throws Exception
+    {
+        String dataText = "a/**/b";
+        byte[] dataBytes = dataText.getBytes("UTF-8");
+
+        Iterator<IonValue> reader = system().iterate(dataBytes);
+        while (reader.hasNext()) reader.next();
+
+        Assert.assertArrayEquals(dataText.getBytes("UTF-8"), dataBytes);
     }
 
 
