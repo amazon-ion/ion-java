@@ -21,7 +21,7 @@ import java.util.Iterator;
  * {@link #clone(IonValue)}.
  * <p>
  * To create an {@code IonSystem},
- * see {@link com.amazon.ion.system.SystemFactory}.
+ * see {@link com.amazon.ion.system.IonSystemBuilder}.
  * <p>
  * Implementations of this interface must be safe for use by multiple threads.
  */
@@ -361,7 +361,7 @@ public interface IonSystem
     /**
      * Creates an new {@link IonReader} instance over a block of Ion data,
      * detecting whether it's text or binary data.  If the input data is
-     * text this may return an (@link IonTextReader) which can report the
+     * text this may return an {@link IonTextReader} which can report the
      * line and offset position of the parser for error reporting.
      *
      * @param ionData is used only within the range of bytes starting at
@@ -378,7 +378,7 @@ public interface IonSystem
     /**
      * Creates a new {@link IonReader} instance over a stream of Ion data,
      * detecting whether it's text or binary data. If the input data is
-     * text this may return an (@link IonTextReader) which can report the
+     * text this may return an {@link IonTextReader} which can report the
      * line and offset position of the parser for error reporting.
      *
      * @param ionData must not be null.

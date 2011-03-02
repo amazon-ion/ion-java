@@ -1,3 +1,5 @@
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+
 package com.amazon.ion.impl;
 
 
@@ -253,6 +255,7 @@ public abstract class UnifiedInputBufferX
         protected Chars(int initialPageSize) {
             super(initialPageSize);
         }
+        /** Retains a reference to the chars array! */
         protected Chars(char[] chars, int offset, int length) {
             super(offset + length);
             _buffers[0] = new UnifiedDataPageX.Chars(chars, offset, length);
@@ -260,6 +263,9 @@ public abstract class UnifiedInputBufferX
             _buffer_count = 1;
 
         }
+        /**
+         * Makes a copy of the {@link CharSequence}.
+         */
         protected Chars(CharSequence chars, int offset, int length) {
             this(chars_make_char_array(chars, offset, length), 0, length);
         }

@@ -2,8 +2,8 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.SimpleCatalog;
-import com.amazon.ion.system.SystemFactory;
 
 
 /**
@@ -14,8 +14,8 @@ import com.amazon.ion.system.SystemFactory;
  * A typical implementation would retrieve symbol tables from some external
  * source.
  * <p>
- * To utilize a custom catalog, it must be passed to
- * {@link SystemFactory#newSystem(IonCatalog)} when a system is created, or to
+ * To utilize a custom catalog, it must be given to the
+ * {@link IonSystemBuilder} before a system is built, or to
  * selected methods of the {@link IonSystem} for localized use.
  *
  * <h2>Notes for Implementors</h2>
