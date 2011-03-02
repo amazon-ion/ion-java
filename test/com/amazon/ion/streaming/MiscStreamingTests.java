@@ -13,8 +13,10 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.impl.IonImplUtils;
-import com.amazon.ion.system.SystemFactory;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import org.junit.Test;
 
 /**
@@ -94,7 +96,7 @@ public class MiscStreamingTests
             +",index_suppressed:true,"
             +"offline_store_only:true,version:2,}";
 
-        IonSystem sys = SystemFactory.newSystem();
+        IonSystem sys = system();
         IonDatagram dg = sys.getLoader().load(s);
         IonValue v = dg.get(0);
         IonType t = v.getType();
@@ -145,7 +147,7 @@ public class MiscStreamingTests
             +",index_suppressed:true,"
             +"offline_store_only:true,version:2,}";
 
-        IonSystem sys = SystemFactory.newSystem();
+        IonSystem sys = system();
         IonDatagram dg = sys.getLoader().load(s);
         IonValue v = dg.get(0);
         IonType t = v.getType();
@@ -236,6 +238,7 @@ public class MiscStreamingTests
         testNullTextValue(reader, IonType.SYMBOL);
     }
 
+    @SuppressWarnings("deprecation")
     private void testNullTextValue(IonReader reader, IonType textType)
     {
         if (! IonImplUtils.READER_HASNEXT_REMOVED) {
@@ -268,5 +271,19 @@ public class MiscStreamingTests
         assertEquals(IonType.INT, reader.next());
         assertEquals(2, reader.intValue());
         assertEquals(null, reader.next());
+    }
+
+
+    /** ION-140 IMSVT-2863 IMSVT-2573 */
+    @Test
+    public void testTextWriterSymtabs()
+    throws IOException
+    {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonWriter writer = system().newTextWriter(out);
+        writer.writeValue(system().newSymbol("foo"));
+        writer.close();
+
+        assertEquals("$ion_1_0 foo", new String(out.toByteArray(), "UTF-8"));
     }
 }
