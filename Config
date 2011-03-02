@@ -23,15 +23,14 @@ package.IonJava = {
   };
 
 
-  build-system = happytrails;   # Comes from MiniTrails
+  build-system = happytrails;
 
   build-tools = {
     1.0 = {
       ApacheAnt = 1.8;
-      BrazilJavadoc = 1.0;
-      HappyTrails = 2.0;
+      BrazilJavadoc = 1.1;
+      HappyTrails = 3.0;
       JDK = 1.5;
-      MiniTrails = 2.0;
     };
   };
 
