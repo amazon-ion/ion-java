@@ -93,6 +93,9 @@ extends IonTestCase
         return text;
     }
 
+    /**
+     * Use IonReader to consume the buffer, and IonTextWriter to print it out.
+     */
     private byte[] makeText(byte[] buffer, boolean prettyPrint)
     throws IOException
     {
@@ -228,8 +231,10 @@ extends IonTestCase
             }
             boolean datagrams_are_equal = Equivalence.ionEquals(dg1, dg2);
             if (!datagrams_are_equal) {
-                datagrams_are_equal = Equivalence.ionEquals(dg1, dg2);
+                // For breakpointing and better error indication.
+                assertIonEquals(dg1, dg2);
             }
+
             assertTrue("resulting datagrams should be the same in "+title, datagrams_are_equal);
         }
 
@@ -422,7 +427,7 @@ extends IonTestCase
         }
     }
 
-    int break_point_point(int x) throws Exception
+    private int break_point_point(int x) throws Exception
     {
         int y = 2;
         int z;
