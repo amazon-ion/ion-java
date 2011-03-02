@@ -27,7 +27,9 @@ package.IonJava = {
 
   build-tools = {
     1.0 = {
-      ApacheAnt = 1.8;
+    # ApacheAnt-1.8 is broken on RHEL5_65
+    # http://devcentral.amazon.com/contact-us/ContactUsIssue.cgi?profile=dev-support;issue=10035526
+#     ApacheAnt = 1.8;
       BrazilJavadoc = 1.1;
       HappyTrails = 3.0;
       JDK = 1.5;
