@@ -742,7 +742,7 @@ public final class Timestamp
                 case DAY:
                     break;
                 default:
-                    error_in_field("Timestamp must have local offsetinvalid timezone offset: missing timezone offset");
+                    error_in_field("Timestamp must have local offset: " + image);
             }
             offset = null;
         }
