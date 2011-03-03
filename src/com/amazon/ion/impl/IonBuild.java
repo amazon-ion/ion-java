@@ -1,39 +1,23 @@
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonList;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSystem;
-import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.system.SystemFactory;
+import com.amazon.ion.system.IonSystemBuilder;
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
 
 public class IonBuild
 {
-    static final int Major = 1;
-    static final int Minor = 8;
-    static final int Patch = 5;
-
-    static final String CheckInDate    = "2010-08-30T10:05+07:00";
-    static final String CheckInComment = "fixed symbol table ion struct binding (half way) - csuver";
-
-    static final String[] History = {
-        "{major_version:1,minor_version:8,patch:5,check_in_date:2010-08-30T10:05+07:00,check_in_comment:'''fixed symbol table ion struct binding (half way) - csuver'''}"
-        ,"{major_version:1,minor_version:8,patch:4,check_in_date:2010-06-24T09:56+07:00,check_in_comment:'''fixed symbol table related asserts from integration - csuver'''}"
-        ,"{major_version:1,minor_version:8,patch:3,check_in_date:2010-06-24T09:56+07:00,check_in_comment:'''fixed binary stepOut bug Jira 133 - csuver'''}"
-        ,"{major_version:1,minor_version:8,patch:2,check_in_date:2010-06-07T08:10+07:00,check_in_comment:'''Initial identified JAR - with lite and fix for reading local symbol table - csuver'''}"
-    };
-
-    static final String BrazilBuild = "@BRAZIL_VERSION@"; // someday we'll make this work
-
-    static final int argid_HISTORY = 1;
     static final int argid_VERSION = 2;
     static final int argid_HELP    = 3;
     static final int argid_INVALID = -1;
 
     static boolean printHelp    = false;
-    static boolean printHistory = false;
     static boolean printVersion = false;
     static String  errorMessage = null;
 
@@ -48,7 +32,7 @@ public class IonBuild
     {
         process_command_line(args);
 
-        if (printVersion || printHistory) {
+        if (printVersion) {
             doPrintVersion();
         }
         if (printHelp) {
@@ -58,14 +42,13 @@ public class IonBuild
 
     private static void process_command_line(String[] args)
     {
+        if (args.length == 0) printHelp = true;
+
         for (int ii=0; ii<args.length; ii++) {
             String arg = args[ii];
             if (arg == null || arg.length() < 1) continue;
             int argid = getArgumentId(arg);
             switch (argid) {
-            case argid_HISTORY:
-                printHistory = true;
-                break;
             case argid_VERSION:
                 printVersion = true;
                 break;
@@ -85,8 +68,6 @@ public class IonBuild
             switch (arg.charAt(1)) {
             case 'h': case '?':
                 return argid_HELP;
-            case 'a':
-                return argid_HISTORY;
             case 'v':
                 return argid_VERSION;
             default:
@@ -96,9 +77,6 @@ public class IonBuild
         if (arg.startsWith("--") && arg.length() > 2) {
             if (arg.equals("help")) {
                 return argid_HELP;
-            }
-            if (arg.equals("history")) {
-                return argid_HISTORY;
             }
             if (arg.equals("version")) {
                 return argid_VERSION;
@@ -113,39 +91,56 @@ public class IonBuild
     }
 
     private static void doPrintHelp() {
-        System.out.println("IonJava JAR - CSuver");
-        System.out.println("Copyright (c) 2010 Amazon.com");
+        System.out.println("IonJava -- Copyright (c) 2010-2011 Amazon.com");
         System.out.println("usage: java -jar IonJava.jar <options>");
         System.out.println("options:");
-        System.out.println("-v (--version) - prints current version entry");
-        System.out.println("-a (--all) - prints all the history entries");
-        System.out.println("-h )--help) - prints this helpful message");
+        System.out.println("-v (--version) prints current version entry");
+        System.out.println("-h (--help)    prints this helpful message");
         if (errorMessage != null) {
             System.out.println();
             System.out.println(errorMessage);
         }
     }
 
+    private static Properties loadBuildProperties() throws IOException
+    {
+        Properties props = new Properties();
+
+        InputStream in = IonBuild.class.getResourceAsStream("build.properties");
+        try
+        {
+            props.load(in);
+        }
+        finally
+        {
+            in.close();
+        }
+
+        return props;
+    }
+
+
+    private static void copyProperty(IonStruct struct, Properties props,
+                                     String name)
+    {
+        String value = props.getProperty(name, "");
+        if (value.length() != 0)
+        {
+            struct.add(name).newString(value);
+        }
+    }
+
     private static void doPrintVersion() throws IOException
     {
-        IonSystem sys = SystemFactory.newSystem();
+        Properties props = loadBuildProperties();
+
+        IonSystem sys = IonSystemBuilder.defaultBuilder().build();
         IonStruct v = sys.newEmptyStruct();
 
         if (printVersion) {
-            v.add("major_version", sys.newInt(Major));
-            v.add("minor_version", sys.newInt(Minor));
-            v.add("patch",         sys.newInt(Patch));
-            IonValue t = sys.singleValue(CheckInDate);
-            v.add("check_in_date", t);
-            v.add("check_in_comment", sys.newString(CheckInComment));
-        }
-
-        if (printHistory) {
-            IonList h = sys.newEmptyList();
-            for (int ii=0; ii<History.length; ii++) {
-                h.add(sys.singleValue(History[ii]));
-            }
-            v.add("history", h);
+            copyProperty(v, props, "release_label");
+            copyProperty(v, props, "brazil_package_version");
+            copyProperty(v, props, "build_time");
         }
 
         IonWriterUserText.TextOptions options = new IonWriterUserText.TextOptions(
@@ -154,7 +149,6 @@ public class IonBuild
                 ,true  // boolean filterOutSymbolTables
                 ,false // boolean suppressIonVersionMarker
         );
-        v.addTypeAnnotation("IonJava");
 
         IonWriter w = IonWriterFactory.makeWriter(sys, (Appendable)System.out, options);
         IonReader r = sys.newReader(v);
@@ -162,5 +156,4 @@ public class IonBuild
         w.finish();
         System.out.println();
     }
-
 }
