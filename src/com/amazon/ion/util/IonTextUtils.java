@@ -408,14 +408,14 @@ public class IonTextUtils
                 out.append(mode == EscapeMode.JSON ? "\\u0007" : "\\a");
                 return;
             case '\u000B':
-                out.append("\\v");
+                out.append(mode == EscapeMode.JSON ? "\\u000b" : "\\v");
                 return;
             case '\"':
                 if (mode == EscapeMode.JSON || mode == EscapeMode.ION_STRING) {
                     out.append("\\\"");
                     return;
                 }
-                break;
+                break; // Treat as normal code point for long string or symbol.
             case '\'':
                 if (mode == EscapeMode.ION_SYMBOL ||
                     mode == EscapeMode.ION_LONG_STRING)
@@ -486,6 +486,11 @@ public class IonTextUtils
         "0000000",
     };
 
+    /**
+     * Generates a two-digit hex escape sequence,
+     * {@code "\x}<i>{@code HH}</i>{@code "},
+     * using lower-case for alphabetics.
+     */
     private static void printCodePointAsTwoHexDigits(Appendable out, int c)
         throws IOException
     {
@@ -497,6 +502,11 @@ public class IonTextUtils
         out.append(s);
     }
 
+    /**
+     * Generates a four-digit hex escape sequence,
+     * {@code "\}{@code u}<i>{@code HHHH}</i>{@code "},
+     * using lower-case for alphabetics.
+     */
     private static void printCodePointAsFourHexDigits(Appendable out, int c)
         throws IOException
     {
@@ -506,6 +516,11 @@ public class IonTextUtils
         out.append(s);
     }
 
+    /**
+     * Prints an eight-digit hex escape sequence,
+     * {@code "\}{@code U}<i>{@code HHHHHHHH}</i>{@code "},
+     * using lower-case for alphabetics.
+     */
     private static void printCodePointAsEightHexDigits(Appendable out, int c)
         throws IOException
     {
@@ -515,6 +530,12 @@ public class IonTextUtils
         out.append(s);
     }
 
+    /**
+     * Generates a surrogate pair as two four-digit hex escape sequences,
+     * {@code "\}{@code u}<i>{@code HHHH}</i>{@code \}{@code u}<i>{@code HHHH}</i>{@code "},
+     * using lower-case for alphabetics.
+     * This for necessary for JSON when the code point is outside the BMP.
+     */
     private static void printCodePointAsSurrogatePairHexDigits(Appendable out, int c)
         throws IOException
     {

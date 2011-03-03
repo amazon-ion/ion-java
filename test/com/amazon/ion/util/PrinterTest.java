@@ -579,6 +579,25 @@ public class PrinterTest
         // TODO test printTimestampAsMillis
     }
 
+    private static final String Q = "\"";
+
+    @Test
+    public void testJsonEscapes()
+    throws Exception
+    {
+        // ION-101
+        String ionEscapes =
+            Q + "\\0\\a\\b\\t\\n\\f\\r\\v\\\"\\'\\?\\\\\\/\\\n" + Q;
+        String jsonEscapes =
+            Q + "\\u0000\\u0007\\b\\t\\n\\f\\r\\u000b\\\"'?\\\\/" + Q;
+
+        IonString value = (IonString) system().singleValue(ionEscapes);
+
+        myPrinter.setJsonMode();
+        checkRendering(jsonEscapes, value);
+    }
+
+
     @Test
     public void testJsonEscapeNonBmp() throws Exception {
         // JIRA ION-33
