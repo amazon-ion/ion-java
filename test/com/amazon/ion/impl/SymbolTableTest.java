@@ -713,14 +713,6 @@ public class SymbolTableTest
         assertEquals("[\"foo\",\"bar\"]", symbols.toString());
     }
 
-    @Deprecated @Test
-    public void testGetReader()
-    {
-        SymbolTable st = system().newLocalSymbolTable();
-        IonReader r = st.getReader();
-        assertNotSame("reader", null, r);
-    }
-
 
     @Test
     public void testBadLocalSymtabCreation()
