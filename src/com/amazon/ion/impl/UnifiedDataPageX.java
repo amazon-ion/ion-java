@@ -84,6 +84,9 @@ public abstract class UnifiedDataPageX
 
     public int getBufferLimit()    { return _page_limit; }
     public int getOriginalStartingOffset() { return _base_offset; }
+
+    // FIXME document lower-bound of the result.  Can it be negative?
+    // If not, why not?
     public int getStartingOffset() { return _base_offset - _unread_count; }
     public int getUnreadCount()    { return _unread_count; }
 

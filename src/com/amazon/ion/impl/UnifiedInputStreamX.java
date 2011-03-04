@@ -47,6 +47,7 @@ public abstract class UnifiedInputStreamX
     byte[]                  _bytes;
     char[]                  _chars;
 
+
     UnifiedSavePointManagerX _save_points;
 
 
@@ -177,10 +178,10 @@ public abstract class UnifiedInputStreamX
         _pos--;
         if (_pos >= 0) {
             if (is_byte_data()) {
-                _bytes[_pos] = (byte)c;
+                _bytes[_pos] = (byte)c;  // FIXME modifying user's data!
             }
             else {
-                _chars[_pos] = (char)c;
+                _chars[_pos] = (char)c;  // FIXME modifying user's data!
             }
             UnifiedDataPageX curr = _buffer.getCurrentPage();
             if (_pos < curr.getStartingOffset()) {
@@ -189,6 +190,8 @@ public abstract class UnifiedInputStreamX
 
         }
         else {
+            // FIXME _pos is negative?!?
+            // We don't seem to check for that elsewhere.
             _buffer.putCharAt(getPosition(), c);
         }
     }
@@ -212,6 +215,8 @@ public abstract class UnifiedInputStreamX
         // the \r and has editted the buffer.  That's a bad
         // thing.
         if (_pos > curr.getStartingOffset()) {
+            // FIXME what keeps _pos from being zero or negative,
+            // causing the array access below to fail?
             if (is_byte_data()) {
                 c = _bytes[_pos-1] & 0xff;
             }
