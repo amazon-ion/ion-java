@@ -360,7 +360,11 @@ public class IonDatagramLite
             if (child_symbols != null) {
                 symbols = child_symbols;
             }
-            symbols = child.populateSymbolValues(symbols);
+            // the datagram is not marked readonly, although it's
+            // children may be read only
+            if (child.isReadOnly() == false) {
+                symbols = child.populateSymbolValues(symbols);
+            }
         }
         return symbols;
     }
@@ -660,13 +664,58 @@ public class IonDatagramLite
 
     public ListIterator<IonValue> systemIterator()
     {
-        if (false)
-        {
-            populateSymbolValues(null);  // FIXME Fails if read-only!
+
+/* test code  FIXME: remove this
+if (this.isReadOnly() && hasUnresolvedSymbols(this)) {
+    System.err.println("datagram lite has unresolved symbols at get systemIterator time !!");
+}
+*/
+        // read only values have already had their
+        // symbols updated, and should not be modified
+        if (isReadOnly() == false) {
+            populateSymbolValues(null);
         }
+
         ListIterator<IonValue> iterator = new SystemContentIterator(this.isReadOnly());
         return iterator;
     }
+
+/* more test code: FIXME: remove this
+private static boolean hasUnresolvedSymbols(IonValueLite value) {
+    if (value instanceof IonContainerLite ) {
+        IonContainerLite container = (IonContainerLite)value;
+        for (int ii=0; ii<container.get_child_count(); ii++) {
+            IonValueLite child = container.get_child_lite(ii);
+            if (hasUnresolvedSymbols(child)) {
+                return true;
+            }
+        }
+    }
+    else {
+        SymbolTable st = value.getAssignedSymbolTable();
+        String fieldname = value.getFieldName();
+        if (fieldname != null) {
+            int sid = st.findSymbol(fieldname);
+            if (sid < 1) {
+                return true;
+            }
+        }
+        if (value instanceof IonSymbolLite) {
+
+        }
+    }
+    String[] annotations = value.getTypeAnnotationStrings();
+    if (annotations != null && annotations.length > 0) {
+        SymbolTable st = value.getAssignedSymbolTable();
+        for (int ii=0; ii<annotations.length; ii++) {
+            if (st.findSymbol(annotations[ii]) < 1) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+*/
 
     // TODO: optimize this, if there's a real use case
     //       deprecate this is there isn't (which I suspect is actually the case)

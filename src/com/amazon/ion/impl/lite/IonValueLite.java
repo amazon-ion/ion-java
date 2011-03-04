@@ -276,7 +276,7 @@ public abstract class IonValueLite
         // this is done second as the flag assignment
         // copies all the flags, including locked
         this._fieldName = null;
-        this._isLocked(false);  // when we're copying the flags, the target is by definition not locked
+        this.make_readable();  // when we're copying the flags, the target is by definition not locked
     }
 
 
@@ -581,8 +581,15 @@ public abstract class IonValueLite
 
     public void makeReadOnly()
     {
+        populateSymbolValues(null);
         _isLocked(true);
     }
+
+    protected void make_readable()
+    {
+        _isLocked(false);
+    }
+
     /**
      * Verifies that this value is not read-only.
      *
