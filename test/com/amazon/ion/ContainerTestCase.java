@@ -350,4 +350,35 @@ it.next();
         }
         catch (IonException e) { }
     }
+
+    @Test
+    public void testCloneOfReadOnlyContainer()
+    {
+        IonContainer c = makeEmpty();
+        add(c, system().newInt(12));
+        c.makeReadOnly();
+
+        IonValue clone = c.clone();
+        assertEquals(c, clone);
+        assertFalse("clone should be read-only", c.isReadOnly());
+    }
+
+    @Test
+    public void testCloneOfReadOnlyChild()
+    {
+        IonContainer c = makeEmpty();
+        IonInt child = system().newInt(12);
+        add(c, child);
+        child.makeReadOnly();
+
+        IonContainer clone = c.clone();
+        assertEquals(c, clone);
+        assertFalse("clone should be read-only", c.isReadOnly());
+
+        IonValue childClone = clone.iterator().next();
+        assertEquals(child, childClone);
+        assertFalse("clone should be read-only", childClone.isReadOnly());
+    }
+
+
 }
