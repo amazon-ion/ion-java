@@ -360,7 +360,7 @@ it.next();
 
         IonValue clone = c.clone();
         assertEquals(c, clone);
-        assertFalse("clone should be read-only", c.isReadOnly());
+        assertFalse("clone should not be read-only", clone.isReadOnly());
     }
 
     @Test
@@ -373,11 +373,11 @@ it.next();
 
         IonContainer clone = c.clone();
         assertEquals(c, clone);
-        assertFalse("clone should be read-only", c.isReadOnly());
+        assertFalse("clone should not be read-only", clone.isReadOnly());
 
         IonValue childClone = clone.iterator().next();
         assertEquals(child, childClone);
-        assertFalse("clone should be read-only", childClone.isReadOnly());
+        assertFalse("clone should not be read-only", childClone.isReadOnly());
     }
 
 
