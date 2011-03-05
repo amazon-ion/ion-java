@@ -289,7 +289,8 @@ public class MiscStreamingTests
         IonReader reader = system().newReader(dataBytes);
         TestUtils.deepRead(reader);
 
-        Assert.assertArrayEquals(dataText.getBytes("UTF-8"), dataBytes);
+        Assert.assertArrayEquals("UTF-8 text",
+                                 dataText.getBytes("UTF-8"), dataBytes);
     }
 
 
@@ -303,7 +304,8 @@ public class MiscStreamingTests
         Iterator<IonValue> reader = system().iterate(dataBytes);
         while (reader.hasNext()) reader.next();
 
-        Assert.assertArrayEquals(dataText.getBytes("UTF-8"), dataBytes);
+        Assert.assertArrayEquals("UTF-8 text",
+                                 dataText.getBytes("UTF-8"), dataBytes);
     }
 
 
