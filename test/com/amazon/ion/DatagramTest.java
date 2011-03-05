@@ -622,6 +622,8 @@ public class DatagramTest
         }
         catch (ReadOnlyValueException e) { }
         assertEquals(1, dg.size());
+
+        dg.byteSize();
     }
 
     /**

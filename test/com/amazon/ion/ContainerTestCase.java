@@ -2,6 +2,7 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.system.SimpleCatalog;
 import java.util.Iterator;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -352,26 +353,51 @@ it.next();
     }
 
     @Test
+    public void testDeepMaterializeReadOnlyContainer()
+    {
+        IonContainer c = makeEmpty();
+        IonSymbol child = system().newSymbol("s"); // Symbol hits more code
+        add(c, child);
+        c.makeReadOnly();
+        c.deepMaterialize();
+    }
+
+    @Test
     public void testCloneOfReadOnlyContainer()
     {
         IonContainer c = makeEmpty();
-        add(c, system().newInt(12));
+        IonSymbol child = system().newSymbol("s"); // Symbol hits more code
+        add(c, child);
         c.makeReadOnly();
 
-        IonValue clone = c.clone();
-        assertEquals(c, clone);
-        assertFalse("clone should not be read-only", clone.isReadOnly());
+        checkClones(c, child);
     }
 
     @Test
     public void testCloneOfReadOnlyChild()
     {
         IonContainer c = makeEmpty();
-        IonInt child = system().newInt(12);
+        IonSymbol child = system().newSymbol("s"); // Symbol hits more code
         add(c, child);
         child.makeReadOnly();
 
+        checkClones(c, child);
+    }
+
+    private void checkClones(IonContainer c, IonSymbol child)
+    {
         IonContainer clone = c.clone();
+        checkClone(c, child, clone);
+
+        clone = system().clone(c); // clone w/ same system
+        checkClone(c, child, clone);
+
+        clone = system(new SimpleCatalog()).clone(c); // clone w/ other system
+        checkClone(c, child, clone);
+    }
+
+    private void checkClone(IonContainer c, IonSymbol child, IonContainer clone)
+    {
         assertEquals(c, clone);
         assertFalse("clone should not be read-only", clone.isReadOnly());
 
@@ -379,6 +405,4 @@ it.next();
         assertEquals(child, childClone);
         assertFalse("clone should not be read-only", childClone.isReadOnly());
     }
-
-
 }
