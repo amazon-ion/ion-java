@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.util.Iterator;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class RoundTripStreamingTests
@@ -383,7 +382,7 @@ extends IonTestCase
     }
 
 
-    @Test @Ignore
+    @Test
     public void test()
     throws Exception
     {

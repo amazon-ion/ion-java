@@ -460,6 +460,25 @@ public final class IonDatagramImpl
     }
 
     @Override
+    public void makeReadOnly() {
+        // we know this is the root, so there's no helper here: make_read_only_helper(true);
+        if (_isLocked()) return;
+        synchronized (this) { // TODO why is this needed?
+            deepMaterialize();
+            updateBuffer();
+            if (_children != null) {
+                for (int ii=0; ii<_child_count; ii++) {
+                    IonValue child = _children[ii];
+                    //child.makeReadOnly();
+                    ((IonValueImpl)child).make_read_only_helper(false);
+                }
+            }
+            _isLocked(true);
+        }
+
+    }
+
+    @Override
     public boolean isEmpty() throws NullValueException
     {
         return _userContents.isEmpty();

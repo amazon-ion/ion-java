@@ -19,6 +19,7 @@ import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.IonReaderTextRawTokensX.IonReaderTextTokenException;
 import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
 import com.amazon.ion.impl.IonScalarConversionsX.CantConvertException;
+import com.amazon.ion.impl.IonTokenConstsX.CharacterSequence;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -663,7 +664,10 @@ public class IonReaderTextSystemX
             while (len-- > 0) {
                 c = _scanner.read_double_quoted_char(true);
                 if (c < 0) {
-                    if (c == IonTokenConstsX.EMPTY_ESCAPE_SEQUENCE) {
+                    if (c == CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1
+                     || c == CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2
+                     || c == CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3
+                    ) {
                         continue;
                     }
                     break;
@@ -676,7 +680,18 @@ public class IonReaderTextSystemX
             while (len-- > 0) {
                 c = _scanner.read_triple_quoted_char(true);
                 if (c < 0) {
-                    if (c == IonTokenConstsX.EMPTY_ESCAPE_SEQUENCE) {
+                    if (c == CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1
+                     || c == CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2
+                     || c == CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3
+                     || c == CharacterSequence.CHAR_SEQ_STRING_NON_TERMINATOR
+                    ) {
+                        continue;
+                    }
+                    if (c == CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_1
+                     || c == CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_2
+                     || c == CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_3
+                    ) {
+                        buffer[offset++] = (byte)'\n';
                         continue;
                     }
                     break;

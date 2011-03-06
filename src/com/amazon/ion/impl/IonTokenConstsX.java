@@ -13,10 +13,19 @@ import com.amazon.ion.impl.IonScalarConversionsX.CantConvertException;
  */
 public class IonTokenConstsX
 {
-    public static final int STRING_TERMINATOR           = -3; // can't be >=0, ==-1 (eof), nor -2 (empty esc)
-    public static final int EMPTY_ESCAPE_SEQUENCE       = -2;
+    public static class CharacterSequence {
+        public static final int CHAR_SEQ_EOF                         = -1; // matches -1 (stream eof)
+        public static final int CHAR_SEQ_STRING_TERMINATOR           = -2; // can't be >=0, ==-1 (eof), nor -2 (empty esc)
+        public static final int CHAR_SEQ_STRING_NON_TERMINATOR       = -3; // used for a pair of triple quotes treated a nothing
 
-    public static final int TOKEN_break                 = -2;
+        public static final int CHAR_SEQ_NEWLINE_SEQUENCE_1          = -4;  // single new line
+        public static final int CHAR_SEQ_NEWLINE_SEQUENCE_2          = -5;  // single carriage return
+        public static final int CHAR_SEQ_NEWLINE_SEQUENCE_3          = -6;  // new line - carriage return pair
+        public static final int CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1  = -7;  // escape followed by new line
+        public static final int CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2  = -8;  // escape followed by carriage return
+        public static final int CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3  = -9;  // escape followed by new line - carriage return pair
+    }
+
     public static final int TOKEN_ERROR                 = -1;
     public static final int TOKEN_EOF                   =  0;
 

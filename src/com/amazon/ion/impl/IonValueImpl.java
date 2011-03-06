@@ -200,7 +200,7 @@ public abstract class IonValueImpl
 
 
     /**
-     * Indicates whether our {@link #_nativeValue} has been updated and is
+     * Indicates whether our {@link #_hasNativeValue} has been updated and is
      * is currently out of synch with the underlying byte buffer. Initially
      * a non-buffer backed value is dirty, and a buffer backed value (even
      * if it has not been materialized) is clean.  Don't modify this directly,
@@ -210,7 +210,7 @@ public abstract class IonValueImpl
      * <p>
      * Note that a value with no buffer is always dirty.
      */
-    private final boolean _isDirty() { return is_true(IS_DIRTY); }
+    protected final boolean _isDirty() { return is_true(IS_DIRTY); }
     private final boolean _isDirty(boolean flag)
     {
         if (flag) {
@@ -390,36 +390,6 @@ public abstract class IonValueImpl
         _annotations = a.length == 0 ? null : a;
     }
 
-    /**
-     *
-     * @param symboltable must be local, not shared, not null.
-     */
-    /*
-    protected final void init(int fieldSID
-                       ,BufferManager buffer
-                       ,int offset
-                       ,IonContainerImpl container
-                       ,SymbolTable symboltable
-                       )
-    {
-        assert symboltable.isLocalTable();
-
-        _fieldSid    = fieldSID;
-        _buffer      = buffer;
-        _container   = container;
-        _symboltable = symboltable;
-
-        try {
-            IonBinary.Reader reader = buffer.reader();
-            reader.sync();
-            reader.setPosition(offset);
-            pos_load(fieldSID, reader);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-    }
-    */
 
     // this is split to make it more likely
     // that it will be inlined. This is
@@ -452,41 +422,6 @@ public abstract class IonValueImpl
 
     /**
      * @param symboltable must be local, not shared.
-     * @return not null.
-     */
-    /*
-    public static IonValueImpl makeValueFromBuffer(
-                                     int fieldSID
-                                    ,int position
-                                    ,BufferManager buffer
-                                    ,SymbolTable symboltable
-                                    ,IonContainerImpl container
-                                    ,IonSystemImpl system
-    ) {
-        IonValueImpl value;
-
-        try {
-            IonBinary.Reader reader = buffer.reader();
-            reader.sync();
-            reader.setPosition(position);
-            value = makeValueFromReader(fieldSID
-                                       ,reader
-                                       ,buffer
-                                       ,symboltable
-                                       ,container
-                                       ,system
-                    );
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-
-        return value;
-    }
-    */
-
-    /**
-     * @param symboltable must be local, not shared.
      *
      * @return not null.
      */
@@ -507,7 +442,6 @@ public abstract class IonValueImpl
         value._buffer      = buffer;
         value._container   = container;
         value._symboltable = symboltable;
-
         reader.sync();
         reader.setPosition(pos);
         value.pos_load(fieldSID, reader);
@@ -617,6 +551,7 @@ public abstract class IonValueImpl
         }
         return this._fieldSid;
     }
+
     /**
      * variant for symbol table resolution
      * @return boolean if an add symbol was done
@@ -629,6 +564,7 @@ public abstract class IonValueImpl
         {
             this._fieldSid = this.resolveSymbol(this._fieldName);
             if (this._fieldSid == UnifiedSymbolTable.UNKNOWN_SID) {
+                checkForLock();
                 symtab = this.addSymbol(this._fieldName, symtab);
                 this._fieldSid = symtab.findSymbol(this._fieldName);
                 assert( this._fieldSid != UnifiedSymbolTable.UNKNOWN_SID);
@@ -695,9 +631,20 @@ public abstract class IonValueImpl
 
     public void makeReadOnly()
     {
+        // NOTE: it sure seems to me this should be true - but it seems not. hmmm.
+        // IonValuePrivate parent = this.get_symbol_table_root();
+        // if (parent != this) {
+        //     throw new IonException("child members can't be make read only by themselves");
+        // }
+        make_read_only_helper(true);
+    }
+    void make_read_only_helper(boolean is_root) {
         if (_isLocked()) return;
         synchronized (this) {
             deepMaterialize();
+            if (is_root) {
+                this.populateSymbolValues(this._symboltable);
+            }
             _isLocked(true);
         }
     }
@@ -767,7 +714,6 @@ public abstract class IonValueImpl
         }
         return prev;
     }
-
 
     // Not really: overridden for struct, which really needs to have a
     // symbol table.  Everyone needs to have a symbol table since they
@@ -903,11 +849,11 @@ public abstract class IonValueImpl
         if (UnifiedSymbolTable.isAssignableTable(symtab) == false) {
             throw new IllegalArgumentException("symbol table must be local or system");
         }
-        checkForLock();
 
         IonValueImpl parent = get_symbol_table_root();
         SymbolTable  currentSymtab = parent.getSymbolTable();
         if (currentSymtab != symtab) {
+            checkForLock();
             if (UnifiedSymbolTable.isTrivialTable(currentSymtab) == false) {
                 parent.detachFromSymbolTable(); // Calls setDirty
             }
@@ -1287,10 +1233,11 @@ public abstract class IonValueImpl
      * allow materialize to be in-lined.
      * <p/>
      * Postcondition: <code>this._hasNativeValue == true </code>
+     * <p/>
+     * this method is split to help the JIT inline the base version.
      */
     protected final void materialize() throws IOException
     {
-
         if ( this._isMaterialized() ) return;
         materialize_helper();
     }
@@ -1774,14 +1721,13 @@ public abstract class IonValueImpl
      */
     public SymbolTable populateSymbolValues(SymbolTable symtab)
     {
-        checkForLock();
-
         // TODO can any of this be short-circuited?
 
         if (this._annotations != null) {
             for (String s : this._annotations) {
                 int sid = this.resolveSymbol(s);
                 if (sid < 1) {
+                    checkForLock();
                     symtab = this.addSymbol(s, symtab);
                 }
             }

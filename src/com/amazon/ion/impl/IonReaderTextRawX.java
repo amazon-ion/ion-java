@@ -633,6 +633,7 @@ public abstract class IonReaderTextRawX
     {
         int t;
         int action, temp_state;
+        boolean trailing_whitespace = false;  // TODO: there's a better way to do this
         StringBuilder sb;
 
         // FIXME: check depth and type before doing anything further
@@ -708,6 +709,7 @@ public abstract class IonReaderTextRawX
                     // this is the case for an empty symbol
                     parse_error("empty symbols are not valid");
                 }
+                trailing_whitespace = _scanner.skip_whitespace();
                 if (!_scanner.skipDoubleColon()) {
                     // unnecessary: set_current_value(sp);
                     // this will "loop around" to ACTION_LOAD_SCALAR
@@ -791,7 +793,7 @@ public abstract class IonReaderTextRawX
                     switch (_value_keyword) {
                     case IonTokenConstsX.KEYWORD_NULL:
                     {
-                        int kwt = _scanner.peekNullTypeSymbol();
+                        int kwt = trailing_whitespace ? IonTokenConstsX.KEYWORD_none : _scanner.peekNullTypeSymbol();
                         switch (kwt) {
                         case IonTokenConstsX.KEYWORD_NULL:      _null_type = IonType.NULL;       break;
                         case IonTokenConstsX.KEYWORD_BOOL:      _null_type = IonType.BOOL;       break;

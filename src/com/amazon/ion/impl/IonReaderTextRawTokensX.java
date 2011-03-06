@@ -3,6 +3,7 @@ package com.amazon.ion.impl;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.UnexpectedEofException;
+import com.amazon.ion.impl.IonTokenConstsX.CharacterSequence;
 import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
 import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
@@ -42,9 +43,7 @@ public class IonReaderTextRawTokensX
 {
 //////////////////////////////////////////////////////////////////////////debug
     static final boolean _debug = false;
-//    static final boolean _token_counter_on = true;
-//    int _tokens_read = 0;
-//    int _tokens_consumed = 0;
+
 
     static final int   BASE64_EOF = 128; // still a byte, not -1, none of the low 6 bits on
     static final int[] BASE64_CHAR_TO_BIN = Base64Encoder.Base64EncodingCharToInt;
@@ -60,8 +59,6 @@ public class IonReaderTextRawTokensX
     private long                _line_offset_cached;
     private int                 _base64_prefetch_count; // number of base64 decoded bytes in the stack, used to decode base64
     private int                 _base64_prefetch_stack; // since this "stack" will only 0-2 bytes deep, we'll just shift them into an int
-    private int                 _utf8_pretch_byte_count;
-    private int                 _utf8_pretch_bytes;
 
 
     /**
@@ -96,7 +93,6 @@ public class IonReaderTextRawTokensX
 
     public final void tokenIsFinished() {
         _unfinished_token = false;
-        _utf8_pretch_byte_count = 0;
         _base64_prefetch_count = 0;
     }
 
@@ -109,14 +105,6 @@ public class IonReaderTextRawTokensX
         int c;
 
         c = _stream.read();
-        // start if inline of _r.read() ...
-        //if (_r._pos >= _r._limit) {
-        //    c = _r.read_helper();
-        //}
-        //else {
-        //    c = (_r._is_byte_data) ? (_r._bytes[_r._pos++] & 0xff) : _r._chars[_r._pos++];
-        //}
-        // end of in-lined _r.read()
 
         if (c == '\r' || c == '\n' || c == '\\') {  // the c == '\\' clause will cause us to eat ALL slash-newlines
             c = line_count(c);
@@ -124,27 +112,56 @@ public class IonReaderTextRawTokensX
         return c;
     }
 
-    protected final void unread_char(int c)
+    private final void unread_char(int c)
     {
-        if (c == IonTokenConstsX.EMPTY_ESCAPE_SEQUENCE) {
-            c = line_count_unread(c);
-            _stream.unread(c);
+        if (c < 0) {
+            switch (c) {
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_1:
+                line_count_unread(c);
+                _stream.unread('\n');
+                break;
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_2:
+                line_count_unread(c);
+                _stream.unread('\r');
+                break;
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_3:
+                line_count_unread(c);
+                _stream.unread('\n');
+                _stream.unread('\r');
+                break;
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1:
+                _stream.unread('\n');
+                _stream.unread('\\');
+                break;
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2:
+                _stream.unread('\r');
+                _stream.unread('\\');
+                break;
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3:
+                _stream.unread('\n');
+                _stream.unread('\r');
+                _stream.unread('\\');
+                break;
+            case UnifiedInputStreamX.EOF:
+                _stream.unread(UnifiedInputStreamX.EOF);
+                break;
+            default:
+                assert(false && ("INVALID SPECIAL CHARACTER ENCOUNTERED: "+Integer.toString(c)).equals(""));
+            }
         }
-        else if (c == '\n') {
-            c = line_count_unread(c);
-            _stream.unread(c);
-            _stream.unread_optional_cr();
-        }
-        else {
+        else  {
             _stream.unread(c);
         }
     }
+
     private final int line_count_unread(int c) {
-        assert( c == IonTokenConstsX.EMPTY_ESCAPE_SEQUENCE || c == '\n' );
-        if (c == IonTokenConstsX.EMPTY_ESCAPE_SEQUENCE ) {
-            _stream.unread('\n');
-            c = '\\';
-        }
+        assert( c == CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_1
+             || c == CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_2
+             || c == CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_3
+             || c == CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1
+             || c == CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2
+             || c == CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3
+        );
         if (_line_count_has_cached) {
             _line_count = _line_count_cached;
             _line_starting_position = _line_offset_cached;
@@ -156,33 +173,53 @@ public class IonReaderTextRawTokensX
     {
         // check for the slash new line case (and we'l
         // consume both here it that's what we find
-        if (c == '\\') {
-            int c2 = _stream.read();
-            if (c2 == '\r') {  // DOS <cr><lf>  or old Mac <cr>
-                int c3 = _stream.read();
-                if (c3 != '\n') {
-                    unread_char(c3);
+        switch (c) {
+        case '\\':
+            {
+                int c2 = _stream.read();
+                switch (c2) {
+                case '\r':  // DOS <cr><lf>  or old Mac <cr>
+                    int c3 = _stream.read();
+                    if (c3 != '\n') {
+                        unread_char(c3);
+                        c = CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2;
+                    }
+                    else {
+                        c = CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3;
+                    }
+                    break;
+                case '\n':
+                    // Unix and new Mac (also Unix) <lf>
+                    c = CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1;
+                    break;
+                default:
+                    // not a slash new line, so we'll just return the slash
+                    // leave it to be handled elsewhere
+                    unread_char(c2);
+                    return c;
                 }
-                c = IonTokenConstsX.EMPTY_ESCAPE_SEQUENCE;
             }
-            else if (c2 == '\n') { // Unix and new Mac (also Unix) <lf>
-                c = IonTokenConstsX.EMPTY_ESCAPE_SEQUENCE;
+            break;
+        case '\r':
+            {
+                // convert '\r' or '\r\n' into the appropriate CHAR_SEQ pseudo character
+                int c2 = _stream.read();
+                if (c2 == '\n') {
+                    c = CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_3;
+                }
+                else {
+                    unread_char(c2);
+                    c = CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_2;
+                }
             }
-            else {
-                // not a slash new line, so we'll just return the slash
-                // leave it to be handled elsewhere
-                unread_char(c2);
-                return c;
-            }
+            break;
+        case '\n':
+            c = CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_1;
+            break;
+        default:
+            assert("WE SHOULD NEVER BE HERE!".equals("false"));
         }
-        else if (c == '\r') {
-            // convert '\r' or '\r\n' into '\n'
-            int c2 = _stream.read();
-            if (c2 != '\n') {
-                unread_char(c2);
-            }
-            c = '\n';
-        }
+
         // before we adjust the line count we save it so that
         // we can recover from a unread of a line terminator
         // note that we can only recover from a single line
@@ -194,9 +231,8 @@ public class IonReaderTextRawTokensX
         _line_count_has_cached = true;
 
         // anything else (and that should only be either a new line
-        // of IonTokenConsts.EMPTY_ESCAPE_SEQUENCE passed in) we will
+        // of IonTokenConsts.ESCAPED_NEWLINE_SEQUENCE passed in) we will
         // return the char unchanged and line count
-
         _line_count++;
         _line_starting_position = _stream.getPosition();
         return c;
@@ -214,22 +250,15 @@ public class IonReaderTextRawTokensX
      */
     public final boolean skipDoubleColon() throws IOException
     {
-        boolean any_whitespace = skip_whitespace();
-        int c = read_char();
+        int c = skip_over_whitespace();
         if (c != ':') {
             unread_char(c);
-            if (any_whitespace) {
-                unread_char(' ');
-            }
             return false;
         }
         c = read_char();
         if (c != ':') {
             unread_char(c);
             unread_char(':');
-            if (any_whitespace) {
-                unread_char(' ');
-            }
             return false;
         }
         return true;
@@ -253,13 +282,9 @@ public class IonReaderTextRawTokensX
      */
     public final boolean skipDot() throws IOException
     {
-        boolean any_whitespace = skip_whitespace();
-        int c = read_char();
+        int c = skip_over_whitespace();
         if (c != '.') {
             unread_char(c);
-            if (any_whitespace) {
-                unread_char(' ');
-            }
             return false;
         }
         return true;
@@ -335,17 +360,10 @@ public class IonReaderTextRawTokensX
     {
         String type_error = "";
         for (int ii=0; ii<read_count; ii++) {
-            type_error += (char)read_ahead[ii];  // this is horrible, but we're about throw anyway
+            type_error += (char)read_ahead[ii];  // this (string concatenation) is horrible, but we're about throw anyway
         }
 
-        int ii = read_count;
-        while (ii > 0) {
-            ii--;
-            unread_char(read_ahead[ii]);
-        }
-        unread_char('.'); // because we don't need the dot either (but it's what got us here)
-
-        String message = "invalid type name '"+type_error+"' on a typed null value";
+        String message = "invalid type name on a typed null value";
         error(message); // this throws so we won't actually return
         return IonTokenConstsX.KEYWORD_unrecognized;
     }
@@ -642,12 +660,43 @@ public class IonReaderTextRawTokensX
 
     private final int skip_over_whitespace() throws IOException
     {
-        skip_whitespace();
-        int c = read_char();
+        int c, c2;
+
+        loop: for (;;) {
+            c = read_char();
+            switch (c) {
+            case -1:
+                break loop;
+            case ' ':
+            case '\t':
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_1:          // new line normalization and counting is handled in read_char
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_2:
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_3:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3:
+                break;
+            case '/':
+                switch(c2 = read_char()) {
+                case '/':
+                    skip_single_line_comment();
+                    break;
+                case '*':
+                    skip_block_comment();
+                    break;
+                default:
+                    unread_char(c2);
+                    break loop;
+                }
+                break;
+            default:
+                break loop;
+            }
+        }
         return c;
     }
 
-    private final boolean skip_whitespace() throws IOException
+    protected final boolean skip_whitespace() throws IOException
     {
         boolean any_whitespace = false;
         int c, c2;
@@ -657,11 +706,14 @@ public class IonReaderTextRawTokensX
             switch (c) {
             case -1:
                 break loop;
-            case IonTokenConstsX.EMPTY_ESCAPE_SEQUENCE:
             case ' ':
             case '\t':
-            case '\r':
-            case '\n': // new line normalization and counting is handled in read_char
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_1:          // new line normalization and counting is handled in read_char
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_2:
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_3:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3:
                 any_whitespace = true;
                 break;
             case '/':
@@ -698,8 +750,12 @@ public class IonReaderTextRawTokensX
                 return c;
             case ' ':
             case '\t':
-            case '\r':
-            case '\n': // new line normalization is handled in read_char
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_1:          // new line normalization and counting is handled in read_char
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_2:
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_3:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3:
                 break;
             default:
                 return c;
@@ -712,9 +768,17 @@ public class IonReaderTextRawTokensX
         for (;;) {
             int c = read_char();
             switch (c) {
-            case '\n': return;
-            case -1:   return;
-            default:   break;
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_1:          // new line normalization and counting is handled in read_char
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_2:
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_3:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3:
+                return;
+            case -1:
+                return;
+            default:
+                break; // and read another character
             }
         }
     }
@@ -905,14 +969,24 @@ public class IonReaderTextRawTokensX
     {
         boolean isTerminator;
 
-        if (c == '/') {
+        switch (c) {
+            case '/':
             // this is terminating only if it starts a comment of some sort
             c = read_char();
             unread_char(c);  // we never "keep" this character
             isTerminator = (c == '/' || c == '*');
-        }
-        else {
+            break;
+        case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_1:          // new line normalization and counting is handled in read_char
+        case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_2:
+        case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_3:
+        case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1:
+        case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2:
+        case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3:
+            isTerminator = true;
+            break;
+        default:
             isTerminator = IonTextUtils.isNumericStop(c);
+            break;
         }
 
         return isTerminator;
@@ -958,7 +1032,10 @@ public class IonReaderTextRawTokensX
         for (;;) {
             c = read_char();
             switch (c) {
-            case IonTokenConstsX.EMPTY_ESCAPE_SEQUENCE:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3:
+            // WAS: case IonTokenConstsX.ESCAPED_NEWLINE_SEQUENCE:
                 continue;
             case -1:
                 return;
@@ -1715,10 +1792,6 @@ public class IonReaderTextRawTokensX
                 return read_char(); // Return the next character beyond the token
             case '\\':
                 c = read_char();
-// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-//                if (c == '\\') {
-//                    c = read_char();
-//                }
                 break;
             }
         }
@@ -1730,12 +1803,16 @@ public class IonReaderTextRawTokensX
         for (;;) {
             c = read_char();
             switch (c) {
-            case IonTokenConstsX.EMPTY_ESCAPE_SEQUENCE:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3:
                 continue;
             case -1:
             case '\'':
                 return c;
-            case '\n':
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_1:          // new line normalization and counting is handled in read_char
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_2:
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_3:
                 bad_token(c);
             case '\\':
                 c = read_char();
@@ -1775,20 +1852,14 @@ public class IonReaderTextRawTokensX
             switch (c) {
             case -1:
                 unexpected_eof(); // throws
-            case '\n':
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_1:          // new line normalization and counting is handled in read_char
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_2:
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_3:
                 bad_token(c); // throws
             case '"':
                 return;
             case '\\':
                 c = read_char();
-
-// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-//if (c == '\\') {
-//// we don't want the escaped slash to be re-escaped
-//c = read_char();
-//}
-
                 break;
             }
         }
@@ -1801,13 +1872,16 @@ public class IonReaderTextRawTokensX
         for (;;) {
             c = read_char();
             switch (c) {
-            case IonTokenConstsX.EMPTY_ESCAPE_SEQUENCE:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3:
                 continue;
             case -1:
             case '"':
                 return c;
-            case '\r':
-            case '\n':
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_1:          // new line normalization and counting is handled in read_char
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_2:
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_3:
                 bad_token(c);
             case '\\':
                 c = read_char_escaped(c, is_clob);
@@ -1835,7 +1909,7 @@ public class IonReaderTextRawTokensX
         switch (c) {
         case '"':
             unread_char(c);
-            c = IonTokenConstsX.STRING_TERMINATOR;
+            c = CharacterSequence.CHAR_SEQ_STRING_TERMINATOR;
             break;
         case -1:
             break;
@@ -1882,12 +1956,7 @@ public class IonReaderTextRawTokensX
                 break;
             case '\\':
                 c = read_char();
-// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-//                if (c == '\\') {
-//                    // we don't want the escaped slash to be re-escaped
-//                    c = read_char();
-//                }
-                break;
+               break;
             }
         }
     }
@@ -1897,10 +1966,24 @@ public class IonReaderTextRawTokensX
         for (;;) {
             c = read_triple_quoted_char(is_clob);
             switch(c) {
-            case IonTokenConstsX.STRING_TERMINATOR:
-            case UnifiedInputStreamX.EOF:
+            case CharacterSequence.CHAR_SEQ_STRING_TERMINATOR:
+            case CharacterSequence.CHAR_SEQ_EOF: // was EOF
                 return c;
-            case IonTokenConstsX.EMPTY_ESCAPE_SEQUENCE:
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_1:          // new line normalization and counting is handled in read_char
+                c = '\n';
+                break;
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_2:
+                // TODO: uncomment if we don't want to normalize end of line: c = '\r';
+                c = '\n';
+                break;
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_3:
+                // TODO: uncomment if we don't want to normalize end of line: sb.append('\r');
+                c = '\n';
+                break;
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3:
+            case CharacterSequence.CHAR_SEQ_STRING_NON_TERMINATOR:
                 continue;
             default:
                 break;
@@ -1916,73 +1999,37 @@ public class IonReaderTextRawTokensX
             sb.append((char)c);
         }
     }
-    protected int load_triple_quoted_string(byte[] buffer, int offset, int len, boolean is_clob) throws IOException {
-        int c;
-        int orig_offset = offset;
-        int limit = offset + len;
 
-        while (_utf8_pretch_byte_count > 0 && offset < limit) {
-            _utf8_pretch_byte_count--;
-            buffer[offset++] = (byte)((_utf8_pretch_bytes >> (_utf8_pretch_byte_count*8)) & 0xff);
-        }
-        while (offset < limit) {
-            c = read_triple_quoted_char(is_clob);
-            if (c < 0) {
-                if (c == -1) break;
-                if (c == IonTokenConstsX.STRING_TERMINATOR) {
-                    break;
-                }
-                if (c == IonTokenConstsX.EMPTY_ESCAPE_SEQUENCE) {
-                    continue;
-                }
-                error("unexpected escape return ["+c+"] loading long string");
-            }
-            // end of loop - append whatever character we read
-            offset = load_quoted_char_in_bytes(c, buffer, offset, limit, is_clob);
-        }
-        return offset - orig_offset;
-    }
     protected int read_triple_quoted_char(boolean is_clob) throws IOException
     {
         int c = read_char();
         switch (c) {
         case '\'':
             if (is_2_single_quotes_helper()) {
+                // so at this point we are at the end of the closing
+                // triple quote - so we need to look ahead to see if
+                // there's just whitespace and a new opening triple quote
                 c = skip_over_whitespace();
                 if (c == '\'' && is_2_single_quotes_helper()) {
                     // there's another segment so read the next segment as well
                     // since we're now just before char 1 of the next segment
                     // loop again, but don't append this char
-                    return IonTokenConstsX.EMPTY_ESCAPE_SEQUENCE;
+                    return CharacterSequence.CHAR_SEQ_STRING_NON_TERMINATOR;
                 }
                 // end of last segment - we're done (although we read a bit too far)
-                if (c == IonTokenConstsX.EMPTY_ESCAPE_SEQUENCE) {
-                    // empty escape is really a two character sequence
-                    // so we'll unread the 2nd character
-                    unread_char('\n');
-                    // and fake us up the 1st character
-                    c = '\\';
-                }
                 unread_char(c);
-                c = IonTokenConstsX.STRING_TERMINATOR;
-            }
-            break;
-        case '\r':
-            // in triple quoted strings \r\n is really just \n
-            // we do this before escape decoding to avoid removing
-            // an escaped '\r'
-            int c2 = read_char();
-            if (c2 != '\n') {
-                unread_char(c2);
-            }
-            else {
-                c = c2;
+                c = CharacterSequence.CHAR_SEQ_STRING_TERMINATOR;
             }
             break;
         case '\\':
             c = read_char_escaped(c, is_clob);
             break;
-        case IonTokenConstsX.EMPTY_ESCAPE_SEQUENCE:
+        case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1:
+        case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2:
+        case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3:
+        case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_1:
+        case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_2:
+        case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_3:
             break;
         case -1:
             break;
@@ -1994,27 +2041,6 @@ public class IonReaderTextRawTokensX
         }
 
         return c;
-    }
-    private final int load_quoted_char_in_bytes(int c, byte[] buffer, int offset, int limit, boolean is_clob) {
-
-        if (is_clob) {
-            if (!IonTokenConstsX.is8bitValue(c)) {
-                String message = "invalid character ["
-                                + IonTextUtils.printCodePointAsString(c)
-                                + "] encounterd in CLOB";
-                error(message);
-            }
-        }
-        else {
-            int len = IonUTF8.getUTF8ByteCount(c);
-            if (len > 1) {
-                _utf8_pretch_bytes =  IonUTF8.packBytesAfter1(c, len);
-                _utf8_pretch_byte_count = len - 1;
-                c = IonUTF8.getByte1Of2(c);
-            }
-        }
-        buffer[offset++] = (byte)(c & 0xff);
-        return offset;
     }
 
     protected void skip_over_lob(int lobToken, SavePoint sp) throws IOException {
@@ -2051,30 +2077,39 @@ public class IonReaderTextRawTokensX
     private final int read_char_escaped(int c, boolean is_clob) throws IOException
     {
         for (;;) {
-            if (c == IonTokenConstsX.EMPTY_ESCAPE_SEQUENCE) {
+            switch (c) {
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3:
                 // loop again, we don't want empty escape chars
                 c = read_char();
                 continue;
-            }
-            if (c == '\\') {
+            case '\\':
                 c = read_char();
                 if (c < 0) {
                     unexpected_eof();
                 }
                 c = read_escaped_char_content_helper(c, is_clob);
-                if (c == IonTokenConstsX.EMPTY_ESCAPE_SEQUENCE) {
+                if (c == CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1
+                 || c == CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2
+                 || c == CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3
+                ) {
                     // loop again, we don't want empty escape chars
                     c = read_char();
                     continue;
                 }
                 if (c == IonTokenConstsX.ESCAPE_NOT_DEFINED) bad_escape_sequence();
-            }
-            else if (!is_clob && !IonTokenConstsX.is7bitValue(c)) {
-                c = read_large_char_sequence(c);
+                break;
+            default:
+                if (!is_clob && !IonTokenConstsX.is7bitValue(c)) {
+                    c = read_large_char_sequence(c);
+                }
+                break;
             }
             break; // at this point we have a post-escaped character to return to the caller
         }
-        if (c == -1) return c;
+
+        if (c == CharacterSequence.CHAR_SEQ_EOF) return c;
         if (is_clob && !IonTokenConstsX.is8bitValue(c)) {
             error("invalid character ["+ IonTextUtils.printCodePointAsString(c)+"] in CLOB");
         }
@@ -2186,23 +2221,25 @@ public class IonReaderTextRawTokensX
 
     private final int read_escaped_char_content_helper(int c1, boolean is_clob) throws IOException
     {
+        if (c1 < 0) {
+            switch (c1) {
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_1:          // new line normalization and counting is handled in read_char
+                return CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1;
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_2:
+                return CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2;
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_3:
+                return CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3;
+            default:
+                bad_escape_sequence(c1);
+            }
+        }
         if (!IonTokenConstsX.isValueEscapeStart(c1)) {
             bad_escape_sequence(c1);
         }
         int c2 = IonTokenConstsX.escapeReplacementCharacter(c1);
         switch (c2) {
         case IonTokenConstsX.ESCAPE_NOT_DEFINED:
-            assert(("invalid escape start characters (line "+((char)c1)+" should have been removed by isValid").length() < 0);
-            break;
-        case IonTokenConstsX.ESCAPE_REMOVES_NEWLINE2:
-            int c3 = read_char();
-            if (c3 != '\n') {
-                unread_char(c3);
-                break;
-            }
-            // fall through to regular newline
-        case IonTokenConstsX.ESCAPE_REMOVES_NEWLINE:
-            c2 = IonTokenConstsX.EMPTY_ESCAPE_SEQUENCE;
+            assert(("invalid escape start characters (line "+((char)c1)+" should have been removed by isValid").equals("failure"));
             break;
         case IonTokenConstsX.ESCAPE_LITTLE_U:
             if (is_clob) {

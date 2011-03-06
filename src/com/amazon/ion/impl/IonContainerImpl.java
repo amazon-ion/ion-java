@@ -322,19 +322,34 @@ abstract public class IonContainerImpl
     }
 
     @Override
+    // this is split so that the public version is called only
+    // by the user, not internally.  This allows us to know
+    // when we're at the originating value for checks and symbol
+    // table processing.
     public void makeReadOnly() {
+        // FIXME: it sure seems to me this should be true - but it seems not. hmmm.
+        // IonValuePrivate parent = this.get_symbol_table_root();
+        // if (parent != this) {
+        //     throw new IonException("child members can't be make read only by themselves");
+        // }
+        make_read_only_helper(true);
+    }
+    @Override
+    void make_read_only_helper(boolean is_root) {
         if (_isLocked()) return;
         synchronized (this) { // TODO why is this needed?
             deepMaterialize();
+            if (is_root) {
+                this.populateSymbolValues(this._symboltable);
+            }
             if (_children != null) {
                 for (int ii=0; ii<_child_count; ii++) {
                     IonValue child = _children[ii];
-                    child.makeReadOnly();
+                    ((IonValueImpl)child).make_read_only_helper(false);
                 }
             }
             _isLocked(true);
         }
-
     }
 
     public void makeNull()

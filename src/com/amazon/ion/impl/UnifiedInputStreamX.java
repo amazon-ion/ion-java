@@ -9,11 +9,38 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 
-
+/**
+ * This is a local stream abstraction, and implementation, that
+ * allows the calling code to operate over final methods even
+ * when the original data source is an interface, such a
+ * <code>Reader</code>.
+ *
+ * When passed a users data buffer it simply operates of the
+ * entire buffer directly.
+ *
+ * When the input source is a stream is creates it's own local
+ * buffers, using {@link #UnifiedInputBufferX} and {@link #UnifiedDataPageX}.
+ * These allocate pages and loads them, a page at a time, from
+ * the stream using the highest bandwitdh stream interface available.
+ *
+ * In this class the unread is only allowed to unread characters
+ * that it actually read.  This is checked, when possible, when
+ * the local {@link #_debug} is true.  This is checked when
+ * the unread is bad into data that is present in the current
+ * buffer.  When the unread crosses a buffer boundary the unread
+ * value is simply written into the space at the beginning of the
+ * block, which is reserved for that purpose.  On all system
+ * allocated pages the user data starts at an offset in from
+ * the front of the buffer,  The offset is set by {@link #UNREAD_LIMIT}.
+ * This is not necessary at either the beginning of the input
+ * or for a user supplied buffer since the entire input is a
+ * single buffer.
+ *
+ */
 public abstract class UnifiedInputStreamX
     implements Closeable
 {
-    public  static final int     EOF = -1;
+    public static final int      EOF = -1;
 
     private static final boolean _debug = false;
             static final int     UNREAD_LIMIT = 10;
@@ -177,22 +204,44 @@ public abstract class UnifiedInputStreamX
         }
         _pos--;
         if (_pos >= 0) {
-            if (is_byte_data()) {
-                _bytes[_pos] = (byte)c;  // FIXME modifying user's data!
-            }
-            else {
-                _chars[_pos] = (char)c;  // FIXME modifying user's data!
-            }
             UnifiedDataPageX curr = _buffer.getCurrentPage();
             if (_pos < curr.getStartingOffset()) {
+                // here we've backed up past the beginning of the current
+                // buffer.  This can only happen when this is a system
+                // managed buffer, not a use supplied buffer (which has
+                // only one page).  Or when the user has backed up past
+                // the actual beginning of the input - which is an error.
                 curr.inc_unread_count();
+                if (is_byte_data()) {
+                    _bytes[_pos] = (byte)c;
+                }
+                else {
+                    _chars[_pos] = (char)c;
+                }
             }
-
+            else {
+                // we only allow unreading the character that was actually
+                // read - and when we can, we verify this.  We will miss
+                // cases when the character was in the preceding buffer
+                // (handled above) when we just have to believe them.
+                // TODO: add test only code that checks the previous buffer
+                //       case.
+                verify_matched_unread(c);
+            }
         }
         else {
-            // FIXME _pos is negative?!?
             // We don't seem to check for that elsewhere.
             _buffer.putCharAt(getPosition(), c);
+        }
+    }
+    private final void verify_matched_unread(int c) {
+        if (_debug) {
+            if (is_byte_data()) {
+                assert(_bytes[_pos] == (byte)c);
+            }
+            else {
+                assert(_chars[_pos] == (char)c);
+            }
         }
     }
     public final boolean unread_optional_cr()
@@ -215,8 +264,6 @@ public abstract class UnifiedInputStreamX
         // the \r and has editted the buffer.  That's a bad
         // thing.
         if (_pos > curr.getStartingOffset()) {
-            // FIXME what keeps _pos from being zero or negative,
-            // causing the array access below to fail?
             if (is_byte_data()) {
                 c = _bytes[_pos-1] & 0xff;
             }

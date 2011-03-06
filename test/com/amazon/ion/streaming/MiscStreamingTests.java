@@ -20,7 +20,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -279,7 +278,7 @@ public class MiscStreamingTests
     }
 
 
-    @Test @Ignore // FIXME ION-184
+    @Test // FIXME ION-184
     public void testReaderDataMangling()
     throws Exception
     {
@@ -294,7 +293,7 @@ public class MiscStreamingTests
     }
 
 
-    @Test @Ignore // FIXME ION-184
+    @Test // FIXME ION-184
     public void testIteratorDataMangling()
     throws Exception
     {

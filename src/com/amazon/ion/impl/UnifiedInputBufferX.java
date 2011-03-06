@@ -22,7 +22,8 @@ public abstract class UnifiedInputBufferX
         return buf;
     }
     public static UnifiedInputBufferX makePageBuffer(CharSequence chars, int offset, int length) {
-        UnifiedInputBufferX buf = new UnifiedInputBufferX.Chars(chars, offset, length);
+        char [] char_array = chars_make_char_array(chars, offset, length);
+        UnifiedInputBufferX buf = makePageBuffer(char_array, 0, length);
         return buf;
     }
     public static UnifiedInputBufferX makePageBuffer(BufferType bufferType, int initialPageSize)
@@ -39,6 +40,16 @@ public abstract class UnifiedInputBufferX
             throw new IllegalArgumentException("invalid buffer type");
         }
         return buf;
+    }
+    protected static final char[] chars_make_char_array(CharSequence chars,
+                                                         int offset,
+                                                         int length)
+    {
+        char[] char_array = new char[length];
+        for (int ii=offset; ii<length; ii++) {
+            char_array[ii] = chars.charAt(ii);
+        }
+        return char_array;
     }
     private UnifiedInputBufferX(int initialPageSize) {
         if (initialPageSize < 0) {
@@ -269,14 +280,6 @@ public abstract class UnifiedInputBufferX
         protected Chars(CharSequence chars, int offset, int length) {
             this(chars_make_char_array(chars, offset, length), 0, length);
         }
-        private static final char[] chars_make_char_array(CharSequence chars, int offset, int length) {
-            char[] char_array = new char[length];
-            for (int ii=offset; ii<length; ii++) {
-                char_array[ii] = chars.charAt(ii);
-            }
-            return char_array;
-        }
-
         @Override
         public final BufferType getType() { return BufferType.CHARS; }
 
