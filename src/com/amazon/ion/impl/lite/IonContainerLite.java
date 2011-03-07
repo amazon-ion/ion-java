@@ -374,23 +374,6 @@ public abstract class IonContainerLite
     }
 
 
-    @Override
-    protected void make_readable()
-    {
-        if (_isLocked() == false) return;
-
-        synchronized (this) { // TODO why is this needed?
-            if (_children != null) {
-                for (int ii=0; ii<_child_count; ii++) {
-                    IonValueLite child = _children[ii];
-                    child.make_readable();
-                }
-            }
-            _isLocked(false);
-        }
-    }
-
-
     /**
      * methods from IonValue
      *
@@ -567,9 +550,9 @@ public abstract class IonContainerLite
     {
         checkForLock();
 
-        // first copy the annotations, flags and field name
+        // first copy the annotations, flags (but not field name)
         this.copyValueContentFrom(source);
-        this.make_readable(); // we can clone FROM a read only value but we create a writable value
+        assert ! _isLocked();  // Prior call unlocks us
 
         // now we can copy the contents
 

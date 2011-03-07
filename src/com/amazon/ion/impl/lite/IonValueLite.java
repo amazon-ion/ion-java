@@ -234,7 +234,9 @@ public abstract class IonValueLite
     }
 
     /**
-     * the base classes in IonValue(Impl) should not be called for
+     * {@inheritDoc}
+     * <p>
+     * The base classes in IonValue(Impl) should not be called for
      * cloning directly. The user should be calling clone on the
      * Actually (leaf) instances class (such as IonIntImpl).  The
      * shared clone work is handled in copyFrom(src) in any base
@@ -247,12 +249,14 @@ public abstract class IonValueLite
     /**
      * copyValueContentFrom is used to make a duplicate
      * of the value properties during a value clone.
-     * This includes the field name, the flags and
-     * the annotations.
+     * This includes the flags, annotations, and context,
+     * but NOT the field name.
+     * <p>
+     * This instance will always be unlocked after calling this method.
      *
      * @param original value
      */
-    protected void copyValueContentFrom(IonValueLite original)
+    protected final void copyValueContentFrom(IonValueLite original)
     {
         // values we copy
         this._flags        = original._flags;
@@ -273,10 +277,11 @@ public abstract class IonValueLite
         }
 
         // and now values we don't copy
-        // this is done second as the flag assignment
-        // copies all the flags, including locked
         this._fieldName = null;
-        this.make_readable();  // when we're copying the flags, the target is by definition not locked
+
+        // IonValue.clone() is specified to return a modifiable copy, but the
+        // flag assignment above copies all the flags, including locked.
+        this._isLocked(false);
     }
 
 
@@ -583,11 +588,6 @@ public abstract class IonValueLite
     {
         populateSymbolValues(null);
         _isLocked(true);
-    }
-
-    protected void make_readable()
-    {
-        _isLocked(false);
     }
 
     /**
