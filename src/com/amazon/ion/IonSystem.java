@@ -227,6 +227,10 @@ public interface IonSystem
      * The iterator will automatically consume Ion system IDs and local symbol
      * tables; they will not be returned by the iterator.
      * <p>
+     * If the input source throws an {@link IOException} during iteration, it
+     * will be wrapped in an {@link IonException}. See documentation there for
+     * tips on how to recover the cause.
+     * <p>
      * This method is suitable for use over unbounded streams with a reasonable
      * schema.
      * <p>
@@ -240,6 +244,7 @@ public interface IonSystem
      * @return a new iterator instance.
      *
      * @throws NullPointerException if <code>ionText</code> is null.
+     * @throws IonException if the source throws {@link IOException}.
      */
     public Iterator<IonValue> iterate(Reader ionText);
 
@@ -252,6 +257,10 @@ public interface IonSystem
      * The iterator will automatically consume Ion system IDs and local symbol
      * tables; they will not be returned by the iterator.
      * <p>
+     * If the input source throws an {@link IOException} during iteration, it
+     * will be wrapped in an {@link IonException}. See documentation there for
+     * tips on how to recover the cause.
+     * <p>
      * This method is suitable for use over unbounded streams with a reasonable
      * schema.
      *
@@ -261,6 +270,7 @@ public interface IonSystem
      * @return a new iterator instance.
      *
      * @throws NullPointerException if <code>ionData</code> is null.
+     * @throws IonException if the source throws {@link IOException}.
      */
     public Iterator<IonValue> iterate(InputStream ionData);
 
@@ -332,10 +342,12 @@ public interface IonSystem
     // IonReader creation
 
     /*
-    * Applications should generally us {@link #newReader(InputStream)}
-    * whenever possible, since this library has much faster UTF-8 decoding
-    * than the Java IO framework.
-    */
+     * Applications should generally us {@link #newReader(InputStream)}
+     * whenever possible, since this library has much faster UTF-8 decoding
+     * than the Java IO framework.
+     *
+     * @throws IonException if the source throws {@link IOException}.
+     */
 //  public IonReader newReader(Reader ionText); // TODO add newReader(Reader)
 
     /**
@@ -385,6 +397,8 @@ public interface IonSystem
      *
      * @return a new reader instance.
      * Callers must call {@link IonReader#close()} when finished with it.
+     *
+     * @throws IonException if the source throws {@link IOException}.
      */
     public IonReader newReader(InputStream ionData);
 
