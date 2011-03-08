@@ -784,15 +784,17 @@ public final class IonSystemImpl
     }
 
     /**
-     * checks the value to see if it is a symbol and has the
-     * form $ION_ddd_ddd.  Where ddd is 1 or more decimal
-     * digits.  This includes the current value of $ION_1_0
+     * Checks the value to see if it is an unannotated symbol and has the
+     * form {@code $ion_DDD_DDD} where DDD is 1 or more decimal
+     * digits.  This includes the current value of {@code $ion_1_0}
      * which is really the only valid system id today, but
      * there may be more later.
      */
     final boolean valueIsSystemId(IonValue value)
     {
-        if (value instanceof IonSymbol && ! value.isNullValue())
+        if (value instanceof IonSymbol
+            && ! value.isNullValue()
+            && value.getTypeAnnotations().length == 0)
         {
             IonSymbol symbol = (IonSymbol) value;
             int sid = symbol.getSymbolId();
