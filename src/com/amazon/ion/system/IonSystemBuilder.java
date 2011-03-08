@@ -18,9 +18,9 @@ import com.amazon.ion.impl.lite.IonSystemLite;
  * copy of a prototype (presumably for altering some property).
  * Builder instances are <em>not</em> thread-safe unless they are immutable.
  * <p>
- * The easiest way to get going is to just use the {@link #defaultBuilder()}:
+ * The easiest way to get going is to just use the {@link #standard()} builder:
  * <pre>
- *  IonSystem ion = IonSystemBuilder.defaultBuilder().build();
+ *  IonSystem ion = IonSystemBuilder.standard().build();
  *</pre>
  * <p>
  * However, most long-lived applications will want to provide a custom
@@ -28,7 +28,7 @@ import com.amazon.ion.impl.lite.IonSystemLite;
  * {@link SimpleCatalog}.  For example:
  * <pre>
  *  IonCatalog catalog = newCustomCatalog();
- *  IonSystemBuilder b = IonSystemBuilder.defaultBuilder().copy();
+ *  IonSystemBuilder b = IonSystemBuilder.standard().copy();
  *  b.setCatalog(catalog);
  *  IonSystem ion = b.build();
  *</pre>
@@ -38,7 +38,7 @@ import com.amazon.ion.impl.lite.IonSystemLite;
  * mutation methods that enable a more fluid style:
  * <pre>
  *  IonCatalog catalog = newCustomCatalog();
- *  IonSystem ion = IonSystemBuilder.defaultBuilder()
+ *  IonSystem ion = IonSystemBuilder.standard()
  *                                  .withCatalog(catalog)
  *                                  .build();
  *</pre>
@@ -73,17 +73,26 @@ import com.amazon.ion.impl.lite.IonSystemLite;
  */
 public class IonSystemBuilder
 {
-    private static final IonSystemBuilder DEFAULT = new IonSystemBuilder();
+    private static final IonSystemBuilder STANDARD = new IonSystemBuilder();
 
     /**
-     * The default builder of {@link IonSystem}s.
-     * See the class documentation for the default configuration.
+     * The standard builder of {@link IonSystem}s.
+     * See the class documentation for the standard configuration.
      * <p>
      * The returned instance is immutable.
      */
+    public static IonSystemBuilder standard()
+    {
+        return STANDARD;
+    }
+
+    /**
+     * @deprecated Will be removed before R10.
+     */
+    @Deprecated
     public static IonSystemBuilder defaultBuilder()
     {
-        return DEFAULT;
+        return STANDARD;
     }
 
 

@@ -134,7 +134,7 @@ public class IonBuild
     {
         Properties props = loadBuildProperties();
 
-        IonSystem sys = IonSystemBuilder.defaultBuilder().build();
+        IonSystem sys = IonSystemBuilder.standard().build();
         IonStruct v = sys.newEmptyStruct();
 
         if (printVersion) {

@@ -28,7 +28,7 @@ This all means your first task is acquiring a system instance, and for that we
 turn to {@link com.amazon.ion.system.IonSystemBuilder IonSystemBuilder}.
 Here's the easiest way to bootstrap:
 <pre>
-    IonSystem ion = IonSystemBuilder.defaultBuilder().build();
+    IonSystem ion = IonSystemBuilder.standard().build();
 </pre>
 That should be sufficient for many, but not all, applications.  Long-running
 services will probably want to use a non-default 
@@ -52,8 +52,8 @@ another {@code IonSystem}!  For example, the following code is <b>not
 guaranteed to work</b>:
 
 <pre>
-    IonSystem sys1 = IonSystemBuilder.defaultBuilder().build();
-    IonSystem sys2 = IonSystemBuilder.defaultBuilder().build();
+    IonSystem sys1 = IonSystemBuilder.standard().build();
+    IonSystem sys2 = IonSystemBuilder.standard().build();
     
     IonList parent = sys1.newEmptyList();
     IonInt  child  = sys2.newInt(23);
@@ -100,7 +100,7 @@ You can then pull data from the reader. Don't forget to
 Ion iterators are extensions of
 {@link java.util.Iterator} so they are used once and then discarded.
 Use the various {@code iterate} methods on {@code IonSystem} to
-create them; for eiample 
+create them; for example 
 {@link com.amazon.ion.IonSystem#iterate(InputStream)}. 
 <p>
 To construct an {@code IonLoader}, call

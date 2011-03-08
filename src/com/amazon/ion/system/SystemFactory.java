@@ -148,7 +148,7 @@ public final class SystemFactory
             implementation = DEFAULT_IMPLEMENTATION;
         }
 
-        IonSystemBuilder builder = IonSystemBuilder.defaultBuilder().copy();
+        IonSystemBuilder builder = IonSystemBuilder.standard().copy();
         builder.setCatalog(catalog);
         builder.setBinaryBacked(implementation == SystemCapabilities.ORIGINAL);
 

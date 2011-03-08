@@ -20,16 +20,16 @@ public class IonSystemBuilderTest
     @Test(expected = UnsupportedOperationException.class)
     public void testDefaultIsLocked()
     {
-        IonSystemBuilder.defaultBuilder().setCatalog(null);
+        IonSystemBuilder.standard().setCatalog(null);
     }
 
     @Test
     public void testDefault()
     {
-        assertEquals(false, IonSystemBuilder.defaultBuilder().isBinaryBacked());
-        assertEquals(null, IonSystemBuilder.defaultBuilder().getCatalog());
+        assertEquals(false, IonSystemBuilder.standard().isBinaryBacked());
+        assertEquals(null, IonSystemBuilder.standard().getCatalog());
 
-        IonSystem ion = IonSystemBuilder.defaultBuilder().build();
+        IonSystem ion = IonSystemBuilder.standard().build();
         assertSame(IonSystemLite.class, ion.getClass());
         assertSame(SimpleCatalog.class, ion.getCatalog().getClass());
     }
@@ -39,7 +39,7 @@ public class IonSystemBuilderTest
     @Test
     public void testFrozen()
     {
-        IonSystemBuilder b = IonSystemBuilder.defaultBuilder();
+        IonSystemBuilder b = IonSystemBuilder.standard();
         IonSystemBuilder fb = b.immutable();
         assertSame(b, fb);
     }
@@ -47,7 +47,7 @@ public class IonSystemBuilderTest
     @Test
     public void testMutable()
     {
-        IonSystemBuilder b = IonSystemBuilder.defaultBuilder();
+        IonSystemBuilder b = IonSystemBuilder.standard();
         IonSystemBuilder mb = b.mutable();
         assertNotSame(b, mb);
         assertSame(mb, mb.mutable());
@@ -57,14 +57,14 @@ public class IonSystemBuilderTest
     @Test(expected = UnsupportedOperationException.class)
     public void testCatalogLockCheck()
     {
-        IonSystemBuilder b = IonSystemBuilder.defaultBuilder().copy().immutable();
+        IonSystemBuilder b = IonSystemBuilder.standard().copy().immutable();
         b.setCatalog(null);
     }
 
     @Test
     public void testNullCatalog()
     {
-        IonSystemBuilder b = IonSystemBuilder.defaultBuilder().copy();
+        IonSystemBuilder b = IonSystemBuilder.standard().copy();
         b.setCatalog(null);
         IonSystem ion = b.build();
         assertSame(SimpleCatalog.class, ion.getCatalog().getClass());
@@ -75,7 +75,7 @@ public class IonSystemBuilderTest
     {
         IonCatalog catalog = new SimpleCatalog();
 
-        IonSystemBuilder b = IonSystemBuilder.defaultBuilder().copy();
+        IonSystemBuilder b = IonSystemBuilder.standard().copy();
         b.setCatalog(catalog);
         assertSame(catalog, b.getCatalog());
 
@@ -89,7 +89,7 @@ public class IonSystemBuilderTest
         IonCatalog catalog = new SimpleCatalog();
 
         IonSystemBuilder b =
-            IonSystemBuilder.defaultBuilder().withCatalog(catalog);
+            IonSystemBuilder.standard().withCatalog(catalog);
         assertSame(catalog, b.getCatalog());
     }
 
@@ -97,14 +97,14 @@ public class IonSystemBuilderTest
     @Test(expected = UnsupportedOperationException.class)
     public void testBinaryBackedLockCheck()
     {
-        IonSystemBuilder b = IonSystemBuilder.defaultBuilder().copy().immutable();
+        IonSystemBuilder b = IonSystemBuilder.standard().copy().immutable();
         b.setBinaryBacked(true);
     }
 
     @Test
     public void testLite()
     {
-        IonSystemBuilder b = IonSystemBuilder.defaultBuilder().copy();
+        IonSystemBuilder b = IonSystemBuilder.standard().copy();
         b.setBinaryBacked(false);
         IonSystem ion = b.build();
         assertSame(IonSystemLite.class, ion.getClass());
@@ -113,7 +113,7 @@ public class IonSystemBuilderTest
     @Test
     public void testBinaryBacked()
     {
-        IonSystemBuilder b = IonSystemBuilder.defaultBuilder().copy();
+        IonSystemBuilder b = IonSystemBuilder.standard().copy();
         b.setBinaryBacked(true);
         IonSystem ion = b.build();
         assertSame(IonSystemImpl.class, ion.getClass());
@@ -123,7 +123,7 @@ public class IonSystemBuilderTest
     public void testFluidStyle()
     {
         IonCatalog catalog = new SimpleCatalog();
-        IonSystem ion = IonSystemBuilder.defaultBuilder()
+        IonSystem ion = IonSystemBuilder.standard()
                                         .withCatalog(catalog)
                                         .withBinaryBacked(true)
                                         .build();
@@ -135,7 +135,7 @@ public class IonSystemBuilderTest
     public void testCopy()
     {
         IonCatalog catalog = new SimpleCatalog();
-        IonSystemBuilder b1 = IonSystemBuilder.defaultBuilder()
+        IonSystemBuilder b1 = IonSystemBuilder.standard()
                                               .withCatalog(catalog)
                                               .withBinaryBacked(true);
         IonSystemBuilder b2 = b1.copy();
