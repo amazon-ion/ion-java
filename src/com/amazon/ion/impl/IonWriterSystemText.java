@@ -137,6 +137,7 @@ public class IonWriterSystemText
     // for the system text writer since it doesn't
     // need any work beyond the base method
 
+    @Override
     public int getDepth()
     {
         return _top;
@@ -443,29 +444,6 @@ public class IonWriterSystemText
         closeValue();
     }
 
-    // @Override
-    // FIXME: removed !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    public void writeDecimal_old(BigDecimal value) throws IOException
-    {
-        if (value == null) {
-            writeNull(IonType.DECIMAL);
-        }
-        else {
-            startValue();
-            BigInteger unscaled = value.unscaledValue();
-
-            if (Decimal.isNegativeZero(value)) {
-                assert value.signum() == 0;
-                _output.append('-');
-            }
-
-            _output.append(unscaled.toString());
-            _output.append('d');
-            _output.append(Integer.toString(-value.scale()));
-
-            closeValue();
-        }
-    }
 
     @Override
     public void writeDecimal(BigDecimal value) throws IOException

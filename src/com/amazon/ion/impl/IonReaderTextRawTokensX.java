@@ -1,3 +1,4 @@
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
@@ -269,26 +270,6 @@ public class IonReaderTextRawTokensX
         return (c == '\'');
     }
 
-    /**
-     * this first peeks forward to the next punctuation
-     * character.  If that is a dot '.' it consumes
-     * the dot and return true.  Otherwise is unreads
-     * whatever character it encountered and returns
-     * false.
-     * It consuming any leading whitespace whether
-     * a dot was consumed or some other non-whitespace
-     * character was encountered (and not skipped).
-     * @return true if a dot was skipped, false if the next non-whitespace character was not a dot (and was, therefore, not consumed)
-     */
-    public final boolean skipDot() throws IOException
-    {
-        int c = skip_over_whitespace();
-        if (c != '.') {
-            unread_char(c);
-            return false;
-        }
-        return true;
-    }
 
     /**
      * peeks into the input stream to see if we have an
@@ -1339,17 +1320,22 @@ public class IonReaderTextRawTokensX
         }
     }
 
-    // helper method for skipping embedded digits inside a timestamp value
-    // this overload skips exactly the number indicated, and errors if a non-digit is encountered
+    /**
+     * Helper method for skipping embedded digits inside a timestamp value.
+     * This overload skips exactly the number indicated, and errors if a
+     * non-digit is encountered.
+     */
     private final int skip_timestamp_past_digits(int len) throws IOException
     {
         // special case of the other overload
         return skip_timestamp_past_digits(len, len);
     }
 
-    // helper method for skipping embedded digits inside a timestamp value
-    // this overload skips at least min and at most max digits, and errors
-    // if a non-digit is encountered in the first min characters read
+    /**
+     * Helper method for skipping embedded digits inside a timestamp value
+     * This overload skips at least min and at most max digits, and errors
+     * if a non-digit is encountered in the first min characters read
+     */
     private final int skip_timestamp_past_digits(int min, int max) throws IOException
     {
         int c;

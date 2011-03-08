@@ -278,7 +278,8 @@ public class MiscStreamingTests
     }
 
 
-    @Test // FIXME ION-184
+    /** ION-184 */
+    @Test
     public void testReaderDataMangling()
     throws Exception
     {
@@ -293,7 +294,8 @@ public class MiscStreamingTests
     }
 
 
-    @Test // FIXME ION-184
+    /** ION-184 */
+    @Test
     public void testIteratorDataMangling()
     throws Exception
     {
