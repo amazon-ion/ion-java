@@ -1,10 +1,13 @@
-// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import com.amazon.ion.util.IonStreamUtils;
+import java.io.Closeable;
+import java.io.Flushable;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Date;
 
 /**
@@ -13,6 +16,11 @@ import java.util.Date;
  * This interface allows
  * the user to logically write the values as they view the data
  * without being concerned about which output format is needed.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented by applications.
+ * We still have some work to do before this interface is stable.
+ * See <a href="https://issue-tracking.amazon.com/browse/ION-182">JIRA issue
+ * ION-182</a>
  * <p>
  * A value is written via the set of typed {@code write*()} methods such as
  * {@link #writeBool(boolean)} and {@link #writeInt(long)}.
@@ -43,19 +51,19 @@ import java.util.Date;
  * caller can use getBytes() or writeBytes() to get the cached output
  * as a byte array (either a new one allocated by the writer or
  * a user supplied buffer), or output to an output stream.
+ *
+ * <h2>Exception Handling</h2>
+ * {@code IonWriter} is a generic interface for generating Ion data, and it's
+ * not possible to fully specify the set of exceptions that could be thrown
+ * from the underlying data sink.  Thus all failures are thrown as instances
+ * of {@link IonException}, wrapping the originating cause.  If an application
+ * wants to handle (say) {@link IOException}s specially, then it needs to
+ * extract that from the wrappers; the documentation of {@link IonException}
+ * explains how to do that.
  */
 public interface IonWriter
+    extends Closeable, Flushable
 {
-
-    /**
-     * sets the symbol table to use for encoding to be the passed
-     * in symbol table.
-     * @param symbols base symbol table for encoding
-     *
-     * @deprecated Removed pending a better API.
-     */
-//    public void setSymbolTable(SymbolTable symbols);
-
     /**
      * Gets the symbol table that is currently in use by the writer.
      * While writing a number of values the symbol table will be
@@ -68,6 +76,47 @@ public interface IonWriter
      * @return current symbol table
      */
     public SymbolTable getSymbolTable();
+
+
+    /**
+     * Flushes this writer by writing any buffered output to the underlying
+     * output target.
+     * <p>
+     * For some implementations this may have no effect even when some data is
+     * buffered, because it's not always possible to fully write partial data.
+     * In particular, if this is writing binary Ion data, Ion's length-prefixed
+     * encoding requires a complete top-level value to be written at once.
+     * Furthermore, if local symbol tables are being generated, nothing can be
+     * flushed until the the symbol context is reset.
+     *
+     * @throws IOException if thrown by the underlying output target.
+     *
+     * @see #finish()
+     */
+    public void flush() throws IOException;
+
+
+    /**
+     * Indicates that writing is completed and all buffered data should be
+     * written and flushed as if this were the end of the Ion data stream.
+     * For example, an Ion binary writer will finalize any local symbol table,
+     * write all top-level values, and then flush.
+     * <p>
+     * This method may only be called when all top-level values are
+     * completely written and {@link #stepOut() stepped-out}.
+     * <p>
+     * Implementations should allow the application to continue writing further
+     * top-level values following the semantics for concatenating Ion data
+     * streams. If another top-level value is written, it must be preceded by
+     * an Ion version marker in order to reset the stream context as if this
+     * were a new stream.
+     *
+     * @throws IOException if thrown by the underlying output target.
+     * @throws IllegalStateException when not between top-level values.
+     *
+     * @see #flush
+     */
+    public void finish() throws IOException;
 
 
     /**
@@ -153,7 +202,7 @@ public interface IonWriter
 
 
     //=========================================================================
-    // Container navagation
+    // Container navigation
 
     /**
      * Writes the beginning of a non-null container (list, sexp, or struct).
@@ -271,19 +320,24 @@ public interface IonWriter
     public void writeInt(int value) throws IOException;
 
     /**
-     * writes a signed 64 bit value, a Java byte, as an IonInt.
+     * writes a signed 64 bit value, a Java long, as an IonInt.
      * @param value signed int to write
      */
     public void writeInt(long value) throws IOException;
 
-    // TODO add writeInt(Number)
+    /**
+     * writes a BigInteger value as an IonInt.  If the
+     * BigInteger value is null this writes a null int.
+     * @param value BigInteger to write
+     */
+    public void writeInt(BigInteger value) throws IOException;
 
 
     /**
-     * writes a 32 bit binary floaing point value, a Java float,
+     * writes a 32 bit binary floating point value, a Java float,
      * as an IonFloat.  Currently IonFloat values are output as
      * 64 bit IEEE 754 big endian values.  As a result writeFloat
-     * is simply a convienience method which casts the float
+     * is simply a convenience method which casts the float
      * up to a double on output.
      * @param value float to write
      *
@@ -293,11 +347,11 @@ public interface IonWriter
     public void writeFloat(float value) throws IOException;
 
     /**
-     * writes a 64 bit binary floaing point value, a Java double,
+     * writes a 64 bit binary floating point value, a Java double,
      * as an IonFloat.  Currently IonFloat values are output as
      * 64 bit IEEE 754 big endian values.  IonFloat preserves all
      * valid floating point values, including -0.0, Nan and +/-infinity.
-     * It does not gaurantee preservation of -Nan or other less
+     * It does not guarantee preservation of -Nan or other less
      * less "common" values.
      * @param value double to write
      */
@@ -332,7 +386,7 @@ public interface IonWriter
 
     /**
      * writes a BigDecimal value as an IonDecimal.  Ion uses an
-     * arbitrarily long sign/value and an arbitartily long signed
+     * arbitrarily long sign/value and an arbitrarily long signed
      * exponent to write the value. This preserves
      * all of the BigDecimal digits, the number of
      * significant digits.  Since java.math.BigDecimal cannot represent
@@ -407,6 +461,22 @@ public interface IonWriter
     public void writeSymbol(String value) throws IOException;
 
     /**
+     * Write an Ion version marker symbol to the output.  This
+     * is the $ion_1_0 value currently (in later versions the
+     * number may change).  In text output this appears as the
+     * text symbol.  In binary this will be the symbol id if
+     * the writer is in a list, sexp or struct.  If the writer
+     * is currently at the top level this will write the
+     * "magic cookie" value.
+     *
+     *  Writing a version marker will reset the symbol table
+     *  to be the system symbol table.
+     *
+     * @throws IOException
+     */
+//    public void writeIonVersionMarker() throws IOException;
+
+    /**
      * Writes a {@link java.lang.String} as an Ion string. Since Ion strings are
      * UTF-8 and Java Strings are Unicode 16.  As such the resulting
      * lengths may not match.  In addition some Java strings are not
@@ -449,7 +519,7 @@ public interface IonWriter
 
     /**
      * writes a portion of the byte array out as an IonBlob value.  This
-     * copies the porition of the byte array that is written.
+     * copies the portion of the byte array that is written.
      * @param value bytes to be written
      * @param start offset of the first byte in value to write
      * @param len number of bytes to write from value
@@ -461,9 +531,9 @@ public interface IonWriter
 
     /**
      * writes an IonList with a series of IonBool values. This
-     * starts a List, writes the values (without any annoations)
+     * starts a List, writes the values (without any annotations)
      * and closes the list. For text and tree writers this is
-     * just a convienience, but for the binary writer it can be
+     * just a convenience, but for the binary writer it can be
      * optimized internally.
      * @param values boolean values to populate the list with
      *
@@ -474,9 +544,9 @@ public interface IonWriter
 
     /**
      * writes an IonList with a series of IonInt values. This
-     * starts a List, writes the values (without any annoations)
+     * starts a List, writes the values (without any annotations)
      * and closes the list. For text and tree writers this is
-     * just a convienience, but for the binary writer it can be
+     * just a convenience, but for the binary writer it can be
      * optimized internally.
      * @param values signed byte values to populate the lists int's with
      *
@@ -487,9 +557,9 @@ public interface IonWriter
 
     /**
      * writes an IonList with a series of IonInt values. This
-     * starts a List, writes the values (without any annoations)
+     * starts a List, writes the values (without any annotations)
      * and closes the list. For text and tree writers this is
-     * just a convienience, but for the binary writer it can be
+     * just a convenience, but for the binary writer it can be
      * optimized internally.
      * @param values signed short values to populate the lists int's with
      *
@@ -500,9 +570,9 @@ public interface IonWriter
 
     /**
      * writes an IonList with a series of IonInt values. This
-     * starts a List, writes the values (without any annoations)
+     * starts a List, writes the values (without any annotations)
      * and closes the list. For text and tree writers this is
-     * just a convienience, but for the binary writer it can be
+     * just a convenience, but for the binary writer it can be
      * optimized internally.
      * @param values signed int values to populate the lists int's with
      *
@@ -513,9 +583,9 @@ public interface IonWriter
 
     /**
      * writes an IonList with a series of IonInt values. This
-     * starts a List, writes the values (without any annoations)
+     * starts a List, writes the values (without any annotations)
      * and closes the list. For text and tree writers this is
-     * just a convienience, but for the binary writer it can be
+     * just a convenience, but for the binary writer it can be
      * optimized internally.
      * @param values signed long values to populate the lists int's with
      *
@@ -526,9 +596,9 @@ public interface IonWriter
 
     /**
      * writes an IonList with a series of IonFloat values. This
-     * starts a List, writes the values (without any annoations)
+     * starts a List, writes the values (without any annotations)
      * and closes the list. For text and tree writers this is
-     * just a convienience, but for the binary writer it can be
+     * just a convenience, but for the binary writer it can be
      * optimized internally.  Note that since, currently, IonFloat
      * is a 64 bit float this is a helper that simply casts
      * the passed in floats to double before writing them.
@@ -541,9 +611,9 @@ public interface IonWriter
 
     /**
      * writes an IonList with a series of IonFloat values. This
-     * starts a List, writes the values (without any annoations)
+     * starts a List, writes the values (without any annotations)
      * and closes the list. For text and tree writers this is
-     * just a convienience, but for the binary writer it can be
+     * just a convenience, but for the binary writer it can be
      * optimized internally.
      * @param values 64 bit float values to populate the lists IonFloat's with
      *
@@ -554,9 +624,9 @@ public interface IonWriter
 
     /**
      * writes an IonList with a series of IonString values. This
-     * starts a List, writes the values (without any annoations)
+     * starts a List, writes the values (without any annotations)
      * and closes the list. For text and tree writers this is
-     * just a convienience, but for the binary writer it can be
+     * just a convenience, but for the binary writer it can be
      * optimized internally.
      * @param values Java String to populate the lists IonString's from
      *
@@ -564,4 +634,5 @@ public interface IonWriter
      */
     @Deprecated
     public void writeStringList(String[] values) throws IOException;
+
 }

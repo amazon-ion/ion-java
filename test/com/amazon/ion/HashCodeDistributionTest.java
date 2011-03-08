@@ -1,4 +1,4 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -9,8 +9,9 @@ import com.amazon.ion.system.SystemFactory;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -259,9 +260,9 @@ public class HashCodeDistributionTest
     /**
      * Loads test data
      * @param data_dir Directory w data files
-     * @throws FileNotFoundException if {@link File} has a bug
      */
-    protected static void loadTestData(File data_dir) throws FileNotFoundException
+    protected static void loadTestData(File data_dir)
+    throws IOException
     {
         File[] data_files = data_dir.listFiles(new FilenameFilter()
         {
@@ -271,11 +272,16 @@ public class HashCodeDistributionTest
             }
         });
         for (File data_file : data_files)  {
-            Iterator<IonValue> i = ionSys.iterate(
-                    new BufferedInputStream(
-                            new FileInputStream(data_file)));
-            while (i.hasNext())  {
-                loadValue(i.next());
+            InputStream in =
+                new BufferedInputStream(new FileInputStream(data_file));
+            try {
+                Iterator<IonValue> i = ionSys.iterate(in);
+                while (i.hasNext())  {
+                    loadValue(i.next());
+                }
+            }
+            finally {
+                in.close();
             }
         }
     }

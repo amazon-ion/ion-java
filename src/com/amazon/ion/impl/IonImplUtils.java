@@ -1,13 +1,15 @@
-// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
-import com.amazon.ion.IonWriter;
+import com.amazon.ion.IonSystem;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.Reader;
-import java.io.BufferedInputStream;
+import com.amazon.ion.impl.IonWriterUserText.TextOptions;
+import com.amazon.ion.system.SystemFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -83,19 +85,20 @@ public final class IonImplUtils // TODO this class shouldn't be public
     public static byte[] loadFileBytes(File file)
         throws IOException
     {
-        int len = (int)file.length();
-        byte[] buf = new byte[len];
+        long len = file.length();
+        if (len < 0 || len > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("File too long: " + file);
+        }
+
+        byte[] buf = new byte[(int) len];
 
         FileInputStream in = new FileInputStream(file);
         try {
-            // TODO I don't think buffering here is helpful since we are
-            // doing a bulk read into our own buffer.
-            BufferedInputStream bin = new BufferedInputStream(in);
-            try {
-                bin.read(buf);
-            }
-            finally {
-                bin.close();
+            int readBytesCount = in.read(buf);
+            if (readBytesCount != len || in.read() != -1)
+            {
+                throw new IOException("Read the wrong number of bytes from "
+                                       + file);
             }
         }
         finally {
@@ -161,7 +164,15 @@ public final class IonImplUtils // TODO this class shouldn't be public
     public static String valueToString(IonReader reader)
     {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        IonWriter writer = new IonTextWriter(out);
+        TextOptions options = new TextOptions(false, true, false); // pretty print, ascii only, filter symbol tables
+
+        // This is vaguely inappropriate.
+        IonSystem system = SystemFactory.newSystem();
+        SymbolTable systemSymtab = system.getSystemSymbolTable();
+        IonWriterSystemText writer =
+            new IonWriterSystemText(system, systemSymtab, out, options);
+        // IonWriter writer = IonWriterUserText new IonTextWriter(out);
+
         try
         {
             writer.writeValue(reader);
@@ -173,4 +184,52 @@ public final class IonImplUtils // TODO this class shouldn't be public
         String s = out.toString();
         return s;
     }
+
+    static final class StringIterator implements Iterator<String>
+    {
+        String [] _values;
+        int       _pos;
+
+        StringIterator(String[] values) {
+            _values = values;
+        }
+        public boolean hasNext() {
+            return (_pos < _values.length);
+        }
+        public String next() {
+            if (!hasNext()) throw new NoSuchElementException();
+            return _values[_pos++];
+        }
+        public void remove() {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    static final class IntIterator implements Iterator<Integer>
+    {
+        int []  _values;
+        int     _pos;
+        int     _len;
+
+        IntIterator(int[] values) {
+            this(values, 0, values.length);
+        }
+        IntIterator(int[] values, int off, int len) {
+            _values = values;
+            _len = len;
+            _pos = off;
+        }
+        public boolean hasNext() {
+            return (_pos < _len);
+        }
+        public Integer next() {
+            if (!hasNext()) throw new NoSuchElementException();
+            int value = _values[_pos++];
+            return value;
+        }
+        public void remove() {
+            throw new UnsupportedOperationException();
+        }
+    }
+
 }

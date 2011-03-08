@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -26,6 +26,14 @@ public interface IonLoader
      * @return the system instance; not <code>null</code>.
      */
     public IonSystem getSystem();
+
+
+    /**
+     * Gets the {@link IonCatalog} being used by this loader.
+     *
+     * @return a catalog; not null.
+     */
+    public IonCatalog getCatalog();
 
 
     /**

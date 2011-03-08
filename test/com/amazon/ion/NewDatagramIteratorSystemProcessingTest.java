@@ -2,7 +2,7 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl.IonDatagramImpl;
+import com.amazon.ion.impl.IonValuePrivate;
 import java.util.Iterator;
 
 /**
@@ -25,10 +25,21 @@ public class NewDatagramIteratorSystemProcessingTest
         throws Exception
     {
         IonReader reader = system().newSystemReader(myText);
-        IonDatagram datagram =
-            new IonDatagramImpl(system(), catalog(), reader);
+
+        // was: new IonDatagramImpl(system(), catalog(), reader);
         // Force symtab preparation  FIXME should not be necessary
-        datagram.byteSize();
+        // datagram.byteSize();
+        IonDatagram datagram = system().newDatagram();
+
+        // not newTreeUserWriter since we don't want to see local
+        // symbol tables even if they're required
+        IonWriter writer = system().newTreeWriter(datagram);
+
+        writer.writeValues(reader);
+        writer.close();
+
+        // not needed, used populateSymbolValue instead: datagram.deepMaterialize();
+        ((IonValuePrivate)datagram).populateSymbolValues(null);
 
         return datagram.iterator();
     }
@@ -38,10 +49,23 @@ public class NewDatagramIteratorSystemProcessingTest
         throws Exception
     {
         IonReader reader = system().newSystemReader(myText);
-        IonDatagram datagram =
-            new IonDatagramImpl(system(), catalog(), reader);
-        // Force symtab preparation  FIXME should not be necessary
-        datagram.byteSize();
+        // was: IonDatagram datagram =
+        //         new IonDatagramImpl(system(), catalog(), reader);
+        //      // Force symtab preparation  FIXME should not be necessary
+        //      datagram.byteSize();
+
+        IonDatagram datagram = system().newDatagram();
+
+        // FIXME: hack - maybe this is simply surpassed by the lite
+        //               but here we can have an extra $ion_1_0 if
+        //               it is present in the input text since the
+        //               newDatagram() forces one into the binary
+        //               buffer as well.
+
+
+        IonWriter writer = system().newTreeSystemWriter(datagram);
+        writer.writeValues(reader);
+        writer.close();
 
         return datagram.systemIterator();
     }

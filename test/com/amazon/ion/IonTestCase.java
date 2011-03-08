@@ -1,38 +1,85 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import com.amazon.ion.impl.IonSystemImpl;
+import com.amazon.ion.impl.IonSystemPrivate;
+import com.amazon.ion.junit.Injected;
+import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.system.SimpleCatalog;
+import com.amazon.ion.system.SystemFactory;
+import com.amazon.ion.system.SystemFactory.SystemCapabilities;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.math.BigInteger;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CodingErrorAction;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 import junit.framework.TestCase;
+import org.junit.Assert;
+import org.junit.runner.RunWith;
 
 /**
  * Base class with helpers for Ion unit tests.
  */
+@RunWith(Injected.class)
 public abstract class IonTestCase
     extends TestCase
 {
-    private static boolean ourSystemPropertiesLoaded = false;
-    protected IonSystemImpl mySystem;
-    protected IonLoader myLoader;
+    @Inject("systemCapabilities")
+    public static final SystemCapabilities[] TEST_DIMENSION =
+    { SystemCapabilities.ORIGINAL, SystemCapabilities.LITE };
 
-
-    public IonTestCase()
-    {
+    public static enum StreamingMode {
+        OLD_STREAMING,
+        NEW_STREAMING
     }
 
-    public IonTestCase(String name)
+    @Inject("streamingMode")
+    public static final StreamingMode[] STREAMING_DIMENSION =
+        //StreamingMode.values();  // ION-180 the old streaming fails numerous regressions.
+    { StreamingMode.NEW_STREAMING };
+
+
+
+    private static boolean ourSystemPropertiesLoaded = false;
+    protected IonSystemPrivate mySystem;
+    protected IonLoader        myLoader;
+
+    //  FIXME: needs java docs
+    private SystemCapabilities desiredSystemType =
+        SystemCapabilities.DEFAULT;
+
+    private StreamingMode desiredStreamingMode =
+        StreamingMode.NEW_STREAMING;
+
+    public void setSystemCapabilities(SystemCapabilities systype)
     {
-        super(name);
+        desiredSystemType = systype;
+    }
+
+    public SystemCapabilities getSystemCapabilities()
+    {
+        return desiredSystemType;
+    }
+
+    public void setStreamingMode(StreamingMode mode) {
+        desiredStreamingMode = mode;
+    }
+
+    public StreamingMode getStreamingMode() {
+        return desiredStreamingMode;
     }
 
 
@@ -144,7 +191,48 @@ public abstract class IonTestCase
     public IonDatagram load(File ionFile)
         throws IonException, IOException
     {
-        IonDatagram dg = loader().load(ionFile);
+        IonLoader loader = loader();
+        IonDatagram dg = loader.load(ionFile);
+
+        // Flush out any encoding problems in the data.
+        forceMaterialization(dg);
+
+        return dg;
+    }
+
+    /** Returns the file decoded as UTF-8 as an IonDatagram loaded as a Java String, or <tt>null</tt> if the file is not UTF-8. */
+    public IonDatagram loadAsJavaString(File ionFile)
+        throws IonException, IOException
+    {
+        // slurp file into a byte sink
+        final ByteArrayOutputStream sink = new ByteArrayOutputStream();
+        // BufferedInputStream isn't needed, we are reading in bulk.
+        final InputStream in = new FileInputStream(ionFile);
+        try {
+            final byte[] buf = new byte[131072];
+            int read = 0;
+            while ((read = in.read(buf)) != -1) {
+                sink.write(buf, 0, read);
+            }
+        } finally {
+            in.close();
+        }
+
+        String ionText = null;
+        try {
+            // we jump through these hoops because the default decoding is to put replacement characters
+            // which is NOT useful for this purpose
+            final CharsetDecoder decoder =
+                Charset.forName("UTF-8")
+                       .newDecoder()
+                       .onMalformedInput(CodingErrorAction.REPORT)
+                       .onUnmappableCharacter(CodingErrorAction.REPORT)
+                       ;
+            ionText = decoder.decode(ByteBuffer.wrap(sink.toByteArray())).toString();
+        } catch (CharacterCodingException e) {
+            return null;
+        }
+        final IonDatagram dg = loader().load(ionText);
 
         // Flush out any encoding problems in the data.
         forceMaterialization(dg);
@@ -161,13 +249,33 @@ public abstract class IonTestCase
     // ========================================================================
     // Fixture Helpers
 
-    protected IonSystemImpl system()
+
+    protected IonSystemPrivate system()
     {
         if (mySystem == null)
         {
-            mySystem = new IonSystemImpl();
+            mySystem = (IonSystemPrivate)SystemFactory.newSystem(getSystemCapabilities()); // was: new IonSystemImpl();
+            if (mySystem instanceof IonSystemImpl)
+            {
+                // TODO we really should phase this out...
+                ((IonSystemImpl) mySystem).useNewReaders_UNSUPPORTED_MAGIC = getStreamingMode() == StreamingMode.NEW_STREAMING;
+            }
         }
         return mySystem;
+    }
+
+    // added helper, this returns a separate system
+    // every time since the user is passing in a catalog
+    // which changes the state of the system object
+    protected IonSystemPrivate system(IonCatalog catalog)
+    {
+        IonSystemPrivate system = (IonSystemPrivate)SystemFactory.newSystem(getSystemCapabilities(), catalog);
+        if (system instanceof IonSystemImpl)
+        {
+            // TODO we really should phase this out...
+            ((IonSystemImpl) system).useNewReaders_UNSUPPORTED_MAGIC = getStreamingMode() == StreamingMode.NEW_STREAMING;
+        }
+        return system;
     }
 
     protected SimpleCatalog catalog()
@@ -225,7 +333,12 @@ public abstract class IonTestCase
         byte[] bytes = dg.getBytes();
         checkBinaryHeader(bytes);
 
-        dg = loader().load(bytes);
+        try {
+            dg = loader().load(bytes);
+        } catch (final IonException e) {
+            final String hex = BinaryTest.bytesToHex(bytes);
+            throw new IonException("Bad bytes: " + hex, e);
+        }
         assertEquals(1, dg.size());
         return dg.get(0);
     }
@@ -388,13 +501,31 @@ public abstract class IonTestCase
     {
         assertTrue("datagram is too small", datagram.length >= 4);
 
-        assertEquals("datagram cookie byte 1", (byte) 0xE0, datagram[0]);
-        assertEquals("datagram cookie byte 2", (byte) 0x01, datagram[1]);
-        assertEquals("datagram cookie byte 3", (byte) 0x00, datagram[2]);
-        assertEquals("datagram cookie byte 4", (byte) 0xEA, datagram[3]);
+        assertEquals("datagram cookie byte 1", 0xE0, datagram[0] & 0xff );
+        assertEquals("datagram cookie byte 2", 0x01, datagram[1] & 0xff);
+        assertEquals("datagram cookie byte 3", 0x00, datagram[2] & 0xff);
+        assertEquals("datagram cookie byte 4", 0xEA, datagram[3] & 0xff);
     }
 
 
+
+    /**
+     * Checks that the value is an IonInt with the given value.
+     * @param expected may be null to check for null.int
+     */
+    public void checkInt(BigInteger expected, IonValue actual)
+    {
+        assertSame(IonType.INT, actual.getType());
+        IonInt i = (IonInt) actual;
+
+        if (expected == null) {
+            assertTrue("expected null value", actual.isNullValue());
+        }
+        else
+        {
+            assertEquals("int content", expected, i.bigIntegerValue());
+        }
+    }
 
     /**
      * Checks that the value is an IonInt with the given value.
@@ -550,7 +681,11 @@ public abstract class IonTestCase
         assertSame(IonType.SYMBOL, value.getType());
         IonSymbol sym = (IonSymbol) value;
         assertEquals("symbol name", name, sym.stringValue());
-        assertEquals("symbol id", id, sym.getSymbolId());
+        // just so we can set a break point on this before we lose all context
+        int sid = sym.getSymbolId();
+        if (sid != id) {
+            assertEquals("symbol id", id, sym.getSymbolId());
+        }
     }
 
     public void checkSymbol(String name, int id, SymbolTable symtab)
@@ -560,7 +695,7 @@ public abstract class IonTestCase
     }
 
 
-    public void checkAnnotation(String expectedAnnot, IonValue value)
+    public static void checkAnnotation(String expectedAnnot, IonValue value)
     {
         assertTrue("missing annotation",
                    value.hasTypeAnnotation(expectedAnnot));
@@ -643,7 +778,7 @@ public abstract class IonTestCase
      * @deprecated use {@link #assertEquals(Object, Object)} instead.
      */
     @Deprecated
-    public void assertIonEquals(IonValue expected, final IonValue found)
+    public static void assertIonEquals(IonValue expected, final IonValue found)
     {
         assertSame("element classes", expected.getClass(), found.getClass());
 
@@ -666,9 +801,9 @@ public abstract class IonTestCase
                 {
                     public void visit(IonBlob expected) throws Exception
                     {
-                        assertEquals("blob data",
-                                     expected.getBytes(),
-                                     ((IonBlob)found).getBytes());
+                        Assert.assertArrayEquals("blob data",
+                                                 expected.getBytes(),
+                                                 ((IonBlob)found).getBytes());
                     }
 
                     public void visit(IonBool expected) throws Exception
@@ -680,9 +815,9 @@ public abstract class IonTestCase
 
                     public void visit(IonClob expected) throws Exception
                     {
-                        assertEquals("clob data",
-                                     expected.getBytes(),
-                                     ((IonClob)found).getBytes());
+                        Assert.assertArrayEquals("clob data",
+                                                 expected.getBytes(),
+                                                 ((IonClob)found).getBytes());
                     }
 
                     /**
@@ -711,13 +846,13 @@ public abstract class IonTestCase
                     public void visit(IonFloat expected) throws Exception
                     {
                         assertEquals("float value",
-                                     expected.bigDecimalValue(),
-                                     ((IonFloat)found).bigDecimalValue());
+                                     expected.doubleValue(),
+                                     ((IonFloat)found).doubleValue());
                     }
 
                     public void visit(IonInt expected) throws Exception
                     {
-                        assertEquals("float value",
+                        assertEquals("int value",
                                      expected.bigIntegerValue(),
                                      ((IonInt)found).bigIntegerValue());
                     }

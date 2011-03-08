@@ -1,6 +1,8 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
+
+import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
@@ -35,57 +37,60 @@ import java.util.NoSuchElementException;
  */
 public class IonReaderTextUserX
     extends IonReaderTextSystemX
+    implements IonReaderWriterPrivate
 {
-    IonSystem   _system;
+    // IonSystem   _system; now in IonReaderTextSystemX where it could be null
     IonCatalog  _catalog;
     SymbolTable _symbols;
 
-    public IonReaderTextUserX(IonSystem system, char[] chars) {
-        super(chars);
-        initUserReader(system);
+    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, char[] chars, int offset, int length) {
+        super(system, chars, offset, length);
+        initUserReader(system, catalog);
     }
-    public IonReaderTextUserX(IonSystem system, char[] chars, int offset, int length) {
-        super(chars, offset, length);
-        initUserReader(system);
+    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, CharSequence chars, int offset, int length) {
+        super(system, chars, offset, length);
+        initUserReader(system, catalog);
     }
-    public IonReaderTextUserX(IonSystem system, CharSequence chars) {
-        super(chars);
-        initUserReader(system);
+    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, Reader userChars) {
+        super(system, userChars);
+        initUserReader(system, catalog);
     }
-    public IonReaderTextUserX(IonSystem system, CharSequence chars, int offset, int length) {
-        super(chars, offset, length);
-        initUserReader(system);
+    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, byte[] bytes, int offset, int length) {
+        super(system, bytes, offset, length);
+        initUserReader(system, catalog);
     }
-    public IonReaderTextUserX(IonSystem system, Reader userChars) {
-        super(userChars);
-        initUserReader(system);
+    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, InputStream userBytes) {
+        super(system, userBytes);
+        initUserReader(system, catalog);
     }
-    public IonReaderTextUserX(IonSystem system, byte[] bytes) {
-        super(bytes);
-        initUserReader(system);
+    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, File file) {
+        super(system, file);
+        initUserReader(system, catalog);
     }
-    public IonReaderTextUserX(IonSystem system, byte[] bytes, int offset, int length) {
-        super(bytes, offset, length);
-        initUserReader(system);
+    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, UnifiedInputStreamX uis) {
+        super(system, uis);
+        initUserReader(system, catalog);
     }
-    public IonReaderTextUserX(IonSystem system, InputStream userBytes) {
-        super(userBytes);
-        initUserReader(system);
-    }
-    public IonReaderTextUserX(IonSystem system, File file) {
-        super(file);
-        initUserReader(system);
-    }
-    public IonReaderTextUserX(IonSystem system, UnifiedInputStreamX uis) {
-        super(uis);
-        initUserReader(system);
-    }
-    private void initUserReader(IonSystem system) {
+    private void initUserReader(IonSystem system, IonCatalog catalog) {
+        if (system == null) {
+            throw new IllegalArgumentException();
+        }
         _system = system;
-        _catalog = system.getCatalog();
-        _symbols = system.getSystemSymbolTable();
+        if (catalog != null) {
+            _catalog = catalog;
+        }
+        else {
+            _catalog = system.getCatalog();
+        }
+        // not needed, getSymbolTable will force this when necessary
+        //  _symbols = system.getSystemSymbolTable();
     }
 
+    @Override
+    public IonSystem getSystem()
+    {
+        return _system;
+    }
 
     /**
      * this looks forward to see if there is an upcoming value
@@ -110,7 +115,10 @@ public class IonReaderTextUserX
     }
     private final boolean has_next_user_value()
     {
-     // changed to 'while' since consumed
+        // clear out our previous value
+        clear_system_value_stack();
+
+        // changed to 'while' since consumed
         // values will not be counted
         while (!_has_next_called)
         {
@@ -130,7 +138,8 @@ public class IonReaderTextUserX
                         for (int ii=0; ii<_annotation_count; ii++) {
                             String a = _annotations[ii];
                             if (UnifiedSymbolTable.ION_SYMBOL_TABLE.equals(a)) {
-                                symbol_table_load();
+                                _symbols = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _catalog, this, true);
+                                push_symbol_table(_symbols);
                                 _has_next_called = false;
                                 break;
                             }
@@ -141,6 +150,7 @@ public class IonReaderTextUserX
                     String sym = stringValue();
                     if (UnifiedSymbolTable.ION_1_0.equals(sym)) {
                         symbol_table_reset();
+                        push_symbol_table(_system.getSystemSymbolTable());
                         _has_next_called = false;
                     }
                     break;
@@ -151,16 +161,11 @@ public class IonReaderTextUserX
         }
         return (_eof != true);
     }
-    private final void symbol_table_load()
-    {
-        _symbols = UnifiedSymbolTable.loadLocalSymbolTable(this._system, this, _catalog);
-        return;
-    }
     private final void symbol_table_reset()
     {
         IonType t = next();
         assert( IonType.SYMBOL.equals(t) );
-        _symbols = _symbols.getSystemSymbolTable();
+        _symbols = null; // was: _symbols.getSystemSymbolTable(); - the null is fixed in getSymbolTable()
         return;
     }
 
@@ -171,8 +176,9 @@ public class IonReaderTextUserX
             // TODO: should this be return IllegalStateException ?
             return SymbolTable.UNKNOWN_SYMBOL_ID;
         }
-        String fieldname = getFieldName();
-        int    id        = _symbols.findSymbol(fieldname);
+        String      fieldname = getFieldName();
+        SymbolTable symbols   = getSymbolTable();
+        int         id        = symbols.findSymbol(fieldname);
         return id;
     }
 
@@ -183,7 +189,18 @@ public class IonReaderTextUserX
             throw new IllegalStateException("only valid if the value is a symbol");
         }
         String symbol = stringValue();
-        int    id     = _symbols.findSymbol(symbol);
+        SymbolTable symbols   = getSymbolTable();
+        // if (!_symbols.isLocalTable()) {
+        //     UnifiedSymbolTable local;
+        //     if (_symbols.isSystemTable()) {
+        //         local = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _system.getSystemSymbolTable());
+        //     }
+        //     else { // if (_symbols.isSharedTable()) {
+        //         local = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _system.getSystemSymbolTable(), _symbols);
+        //     }
+        //     _symbols = local;
+        // }
+        int    id     = symbols.addSymbol(symbol);
         return id;
     }
 
@@ -191,12 +208,12 @@ public class IonReaderTextUserX
     public SymbolTable getSymbolTable()
     {
         if (_symbols == null) {
-            _symbols = _system.getSystemSymbolTable();
+            SymbolTable system_symbols = _system.getSystemSymbolTable();
+            _symbols = makeNewLocalSymbolTable(_system, system_symbols);
         }
         return _symbols;
     }
 
-    private static int[] _empty_int_array = new int[0];
     @Override
     public int[] getTypeAnnotationIds()
     {
@@ -205,13 +222,14 @@ public class IonReaderTextUserX
         int      len  = syms.length;
 
         if (len == 0) {
-            ids  = _empty_int_array;
+            ids = IonImplUtils.EMPTY_INT_ARRAY;
         }
         else {
+            SymbolTable symbols = getSymbolTable();
             ids  = new int[len];
             for (int ii=0; ii<len; ii++) {
-                String sym = stringValue();
-                ids[ii] = _symbols.findSymbol(sym);
+                String sym = syms[ii];
+                ids[ii] = symbols.findSymbol(sym);
             }
         }
         return ids;
@@ -252,5 +270,45 @@ public class IonReaderTextUserX
         public void remove() {
             throw new UnsupportedOperationException();
         }
+    }
+
+    //
+    //  This code handles the skipped symbol table
+    //  support - it is cloned in IonReaderTreeUserX
+    //  and IonReaderBinaryUserX
+    //
+    //  SO ANY FIXES HERE WILL BE NEEDED IN THOSE
+    //  TWO LOCATIONS AS WELL.
+    //
+    private int _symbol_table_top = 0;
+    private SymbolTable[] _symbol_table_stack = new SymbolTable[3]; // 3 is rare, IVM followed by a local sym tab with open content
+    private void clear_system_value_stack()
+    {
+        while (_symbol_table_top > 0) {
+            _symbol_table_top--;
+            _symbol_table_stack[_symbol_table_top] = null;
+        }
+    }
+    private void push_symbol_table(SymbolTable symbols)
+    {
+        assert(symbols != null);
+        if (_symbol_table_top >= _symbol_table_stack.length) {
+            int new_len = _symbol_table_stack.length * 2;
+            SymbolTable[] temp = new SymbolTable[new_len];
+            System.arraycopy(_symbol_table_stack, 0, temp, 0, _symbol_table_stack.length);
+            _symbol_table_stack = temp;
+        }
+        _symbol_table_stack[_symbol_table_top++] = symbols;
+    }
+    @Override
+    public SymbolTable pop_passed_symbol_table()
+    {
+        if (_symbol_table_top <= 0) {
+            return null;
+        }
+        _symbol_table_top--;
+        SymbolTable symbols = _symbol_table_stack[_symbol_table_top];
+        _symbol_table_stack[_symbol_table_top] = null;
+        return symbols;
     }
 }

@@ -4,6 +4,10 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
+import java.io.Closeable;
+import java.io.Flushable;
+import java.io.IOException;
+import java.io.OutputStream;
 
 /**
  * this class holds the various constants and helper functions Ion uses
@@ -381,13 +385,23 @@ public class IonUTF8 {
         int c = ((unicodeScalar - SURROGATE_OFFSET) & 0x3ff);
         return (char)((c | LOW_SURROGATE) & 0xffff);
     }
+    public final static int getUnicodeScalarFromSurrogates(int highSurrogate, int lowSurrogate)
+    {
+        assert(IonUTF8.isHighSurrogate(highSurrogate));
+        assert(IonUTF8.isLowSurrogate(lowSurrogate));
+        int scalar;
+        scalar = lowSurrogate & 0x3ff;
+        scalar += (highSurrogate & 0x3ff) << 10;
+        scalar += SURROGATE_OFFSET;
+        return scalar;
+    }
 
     public static class InvalidUnicodeCodePoint extends IonException
     {
         private static final long serialVersionUID = -3200811216940328945L;
 
         public InvalidUnicodeCodePoint() {
-            super("invlid UTF8");
+            super("invalid UTF8");
         }
         public InvalidUnicodeCodePoint(String msg) {
             super(msg);
@@ -397,6 +411,247 @@ public class IonUTF8 {
         }
         public InvalidUnicodeCodePoint(String msg, Exception e) {
             super(msg, e);
+        }
+    }
+    public static final class CharToUTF8
+        implements Appendable, Closeable, Flushable
+    {
+        final private int           NO_SURROGATE = 0; // a surrogate char is necessarily non-zero
+        final private OutputStream _byte_stream;
+              private char         _pending_low_surrogate = NO_SURROGATE;
+
+        public CharToUTF8(OutputStream byteStream) {
+            _byte_stream = byteStream;
+        }
+        public final OutputStream getOutputStream() {
+            return _byte_stream;
+        }
+        public final void flush() throws IOException
+        {
+            if (_pending_low_surrogate != NO_SURROGATE) {
+                throw new IOException("unused low surrogate still pending on close");
+            }
+            _byte_stream.flush();
+        }
+
+        public final void close() throws IOException
+        {
+            flush();
+            _byte_stream.close();
+        }
+
+        public final Appendable append(CharSequence csq) throws IOException
+        {
+            return append(csq, 0, csq.length());
+        }
+        public final Appendable append(CharSequence csq, int start, int end)
+            throws IOException
+        {
+            for (int ii=start; ii < end; ii++) {
+                char c = csq.charAt(ii);
+                append_helper(c);
+            }
+
+            return this;
+        }
+        public final Appendable append(char c) throws IOException
+        {
+            if (c < 0) {
+                throw new IllegalArgumentException("invalid character");
+            }
+            append_helper(c);
+            return this;
+        }
+        private final void append_helper(char c) throws IOException
+        {
+            if (_pending_low_surrogate != NO_SURROGATE) {
+                if (!IonUTF8.isHighSurrogate(c)) {
+                    throw new IOException("invalid surrogate (low surrogate not followed by a high surrogate)");
+                }
+                int scalar = IonUTF8.getUnicodeScalarFromSurrogates(c, _pending_low_surrogate);
+                append_helper_write_utf8(scalar);
+                _pending_low_surrogate = NO_SURROGATE;
+            }
+            else if (c > 127) {
+                _byte_stream.write((byte)c & 0xff);
+            }
+            else if (IonUTF8.isLowSurrogate(c)) {
+                _pending_low_surrogate = c;
+            }
+            else {
+                append_helper_write_utf8(c);
+            }
+        }
+        private final void append_helper_write_utf8(int unicodeScalar) throws IOException
+        {
+            switch (IonUTF8.getUTF8ByteCount(unicodeScalar)) {
+            case 1:
+                _byte_stream.write(unicodeScalar & 0xff);
+                break;
+            case 2:
+                _byte_stream.write(IonUTF8.getByte1Of2(unicodeScalar) & 0xff);
+                _byte_stream.write(IonUTF8.getByte2Of2(unicodeScalar) & 0xff);
+                break;
+            case 3:
+                _byte_stream.write(IonUTF8.getByte1Of3(unicodeScalar) & 0xff);
+                _byte_stream.write(IonUTF8.getByte2Of3(unicodeScalar) & 0xff);
+                _byte_stream.write(IonUTF8.getByte3Of3(unicodeScalar) & 0xff);
+                break;
+            case 4:
+                _byte_stream.write(IonUTF8.getByte1Of4(unicodeScalar) & 0xff);
+                _byte_stream.write(IonUTF8.getByte2Of4(unicodeScalar) & 0xff);
+                _byte_stream.write(IonUTF8.getByte3Of4(unicodeScalar) & 0xff);
+                _byte_stream.write(IonUTF8.getByte4Of4(unicodeScalar) & 0xff);
+                break;
+            }
+        }
+    }
+
+    public static final class UTF8ToChar extends OutputStream implements Closeable
+    {
+        final private Appendable   _char_stream;
+        // the pending bytes are being handled like this
+        // instead of in a byte array as previous timing
+        // of array dereferencing (circa 2009) shows it
+        // to be remarkably slow.
+              private int          _expected_count = 0;
+              private int          _pending_count = 0;
+              private int          _pending_c1;
+              private int          _pending_c2;
+              private int          _pending_c3;
+
+        public UTF8ToChar(Appendable charStream) {
+            _char_stream = charStream;
+        }
+        public final Appendable getAppendable() {
+            return _char_stream;
+        }
+
+        @Override
+        public final void close() throws IOException
+        {
+            if (_pending_count > 0) {
+                throw new IOException("unfinished utf8 sequence still open");
+            }
+        }
+
+        @Override
+        public final void write(int b) throws IOException
+        {
+            b = b & 0xff;
+            if (_expected_count > 0) {
+                write_helper_continue(b);
+            }
+            else if (b > 127) {
+                if (!IonUTF8.isStartByte(b)) {
+                    throw new IOException("invalid UTF8 sequence: byte > 127 is not a UTF8 leading byte");
+                }
+                write_helper_start_sequence(b);
+            }
+            else {
+                _char_stream.append((char)b);
+            }
+        }
+
+        @Override
+        public final void write(byte[] bytes) throws IOException
+        {
+            write(bytes, 0, bytes.length);
+        }
+
+        @Override
+        public final void write(byte[] bytes, int off, int len) throws IOException
+        {
+            for (int ii=off; ii<off+len; ii++) {
+                int b = bytes[ii] & 0xff;
+                if (_pending_count == 0 && b < 128) {
+                    _char_stream.append((char)b);
+                }
+                else {
+                    write(b);
+                }
+            }
+        }
+
+        private final void write_helper_start_sequence(int b) throws IOException
+        {
+            _expected_count = IonUTF8.getUTF8LengthFromFirstByte(b);
+            _pending_count = 1;
+            _pending_c1 = b;
+        }
+        private final void write_helper_continue(int b) throws IOException
+        {
+            _pending_count++;
+            if (_expected_count == _pending_count) {
+                write_helper_write_char(b);
+            }
+            else {
+                switch(_pending_count) {
+                case 2:
+                    _pending_c2 = b;
+                    break;
+                case 3:
+                    _pending_c3 = b;
+                    break;
+                default:
+                    throw new IOException("invalid state for pending vs expected UTF8 bytes");
+                }
+            }
+        }
+        private final void write_helper_write_char(int b) throws IOException
+        {
+            char c;
+            int  s;
+            switch(_pending_count) {
+            case 2:
+                if (!IonUTF8.isContinueByteUTF8(b)) {
+                    throwBadContinuationByte();
+                }
+                c = IonUTF8.twoByteScalar(_pending_c1, b);
+                _char_stream.append(c);
+                break;
+            case 3:
+                if (!IonUTF8.isContinueByteUTF8(b)) {
+                    throwBadContinuationByte();
+                }
+                if (!IonUTF8.isContinueByteUTF8(_pending_c2)) {
+                    throwBadContinuationByte();
+                }
+                s = IonUTF8.threeByteScalar(_pending_c1, _pending_c2, b);
+                if (IonUTF8.needsSurrogateEncoding(s)) {
+                    _char_stream.append(IonUTF8.lowSurrogate(s));
+                    _char_stream.append(IonUTF8.highSurrogate(s));
+                }
+                else {
+                    _char_stream.append((char)s);
+                }
+                break;
+            case 4:
+                if (!IonUTF8.isContinueByteUTF8(b)) {
+                    throwBadContinuationByte();
+                }
+                if (!IonUTF8.isContinueByteUTF8(_pending_c2)) {
+                    throwBadContinuationByte();
+                }
+                if (!IonUTF8.isContinueByteUTF8(_pending_c3)) {
+                    throwBadContinuationByte();
+                }
+                s = IonUTF8.fourByteScalar(_pending_c1, _pending_c2, _pending_c3, b);
+                if (IonUTF8.needsSurrogateEncoding(s)) {
+                    _char_stream.append(IonUTF8.lowSurrogate(s));
+                    _char_stream.append(IonUTF8.highSurrogate(s));
+                }
+                else {
+                    _char_stream.append((char)s);
+                }
+                break;
+            default:
+                throw new IOException("invalid state for UTF8 sequence length "+_pending_count);
+            }
+        }
+        private void throwBadContinuationByte() throws IOException
+        {
+            throw new IOException("continuation byte expected");
         }
     }
 }

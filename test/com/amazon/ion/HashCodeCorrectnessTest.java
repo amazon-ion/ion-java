@@ -1,9 +1,4 @@
-/*
- *  Copyright 2009 Amazon.com.  All rights reserved.
- *  $Id: //brazil/src/shared/platform/IonJava/release/test/com/amazon/ion/HashCodeCorrectnessTest.java#1 $
- *  $Change: 2878748 $ $Author: jonker $ $DateTime: 2010/01/07 21:22:37 $
- */
-
+// Copyright 2009-2011 Amazon.com.  All rights reserved.
 package com.amazon.ion;
 
 import com.amazon.ion.util.Equivalence;
@@ -63,6 +58,7 @@ public class HashCodeCorrectnessTest extends IonTestCase
     /**
      * Test method for {@link IonLob#hashCode()}
      */
+    @Test
     public void testIonLobHashCode()
     {
         // Some clobs
@@ -116,9 +112,11 @@ public class HashCodeCorrectnessTest extends IonTestCase
         assertIonEqImpliesHashEq(clob4, blob4);
     }
 
+
     /**
      * Test method for {@link IonBool#hashCode()}.
      */
+    @Test
     public void testIonBoolHashCode()
     {
         IonValue[] bools = {oneValue("true"), oneValue("true"),
@@ -133,6 +131,7 @@ public class HashCodeCorrectnessTest extends IonTestCase
     /**
      * Test method for {@link IonInt#hashCode()}.
      */
+    @Test
     public void testIonIntHashCode()
     {
         Set<IonInt> unique_values = new HashSet<IonInt>();
@@ -199,9 +198,11 @@ public class HashCodeCorrectnessTest extends IonTestCase
                      unique_hashes.size());
     }
 
+
     /**
      * Test method for {@link IonFloat#hashCode()}.
      */
+    @Test
     public void testIonFloatHashCode()
     {
         double foo = 2.17845643324e23;

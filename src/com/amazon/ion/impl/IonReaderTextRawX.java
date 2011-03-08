@@ -1,4 +1,4 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2010 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -268,7 +268,9 @@ public abstract class IonReaderTextRawX
     int                 _lob_actual_len;
 
 
-    protected IonReaderTextRawX() {}
+    protected IonReaderTextRawX() {
+        super();
+    }
 
     protected final void init(UnifiedInputStreamX iis) {
         _scanner = new IonReaderTextRawTokensX(iis);
@@ -279,6 +281,12 @@ public abstract class IonReaderTextRawX
         set_state(STATE_BEFORE_ANNOTATION_DATAGRAM);
         _eof = false;
         push_container_state(IonType.DATAGRAM);
+    }
+
+    public void close()
+        throws IOException
+    {
+        _scanner.close();
     }
 
     private final void set_state(int new_state) {
@@ -426,8 +434,19 @@ public abstract class IonReaderTextRawX
     private final void finish_value(SavePoint sp) throws IOException
     {
         if (_scanner.isUnfishedToken()) {
-            assert(_current_value_save_point.isDefined());
+            if (sp != null && _value_type != null) {
+                switch (_value_type) {
+                case STRUCT:
+                case SEXP:
+                case LIST:
+                    sp = null;
+                    break;
+                default:
+                    break;
+                }
+            }
             _scanner.finish_token(sp);
+
             int new_state = get_state_after_value();
             set_state(new_state);
         }
@@ -478,21 +497,39 @@ public abstract class IonReaderTextRawX
     private int get_state_after_value() {
         int state_after_scalar;
         switch(getContainerType()) {
+        case LIST:
+        case STRUCT:
+            state_after_scalar = STATE_AFTER_VALUE_CONTENTS;
+            break;
+        case SEXP:
+            state_after_scalar = STATE_BEFORE_ANNOTATION_SEXP;
+            break;
+        case DATAGRAM:
+            state_after_scalar = STATE_BEFORE_ANNOTATION_DATAGRAM;
+            break;
+        default:
+            String message = "invalid container type encountered during parsing "
+                           + getContainerType()
+                           + _scanner.input_position();
+            throw new IonException(message);
+        }
+        if (_v.isNull() && false) {  // FIXME: fix this !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            switch (_value_type) {
             case LIST:
+                state_after_scalar = STATE_BEFORE_FIELD_NAME;
+                break;
             case STRUCT:
-                state_after_scalar = STATE_AFTER_VALUE_CONTENTS;
+                state_after_scalar = STATE_BEFORE_ANNOTATION_SEXP;
                 break;
             case SEXP:
                 state_after_scalar = STATE_BEFORE_ANNOTATION_SEXP;
-                break;
-            case DATAGRAM:
-                state_after_scalar = STATE_BEFORE_ANNOTATION_DATAGRAM;
                 break;
             default:
                 String message = "invalid container type encountered during parsing "
                                + getContainerType()
                                + _scanner.input_position();
                 throw new IonException(message);
+            }
         }
         return state_after_scalar;
     }
@@ -533,8 +570,12 @@ public abstract class IonReaderTextRawX
         return state_after_annotation;
     }
     private final int get_state_after_container() {
-        int new_state;
         IonType container = top_state();
+        int new_state = get_state_after_container(container);
+        return new_state;
+    }
+    private final int get_state_after_container(IonType container) {
+        int new_state;
         if (container == null) {
             new_state = STATE_BEFORE_ANNOTATION_DATAGRAM;
         }
@@ -592,7 +633,13 @@ public abstract class IonReaderTextRawX
     {
         int t;
         int action, temp_state;
+        boolean trailing_whitespace = false;  // TODO: there's a better way to do this
         StringBuilder sb;
+
+        // FIXME: check depth and type before doing anything further
+        //        if we're on a collection and at the correct depth
+        //        we need to skip over the contents of the collection
+        //        before doing any more parsing
 
         // we'll need a token to get started here
         t = _scanner.nextToken();
@@ -662,6 +709,7 @@ public abstract class IonReaderTextRawX
                     // this is the case for an empty symbol
                     parse_error("empty symbols are not valid");
                 }
+                trailing_whitespace = _scanner.skip_whitespace();
                 if (!_scanner.skipDoubleColon()) {
                     // unnecessary: set_current_value(sp);
                     // this will "loop around" to ACTION_LOAD_SCALAR
@@ -745,7 +793,7 @@ public abstract class IonReaderTextRawX
                     switch (_value_keyword) {
                     case IonTokenConstsX.KEYWORD_NULL:
                     {
-                        int kwt = _scanner.peekNullTypeSymbol();
+                        int kwt = trailing_whitespace ? IonTokenConstsX.KEYWORD_none : _scanner.peekNullTypeSymbol();
                         switch (kwt) {
                         case IonTokenConstsX.KEYWORD_NULL:      _null_type = IonType.NULL;       break;
                         case IonTokenConstsX.KEYWORD_BOOL:      _null_type = IonType.BOOL;       break;
@@ -760,7 +808,8 @@ public abstract class IonReaderTextRawX
                         case IonTokenConstsX.KEYWORD_LIST:      _null_type = IonType.LIST;       break;
                         case IonTokenConstsX.KEYWORD_SEXP:      _null_type = IonType.SEXP;       break;
                         case IonTokenConstsX.KEYWORD_STRUCT:    _null_type = IonType.STRUCT;     break;
-                        default:                                _null_type = IonType.NULL;       break; // this happens when there isn't a '.' otherwise peek throws the error
+                        case IonTokenConstsX.KEYWORD_none:      _null_type = IonType.NULL;       break; // this happens when there isn't a '.' otherwise peek throws the error or returns none
+                        default: parse_error("invalid keyword id ("+kwt+") encountered while parsing a null");
                         }
                         // at this point we've consumed a dot '.' and it's preceding whitespace
                         // clear_value();
@@ -837,12 +886,20 @@ public abstract class IonReaderTextRawX
                 if (_container_prohibits_commas) {
                     parse_error("comma's aren't used to separate values in "+getContainerType().toString());
                 }
-                set_state(_container_is_struct? STATE_BEFORE_FIELD_NAME : STATE_BEFORE_ANNOTATION_CONTAINED);
+                int new_state = STATE_BEFORE_ANNOTATION_CONTAINED;
+                //if (_v._is_null) {
+                //    new_state = get_state_after_container(_value_type);
+                //}
+                //else
+                if (_container_is_struct) {
+                    new_state = STATE_BEFORE_FIELD_NAME;
+                }
+                set_state(new_state);
                 _scanner.tokenIsFinished();
                 t = _scanner.nextToken();
                 break;
             case ACTION_FINISH_CONTAINER:
-                int new_state = get_state_after_container();
+                new_state = get_state_after_container();
                 set_state(new_state);
                 _eof = true;
                 return;
@@ -851,7 +908,7 @@ public abstract class IonReaderTextRawX
                 set_state(state_after_scalar);
                 return;
             case ACTION_FINISH_DATAGRAM:
-                if (getDepth() != 1) {
+                if (getDepth() != 0) {
                     parse_error("state failure end of datagram encounterd with a non-container stack");
                 }
                 set_state(STATE_EOF);
@@ -930,8 +987,9 @@ public abstract class IonReaderTextRawX
                 clob_chars_only = (IonType.CLOB == _value_type);
                 c = _scanner.load_single_quoted_string(sb, clob_chars_only);
                 if (c == UnifiedInputStreamX.EOF) {
-                    String message = "EOF encountered before closing single quote";
-                   parse_error(message);
+                    //String message = "EOF encountered before closing single quote";
+                    //parse_error(message);
+                    _scanner.unexpected_eof();
                 }
                 _value_type = IonType.SYMBOL;
                 break;
@@ -939,8 +997,9 @@ public abstract class IonReaderTextRawX
                 clob_chars_only = (IonType.CLOB == _value_type);
                 c = _scanner.load_double_quoted_string(sb, clob_chars_only);
                 if (c == UnifiedInputStreamX.EOF) {
-                    String message = "EOF encountered before closing single quote";
-                   parse_error(message);
+                    // String message = "EOF encountered before closing single quote";
+                    // parse_error(message);
+                    _scanner.unexpected_eof();
                 }
                 _value_type = IonType.STRING;
                 break;
@@ -948,8 +1007,9 @@ public abstract class IonReaderTextRawX
                 clob_chars_only = (IonType.CLOB == _value_type);
                 c = _scanner.load_triple_quoted_string(sb, clob_chars_only);
                 if (c == UnifiedInputStreamX.EOF) {
-                    String message = "EOF encountered before closing single quote";
-                   parse_error(message);
+                    //String message = "EOF encountered before closing single quote";
+                    //parse_error(message);
+                    _scanner.unexpected_eof();
                 }
                 _value_type = IonType.STRING;
                 break;
@@ -971,10 +1031,19 @@ public abstract class IonReaderTextRawX
      * called by super classes to tell us that the
      * current token has been consumed.
      */
-    protected void tokenValueIsFinished() {
+    protected void tokenValueIsFinished()
+    {
         _scanner.tokenIsFinished();
-        int state_after_scalar = get_state_after_value();
-        set_state(state_after_scalar);
+        if (IonType.BLOB.equals(_value_type) || IonType.CLOB.equals(_value_type))
+        {
+            int state_after_scalar = get_state_after_value();
+            set_state(state_after_scalar);
+        }
+//
+//  fix during IMS 3 integration - unnecessary (and in 1 circumstance harmful)
+//
+//        int state_after_scalar = get_state_after_value();
+//        set_state(state_after_scalar);
     }
 
     private final void push_container_state(IonType newContainer)
@@ -1017,13 +1086,16 @@ public abstract class IonReaderTextRawX
     }
     public IonType getContainerType()
     {
-        if (_eof) return IonType.DATAGRAM;
         if (_container_state_top == 0) return IonType.DATAGRAM;
         return _container_state_stack[_container_state_top - 1];
     }
     public int getDepth()
     {
-        return _container_state_top;
+        int depth = _container_state_top;
+        if (depth > 0 && IonType.DATAGRAM.equals(_container_state_stack[0])) {
+            depth--;
+        }
+        return depth;
     }
     public String getFieldName()
     {
@@ -1036,7 +1108,6 @@ public abstract class IonReaderTextRawX
         return new StringIterator(ids);
     }
 
-    private static String[] _empty_string_array = new String[0];
     public String[] getTypeAnnotations()
     {
         String[] annotations;
@@ -1045,7 +1116,7 @@ public abstract class IonReaderTextRawX
             System.arraycopy(_annotations, 0, annotations, 0, _annotation_count);
         }
         else {
-            annotations = _empty_string_array;
+            annotations = IonImplUtils.EMPTY_STRING_ARRAY;
         }
         return annotations;
     }
@@ -1074,6 +1145,10 @@ public abstract class IonReaderTextRawX
         }
         catch (IOException e) {
             throw new IonException(e);
+        }
+        if (_v.isNull()) {
+            _eof = true;
+            _has_next_called = true;  // there are no contents in a null container
         }
         if (_debug) System.out.println("stepInto() new depth: "+getDepth());
     }
@@ -1124,19 +1199,22 @@ public abstract class IonReaderTextRawX
     }
     public int getSymbolId()
     {
-        throw new UnsupportedOperationException("not supported - use UserReader");
+        return SymbolTable.UNKNOWN_SYMBOL_ID;
     }
     public int getFieldId()
     {
-        throw new UnsupportedOperationException("not supported - use UserReader");
+        return -1;
+        // throw new UnsupportedOperationException("not supported - use UserReader");
     }
     public int[] getTypeAnnotationIds()
     {
-        throw new UnsupportedOperationException("not supported - use UserReader");
+        return null;
+//        throw new UnsupportedOperationException("not supported - use UserReader");
     }
     public Iterator<Integer> iterateTypeAnnotationIds()
     {
-        throw new UnsupportedOperationException("not supported - use UserReader");
+        return null;
+//        throw new UnsupportedOperationException("not supported - use UserReader");
     }
     //
     // value getters - also inactive in this parser
@@ -1238,5 +1316,13 @@ public abstract class IonReaderTextRawX
               + ": "
               + reason;
         throw new IonReaderTextParsingException(message);
+    }
+    protected final void parse_error(Exception e) {
+        String message =
+                "Syntax error at "
+              + _scanner.input_position()
+              + ": "
+              + e.getLocalizedMessage();
+        throw new IonReaderTextParsingException(message, e);
     }
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -21,7 +21,7 @@ import java.util.Iterator;
  * {@link #clone(IonValue)}.
  * <p>
  * To create an {@code IonSystem},
- * see {@link com.amazon.ion.system.SystemFactory}.
+ * see {@link com.amazon.ion.system.IonSystemBuilder}.
  * <p>
  * Implementations of this interface must be safe for use by multiple threads.
  */
@@ -30,6 +30,8 @@ public interface IonSystem
 {
     /**
      * Gets the default system symbol table.
+     *
+     * @return not null.
      */
     public SymbolTable getSystemSymbolTable();
 
@@ -50,6 +52,8 @@ public interface IonSystem
     /**
      * Gets the catalog used by this system.  Unless otherwise noted,
      * all objects derived from this system will use this catalog.
+     *
+     * @return this system's default catalog; not null.
      */
     public IonCatalog getCatalog();
 
@@ -70,7 +74,7 @@ public interface IonSystem
      * Creates a new local symbol table based on specific imported tables.
      * If the first imported table is a system table, then the local table will
      * use it appropriately. Otherwise, the local table will use this system's
-     * {@linkplain #getCatalog() default catalog}.
+     * {@linkplain #getSystemSymbolTable() default system symbol table}.
      *
      * @param imports the set of shared symbol tables to import.
      * The first (and only the first) may be a system table.
@@ -192,12 +196,16 @@ public interface IonSystem
     public IonDatagram newDatagram(SymbolTable... imports);
 
     /**
-     * Constructs a new loader instance using the system catalog.
+     * Constructs a new loader instance using the
+     * {@linkplain #getCatalog() default system catalog}.
      */
     public IonLoader newLoader();
 
     /**
      * Constructs a new loader instance using the given catalog.
+     *
+     * @param catalog may be null, in which case the loader will use the
+     * {@linkplain #getCatalog() default system catalog}.
      *
      * @see #newLoader()
      */
@@ -219,8 +227,16 @@ public interface IonSystem
      * The iterator will automatically consume Ion system IDs and local symbol
      * tables; they will not be returned by the iterator.
      * <p>
+     * If the input source throws an {@link IOException} during iteration, it
+     * will be wrapped in an {@link IonException}. See documentation there for
+     * tips on how to recover the cause.
+     * <p>
      * This method is suitable for use over unbounded streams with a reasonable
      * schema.
+     * <p>
+     * Applications should generally use {@link #iterate(InputStream)}
+     * whenever possible, since this library has much faster UTF-8 decoding
+     * than the Java IO framework.
      *
      * @param ionText a stream of Ion text data.  The caller is responsible for
      * closing the Reader after iteration is complete.
@@ -228,6 +244,7 @@ public interface IonSystem
      * @return a new iterator instance.
      *
      * @throws NullPointerException if <code>ionText</code> is null.
+     * @throws IonException if the source throws {@link IOException}.
      */
     public Iterator<IonValue> iterate(Reader ionText);
 
@@ -240,6 +257,10 @@ public interface IonSystem
      * The iterator will automatically consume Ion system IDs and local symbol
      * tables; they will not be returned by the iterator.
      * <p>
+     * If the input source throws an {@link IOException} during iteration, it
+     * will be wrapped in an {@link IonException}. See documentation there for
+     * tips on how to recover the cause.
+     * <p>
      * This method is suitable for use over unbounded streams with a reasonable
      * schema.
      *
@@ -249,6 +270,7 @@ public interface IonSystem
      * @return a new iterator instance.
      *
      * @throws NullPointerException if <code>ionData</code> is null.
+     * @throws IonException if the source throws {@link IOException}.
      */
     public Iterator<IonValue> iterate(InputStream ionData);
 
@@ -319,8 +341,14 @@ public interface IonSystem
     //-------------------------------------------------------------------------
     // IonReader creation
 
+    /*
+     * Applications should generally us {@link #newReader(InputStream)}
+     * whenever possible, since this library has much faster UTF-8 decoding
+     * than the Java IO framework.
+     *
+     * @throws IonException if the source throws {@link IOException}.
+     */
 //  public IonReader newReader(Reader ionText); // TODO add newReader(Reader)
-
 
     /**
      * Creates an new {@link IonTextReader} instance over Ion text data.
@@ -345,7 +373,7 @@ public interface IonSystem
     /**
      * Creates an new {@link IonReader} instance over a block of Ion data,
      * detecting whether it's text or binary data.  If the input data is
-     * text this may return an (@link IonTextReader) which can report the
+     * text this may return an {@link IonTextReader} which can report the
      * line and offset position of the parser for error reporting.
      *
      * @param ionData is used only within the range of bytes starting at
@@ -362,15 +390,15 @@ public interface IonSystem
     /**
      * Creates a new {@link IonReader} instance over a stream of Ion data,
      * detecting whether it's text or binary data. If the input data is
-     * text this may return an (@link IonTextReader) which can report the
+     * text this may return an {@link IonTextReader} which can report the
      * line and offset position of the parser for error reporting.
-     * <p>
-     * <b>NOTE:</b> The current implementation of this method reads the entire
-     * contents of the input stream into memory.
      *
      * @param ionData must not be null.
      *
      * @return a new reader instance.
+     * Callers must call {@link IonReader#close()} when finished with it.
+     *
+     * @throws IonException if the source throws {@link IOException}.
      */
     public IonReader newReader(InputStream ionData);
 
@@ -457,11 +485,34 @@ public interface IonSystem
     public IonWriter newTextWriter(Appendable out, SymbolTable... imports)
         throws IOException;
 
+
+    /**
+     * Creates a new writer that will encode binary Ion data,
+     * using the given shared symbol tables as imports.
+     * <p>
+     * The output stream will start with an Ion Version Marker and a
+     * local symbol table that uses the given {@code imports}.
+     *
+     * @param out the stream to receive binary Ion data; not null.
+     * @param imports a sequence of shared symbol tables to import.
+     * The first (and only the first) may be a system table.
+     *
+     * @return a new {@link IonWriter} instance; not null.
+     *
+     * @throws IllegalArgumentException if any import is a local table,
+     * or if any but the first is a system table.
+     * @throws NullPointerException if any import is null.
+     */
+    public IonWriter newBinaryWriter(OutputStream out, SymbolTable... imports);
+
     /**
      * Creates a new writer that will encode binary Ion data.
      *
      * @return a new {@link IonBinaryWriter} instance; not {@code null}.
+     *
+     * @deprecated Use {@link #newBinaryWriter(OutputStream, SymbolTable...)}.
      */
+    @Deprecated
     public IonBinaryWriter newBinaryWriter();
 
     /**
@@ -474,7 +525,10 @@ public interface IonSystem
      * @param imports a sequence of shared symbol tables
      *
      * @return a new {@link IonBinaryWriter} instance; not {@code null}.
+     *
+     * @deprecated Use {@link #newBinaryWriter(OutputStream, SymbolTable...)}.
      */
+    @Deprecated
     public IonBinaryWriter newBinaryWriter(SymbolTable... imports);
 
 

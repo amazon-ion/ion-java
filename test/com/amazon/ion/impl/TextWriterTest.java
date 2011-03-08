@@ -1,37 +1,47 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
-import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
+import org.junit.Test;
 
 /**
  *
  */
 public class TextWriterTest
-    extends IonWriterTestCase
+    extends OutputStreamWriterTestCase
 {
-    private ByteArrayOutputStream myOutputStream;
-
 
     @Override
-    protected IonWriter makeWriter(SymbolTable... imports)
+    protected IonWriter makeWriter(OutputStream out, SymbolTable... imports)
         throws Exception
     {
-        myOutputStream = new ByteArrayOutputStream();
-        return system().newTextWriter(myOutputStream, imports);
+        return system().newTextWriter(out, imports);
     }
 
-    @Override
-    protected byte[] outputByteArray()
+    protected String outputString()
         throws Exception
     {
-        myOutputStream.close();
-        byte[] utf8Bytes = myOutputStream.toByteArray();
+        byte[] utf8Bytes = outputByteArray();
+        return new String(utf8Bytes, "UTF-8");
+    }
 
-//        String ionText = new String(utf8Bytes, "UTF-8"); // for debugging
+    @Test
+    public void testNotWritingSymtab()
+        throws Exception
+    {
+        iw = makeWriter();
+        iw.writeSymbol("holla");
+        String ionText = outputString();
 
-        return utf8Bytes;
+        if (! ionText.startsWith(UnifiedSymbolTable.ION_1_0)) {
+            fail("TextWriter didn't write IVM: " + ionText);
+        }
+
+        if (ionText.contains(UnifiedSymbolTable.ION_SYMBOL_TABLE)) {
+            fail("TextWriter shouldn't write symtab: " + ionText);
+        }
     }
 }

@@ -1,8 +1,11 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
 import static com.amazon.ion.IonNumber.Classification.NEGATIVE_ZERO;
+import static com.amazon.ion.impl.UnifiedSymbolTable.ION_1_0_SID;
+import static com.amazon.ion.impl.UnifiedSymbolTable.ION_SYMBOL_TABLE;
+import static com.amazon.ion.impl.UnifiedSymbolTable.SYMBOLS;
 
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonBool;
@@ -19,8 +22,11 @@ import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonTimestamp;
+import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.impl.UnifiedSymbolTable;
 import com.amazon.ion.util.IonTextUtils.SymbolVariant;
 import java.io.IOException;
 import java.io.InputStream;
@@ -58,6 +64,7 @@ public class Printer
         public boolean sexpAsList;
         public boolean skipAnnotations;
         public boolean skipSystemValues;
+        public boolean simplifySystemValues;
         public boolean stringAsJson;
         public boolean symbolAsString;
         public boolean timestampAsString;
@@ -148,7 +155,7 @@ public class Printer
 
 
     /**
-     * Sets whether this printer renders blobs as Base64 strings.
+     * Indicates whether this printer renders blobs as Base64 strings.
      * By default, this is <code>false</code>.
      */
     public synchronized boolean getPrintBlobAsString()
@@ -156,6 +163,10 @@ public class Printer
         return myOptions.blobAsString;
     }
 
+    /**
+     * Sets whether this printer renders blobs as Base64 strings.
+     * By default, this is <code>false</code>.
+     */
     public synchronized void setPrintBlobAsString(boolean blobAsString)
     {
         myOptions.blobAsString = blobAsString;
@@ -163,7 +174,7 @@ public class Printer
 
 
     /**
-     * Sets whether this printer renders clobs as ASCII strings.
+     * Indicates whether this printer renders clobs as ASCII strings.
      * By default, this is <code>false</code>.
      */
     public synchronized boolean getPrintClobAsString()
@@ -171,6 +182,10 @@ public class Printer
         return myOptions.clobAsString;
     }
 
+    /**
+     * Sets whether this printer renders clobs as ASCII strings.
+     * By default, this is <code>false</code>.
+     */
     public synchronized void setPrintClobAsString(boolean clobAsString)
     {
         myOptions.clobAsString = clobAsString;
@@ -197,7 +212,7 @@ public class Printer
 
 
     /**
-     * Sets whether this printer renders decimals as floats, thus using 'e'
+     * Indicates whether this printer renders decimals as floats, thus using 'e'
      * notation for all real values.
      * By default, this is <code>false</code>.
      */
@@ -206,6 +221,11 @@ public class Printer
         return myOptions.decimalAsFloat;
     }
 
+    /**
+     * Sets whether this printer renders decimals as floats, thus using 'e'
+     * notation for all real values.
+     * By default, this is <code>false</code>.
+     */
     public synchronized void setPrintDecimalAsFloat(boolean decimalAsFloat)
     {
         myOptions.decimalAsFloat = decimalAsFloat;
@@ -213,7 +233,7 @@ public class Printer
 
 
     /**
-     * Sets whether this printer renders sexps as lists.
+     * Indicates whether this printer renders sexps as lists.
      * By default, this is <code>false</code>.
      */
     public synchronized boolean getPrintSexpAsList()
@@ -221,6 +241,10 @@ public class Printer
         return myOptions.sexpAsList;
     }
 
+    /**
+     * Sets whether this printer renders sexps as lists.
+     * By default, this is <code>false</code>.
+     */
     public synchronized void setPrintSexpAsList(boolean sexpAsList)
     {
         myOptions.sexpAsList = sexpAsList;
@@ -228,14 +252,18 @@ public class Printer
 
 
     /**
-     * Sets whether this printer renders strings using JSON escapes.
+     * Indicates whether this printer renders strings using JSON escapes.
      * By default, this is <code>false</code>.
      */
-    public synchronized boolean getPrintStringlAsJson()
+    public synchronized boolean getPrintStringAsJson()
     {
         return myOptions.stringAsJson;
     }
 
+    /**
+     * Sets whether this printer renders strings using JSON escapes.
+     * By default, this is <code>false</code>.
+     */
     public synchronized void setPrintStringAsJson(boolean stringAsJson)
     {
         myOptions.stringAsJson = stringAsJson;
@@ -243,7 +271,7 @@ public class Printer
 
 
     /**
-     * Sets whether this printer renders symbols as strings.
+     * Indicates whether this printer renders symbols as strings.
      * By default, this is <code>false</code>.
      */
     public synchronized boolean getPrintSymbolAsString()
@@ -251,13 +279,18 @@ public class Printer
         return myOptions.symbolAsString;
     }
 
+    /**
+     * Sets whether this printer renders symbols as strings.
+     * By default, this is <code>false</code>.
+     */
     public synchronized void setPrintSymbolAsString(boolean symbolAsString)
     {
         myOptions.symbolAsString = symbolAsString;
     }
 
+
     /**
-     * Sets whether this printer renders timestamps as millisecond values.
+     * Indicates whether this printer renders timestamps as millisecond values.
      * By default, this is <code>false</code>.
      */
     public synchronized boolean getPrintTimestampAsMillis()
@@ -265,13 +298,18 @@ public class Printer
         return myOptions.timestampAsMillis;
     }
 
+    /**
+     * Sets whether this printer renders timestamps as millisecond values.
+     * By default, this is <code>false</code>.
+     */
     public synchronized void setPrintTimestampAsMillis(boolean timestampAsMillis)
     {
         myOptions.timestampAsMillis = timestampAsMillis;
     }
 
+
     /**
-     * Sets whether this printer renders timestamps as strings.
+     * Indicates whether this printer renders timestamps as strings.
      * By default, this is <code>false</code>.
      */
     public synchronized boolean getPrintTimestampAsString()
@@ -279,6 +317,10 @@ public class Printer
         return myOptions.timestampAsString;
     }
 
+    /**
+     * Sets whether this printer renders timestamps as strings.
+     * By default, this is <code>false</code>.
+     */
     public synchronized void setPrintTimestampAsString(boolean timestampAsString)
     {
         myOptions.timestampAsString = timestampAsString;
@@ -286,7 +328,7 @@ public class Printer
 
 
     /**
-     * Sets whether this printer renders all null values as <code>null</code>
+     * Indicates whether this printer renders all null values as {@code null}
      * (<em>i.e.</em>, the same as an {@link IonNull}).
      * By default, this is <code>false</code>.
      */
@@ -295,6 +337,11 @@ public class Printer
         return myOptions.untypedNulls;
     }
 
+    /**
+     * Sets whether this printer renders all null values as {@code null}
+     * (<em>i.e.</em>, the same as an {@link IonNull}).
+     * By default, this is <code>false</code>.
+     */
     public synchronized void setPrintUntypedNulls(boolean untypedNulls)
     {
         myOptions.untypedNulls = untypedNulls;
@@ -665,22 +712,83 @@ public class Printer
             }
 
             boolean hitOne = false;
+
+            // If we're skipping system values we don't need to simplify them.
+            final boolean simplify_system_values =
+                myOptions.simplifySystemValues && ! myOptions.skipSystemValues;
+
+            SymbolTable previous_symbols = null;
+
             while (i.hasNext())
             {
-                if (hitOne)
-                {
-                    myOut.append(asList  ?  ','  :  ' ');
-                }
-                hitOne = true;
-
                 IonValue child = i.next();
-                writeChild(child, true);
+
+                if (simplify_system_values)
+                {
+                    SymbolTable new_symbols = child.getSymbolTable();
+                    child = simplify(child, previous_symbols, new_symbols);
+                    previous_symbols = new_symbols;
+                }
+
+                if (child != null)
+                {
+                    if (hitOne)
+                    {
+                        myOut.append(asList  ?  ','  :  ' ');
+                    }
+                    writeChild(child, true);
+                    hitOne = true; // we've only "hit one" if we wrote it
+                }
             }
 
             if (asList)
             {
                 myOut.append(']');
             }
+        }
+
+        private final IonValue simplify(IonValue child,
+                                        SymbolTable previous_symbols,
+                                        SymbolTable new_symbols)
+        {
+            IonType t = child.getType();
+            switch (t) {
+            case STRUCT:
+                if (child.hasTypeAnnotation(ION_SYMBOL_TABLE)) {
+                    // TODO What keeps us from having this struct as first thing
+                    // in the datagram?  It could be manually constructed.
+                    assert(previous_symbols != null && new_symbols != null);
+
+                    if (symbol_table_struct_has_imports(child))
+                    {
+                        return ((IonStruct)child).cloneAndRemove(SYMBOLS);
+                    }
+                    return null;
+                }
+                // fall through to default (print the value)
+                break;
+            case SYMBOL:
+                if (((IonSymbol)child).getSymbolId() == ION_1_0_SID) {
+                    if (previous_symbols != null && previous_symbols.isSystemTable()) {
+                        return null;
+                    }
+                    // fall through to default (print the value)
+                }
+                // fall through to default (print the value)
+                break;
+            default:
+                break;
+            }
+            return child;
+        }
+
+        static final private boolean symbol_table_struct_has_imports(IonValue child) {
+            IonStruct struct = (IonStruct)child;
+            IonValue imports = struct.get(UnifiedSymbolTable.IMPORTS);
+            if (imports instanceof IonList) {
+                return ((IonList)imports).size() != 0;
+            }
+            return false;
         }
 
         @Override
@@ -834,8 +942,7 @@ public class Printer
             }
             else
             {
-                // FIXME broken for over-long values
-                myOut.append(Long.toString(value.longValue()));
+                myOut.append(value.bigIntegerValue().toString(10));
             }
         }
 

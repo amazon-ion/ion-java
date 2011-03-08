@@ -4,6 +4,8 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.impl.IonSystemPrivate;
+import java.util.Arrays;
 import java.util.Iterator;
 
 /**
@@ -16,13 +18,6 @@ public class IteratorSystemProcessingTest
     private Iterator<IonValue> myIterator;
     private IonValue myCurrentValue;
 
-
-    @Override
-    protected boolean processingBinary()
-    {
-        return false;
-    }
-
     protected Iterator<IonValue> iterate()
         throws Exception
     {
@@ -32,7 +27,9 @@ public class IteratorSystemProcessingTest
     protected Iterator<IonValue> systemIterate()
         throws Exception
     {
-        return system().systemIterate(myText);
+        IonSystemPrivate sys = system();
+        Iterator<IonValue> it = sys.systemIterate(myText);
+        return it;
     }
 
 
@@ -62,12 +59,30 @@ public class IteratorSystemProcessingTest
     }
 
     @Override
-    protected void checkAnnotation(String expected)
+    protected IonType currentValueType() throws Exception
+    {
+        if (myCurrentValue == null) {
+            return null;
+        }
+        return myCurrentValue.getType();
+    }
+
+    @Override
+    protected void checkAnnotation(String expected, int expectedSid)
     {
         if (! myCurrentValue.hasTypeAnnotation(expected))
         {
             fail("Didn't find expected annotation: " + expected);
         }
+
+        String[] typeAnnotations = myCurrentValue.getTypeAnnotations();
+        if (! Arrays.asList(typeAnnotations).contains(expected))
+        {
+            fail("Didn't find expected annotation: " + expected);
+        }
+
+        int foundSid = myCurrentValue.getSymbolTable().findSymbol(expected);
+        assertEquals("symbol id", expectedSid, foundSid);
     }
 
     @Override
@@ -114,10 +129,14 @@ public class IteratorSystemProcessingTest
     }
 
     @Override
-    protected void checkMissingSymbol(String expected, int expectedSid)
+    protected boolean checkMissingSymbol(String expected, int expectedSymbolTableSid, int expectedLocalSid)
         throws Exception
     {
-        checkSymbol(expected, myCurrentValue);
+        checkSymbol(expected, expectedLocalSid, myCurrentValue);
+
+        // when missing from a shared table the symbol
+        // will have been added to the local symbols
+        return true;
     }
 
     @Override

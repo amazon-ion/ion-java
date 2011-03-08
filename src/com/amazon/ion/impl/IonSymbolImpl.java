@@ -44,7 +44,7 @@ public final class IonSymbolImpl
     public IonSymbolImpl(IonSystemImpl system)
     {
         this(system, NULL_SYMBOL_TYPEDESC);
-        _hasNativeValue = true; // Since this is null
+        _hasNativeValue(true); // Since this is null
     }
 
     public IonSymbolImpl(IonSystemImpl system, String name)
@@ -108,10 +108,29 @@ public final class IonSymbolImpl
         if (this.isNullValue()) return null;
 
         makeReady();
-        if (this._hasNativeValue) {
-            return _get_value();
+
+        String value = _get_value();
+
+        // this only decodes a valid value if the symbol
+        // is of the form $<digits>
+        int sid = UnifiedSymbolTable.decodeIntegerSymbol(value);
+        if (this._hasNativeValue()) {
+            if (sid != UnifiedSymbolTable.UNKNOWN_SYMBOL_ID) {
+                SymbolTable symbols = this.getSymbolTable();
+                if (symbols != null) {
+                     value = symbols.findSymbol(sid);
+                }
+            }
         }
-        return this.getSymbolTable().findSymbol(this.getSymbolId());
+        else {
+            // we have to look up the string for this
+            sid = this.getSymbolId();
+            SymbolTable symbols = this.getSymbolTable();
+            if (symbols != null) {
+                 value = symbols.findSymbol(sid);
+            }
+        }
+        return value;
     }
 
     @Deprecated
@@ -130,7 +149,7 @@ public final class IonSymbolImpl
 
         // TODO this can be streamlined
         if (mySid == UNKNOWN_SYMBOL_ID) {
-            assert _hasNativeValue == true && isDirty();
+            assert _hasNativeValue() == true && isDirty();
             SymbolTable symtab = getSymbolTable();
             if (symtab == null) {
                 symtab = materializeSymbolTable();
@@ -171,7 +190,7 @@ public final class IonSymbolImpl
     @Override
     protected int getNativeValueLength()
     {
-        assert _hasNativeValue == true;
+        assert _hasNativeValue() == true;
 
         if (this.isIonVersionMarker()) {
             return IonConstants.BINARY_VERSION_MARKER_SIZE;
@@ -189,9 +208,9 @@ public final class IonSymbolImpl
         assert SystemSymbolTable.ION_1_0.equals(this._get_value());
 
         _is_IonVersionMarker = isIVM;
-        _isSystemValue = true;
-        _hasNativeValue = true;
-        _isMaterialized = true;
+        _isSystemValue(true);
+        _hasNativeValue(true);
+        _isMaterialized(true);
 
         mySid = SystemSymbolTable.ION_1_0_SID;
     }
@@ -199,10 +218,10 @@ public final class IonSymbolImpl
     @Override
     protected int computeLowNibble(int valuelen)
     {
-        assert _hasNativeValue == true;
+        assert _hasNativeValue() == true;
 
         if (mySid == UNKNOWN_SYMBOL_ID) {
-            assert _hasNativeValue == true && isDirty();
+            assert _hasNativeValue() == true && isDirty();
             String name = _get_value();
             mySid = (name == null
                          ? NULL_SYMBOL_ID
@@ -228,18 +247,26 @@ public final class IonSymbolImpl
     }
 
     @Override
-    public void updateSymbolTable(SymbolTable symtab)
+    public SymbolTable populateSymbolValues(SymbolTable symtab)
     {
         // TODO do we really need to materialize?
         makeReady();
 
         // the super method will check for the lock
-        super.updateSymbolTable(symtab);
+        symtab = super.populateSymbolValues(symtab);
 
         if (mySid < 1 && this.isNullValue() == false) {
-            assert _hasNativeValue == true && isDirty();
-            mySid = symtab.addSymbol(this._get_value());
+            assert _hasNativeValue() == true && isDirty();
+
+            String s = this._get_value();
+            mySid = this.resolveSymbol(s);
+            if (mySid < 1) {
+                symtab = this.addSymbol(s, symtab);
+                mySid = this.resolveSymbol(s);
+            }
         }
+
+        return symtab;
     }
 
     @Override
@@ -247,7 +274,7 @@ public final class IonSymbolImpl
     {
         int len;
 
-        if (this._is_IonVersionMarker) {
+        if (this._is_IonVersionMarker) {  // FIXME: WHAT IF THE ivm HAS ANNOTATIONS ??
             len = IonConstants.BINARY_VERSION_MARKER_SIZE - IonConstants.BB_TOKEN_LEN;
         }
         else {
@@ -285,10 +312,10 @@ public final class IonSymbolImpl
     protected void doMaterializeValue(IonBinary.Reader reader)
         throws IOException
     {
-        assert this._isPositionLoaded == true && this._buffer != null;
+        assert this._isPositionLoaded() == true && this._buffer != null;
 
         // a native value trumps a buffered value
-        if (_hasNativeValue) return;
+        if (_hasNativeValue()) return;
 
         // the reader will have been positioned for us
         assert reader.position() == this.pos_getOffsetAtValueTD();
@@ -324,12 +351,15 @@ public final class IonSymbolImpl
                 // fall through to default:
             default:
                 mySid = reader.readVarUInt8IntValue(ln);
+                if (mySid == 0) {
+                    throw new IonException("invalid symbol id for value, must be > 0");
+                }
                 _set_value(getSymbolTable().findSymbol(mySid));
                 break;
             }
         }
 
-        _hasNativeValue = true;
+        _hasNativeValue(true);
     }
 
 

@@ -10,7 +10,6 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.ValueFactory;
 import java.io.IOException;
 import java.lang.reflect.Array;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
@@ -38,7 +37,7 @@ public abstract class IonSequenceImpl
     protected IonSequenceImpl(IonSystemImpl system, int typeDesc)
     {
         super(system, typeDesc);
-        assert !_hasNativeValue;
+        assert !_hasNativeValue();
     }
 
     /**
@@ -50,14 +49,20 @@ public abstract class IonSequenceImpl
     protected IonSequenceImpl(IonSystemImpl system, int typeDesc, boolean makeNull)
     {
         this(system, typeDesc);
-        assert _contents == null;
+        assert _children == null;
         assert isDirty();
 
-        if (!makeNull)
+        if (makeNull)
         {
-            _contents = new ArrayList<IonValue>();
+            _isNullValue(true);
         }
-        _hasNativeValue = true;
+        else
+        {
+            _isNullValue(false);
+            _children = new IonValue[initialSize(typeDesc)];
+            _child_count = 0;
+        }
+        _hasNativeValue(true);
     }
 
     /**
@@ -81,14 +86,17 @@ public abstract class IonSequenceImpl
             IllegalArgumentException
     {
         this(system, typeDesc);
-        assert _contents == null;
+        assert _children == null;
         assert isDirty();
 
-        _hasNativeValue = true;
+        _hasNativeValue(true);
+
+        boolean isnull = (elements == null);
+        _isNullValue(isnull);
 
         if (elements != null)
         {
-            _contents = new ArrayList<IonValue>(elements.size());
+            _children = new IonValue[elements.size()];
             for (Iterator i = elements.iterator(); i.hasNext();)
             {
                 IonValue element = (IonValue) i.next();
@@ -123,16 +131,15 @@ public abstract class IonSequenceImpl
         return hash_code;
     }
 
-    @Override
-    public boolean isNullValue()
-    {
-        if (_hasNativeValue || !_isPositionLoaded) {
-            return (_contents == null);
-        }
-
-        int ln = this.pos_getLowNibble();
-        return (ln == IonConstants.lnIsNullSequence);
-    }
+    //public boolean oldisNullValue()
+    //{
+    //    if (_hasNativeValue() || !_isPositionLoaded()) {
+    //        return _isNullValue();
+    //    }
+    //
+    //    int ln = this.pos_getLowNibble();
+    //    return (ln == IonConstants.lnIsNullSequence);
+    //}
 
     @Override
     // Increasing visibility
@@ -219,9 +226,9 @@ public abstract class IonSequenceImpl
 
         validateNewChild(element);
 
-        assert _contents != null; // else index would be out of bounds above.
+        assert _children != null; // else index would be out of bounds above.
 
-        IonValueImpl removed = (IonValueImpl) _contents.set(index, concrete);
+        IonValueImpl removed = (IonValueImpl)set_child(index, concrete);
         concrete._elementid = index;
         concrete._container = this;
 
@@ -242,6 +249,9 @@ public abstract class IonSequenceImpl
     public IonValue remove(int index)
     {
         // TODO optimize
+        if (index < 0 || index >= get_child_count()) {
+            throw new IndexOutOfBoundsException("" + index);
+        }
         IonValue v = get(index);
         remove(v);
         return v;
@@ -264,12 +274,12 @@ public abstract class IonSequenceImpl
 
     public boolean retainAll(Collection<?> c)
     {
-        ArrayList<IonValue> contents = userContents();
-        if (contents == null || contents.isEmpty()) return false;
+        if (get_child_count() < 1) return false;
 
         // TODO this method (and probably several others) needs optimization.
         IdentityHashMap<IonValue, IonValue> keepers =
             new IdentityHashMap<IonValue, IonValue>();
+
         for (Object o : c)
         {
             IonValue v = (IonValue) o;
@@ -277,9 +287,9 @@ public abstract class IonSequenceImpl
         }
 
         boolean changed = false;
-        for (int i = contents.size() - 1; i >= 0; i--)
+        for (int i = get_child_count() - 1; i >= 0; i--)
         {
-            IonValue v = contents.get(i);
+            IonValue v = get_child(i);
             if (! keepers.containsKey(v))
             {
                 remove(v);
@@ -325,27 +335,34 @@ public abstract class IonSequenceImpl
 
     public IonValue[] toArray()
     {
-        ArrayList<IonValue> contents = userContents();
-        if (contents == null || contents.isEmpty()) return EMPTY_VALUE_ARRAY;
+        if (get_child_count() < 1) return EMPTY_VALUE_ARRAY;
 
-        IonValue[] array = new IonValue[contents.size()];
-        contents.toArray(array);
+        IonValue[] array = new IonValue[get_child_count()];
+        System.arraycopy(_children, 0, array, 0, get_child_count());
         return array;
     }
 
+
+    @SuppressWarnings("unchecked")
     public <T> T[] toArray(T[] a)
     {
-        ArrayList<IonValue> contents = userContents();
-        if (contents == null)
+        int size = get_child_count();
+        if (a.length < size)
         {
-            if (a.length != 0)
-            {
-                // A surprising bit of spec.
-                a[0] = null;
-            }
-            return a;
+            // TODO JDK 1.6 this could use Arrays.copyOf
+            Class<?> type = a.getClass().getComponentType();
+            // generates unchecked warning
+            a = (T[]) Array.newInstance(type, size);
         }
-        return contents.toArray(a);
+        if (size > 0) {
+            System.arraycopy(_children, 0, a, 0, size);
+        }
+        if (size < a.length) {
+            // A surprising bit of spec.
+            // this is required even with a 0 entries
+            a[size] = null;
+        }
+        return a;
     }
 
     @SuppressWarnings("unchecked")
@@ -360,19 +377,14 @@ public abstract class IonSequenceImpl
 
     //=========================================================================
 
-    protected ArrayList<IonValue> userContents()
-    {
-        makeReady();
-        return _contents;
-    }
-
     @Override
     protected int computeLowNibble(int valuelen)
         throws IOException
     {
-        assert _hasNativeValue;
+        assert _hasNativeValue();
 
-        if (_contents == null) { return IonConstants.lnIsNullSequence; }
+        if (_isNullValue())    { return IonConstants.lnIsNullSequence; }
+        if (_children == null || _child_count == 0) { return IonConstants.lnIsEmptyContainer; }
 
         int contentLength = getNakedValueLength();
         if (contentLength > IonConstants.lnIsVarLen)
@@ -388,7 +400,7 @@ public abstract class IonSequenceImpl
                              int cumulativePositionDelta)
         throws IOException
     {
-        assert _hasNativeValue == true || _isPositionLoaded == false;
+        assert _hasNativeValue() == true || _isPositionLoaded() == false;
         assert !(this instanceof IonDatagram);
 
         writer.write(this.pos_getTypeDescriptorByte());

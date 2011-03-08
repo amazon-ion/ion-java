@@ -1,5 +1,4 @@
-/* Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved. */
-
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion;
 
 import static com.amazon.ion.Timestamp.UNKNOWN_OFFSET;
@@ -12,6 +11,7 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
+import org.junit.Test;
 
 
 
@@ -49,6 +49,20 @@ public class TimestampTest
     {
         return (IonTimestamp) oneValue(text);
     }
+
+
+    @Override
+    public void badValue(String text)
+    {
+        super.badValue(text);
+
+        try {
+            Timestamp.valueOf(text);
+            fail("Expected exception parsing text: " + text);
+        }
+        catch (IllegalArgumentException e) { }
+    }
+
 
     private void checkTimestamp(Date expected, IonTimestamp actual)
     {
@@ -268,6 +282,7 @@ public class TimestampTest
 
     // ========================================================================
 
+    @Test
     public void testFactoryNullTimestamp()
     {
         IonTimestamp value = system().newNullTimestamp();
@@ -275,6 +290,7 @@ public class TimestampTest
         modifyTimestamp(value);
     }
 
+    @Test
     public void testTextNullTimestamp()
     {
         IonTimestamp value = (IonTimestamp) oneValue("null.timestamp");
@@ -283,10 +299,32 @@ public class TimestampTest
     }
 
 
-    public void testBadDates()
+    @Test
+    public void testBadYears()
     {
         badValue("1969-");
         badValue("1969t");
+
+        // No timezone allowed
+        badValue("2000TZ");
+        badValue("2000T-00:00");
+    }
+
+    @Test
+    public void testBadMonths()
+    {
+        badValue("1696-02");
+        badValue("1969-02-");
+        badValue("1969-02t");
+
+        // No timezone allowed
+        badValue("2000-01TZ");
+        badValue("2000-01T-00:00");
+    }
+
+    @Test
+    public void testBadDates()
+    {
         badValue("1696-02");
         badValue("1969-02-");
         badValue("1969-02t");
@@ -295,14 +333,20 @@ public class TimestampTest
         badValue("1969-02-23T00:00z");      // bad TZD
 
         badValue("1969-1x-23");
+
+        // No timezone allowed
+        badValue("2000-01-01TZ");
+        badValue("2000-01-01T+00:00");
     }
 
+    @Test
     public void testDateWithSlashes()
     {
         badValue("2007/02/21");
     }
 
 
+    @Test
     public void testMillis()
     {
         checkTime(2001, 1, 1, 12, 34, 56, new BigDecimal(".789"),
@@ -310,6 +354,7 @@ public class TimestampTest
                   "2001-01-01T12:34:56.789Z");
     }
 
+    @Test
     public void testBareDate()
     {
         checkTime(1969, 02, 23, "1969-02-23");
@@ -320,24 +365,28 @@ public class TimestampTest
         checkTime(1969, 02, 23, "1969-02-23", "1969-02-23T ");
     }
 
+    @Test
     public void testDateWithMinutes()
     {
         checkTime(1969, 02, 23, 0, 0, 0, null, UTC_OFFSET,
                   "1969-02-23T00:00Z");
     }
 
+    @Test
     public void testDateWithSeconds()
     {
         checkTime(1969, 02, 23, 0, 0, 0, null, UTC_OFFSET,
                   "1969-02-23T00:00:00Z");
     }
 
+    @Test
     public void testDateWithMillis()
     {
         checkTime(1969, 02, 23, 0, 0, 0, new BigDecimal("0.000"), UTC_OFFSET,
                   "1969-02-23T00:00:00.000Z");
     }
 
+    @Test
     public void testDateWithMinutesAndPosTzd()
     {
         checkTime(1969, 02, 23, 0, 0, 0, null, UTC_OFFSET,
@@ -345,6 +394,7 @@ public class TimestampTest
                   "1969-02-23T00:00+00:00");
     }
 
+    @Test
     public void testDateWithMillisAndPosTzd()
     {
         checkTime(1969, 02, 23, 0, 0, 0, new BigDecimal("0.00"), UTC_OFFSET,
@@ -360,6 +410,7 @@ public class TimestampTest
         assertEquals(text, printed);
     }
 
+    @Test
     public void testPrecision()
     {
         checkCanonicalText("2007T");
@@ -380,18 +431,21 @@ public class TimestampTest
     }
 
 
+    @Test
     public void testDateWithNormalTzd()
     {
         checkTime(1969, 02, 22, 16, 0, 0, null, new Integer(-480),
                   "1969-02-22T16:00-08:00");
     }
 
+    @Test
     public void testdateWithOddTzd()
     {
         checkTime(1969, 02, 23, 1, 15, 0, new BigDecimal("0.00"), new Integer(75),
                   "1969-02-23T01:15:00.00+01:15");
     }
 
+    @Test
     public void testLocalOffset()
     {
         IonTimestamp value = (IonTimestamp) oneValue("1969-02-23T00:00+01:23");
@@ -414,6 +468,7 @@ public class TimestampTest
 
     }
 
+    @Test
     public void testUnknownLocalOffset()
     {
         IonTimestamp value = (IonTimestamp) oneValue("2007-05-08T05:17-00:00");
@@ -423,16 +478,19 @@ public class TimestampTest
                   "2007-05-08T05:17-00:00");
     }
 
+    @Test
     public void testDateWithZ()
     {
         badValue("1696-02-23Z");
     }
 
+    @Test
     public void testTruncatedOffset()
     {
         badValue("2004-12-11T12:10:11+8");
     }
 
+    @Test
     public void testTruncatedSeconds()
     {
         badValue("2004-12-11T12:10:1Z");
@@ -440,22 +498,26 @@ public class TimestampTest
         badValue("2004-12-11T12:10:1+08:00");
     }
 
+    @Test
     public void testYearZero()
     {
         badValue("0000-01-01");
         badValue("0000-12-31");
     }
 
+    @Test
     public void testNegativeYear()
     {
         badValue("[ -2000-01-01 ]");
     }
 
+    @Test
     public void testPositiveYear()
     {
         badValue("[ +2000-01-01 ]");
     }
 
+    @Test
     public void testYearOne()
     {
         checkTime(1, 1, 1, 0, 0, 0, null, Timestamp.UNKNOWN_OFFSET,
@@ -465,6 +527,7 @@ public class TimestampTest
     }
 
 
+    @Test
     public void testEquivalence()
     {
         IonTimestamp t1 = (IonTimestamp) oneValue("2009-04-25T16:07:00Z");
@@ -489,6 +552,7 @@ public class TimestampTest
         assertEquals(0, t1.timestampValue().compareTo(t2.timestampValue()));
     }
 
+    @Test
     public void testBadSetLocalOffset()
     {
         IonTimestamp value = system().newNullTimestamp();
@@ -512,6 +576,7 @@ public class TimestampTest
         catch (NullValueException e) { }
     }
 
+    @Test
     public void testTimestampsFromSuite()
         throws Exception
     {
@@ -529,6 +594,7 @@ public class TimestampTest
     }
 
 
+    @Test
     public void testTimestampClone()
         throws Exception
     {
@@ -543,6 +609,7 @@ public class TimestampTest
         testSimpleClone("2008-07-11T14:49:26.01000-07:00");
     }
 
+    @Test
     public void testMonthBoundaries()
     {
         // This traps a bug in leap-year calculation
@@ -579,6 +646,7 @@ public class TimestampTest
         badValue("2009-12-32T00:00Z");
     }
 
+    @Test
     public void testNewTimestamp()
     {
         Timestamp ts = new Timestamp(2010, 2, 1, 10, 11, PST_OFFSET);
@@ -616,6 +684,7 @@ public class TimestampTest
     }
 
 
+    @Test
     public void testNewTimestampFromCalendar()
     {
         Calendar cal = makeUtcCalendar();
@@ -668,6 +737,7 @@ public class TimestampTest
         assertEquals(18, ts.getDay());
     }
 
+    @Test
     public void testTimestampWithNegativeFraction()
     {
         BigDecimal frac = Decimal.negativeZero(3);
@@ -680,6 +750,7 @@ public class TimestampTest
         assertEquals("2000-11-14T17:30:12.123Z", ts.toString());
     }
 
+    @Test
     public void testNewTimestampWithNullFraction()
     {
         BigDecimal frac = null;
@@ -697,12 +768,14 @@ public class TimestampTest
         catch (NullPointerException e) { }
     }
 
+    @Test
     public void testValueOfNullTimestamp()
     {
         Timestamp nt = Timestamp.valueOf("null.timestamp");
         assertEquals(null, nt);
     }
 
+    @Test
     public void testValueOfBadNullTimestamp()
     {
         try {
@@ -721,6 +794,7 @@ public class TimestampTest
     /**
      * Trap for ION-124
      */
+    @Test
     public void testValueOfWithNonsenseText()
     {
         try {
@@ -734,5 +808,15 @@ public class TimestampTest
             fail("Expected exception");
         }
         catch (IllegalArgumentException e) { }
+    }
+
+    /**
+     * TODO This replicates a file in the test data suite.
+     * We should really be scanning all relevant data files.
+     */
+    @Test(expected = IllegalArgumentException.class)
+    public void testValueOfWithMissingFraction()
+    {
+        Timestamp.valueOf("2010-11-17T12:34:56.Z");
     }
 }

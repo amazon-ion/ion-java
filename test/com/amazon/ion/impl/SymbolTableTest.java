@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -8,13 +8,12 @@ import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.UnifiedSymbolTable.ION_SHARED_SYMBOL_TABLE;
-import com.amazon.ion.IonMutableCatalog;
-import com.amazon.ion.system.SystemFactory;
 
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
+import com.amazon.ion.IonMutableCatalog;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonStruct;
@@ -25,15 +24,17 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
+import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.system.SimpleCatalog;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+import com.amazon.ion.system.SystemFactory;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import org.junit.Ignore;
+import org.junit.Test;
 
 /**
  *
@@ -123,6 +124,7 @@ public class SymbolTableTest
     //=========================================================================
     // Test cases
 
+    @Test
     public void testInitialSystemSymtab()
     {
         final SymbolTable systemTable = system().getSystemSymbolTable(ION_1_0);
@@ -143,6 +145,7 @@ public class SymbolTableTest
         assertSame(systemTable, st.getSystemSymbolTable());
     }
 
+    @Test
     public void testLocalTable()
     {
         String text =
@@ -162,6 +165,7 @@ public class SymbolTableTest
         assertEquals("$33", symbolTable.findSymbol(33));
     }
 
+    @Test
     public void testImportsFollowSymbols()
     {
         registerImportedV1();
@@ -194,7 +198,7 @@ public class SymbolTableTest
         value = scanner.next();
         checkSymbol("imported 1", import1id, value);
     }
-    
+
     public IonStruct synthesizeSharedSymbolTableIon(final String name,
                                                     final int version,
                                                     final String... symbols) {
@@ -209,7 +213,8 @@ public class SymbolTableTest
         }
         return tableStruct;
     }
-    
+
+    @Test
     public void testDomSharedSymbolTable() {
         // JIRA ION-72
         final SymbolTable table = system().newSharedSymbolTable(
@@ -223,6 +228,7 @@ public class SymbolTableTest
     /**
      * Attempts to override system symbols are ignored.
      */
+    @Test
     public void testOverridingSystemSymbolId()
     {
         int nameSid =
@@ -243,6 +249,7 @@ public class SymbolTableTest
     }
 
 
+    @Test
     public void testOverridingImportedSymbolId()
     {
         registerImportedV1();
@@ -272,7 +279,8 @@ public class SymbolTableTest
     }
 
 
-    public void XXXtestInjectingMaxIdIntoImport() // TODO implement
+    @Test @Ignore
+    public void testInjectingMaxIdIntoImport() // TODO implement
     {
         SymbolTable importedTable = registerImportedV1();
 
@@ -305,6 +313,7 @@ public class SymbolTableTest
     }
 
 
+    @Test
     public void testLocalTableWithMissingImport()
     {
         // Use a big symtab to get beyond any default allocation within the
@@ -366,6 +375,7 @@ public class SymbolTableTest
     /**
      * Import v2 but catalog has v1.
      */
+    @Test
     public void testLocalTableWithLesserImport()
     {
         final int import1id = ION_1_0_MAX_ID + 1;
@@ -402,6 +412,7 @@ public class SymbolTableTest
     /**
      * Import v2 but catalog has v3.
      */
+    @Test
     public void testLocalTableWithGreaterImport()
     {
         final int import1id = ION_1_0_MAX_ID + 1;
@@ -442,6 +453,7 @@ public class SymbolTableTest
         checkSymbol("fred5", local3id, dg.get(5));
     }
 
+    @Test
     public void testRepeatedImport()
     {
         SymbolTable importedV1 = registerImportedV1();
@@ -475,29 +487,31 @@ public class SymbolTableTest
     }
 
     // JIRA ION-75
-    public void XXXtestDupLocalSymbolOnDatagram() throws Exception {
-        final IonSystem ion1 = SystemFactory.newSystem(); 
+    @Test @Ignore
+    public void testDupLocalSymbolOnDatagram() throws Exception {
+        final IonSystem ion1 = SystemFactory.newSystem();
         final SymbolTable st = ion1.newSharedSymbolTable("foobar", 1, Arrays.asList("s1").iterator());
         final IonMutableCatalog cat = new SimpleCatalog();
         cat.putTable(st);
-        
+
         // ION-75 has the datagram producing something like:
         // $ion_1_0 $ion_symbol_table::{imports:[{name: "foobar", version: 1, max_id: 1}], symbols: ["s1", "l1"]} $11 $12
         // local table should not have "s1", user values should be $10 $11
         IonDatagram dg = ion1.newDatagram(st);
         dg.add().newSymbol("s1");
         dg.add().newSymbol("l1");
-        
+
         final IonSystem ion2 = SystemFactory.newSystem(cat);
-        
+
         dg = ion2.getLoader().load(dg.getBytes());
         final IonSymbol sym1 = (IonSymbol) dg.get(0);
         final IonSymbol sym2 = (IonSymbol) dg.get(1);
         assertEquals(10, sym1.getSymbolId());
         assertEquals(11, sym2.getSymbolId());
     }
-    
 
+
+    @Test
     public void testMalformedImportsField()
     {
         testMalformedImportsField("[]");
@@ -532,6 +546,7 @@ public class SymbolTableTest
     }
 
 
+    @Test
     public void testImportWithMalformedName()
     {
         SymbolTable importedV1 = registerImportedV1();
@@ -571,6 +586,7 @@ public class SymbolTableTest
     // TODO test getUsedTable(null)
     // TODO test getImportedTable(null)
 
+    @Test
     public void testImportWithZeroMaxId()
     {
         SymbolTable importedV1 = registerImportedV1();
@@ -588,6 +604,7 @@ public class SymbolTableTest
         assertEquals(ION_1_0_MAX_ID + 1, symbolTable.findSymbol("local"));
     }
 
+    @Test
     public void testImportWithBadMaxId()
     {
         SymbolTable importedV1 = registerImportedV1();
@@ -631,6 +648,7 @@ public class SymbolTableTest
     //-------------------------------------------------------------------------
     // Local symtab creation
 
+    @Test
     public void testEmptyLocalSymtabCreation()
     {
         SymbolTable st = system().newLocalSymbolTable();
@@ -663,6 +681,7 @@ public class SymbolTableTest
         assertEquals(0, st.getImportedTables().length);
     }
 
+    @Test
     public void testBasicLocalSymtabCreation()
     {
         SymbolTable systemTable = system().getSystemSymbolTable();
@@ -682,6 +701,20 @@ public class SymbolTableTest
         checkEmptyLocalSymtab(st);
     }
 
+    @Test
+    public void testSymtabImageMaintenance()
+    {
+        SymbolTable st = system().newLocalSymbolTable();
+        st.addSymbol("foo");
+        IonStruct image = st.getIonRepresentation();
+        st.addSymbol("bar");
+        image = st.getIonRepresentation();
+        IonList symbols = (IonList) image.get(SystemSymbolTable.SYMBOLS);
+        assertEquals("[\"foo\",\"bar\"]", symbols.toString());
+    }
+
+
+    @Test
     public void testBadLocalSymtabCreation()
     {
         SymbolTable systemTable = system().getSystemSymbolTable();
@@ -717,6 +750,7 @@ public class SymbolTableTest
     //-------------------------------------------------------------------------
     // Shared symtab creation
 
+    @Test
     public void testSystemNewSharedSymtab()
         throws Exception
     {
@@ -745,7 +779,13 @@ public class SymbolTableTest
 
       // Try a bit of round-trip action
       StringBuilder buf = new StringBuilder();
-      IonWriter out = system().newTextWriter(buf);
+      IonWriterUserText.TextOptions options = new IonWriterUserText.TextOptions(
+             false // prettyPrint,
+           , true // printAscii,
+           , false // filterOutSymbolTables,
+           , true // suppressIonVersionMarker
+      );
+      IonWriter out = system().newTextWriter(buf, options);
       stFromReader.writeTo(out);
       reader = system().newReader(buf.toString());
       SymbolTable reloaded = system().newSharedSymbolTable(reader);
@@ -754,6 +794,7 @@ public class SymbolTableTest
     }
 
 
+    @Test
     public void testBasicSharedSymtabCreation()
     {
         String[] syms = { "a", null, "b" };
@@ -773,6 +814,7 @@ public class SymbolTableTest
         checkSharedTable("ST", 2, new String[]{"a", "b", "c"}, st2);
     }
 
+    @Test
     public void testEmptySharedSymtabCreation()
     {
         String[] noStrings = new String[0];
@@ -785,13 +827,14 @@ public class SymbolTableTest
         checkSharedTable("ST", 1, noStrings, st);
     }
 
+    @Test
     public void testSharedSymtabCreationWithImports()
     {
         SymbolTable fred1   = Symtabs.CATALOG.getTable("fred", 1);
         SymbolTable ginger1 = Symtabs.CATALOG.getTable("ginger", 1);
 
         String[] syms = { "a", "fred_1", "b" };
-        UnifiedSymbolTable st =
+        SymbolTable st =
             system().newSharedSymbolTable("ST", 1,
                                           Arrays.asList(syms).iterator(),
                                           fred1);
@@ -810,6 +853,7 @@ public class SymbolTableTest
                          st);
     }
 
+    @Test
     public void testBadSharedSymtabCreation()
     {
         String[] syms = { "a" };
@@ -880,6 +924,7 @@ public class SymbolTableTest
     //-------------------------------------------------------------------------
     // Testing name field
 
+    @Test
     public void testMalformedSymtabName()
     {
         testMalformedSymtabName(null);     // missing field
@@ -913,6 +958,7 @@ public class SymbolTableTest
     //-------------------------------------------------------------------------
     // Testing version field
 
+    @Test
     public void testSharedTableMissingVersion()
     {
         String text =
@@ -927,6 +973,7 @@ public class SymbolTableTest
         assertEquals(1, symbolTable.getVersion());
     }
 
+    @Test
     public void testMalformedVersionField()
     {
         testMalformedVersionField("-1");
@@ -969,6 +1016,7 @@ public class SymbolTableTest
     //-------------------------------------------------------------------------
     // Testing symbols field
 
+    @Test
     public void testMalformedSymbolsField()
     {
         testMalformedSymbolsField("[]");
@@ -1003,6 +1051,7 @@ public class SymbolTableTest
         assertEquals(ION_1_0_MAX_ID, table.getMaxId());
     }
 
+    @Test
     public void testMalformedSymbolDeclarations()
     {
         testMalformedSymbolDeclaration(" \"\" ");      // empty string
@@ -1038,6 +1087,7 @@ public class SymbolTableTest
     }
 
 
+    @Test
     public void testSystemIdOnNonStruct()
     {
         String text = "$ion_1_0::12";
@@ -1045,6 +1095,7 @@ public class SymbolTableTest
         checkInt(12, v);
     }
 
+    @Test
     public void testSymbolTableOnNonStruct()
     {
         String text = "$ion_symbol_table::12";
@@ -1052,61 +1103,26 @@ public class SymbolTableTest
         checkInt(12, v);
     }
 
+    @Test
     public void testNestedSystemId()
     {
         String text = "($ion_1_0)";
         IonSexp v = oneSexp(text);
         checkSymbol(ION_1_0, v.get(0));
     }
-    
+
     public IonList serialize(final SymbolTable table) throws IOException {
         final IonList container = system().newEmptyList();
         table.writeTo(system().newWriter(container));
         return container;
     }
-    
+
+    @Test
     public void testDoubleWrite() throws IOException {
         // JIRA ION-73
         final SymbolTable table =
             system().newSharedSymbolTable("foobar", 1, Arrays.asList("moo").iterator());
         assertEquals(serialize(table), serialize(table));
-    }
-
-
-    static byte[] openFileForBuffer(Object arg) {
-        FileInputStream is = null;
-        byte[] buf = null;
-
-        if (arg instanceof String) {
-            String filename = (String)arg;
-            File f = new File(filename);
-            if (!f.canRead()) {
-                throw new IllegalArgumentException("can't read the file " + filename);
-            }
-            try {
-                is =  new FileInputStream(f);
-                if (f.length() < 1 || f.length() > Integer.MAX_VALUE) {
-                    throw new IllegalArgumentException("file is too long to load into a buffer: " + filename + " len = "+f.length());
-                }
-                int len = (int)f.length();
-                buf = new byte[len];
-                try {
-                    if (is.read(buf) != len) {
-                        throw new IOException ("failed to read file into buffer: " + filename);
-                    }
-                }
-                catch (IOException e) {
-                    throw new IllegalArgumentException(e);
-                }
-            }
-            catch (FileNotFoundException e){
-                throw new IllegalArgumentException("can't read the file " + filename);
-            }
-        }
-        else {
-            throw new IllegalArgumentException("string routines need a filename");
-        }
-        return buf;
     }
 
 
@@ -1116,6 +1132,54 @@ public class SymbolTableTest
         assert value.length() > 0;
 
         return fieldName + ':' + value;
+    }
+
+
+    @Test
+    public void testWriteWithSymbolTable() throws IOException
+    {
+        // this example code is the fix for JIRA IMSVT-2573
+        // which resulted in an assertion due to a but in
+        // IonWriterUser.close_local_symbol_table_copy
+
+        IonDatagram data;
+
+        data = system().newDatagram();
+
+        insert_local_symbol_table(data);
+        append_some_data(data);
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonWriter writer = system().newTextWriter(out);
+        writer.writeValue(data);
+        writer.close();
+
+        // dataMap.put("value", out.toByteArray());
+        byte[] bytes = out.toByteArray();
+        assertNotNull(bytes);
+    }
+
+    private void insert_local_symbol_table(IonDatagram data)
+    {
+        IonStruct local_symbol_table = system().newEmptyStruct();
+        local_symbol_table.addTypeAnnotation("$ion_symbol_table");
+
+        IonList symbols = system().newEmptyList();
+        symbols.add(system().newString("one"));
+        symbols.add(system().newString("two"));
+
+        local_symbol_table.add("symbols", symbols);
+
+        data.add(local_symbol_table);
+    }
+
+    private void append_some_data(IonDatagram data)
+    {
+        IonStruct contents = system().newEmptyStruct();
+        contents.add("one", system().newInt(1));
+        contents.add("two", system().newInt(2));
+
+        data.add(contents);
     }
 
 }

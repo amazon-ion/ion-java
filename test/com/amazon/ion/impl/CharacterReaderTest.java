@@ -1,12 +1,10 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
-
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonTestCase;
 import java.io.IOException;
 import java.io.StringReader;
+import org.junit.Test;
 
 /**
  * Test cases for {@link IonCharacterReader}.
@@ -22,6 +20,7 @@ public class CharacterReaderTest extends IonTestCase
         return createReader( data.toString(), size );
     }
 
+    @Test
     public void testEmpty() throws Exception {
         IonCharacterReader in = createReader( "", 1 );
         assertTrue( in.read() == -1 );
@@ -30,12 +29,14 @@ public class CharacterReaderTest extends IonTestCase
         assertTrue( in.getLineNumber() == 1 );
     }
 
+    @Test
     public void testEmptyMultipleRead() throws Exception {
         IonCharacterReader in = createReader( "", 1 );
         assertTrue( in.read() == -1 );
         assertTrue( in.read() == -1 );
     }
 
+    @Test
     public void testEmptyUnreadEOF() throws Exception {
         IonCharacterReader in = createReader( "", 1 );
         assertTrue( in.read() == -1 );
@@ -43,6 +44,7 @@ public class CharacterReaderTest extends IonTestCase
         assertTrue( in.read() == -1 );
     }
 
+    @Test
     public void testSingleRead() throws Exception {
         IonCharacterReader in = createReader( "A", 1 );
 
@@ -58,6 +60,7 @@ public class CharacterReaderTest extends IonTestCase
         assertTrue( in.getLineNumber() == 1 );
     }
 
+    @Test
     public void testSingleUnread() throws Exception {
         IonCharacterReader in = createReader( "B", 1 );
 
@@ -74,6 +77,7 @@ public class CharacterReaderTest extends IonTestCase
         assertTrue( in.getLineNumber() == 1 );
     }
 
+    @Test
     public void testSingleUnreadCarriageReturn() throws Exception {
         IonCharacterReader in = createReader( "B", 1 );
 
@@ -83,6 +87,7 @@ public class CharacterReaderTest extends IonTestCase
         } catch ( final IOException e ) {}
     }
 
+    @Test
     public void testEmptyUnread() throws Exception {
         IonCharacterReader in = createReader( "", 1 );
 
@@ -92,6 +97,7 @@ public class CharacterReaderTest extends IonTestCase
         assertTrue( in.read() == -1 );
     }
 
+    @Test
     public void testReadBatchMultiline() throws Exception {
         IonCharacterReader in = createReader( "A\r\nB", 3 );
 
@@ -108,6 +114,7 @@ public class CharacterReaderTest extends IonTestCase
         assertTrue( in.getLineNumber() == 2 );
     }
 
+    @Test
     public void testUnreadBatch() throws Exception {
         IonCharacterReader in = createReader( "ABCD", 3 );
 
@@ -134,6 +141,7 @@ public class CharacterReaderTest extends IonTestCase
         assertEquals( new String( buf ), "ABC" );
     }
 
+    @Test
     public void testUnreadBatchMultiline() throws Exception {
         IonCharacterReader in = createReader( "A\r\n\n\nB\n\nC\n\nD", 3 );
 
@@ -162,18 +170,22 @@ public class CharacterReaderTest extends IonTestCase
         assertEquals( new String( buf ), "\n\n\n" );
     }
 
+    @Test
     public void testUnreadBatchMultilineAllNewlines1() throws Exception {
         implCRUnreadBatchMultilineAllNewlines( "ABC\r\n\r\n\r\n\r\n" );
     }
 
+    @Test
     public void testUnreadBatchMultilineAllNewlines2() throws Exception {
         implCRUnreadBatchMultilineAllNewlines( "ABC\n\r\n\r\n\r\n\r" );
     }
 
+    @Test
     public void testUnreadBatchMultilineAllNewlines3() throws Exception {
         implCRUnreadBatchMultilineAllNewlines( "ABC\n\n\n\n\n" );
     }
 
+    @Test
     public void testUnreadBatchMultilineAllNewlines4() throws Exception {
         implCRUnreadBatchMultilineAllNewlines( "ABC\r\r\r\r\r" );
     }
@@ -196,6 +208,7 @@ public class CharacterReaderTest extends IonTestCase
         assertTrue( in.getLineNumber() == 1 );
     }
 
+    @Test
     public void testUnreadUnderflow() throws Exception {
         IonCharacterReader in = createReader( "ABCDE", 1 );
 
@@ -209,6 +222,7 @@ public class CharacterReaderTest extends IonTestCase
         } catch ( IOException e ) {}
     }
 
+    @Test
     public void testSkip() throws Exception {
         IonCharacterReader in = createReader( "\r\n\r\nABCDEFG", 4 );
 

@@ -1,3 +1,5 @@
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+
 package com.amazon.ion.impl;
 
 
@@ -20,7 +22,8 @@ public abstract class UnifiedInputBufferX
         return buf;
     }
     public static UnifiedInputBufferX makePageBuffer(CharSequence chars, int offset, int length) {
-        UnifiedInputBufferX buf = new UnifiedInputBufferX.Chars(chars, offset, length);
+        char [] char_array = chars_make_char_array(chars, offset, length);
+        UnifiedInputBufferX buf = makePageBuffer(char_array, 0, length);
         return buf;
     }
     public static UnifiedInputBufferX makePageBuffer(BufferType bufferType, int initialPageSize)
@@ -37,6 +40,16 @@ public abstract class UnifiedInputBufferX
             throw new IllegalArgumentException("invalid buffer type");
         }
         return buf;
+    }
+    protected static final char[] chars_make_char_array(CharSequence chars,
+                                                         int offset,
+                                                         int length)
+    {
+        char[] char_array = new char[length];
+        for (int ii=offset; ii<length; ii++) {
+            char_array[ii] = chars.charAt(ii);
+        }
+        return char_array;
     }
     private UnifiedInputBufferX(int initialPageSize) {
         if (initialPageSize < 0) {
@@ -253,6 +266,7 @@ public abstract class UnifiedInputBufferX
         protected Chars(int initialPageSize) {
             super(initialPageSize);
         }
+        /** Retains a reference to the chars array! */
         protected Chars(char[] chars, int offset, int length) {
             super(offset + length);
             _buffers[0] = new UnifiedDataPageX.Chars(chars, offset, length);
@@ -260,17 +274,12 @@ public abstract class UnifiedInputBufferX
             _buffer_count = 1;
 
         }
+        /**
+         * Makes a copy of the {@link CharSequence}.
+         */
         protected Chars(CharSequence chars, int offset, int length) {
             this(chars_make_char_array(chars, offset, length), 0, length);
         }
-        private static final char[] chars_make_char_array(CharSequence chars, int offset, int length) {
-            char[] char_array = new char[length];
-            for (int ii=offset; ii<length; ii++) {
-                char_array[ii] = chars.charAt(ii);
-            }
-            return char_array;
-        }
-
         @Override
         public final BufferType getType() { return BufferType.CHARS; }
 

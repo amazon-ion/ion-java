@@ -24,7 +24,9 @@ public class ReaderCompare
             IonType t1 = (READER_HASNEXT_REMOVED ? it1.getType() : it1.next());
             IonType t2 = (READER_HASNEXT_REMOVED ? it2.getType() : it2.next());
 
-            assertEquals("ion type", t1, t2);
+            if ((t1 != t2) && (t1 == null || t2 == null || !t1.equals(t2))) {
+                assertEquals("ion type", t1, t2);
+            }
             if (t1 == null) break;
 
             if (it1.isInStruct()) {
@@ -137,7 +139,7 @@ public class ReaderCompare
                 assertEquals(it1.booleanValue(), it2.booleanValue());
                 break;
             case INT:
-                assertEquals(it1.longValue(), it2.longValue());
+                assertEquals(it1.bigIntegerValue(), it2.bigIntegerValue());
                 break;
             case FLOAT: {
                 double v1 = it1.doubleValue();

@@ -91,6 +91,7 @@ public interface SymbolTable
     @Deprecated
     public String getSystemId();
 
+
     /**
      * Gets the identifier for the Ion version (and thus the system symbol
      * table) used by this table.

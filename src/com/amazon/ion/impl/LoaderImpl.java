@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved. */
+/* Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion.impl;
 
@@ -6,6 +6,7 @@ import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
+import com.amazon.ion.IonTextReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -23,13 +24,22 @@ import java.io.StringReader;
 public class LoaderImpl
     implements IonLoader
 {
-    static final boolean USE_NEW_READERS = false;
+    static final boolean USE_NEW_READERS = true;
 
     private final IonSystemImpl mySystem;
+
+    /** Not null. */
     private final IonCatalog    myCatalog;
 
+    /**
+     * @param system must not be null.
+     * @param catalog must not be null.
+     */
     public LoaderImpl(IonSystemImpl system, IonCatalog catalog)
     {
+        assert system != null;
+        assert catalog != null;
+
         mySystem = system;
         myCatalog = catalog;
     }
@@ -38,6 +48,11 @@ public class LoaderImpl
     public IonSystemImpl getSystem()
     {
         return mySystem;
+    }
+
+    public IonCatalog getCatalog()
+    {
+        return myCatalog;
     }
 
 
@@ -73,6 +88,7 @@ public class LoaderImpl
             {
                 IonDatagramImpl dg =
                     new IonDatagramImpl(mySystem, myCatalog, reader);
+
                 return dg;
             }
             catch (IOException e)
@@ -111,20 +127,24 @@ public class LoaderImpl
     public IonDatagramImpl load(Reader ionText)
         throws IonException, IOException
     {
-        if (USE_NEW_READERS)
+        try
         {
-            IonReader reader = mySystem.newSystemReader(ionText);
-            try
+            if (USE_NEW_READERS)
             {
-                IonDatagramImpl dg = new IonDatagramImpl(mySystem, myCatalog, reader);
+                IonReader reader = mySystem.newSystemReader(ionText);
+                IonDatagramImpl dg =
+                    new IonDatagramImpl(mySystem, myCatalog, reader);
                 return dg;
             }
-            catch (IOException e)
-            {
-                throw new IonException(e);
-            }
+            // TODO This does transcoding to binary first!
+            return new IonDatagramImpl(mySystem, myCatalog, ionText);
         }
-        return new IonDatagramImpl(mySystem, myCatalog, ionText);
+        catch (IonException e)
+        {
+            IOException io = e.causeOfType(IOException.class);
+            if (io != null) throw io;
+            throw e;
+        }
     }
 
 
@@ -133,30 +153,29 @@ public class LoaderImpl
 
     public IonDatagramImpl load(byte[] ionData)
     {
-        if (USE_NEW_READERS)
+        IonDatagramImpl dg = null;
+
+        try
         {
             boolean isBinary = IonBinary.matchBinaryVersionMarker(ionData);
-            if (! isBinary)
-            {
+            if (USE_NEW_READERS && !isBinary) {
                 IonReader reader = mySystem.newSystemReader(ionData);
-                assert reader instanceof IonTextReaderImpl;
-                try
-                {
-                    IonDatagramImpl dg = new IonDatagramImpl(mySystem, myCatalog, reader);
-                    // Force symtab preparation  FIXME should not be necessary
-                    dg.byteSize();
-                    return dg;
-                }
-                catch (IOException e)
-                {
-                    throw new IonException(e);
-                }
+
+                dg = new IonDatagramImpl(mySystem, myCatalog, reader);
             }
-            // else fall through, the old implementation is fine
-            // TODO refactor this path to eliminate SystemReader
+            else {
+                dg = new IonDatagramImpl(mySystem, myCatalog, ionData);
+            }
+
+            // Force symtab preparation  FIXME should not be necessary
+            dg.byteSize();
+        }
+        catch (IOException e)  // Not expected since we're reading a buffer.
+        {
+            throw new IonException(e);
         }
 
-        return new IonDatagramImpl(mySystem, myCatalog, ionData);
+        return dg;
     }
 
 
@@ -166,39 +185,41 @@ public class LoaderImpl
     public IonDatagramImpl load(InputStream ionData)
         throws IonException, IOException
     {
-        PushbackInputStream pushback = new PushbackInputStream(ionData, 8);
-        if (IonImplUtils.streamIsIonBinary(pushback)) {
+        try
+        {
+            PushbackInputStream pushback = new PushbackInputStream(ionData, 8);
+            if (IonImplUtils.streamIsIonBinary(pushback)) {
+                if (USE_NEW_READERS)
+                {
+                    // Nothing special to do. SystemReader works fine to
+                    // materialize the top layer of the datagram.
+                    // The streaming APIs add no benefit.
+                }
+
+                SystemValueIterator systemReader =
+                    mySystem.newBinarySystemReader(myCatalog, pushback);
+                return new IonDatagramImpl(mySystem, systemReader);
+            }
+
+            // Input is text
             if (USE_NEW_READERS)
             {
-                // Nothing special to do. SystemReader works fine to
-                // materialize the top layer of the datagram.
-                // The streaming APIs add no benefit.
-            }
+                IonReader reader = mySystem.newSystemReader(pushback);
+                assert reader instanceof IonTextReader;
 
-            SystemReader systemReader =
-                mySystem.newBinarySystemReader(myCatalog, pushback);
-            return new IonDatagramImpl(mySystem, systemReader);
-        }
-
-        // Input is text
-        if (USE_NEW_READERS)
-        {
-            IonReader reader = mySystem.newSystemReader(pushback);
-            assert reader instanceof IonTextReaderImpl;
-            try
-            {
-                IonDatagramImpl dg = new IonDatagramImpl(mySystem, myCatalog, reader);
-                // Force symtab preparation  FIXME should not be necessary
-                dg.byteSize();
+                IonDatagramImpl dg =
+                    new IonDatagramImpl(mySystem, myCatalog, reader);
                 return dg;
             }
-            catch (IOException e)
-            {
-                throw new IonException(e);
-            }
-        }
 
-        Reader reader = new InputStreamReader(pushback, "UTF-8");
-        return load(reader);
+            Reader reader = new InputStreamReader(pushback, "UTF-8");
+            return load(reader);
+        }
+        catch (IonException e)
+        {
+            IOException io = e.causeOfType(IOException.class);
+            if (io != null) throw io;
+            throw e;
+        }
     }
 }

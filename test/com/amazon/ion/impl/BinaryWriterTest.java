@@ -1,32 +1,21 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import java.io.OutputStream;
 
 /**
  *
  */
 public class BinaryWriterTest
-    extends IonWriterTestCase
+    extends OutputStreamWriterTestCase
 {
-    private IonBinaryWriter myWriter;
-
-
     @Override
-    protected IonWriter makeWriter(SymbolTable... imports)
+    protected IonWriter makeWriter(OutputStream out, SymbolTable... imports)
         throws Exception
     {
-        myWriter = system().newBinaryWriter(imports);
-        return myWriter;
-    }
-
-    @Override
-    protected byte[] outputByteArray()
-        throws Exception
-    {
-        return myWriter.getBytes();
+        return system().newBinaryWriter(out, imports);
     }
 }

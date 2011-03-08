@@ -1,12 +1,15 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
+
+import org.junit.Test;
 
 
 
 public class SymbolTest
     extends TextTestCase
 {
+
     public static void checkNullSymbol(IonSymbol value)
     {
         assertSame(IonType.SYMBOL, value.getType());
@@ -61,6 +64,7 @@ public class SymbolTest
     //=========================================================================
     // Test cases
 
+    @Test
     public void testFactorySymbol()
     {
         IonSymbol value = system().newNullSymbol();
@@ -70,6 +74,8 @@ public class SymbolTest
         value = system().newSymbol("hello");
     }
 
+
+    @Test
     public void testNullSymbol()
     {
         IonSymbol value = (IonSymbol) oneValue("null.symbol");
@@ -84,6 +90,14 @@ public class SymbolTest
     }
 
 
+    @Test
+    public void testPlusInfinitySymbol()
+    {
+        system().singleValue("{value:special::'+infinity'}");
+    }
+
+
+    @Test
     public void testSymbols()
     {
         IonSymbol value = (IonSymbol) oneValue("foo");
@@ -105,6 +119,8 @@ public class SymbolTest
         modifySymbol(value);
     }
 
+
+    @Test
     public void testSyntheticSymbols()
     {
         String symText = "$324";
@@ -113,12 +129,16 @@ public class SymbolTest
         assertEquals(324, value.getSymbolId());
     }
 
+
+    @Test
     public void testQuotesOnMediumStringBoundary()
     {
         // Double-quote falls on the boundary.
         checkSymbol("KIM 12\" X 12\"", oneValue("'KIM 12\\\" X 12\\\"'"));
     }
 
+
+    @Test
     public void testSymbolClone()
         throws Exception
     {
@@ -126,6 +146,8 @@ public class SymbolTest
         testSimpleClone("root");
     }
 
+
+    @Test
     public void testClone()
     {
         IonValue data = system().singleValue("root");
@@ -133,6 +155,8 @@ public class SymbolTest
         assertEquals(data, clone);
     }
 
+
+    @Test
     public void testSymbolWithEscapedNewline()
     {
         badValue("'\\\n'");

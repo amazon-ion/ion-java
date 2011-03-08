@@ -1,10 +1,9 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
-
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
+import org.junit.Test;
 
 
 
@@ -59,6 +58,7 @@ public class IntTest
     //=========================================================================
     // Test cases
 
+    @Test
     public void testFactoryInt()
     {
         IonInt value = system().newNullInt();
@@ -66,6 +66,7 @@ public class IntTest
         modifyInt(value);
     }
 
+    @Test
     public void testTextNullInt()
     {
         IonInt value = (IonInt) oneValue("null.int");
@@ -74,7 +75,7 @@ public class IntTest
     }
 
 
-
+    @Test
     public void testNegInt()
     {
         IonInt value = (IonInt) oneValue("-1");
@@ -94,6 +95,7 @@ public class IntTest
     }
 
 
+    @Test
     public void testInts()
     {
         IonInt value = (IonInt) oneValue("1");
@@ -119,6 +121,7 @@ public class IntTest
     }
 
 
+    @Test
     public void testPositiveSign()
     {
         // Array keeps this from parsing as datagram "+ 1"
@@ -127,6 +130,7 @@ public class IntTest
     }
 
 
+    @Test
     public void testNegativeIntRoundTrip()
     {
         IonInt i = system().newInt(-20);
@@ -135,10 +139,10 @@ public class IntTest
     }
 
 
+    @Test
     public void testNegativeLongRoundTrip()
     {
-        // FIXME: encoder can't handle Long.MIN_VALUE
-        final long v = Long.MIN_VALUE + 1;
+        final long v = Long.MIN_VALUE;
 
         IonInt i = system().newInt(v);
         IonInt result = (IonInt) reload(i);
@@ -153,7 +157,7 @@ public class IntTest
         assertEquals(v, result.bigIntegerValue());
     }
 
-
+    @Test
     public void testNegNumberRoundTrip()
     {
         testRoundTrip(BigInteger.valueOf(Long.MAX_VALUE));
@@ -164,6 +168,7 @@ public class IntTest
         // testRoundTrip(BigInteger.valueOf(Long.MIN_VALUE));
     }
 
+    @Test
     public void testLongs()
     {
         IonInt value = (IonInt) oneValue(String.valueOf(A_LONG_INT));
@@ -181,20 +186,54 @@ public class IntTest
         checkAnnotation("a", value);
     }
 
-    // TODO test BigInteger
+    private static final BigInteger SUPER_BIG = new BigInteger("10123456789ABCDEF", 16);
+    private static final long SUPER_BIG_TRUNC_64 = 0x0123456789ABCDEFL;
+    private static final int SUPER_BIG_TRUNC_32 = 0x89ABCDEF;
 
+    @Test
+    public void testBigIntegers() {
+        IonInt val = system().newInt(SUPER_BIG);
+        assertEquals(SUPER_BIG, val.bigIntegerValue());
+        assertEquals(SUPER_BIG_TRUNC_64, val.longValue());
+        assertEquals(SUPER_BIG_TRUNC_32, val.intValue());
 
+        assertEquals(SUPER_BIG.hashCode(), val.hashCode());
+
+        testRoundTrip(SUPER_BIG);
+    }
+
+    @Test
+    public void testBigDecimals() {
+        BigDecimal big = new BigDecimal(SUPER_BIG.multiply(BigInteger.TEN), 1);
+        IonInt val = system().newInt(big);
+        assertEquals(SUPER_BIG, val.bigIntegerValue());
+        assertEquals(SUPER_BIG_TRUNC_64, val.longValue());
+        assertEquals(SUPER_BIG_TRUNC_32, val.intValue());
+
+        assertEquals(SUPER_BIG.hashCode(), val.hashCode());
+    }
+
+    @Test
+    public void testSetLongAfterSetBig() {
+        IonInt val = system().newInt(SUPER_BIG);
+        val.setValue(1);
+        assertEquals(BigInteger.valueOf(1), val.bigIntegerValue());
+    }
+
+    @Test
     public void testStopChars()
     {
         badValue("12/");
     }
 
+    @Test
     public void testHexadecimal()
     {
         checkInt(-3, oneValue("-0x3"));
         checkInt(-3, oneValue("-0x0003"));
     }
 
+    @Test
     public void testIntsFromSuite()
         throws Exception
     {
@@ -209,6 +248,7 @@ public class IntTest
     }
 
 
+    @Test
     public void testReadOnlyInt()
     {
         IonInt v = system().newInt(1);

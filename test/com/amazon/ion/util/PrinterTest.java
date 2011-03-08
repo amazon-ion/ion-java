@@ -1,9 +1,10 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
 
 import static com.amazon.ion.SystemSymbolTable.ION_1_0;
+import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
 
 import com.amazon.ion.BlobTest;
 import com.amazon.ion.ClobTest;
@@ -24,6 +25,9 @@ import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.system.SystemFactory.SystemCapabilities;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  *
@@ -34,7 +38,7 @@ public class PrinterTest
     private Printer myPrinter;
 
 
-    @Override
+    @Before @Override
     public void setUp()
         throws Exception
     {
@@ -68,13 +72,14 @@ public class PrinterTest
     {
         StringBuilder w = new StringBuilder();
         myPrinter.print(value, w);
-        assertEquals(expected, w.toString());
+        assertEquals("Printer output", expected, w.toString());
     }
 
 
     //=========================================================================
     // Test cases
 
+    @Test
     public void testPrintingAnnotations()
         throws Exception
     {
@@ -106,6 +111,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingBlob()
         throws Exception
     {
@@ -132,6 +138,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingBool()
         throws Exception
     {
@@ -149,6 +156,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingClob()
         throws Exception
     {
@@ -183,6 +191,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingDatagram()
         throws Exception
     {
@@ -204,6 +213,15 @@ public class PrinterTest
                    text.endsWith(" a b c"));
 
         // We shouldn't jnject a local table if its not needed.
+
+        // TODO ION-165
+        if (getSystemCapabilities() == SystemCapabilities.LITE)
+        {
+            // This is a hack to make the lite dom work like the original.
+            // It's hiding some uglyness, disable to see.
+            myPrinter.myOptions.simplifySystemValues = true;
+        }
+
         String data = "2 '+' [2,'+']";
         String dataWithIvm = ION_1_0 + ' ' + data;
         dg = loader().load(dataWithIvm);
@@ -221,7 +239,31 @@ public class PrinterTest
         checkRendering("[2,\"+\",[2,\"+\"]]", dg);
     }
 
+    @Test
+    public void testDatagramWithoutSymbols()
+    throws Exception
+    {
+        IonDatagram dg = system().newDatagram();
+        dg.add().newInt(1);
+        checkRendering(ION_1_0 + " 1", dg);
+    }
 
+    @Test
+    public void testSimplifyingChainedLocalSymtab()
+    throws Exception
+    {
+        myPrinter.myOptions.simplifySystemValues = true;
+
+        String ionText =
+            ION_SYMBOL_TABLE + "::{}"
+            + " x"
+            + " " + ION_SYMBOL_TABLE + "::{}"
+            + " y";
+        IonDatagram dg = loader().load(ionText);
+        checkRendering(ION_1_0 + " x y", dg);
+    }
+
+    @Test
     public void testPrintingDecimal()
         throws Exception
     {
@@ -260,6 +302,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingFloat()
         throws Exception
     {
@@ -291,6 +334,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingInt()
         throws Exception
     {
@@ -314,6 +358,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingList()
         throws Exception
     {
@@ -339,6 +384,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingNull()
         throws Exception
     {
@@ -350,6 +396,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingSexp()
         throws Exception
     {
@@ -383,6 +430,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingString()
         throws Exception
     {
@@ -407,6 +455,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingStruct()
         throws Exception
     {
@@ -440,6 +489,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingSymbol()
         throws Exception
     {
@@ -494,6 +544,7 @@ public class PrinterTest
     }
 
 
+    @Test
     public void testPrintingTimestamp()
         throws Exception
     {
@@ -527,7 +578,27 @@ public class PrinterTest
 
         // TODO test printTimestampAsMillis
     }
-    
+
+    private static final String Q = "\"";
+
+    @Test
+    public void testJsonEscapes()
+    throws Exception
+    {
+        // ION-101
+        String ionEscapes =
+            Q + "\\0\\a\\b\\t\\n\\f\\r\\v\\\"\\'\\?\\\\\\/\\\n" + Q;
+        String jsonEscapes =
+            Q + "\\u0000\\u0007\\b\\t\\n\\f\\r\\u000b\\\"'?\\\\/" + Q;
+
+        IonString value = (IonString) system().singleValue(ionEscapes);
+
+        myPrinter.setJsonMode();
+        checkRendering(jsonEscapes, value);
+    }
+
+
+    @Test
     public void testJsonEscapeNonBmp() throws Exception {
         // JIRA ION-33
         // JIRA ION-64
@@ -539,13 +610,13 @@ public class PrinterTest
             .toString()
             .getBytes("UTF-8")
             ;
-        
+
         final IonDatagram dg = loader().load(literal);
         final StringBuilder out = new StringBuilder();
         final Printer json = new Printer();
         json.setJsonMode();
         json.print(dg.get(0), out);
-        
+
         assertEquals(
             "\"\\uDAF7\\uDE56\"".toLowerCase(),
             out.toString().toLowerCase()

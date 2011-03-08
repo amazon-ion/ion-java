@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 import com.amazon.ion.AnnotationEscapesTest;
 import com.amazon.ion.BadIonTests;
@@ -16,6 +16,7 @@ import com.amazon.ion.GoodIonTests;
 import com.amazon.ion.HashCodeCorrectnessTest;
 import com.amazon.ion.HashCodeDistributionTest;
 import com.amazon.ion.IntTest;
+import com.amazon.ion.IonExceptionTest;
 import com.amazon.ion.IonSystemTest;
 import com.amazon.ion.JavaNumericsTest;
 import com.amazon.ion.ListTest;
@@ -31,6 +32,7 @@ import com.amazon.ion.SurrogateEscapeTest;
 import com.amazon.ion.SymbolTest;
 import com.amazon.ion.SystemProcessingTests;
 import com.amazon.ion.TimestampTest;
+import com.amazon.ion.ValueFactorySequenceTest;
 import com.amazon.ion.impl.ByteBufferTest;
 import com.amazon.ion.impl.CharacterReaderTest;
 import com.amazon.ion.impl.IonEqualsTest;
@@ -44,102 +46,95 @@ import com.amazon.ion.streaming.BinaryStreamingTest;
 import com.amazon.ion.streaming.GoodIonStreamingTests;
 import com.amazon.ion.streaming.MiscStreamingTests;
 import com.amazon.ion.streaming.RoundTripStreamingTests;
+import com.amazon.ion.system.IonSystemBuilderTest;
 import com.amazon.ion.system.SimpleCatalogTest;
 import com.amazon.ion.util.EquivalenceTest;
 import com.amazon.ion.util.PrinterTest;
 import com.amazon.ion.util.TextTest;
-import junit.framework.JUnit4TestAdapter;
-import junit.framework.Test;
-import junit.framework.TestSuite;
-
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 
 /**
  * Runs all tests for the Ion project.
  */
+@RunWith(Suite.class)
+@Suite.SuiteClasses({
+    // Low-level facilities.
+    IonExceptionTest.class,
+    ByteBufferTest.class,
+    TextTest.class,
+    CharacterReaderTest.class,
+    JavaNumericsTest.class,
+    ExtendedDecimalTest.class,
+
+    // General framework tests
+    SimpleCatalogTest.class,
+
+    // Type-based DOM tests
+    BlobTest.class,
+    BoolTest.class,
+    ClobTest.class,
+    DatagramTest.class,
+    DecimalTest.class,
+    FloatTest.class,
+    IntTest.class,
+    ListTest.class,
+    NullTest.class,
+    SexpTest.class,
+    StringTest.class,
+    LongStringTest.class,
+    StructTest.class,
+    SymbolTest.class,
+    TimestampTest.class,
+
+    AnnotationEscapesTest.class,
+    FieldNameEscapesTest.class,
+    StringFieldNameEscapesTest.class,
+    SurrogateEscapeTest.class,
+
+    // binary format tests
+    BinaryTest.class,
+
+    // Utility tests
+    LoaderTest.class,
+    IterationTest.class,
+    ReaderTest.class,
+    PrinterTest.class,
+    SymbolTableTest.class,
+
+    // equality testing
+    EquivalenceTest.class,
+    IonEqualsTest.class,
+
+    // hash code tests
+    HashCodeCorrectnessTest.class,
+    HashCodeDistributionTest.class,
+
+    // General processing test suite
+    GoodIonTests.class,
+    BadIonTests.class,
+    EquivsTests.class,
+    RoundTripTests.class,
+
+    // Subclasses of SystemProcessingTestCase are collected to make it
+    // easier to run that subset.
+    SystemProcessingTests.class,
+
+    // Ditto for WriterTestCase
+    IonWriterTests.class,
+
+    TreeReaderTest.class,
+    MiscStreamingTests.class,  // TODO misnamed
+    BinaryStreamingTest.class,
+
+    BadIonStreamingTests.class,  // TODO misnamed
+    GoodIonStreamingTests.class,  // TODO misnamed
+    RoundTripStreamingTests.class,  // TODO misnamed
+
+    IonSystemTest.class,
+    ValueFactorySequenceTest.class,
+    IonSystemBuilderTest.class
+})
 public class AllTests
 {
-    public static Test suite()
-    {
-        TestSuite suite =
-            new TestSuite("AllTests for Ion");
-
-        //$JUnit-BEGIN$
-
-        // Low-level facilities.
-        suite.addTestSuite(ByteBufferTest.class);
-        suite.addTestSuite(TextTest.class);
-        suite.addTestSuite(CharacterReaderTest.class);
-        suite.addTestSuite(JavaNumericsTest.class);
-        suite.addTestSuite(ExtendedDecimalTest.class);
-
-        // General framework tests
-        suite.addTestSuite(SimpleCatalogTest.class);
-
-        // Type-based DOM tests
-        suite.addTestSuite(BlobTest.class);
-        suite.addTestSuite(BoolTest.class);
-        suite.addTestSuite(ClobTest.class);
-        suite.addTestSuite(DecimalTest.class);
-        suite.addTestSuite(FloatTest.class);
-        suite.addTestSuite(IntTest.class);
-        suite.addTestSuite(ListTest.class);
-        suite.addTestSuite(NullTest.class);
-        suite.addTestSuite(SexpTest.class);
-        suite.addTestSuite(StringTest.class);
-        suite.addTestSuite(LongStringTest.class);
-        suite.addTestSuite(StructTest.class);
-        suite.addTestSuite(SymbolTest.class);
-        suite.addTestSuite(TimestampTest.class);
-
-        suite.addTestSuite(AnnotationEscapesTest.class);
-        suite.addTestSuite(FieldNameEscapesTest.class);
-        suite.addTestSuite(StringFieldNameEscapesTest.class);
-        suite.addTestSuite(SurrogateEscapeTest.class);
-
-        // binary format tests
-        suite.addTestSuite(BinaryTest.class);
-
-        // Utility tests
-        suite.addTestSuite(LoaderTest.class);
-        suite.addTestSuite(IterationTest.class);
-        suite.addTestSuite(ReaderTest.class);
-        suite.addTestSuite(PrinterTest.class);
-        suite.addTestSuite(SymbolTableTest.class);
-
-        suite.addTestSuite(DatagramTest.class);
-
-        // equality testing
-        suite.addTest(new JUnit4TestAdapter(EquivalenceTest.class));
-        suite.addTest(new JUnit4TestAdapter(IonEqualsTest.class));
-
-        // hash code tests
-        suite.addTest(new JUnit4TestAdapter(HashCodeCorrectnessTest.class));
-        suite.addTest(new JUnit4TestAdapter(HashCodeDistributionTest.class));
-
-        // General processing test suite
-        suite.addTest(new GoodIonTests());
-        suite.addTest(new BadIonTests());
-        suite.addTest(new EquivsTests());
-        suite.addTest(new RoundTripTests());
-
-        // Subclasses of SystemProcessingTestCase are collected to make it
-        // easier to run that subset.
-        suite.addTest(SystemProcessingTests.suite());
-
-        // Ditto for WriterTestCase
-        suite.addTest(IonWriterTests.suite());
-
-        suite.addTestSuite(TreeReaderTest.class);
-        suite.addTestSuite(MiscStreamingTests.class);
-        suite.addTestSuite(BinaryStreamingTest.class);
-        suite.addTest(new BadIonStreamingTests());
-        suite.addTest(new GoodIonStreamingTests());
-        suite.addTest(new RoundTripStreamingTests());
-
-        suite.addTestSuite(IonSystemTest.class);
-
-        //$JUnit-END$
-
-        return suite;
-    }
 }

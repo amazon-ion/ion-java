@@ -1,8 +1,9 @@
-// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_ITERATOR;
+import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.util.IonTextUtils.printQuotedSymbol;
 
 import com.amazon.ion.Decimal;
@@ -29,6 +30,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Date;
 import java.util.Iterator;
 
@@ -44,6 +46,7 @@ public final class IonTextReaderImpl
     static final boolean _debug = false;
 
 
+    IonSystem        _system;
     IonTextTokenizer _scanner;
     IonCatalog       _catalog;
     SymbolTable      _current_symtab;
@@ -86,7 +89,7 @@ public final class IonTextReaderImpl
     // int             _saved_position;
     void save_state() {
         if (_saved_copy == null) {
-            _saved_copy = new IonTextReaderImpl();
+            _saved_copy = new IonTextReaderImpl(this._system, this._is_returning_system_values);
         }
         copy_state_to(_saved_copy);
         _saved_copy._scanner = this._scanner.get_saved_copy();
@@ -223,55 +226,70 @@ public final class IonTextReaderImpl
         _value_is_container = false;
     }
 
-    private IonTextReaderImpl() {
-        _is_returning_system_values = false;  // FIXME really?!?!?
+    private IonTextReaderImpl(IonSystem sys, boolean returnSystemValues) {
+        _is_returning_system_values = returnSystemValues;
+        _system = sys;
     }
 
-    public IonTextReaderImpl(byte[] buf) {
-        this(new IonTextTokenizer(buf), null, false);
+    public IonTextReaderImpl(IonSystem sys, byte[] buf) {
+        this(sys, new IonTextTokenizer(buf), null, false);
     }
-    public IonTextReaderImpl(byte[] buf, int start, int len) {
-        this(new IonTextTokenizer(buf, start, len), null, false);
+    public IonTextReaderImpl(IonSystem sys, byte[] buf, int start, int len) {
+        this(sys, new IonTextTokenizer(buf, start, len), null, false);
     }
 
-    public IonTextReaderImpl(byte[] buf, int start, int len,
+    public IonTextReaderImpl(IonSystem sys, byte[] buf, int start, int len,
                          IonCatalog catalog,
                          boolean returnSystemValues)
     {
-        this(new IonTextTokenizer(buf, start, len),
+        this(sys,
+             new IonTextTokenizer(buf, start, len),
              catalog,
              returnSystemValues);
     }
 
-    public IonTextReaderImpl(String ionText) {
-        this(new IonTextTokenizer(ionText), null, false);
+    public IonTextReaderImpl(IonSystem sys, String ionText) {
+        this(sys, new IonTextTokenizer(ionText), null, false);
     }
 
-    public IonTextReaderImpl(String ionText,
+    public IonTextReaderImpl(IonSystem sys,
+                         String ionText,
                          IonCatalog catalog,
                          boolean returnSystemValues)
     {
-        this(new IonTextTokenizer(ionText), catalog, returnSystemValues);
+        this(sys, new IonTextTokenizer(ionText), catalog, returnSystemValues);
     }
 
-    public IonTextReaderImpl(byte[] buf, IonCatalog catalog) {
-        this(new IonTextTokenizer(buf), catalog, false);
+    public IonTextReaderImpl(IonSystem sys, byte[] buf, IonCatalog catalog) {
+        this(sys, new IonTextTokenizer(buf), catalog, false);
     }
-    public IonTextReaderImpl(byte[] buf, int start, int len, IonCatalog catalog) {
-        this(new IonTextTokenizer(buf, start, len), catalog, false);
+    public IonTextReaderImpl(IonSystem sys, byte[] buf, int start, int len, IonCatalog catalog) {
+        this(sys, new IonTextTokenizer(buf, start, len), catalog, false);
     }
-    public IonTextReaderImpl(String ionText, IonCatalog catalog) {
-        this(new IonTextTokenizer(ionText), catalog, false);
+    public IonTextReaderImpl(IonSystem sys, String ionText, IonCatalog catalog) {
+        this(sys, new IonTextTokenizer(ionText), catalog, false);
     }
 
-    private IonTextReaderImpl(IonTextTokenizer scanner, IonCatalog catalog,
+    private IonTextReaderImpl(IonSystem sys, IonTextTokenizer scanner, IonCatalog catalog,
                           boolean returnSystemValues)
     {
-        this._is_returning_system_values = returnSystemValues;
+        this(sys, returnSystemValues);
+        //this._is_returning_system_values = returnSystemValues;
         this._scanner = scanner;
         this._catalog = catalog;
-        this._current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
+        this._current_symtab = sys.getSystemSymbolTable();  // UnifiedSymbolTable.getSystemSymbolTableInstance();
         _state = IonTextReaderImpl.State_read_datagram;
+    }
+
+    public void close()
+        throws IOException
+    {
+        _scanner.close();
+    }
+
+    public IonSystem getSystem()
+    {
+        return _system;
     }
 
     /**
@@ -394,7 +412,7 @@ public final class IonTextReaderImpl
             switch (_lookahead_type) {
             case SYMBOL:
                 if (UnifiedSymbolTable.ION_1_0.equals(this.stringValue())) {
-                    _current_symtab = UnifiedSymbolTable.getSystemSymbolTableInstance();
+                    _current_symtab = _system.getSystemSymbolTable(); // UnifiedSymbolTable.getSystemSymbolTableInstance();
                     skip_value = true; // FIXME get system tab from current
                 }
                 break;
@@ -547,12 +565,10 @@ public final class IonTextReaderImpl
         SymbolTable temp = _current_symtab;
         _current_symtab = _current_symtab.getSystemSymbolTable();
 
-        this.stepIn();
-
         UnifiedSymbolTable table =
-            UnifiedSymbolTable.makeNewLocalSymbolTable(_current_symtab.getSystemSymbolTable(), _catalog, this);
-
-        this.stepOut();
+            makeNewLocalSymbolTable(_system,
+                                    _current_symtab.getSystemSymbolTable(),
+                                    _catalog, this, /*alreadyInStruct*/ false);
         _current_symtab = temp;
         return table;
     }
@@ -566,7 +582,7 @@ public final class IonTextReaderImpl
     public SymbolTable getSymbolTable()
     {
         if (_current_symtab == null) {
-            _current_symtab = UnifiedSymbolTable.makeNewLocalSymbolTable(1);
+            _current_symtab = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, 1);
         }
         assert _current_symtab.isLocalTable() || _current_symtab.isSystemTable();
         return _current_symtab;
@@ -624,7 +640,7 @@ public final class IonTextReaderImpl
     {
         int[] ids = getTypeAnnotationIds();
         if (ids == null) return (Iterator<Integer>) EMPTY_ITERATOR;
-        return new IonTreeReader.IdIterator(ids);
+        return new IonImplUtils.IntIterator(ids);
     }
 
     @SuppressWarnings("unchecked")
@@ -632,7 +648,7 @@ public final class IonTextReaderImpl
     {
         String[] ids = getTypeAnnotations();
         if (ids == null) return (Iterator<String>) EMPTY_ITERATOR;
-        return new IonTreeReader.StringIterator(ids);
+        return new IonImplUtils.StringIterator(ids);
     }
 
     public int getFieldId()
@@ -774,8 +790,6 @@ public final class IonTextReaderImpl
                     if (c1 == '-') {
                         start++;
                         is_negative = true;
-                    } else if (c1 == '+') {
-                        start++;
                     }
                     s = _scanner.getValueAsString(start, _value_end);
                     intvalue = Integer.parseInt(s, 16);
@@ -813,8 +827,6 @@ public final class IonTextReaderImpl
                     if (c1 == '-') {
                         start++;
                         is_negative = true;
-                    } else if (c1 == '+') {
-                        start++;
                     }
                     s = _scanner.getValueAsString(start, _value_end);
                     longvalue = Long.parseLong(s, 16);
@@ -829,6 +841,48 @@ public final class IonTextReaderImpl
                 return (long)d;
             case DECIMAL:
                 return decimalValue().longValue();
+            default:
+                break;
+        }
+        throw new IllegalStateException("current value is not an ion int, float, or decimal");
+    }
+
+    public BigInteger bigIntegerValue()
+    {
+        if (_is_null) {
+            // TODO ION-176 should this throw in the case of not null? If so, what?
+            return null;
+        }
+
+        switch (_value_type) {
+            case INT:
+                String s;
+                BigInteger bigvalue = null;
+                if (this._value_token == IonTextTokenizer.TOKEN_INT) {
+                    s = _scanner.getValueAsString(_value_start, _value_end);
+                    bigvalue = new BigInteger(s, 10);
+                }
+                else if (this._value_token == IonTextTokenizer.TOKEN_HEX) {
+                    int start = _value_start + 2; // skip over the "0x" header
+                    int c1 = _scanner.getByte(_value_start);
+                    boolean is_negative = false;
+                    if (c1 == '-') {
+                        start++;
+                        is_negative = true;
+                    }
+                    s = _scanner.getValueAsString(start, _value_end);
+                    bigvalue = new BigInteger(s, 16);
+                    if (is_negative) bigvalue = bigvalue.negate();
+                }
+                else {
+                    throw new IllegalStateException("unexpected token created an int");
+                }
+                return bigvalue;
+            case FLOAT:
+                double d = doubleValue();
+                return BigInteger.valueOf((long)d);
+            case DECIMAL:
+                return decimalValue().toBigInteger();
             default:
                 break;
         }
@@ -947,7 +1001,7 @@ public final class IonTextReaderImpl
             int sid = syms.findSymbol(value);
             if (sid <= 0) {
                 if (syms.isSystemTable()) {
-                    _current_symtab = UnifiedSymbolTable.makeNewLocalSymbolTable(syms);
+                    _current_symtab = makeNewLocalSymbolTable(_system, syms);
                     syms = _current_symtab;
                 }
                 assert syms.isLocalTable();

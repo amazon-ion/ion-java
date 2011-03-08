@@ -70,7 +70,7 @@ public class IonSexpImpl
      */
     public IonSexpImpl(IonSystemImpl system, int typeDesc)
     {
-        super(system, typeDesc, true);
+        super(system, typeDesc, (IonConstants.getLowNibble(typeDesc) == IonConstants.lnIsNull));
         assert pos_getType() == IonConstants.tidSexp;
     }
 

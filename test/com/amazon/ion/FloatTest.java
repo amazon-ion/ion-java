@@ -1,6 +1,9 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
+
+import org.junit.Ignore;
+import org.junit.Test;
 
 
 
@@ -57,6 +60,7 @@ public class FloatTest
     //=========================================================================
     // Test cases
 
+    @Test
     public void testFactoryFloat()
     {
         IonFloat value = system().newNullFloat();
@@ -64,6 +68,7 @@ public class FloatTest
         modifyFloat(value);
     }
 
+    @Test
     public void testTextNullFloat()
     {
         IonFloat value = (IonFloat) oneValue("null.float");
@@ -71,6 +76,7 @@ public class FloatTest
         modifyFloat(value);
     }
 
+    @Test
     public void testFloats()
     {
         IonFloat value = (IonFloat) oneValue("1.0e0");
@@ -93,6 +99,7 @@ public class FloatTest
         // TODO test BigDecimal
     }
 
+    @Test
     public void testParsingSpecialFloats()
     {
         IonFloat value = (IonFloat) oneValue("nan");
@@ -105,6 +112,7 @@ public class FloatTest
         checkNegInf(value);
     }
 
+    @Test
     public void testCreatingSpecialFloats()
     {
         IonFloat value = system().newFloat(Double.NaN);
@@ -169,5 +177,20 @@ public class FloatTest
             fail("expected exception");
         }
         catch (NumberFormatException e) { }
+    }
+
+    /**
+     * Trap for the JDK defect parsing doubles.  ION-162
+     *
+     * http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4421494
+     * http://www.exploringbinary.com/java-hangs-when-converting-2-2250738585072012e-308/
+     */
+    @Test @Ignore
+    public void testJavaDblMinBug()
+    {
+        String breakingValue = "2.2250738585072012e-308";
+        double d = Double.valueOf(breakingValue);
+        IonFloat f = (IonFloat) system().singleValue(breakingValue);
+        assertEquals(d, f.doubleValue());
     }
 }

@@ -4,8 +4,8 @@ package com.amazon.ion.apps;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
+import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.impl.IonTextWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -61,8 +61,8 @@ public class PrintApp
                 }
             }
             else if ("--output".equals(arg))
-	    {
-		String path = args[++i];
+            {
+                String path = args[++i];
                 myOutputFile = path;
                 myOutputDir = new File(path).getParentFile();
                 if (! myOutputDir.isDirectory() || ! myOutputDir.canWrite())
@@ -133,7 +133,9 @@ public class PrintApp
     protected void process(IonReader reader, OutputStream out)
         throws IOException, IonException
     {
-        IonWriter writer = new IonTextWriter(out, true);
+        IonSystem system = this.mySystem;
+        IonWriter writer = system.newTextWriter(out);
+
         writer.writeValues(reader);
 
         // Ensure there's a newline at the end and flush the buffer.

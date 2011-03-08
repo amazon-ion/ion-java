@@ -1,8 +1,11 @@
-/* Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved. */
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
+import com.amazon.ion.system.SimpleCatalog;
 import java.util.Iterator;
+import org.junit.Ignore;
+import org.junit.Test;
 
 
 
@@ -58,6 +61,8 @@ public abstract class ContainerTestCase
         catch (NullValueException e) { }
     }
 
+
+    @Test
     public void testNullMakeReadOnly()
     {
         IonContainer c = makeNull();
@@ -78,6 +83,8 @@ public abstract class ContainerTestCase
         assertTrue(c.isReadOnly());
     }
 
+
+    @Test
     public void testEmptyMakeReadOnly()
     {
         IonContainer c = makeEmpty();
@@ -96,6 +103,8 @@ public abstract class ContainerTestCase
         assertTrue(c.isReadOnly());
     }
 
+
+    @Test
     public void testNonEmptyMakeReadOnly()
     {
         IonSystem s = system();
@@ -181,7 +190,7 @@ public abstract class ContainerTestCase
         // (should throw IllegalStateException)
     }
 
-
+    @Test
     public void testRemoveFromNull()
     {
         IonValue n = system().newNull();
@@ -198,6 +207,7 @@ public abstract class ContainerTestCase
     }
 
 
+    @Test
     public void testRemoveFromContainer()
     {
         IonValue n = system().newNull();
@@ -219,6 +229,7 @@ public abstract class ContainerTestCase
     }
 
 
+    @Test
     public void testDetachHasDifferentSymtab()
     {
         String data = wrap("sym1", "[sym2]", "{f:sym3}", "a::3");
@@ -227,6 +238,10 @@ public abstract class ContainerTestCase
 
         // Don't test this for datagram, which has different symtab behavior.
         if (dg.get(0).getType() == IonType.SYMBOL) return;
+
+// FIXME: this forces the local symbol tables to be created
+Iterator<IonValue> it = dg.systemIterator();
+it.next();
 
         IonContainer list = (IonContainer) dg.get(0);
         if (list instanceof IonDatagram) return;
@@ -274,6 +289,7 @@ public abstract class ContainerTestCase
     /**
      * Isolates issue ION-25.
      */
+    @Test
     public void testUnmaterializedInsert()
     {
         IonContainer c = wrapAndParse((String[])null);
@@ -282,12 +298,14 @@ public abstract class ContainerTestCase
     }
 
 
+    @Test
     public void testAddingReadOnlyChild()
     {
         IonContainer c = makeEmpty();
 
         IonNull n = system().newNull();
         n.makeReadOnly();
+        assertEquals(null, n.getContainer());
 
         try
         {
@@ -300,6 +318,8 @@ public abstract class ContainerTestCase
         assertTrue(c.isEmpty());
     }
 
+
+    @Test
     public void testRemovingReadOnlyChild()
     {
         IonContainer c = makeEmpty();
@@ -318,5 +338,71 @@ public abstract class ContainerTestCase
 
         assertSame(c, n.getContainer());
         assertSame(n, c.iterator().next());
+    }
+
+    /** TODO ION-117 */
+    @Test @Ignore
+    public void testSelfContainment()
+    {
+        IonContainer c = makeEmpty();
+        try {
+            add(c, c);
+            fail("expected exception");
+        }
+        catch (IonException e) { }
+    }
+
+    @Test
+    public void testDeepMaterializeReadOnlyContainer()
+    {
+        IonContainer c = makeEmpty();
+        IonSymbol child = system().newSymbol("s"); // Symbol hits more code
+        add(c, child);
+        c.makeReadOnly();
+        c.deepMaterialize();
+    }
+
+    @Test
+    public void testCloneOfReadOnlyContainer()
+    {
+        IonContainer c = makeEmpty();
+        IonSymbol child = system().newSymbol("s"); // Symbol hits more code
+        add(c, child);
+        c.makeReadOnly();
+
+        checkClones(c, child);
+    }
+
+    @Test
+    public void testCloneOfReadOnlyChild()
+    {
+        IonContainer c = makeEmpty();
+        IonSymbol child = system().newSymbol("s"); // Symbol hits more code
+        add(c, child);
+        child.makeReadOnly();
+
+        checkClones(c, child);
+    }
+
+    private void checkClones(IonContainer c, IonSymbol child)
+    {
+        IonContainer clone = c.clone();
+        checkClone(c, child, clone);
+
+        clone = system().clone(c); // clone w/ same system
+        checkClone(c, child, clone);
+
+        clone = system(new SimpleCatalog()).clone(c); // clone w/ other system
+        checkClone(c, child, clone);
+    }
+
+    private void checkClone(IonContainer c, IonSymbol child, IonContainer clone)
+    {
+        assertEquals(c, clone);
+        assertFalse("clone should not be read-only", clone.isReadOnly());
+
+        IonValue childClone = clone.iterator().next();
+        assertEquals(child, childClone);
+        assertFalse("clone should not be read-only", childClone.isReadOnly());
     }
 }

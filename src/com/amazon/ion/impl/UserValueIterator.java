@@ -1,8 +1,7 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
-
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion.impl;
+
+import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemReader;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonValue;
@@ -13,12 +12,13 @@ import java.io.Reader;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-public class UserReader
+public class UserValueIterator
     implements Iterator<IonValue>
 {
-	private boolean		 _recycle_buffer; // if true we reset the system reader for each user value
+    /** if true we reset the system reader for each user value */
+    private boolean        _recycle_buffer;
 
-    private SystemReader _systemReader;
+    private SystemValueIterator _systemReader;
 
     /**
      * The system reader changes it's local symtab on next(), but we call
@@ -29,34 +29,37 @@ public class UserReader
     private SymbolTable    _localSymbolTable;
 
     private boolean        _at_eof;
-    private IonValueImpl   _next;
+    private IonValue       _next;
 
 
     /**
+     * Unless {@link #setBufferToRecycle()} is called, this iterator will
+     * intrementally load the encode the whole input stream into a buffer!
+     *
      * @param initialSymbolTable must be local, not shared.
      * @throws NullPointerException if input is null.
      */
-    public UserReader(IonSystemImpl system,
-                      SymbolTable initialSymbolTable,
-                      Reader input)
+    public UserValueIterator(IonSystemImpl system,
+                             SymbolTable initialSymbolTable,
+                             Reader input)
     {
-        this(new SystemReader(system,
+        this(makeSystemReader(system,
                               system.getCatalog(),
                               initialSymbolTable,
                               input));
     }
 
-    public UserReader(SystemReader systemReader)
+    public UserValueIterator(SystemValueIterator systemReader)
     {
         _systemReader = systemReader;
-        _localSymbolTable = systemReader.getLocalSymbolTable();
+        _localSymbolTable = null; // systemReader.getLocalSymbolTable();
     }
 
     public void setBufferToRecycle() {
-    	this._recycle_buffer = true;
+        this._recycle_buffer = true;
     }
     public void clearBufferRecycling() {
-    	this._recycle_buffer = false;
+        this._recycle_buffer = false;
     }
 
     //Returns true if the iteration has more elements.
@@ -86,6 +89,7 @@ public class UserReader
             assert _next != null;
 
             if (this._systemReader.currentIsHidden()) {
+                _localSymbolTable = null; // we'll be resetting this shortly
                 _next = null;
             }
         }
@@ -100,11 +104,11 @@ public class UserReader
                 prefetch();
             }
             if (_next != null) {
-                IonValueImpl retval = _next;
+                IonValue retval = _next;
                 _next = null;
-                _localSymbolTable = _systemReader.getLocalSymbolTable();
+                _localSymbolTable = _systemReader.getSymbolTable();
                 if (this._recycle_buffer) {
-                    retval.clear_position_and_buffer();
+                    ((IonValueImpl)retval).clear_position_and_buffer();
                 }
                 return retval;
             }
@@ -137,31 +141,39 @@ public class UserReader
 
     public SymbolTable getLocalSymbolTable()
     {
+        if (_localSymbolTable == null) {
+            _localSymbolTable = _systemReader.getLocalSymbolTable();
+        }
         return _localSymbolTable;
     }
 
-    /**
-     * This cannot be called between {@link #hasNext()} and {@link #next()}.
-     * @param symbols must be local, not shared.
-     */
-    public void setLocalSymbolTable(SymbolTable symbols)
-    {
-        if (_next != null) {
-            throw new IllegalStateException();
-        }
-        _systemReader.setLocalSymbolTable(symbols);
-        _localSymbolTable = symbols;
-    }
+//    /**
+//     * This cannot be called between {@link #hasNext()} and {@link #next()}.
+//     * @param symbols must be local, not shared.
+//     */
+//    public void setLocalSymbolTable(SymbolTable symbols)
+//    {
+//        if (_next != null) {
+//            throw new IllegalStateException();
+//        }
+//        _systemReader.setLocalSymbolTable(symbols);
+//        _localSymbolTable = symbols;
+//    }
 
-    public boolean canSetLocalSymbolTable()
-    {
-        return _systemReader.canSetLocalSymbolTable();
-    }
+//    public boolean canSetLocalSymbolTable()
+//    {
+//        return _systemReader.canSetLocalSymbolTable();
+//    }
 
     public void close()
     {
         _at_eof = true;
         _next = null;
-        _systemReader.close();
+        try {
+            _systemReader.close();
+        }
+        catch (IOException e) {
+            throw new IonException(e);
+        }
     }
 }

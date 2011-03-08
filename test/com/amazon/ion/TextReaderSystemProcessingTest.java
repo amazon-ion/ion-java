@@ -13,12 +13,6 @@ public class TextReaderSystemProcessingTest
     private String myText;
 
     @Override
-    protected boolean processingBinary()
-    {
-        return false;
-    }
-
-    @Override
     protected void prepare(String text)
     {
         myText = text;
@@ -37,11 +31,17 @@ public class TextReaderSystemProcessingTest
     }
 
     @Override
-    protected void checkMissingSymbol(String expected, int expectedSid)
+    protected boolean checkMissingSymbol(String expected, int expectedSymbolTableSid, int expectedLocalSid)
         throws Exception
     {
         // When reading text and symtab is missing, we'll get the name right
         // but we won't know the right sid.
+        // note that this form of checkSymbol does force a sid
+        // to be assigned to this symbol will have an id
         checkSymbol(expected);
+
+        // when missing from a shared table the symbol
+        // will have been added to the local symbols
+        return true;
     }
 }

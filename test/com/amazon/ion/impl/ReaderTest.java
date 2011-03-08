@@ -1,12 +1,14 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
-
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion.impl;
 
+import com.amazon.ion.BinaryTest;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
+import com.amazon.ion.IonType;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import org.junit.Test;
 
 /**
  *
@@ -32,8 +34,22 @@ public class ReaderTest
     //=========================================================================
     // Test cases
 
-    public void testNothing()
-    {
+    @Test
+    public void testNullInt() {
+        {
+            IonReader scanner = system().newReader("null.int");
+            assertEquals(IonType.INT, scanner.next());
+            assertTrue(scanner.isNullValue());
+            assertEquals(null, scanner.bigIntegerValue());
+        }
+        {
+            for (final String hex : Arrays.asList("E0 01 00 EA 2F", "E0 01 00 EA 3F")) {
+                IonReader scanner = system().newReader(BinaryTest.hexToBytes(hex));
+                assertEquals(IonType.INT, scanner.next());
+                assertTrue(scanner.isNullValue());
+                assertEquals(null, scanner.bigIntegerValue());
+            }
+        }
     }
 
 /* jonker 2008-05-29 Disabled everything while we (temporarily) remove IonReader

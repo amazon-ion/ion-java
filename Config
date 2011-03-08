@@ -23,22 +23,23 @@ package.IonJava = {
   };
 
 
-  build-system = happytrails;   # Comes from MiniTrails
+  build-system = happytrails;
 
   build-tools = {
     1.0 = {
-      ApacheAnt = 1.7;
-      BrazilJavadoc = 1.0;
-      HappyTrails = 2.0;
+    # ApacheAnt-1.8 is broken on RHEL5_65
+    # http://devcentral.amazon.com/contact-us/ContactUsIssue.cgi?profile=dev-support;issue=10035526
+#     ApacheAnt = 1.8;
+      BrazilJavadoc = 1.1;
+      HappyTrails = 3.0;
       JDK = 1.5;
-      MiniTrails = 2.0;
     };
   };
 
   test-dependencies = {
     1.0 = {
       IonTests = 1.0;
-      junit = 4.4;
+      junit = 4.7;
     };
   };
 

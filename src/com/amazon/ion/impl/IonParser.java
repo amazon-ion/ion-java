@@ -1,10 +1,9 @@
-/* Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved. */
+/* Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion.impl;
 
 
 import com.amazon.ion.IonException;
-import com.amazon.ion.SymbolTable;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.PositionMarker;
@@ -14,6 +13,7 @@ import java.io.PushbackReader;
 import java.io.Reader;
 import java.io.StringReader;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 
 
@@ -25,9 +25,15 @@ public class IonParser
 
     private IonTokenReader      _in;
     private BufferManager       _out;
-    private SymbolTable         _symboltable;
+    // private SymbolTable         _symboltable;
+    private SystemValueIteratorImpl _reader_for_symbols;
+
     private IonTokenReader.Type _t;
     private ArrayList<Integer>  _annotationList;
+
+    private boolean             _just_wrote_ivm;
+    private boolean             _skipped_ivm;
+    private int                 _depth;
 
 
     /**
@@ -46,6 +52,8 @@ public class IonParser
         else {
             _out = new BufferManager();
         }
+        _just_wrote_ivm = false;
+        _depth = 0;
     }
 
     /**
@@ -91,13 +99,14 @@ public class IonParser
      * @param consume the preferred number of characters to consume.  More than
      * this number may be read, but we won't stop until we pass this threshold.
      */
-    public void parse(SymbolTable symboltable
+    public void parse(SystemValueIteratorImpl readerForSymbols // was SymbolTable symboltable
                     , int startPosition
-                    , boolean writeMagicCookie
+                    , boolean just_wrote_ivm
                     , long consume)
     {
-        assert symboltable.isLocalTable();
-        this._symboltable = symboltable;
+        //assert symboltable.isLocalTable();
+        //this._symboltable = symboltable;
+        this._reader_for_symbols = readerForSymbols;
 
         // now start the hard work, we catch all the IOExceptions here
         // so that we don't have to try/catch all the time, or throw them
@@ -106,12 +115,12 @@ public class IonParser
             _out.openWriter();
             IonBinary.Writer writer = _out.writer(startPosition);
 
-            if (writeMagicCookie) {
-                // Start the buffer with the BVM.
-                writer.write(IonConstants.BINARY_VERSION_MARKER_1_0);
-            }
+            _just_wrote_ivm = just_wrote_ivm;
 
+            this._depth = 0;
             do {
+                _skipped_ivm = false;
+
                 // get the first token
                 next(false /* not in sexp */);
                 if (this._t == IonTokenReader.Type.eof) {
@@ -119,10 +128,9 @@ public class IonParser
                 }
                 // we are an annotated value here
                 parseAnnotatedValue(false /* not in sexp */);
+                assert(this._depth == 0); // this should be restored if the calls and operations are balanced
 
-                //  FIXME need symtab logic here!!!
-
-            } while (consume > this._in.getConsumedAmount());
+            } while (_skipped_ivm || consume > this._in.getConsumedAmount());
 
             // and we're done
             this._out.writer().truncate();
@@ -172,7 +180,7 @@ public class IonParser
         if (annotation.length() < 1) {
             throw new IonException("symbols must be at least 1 character long");
         }
-        int sid = this._symboltable.addSymbol(annotation);
+        int sid = this._reader_for_symbols.addSymbol(annotation);
         assert sid > 0;
         _annotationList.add(new Integer(sid));
     }
@@ -287,6 +295,7 @@ public class IonParser
                 throw new IonException(message);
             }
         }
+        _just_wrote_ivm = false;
     }
 
     private void transferString(int hn) throws IOException
@@ -357,6 +366,7 @@ public class IonParser
         assert _t == IonTokenReader.Type.tOpenParen;
 
         _out.writer().startLongWrite(IonConstants.tidSexp);
+        this._depth++;
 
 loop:   for (;;) {
             next(true);
@@ -382,6 +392,7 @@ loop:   for (;;) {
         // TODO shouldn't need to pass high-nibble again.
         // lownibble is ignored and computed from amount written.
         this._out.writer().patchLongHeader(IonConstants.tidSexp, 0);
+        this._depth--;
     }
 
     void parseListBody( ) throws IOException  {
@@ -389,6 +400,7 @@ loop:   for (;;) {
         assert _t == IonTokenReader.Type.tOpenSquare;
 
         _out.writer().startLongWrite(IonConstants.tidList);
+        this._depth++;
 
 loop:   for (;;) {
             next(false);
@@ -416,6 +428,7 @@ loop:   for (;;) {
         // here we backpatch the head of this list
         // lownibble is ignored and computed from amount written.
         this._out.writer().patchLongHeader(IonConstants.tidList, 0);
+        this._depth--;
     }
 
     void parseStructBody(  ) throws IOException  {
@@ -427,6 +440,7 @@ loop:   for (;;) {
         int ln = IonConstants.lnNumericZero;  // TODO justify
         _out.writer().pushLongHeader(hn, ln, true);
         this._out.writer().writeStubStructHeader(hn, ln);
+        this._depth++;
 
         // read string tagged values - legal tags will be recognized
         this._in.pushContext(IonTokenReader.Context.STRUCT);
@@ -510,6 +524,7 @@ loop:   for (;;) {
         int lowNibble = (fieldsAreOrdered ? IonConstants.lnIsOrderedStruct : 0);
         this._out.writer().patchLongHeader(IonConstants.tidStruct,
                                   lowNibble);
+        this._depth--;
         this._in.popContext();
     }
 
@@ -520,9 +535,11 @@ loop:   for (;;) {
             throw new IonException("symbols must be at least 1 character long");
         }
 
-        int sid = this._symboltable.addSymbol(s);
+        int sid = this._reader_for_symbols.addSymbol(s); // was ._symboltable
         this._out.writer().writeVarUInt7Value(sid, true);
     }
+
+    private static final int ION_1_0_LENGTH = UnifiedSymbolTable.ION_1_0.length();
 
     /**
      * Encodes symbols (does not include keywords like true/false/null*).
@@ -535,10 +552,31 @@ loop:   for (;;) {
         assert this._in.keyword == null;
 
         String s = this._in.getValueString(is_in_expression);
-        if (s.length() < 1) {
+        int len = s.length();
+        if (len < 1) {
             throw new IonException("symbols must be at least 1 character long");
         }
-        this._out.writer().writeSymbolWithTD(s, _symboltable);
+        boolean is_ivm_symbol = false;
+        if (this._depth == 0) {
+            is_ivm_symbol = (len == ION_1_0_LENGTH) && UnifiedSymbolTable.ION_1_0.equals(s);
+            if (this._annotationList != null && this._annotationList.size() > 0) {
+                // if this $ion_1_0 is annotated, we have to write it as a
+                // normal symbol.
+                is_ivm_symbol = false;
+            }
+        }
+        if (is_ivm_symbol) {
+            if (this._just_wrote_ivm) {
+                this._skipped_ivm = true;
+            }
+            else {
+                this._out.writer().write(IonConstants.BINARY_VERSION_MARKER_1_0);
+            }
+        }
+        else {
+            int sid = this._reader_for_symbols.addSymbol(s);
+            this._out.writer().writeSymbolWithTD(sid);
+        }
     }
 
     void processKeywordValue() throws IOException
@@ -588,23 +626,29 @@ loop:   for (;;) {
         switch (castto) {
         case constPosInt:
             {
-                long l = this._in.intValue.longValue();
-                int size = IonBinary.lenVarUInt8(l);
+                BigInteger val = this._in.intValue;
+                int size = IonBinary.lenVarUInt8(val);
                 this._out.writer().writeByte(
                         castto.getHighNibble(),
                         size);
-                int wroteLen = this._out.writer().writeVarUInt8Value(l, size);
+                if (size >= IonConstants.lnIsVarLen) {
+                    this._out.writer().writeVarUInt7Value(size, false);
+                }
+                int wroteLen = this._out.writer().writeVarUInt8Value(val, size);
                 assert wroteLen == size;
             }
             break;
         case constNegInt:
             {
-                long l = 0 - this._in.intValue.longValue();
-                int size = IonBinary.lenVarUInt8(l);
+                BigInteger val = this._in.intValue.negate();
+                int size = IonBinary.lenVarUInt8(val);
                 this._out.writer().writeByte(
                         castto.getHighNibble(),
                         size);
-                int wroteLen = this._out.writer().writeVarUInt8Value(l, size);
+                if (size >= IonConstants.lnIsVarLen) {
+                    this._out.writer().writeVarUInt7Value(size, false);
+                }
+                int wroteLen = this._out.writer().writeVarUInt8Value(val, size);
                 assert wroteLen == size;
             }
             break;

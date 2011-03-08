@@ -1,8 +1,9 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
 import com.amazon.ion.IonTestCase;
+import org.junit.Test;
 
 /**
  *
@@ -10,7 +11,7 @@ import com.amazon.ion.IonTestCase;
 public class TextTest
     extends IonTestCase
 {
-
+    @Test
     public void testSymbolNeedsQuoting()
     {
         unquotedAnywhere("hello");
@@ -54,6 +55,7 @@ public class TextTest
         quotedEverywhere(":a");
     }
 
+    @Test
     public void testPrintLongString()
         throws Exception
     {

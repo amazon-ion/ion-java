@@ -1,11 +1,9 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.system;
 
-import com.amazon.ion.IonMutableCatalog;
 import com.amazon.ion.IonCatalog;
+import com.amazon.ion.IonMutableCatalog;
 import com.amazon.ion.SymbolTable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -13,6 +11,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
+
 
 /**
  * A basic implementation of {@link IonCatalog} as a hash table.  There is no
@@ -24,7 +23,7 @@ public class SimpleCatalog
     /*  CAVEATS AND LIMITATIONS
      *
      *  - When getTable can't find an exact match, it does a linear scan of
-     *    all tables with the same name to find the greatest version.
+     *    all tables with the same name to find the best match.
      *  - Synchonization could probably be tighter using read/write locks
      *    instead of simple monitors.
      */
@@ -91,20 +90,45 @@ public class SimpleCatalog
                 // asked for (see CAVEAT above)
                 assert !versions.isEmpty();
 
-                // In Java 5 this works:
-                st = versions.get(versions.lastKey());
-
-                // TODO in Java 6 this is probably faster:
-                //Map.Entry<Integer, UnifiedSymbolTable> entry;
-                //entry = versions.lastEntry();
-                //assert entry != null;
-                //st = entry.getValue();
-
+                Integer ibest = bestMatch(version, versions.keySet());
+                assert(ibest != null);
+                st = versions.get(ibest);
                 assert st != null;
             }
 
             return st;
         }
+    }
+
+    static Integer bestMatch(int requestedVersion,
+                             Iterable<Integer> availableVersions)
+    {
+        int best = requestedVersion;
+        Integer ibest = null;
+        for (Integer available : availableVersions)
+        {
+            assert available != requestedVersion;
+
+            int v = available.intValue();
+
+            if (requestedVersion < best) {
+                if (requestedVersion < v && v < best) {
+                    best = v;
+                    ibest = available;
+                }
+            }
+            else if (best < requestedVersion) {
+                if (best < v) {
+                    best = v;
+                    ibest = available;
+                }
+            }
+            else {
+                best = v;
+                ibest = available;
+            }
+        }
+        return ibest;
     }
 
     public void putTable(SymbolTable table)

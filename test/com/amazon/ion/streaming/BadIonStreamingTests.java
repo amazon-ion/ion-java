@@ -1,113 +1,75 @@
+// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion.streaming;
 
-import com.amazon.ion.DirectoryTestSuite;
-import com.amazon.ion.FileTestCase;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
+import com.amazon.ion.IonTestCase;
 import com.amazon.ion.TestUtils;
-import java.io.BufferedInputStream;
+import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.junit.Injected.Inject;
+import com.amazon.ion.system.SystemFactory.SystemCapabilities;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import junit.framework.TestSuite;
+import org.junit.Ignore;
+import org.junit.Test;
 
-public class BadIonStreamingTests extends DirectoryTestSuite {
-    private static class BadIonStreamingTestCase
-    	extends FileTestCase
+public class BadIonStreamingTests
+extends IonTestCase
+{
+    private static final boolean _debug_output_errors = false;
+
+
+    @Inject("testFile")
+    public static final File[] FILES = TestUtils.testdataFiles(TestUtils.GLOBAL_SKIP_LIST, "bad");
+
+
+    private File myTestFile;
+
+    public void setTestFile(File file)
     {
-    	private final static boolean _debug_output_errors = false;
-    	private final boolean myFileIsBinary;
+        myTestFile = file;
+    }
 
-    	public BadIonStreamingTestCase(File ionFile, boolean binary)
-    	{
-    	    super(ionFile);
-    	    myFileIsBinary = binary;
-    	}
 
-    	@Override
-        public void runTest()
-    	    throws Exception
-    	{
-    	    try {
-    	        iterateIon();
-    	        fail("Expected IonException parsing "
-    	             + myTestFile.getAbsolutePath());
-    	    } catch (IonException e) {
-    	        /* good - we're expecting an error, there are testing bad input */
-    	        if (_debug_output_errors) {
-    	            System.out.print(this.myTestFile.getName());
-    	            System.out.print(": ");
-    	            System.out.println(e.getMessage());
-    	        }
-    	    }
-    	}
+    @Test(expected = IonException.class)
+    public void testReadingScalars()
+    throws Exception
+    {
+        readFile( true );
+    }
 
-        void iterateIon() {
-            IonReader it;
-            int len = (int)myTestFile.length();
-            byte[] buf = new byte[len];
 
-            FileInputStream in;
-            BufferedInputStream bin;
-            try {
-                in = new FileInputStream(myTestFile);
-                bin = new BufferedInputStream(in);
-                bin.read(buf);
-            } catch (FileNotFoundException e) {
-                throw new RuntimeException(e);
-            } catch (IOException ioe) {
-                throw new RuntimeException(ioe);
+    @Ignore // TODO ION-161
+    @Test(expected = IonException.class)
+    public void testSkippingScalars()
+    throws Exception
+    {
+        if (getSystemCapabilities() != SystemCapabilities.LITE)
+        {
+            // Newer readers don't validate while skipping scalars
+            // so we won't throw exceptions for all bad files.
+            readFile( false );
+        }
+    }
+
+    private void readFile(boolean materializeScalars)
+    throws IOException
+    {
+        try
+        {
+            byte[] buf = IonImplUtils.loadFileBytes(myTestFile);
+            IonReader it = system().newReader(buf);
+            TestUtils.deepRead(it, materializeScalars);
+        }
+        catch (IonException e)
+        {
+            /* good - we're expecting an error, there are testing bad input */
+            if (_debug_output_errors) {
+                System.out.print(this.myTestFile.getName());
+                System.out.print(": ");
+                System.out.println(e.getMessage());
             }
-            it = system().newReader(buf);
-            // Do we want to check the type of "it" here
-            // to make sure the iterator made the right
-            // choice of binary or text?  Or should be test
-            // that somewhere else?
-
-            TestUtils.deepRead(it);
+            throw e;
         }
-    }
-
-    public static TestSuite suite() {
-        return new BadIonStreamingTests();
-    }
-
-    public BadIonStreamingTests() {
-        super("bad");
-    }
-
-
-    @Override
-    protected BadIonStreamingTestCase makeTest(File ionFile)
-    {
-        String fileName = ionFile.getName();
-        if (fileName.endsWith(".ion"))
-        {
-            return new BadIonStreamingTestCase(ionFile, false);
-        }
-        else if (fileName.endsWith(".10n"))
-        {
-            return new BadIonStreamingTestCase(ionFile, true);
-        }
-        return null;
-    }
-
-    @Override
-    protected String[] getFilesToSkip()
-    {
-        return new String[]
-        {
-            // "annotationNan.ion",
-            // "clob_U0000003F.ion",
-            // "clob_U00000080.ion",
-            // "clob_u0020.ion",
-            // "clob_u00FF.ion",
-            // "fieldNameNan.ion",
-            // "hexWithTerminatingUtf8.ion",
-            // "symbolEmptyWithCRLF.ion",
-            // "symbolEmptyWithLF.ion",
-            // "symbolEmptyWithLFLF.ion",
-        };
     }
 }

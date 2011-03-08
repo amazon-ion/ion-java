@@ -1,10 +1,11 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import org.junit.Test;
 
 /**
  *
@@ -32,15 +33,16 @@ public class ValueWriterTest
         return myDatagram.getBytes();
     }
 
-
     @Override
-    public void testWritingBadSurrogates()
+    protected void checkClosed()
     {
-        logSkippedTest();
+        // Nothing to do.
     }
 
-    @Override
-    public void testWritingAnnotationIds()
+
+
+    @Override @Test
+    public void testWritingBadSurrogates()
     {
         logSkippedTest();
     }

@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.impl.IonScalarConversionsX.CantConvertException;
 
@@ -12,10 +13,19 @@ import com.amazon.ion.impl.IonScalarConversionsX.CantConvertException;
  */
 public class IonTokenConstsX
 {
-    public static final int STRING_TERMINATOR           = -3; // can't be >=0, ==-1 (eof), nor -2 (empty esc)
-    public static final int EMPTY_ESCAPE_SEQUENCE       = -2;
+    public static class CharacterSequence {
+        public static final int CHAR_SEQ_EOF                         = -1; // matches -1 (stream eof)
+        public static final int CHAR_SEQ_STRING_TERMINATOR           = -2; // can't be >=0, ==-1 (eof), nor -2 (empty esc)
+        public static final int CHAR_SEQ_STRING_NON_TERMINATOR       = -3; // used for a pair of triple quotes treated a nothing
 
-    public static final int TOKEN_break                 = -2;
+        public static final int CHAR_SEQ_NEWLINE_SEQUENCE_1          = -4;  // single new line
+        public static final int CHAR_SEQ_NEWLINE_SEQUENCE_2          = -5;  // single carriage return
+        public static final int CHAR_SEQ_NEWLINE_SEQUENCE_3          = -6;  // new line - carriage return pair
+        public static final int CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1  = -7;  // escape followed by new line
+        public static final int CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2  = -8;  // escape followed by carriage return
+        public static final int CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3  = -9;  // escape followed by new line - carriage return pair
+    }
+
     public static final int TOKEN_ERROR                 = -1;
     public static final int TOKEN_EOF                   =  0;
 
@@ -53,6 +63,7 @@ public class IonTokenConstsX
     public static final int TOKEN_count                 = 26;
 
     public static final int KEYWORD_unrecognized = -1;
+    public static final int KEYWORD_none         =  0;
     public static final int KEYWORD_TRUE      =  1;
     public static final int KEYWORD_FALSE     =  2;
     public static final int KEYWORD_NULL      =  3;
@@ -165,7 +176,7 @@ public class IonTokenConstsX
     public final static boolean[] isHexDigit = makeHexDigitTestArray(hexValue);
     private final static int[] makeHexValueArray() {
         int[] hex = new int[256];
-        for (int ii=0; ii<128; ii++) {
+        for (int ii=0; ii<256; ii++) {
             hex[ii] = -1;
         }
         for (int ii='0'; ii<='9'; ii++) {
@@ -191,16 +202,17 @@ public class IonTokenConstsX
     }
     public final static int hexDigitValue(int c) {
         if (!isHexDigit(c)) {
-            throw new IllegalArgumentException("character '"+((char)c)+"' is not a hex digit");
+            IllegalArgumentException e = new IllegalArgumentException("character '"+((char)c)+"' is not a hex digit");
+            throw new IonException(e);
         }
         return hexValue[c];
     }
-
+/*
     public final static int[] decimalValue = makeDecimalValueArray();
-    public final static boolean[] isDecimalDigit = makeDecimalDigitTestArray(hexValue);
+    public final static boolean[] isDecimalDigit = makeDecimalDigitTestArray(decimalValue);
     private final static int[] makeDecimalValueArray() {
         int[] dec = new int[256];
-        for (int ii=0; ii<128; ii++) {
+        for (int ii=0; ii<256; ii++) {
             dec[ii] = -1;
         }
         for (int ii='0'; ii<='9'; ii++) {
@@ -215,14 +227,15 @@ public class IonTokenConstsX
         }
         return is_hex;
     }
+*/
     public final static boolean isDigit(int c) {
-        return isDecimalDigit[c & 0xff] && is8bitValue(c);
+    	return (c >= '0' && c <= '9');
     }
     public final static int decimalDigitValue(int c) {
         if (!isDigit(c)) {
             throw new IllegalArgumentException("character '"+((char)c)+"' is not a hex digit");
         }
-        return decimalValue[c];
+        return c - '0'; // decimalValue[c];
     }
 
     public static final int CLOB_CHARACTER_LIMIT = 0xFF;
@@ -293,6 +306,7 @@ public class IonTokenConstsX
         return escapeCharacterImage[c];
     }
 
+    // FIXME: this should be isValidEscapeStart (valid, not value)
     public final static boolean isValueEscapeStart(int c) {
         return (escapeCharactersValues[c & 0xff] != ESCAPE_NOT_DEFINED)
          && is8bitValue(c);
@@ -745,7 +759,7 @@ public class IonTokenConstsX
         int kw = KEYWORD_unrecognized;
         if (possible_names != IonTokenConstsX.KW_ALL_BITS) {
             for (int ii=0; ii<typeNameBits.length; ii++) {
-                int tb = typeNameBits[ii]; 
+                int tb = typeNameBits[ii];
                 if (tb == possible_names) {
                     if (typeNameNames[ii].length() == length) {
                         kw = typeNameKeyWordIds[ii];

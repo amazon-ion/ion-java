@@ -1,11 +1,12 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbolTable.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
-import static com.amazon.ion.impl.IonBinary.matchBinaryVersionMarker;
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
+import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemReader;
+import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
 import com.amazon.ion.ContainedValueException;
@@ -24,11 +25,11 @@ import com.amazon.ion.IonList;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonNull;
 import com.amazon.ion.IonReader;
+import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
@@ -39,7 +40,7 @@ import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnsupportedIonVersionException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
-import com.amazon.ion.system.SimpleCatalog;
+import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import com.amazon.ion.util.Printer;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -55,6 +56,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -62,50 +64,49 @@ import java.util.List;
 /**
  * The standard implementation of Ion.
  */
-public class IonSystemImpl
-    implements IonSystem
+public final class IonSystemImpl
+    implements IonSystemPrivate
 {
-    private final UnifiedSymbolTable mySystemSymbols =
-        UnifiedSymbolTable.getSystemSymbolTableInstance();
+    public static final int SYSTEM_VERSION = 1;
 
+    private final UnifiedSymbolTable mySystemSymbols;
 
+    /** Not null. */
     private IonCatalog  myCatalog;
-    private IonLoader   myLoader;
+    private final IonLoader myLoader;
 
     /**
      * If true, this system will create the newer, faster, second-generation
      * streaming readers. Be prepared for bugs!
      */
-    public boolean useNewReaders_UNSUPPORTED_MAGIC = false;
+    public boolean useNewReaders_UNSUPPORTED_MAGIC = true;
 
 
-    public IonSystemImpl()
-    {
-        this(new SimpleCatalog());
-    }
-
+    /**
+     * @param catalog must not be null.
+     */
     public IonSystemImpl(IonCatalog catalog)
     {
+        assert catalog != null;
         myCatalog = catalog;
         myLoader = new LoaderImpl(this, myCatalog);
+        mySystemSymbols = UnifiedSymbolTable.makeSystemSymbolTable(this, SYSTEM_VERSION);
     }
 
 
-    public UnifiedSymbolTable getSystemSymbolTable()
+    public final UnifiedSymbolTable getSystemSymbolTable()
     {
         return mySystemSymbols;
     }
 
 
-    public UnifiedSymbolTable getSystemSymbolTable(String systemId)
+    public UnifiedSymbolTable getSystemSymbolTable(String ionVersionId)
         throws UnsupportedIonVersionException
     {
-        if (systemId.equals(SystemSymbolTable.ION_1_0))
-        {
-            return mySystemSymbols;
+        if (!UnifiedSymbolTable.ION_1_0.equals(ionVersionId)) {
+            throw new UnsupportedIonVersionException(ionVersionId);
         }
-
-        throw new UnsupportedIonVersionException(systemId);
+        return getSystemSymbolTable();
     }
 
 
@@ -124,34 +125,8 @@ public class IonSystemImpl
 
     public UnifiedSymbolTable newLocalSymbolTable(SymbolTable... imports)
     {
-        if (imports == null || imports.length == 0)
-        {
-            UnifiedSymbolTable st = UnifiedSymbolTable.makeNewLocalSymbolTable(this, mySystemSymbols);
-            return st;
-        }
-
-        SymbolTable systemTable;
-        if (imports[0].isSystemTable())
-        {
-            systemTable = imports[0];
-
-            if (imports.length != 0)
-            {
-                SymbolTable[] others = new SymbolTable[imports.length - 1];
-                System.arraycopy(imports, 1, others, 0, imports.length - 1);
-                imports = others;
-            }
-            else
-            {
-                imports = null;
-            }
-        }
-        else
-        {
-            systemTable = mySystemSymbols;
-        }
-
-        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewLocalSymbolTable(this, systemTable, imports);
+        UnifiedSymbolTable st =
+            makeNewLocalSymbolTable(this, mySystemSymbols, imports);
         st.setSystem(this);
         return st;
     }
@@ -160,19 +135,16 @@ public class IonSystemImpl
     public UnifiedSymbolTable newSharedSymbolTable(IonStruct ionRep)
     {
         UnifiedSymbolTable st = UnifiedSymbolTable.makeNewSharedSymbolTable(ionRep);
-        st.setSystem(this);
         return st;
     }
     public UnifiedSymbolTable newSharedSymbolTable(IonReader reader)
     {
-        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewSharedSymbolTable(reader, false);
-        st.setSystem(this);
+        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewSharedSymbolTable(this, reader, false);
         return st;
     }
     public UnifiedSymbolTable newSharedSymbolTable(IonReader reader, boolean isOnStruct)
     {
-        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewSharedSymbolTable(reader, isOnStruct);
-        st.setSystem(this);
+        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewSharedSymbolTable(this, reader, isOnStruct);
         return st;
     }
     public UnifiedSymbolTable newSharedSymbolTable(String name,
@@ -206,8 +178,7 @@ public class IonSystemImpl
 
         addAllNonNull(syms, newSymbols);
 
-        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewSharedSymbolTable(name, version, syms.iterator());
-        st.setSystem(this);
+        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewSharedSymbolTable(this, name, version, syms.iterator());
 
         return st;
     }
@@ -221,8 +192,6 @@ public class IonSystemImpl
             {
                 IonDatagramImpl dg =
                     new IonDatagramImpl(this, this.getCatalog(), (IonReader) null);
-                // Force symtab preparation  FIXME should not be necessary
-                dg.byteSize();
                 return dg;
             }
             catch (IOException e)
@@ -237,19 +206,18 @@ public class IonSystemImpl
 
     public IonDatagram newDatagram(IonValue initialChild)
     {
+        IonDatagramImpl datagram = newDatagram();
+
         if (initialChild != null) {
             if (initialChild.getSystem() != this) {
                 throw new IonException("this Ion system can't mix with instances from other system impl's");
             }
-            // FIXME we shouldn't do this, it violates expectations
+
+            // This is an API anomaly but it's documented so here we go.
             if (initialChild.getContainer() != null) {
                 initialChild = clone(initialChild);
             }
-        }
 
-        IonDatagramImpl datagram = newDatagram();
-
-        if (initialChild != null) {
             // This will fail if initialChild instanceof IonDatagram:
             datagram.add(initialChild);
         }
@@ -264,16 +232,7 @@ public class IonSystemImpl
         UnifiedSymbolTable lst = newLocalSymbolTable(imports);
 
         IonDatagramImpl datagram = newDatagram();
-        IonWriter newWriter = newWriter(datagram);
-        try
-        {
-            lst.writeTo(newWriter);
-        }
-        catch (IOException e)
-        {
-            // Shouldn't happen
-            throw new Error(e);
-        }
+        datagram.setSymbolTable(lst); // This is the "pending" symtab
         return datagram;
     }
 
@@ -285,10 +244,11 @@ public class IonSystemImpl
 
     public IonLoader newLoader(IonCatalog catalog)
     {
+        if (catalog == null) catalog = getCatalog();
         return new LoaderImpl(this, catalog);
     }
 
-    public synchronized IonLoader getLoader()
+    public IonLoader getLoader()
     {
         return myLoader;
     }
@@ -303,22 +263,24 @@ public class IonSystemImpl
         // TODO optimize to use IonTextReader, but first that must truly stream
         // instead of requiring a full-stream buffer.
         // See https://issue-tracking.amazon.com/browse/ION-31
-        UserReader userReader =
-            new UserReader(this, this.newLocalSymbolTable(), reader);
+        UserValueIterator userReader =
+            new UserValueIterator(this, this.newLocalSymbolTable(), reader);
         userReader.setBufferToRecycle();
         return userReader;
     }
 
     /**
-     * FIXME Can't yet add this to public API, unclear how to do buffer recycling
-     * since that's currently done by the UserReader.
+     * TODO Must correct ION-160 before exposing this or using from public API.
+     * Unclear how to do buffer recycling since that's currently done by the
+     * {@link UserValueIterator} an not by the system level.
      */
-    protected SystemReader systemIterate(Reader reader)
+    protected SystemValueIterator systemIterate(Reader reader)
     {
-        return new SystemReader(this,
-                                getCatalog(),
-                                newLocalSymbolTable(),
-                                reader);
+        SystemValueIterator sysreader = makeSystemReader(this,
+                                                         getCatalog(),
+                                                         newLocalSymbolTable(),  // FIXME: should be null
+                                                         reader);
+        return sysreader;
     }
 
     public Iterator<IonValue> iterate(String ionText)
@@ -329,9 +291,10 @@ public class IonSystemImpl
             return new IonIteratorImpl(this, reader);
         }
 
-        UserReader userReader = new UserReader(this,
-                                               this.newLocalSymbolTable(),
-                                               new StringReader(ionText));
+        UserValueIterator userReader =
+            new UserValueIterator(this,
+                                  this.newLocalSymbolTable(),
+                                  new StringReader(ionText));
         userReader.setBufferToRecycle();
         return userReader;
     }
@@ -340,17 +303,21 @@ public class IonSystemImpl
     {
         if (LoaderImpl.USE_NEW_READERS)
         {
-            // TODO use IonIteratorImpl
+            // TODO sadly this doesn't pass all tests yet
+            // There's some strangeness with symbol tables
+//            IonReader reader = newSystemReader(ionText);
+//            return new IonIteratorImpl(this, reader);
         }
 
-        return new SystemReader(this, ionText);
+        SystemValueIterator reader = makeSystemReader(this, ionText);
+        return reader;
     }
 
 
     public Iterator<IonValue> iterate(byte[] ionData)
     {
-        SystemReader systemReader = newLegacySystemReader(getCatalog(), ionData);
-        UserReader userReader = new UserReader(systemReader);
+        SystemValueIterator systemReader = newLegacySystemReader(getCatalog(), ionData);
+        UserValueIterator userReader = new UserValueIterator(systemReader);
         // Don't use buffer-clearing!
         return userReader;
     }
@@ -362,9 +329,10 @@ public class IonSystemImpl
     }
 
     /**
-     * FIXME If data is text, the resulting reader will NOT flush the buffer
+     * TODO Must correct ION-160 before exposing this or using from public API
+     * If data is text, the resulting reader will NOT flush the buffer
      * and will accumulate memory!
-     * See comment on systemIterate(Reader) before adding to public APIs!
+     * See comment on {@link #systemIterate(Reader)} before adding to public APIs!
      */
     public Iterator<IonValue> systemIterate(InputStream ionData)
     {
@@ -373,7 +341,7 @@ public class IonSystemImpl
 
     private Iterator<IonValue> iterate(InputStream ionData, boolean system)
     {
-        SystemReader systemReader;
+        SystemValueIterator systemReader;
         boolean binaryData;
         try
         {
@@ -386,6 +354,10 @@ public class IonSystemImpl
             else
             {
                 Reader reader = new InputStreamReader(pushback, "UTF-8");
+                // This incrementally transcodes the whole stream into
+                // a buffer. However, when system==false we wrap this with a
+                // UserReader below, and then flip a switch to recycle the
+                // buffer.
                 systemReader = systemIterate(reader);
             }
         }
@@ -396,9 +368,10 @@ public class IonSystemImpl
 
         if (system) return systemReader;
 
-        UserReader userReader = new UserReader(systemReader);
+        UserValueIterator userReader = new UserValueIterator(systemReader);
         if (!binaryData)
         {
+            // This prevents us from accumulating all the transcoded data.
             userReader.setBufferToRecycle();
         }
         return userReader;
@@ -412,19 +385,19 @@ public class IonSystemImpl
     {
         if (useNewReaders_UNSUPPORTED_MAGIC)
         {
-            return new IonReaderTextUserX(this, ionText);
+            return new IonReaderTextUserX(this, null, ionText, 0, ionText.length());
         }
 
-        return new IonTextReaderImpl(ionText, getCatalog());
+        return new IonTextReaderImpl(this, ionText, getCatalog());
     }
 
     public IonTextReader newSystemReader(String ionText)
     {
         if (useNewReaders_UNSUPPORTED_MAGIC)
         {
-            return new IonReaderTextSystemX(ionText);
+            return new IonReaderTextSystemX(this, ionText, 0, ionText.length());
         }
-        return new IonTextReaderImpl(ionText, getCatalog(), true);
+        return new IonTextReaderImpl(this, ionText, getCatalog(), true);
     }
 
 
@@ -432,14 +405,14 @@ public class IonSystemImpl
     {
         if (useNewReaders_UNSUPPORTED_MAGIC)
         {
-            return new IonReaderTextSystemX(ionText);
+            return new IonReaderTextSystemX(this, ionText);
         }
 
         try
         {
             // FIXME we shouldn't have to load the whole stream into a String.
             String str = IonImplUtils.loadReader(ionText);
-            return new IonTextReaderImpl(str, getCatalog(), true);
+            return new IonTextReaderImpl(this, str, getCatalog(), true);
         }
         catch (IOException e)
         {
@@ -461,148 +434,83 @@ public class IonSystemImpl
 
     public IonReader newReader(byte[] ionData, int offset, int len)
     {
-        if (useNewReaders_UNSUPPORTED_MAGIC)
-        {
-            return newReaderUserX(ionData, offset, len);
-        }
-
-        boolean isBinary = matchBinaryVersionMarker(ionData, offset, len);
-        IonReader reader;
-        if (isBinary) {
-            reader = new IonBinaryReader(ionData, offset, len, getCatalog());
-        }
-        else {
-            reader = new IonTextReaderImpl(ionData, offset, len, getCatalog(),
-                                           /* returnSystemValues */ false);
-        }
-        return reader;
-    }
-
-    private IonReader newReaderUserX(byte[] ionData, int offset, int len)
-    {
-        boolean isBinary = matchBinaryVersionMarker(ionData, offset, len);
-
+        boolean isBinary = IonBinary.matchBinaryVersionMarker(ionData);
         if (isBinary)
         {
-            return new IonReaderBinaryUserX(this, ionData, offset, len);
+            return new IonReaderBinaryUserX(this, myCatalog, ionData, offset, len);
         }
 
-        return new IonReaderTextUserX(this, ionData, offset, len);
+        return new IonReaderTextUserX(this, myCatalog, ionData, offset, len);
     }
+
 
     public IonReader newSystemReader(byte[] ionData, int offset, int len)
     {
         boolean isBinary = IonBinary.matchBinaryVersionMarker(ionData);
-
-        if (useNewReaders_UNSUPPORTED_MAGIC)
+        if (isBinary)
         {
-            if (isBinary)
-            {
-                return new IonReaderBinarySystemX(ionData, offset, len);
-            }
-
-            return new IonReaderTextSystemX(ionData, offset, len);
+            return new IonReaderBinarySystemX(this, ionData, offset, len);
         }
 
-        IonReader reader;
-        if (isBinary) {
-            reader =
-                new IonBinaryReader(ionData, offset, len, getCatalog(), true);
-        }
-        else {
-            reader =
-                new IonTextReaderImpl(ionData, offset, len, getCatalog(), true);
-        }
-        return reader;
+        return new IonReaderTextSystemX(this, ionData, offset, len);
     }
 
 
     public IonReader newReader(InputStream ionData)
     {
-        if (useNewReaders_UNSUPPORTED_MAGIC)
-        {
-            boolean isBinary;
-            try
-            {
-                PushbackInputStream pushback =
-                    new PushbackInputStream(ionData, 8);
-                isBinary = IonImplUtils.streamIsIonBinary(pushback);
-
-                if (isBinary)
-                {
-                    return new IonReaderBinaryUserX(this, pushback);
-                }
-
-                Reader reader = new InputStreamReader(pushback, "UTF-8");
-                return new IonReaderTextUserX(this, reader);
-            }
-            catch (IOException e)
-            {
-                throw new IonException(e);
-            }
-        }
-
-        // TODO optimize if stream is text!
-        byte[] bytes;
         try
         {
-            bytes = IonImplUtils.loadStreamBytes(ionData);
+            PushbackInputStream pushback =
+                new PushbackInputStream(ionData, 8);
+            boolean isBinary = IonImplUtils.streamIsIonBinary(pushback);
+
+            if (isBinary)
+            {
+                return new IonReaderBinaryUserX(this, myCatalog, pushback);
+            }
+
+            Reader reader = new InputStreamReader(pushback, "UTF-8");
+            return new IonReaderTextUserX(this, null, reader);
         }
         catch (IOException e)
         {
-            throw new IonException("Error reading from stream", e);
+            throw new IonException(e);
         }
-
-        return newReader(bytes, 0, bytes.length);
     }
 
     public IonReader newSystemReader(InputStream ionData)
     {
-        if (useNewReaders_UNSUPPORTED_MAGIC)
-        {
-            boolean isBinary;
-            try
-            {
-                PushbackInputStream pushback =
-                    new PushbackInputStream(ionData, 8);
-                isBinary = IonImplUtils.streamIsIonBinary(pushback);
-
-                if (isBinary)
-                {
-                    return new IonReaderBinarySystemX(pushback);
-                }
-
-                Reader reader = new InputStreamReader(pushback, "UTF-8");
-                return new IonReaderTextSystemX(reader);
-            }
-            catch (IOException e)
-            {
-                throw new IonException(e);
-            }
-        }
-
-        byte[] bytes;
         try
         {
-            bytes = IonImplUtils.loadStreamBytes(ionData);
+            PushbackInputStream pushback =
+                new PushbackInputStream(ionData, 8);
+            boolean isBinary = IonImplUtils.streamIsIonBinary(pushback);
+
+            if (isBinary)
+            {
+                return new IonReaderBinarySystemX(this, pushback);
+            }
+
+            Reader reader = new InputStreamReader(pushback, "UTF-8");
+            return new IonReaderTextSystemX(this, reader);
         }
         catch (IOException e)
         {
-            throw new IonException("Error reading from stream", e);
+            throw new IonException(e);
         }
-
-        return newSystemReader(bytes, 0, bytes.length);
     }
 
 
     public IonReader newReader(IonValue value)
     {
-        return new IonTreeReader(value);
+        IonReader reader = new IonReaderTreeUserX(value, getCatalog());
+        return reader;
     }
 
-    public IonReader newSystemReader(IonDatagram dg)
+    public IonReader newSystemReader(IonValue value)
     {
-        return new IonTreeReader(dg, true);
+        IonReader reader = new IonReaderTreeSystem(value);
+        return reader;
     }
 
 
@@ -612,54 +520,131 @@ public class IonSystemImpl
 
     public IonWriter newWriter(IonContainer container)
     {
-        return new IonTreeWriter(this, container);
-    }
-
-    public IonWriter newTextWriter(OutputStream out)
-    {
-        return new IonTextWriter(out);
+        IonWriter userWriter = IonWriterFactory.makeWriter(container);
+        return userWriter;
     }
 
     public IonWriter newTextWriter(Appendable out)
     {
-        return new IonTextWriter(out, false, true);
+        TextOptions options = new TextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
+        IonWriter userWriter = newTextWriter(out, options);
+        return userWriter;
     }
 
-    public IonWriter newTextWriter(OutputStream out, SymbolTable... imports)
-        throws IOException
+    public IonWriter newTextWriter(Appendable out, boolean pretty)
     {
-        UnifiedSymbolTable lst = newLocalSymbolTable(imports);
-        IonTextWriter writer = new IonTextWriter(out);
-        writer.setSymbolTable(lst);
-        return writer;
+        TextOptions options = new TextOptions(pretty /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
+        IonWriter userWriter = newTextWriter(out, options);
+        return userWriter;
+    }
+
+    public IonWriter newTextWriter(Appendable out, TextOptions options)
+    {
+        IonWriter userWriter = IonWriterFactory.makeWriter(this, out, options);
+        return userWriter;
     }
 
     public IonWriter newTextWriter(Appendable out, SymbolTable... imports)
         throws IOException
     {
+        TextOptions options = new TextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
+        IonWriter writer = newTextWriter(out, options, imports);
+        return writer;
+    }
+
+    public IonWriter newTextWriter(Appendable out, TextOptions options, SymbolTable... imports)
+        throws IOException
+    {
         UnifiedSymbolTable lst = newLocalSymbolTable(imports);
-        IonTextWriter writer = new IonTextWriter(out);
+        IonWriterBaseImpl writer = IonWriterFactory.makeWriter(this, out, options);
         writer.setSymbolTable(lst);
         return writer;
     }
 
-    // TODO also Utf8AsAscii flag
-    public IonWriter newTextWriter(OutputStream out, boolean pretty)
+    public IonWriter newTextWriter(OutputStream out)
     {
-        return new IonTextWriter(out, pretty);
+        TextOptions options = new TextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
+        IonWriter userWriter = newTextWriter(out, options);
+        return userWriter;
     }
 
-    public IonBinaryWriterImpl newBinaryWriter()
+    public IonWriter newTextWriter(OutputStream out, TextOptions options)
     {
-        SymbolTable systemSymbolTable = getSystemSymbolTable();
-        return new IonBinaryWriterImpl(systemSymbolTable);
+        IonWriter userWriter = new IonWriterUserText(this, myCatalog, out, options);
+        return userWriter;
     }
 
-    public IonBinaryWriterImpl newBinaryWriter(SymbolTable... imports)
+    public IonWriter newTextWriter(OutputStream out, SymbolTable... imports)
+        throws IOException
+    {
+        TextOptions options = new TextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
+        IonWriter writer = newTextWriter(out, options, imports);
+        return writer;
+    }
+
+    public IonWriter newTextWriter(OutputStream out, TextOptions options, SymbolTable... imports)
+        throws IOException
     {
         UnifiedSymbolTable lst = newLocalSymbolTable(imports);
-        return new IonBinaryWriterImpl(lst);
+        IonWriterBaseImpl writer = IonWriterFactory.makeWriter(this, out, options);
+        writer.setSymbolTable(lst);
+        return writer;
     }
+
+
+    // TODO also Utf8AsAscii flag - this should be extended to be
+    //      printer options which can pick up tab width, JSON format
+    //      choices and other text related options.
+    public IonWriter newTextWriter(OutputStream out, boolean pretty)
+    {
+        // return new IonTextWriter(out, pretty);
+        TextOptions options = new TextOptions(pretty, true /* printAscii */, true /* filterOutSymbolTables */);
+        IonWriter userWriter = newTextWriter(out, options);
+        return userWriter;
+    }
+
+    @Deprecated
+    public com.amazon.ion.IonBinaryWriter newBinaryWriter()
+    {
+        IonWriterBinaryCompatibility.User writer =
+            new IonWriterBinaryCompatibility.User(this, myCatalog);
+        return writer;
+    }
+
+    @Deprecated
+    public com.amazon.ion.IonBinaryWriter newBinaryWriter(SymbolTable... imports)
+    {
+        UnifiedSymbolTable lst = newLocalSymbolTable(imports);
+        IonWriterBinaryCompatibility.User user_writer =
+            new IonWriterBinaryCompatibility.User(this, myCatalog);
+        try {
+            user_writer.setSymbolTable(lst);
+        }
+        catch (IOException e) {
+            throw new IonException(e);
+        }
+        return user_writer;
+    }
+
+    public IonWriter newBinaryWriter(OutputStream out, SymbolTable... imports)
+    {
+        IonWriterUserBinary writer =
+            IonWriterFactory.makeWriter(this, getCatalog(), out, imports);
+        return writer;
+    }
+
+
+    public IonWriter newTreeWriter(IonContainer container)
+    {
+        IonWriter writer = IonWriterFactory.makeWriter(container);
+        return writer;
+    }
+    public IonWriter newTreeSystemWriter(IonContainer container)
+    {
+        IonWriter system_writer = IonWriterFactory.makeSystemWriter(container);
+        return system_writer;
+    }
+
 
 
     //=========================================================================
@@ -676,12 +661,13 @@ public class IonSystemImpl
      *
      * @throws NullPointerException if <code>ionData</code> is null.
      */
-    public SystemReader newLegacySystemReader(IonCatalog catalog, byte[] ionData)
+    public SystemValueIterator newLegacySystemReader(IonCatalog catalog, byte[] ionData)
     {
+        if (catalog == null) catalog = getCatalog();
         boolean isBinary =
             IonBinary.matchBinaryVersionMarker(ionData);
 
-        SystemReader sysReader;
+        SystemValueIterator sysReader;
         if (isBinary) {
             sysReader = newBinarySystemReader(catalog, ionData);
         }
@@ -703,11 +689,14 @@ public class IonSystemImpl
      *
      * @throws NullPointerException if <code>ionBinary</code> is null.
      */
-    private SystemReader newBinarySystemReader(IonCatalog catalog, byte[] ionBinary)
+    private SystemValueIterator newBinarySystemReader(IonCatalog catalog, byte[] ionBinary)
     {
+        if (catalog == null) catalog = getCatalog();
         BlockedBuffer bb = new BlockedBuffer(ionBinary);
         BufferManager buffer = new BufferManager(bb);
-        return new SystemReader(this, catalog, buffer);
+        //return new SystemReader(this, catalog, buffer);
+        SystemValueIterator reader = makeSystemReader(this, catalog, buffer);
+        return reader;
     }
 
 
@@ -721,8 +710,9 @@ public class IonSystemImpl
      *
      * @throws NullPointerException if <code>ionText</code> is null.
      */
-    private SystemReader newTextSystemReader(IonCatalog catalog, byte[] ionText)
+    private SystemValueIterator newTextSystemReader(IonCatalog catalog, byte[] ionText)
     {
+        if (catalog == null) catalog = getCatalog();
         ByteArrayInputStream stream = new ByteArrayInputStream(ionText);
         Reader reader;
         try {
@@ -732,21 +722,28 @@ public class IonSystemImpl
             throw new IonException(e);
         }
 
-        return new SystemReader(this, catalog, reader);
+        // return new SystemReader(this, catalog, reader);
+        SystemValueIterator sysreader = makeSystemReader(this, catalog, reader);
+        return sysreader;
     }
 
 
-    public SystemReader newBinarySystemReader(IonCatalog catalog, InputStream ionBinary)
+    public SystemValueIterator newBinarySystemReader(IonCatalog catalog, InputStream ionBinary)
         throws IOException
     {
+        if (catalog == null) catalog = getCatalog();
         BufferManager buffer = new BufferManager(ionBinary);
-        return new SystemReader(this, catalog, buffer);
+        //return new SystemReader(this, catalog, buffer);
+        SystemValueIterator reader = makeSystemReader(this, catalog, buffer);
+        return reader;
     }
 
-    public SystemReader newPagedBinarySystemReader(IonCatalog catalog, InputStream ionBinary)
+    public SystemValueIterator newPagedBinarySystemReader(IonCatalog catalog, InputStream ionBinary)
         throws IOException
     {
-        return new SystemReader(this, catalog, ionBinary);
+        if (catalog == null) catalog = getCatalog();
+        SystemValueIterator reader = makeSystemReader(this, catalog, ionBinary);
+        return reader;
     }
 
     //-------------------------------------------------------------------------
@@ -766,23 +763,38 @@ public class IonSystemImpl
         // TODO what if the symbol already has a symtab?
         // TODO what if the symbol already has a different system?
 
-        SymbolTable symtab = getSystemSymbolTable(systemId.stringValue());
+        SymbolTable symtab = systemId.getSymbolTable();
+
+        // generally we don't want the IVM holding the symbol
+        // table, but if it has an annotation it's another matter
+        if (systemId.getTypeAnnotations().length == 0) {
+            symtab = getSystemSymbolTable(systemId.stringValue());
+        }
+        else if (UnifiedSymbolTable.isLocalTable(symtab) == false) {
+            if (symtab == null) {
+                symtab = this.mySystemSymbols;
+            }
+            symtab = UnifiedSymbolTable.makeNewLocalSymbolTable(this, symtab);
+        }
 
         systemId.setSymbolTable(symtab);  // This clears the sid
         systemId.setIsIonVersionMarker(true);
+        systemId.setDirty();
         assert systemId.getSymbolId() == 2;
     }
 
     /**
-     * checks the value to see if it is a symbol and has the
-     * form $ION_ddd_ddd.  Where ddd is 1 or more decimal
-     * digits.  This includes the current value of $ION_1_0
+     * Checks the value to see if it is an unannotated symbol and has the
+     * form {@code $ion_DDD_DDD} where DDD is 1 or more decimal
+     * digits.  This includes the current value of {@code $ion_1_0}
      * which is really the only valid system id today, but
      * there may be more later.
      */
     final boolean valueIsSystemId(IonValue value)
     {
-        if (value instanceof IonSymbol && ! value.isNullValue())
+        if (value instanceof IonSymbol
+            && ! value.isNullValue()
+            && value.getTypeAnnotations().length == 0)
         {
             IonSymbol symbol = (IonSymbol) value;
             int sid = symbol.getSymbolId();
@@ -790,9 +802,10 @@ public class IonSystemImpl
             {
                 return true;
             }
-            // TODO quickly skip other sids
-            String image = symbol.stringValue();
-            return textIsSystemId(image);
+            else if (sid < 1 || sid > SystemSymbolTable.ION_1_0_MAX_ID) {
+                String image = symbol.stringValue();
+                return textIsSystemId(image);
+            }
         }
         return false;
     }
@@ -843,7 +856,7 @@ public class IonSystemImpl
         return true;
     }
 
-    public final boolean valueIsLocalSymbolTable(IonValue value)
+    public static final boolean valueIsLocalSymbolTable(IonValue value)
     {
         return (value instanceof IonStruct
                 && value.hasTypeAnnotation(ION_SYMBOL_TABLE));
@@ -862,6 +875,7 @@ public class IonSystemImpl
     /**
      * Helper for other overloads, not useful as public API.
      */
+
     private IonValue singleValue(Iterator<IonValue> iterator)
     {
         if (iterator.hasNext())
@@ -893,20 +907,15 @@ public class IonSystemImpl
         throw new IonException("not a single value");
     }
 
+
     public IonValue singleValue(String ionText)
     {
-//        return singleValue(newReader(ionText));
-        // FIXME ION-113 Use IonReader to avoid binary transcoding
-        Iterator<IonValue> iterator = iterate(ionText);
-        return singleValue(iterator);
+        return singleValue(newReader(ionText));
     }
 
     public IonValue singleValue(byte[] ionData)
     {
-//        return singleValue(newReader(ionData));
-        // FIXME ION-113 Use IonReader to avoid binary transcoding
-        Iterator<IonValue> iterator = iterate(ionData);
-        return singleValue(iterator);
+        return singleValue(newReader(ionData));
     }
 
 
@@ -1155,10 +1164,16 @@ public class IonSystemImpl
         return new IonListImpl(this, elements);
     }
 
-    public <T extends IonValue> IonList newList(T... elements)
+    public IonList newList(IonSequence child)
         throws ContainedValueException, NullPointerException
     {
-        List<T> e = (elements == null ? null : Arrays.asList(elements));
+        return new IonListImpl(this, Collections.singletonList(child));
+    }
+
+    public IonList newList(IonValue... elements)
+        throws ContainedValueException, NullPointerException
+    {
+        List<IonValue> e = (elements == null ? null : Arrays.asList(elements));
         return new IonListImpl(this, e);
     }
 
@@ -1230,10 +1245,17 @@ public class IonSystemImpl
         return new IonSexpImpl(this, elements);
     }
 
-    public <T extends IonValue> IonSexp newSexp(T... elements)
+    public IonSexp newSexp(IonSequence child)
         throws ContainedValueException, NullPointerException
     {
-        List<T> e = (elements == null ? null : Arrays.asList(elements));
+        return new IonSexpImpl(this, Collections.singletonList(child));
+    }
+
+
+    public IonSexp newSexp(IonValue... elements)
+        throws ContainedValueException, NullPointerException
+    {
+        List<IonValue> e = (elements == null ? null : Arrays.asList(elements));
         return new IonSexpImpl(this, e);
     }
 
@@ -1432,4 +1454,5 @@ public class IonSystemImpl
 
         return e;
     }
+
 }

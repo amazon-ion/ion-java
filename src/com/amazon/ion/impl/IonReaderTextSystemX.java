@@ -1,4 +1,4 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -14,10 +14,12 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.IonReaderTextRawTokensX.IonReaderTextTokenException;
 import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
 import com.amazon.ion.impl.IonScalarConversionsX.CantConvertException;
+import com.amazon.ion.impl.IonTokenConstsX.CharacterSequence;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -40,31 +42,30 @@ import java.util.Iterator;
  */
 public class IonReaderTextSystemX
     extends IonReaderTextRawX
+    implements IonReaderWriterPrivate
 {
+    private static int UNSIGNED_BYTE_MAX_VALUE = 255;
 
     Iterator<String> EMPTY_ITERATOR = new StringIterator(null);
+    IonSystem _system;
 
-    public IonReaderTextSystemX(char[] chars) {
-        UnifiedInputStreamX iis;
-        iis = UnifiedInputStreamX.makeStream(chars);
-        init(iis);
-    }
-    public IonReaderTextSystemX(char[] chars, int offset, int length) {
+    protected IonReaderTextSystemX(IonSystem system, char[] chars, int offset, int length) {
+        super();
+        _system = system;
         UnifiedInputStreamX iis;
         iis = UnifiedInputStreamX.makeStream(chars, offset, length);
         init(iis);
     }
-    public IonReaderTextSystemX(CharSequence chars) {
-        UnifiedInputStreamX iis;
-        iis = UnifiedInputStreamX.makeStream(chars);
-        init(iis);
-    }
-    public IonReaderTextSystemX(CharSequence chars, int offset, int length) {
+    protected IonReaderTextSystemX(IonSystem system, CharSequence chars, int offset, int length) {
+        super();
+        _system = system;
         UnifiedInputStreamX iis;
         iis = UnifiedInputStreamX.makeStream(chars, offset, length);
         init(iis);
     }
-    public IonReaderTextSystemX(Reader userChars) {
+    protected IonReaderTextSystemX(IonSystem system, Reader userChars) {
+        super();
+        _system = system;
         UnifiedInputStreamX iis;
         try {
             iis = UnifiedInputStreamX.makeStream(userChars);
@@ -74,17 +75,16 @@ public class IonReaderTextSystemX
         }
         init(iis);
     }
-    public IonReaderTextSystemX(byte[] bytes) {
-        UnifiedInputStreamX iis;
-        iis = UnifiedInputStreamX.makeStream(bytes);
-        init(iis);
-    }
-    public IonReaderTextSystemX(byte[] bytes, int offset, int length) {
+    protected IonReaderTextSystemX(IonSystem system, byte[] bytes, int offset, int length) {
+        super();
+        _system = system;
         UnifiedInputStreamX iis;
         iis = UnifiedInputStreamX.makeStream(bytes, offset, length);
         init(iis);
     }
-    public IonReaderTextSystemX(InputStream userBytes) {
+    protected IonReaderTextSystemX(IonSystem system, InputStream userBytes) {
+        super();
+        _system = system;
         UnifiedInputStreamX iis;
         try {
             iis = UnifiedInputStreamX.makeStream(userBytes);
@@ -94,7 +94,9 @@ public class IonReaderTextSystemX
         }
         init(iis);
     }
-    public IonReaderTextSystemX(File file) {
+    protected IonReaderTextSystemX(IonSystem system, File file) {
+        super();
+        _system = system;
         UnifiedInputStreamX iis;
         try {
             InputStream userBytes = new FileInputStream(file);
@@ -105,10 +107,17 @@ public class IonReaderTextSystemX
         }
         init(iis);
     }
-
-    public IonReaderTextSystemX(UnifiedInputStreamX iis) {
+    protected IonReaderTextSystemX(IonSystem system, UnifiedInputStreamX iis) {
+        super();
+        _system = system;
         init(iis);
     }
+
+    public IonSystem getSystem()
+    {
+        return _system;
+    }
+
 
     /**
      * this checks the state of the raw reader to make sure
@@ -212,10 +221,20 @@ public class IonReaderTextSystemX
                 break;
             case DECIMAL:
                 // note that the string was modified above when it was a charsequence
+                try {
                 _v.setValue(Decimal.valueOf(s));
+                }
+                catch (NumberFormatException e) {
+                    parse_error(e);
+                }
                 break;
             case FLOAT:
-                _v.setValue(Double.parseDouble(s));
+                try {
+                    _v.setValue(Double.parseDouble(s));
+                }
+                catch (NumberFormatException e) {
+                    parse_error(e);
+                }
                 break;
             case TIMESTAMP:
                 _v.setValue(Timestamp.valueOf(s));
@@ -253,13 +272,31 @@ public class IonReaderTextSystemX
             }
             break;
         case IonTokenConstsX.TOKEN_DECIMAL:
+            try {
             _v.setValue(Decimal.valueOf(s));
+            }
+            catch (NumberFormatException e) {
+                parse_error(e);
+            }
             break;
         case IonTokenConstsX.TOKEN_FLOAT:
-            _v.setValue(Double.parseDouble(s));
+            try {
+                _v.setValue(Double.parseDouble(s));
+            }
+            catch (NumberFormatException e) {
+                parse_error(e);
+            }
+
             break;
         case IonTokenConstsX.TOKEN_TIMESTAMP:
-            _v.setValue(Timestamp.valueOf(s));
+            Timestamp t = null;
+            try {
+                t = Timestamp.valueOf(s);
+            }
+            catch (IllegalArgumentException e) {
+                parse_error(e);
+            }
+            _v.setValue(t);
             break;
         case IonTokenConstsX.TOKEN_SYMBOL_BASIC:
             // this includes the various value keywords like true
@@ -416,12 +453,14 @@ public class IonReaderTextSystemX
     public BigInteger bigIntegerValue()
     {
         load_or_cast_cached_value(AS_TYPE.bigInteger_value);
+        if (_v.isNull()) return null;
         return _v.getBigInteger();
     }
     @Override
     public BigDecimal bigDecimalValue()
     {
         load_or_cast_cached_value(AS_TYPE.decimal_value);
+        if (_v.isNull()) return null;
         return _v.getBigDecimal();
     }
     public Decimal decimalValue()
@@ -433,18 +472,21 @@ public class IonReaderTextSystemX
     public Date dateValue()
     {
         load_or_cast_cached_value(AS_TYPE.date_value);
+        if (_v.isNull()) return null;
         return _v.getDate();
     }
     @Override
     public Timestamp timestampValue()
     {
         load_or_cast_cached_value(AS_TYPE.timestamp_value);
+        if (_v.isNull()) return null;
         return _v.getTimestamp();
     }
     @Override
     public String stringValue()
     {
         load_or_cast_cached_value(AS_TYPE.string_value);
+        if (_v.isNull()) return null;
         return _v.getString();
     }
 
@@ -622,12 +664,15 @@ public class IonReaderTextSystemX
             while (len-- > 0) {
                 c = _scanner.read_double_quoted_char(true);
                 if (c < 0) {
-                    if (c == IonTokenConstsX.EMPTY_ESCAPE_SEQUENCE) {
+                    if (c == CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1
+                     || c == CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2
+                     || c == CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3
+                    ) {
                         continue;
                     }
                     break;
                 }
-                assert(c >= 0 && c <= Byte.MAX_VALUE);
+                assert(c >= 0 && c <= UNSIGNED_BYTE_MAX_VALUE);
                 buffer[offset++] = (byte)c;
             }
             break;
@@ -635,12 +680,23 @@ public class IonReaderTextSystemX
             while (len-- > 0) {
                 c = _scanner.read_triple_quoted_char(true);
                 if (c < 0) {
-                    if (c == IonTokenConstsX.EMPTY_ESCAPE_SEQUENCE) {
+                    if (c == CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1
+                     || c == CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2
+                     || c == CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3
+                     || c == CharacterSequence.CHAR_SEQ_STRING_NON_TERMINATOR
+                    ) {
+                        continue;
+                    }
+                    if (c == CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_1
+                     || c == CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_2
+                     || c == CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_3
+                    ) {
+                        buffer[offset++] = (byte)'\n';
                         continue;
                     }
                     break;
                 }
-                assert(c >= 0 && c <= Byte.MAX_VALUE);
+                assert(c >= 0 && c <= UNSIGNED_BYTE_MAX_VALUE);
                 buffer[offset++] = (byte)c;
             }
             break;
@@ -733,5 +789,11 @@ public class IonReaderTextSystemX
             struct.add(name, v);
         }
         this.stepOut();
+    }
+
+    // system readers don't skip any symbol tables
+    public SymbolTable pop_passed_symbol_table()
+    {
+        return null;
     }
 }

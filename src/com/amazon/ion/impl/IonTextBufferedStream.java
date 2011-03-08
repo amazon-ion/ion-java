@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2010 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -12,7 +10,7 @@ import java.io.InputStream;
  * that do not handle character decoding.  Each byte is treated as just
  * a character from 0 to 255.  These are used internally to wire up some
  * of the Iterator code to some of the base64 encoding (or decoding)
- * routins in ion.impl. 
+ * routins in ion.impl.
  */
 public abstract class IonTextBufferedStream extends InputStream
 {
@@ -38,7 +36,7 @@ public abstract class IonTextBufferedStream extends InputStream
     static final class StreamStream extends IonTextBufferedStream
     {
         static final int DEFAULT_BUFFER_SIZE = (32*1024);
-        
+
         InputStream _stream;
         byte []     _buffer1;
         byte []     _buffer2;
@@ -46,8 +44,8 @@ public abstract class IonTextBufferedStream extends InputStream
         long        _file_pos2;
         int         _len;
         int         _pos;
-        
-        public StreamStream (InputStream stream) 
+
+        public StreamStream (InputStream stream)
         {
             _stream = stream;
             _buffer1 = new byte[DEFAULT_BUFFER_SIZE];
@@ -58,15 +56,15 @@ public abstract class IonTextBufferedStream extends InputStream
             _len = load(_buffer1);
         }
         int load(byte[] buffer) {
-            
+
         }
-        
+
         @Override
         public final int getByte(int pos) {
             if (pos < 0 || pos >= _len) return -1;
             return _buffer[pos] & 0xff;
         }
-    
+
         @Override
         public final int read()
             throws IOException
@@ -74,7 +72,7 @@ public abstract class IonTextBufferedStream extends InputStream
             if (_pos >= _len) return -1;
             return _buffer[_pos++];
         }
-        
+
         @Override
         public final int read(byte[] bytes, int offset, int len) throws IOException
         {
@@ -91,13 +89,20 @@ public abstract class IonTextBufferedStream extends InputStream
         public final int position() {
             return _pos;
         }
-       
+
         @Override
         public final SimpleBufferStream setPosition(int pos)
         {
             if (_pos < 0 || _pos > _len) throw new IllegalArgumentException();
             _pos = pos;
             return this;
+        }
+
+        @Override
+        public void close() throws IOException
+        {
+            _stream.close();
+            super.close();
         }
     }
     */
@@ -107,20 +112,20 @@ public abstract class IonTextBufferedStream extends InputStream
         byte [] _buffer;
         int     _len;
         int     _pos;
-        
-        public SimpleBufferStream(byte[] buffer) 
+
+        public SimpleBufferStream(byte[] buffer)
         {
             _buffer = buffer;
             _pos = 0;
             _len = buffer.length;
         }
-        
+
         @Override
         public final int getByte(int pos) {
             if (pos < 0 || pos >= _len) return -1;
             return _buffer[pos] & 0xff;
         }
-    
+
         @Override
         public final int read()
             throws IOException
@@ -128,7 +133,7 @@ public abstract class IonTextBufferedStream extends InputStream
             if (_pos >= _len) return -1;
             return _buffer[_pos++];
         }
-        
+
         @Override
         public final int read(byte[] bytes, int offset, int len) throws IOException
         {
@@ -145,7 +150,7 @@ public abstract class IonTextBufferedStream extends InputStream
         public final int position() {
             return _pos;
         }
-       
+
         @Override
         public final SimpleBufferStream setPosition(int pos)
         {
@@ -153,49 +158,57 @@ public abstract class IonTextBufferedStream extends InputStream
             _pos = pos;
             return this;
         }
+
+        @Override
+        public void close()
+            throws IOException
+        {
+            _pos = _len;
+            super.close();
+        }
     }
-    
+
     static final class StringStream extends IonTextBufferedStream
     {
-        
+
         String _string;
         int    _end;
         int    _pos;
-        
-        public StringStream(String text) 
+
+        public StringStream(String text)
         {
             _string = text;
             _pos = 0;
             _end = text.length();
         }
-        
+
         @Override
         public final int getByte(int pos) {
             if (pos < 0) return -1;
             if (pos >= _end) return -1;
-            return _string.charAt(pos); 
+            return _string.charAt(pos);
         }
-    
+
         @Override
         public final int read()
             throws IOException
         {
             if (_pos >= _end) return -1;
-            char c = _string.charAt(_pos++); 
+            char c = _string.charAt(_pos++);
             return c;
         }
-        
+
         @Override
         public final int read(byte[] bytes, int offset, int len) throws IOException
         {
             throw new UnsupportedOperationException();
         }
-    
+
         @Override
         public final int position() {
             return _pos;
         }
-       
+
         @Override
         public final StringStream setPosition(int pos)
         {
@@ -204,16 +217,24 @@ public abstract class IonTextBufferedStream extends InputStream
             _pos = pos;
             return this;
         }
+
+        @Override
+        public void close()
+            throws IOException
+        {
+            _pos = _end;
+            super.close();
+        }
     }
-    
+
     static final class OffsetBufferStream extends IonTextBufferedStream
     {
         byte [] _buffer;
         int     _start;
         int     _end;
         int     _pos;
-        
-        public OffsetBufferStream(byte[] buffer, int start, int max) 
+
+        public OffsetBufferStream(byte[] buffer, int start, int max)
         {
             _buffer = buffer;
             _pos = start;
@@ -228,15 +249,15 @@ public abstract class IonTextBufferedStream extends InputStream
             if (pos >= _end) return -1;
             return _buffer[pos] & 0xff;
         }
-    
+
         @Override
         public final int read()
             throws IOException
         {
-        	int c; 
-    		if (_pos >= _end) return -1;
-    		c = (((int)_buffer[_pos++]) & 0xFF);  // trim sign extension bits
-            return c; 
+            int c;
+            if (_pos >= _end) return -1;
+            c = (((int)_buffer[_pos++]) & 0xFF);  // trim sign extension bits
+            return c;
         }
 
         @Override
@@ -264,6 +285,14 @@ public abstract class IonTextBufferedStream extends InputStream
             if (pos > _end) throw new IllegalArgumentException();
             _pos = pos;
             return this;
+        }
+
+        @Override
+        public void close()
+            throws IOException
+        {
+            _pos = _end;
+            super.close();
         }
     }
 }

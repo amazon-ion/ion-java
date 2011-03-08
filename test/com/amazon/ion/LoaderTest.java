@@ -1,9 +1,8 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl.IonSystemImpl;
-import com.amazon.ion.impl.UserReader;
+import com.amazon.ion.impl.UserValueIterator;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -19,6 +18,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Iterator;
+import org.junit.Test;
 
 /**
  *
@@ -26,18 +26,6 @@ import java.util.Iterator;
 public class LoaderTest
     extends IonTestCase
 {
-    private IonLoader myLoader;
-
-
-    @Override
-    public void setUp()
-        throws Exception
-    {
-        super.setUp();
-        myLoader = system().newLoader();
-    }
-
-
     /**
      * Parses text as a single Ion value.  If the text contains more than that,
      * a failure is thrown.
@@ -47,7 +35,7 @@ public class LoaderTest
      */
     public IonValue loadOneValue(String text)
     {
-        IonDatagram dg = myLoader.load(text);
+        IonDatagram dg = loader().load(text);
 
         if (dg.size() == 0)
         {
@@ -69,6 +57,7 @@ public class LoaderTest
     //=========================================================================
     // Test cases
 
+    @Test
     public void testLoadingNonexistentFile()
         throws IOException
     {
@@ -80,6 +69,7 @@ public class LoaderTest
         catch (FileNotFoundException e) { }
     }
 
+    @Test
     public void testLoadingBlankTextFiles()
         throws Exception
     {
@@ -90,6 +80,7 @@ public class LoaderTest
         assertEquals(0, contents.size());
     }
 
+    @Test
     public void testLoadingSimpleFile()
         throws Exception
     {
@@ -112,6 +103,7 @@ public class LoaderTest
         assertNotNull(nullValue);
     }
 
+    @Test
     public void testIteratingSimpleFile()
         throws Exception
     {
@@ -134,6 +126,7 @@ public class LoaderTest
         }
     }
 
+    @Test
     public void testLoadOneValue()
     {
         IonList value = (IonList) loadOneValue("[1]");
@@ -144,6 +137,7 @@ public class LoaderTest
         checkInt(1, elt);
     }
 
+    @Test
     public void testIgnoreHeaderSymbol()
     {
         String text = SystemSymbolTable.ION_1_0 + " 123";
@@ -152,6 +146,101 @@ public class LoaderTest
         checkInt(123, value);
     }
 
+
+    private static class FailingInputStream extends InputStream
+    {
+        final int len;
+        int pos = 0;
+
+        FailingInputStream(int length) { len = length; }
+
+        @Override
+        public int read() throws IOException
+        {
+            if (pos++ < len) return ' ';
+            throw new IOException("boom");
+        }
+    }
+
+
+    @Test(expected = IOException.class)
+    public void testInputStreamFailsImmediately()
+    throws IOException
+    {
+        InputStream in = new FailingInputStream(0);
+        loader().load(in);
+    }
+
+    @Test(expected = IOException.class)
+    public void testInputStreamFailsSoon()
+    throws IOException
+    {
+        // Fail within the version-marker prefetch.
+        InputStream in = new FailingInputStream(1);
+        loader().load(in);
+    }
+
+    @Test(expected = IOException.class)
+    public void testInputStreamFailsLater()
+    throws IOException
+    {
+        // Fail after the version-marker prefetch.
+        InputStream in = new FailingInputStream(5);
+        loader().load(in);
+    }
+
+
+    private static class FailingReader extends Reader
+    {
+        final int len;
+        int pos = 0;
+
+        FailingReader(int length) { len = length; }
+
+        @Override
+        public int read(char[] cbuf, int off, int l) throws IOException
+        {
+            if (pos++ < len)
+            {
+                cbuf[off] = ' ';
+                return 1;
+            }
+            throw new IOException("boom");
+        }
+
+        @Override
+        public void close() { }
+    }
+
+
+    @Test(expected = IOException.class)
+    public void testReaderFailsImmediately()
+    throws IOException
+    {
+        Reader in = new FailingReader(0);
+        loader().load(in);
+    }
+
+    @Test(expected = IOException.class)
+    public void testReaderFailsSoon()
+    throws IOException
+    {
+        // Fail within the version-marker prefetch.
+        Reader in = new FailingReader(1);
+        loader().load(in);
+    }
+
+    @Test(expected = IOException.class)
+    public void testReaderFailsLater()
+    throws IOException
+    {
+        // Fail after the version-marker prefetch.
+        Reader in = new FailingReader(5);
+        loader().load(in);
+    }
+
+
+    @Test
     public void testClone()
         throws Exception
     {
@@ -175,6 +264,7 @@ public class LoaderTest
     }
 
     // TODO move to ScannerTest
+    @Test
     public void testCloneWithAnnotation() {
         String s = "some_annotation::{foo:\"test\"}";
         IonStruct v = system().newNullStruct();
@@ -186,6 +276,7 @@ public class LoaderTest
         bar.get("foo");
     }
 
+    @Test
     public void testCloneChildWithAnnotation()
     {
         String s = "some_annotation::{foo:\"test\"}";
@@ -214,6 +305,7 @@ public class LoaderTest
     }
 
 
+    @Test
     public void testReloadingTextSeveralWays()
         throws IOException
     {
@@ -258,9 +350,10 @@ public class LoaderTest
         assertEquals("value", value.stringValue());
     }
 
+    @Test
     public void testSingleValue()
     {
-        IonSystemImpl sys = new IonSystemImpl();
+        IonSystem sys = system();
 
         String image = "(this is a single sexp)";
         IonValue v1 =  sys.singleValue(image);
@@ -288,14 +381,16 @@ public class LoaderTest
         catch (IonException ie) { /* ok */ }
     }
 
+    @Test
     public void testCatalogOnLoader() throws Exception {
-        IonSystem sys = new IonSystemImpl(Symtabs.CATALOG);
+        IonSystem sys = system(Symtabs.CATALOG);
         IonDatagram dg = sys.newDatagram(Symtabs.CATALOG.getTable("fred", 1));
         dg.add().newSymbol("fred_1");
         byte[] raw = dg.getBytes();
         IonLoader loader = sys.newLoader();
         IonDatagram dg_fred = loader.load(raw);
-        IonSymbol sym_fred = (IonSymbol) dg_fred.get(0);
+        IonValue v = dg_fred.get(0);
+        IonSymbol sym_fred = (IonSymbol) v;
         String string_fred = sym_fred.stringValue();
         assertEquals("fred_1", string_fred);
 
@@ -303,11 +398,16 @@ public class LoaderTest
         // a different v1 fred symtab
         IonMutableCatalog newCatalog = new SimpleCatalog();
         newCatalog.putTable(sys.newSharedSymbolTable("fred", 1, Arrays.asList("barney_1").iterator()));
-        assertEquals("barney_1", ((IonSymbol) sys.newLoader(newCatalog).load(raw).get(0)).stringValue());
+        IonLoader new_loader = sys.newLoader(newCatalog);
+        IonDatagram new_dg = new_loader.load(raw);
+        IonSymbol sym = (IonSymbol)new_dg.get(0);
+        String found = sym.stringValue();
+        assertEquals("barney_1", found);
     }
 
 final static boolean _debug_long_test = false;
 
+    @Test
     public void testIteratingVeryLongFile()
     throws Exception
 	{
@@ -322,7 +422,7 @@ if (!_debug_long_test) return;
 
 	    LongInputStream longStream = new LongInputStream("$ion_1_0 { this:is, a:struct } ");
         Reader reader = new InputStreamReader(longStream, "UTF-8");
-        UserReader r = (UserReader)system().iterate(reader);
+        UserValueIterator r = (UserValueIterator)system().iterate(reader);
         r.setBufferToRecycle();
 
         Iterator<IonValue> i = r;

@@ -1,15 +1,16 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2010 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.util.Equivalence.ionEquals;
 
 import com.amazon.ion.IonContainer;
+import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonStruct;
+import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
@@ -25,7 +26,7 @@ import java.io.IOException;
  *
  */
 public abstract class IonValueImpl
-    implements IonValue
+    implements IonValuePrivate
 {
     private static final String[] EMPTY_ANNOTATIONS = new String[0];
 
@@ -36,8 +37,8 @@ public abstract class IonValueImpl
      * WARNING: This member can change even when the value is read-only, since
      * the container may be mutable and have values added or removed.
      */
-    protected int _elementid;
-    private String _fieldName;
+    protected int    _elementid;
+    private String   _fieldName;
     private String[] _annotations;
 
     //
@@ -101,26 +102,105 @@ public abstract class IonValueImpl
      */
 
     /**
+     * this hold all the various boolean flags we have
+     * in a single int.  Use set_flag(), clear_flag(), is_true()
+     * and the associated int flag to check the various flags.
+     * This is to avoid the overhead java seems to impose
+     * for a boolean value - it should be a bit, but it seems
+     * to be an int (4 bytes for 1 bit seems excessive).
+     */
+    private short _flags;
+
+    private static final int IS_MATERIALIZED    = 0x01;
+    private static final int IS_POSITION_LOADED = 0x02;
+    private static final int HAS_NATIVE_VALUE   = 0x04;
+    private static final int IS_DIRTY           = 0x08;
+    private static final int IS_LOCKED          = 0x10;
+    private static final int IS_SYSTEM_VALUE    = 0x20;
+    private static final int IS_NULL_VALUE      = 0x40;
+    private static final int IS_BOOL_TRUE       = 0x80;
+
+
+    private final boolean is_true(int flag_bit)
+    {
+        // FIXME: removed, dead code for debugging
+        if (flag_bit == IS_BOOL_TRUE) {
+            flag_bit = IS_BOOL_TRUE;
+        }
+        return ((_flags & flag_bit) != 0);
+    }
+    private final void set_flag(int flag_bit)
+    {
+        // FIXME: removed, dead code for debugging
+        if (flag_bit == IS_BOOL_TRUE) {
+            flag_bit = IS_BOOL_TRUE;
+        }
+        assert(flag_bit != 0);
+        _flags |= flag_bit;
+    }
+    private final void clear_flag(int flag_bit)
+    {
+        // FIXME: removed, dead code for debugging
+        if (flag_bit == IS_BOOL_TRUE) {
+            flag_bit = IS_BOOL_TRUE;
+        }
+        assert(flag_bit != 0);
+        _flags &= ~flag_bit;
+    }
+
+
+    /**
      * Indicates whether or not a value has been loaded from its buffer.
      * If the value does not have backing buffer this is always false;
      * If this value is true the _isPositionLoaded must also be true;
      */
-    protected boolean      _isMaterialized;
+    protected final boolean _isMaterialized() { return is_true(IS_MATERIALIZED); }
+    protected final boolean _isMaterialized(boolean flag)
+    {
+        if (flag) {
+            set_flag(IS_MATERIALIZED);
+        }
+        else {
+            clear_flag(IS_MATERIALIZED);
+        }
+        return flag;
+    }
 
     /**
      * Indicates whether or not the position information has been loaded.
      * If the value does not have backing buffer this is always false;
      */
-    protected boolean      _isPositionLoaded;
+    protected final boolean _isPositionLoaded() { return is_true(IS_POSITION_LOADED); }
+    protected final boolean _isPositionLoaded(boolean flag)
+    {
+        if (flag) {
+            set_flag(IS_POSITION_LOADED);
+        }
+        else {
+            clear_flag(IS_POSITION_LOADED);
+        }
+        return flag;
+    }
 
     /**
      * Indicates whether our nativeValue (stored by concrete subclasses)
      * has been determined.
      */
-    protected boolean      _hasNativeValue;
+    protected final boolean _hasNativeValue() { return is_true(HAS_NATIVE_VALUE); }
+    protected final boolean _hasNativeValue(boolean flag)
+    {
+        if (flag) {
+            set_flag(HAS_NATIVE_VALUE);
+        }
+        else {
+            clear_flag(HAS_NATIVE_VALUE);
+        }
+        return flag;
+    }
+
 
     /**
-     * Indicates whether our {@link #_nativeValue} has been updated and is
+     * Indicates whether our {@link #_hasNativeValue} has been updated and is
      * is currently out of synch with the underlying byte buffer. Initially
      * a non-buffer backed value is dirty, and a buffer backed value (even
      * if it has not been materialized) is clean.  Don't modify this directly,
@@ -130,15 +210,80 @@ public abstract class IonValueImpl
      * <p>
      * Note that a value with no buffer is always dirty.
      */
-    private boolean      _isDirty;
+    protected final boolean _isDirty() { return is_true(IS_DIRTY); }
+    private final boolean _isDirty(boolean flag)
+    {
+        if (flag) {
+            set_flag(IS_DIRTY);
+        }
+        else {
+            clear_flag(IS_DIRTY);
+        }
+        return flag;
+    }
+
 
     /**
      * Tracks whether or not this instance is locked.  Locked values
      * may not be mutated and must be thread safe for reading.
      */
-    protected boolean    _isLocked;
+    protected final boolean _isLocked() { return is_true(IS_LOCKED); }
+    protected final boolean _isLocked(boolean flag)
+    {
+        if (flag) {
+            set_flag(IS_LOCKED);
+        }
+        else {
+            clear_flag(IS_LOCKED);
+        }
+        return flag;
+    }
 
-    protected boolean    _isSystemValue;
+
+    protected final boolean _isSystemValue() { return is_true(IS_SYSTEM_VALUE); }
+    protected final boolean _isSystemValue(boolean flag)
+    {
+        if (flag) {
+            set_flag(IS_SYSTEM_VALUE);
+        }
+        else {
+            clear_flag(IS_SYSTEM_VALUE);
+        }
+        return flag;
+    }
+
+    /**
+     * used by IonIntImpl and IonBoolImpl (so far)
+     */
+    protected final boolean _isNullValue() { return is_true(IS_NULL_VALUE); }
+    protected final boolean _isNullValue(boolean flag)
+    {
+        if (flag) {
+            set_flag(IS_NULL_VALUE);
+        }
+        else {
+            clear_flag(IS_NULL_VALUE);
+        }
+        return flag;
+    }
+
+    /**
+     * since an IonBool only has true or false, it's value
+     * can live in one of the flags bit
+     */
+    protected final boolean _isBoolTrue() { return is_true(IS_BOOL_TRUE); }
+    protected final boolean _isBoolTrue(boolean flag)
+    {
+        if (flag) {
+            set_flag(IS_BOOL_TRUE);
+        }
+        else {
+            clear_flag(IS_BOOL_TRUE);
+        }
+        return flag;
+    }
+
+
 
     /**
      * This is the containing value, if there is one.  The container
@@ -186,11 +331,13 @@ public abstract class IonValueImpl
         _system = system;
 
         pos_init();
-        _isMaterialized     = false;
-        _isPositionLoaded   = false;
-        _hasNativeValue     = false;
-        _isDirty            = true;
+        _isMaterialized(false);
+        _isPositionLoaded(false);
+        _hasNativeValue(false);
+        _isDirty(true);
         pos_setTypeDescriptorByte(typedesc);
+        boolean isnull = (IonConstants.getLowNibble(typedesc) == IonConstants.lnIsNull);
+        _isNullValue(isnull);
     }
 
 
@@ -243,41 +390,27 @@ public abstract class IonValueImpl
         _annotations = a.length == 0 ? null : a;
     }
 
-    /**
-     *
-     * @param symboltable must be local, not shared, not null.
-     */
-    protected void init(int fieldSID
-                       ,BufferManager buffer
-                       ,int offset
-                       ,IonContainerImpl container
-                       ,SymbolTable symboltable
-                       )
+
+    // this is split to make it more likely
+    // that it will be inlined. This is
+    // very frequently called.
+    // It doesn't look like you can have
+    // a materialized value which doesn't
+    // have a native value, so the first
+    // test should be enough.  But the
+    // _isMaterialized test was there
+    // before and there's no need, at this
+    // time, to change this.
+    protected final void makeReady()
     {
-        assert symboltable.isLocalTable();
-
-        _fieldSid    = fieldSID;
-        _buffer      = buffer;
-        _container   = container;
-        _symboltable = symboltable;
-
-        try {
-            IonBinary.Reader reader = buffer.reader();
-            reader.sync();
-            reader.setPosition(offset);
-            pos_load(fieldSID, reader);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
+        if (_hasNativeValue()) return;
+        makeReadyHelper();
     }
-
-    protected void makeReady()
+    private final void makeReadyHelper()
     {
-        if (_hasNativeValue) return;
-        if (_isMaterialized) return;
+        if (_isMaterialized()) return;
         if (_entry_start != -1) {
-            assert _isPositionLoaded == true;
+            assert _isPositionLoaded() == true;
             try {
                 materialize();
             }
@@ -285,40 +418,6 @@ public abstract class IonValueImpl
                 throw new IonException(e);
             }
         }
-    }
-
-    /**
-     * @param symboltable must be local, not shared.
-     * @return not null.
-     */
-    public static IonValueImpl makeValueFromBuffer(
-                                     int fieldSID
-                                    ,int position
-                                    ,BufferManager buffer
-                                    ,SymbolTable symboltable
-                                    ,IonContainerImpl container
-                                    ,IonSystemImpl system
-    ) {
-        IonValueImpl value;
-// cas symtab:       assert symboltable != null;
-
-        try {
-            IonBinary.Reader reader = buffer.reader();
-            reader.sync();
-            reader.setPosition(position);
-            value = makeValueFromReader(fieldSID
-                                       ,reader
-                                       ,buffer
-                                       ,symboltable
-                                       ,container
-                                       ,system
-                    );
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-
-        return value;
     }
 
     /**
@@ -335,17 +434,17 @@ public abstract class IonValueImpl
         throws IOException
     {
         IonValueImpl value;
-// cas symtab:        assert symboltable != null;
-
         int pos = reader.position();
         int tdb = reader.readActualTypeDesc();
+
         value = makeValue(tdb, system);
-        value.init(fieldSID
-                  ,buffer
-                  ,pos
-                  ,container
-                  ,symboltable
-        );
+        value._fieldSid    = fieldSID;
+        value._buffer      = buffer;
+        value._container   = container;
+        value._symboltable = symboltable;
+        reader.sync();
+        reader.setPosition(pos);
+        value.pos_load(fieldSID, reader);
 
         return value;
     }
@@ -413,21 +512,10 @@ public abstract class IonValueImpl
         return value;
     }
 
-
-    public synchronized boolean isNullValue()
+    public final synchronized boolean isNullValue()
     {
-        // container overrides this method
-        assert ! (this instanceof IonContainer);
-
-        // scalar classes override this, but call the
-        // super() copy (this one) when they don't
-        // have a native value.
-        assert _hasNativeValue == false || _isPositionLoaded == true;
-
-        int ln = this.pos_getLowNibble();
-        return (ln == IonConstants.lnIsNullAtom);
+        return _isNullValue();
     }
-
 
     /**
      * Ensures that this value is not an Ion null.  Used as a helper for
@@ -446,7 +534,7 @@ public abstract class IonValueImpl
     public String getFieldName()
     {
         if (this._fieldName != null) return this._fieldName;
-        if (this._fieldSid == 0) return null;
+        if (this._fieldSid < 1) return null;
         _fieldName = this.getSymbolTable().findSymbol(this._fieldSid);
         assert _fieldName != null;
         return _fieldName;
@@ -456,19 +544,53 @@ public abstract class IonValueImpl
     {
         if (this._fieldSid == 0 && this._fieldName != null)
         {
-            SymbolTable symtab = getSymbolTable();
-            if (symtab == null) {
-                return -1;
+            this._fieldSid = this.resolveSymbol(this._fieldName);
+            if (this._fieldSid == UnifiedSymbolTable.UNKNOWN_SID) {
+                this._fieldSid = this.addSymbol(this._fieldName);
             }
-            _fieldSid = symtab.addSymbol(this._fieldName);
         }
         return this._fieldSid;
+    }
+
+    /**
+     * variant for symbol table resolution
+     * @return boolean if an add symbol was done
+     */
+    private SymbolTable getFieldId(SymbolTable symtab)
+    {
+        assert symtab == this.getSymbolTable();
+
+        if (this._fieldSid == 0 && this._fieldName != null)
+        {
+            this._fieldSid = this.resolveSymbol(this._fieldName);
+            if (this._fieldSid == UnifiedSymbolTable.UNKNOWN_SID) {
+                checkForLock();
+                symtab = this.addSymbol(this._fieldName, symtab);
+                this._fieldSid = symtab.findSymbol(this._fieldName);
+                assert( this._fieldSid != UnifiedSymbolTable.UNKNOWN_SID);
+            }
+        }
+        return symtab;
     }
 
     @Deprecated
     public final int getFieldNameId()
     {
         return getFieldId();
+    }
+
+    public IonValuePrivate getRoot()
+    {
+        IonValueImpl parent;
+        IonValueImpl value = this;
+        for (;;) {
+            parent = (IonValueImpl)value.getContainer();
+            if (parent == null) {
+                break;
+            }
+            value = parent;
+        }
+        return value;
     }
 
     public final IonContainer getContainer()
@@ -479,7 +601,7 @@ public abstract class IonValueImpl
 
         // TODO why is this here?  (See below as well)
         // I think this is vestigial embedded value logic that's now wrong.
-        if (_container._isSystemValue) {
+        if (_container._isSystemValue()) {
             return _container.getContainer();
         }
         return _container;
@@ -487,7 +609,7 @@ public abstract class IonValueImpl
 
     public final boolean removeFromContainer()
     {
-        // TODO how does this interact with the strange systemvalue note above?
+        // TODO how does this interact with the strange system value note above?
         IonContainer c = getContainer();
         if (c == null) return false;
 
@@ -497,24 +619,39 @@ public abstract class IonValueImpl
     }
 
 
-    public void doNothing() {
+    public void doNothing()
+    {
         // used for timing things (to simulate a method call, but not do any work)
     }
 
-    public final boolean isDirty() {
-        return _isDirty;
+    public final boolean isDirty()
+    {
+        return _isDirty();
     }
 
-    public void makeReadOnly() {
-        if (_isLocked) return;
+    public void makeReadOnly()
+    {
+        // NOTE: it sure seems to me this should be true - but it seems not. hmmm.
+        // IonValuePrivate parent = this.get_symbol_table_root();
+        // if (parent != this) {
+        //     throw new IonException("child members can't be make read only by themselves");
+        // }
+        make_read_only_helper(true);
+    }
+    void make_read_only_helper(boolean is_root) {
+        if (_isLocked()) return;
         synchronized (this) {
             deepMaterialize();
-            _isLocked = true;
+            if (is_root) {
+                this.populateSymbolValues(this._symboltable);
+            }
+            _isLocked(true);
         }
     }
 
-    public final boolean isReadOnly() {
-        return _isLocked;
+    public final boolean isReadOnly()
+    {
+        return _isLocked();
     }
 
     /**
@@ -526,19 +663,25 @@ public abstract class IonValueImpl
     protected final void checkForLock()
         throws ReadOnlyValueException
     {
-        if (_isLocked) {
-            throw new ReadOnlyValueException();
+        if (_isLocked()) {
+            throwReadOnlyException();
         }
+    }
+    private final void throwReadOnlyException()
+        throws ReadOnlyValueException
+    {
+        throw new ReadOnlyValueException();
     }
 
     /**
      * Marks this element, and it's container, dirty.  This forces the binary
      * buffer to be updated when it's next needed.
      */
-    protected void setDirty() {
+    protected void setDirty()
+    {
         checkForLock();
-        if (this._isDirty == false) {
-            this._isDirty = true;
+        if (this._isDirty() == false) {
+            this._isDirty(true);
             if (this._container != null) {
                 this._container.setDirty();
             }
@@ -548,20 +691,154 @@ public abstract class IonValueImpl
         }
     }
 
-    protected void setClean() {
+    protected void setClean()
+    {
         assert _buffer != null;
-        this._isDirty = false;
+        this._isDirty(false);
     }
 
+    protected IonValueImpl get_symbol_table_root()
+    {
+        IonValueImpl prev = null;
+        IonValueImpl curr = this;
+
+        while (curr != null) {
+            prev = curr;
+            curr = curr._container;
+            if (curr == null || (curr instanceof IonDatagram)) {
+                break;
+            }
+        }
+        if (prev == null) {
+            return this;
+        }
+        return prev;
+    }
 
     // Not really: overridden for struct, which really needs to have a
     // symbol table.  Everyone needs to have a symbol table since they
     // may have fieldnames or annotations (or this may be a symbol value)
-    public SymbolTable getSymbolTable() {
+    public SymbolTable getSymbolTable()
+    {
         if (this._symboltable != null)  return this._symboltable;
         if (this._container != null)    return this._container.getSymbolTable();
 
         return this._symboltable;
+    }
+
+    public SymbolTable getAssignedSymbolTable()
+    {
+        return this._symboltable;
+    }
+
+    /**
+     * this returns the current values symbol table,
+     * which is typically
+     * owned by the top level value, if the current
+     * symbol table is a local symbol table.  Otherwise
+     * this replaces the current symbol table with a
+     * new local symbol table based on the current Ion system version.
+     * @return SymbolTable that is updatable (i.e. a local symbol table)
+     */
+    public SymbolTable getUpdatableSymbolTable()
+    {
+        IonValueImpl parent = get_symbol_table_root();
+        SymbolTable symbols = parent.getSymbolTable();
+
+        if (UnifiedSymbolTable.isLocalTable(symbols)) {
+            return symbols;
+        }
+
+        if (symbols == null) {
+            symbols = _system.getSystemSymbolTable();
+        }
+
+        symbols = makeNewLocalSymbolTable(_system, symbols);
+        parent.setSymbolTable(symbols);
+
+        return symbols;
+    }
+
+    /**
+     * checks in the current symbol table for this
+     * symbol (name) and returns the symbol id if
+     * this symbol is defined.
+     *
+     * @param name text for the symbol of interest
+     * @return int symbol id if found or
+     *          UnifiedSymbolTable.UNKNOWN_SID if
+     *          it is not already defined
+     */
+    public int resolveSymbol(String name)
+    {
+        SymbolTable symbols = getSymbolTable();
+        if (symbols == null) {
+            return UnifiedSymbolTable.UNKNOWN_SID;
+        }
+        int sid = symbols.findSymbol(name);
+        return sid;
+    }
+
+    /**
+     * checks in the current symbol table for this
+     * symbol id (sid) and returns the symbol text if
+     * this symbol is defined.
+     *
+     * @param sid symbol id of interest
+     * @return String symbol text if found or
+     *          null if it is not already defined
+     */
+    public String resolveSymbol(int sid)
+    {
+        SymbolTable symbols = getSymbolTable();
+        if (symbols == null) {
+            return null;
+        }
+        String name = symbols.findKnownSymbol(sid);
+        return name;
+    }
+
+    /**
+     * adds a symbol name to the current symbol
+     * table.  This may change the current symbol
+     * table if the current symbol table is either
+     * null or not updatable.
+     * @param name symbol text to be added
+     * @return int symbol id of the existing, or
+     *             newly defined, symbol
+     */
+    public int addSymbol(String name)
+    {
+        int sid = resolveSymbol(name);
+        if (sid != UnifiedSymbolTable.UNKNOWN_SID) {
+            return sid;
+        }
+        checkForLock();
+
+        SymbolTable symbols = getUpdatableSymbolTable();
+        sid = symbols.addSymbol(name);
+        return sid;
+    }
+
+    /**
+     * variant of addSymbol that returns the symbol
+     * table for symbol resolution instead of the
+     * symbol id which users generally want.
+     * @param name new symbol
+     * @return SymbolTable after the add
+     */
+    protected SymbolTable addSymbol(String name, SymbolTable symbols)
+    {
+        assert resolveSymbol(name) == UnifiedSymbolTable.UNKNOWN_SID;
+        assert symbols == this.getSymbolTable();
+
+        if (UnifiedSymbolTable.isLocalTable(symbols) == false) {
+            symbols = getUpdatableSymbolTable();
+        }
+        checkForLock();
+        symbols.addSymbol(name);
+
+        return symbols;
     }
 
     /**
@@ -569,18 +846,23 @@ public abstract class IonValueImpl
      * @param symtab must be local, system, or null.
      */
     public void setSymbolTable(SymbolTable symtab) {
-        if (symtab != null
-            && ! (symtab.isLocalTable() || symtab.isSystemTable()))
-        {
+        if (UnifiedSymbolTable.isAssignableTable(symtab) == false) {
             throw new IllegalArgumentException("symbol table must be local or system");
         }
-        checkForLock();
-        SymbolTable currentSymtab = getSymbolTable();
+
+        IonValueImpl parent = get_symbol_table_root();
+        SymbolTable  currentSymtab = parent.getSymbolTable();
         if (currentSymtab != symtab) {
-            if (currentSymtab != null) {
-                detachFromSymbolTable(); // Calls setDirty
+            checkForLock();
+            if (UnifiedSymbolTable.isTrivialTable(currentSymtab) == false) {
+                parent.detachFromSymbolTable(); // Calls setDirty
             }
-            this._symboltable = symtab;
+            else {
+                parent.makeReady();
+                this.setDirty();
+            }
+            parent._symboltable = symtab;
+            assert ((parent == this) || (this._symboltable == null));
         }
     }
 
@@ -597,7 +879,7 @@ public abstract class IonValueImpl
 
         if (this._fieldSid > 0) {
             if (this._fieldName == null) {
-                this._fieldName = this.getSymbolTable().findKnownSymbol(this._fieldSid);
+                this._fieldName = this.resolveSymbol(this._fieldSid);
             }
             this._fieldSid = 0; // FIXME should be UNKNOWN_SYMBOL_ID
         }
@@ -614,7 +896,8 @@ public abstract class IonValueImpl
      * @deprecated Use {@link IonSequence#indexOf(Object)}
      */
     @Deprecated
-    public int getElementId() {
+    public int getElementId()
+    {
         return this._elementid;
     }
 
@@ -665,6 +948,8 @@ public abstract class IonValueImpl
 
         String[] temp = (_annotations.length == 1) ? null : new String[_annotations.length - 1];
         for (int ii=0, jj=0; ii < _annotations.length; ii++) {
+            // FIXME ION-144 if the annotation exists more than once,
+            // the new array will have nulls at the end.
             if (!_annotations[ii].equals(annotation)) {
                 temp[jj++] = _annotations[ii];
             }
@@ -726,9 +1011,9 @@ public abstract class IonValueImpl
         // TODO: should this be if (!(_container instanceof IonDatagram)) _symboltable = null;
         //       that is push all symbol tables up to the immediate datagram child members?
         //       since there's no buffer there's no binary ...
-        _isMaterialized     = false;   // because there's no buffer
-        _isPositionLoaded   = false;
-        _isDirty            = true;
+        _isMaterialized(false);   // because there's no buffer
+        _isPositionLoaded(false);
+        _isDirty(true);
 
         _fieldSid           =  0;
         _entry_start        = -1;
@@ -737,13 +1022,14 @@ public abstract class IonValueImpl
         _next_start         = -1;
     }
 
-    void pos_initDatagram(int typeDesc, int length) {
-        _isMaterialized     = false;
-        _isPositionLoaded   = true;
-        _hasNativeValue     = false;
+    void pos_initDatagram(int typeDesc, int length)
+    {
+        _isMaterialized(false);
+        _isPositionLoaded(true);
+        _hasNativeValue(false);
 
         // if we have a buffer, and it's not loaded, it has to be clean
-        _isDirty            = false;
+        _isDirty(false);
 
         _fieldSid           = 0;
         _type_desc          = typeDesc;
@@ -756,9 +1042,9 @@ public abstract class IonValueImpl
 
     void pos_clear()
     {
-        _isMaterialized     = false;
-        _isPositionLoaded   = false;
-        _isDirty            = true;
+        _isMaterialized(false);
+        _isPositionLoaded(false);
+        _isDirty(true);
 
         _fieldSid           =  0;
         _type_desc          =  0;
@@ -770,10 +1056,10 @@ public abstract class IonValueImpl
 
     void pos_load(int fieldId, Reader valueReader) throws IOException
     {
-        _isMaterialized     = false;
-        _isPositionLoaded   = true;
-        _hasNativeValue     = false;
-        _isDirty            = false; // if we have a buffer, and it's not loaded, it has to be clean
+        _isMaterialized(false);
+        _isPositionLoaded(true);
+        _hasNativeValue(false);
+        _isDirty(false); // if we have a buffer, and it's not loaded, it has to be clean
 
         pos_setFieldId(fieldId);
 
@@ -810,7 +1096,7 @@ public abstract class IonValueImpl
                 // the value length was "wrong"
                 vlen = IonConstants.BINARY_VERSION_MARKER_SIZE - 1;
                 this._next_start = this._value_content_start + vlen;
-                this._isSystemValue = true;
+                this._isSystemValue(true);
             }
             else {
                 // read past the annotation list
@@ -834,25 +1120,31 @@ public abstract class IonValueImpl
         }
     }
 
-    public final byte pos_getTypeDescriptorByte() {
+    public final byte pos_getTypeDescriptorByte()
+    {
         return (byte) this._type_desc;
     }
-    public final void pos_setTypeDescriptorByte(int td) {
+    public final void pos_setTypeDescriptorByte(int td)
+    {
         assert td >= 0 && td <= 0xFF;
         this._type_desc = td;
     }
-    public final int pos_getType() {
+    public final int pos_getType()
+    {
         return IonConstants.getTypeCode(this._type_desc);
     }
 
-    public final int pos_getLowNibble() {
+    public final int pos_getLowNibble()
+    {
         return IonConstants.getLowNibble(this._type_desc);
     }
 
-    public final int pos_getFieldId() {
+    public final int pos_getFieldId()
+    {
         return _fieldSid;
     }
-    public final int pos_getFieldIdLen() {
+    public final int pos_getFieldIdLen()
+    {
         return IonBinary.lenVarUInt7(_fieldSid);
     }
     public final void pos_setFieldId(int fieldNameSid)
@@ -874,40 +1166,50 @@ public abstract class IonValueImpl
         _next_start  += delta;
     }
 
-    public final int pos_getOffsetAtFieldId() {
+    public final int pos_getOffsetAtFieldId()
+    {
         return this._entry_start;
     }
-    public final int pos_getOffsetInitialTD() {
+    public final int pos_getOffsetInitialTD()
+    {
         return this._entry_start + this.pos_getFieldIdLen();
     }
-    public final boolean pos_isAnnotated() {
+    public final boolean pos_isAnnotated()
+    {
         return (this._entry_start + IonBinary.lenVarUInt7(this._fieldSid) != this._value_td_start);
     }
-    public final int pos_getOffsetAtAnnotationTD() {
+    public final int pos_getOffsetAtAnnotationTD()
+    {
         if (this.pos_isAnnotated()) {
             return this.pos_getOffsetInitialTD();
         }
         return -1;
     }
-    public final int pos_getOffsetAtValueTD() {
+    public final int pos_getOffsetAtValueTD()
+    {
         return this._value_td_start;
     }
-    public final int pos_getOffsetAtActualValue() {
+    public final int pos_getOffsetAtActualValue()
+    {
         return this._value_content_start;
     }
-    public final int pos_getOffsetofNextValue() {
+    public final int pos_getOffsetofNextValue()
+    {
         return this._next_start;
     }
-    public final int  pos_getValueOnlyLength() {
+    public final int  pos_getValueOnlyLength()
+    {
         return this._next_start - this._value_content_start;
     }
 
-    public void pos_setEntryStart(int entryStart) {
+    public void pos_setEntryStart(int entryStart)
+    {
         int delta = entryStart - this._entry_start;
         pos_moveAll(delta);
     }
 
-    public void pos_moveAll(int delta) {
+    public void pos_moveAll(int delta)
+    {
         this._entry_start += delta;
         this._value_td_start += delta;
         this._value_content_start += delta;
@@ -926,15 +1228,23 @@ public abstract class IonValueImpl
     /**
      * Decodes the content of this element into Java values for access via
      * this object.  If this is a container, the children are not necessarily
-     * materialized.
+     * materialized.  Real work is in materialize_helper() which has the
+     * synchronization is overridden in IonContainerImpl.  The split should
+     * allow materialize to be in-lined.
      * <p/>
      * Postcondition: <code>this._hasNativeValue == true </code>
+     * <p/>
+     * this method is split to help the JIT inline the base version.
      */
-    protected synchronized void materialize() throws IOException
+    protected final void materialize() throws IOException
     {
-        if ( this._isMaterialized ) return;
-
-        if ( this._isPositionLoaded == false ) {
+        if ( this._isMaterialized() ) return;
+        materialize_helper();
+    }
+    protected synchronized void materialize_helper()
+        throws IOException
+    {
+        if ( this._isPositionLoaded() == false ) {
             if (this._buffer != null) {
                 throw new IonException("invalid value state - buffer but not loaded!");
             }
@@ -946,12 +1256,12 @@ public abstract class IonValueImpl
             throw new IonException("invalid value state - loaded but no buffer!");
         }
 
-        assert ! this._isLocked;
+        assert ! this._isLocked();
 
         IonBinary.Reader reader = _buffer.reader();
         reader.sync();
         if ( ! this.pos_isAnnotated() ) {
-            // if there aren't annoations, just position the reader
+            // if there aren't annontations, just position the reader
             reader.setPosition(this.pos_getOffsetAtValueTD());
         }
         else {
@@ -965,8 +1275,8 @@ public abstract class IonValueImpl
         // TODO doMaterializeValue should precondition !_hasNativeValue and
         // then set _hasNativeValue here, OnceAndOnlyOnce.
         this.doMaterializeValue(reader);
-        assert _hasNativeValue;
-        this._isMaterialized = true;
+        assert _hasNativeValue();
+        this._isMaterialized(true);
     }
 
     protected SymbolTable materializeSymbolTable()
@@ -975,21 +1285,36 @@ public abstract class IonValueImpl
         if (symtab == null && _container != null) {
             symtab = _container.materializeSymbolTable();
         }
-        if (symtab == null) {
+        return symtab;
+    }
+
+    // TODO this is likely to overlap with getUpdateableSymbolTable logic
+    protected SymbolTable materializeUpdateableSymbolTable()
+    {
+        SymbolTable symtab = _symboltable;
+        if (symtab != null && symtab.isLocalTable()) {
+            return symtab;
+        }
+        if (_container != null) {
+            symtab = _container.materializeUpdateableSymbolTable();
+        }
+        else if (!this.isReadOnly()) {
+            if (symtab == null) {
+                symtab = _system.getSystemSymbolTable();
+            }
+            assert symtab.isSystemTable();
             synchronized (this) {
-                // TODO - should this be here or can we put this off
-                //        even longer (until someone asks for the binary
-                //        buffer, for example)
-//                _symboltable = _system.newLocalSymbolTable();
-//                symtab = _symboltable;
+                symtab = makeNewLocalSymbolTable(_system, symtab);
+                this.setSymbolTable(symtab);
             }
         }
+        // else we return whatever we already have
         return symtab;
     }
 
     protected synchronized void materializeAnnotations(IonBinary.Reader reader) throws IOException
     {
-        assert this._isMaterialized == false;
+        assert this._isMaterialized() == false;
 
         if (!this.pos_isAnnotated()) return;
 
@@ -1071,7 +1396,7 @@ public abstract class IonValueImpl
         // Requires prior deep-materialization.
         // Calls setDirty() which also dirties container.
         detachFromSymbolTable();
-        assert _isDirty && _container.isDirty();
+        assert _isDirty() && _container.isDirty();
 
         _container = null;
         _fieldName = null;
@@ -1079,19 +1404,29 @@ public abstract class IonValueImpl
         _elementid = 0;
     }
 
-    protected void setFieldName(String name) {
+    protected void setFieldName(String name)
+    {
         assert this._fieldName == null;
 
         // First materialize, because we're gonna mark ourselves dirty.
         makeReady();
+        String oldname = this._fieldName;
         this._fieldName = name;
         this._fieldSid  = 0;
+        IonContainer container = this._container;
+        if (container != null) {
+            if (IonType.STRUCT.equals(container.getType())) {
+                assert(container instanceof IonStructImpl);
+                ((IonStructImpl)container).updateFieldName(oldname, name, this);
+            }
+        }
         this.setDirty();
     }
 
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         Printer p = new Printer();
         StringBuilder builder = new StringBuilder();
         try {
@@ -1111,15 +1446,15 @@ public abstract class IonValueImpl
         assert !(this instanceof IonContainer);
 
         int len;
-        if (this._isDirty) {
-            assert _hasNativeValue == true || _isPositionLoaded == false;
+        if (this._isDirty()) {
+            assert _hasNativeValue() == true || _isPositionLoaded() == false;
 
             if (isNullValue()) return 0;
 
             len = getNativeValueLength();
         }
         else {
-            assert _isPositionLoaded;
+            assert _isPositionLoaded();
             len = pos_getValueOnlyLength();
         }
         return len;
@@ -1141,7 +1476,8 @@ public abstract class IonValueImpl
      * of the annotation header:
      *      typedesc + overall value length + symbol list length + symbol ids.
      */
-    public int getAnnotationOverheadLength(int valueLen) {
+    public int getAnnotationOverheadLength(int valueLen)
+    {
         int len = 0;
         String[] annotationStrings = this.getTypeAnnotations();
         assert annotationStrings != null;
@@ -1162,20 +1498,17 @@ public abstract class IonValueImpl
         return len;
     }
 
-    int getAnnotationLength() {
+    int getAnnotationLength()
+    {
         int len = 0;
         assert (this._annotations != null);
 
-        SymbolTable symtab =  this.getSymbolTable();
-        if (symtab == null) {
-            symtab = this.materializeSymbolTable();
-// cas symtab:            // TODO:  what should we do here?  Perhaps create a default table?
-// cas symtab:            throw new IonException("can't serialize symbols without a symbol table");
-        }
-
         // first add up the length of the annotations symbol id lengths
         for (int ii=0; ii<_annotations.length; ii++) {
-            int symId = this.getSymbolTable().findSymbol(_annotations[ii]);
+            int symId = resolveSymbol(_annotations[ii]);
+            if (symId <= 0) {
+                symId = addSymbol(_annotations[ii]);
+            }
             if (symId <= 0) {
                 throw new IllegalStateException("the annotation must be in the symbol table");
             }
@@ -1192,13 +1525,15 @@ public abstract class IonValueImpl
      * Gets the size of the encoded field name (a single VarUInt7).
      * @return the size, or zero if there's no field name.
      */
-    public int getFieldNameOverheadLength() {
+    public int getFieldNameOverheadLength()
+    {
         int len = 0;
 
-        if (this._fieldSid == 0 && this._fieldName != null)
+        // CAS: 14 jan 2010 changed fieldSid==0 to fieldSid<=0
+        if (this._fieldSid <= 0 && this._fieldName != null)
         {
             // We haven't interned the symbol, do so now.
-            this._fieldSid = this.getSymbolTable().findSymbol(this._fieldName);
+            this._fieldSid = this.resolveSymbol(this._fieldName);
             if (this._fieldSid <= 0) {
                 throw new IonException("the field name must be in the symbol table, if you're using a name table");
             }
@@ -1218,7 +1553,8 @@ public abstract class IonValueImpl
      * @param contentLength length of the core value.
      * @return at least one.
      */
-    public int getTypeDescriptorAndLengthOverhead(int contentLength) {
+    public int getTypeDescriptorAndLengthOverhead(int contentLength)
+    {
         int len = IonConstants.BB_TOKEN_LEN;
 
         if (isNullValue()) return len;
@@ -1294,8 +1630,9 @@ public abstract class IonValueImpl
      * changed.
      * @throws IOException
      */
-    protected final int updateToken() throws IOException {
-        if (!this._isDirty) return 0;
+    protected final int updateToken() throws IOException
+    {
+        if (!this._isDirty()) return 0;
 
         int old_next_start = _next_start;
 
@@ -1310,7 +1647,10 @@ public abstract class IonValueImpl
             assert this._container != null;
             assert this._container.pos_getType() == IonConstants.tidStruct;
 
-            newFieldSid = getSymbolTable().addSymbol(_fieldName);
+            newFieldSid  = this.resolveSymbol(_fieldName);
+            if (newFieldSid < 1) {
+                newFieldSid = this.addSymbol(_fieldName);
+            }
             fieldSidLen  = IonBinary.lenVarUInt7(newFieldSid);
         }
 
@@ -1338,7 +1678,7 @@ public abstract class IonValueImpl
         // overwrite the sid as everything is computed on the new value
         _fieldSid = newFieldSid;
 
-        _isPositionLoaded = true;
+        _isPositionLoaded(true);
 
         // and the delta is how far the end moved
         return _next_start - old_next_start;
@@ -1379,21 +1719,25 @@ public abstract class IonValueImpl
     /**
      * Adds all of our annotations into the symbol table.
      */
-    public void updateSymbolTable(SymbolTable symtab)
+    public SymbolTable populateSymbolValues(SymbolTable symtab)
     {
-        checkForLock();
-
         // TODO can any of this be short-circuited?
 
         if (this._annotations != null) {
             for (String s : this._annotations) {
-                symtab.addSymbol(s);
+                int sid = this.resolveSymbol(s);
+                if (sid < 1) {
+                    checkForLock();
+                    symtab = this.addSymbol(s, symtab);
+                }
             }
         }
 
         if (this._fieldName != null) {
-            symtab.addSymbol(this._fieldName);
+            symtab = this.getFieldId(symtab);
         }
+
+        return symtab;
     }
 
     /**
@@ -1430,7 +1774,7 @@ public abstract class IonValueImpl
         assert writer != null;
         assert writer.position() == newPosition;
 
-        if (!this._isDirty)
+        if (!this._isDirty())
         {
             // We don't need to re-encode, but we may need to move our data
             // and we must update our positions to deal with buffer movement.
@@ -1517,24 +1861,10 @@ public abstract class IonValueImpl
 
         int oldEndOfValue = pos_getOffsetofNextValue();
 
-//int oldPosition = pos_getOffsetAtFieldId();
-//int oldLength = pos_getOffsetofNextValue() - oldPosition;
-//int nakedLength = getNakedValueLength();
-//int newLength =
-//  ((_fieldName == null) ? 0 : IonBinary.lenVarUInt7(getSymbolTable().addSymbol(_fieldName)))
-//  + nakedLength
-//  + getTypeDescriptorAndLengthOverhead(nakedLength);
 
         pos_moveAll(cumulativePositionDelta);
 
         assert newPosition <= pos_getOffsetAtFieldId();
-
-        // Do we need to insert more space?
-//assert oldEndOfValue - oldLength + newLength - newPosition > 1;
-//assert oldEndOfValue - newPosition > 1;
-        // TODO why 1?? shouldn't this be > 0
-        // TODO why might this be here at all?? the value might have moved any amount
-        //      and the newPosition has no relationship to the old end of this value
 
         updateToken();
 
@@ -1608,6 +1938,9 @@ public abstract class IonValueImpl
 
             writer.writeCommonHeader(IonConstants.tidTypedecl,
                                                 wrappedLength);
+            // this is depending on getAnnotationLength() to have
+            // added all the symbols as necessary so that writeAnnotations
+            // doesn't have to update the symbol table
             writer.writeAnnotations(_annotations, this.getSymbolTable());
         }
     }
@@ -1666,10 +1999,13 @@ public abstract class IonValueImpl
      *          content and annotations.
      */
     @Override
-    public boolean equals(final Object other) {
-        // TODO we can make this more efficient since we have impl details
-
+    public boolean equals(final Object other)
+    {
         boolean same = false;
+        if (other == this) {
+            // we shouldn't make 3 deep method calls for this common case
+            return true;
+        }
         if (other instanceof IonValue)
         {
             same = ionEquals(this, (IonValue) other);

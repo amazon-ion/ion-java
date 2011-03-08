@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -250,29 +250,58 @@ public interface ValueFactory
      *   if any value in {@code values} is null.
      * @throws IllegalArgumentException
      *   if any value in {@code values} is an {@link IonDatagram}.
+     *
+     * @deprecated This method can be invoked (accidentally and incorrectly)
+     *  with an {@link IonSequence}!  Use either {@link #newList(IonValue...)}
+     *  or {@link #newList(IonValue...) newList()}{@link
+     *  IonSequence#addAll(Collection) .addAll(Collection)}.
      */
+    @Deprecated
     public IonList newList(Collection<? extends IonValue> values)
         throws ContainedValueException, NullPointerException;
 
 
     /**
-     * Constructs a new <code>list</code> with given children.
+     * Constructs a new {@code list} with the given child.
+     * <p>
+     * <b>This method is temporary</b> until {@link #newList(Collection)} is
+     * removed.  It's sole purpose is to avoid the doomed attempt to add all
+     * of the parameter's children to the new list; that will always throw
+     * {@link ContainedValueException}.
      *
-     * @param values
-     *  the initial set of children.  If <code>null</code>, then the new
-     *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
-     *  If a value is Java <code>null</code>, its corresponding element in
-     *  the result will be an {@link IonNull} value.
+     * @param child the initial child of the new list.
      *
+     * @throws NullPointerException if {@code child} is null.
+     * @throws IllegalArgumentException if {@code child} is an {@link IonDatagram}.
      * @throws ContainedValueException
-     *  if any value in {@code values}
+     *  if {@code child}
      *  has <code>{@link IonValue#getContainer()} != null</code>.
-     * @throws NullPointerException
-     *   if any value in {@code values} is null.
-     * @throws IllegalArgumentException
-     *   if any value in {@code values} is an {@link IonDatagram}.
      */
-    public <T extends IonValue> IonList newList(T... values)
+    public IonList newList(IonSequence child)
+        throws ContainedValueException, NullPointerException;
+
+
+    /**
+     * Constructs a new {@code list} with the given children.
+     * <p>
+     * Some edge cases are worth examples:
+     * <pre>
+     *  factory.newList();                     // returns []
+     *  factory.newList((IonValue[]) null);    // returns null.list
+     * </pre>
+     * For clarity, applications should prefer {@link #newEmptyList()} and
+     * {@link #newNullList()} instead.
+     *
+     * @param children
+     *  the initial sequence of children.  If <code>null</code>, then the new
+     *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
+     *
+     * @throws NullPointerException if any child is null.
+     * @throws IllegalArgumentException if any child is an {@link IonDatagram}.
+     * @throws ContainedValueException
+     *  if any child has <code>{@link IonValue#getContainer()} != null</code>.
+     */
+    public IonList newList(IonValue... children)
         throws ContainedValueException, NullPointerException;
 
 
@@ -354,27 +383,57 @@ public interface ValueFactory
      *   if any value in {@code values} is null.
      * @throws IllegalArgumentException
      *   if any value in {@code values} is an {@link IonDatagram}.
+     *
+     * @deprecated This method can be invoked (accidentally and incorrectly)
+     *  with an {@link IonSequence}!  Use either {@link #newSexp(IonValue...)}
+     *  or {@link #newSexp(IonValue...) newSexp()}{@link
+     *  IonSequence#addAll(Collection) .addAll(Collection)}.
      */
+    @Deprecated
     public IonSexp newSexp(Collection<? extends IonValue> values)
         throws ContainedValueException, NullPointerException;
 
+    /**
+     * Constructs a new {@code sexp} with the given child.
+     * <p>
+     * <b>This method is temporary</b> until {@link #newSexp(Collection)} is
+     * removed.  It's sole purpose is to avoid the doomed attempt to add all
+     * of the parameter's children to the new sequence; that will always throw
+     * {@link ContainedValueException}.
+     *
+     * @param child the initial child of the new sexp.
+     *
+     * @throws NullPointerException if {@code child} is null.
+     * @throws IllegalArgumentException
+     *  if {@code child} is an {@link IonDatagram}.
+     * @throws ContainedValueException
+     *  if {@code child}
+     *  has <code>{@link IonValue#getContainer()} != null</code>.
+     */
+    public IonSexp newSexp(IonSequence child)
+        throws ContainedValueException, NullPointerException;
 
     /**
      * Constructs a new <code>sexp</code> with given child elements.
+     * <p>
+     * Some edge cases are worth examples:
+     * <pre>
+     *  factory.newSexp();                     // returns ()
+     *  factory.newSexp((IonValue[]) null);    // returns null.sexp
+     * </pre>
+     * For clarity, applications should prefer {@link #newEmptySexp()} and
+     * {@link #newNullSexp()} instead.
      *
-     * @param values
+     * @param children
      *  the initial set of children.  If <code>null</code>, then the new
      *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
      *
+     * @throws NullPointerException if any child is null.
+     * @throws IllegalArgumentException if any child is an {@link IonDatagram}.
      * @throws ContainedValueException
-     *  if any value in {@code values}
-     *  has <code>{@link IonValue#getContainer()} != null</code>.
-     * @throws NullPointerException
-     *   if any value in {@code values} is null.
-     * @throws IllegalArgumentException
-     *   if any value in {@code values} is an {@link IonDatagram}.
+     *  if any child has <code>{@link IonValue#getContainer()} != null</code>.
      */
-    public <T extends IonValue> IonSexp newSexp(T... values)
+    public IonSexp newSexp(IonValue... children)
         throws ContainedValueException, NullPointerException;
 
 

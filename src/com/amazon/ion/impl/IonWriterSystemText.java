@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -8,45 +6,35 @@ import static com.amazon.ion.impl.IonConstants.tidList;
 import static com.amazon.ion.impl.IonConstants.tidSexp;
 import static com.amazon.ion.impl.IonConstants.tidStruct;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonNumber;
+import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.Base64Encoder.TextStream;
 import com.amazon.ion.impl.IonBinary.BufferManager;
+import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import com.amazon.ion.util.IonTextUtils;
 import java.io.ByteArrayInputStream;
+import java.io.Closeable;
+import java.io.Flushable;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.PrintStream;
-import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.CharBuffer;
-import java.util.Date;
 
 /**
- * A concrete implementation of IonWriter which writes the
- * values out as text.  It writes the value out as UTF-8.  The
- * constructor offers the option of pretty printing the value
- * and also offers the option of generating pure ascii output.
- * In the event pure ascii is chosen (utf8asascii) non-ascii
- * characters are emitted as \\u or \\U escaped hex values. If
- * this is not chosen the output stream may contain unicode
- * character directly, which is often not a readable.  Either
- * form will be parsed, by an Ion parser, into the same Ion
- * values however the u encodings may be longer in the text
- * form and less readable in some environments.
+ *
  */
-public final class IonTextWriter
-    extends IonBaseWriter
+public class IonWriterSystemText
+    extends IonWriterBaseImpl
 {
-    private final String _lineSeparator = System.getProperty("line.separator");
-
-    boolean      _pretty;
-    boolean      _printAscii;
-    final Appendable _output;
+    /** Not null. */
+    final private Appendable _output;
+    /** Not null. */
+    final private TextOptions _options;
 
     BufferManager _manager;
 
@@ -60,104 +48,129 @@ public final class IonTextWriter
     boolean[]   _stack_pending_comma = new boolean[10];
 
 
-    public IonTextWriter() {
-        this(false, true);
-    }
-
     /**
-     * Creates a non-pretty UTF-8 writer.
+     * @throws NullPointerException if any parameter is null.
      */
-    public IonTextWriter(Appendable out) {
-        this(out, false, false);
-    }
+    protected IonWriterSystemText(IonSystem system,
+                                  SymbolTable defaultSystemSymtab,
+                                  OutputStream out, TextOptions options)
+    {
+        super(system, defaultSystemSymtab);
 
-    /**
-     * Creates a non-pretty UTF-8 writer.
-     */
-    public IonTextWriter(OutputStream out) {
-        this(out, false, false);
-    }
+        out.getClass(); // Efficient null check
+        options.getClass(); // Efficient null check
 
-    public IonTextWriter(boolean prettyPrint) {
-        this(prettyPrint, true);  // FIXME should print UTF-8
-    }
-
-    /**
-     * Creates a UTF-8 writer.
-     */
-    public IonTextWriter(OutputStream out, boolean prettyPrint) {
-        this(out, prettyPrint, false);
-    }
-    public IonTextWriter(boolean prettyPrint, boolean printAscii) {
-        _manager = new BufferManager();
-        _output = initStream(_manager.openWriter());
-        initFlags(prettyPrint, printAscii);
-    }
-    public IonTextWriter(OutputStream out, boolean prettyPrint, boolean printAscii) {
         if (out instanceof Appendable) {
             _output = (Appendable)out;
         }
         else {
-            _output = initStream(out);
+            _output = new IonUTF8.CharToUTF8(out);
         }
-        initFlags(prettyPrint, printAscii);
-    }
-    public IonTextWriter(Appendable out, boolean prettyPrint, boolean printAscii) {
-        _output = out;
-        initFlags(prettyPrint, printAscii);
+        _options = options;
+        set_separator_character();
     }
 
     /**
-     * Wraps an {@link OutputStream} with a UTF-8 {@link PrintStream}.
-     *
-     * @param out must not be null.
-     * @return a new {@link PrintStream}.
+     * @throws NullPointerException if any parameter is null.
      */
-    private PrintStream initStream(OutputStream out)
+    protected IonWriterSystemText(IonSystem system,
+                                  SymbolTable defaultSystemSymtab,
+                                  Appendable out, TextOptions options)
     {
-        try
-        {
-            final boolean autoFlush = false;
-            return new PrintStream(out, autoFlush, "UTF-8");
-        }
-        catch (UnsupportedEncodingException e)
-        {
-            throw new IonException(e);
-        }
+        super(system, defaultSystemSymtab);
+
+        out.getClass(); // Efficient null check
+        options.getClass(); // Efficient null check
+
+        _output = out;
+        _options = options;
+        set_separator_character();
     }
 
-    void initFlags(boolean prettyPrint, boolean printAscii) {
-        _pretty = prettyPrint;
-        _printAscii = printAscii;
-        _separator_character = ' ';
+    /**
+     * FIXME HACK for IMSv3 that WILL NOT BE MAINTAINED
+     */
+    @Deprecated
+    Appendable getOutput()
+    {
+        return _output;
     }
 
+    TextOptions getOptions()
+    {
+        return _options;
+    }
+
+    void set_separator_character()
+    {
+        if (_options.isPrettyPrintOn()) {
+            _separator_character = '\n';
+        }
+        else {
+            _separator_character = ' ';
+        }
+    }
 
     @Override
-    protected void setSymbolTable(SymbolTable symbols)
-        throws IOException
+    void reset() throws IOException
     {
-        if (_top != 0)
-        {
-            throw new IllegalStateException("not at top level");
+        if (getDepth() != 0) {
+            throw new IllegalStateException("you can't reset a writer that is in the middle of writing a value");
         }
+        setSymbolTable(_default_system_symbol_table);
+    }
 
-        // This ensures that symbols is system or local
-        super.setSymbolTable(symbols);
-
-        startValue();
-        _output.append(symbols.getIonVersionId());
-        closeValue();
-
-        if (symbols.isLocalTable())
-        {
-            symbols.writeTo(this);
-        }
+    @Override
+    UnifiedSymbolTable inject_local_symbol_table() throws IOException
+    {
+        // no catalog since it doesn't matter as this is a
+        // pure local table, with no imports
+        UnifiedSymbolTable symbols
+            = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _symbol_table);
+        return symbols;
     }
 
 
+    //@Override
+    //public void setSymbolTable(SymbolTable symbols)
+    // it is unnecessary to override setSymbolTable
+    // for the system text writer since it doesn't
+    // need any work beyond the base method
+
+    @Override
+    public int getDepth()
+    {
+        return _top;
+    }
     public boolean isInStruct() {
         return this._in_struct;
+    }
+    protected IonType getContainer()
+    {
+        IonType container;
+
+        if (_top < 1) {
+            container = IonType.DATAGRAM;
+        }
+        else {
+            switch(_stack_parent_type[_top-1]) {
+            case IonConstants.tidDATAGRAM:
+                container = IonType.DATAGRAM;
+                break;
+            case IonConstants.tidSexp:
+                container = IonType.SEXP;
+                break;
+            case IonConstants.tidList:
+                container = IonType.LIST;
+                break;
+            case IonConstants.tidStruct:
+                container = IonType.STRUCT;
+                break;
+            default:
+                throw new IonException("unexpected container in parent stack: "+_stack_parent_type[_top-1]);
+            }
+        }
+        return container;
     }
     void push(int typeid)
     {
@@ -176,7 +189,7 @@ public final class IonTextWriter
             _separator_character = ',';
             break;
         default:
-            _separator_character = _pretty ? '\n' : ' ';
+            _separator_character = _options.isPrettyPrintOn() ? '\n' : ' ';
         break;
         }
         _top++;
@@ -211,7 +224,7 @@ public final class IonTextWriter
             _separator_character = ',';
             break;
         default:
-            _separator_character = _pretty ? '\n' : ' ';
+            _separator_character = _options.isPrettyPrintOn() ? '\n' : ' ';
         break;
         }
 
@@ -235,19 +248,19 @@ public final class IonTextWriter
         }
     }
     void closeCollection(char closeChar) throws IOException {
-       if (_pretty) {
-           _output.append(_lineSeparator);
+       if (_options.isPrettyPrintOn()) {
+           _output.append(_options.lineSeparator());
            printLeadingWhiteSpace();
        }
        _output.append(closeChar);
     }
     void startValue() throws IOException
     {
-        if (_pretty) {
+        if (_options.isPrettyPrintOn()) {
             if (_pending_separator && _separator_character != '\n') {
                 _output.append((char)_separator_character);
             }
-            _output.append(_lineSeparator);
+            _output.append(_options.lineSeparator());
             printLeadingWhiteSpace();
         }
         else if (_pending_separator) {
@@ -256,7 +269,7 @@ public final class IonTextWriter
 
         // write field name
         if (_in_struct) {
-            String name = super.get_field_name_as_string();
+            String name = getFieldName();
             if (name == null) {
                 throw new IllegalStateException(ERROR_MISSING_FIELD_NAME);
             }
@@ -268,7 +281,7 @@ public final class IonTextWriter
         // write annotations
         int annotation_count = super._annotation_count;
         if (annotation_count > 0) {
-            String[] annotations = super.get_annotations_as_strings();
+            String[] annotations = getTypeAnnotations();
             for (int ii=0; ii<annotation_count; ii++) {
                 String name = annotations[ii];
                 IonTextUtils.printSymbol(_output, name);
@@ -325,6 +338,7 @@ public final class IonTextWriter
 
     }
 
+    @Override
     public void writeNull()
         throws IOException
     {
@@ -366,20 +380,6 @@ public final class IonTextWriter
         _output.append(value ? "true" : "false");
         closeValue();
     }
-    public void writeInt(byte value)
-        throws IOException
-    {
-        startValue();
-        _output.append(value+"");
-        closeValue();
-    }
-    public void writeInt(short value)
-        throws IOException
-    {
-        startValue();
-        _output.append(value+"");
-        closeValue();
-    }
     public void writeInt(int value)
         throws IOException
     {
@@ -394,12 +394,17 @@ public final class IonTextWriter
         _output.append(value+"");
         closeValue();
     }
-    public void writeFloat(float value)
-        throws IOException
+    public void writeInt(BigInteger value) throws IOException
     {
-        writeFloat((double)value);
+        if (value == null) {
+            writeNull(IonType.INT);
+        }
+        else {
+            startValue();
+            _output.append(value.toString());
+            closeValue();
+        }
     }
-
     public void writeFloat(double value)
         throws IOException
     {
@@ -439,44 +444,83 @@ public final class IonTextWriter
         closeValue();
     }
 
-    public void writeDecimal(BigDecimal value, IonNumber.Classification classification)
-        throws IOException
-    {
-        boolean is_negative_zero = IonNumber.Classification.NEGATIVE_ZERO.equals(classification);
 
-        if (is_negative_zero) {
-            if (value == null || value.signum() != 0) throw new IllegalArgumentException("the value must be zero to write a negative zero");
+    @Override
+    public void writeDecimal(BigDecimal value) throws IOException
+    {
+        if (value == null) {
+            writeNull(IonType.DECIMAL);
         }
+        else {
+            startValue();
+            BigDecimal decimal = value;
+            BigInteger unscaled = decimal.unscaledValue();
 
-        startValue();
-        BigInteger unscaled = value.unscaledValue();
+            int signum = decimal.signum();
+            if (signum < 0)
+            {
+                _output.append('-');
+                unscaled = unscaled.negate();
+            }
+            else if (decimal instanceof Decimal
+                 && ((Decimal)decimal).isNegativeZero())
+            {
+                // for the various forms of negative zero we have to
+                // write the sign ourselves, since neither BigInteger
+                // nor BigDecimal recognize negative zero, but Ion does.
+                _output.append('-');
+            }
 
-        if (is_negative_zero) {
-            assert value.signum() == 0;
-            _output.append('-');
+            final String unscaledText = unscaled.toString();
+            final int significantDigits = unscaledText.length();
+
+            final int scale = decimal.scale();
+            final int exponent = -scale;
+
+            if (exponent == 0)
+            {
+                _output.append(unscaledText);
+                _output.append('.');
+            }
+            else if (0 < scale)
+            {
+                int wholeDigits;
+                int remainingScale;
+                if (significantDigits > scale)
+                {
+                    wholeDigits = significantDigits - scale;
+                    remainingScale = 0;
+                }
+                else
+                {
+                    wholeDigits = 1;
+                    remainingScale = scale - significantDigits + 1;
+                }
+
+                _output.append(unscaledText, 0, wholeDigits);
+                if (wholeDigits < significantDigits)
+                {
+                    _output.append('.');
+                    _output.append(unscaledText, wholeDigits,
+                                 significantDigits);
+                }
+
+                if (remainingScale != 0)
+                {
+                    _output.append("d-");
+                    _output.append(Integer.toString(remainingScale));
+                }
+            }
+            else // (exponent > 0)
+            {
+                // We cannot move the decimal point to the right, adding
+                // rightmost zeros, because that would alter the precision.
+                _output.append(unscaledText);
+                _output.append('d');
+                _output.append(Integer.toString(exponent));
+            }
+            closeValue();
         }
-
-        _output.append(unscaled.toString());
-        _output.append('d');
-        _output.append(Integer.toString(-value.scale()));
-
-        closeValue();
-    }
-
-    @Deprecated
-    public void writeTimestamp(Date value, Integer localOffset)
-        throws IOException
-    {
-        Timestamp ts =
-            (value == null ? null : new Timestamp(value.getTime(), localOffset));
-        writeTimestamp(ts);
-    }
-
-    @Deprecated
-    public void writeTimestampUTC(Date value)
-        throws IOException
-    {
-        writeTimestamp(value, Timestamp.UTC_OFFSET);
     }
 
     public void writeTimestamp(Timestamp value) throws IOException
@@ -534,15 +578,10 @@ public final class IonTextWriter
         closeValue();
     }
 
-    public void writeBlob(byte[] value)
-        throws IOException
+    @Override
+    public void writeIonVersionMarker() throws IOException
     {
-        if (value == null) {
-            writeNull(IonType.BLOB);
-        }
-        else {
-            writeBlob(value, 0, value.length);
-        }
+        writeSymbol(UnifiedSymbolTable.ION_1_0);
     }
 
     public void writeBlob(byte[] value, int start, int len)
@@ -554,28 +593,21 @@ public final class IonTextWriter
         _output.append("{{");
         // base64 encoding is 6 bits per char so
         // it evens out at 3 bytes in 4 characters
-        char[] buf = new char[_pretty ? 80 : 400];
+        char[] buf = new char[_options.isPrettyPrintOn() ? 80 : 400];
         CharBuffer cb = CharBuffer.wrap(buf);
-        if (_pretty) _output.append(" ");
+        if (_options.isPrettyPrintOn()) {
+            _output.append(" ");
+        }
         for (;;) {
             int clen = ts.read(buf, 0, buf.length);
             if (clen < 1) break;
             _output.append(cb, 0, clen);
         }
-        if (_pretty) _output.append(" ");
+        if (_options.isPrettyPrintOn()) {
+            _output.append(" ");
+        }
         _output.append("}}");
         closeValue();
-    }
-
-    public void writeClob(byte[] value)
-        throws IOException
-    {
-        if (value == null) {
-            writeNull(IonType.CLOB);
-        }
-        else {
-            writeClob(value, 0, value.length);
-        }
     }
 
     public void writeClob(byte[] value, int start, int len)
@@ -584,17 +616,30 @@ public final class IonTextWriter
         startValue();
         _output.append("{{");
 
-        if (_pretty) _output.append(" ");
+        if (_options.isPrettyPrintOn()) {
+            _output.append(" ");
+        }
         _output.append('"');
 
+        boolean just_ascii = _options.isAsciiOutputOn();
         int end = start + len;
         for (int ii=start; ii<end; ii++) {
             char c = (char)(value[ii] & 0xff);
             if (c < 32 ) {
                 _output.append(lowEscapeSequence(c));
             }
-            else if (c == 128) {
-                _output.append("\\x80");
+            else if (c > 127) {
+                if (just_ascii) {
+                    // ascii uses backslash-X hex encoding
+                    _output.append("\\x");
+                    assert (c > 0x7f && c <= 0xff); // this should always be 2 hex chars
+                    _output.append(Integer.toHexString(c));
+                }
+                else {
+                    // non-ascii (utf8) uses a 2 byte utf8 sequence (it's always 2 bytes)
+                    _output.append((char)(IonUTF8.getByte1Of2(c) & 0xff));
+                    _output.append((char)(IonUTF8.getByte2Of2(c) & 0xff));
+                }
             }
             else {
                 switch (c) {
@@ -609,66 +654,28 @@ public final class IonTextWriter
             }
         }
         _output.append('"');
-        if (_pretty) _output.append(" ");
+        if (_options.isPrettyPrintOn()) {
+            _output.append(" ");
+        }
         _output.append("}}");
         closeValue();
     }
 
-    public byte[] getBytes()
-        throws IOException
+    public void flush() throws IOException
     {
-        if (_manager == null) {
-            throw new IllegalStateException("this writer was not created with buffer backing");
+        if (_output instanceof Flushable) {
+            ((Flushable)_output).flush();
         }
-        byte[] bytes = null;
-        int len = _manager.buffer().size();
-        bytes = new byte[len];
-        IonBinary.Reader r = _manager.openReader();
-        r.sync();
-        r.setPosition(0); // just in case
-        len = r.read(bytes);
-        if (len != _manager.buffer().size()) {
-            throw new IllegalStateException("inconsistant buffer sizes encountered");
-        }
-        return bytes;
     }
-    public int getBytes(byte[] bytes, int offset, int maxlen)
-        throws IOException
-    {
-        if (_manager == null) {
-            throw new IllegalStateException("this writer was not created with buffer backing");
-        }
-        int buffer_length = _manager.buffer().size();
-        if (buffer_length > maxlen) {
-            throw new IllegalArgumentException();
-        }
-        IonBinary.Reader r = _manager.openReader();
-        r.sync();
-        r.setPosition(0); // just in case
-        int len = r.read(bytes, offset, buffer_length);
-        if (buffer_length != _manager.buffer().size()) {
-            throw new IllegalStateException("inconsistant buffer sizes encountered");
-        }
-        return len;
-    }
-    public int writeBytes(SimpleByteBuffer.SimpleByteWriter out) // OutputStream out)
-        throws IOException
-    {
-        if (_manager == null) {
-            throw new IllegalStateException("this writer was not created with buffer backing");
-        }
-        int buffer_length = _manager.buffer().size();
 
-        IonBinary.Reader r = _manager.openReader();
-        r.sync();
-        r.setPosition(0); // just in case
-
-        int len = r.writeTo((ByteWriter)out, buffer_length);
-        // FIXME: why is this comparing the same value?  Has this just been turned off?
-        if (buffer_length != buffer_length) {
-            throw new IllegalStateException("inconsistant buffer sizes encountered");
+    public void close() throws IOException
+    {
+        if (getDepth() == 0) {
+            finish();
         }
-        return len;
+        if (_output instanceof Closeable) {
+            ((Closeable)_output).close();
+        }
     }
 }
 

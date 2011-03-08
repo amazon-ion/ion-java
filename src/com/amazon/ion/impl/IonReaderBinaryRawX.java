@@ -1,10 +1,10 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2010 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion.impl;
+
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
-import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.Timestamp.Precision;
 import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
@@ -14,8 +14,8 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
-import java.util.Date;
-import java.util.Iterator;
+
+
 /**
  *  low level reader, base class, for reading Ion binary
  *  input sources.  This using the UnifiedInputStream just
@@ -55,6 +55,11 @@ abstract public class IonReaderBinaryRawX
     IonType             _value_type;
     boolean             _value_is_null;
     boolean             _value_is_true;   // cached boolean value (since we step on the length)
+
+    /**
+     * {@link UnifiedSymbolTable#UNKNOWN_SID} means "not on a struct field"
+     * since otherwise we always know the SID.
+     */
     int                 _value_field_id;
     int                 _value_tid;
     int                 _value_len;
@@ -86,6 +91,12 @@ abstract public class IonReaderBinaryRawX
         _v = new ValueVariant();
         _annotation_ids = new int[DEFAULT_ANNOTATION_SIZE];
         _has_next_needed = true;
+    }
+
+    public void close()
+        throws IOException
+    {
+        _input.close();
     }
 
     static private final int  POS_OFFSET        = 0;
@@ -120,7 +131,7 @@ abstract public class IonReaderBinaryRawX
         long type_limit = _container_stack[(_container_top - POS_STACK_STEP) + TYPE_LIMIT_OFFSET];
         int type = (int)(type_limit & TYPE_MASK);
         if (type < 0 || type > IonConstants.tidDATAGRAM) {
-            error_at("invalid type id in parent stack");
+            throwErrorAt("invalid type id in parent stack");
         }
         return type;
     }
@@ -178,8 +189,11 @@ abstract public class IonReaderBinaryRawX
         while (_value_tid == -1 && !_eof) {
             switch (_state) {
             case S_BEFORE_FIELD:
+                assert _value_field_id == UnifiedSymbolTable.UNKNOWN_SID;
                 _value_field_id = read_field_id();
                 if (_value_field_id == UnifiedInputStreamX.EOF) {
+                    // FIXME why is EOF ever okay in the middle of a struct?
+                    assert UnifiedInputStreamX.EOF == UnifiedSymbolTable.UNKNOWN_SID;
                     _eof = true;
                     break;
                 }
@@ -236,7 +250,7 @@ abstract public class IonReaderBinaryRawX
         for (int ii=1; ii<IonConstants.BINARY_VERSION_MARKER_1_0.length; ii++) {
             int b = read();
             if (b != (IonConstants.BINARY_VERSION_MARKER_1_0[ii] & 0xff)) {
-                error_at("invalid binary image");
+                throwErrorAt("invalid binary image");
             }
         }
         // so it's a 4 byte version marker - make it look like
@@ -272,7 +286,7 @@ abstract public class IonReaderBinaryRawX
         // that is there now, before the call)
         _value_tid = read_type_id();
         if (_value_tid == UnifiedInputStreamX.EOF) {
-            error_at("unexpected EOF encountered where a type descriptor byte was expected");
+            throwErrorAt("unexpected EOF encountered where a type descriptor byte was expected");
         }
 
         value_type = get_iontype_from_tid(_value_tid);
@@ -329,6 +343,10 @@ abstract public class IonReaderBinaryRawX
         _annotation_count = 0;
         _value_field_id = UnifiedSymbolTable.UNKNOWN_SID;
     }
+
+    /**
+     * @return the field SID, or -1 if at EOF.
+     */
     private final int read_field_id() throws IOException
     {
         int field_id = readVarUIntOrEOF();
@@ -347,7 +365,7 @@ abstract public class IonReaderBinaryRawX
         }
         else if (tid == IonConstants.tidNull) {
             if (len != IonConstants.lnIsNull) {
-                error_at("invalid null type descriptor");
+                throwErrorAt("invalid null type descriptor");
             }
             _value_is_null = true;
             len = 0;
@@ -367,7 +385,7 @@ abstract public class IonReaderBinaryRawX
                     _value_is_true = true;
                     break;
                 default:
-                    error_at("invalid length nibble in boolean value: "+len);
+                    throwErrorAt("invalid length nibble in boolean value: "+len);
                     break;
             }
             len = 0;
@@ -491,7 +509,7 @@ abstract public class IonReaderBinaryRawX
         pop();
         _eof = false;
         _parent_tid = parent_tid;
-        _local_remaining = local_remaining;
+        // later, only after we've skipped to our new location: _local_remaining = local_remaining;
         if (_parent_tid == IonConstants.tidStruct) {
             _is_in_struct = true;
             _state = State.S_BEFORE_FIELD;
@@ -527,6 +545,7 @@ abstract public class IonReaderBinaryRawX
             error(message);
         }
         assert(next_position == getPosition());
+        _local_remaining = local_remaining;
     }
     public int byteSize()
     {
@@ -657,6 +676,28 @@ abstract public class IonReaderBinaryRawX
         }
         return read;
     }
+    /**
+     * Uses {@link #read(byte[], int, int)} until the entire length is read.
+     * This method will block until the request is satisfied.
+     *
+     * @param buf       The buffer to read to.
+     * @param offset    The offset of the buffer to read from.
+     * @param len       The length of the data to read.
+     */
+    public void readAll(byte[] buf, int offset, int len) throws IOException
+    {
+        int rem = len;
+        while (rem > 0)
+        {
+            int amount = read(buf, offset, rem);
+            if (amount <= 0)
+            {
+                throwUnexpectedEOFException();
+            }
+            rem -= amount;
+            offset += amount;
+        }
+    }
     private final boolean isEOF() {
         if (_local_remaining > 0) return false;
         if (_local_remaining == NO_LIMIT) {
@@ -726,14 +767,12 @@ abstract public class IonReaderBinaryRawX
         }
         return retvalue;
     }
-    // TODO: untested (as yet)
     protected final BigInteger readBigInteger(int len, boolean is_negative) throws IOException
     {
-        int bitlen = len;
         BigInteger value;
-        if (bitlen > 0) {
-            byte[] bits = new byte[bitlen];
-            read(bits, 0, bitlen);
+        if (len > 0) {
+            byte[] bits = new byte[len];
+            readAll(bits, 0, len);
             int signum = is_negative ? -1 : 1;
             value = new BigInteger(signum, bits);
         }
@@ -964,7 +1003,7 @@ done:   for (;;) {
             if (_local_remaining > 0)
             {
                 byte[] bits = new byte[_local_remaining];
-                read(bits, 0, _local_remaining);
+                readAll(bits, 0, _local_remaining);
                 signum = 1;
                 if (bits[0] < 0)
                 {
@@ -999,7 +1038,6 @@ done:   for (;;) {
             // nothing to do here - and the timestamp will be NULL
             return null;
         }
-        Timestamp val;
         Precision   p = null;
         Integer     offset = null;
         int         year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
@@ -1044,8 +1082,17 @@ done:   for (;;) {
         // restore out outer limit(s)
         _local_remaining  = save_limit;
         // now we let timestamp put it all together
-        val = Timestamp.createFromUtcFields(p, year, month, day, hour, minute, second, frac, offset);
-        return val;
+        try {
+            Timestamp val =
+                Timestamp.createFromUtcFields(p, year, month, day, hour,
+                                              minute, second, frac, offset);
+            return val;
+        }
+        catch (IllegalArgumentException e)
+        {
+            // Rewrap to the expected type.
+            throw newErrorAt(e.getMessage());
+        }
     }
     protected final String readString(int len) throws IOException
     {
@@ -1117,95 +1164,26 @@ done:   for (;;) {
     }
     private final void throwUTF8Exception() throws IOException
     {
-        error_at("Invalid UTF-8 character encounter in a string at position ");
+        throwErrorAt("Invalid UTF-8 character encounter in a string at position ");
     }
     private final void throwUnexpectedEOFException() throws IOException {
-        error_at("unexpected EOF in value");
+        throwErrorAt("unexpected EOF in value");
     }
     private final void throwIntOverflowExeption() throws IOException {
-        error_at("int in stream is too long for a Java int 32 use readLong()");
+        throwErrorAt("int in stream is too long for a Java int 32 use readLong()");
     }
-    //
-    // public methods that typically user level methods
-    // these are filled in by either the system reader
-    // or the user reader.  Here they just fail.
-    //
-    public BigInteger bigIntegerValue()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public BigDecimal bigDecimalValue()
-  {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public boolean booleanValue()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public Date dateValue()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public double doubleValue()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public int getFieldId()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public String getFieldName()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public int getSymbolId()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public SymbolTable getSymbolTable()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public int[] getTypeAnnotationIds()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public String[] getTypeAnnotations()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public int intValue()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public Iterator<Integer> iterateTypeAnnotationIds()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public Iterator<String> iterateTypeAnnotations()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public long longValue()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public String stringValue()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    public Timestamp timestampValue()
-    {
-        throw new IonReaderBinaryExceptionX("E_NOT_IMPL");
-    }
-    protected void error_at(String msg) {
+
+    protected IonException newErrorAt(String msg) {
         String msg2 = msg + " at position " + getPosition();
-        throw new IonReaderBinaryExceptionX(msg2);
+        return new IonException(msg2);
+    }
+    protected void throwErrorAt(String msg) {
+        throw newErrorAt(msg);
     }
     protected void error(String msg) {
-        throw new IonReaderBinaryExceptionX(msg);
+        throw new IonException(msg);
     }
     protected void error(Exception e) {
-        throw new IonReaderBinaryExceptionX(e);
+        throw new IonException(e);
     }
 }

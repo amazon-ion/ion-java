@@ -1,4 +1,4 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -11,6 +11,7 @@ import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonNull;
+import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
@@ -224,6 +225,7 @@ abstract class CurriedValueFactory
         return v;
     }
 
+    @Deprecated
     public IonList newList(Collection<? extends IonValue> values)
         throws ContainedValueException, NullPointerException
     {
@@ -232,7 +234,15 @@ abstract class CurriedValueFactory
         return v;
     }
 
-    public <T extends IonValue> IonList newList(T... values)
+    public IonList newList(IonSequence firstChild)
+    throws ContainedValueException, NullPointerException
+    {
+        IonList v = myFactory.newList(firstChild);
+        handle(v);
+        return v;
+    }
+
+    public IonList newList(IonValue... values)
         throws ContainedValueException, NullPointerException
     {
         IonList v = myFactory.newList(values);
@@ -286,6 +296,7 @@ abstract class CurriedValueFactory
         return v;
     }
 
+    @Deprecated
     public IonSexp newSexp(Collection<? extends IonValue> values)
         throws ContainedValueException, NullPointerException
     {
@@ -294,7 +305,15 @@ abstract class CurriedValueFactory
         return v;
     }
 
-    public <T extends IonValue> IonSexp newSexp(T... values)
+    public IonSexp newSexp(IonSequence firstChild)
+    throws ContainedValueException, NullPointerException
+    {
+        IonSexp v = myFactory.newSexp(firstChild);
+        handle(v);
+        return v;
+    }
+
+    public IonSexp newSexp(IonValue... values)
         throws ContainedValueException, NullPointerException
     {
         IonSexp v = myFactory.newSexp(values);

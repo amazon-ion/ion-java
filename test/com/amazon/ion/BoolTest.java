@@ -1,8 +1,7 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
-
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion;
+
+import org.junit.Test;
 
 
 
@@ -30,6 +29,7 @@ public class BoolTest
     }
 
 
+    @Test
     public void testNullBool()
     {
         IonBool value = (IonBool) oneValue("null.bool");
@@ -44,6 +44,7 @@ public class BoolTest
     }
 
 
+    @Test
     public void testBools()
     {
         IonBool value = (IonBool) oneValue("true");
@@ -72,6 +73,8 @@ public class BoolTest
 
     }
 
+
+    @Test
     public void testBoolChanges()
     {
         IonBool v = system().newNullBool();
@@ -97,6 +100,7 @@ public class BoolTest
     /**
      * Thanks to Mark Tomko for reporting this bug.
      */
+    @Test
     public void testReadOnlyBool()
     {
         IonBool v = system().newBool(true);

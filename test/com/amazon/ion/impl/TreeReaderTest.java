@@ -1,13 +1,16 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
+import com.amazon.ion.TestUtils;
+import org.junit.Test;
 
 /**
  *
@@ -15,6 +18,7 @@ import com.amazon.ion.IonType;
 public class TreeReaderTest
     extends IonTestCase
 {
+    @Test
     public void testInitialStateForScalar()
     {
         IonInt value = system().newInt(23);
@@ -24,6 +28,7 @@ public class TreeReaderTest
         assertEquals(IonType.INT, r.next());
     }
 
+    @Test
     public void testInitialStateForList()
     {
         IonList list = system().newEmptyList();
@@ -43,29 +48,25 @@ public class TreeReaderTest
         assertFalse(r.hasNext());
     }
 
-    public void testInitialStateForStruct()
+    @Test
+    public void testReadingReadOnly()
     {
-        IonStruct value = system().newEmptyStruct();
-        IonReader r = system().newReader(value);
+        IonDatagram dg = loader().load("{hello:hello}");
 
-        assertFalse(r.isInStruct());
+        // Make just part of the datagram read-only
+        IonStruct s = (IonStruct) dg.get(0);
+        s.makeReadOnly();
 
-        assertTrue(r.hasNext());
-        assertFalse(r.isInStruct());
+        IonReader r = system().newReader(s);
+        TestUtils.deepRead(r);
 
-        assertEquals(IonType.STRUCT, r.next());
-        assertEquals(0, r.getDepth());
-        assertFalse(r.isInStruct());
+        r = system().newReader(dg);
+        TestUtils.deepRead(r);
 
-        r.stepIn();
-        assertTrue(r.isInStruct());
-        assertEquals(1, r.getDepth());
+        // Now the whole thing
+        dg.makeReadOnly();
 
-        assertFalse(r.hasNext());
-        assertTrue(r.isInStruct());
-
-        r.stepOut();
-        assertFalse(r.isInStruct());
-        assertFalse(r.hasNext());
+        r = system().newReader(dg);
+        TestUtils.deepRead(r);
     }
 }

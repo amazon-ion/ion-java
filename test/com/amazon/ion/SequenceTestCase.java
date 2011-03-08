@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -9,6 +9,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
+import org.junit.Test;
 
 
 
@@ -160,6 +161,7 @@ public abstract class SequenceTestCase
      *
      * @see StructTest#testModsCausingHeaderOverlap()
      */
+    @Test
     public void testModsCausingHeaderOverlap()
         throws Exception
     {
@@ -177,6 +179,8 @@ public abstract class SequenceTestCase
         checkString("this is a string to overlap", v.get(0));
     }
 
+
+    @Test
     public void testBadAdds()
     {
         IonSequence value = makeEmpty();
@@ -185,6 +189,7 @@ public abstract class SequenceTestCase
         value.add().newInt(3);
         testBadAdds(value);
     }
+
 
     protected void testBadAdds(IonSequence s)
     {
@@ -206,6 +211,7 @@ public abstract class SequenceTestCase
     }
 
 
+    @Test
     public void testBadRemoves()
     {
         IonSequence value = makeEmpty();
@@ -244,6 +250,7 @@ public abstract class SequenceTestCase
     }
 
 
+    @Test
     public void testNewSeqWithDatagram()
     {
         IonValue first = system().newInt(12);
@@ -270,6 +277,7 @@ public abstract class SequenceTestCase
     }
 
 
+    @Test
     public void testClearRemovesChildsContainer()
     {
         IonValue val = system().newString("test");
@@ -279,6 +287,8 @@ public abstract class SequenceTestCase
                    val.getContainer());
     }
 
+
+    @Test
     public void testAddAll()
     {
         IonSequence seq = makeEmpty();
@@ -322,6 +332,7 @@ public abstract class SequenceTestCase
     }
 
 
+    @Test
     public void testContains()
     {
         IonNull nullValue1 = system().newNull();
@@ -341,6 +352,8 @@ public abstract class SequenceTestCase
         assertTrue(seq.contains(nullValue2));
     }
 
+
+    @Test
     public void testContainsAll()
     {
         IonNull nullValue1 = system().newNull();
@@ -407,6 +420,7 @@ public abstract class SequenceTestCase
     }
 
 
+    @Test
     public void testRemoveByIndex()
     {
         IonSequence s = wrapAndParse("1", "2", "3");
@@ -435,6 +449,8 @@ public abstract class SequenceTestCase
         checkInt(1, s.get(0));
     }
 
+
+    @Test
     public void testRemoveByIndexOnReadOnly()
     {
         IonSequence s = wrapAndParse("1", "2", "3");
@@ -447,6 +463,8 @@ public abstract class SequenceTestCase
         catch (ReadOnlyValueException e) { }
     }
 
+
+    @Test
     public void testRemoveAll()
     {
         IonNull nullValue1 = system().newNull();
@@ -523,6 +541,8 @@ public abstract class SequenceTestCase
         assertTrue(seq.containsAll(hasNull2AndInt));
     }
 
+
+    @Test
     public void testRetainAll()
     {
         IonNull nullValue1 = system().newNull();
@@ -606,6 +626,8 @@ public abstract class SequenceTestCase
         assertSame(seq, nullValue1.getContainer());
     }
 
+
+    @Test
     public void testToArray()
     {
         IonSequence seq = makeEmpty();
@@ -643,6 +665,13 @@ public abstract class SequenceTestCase
             fail("expected exception");
         }
         catch (ArrayStoreException e) { }
+
+        seq.clear();
+        seq.add().newEmptyStruct();
+        IonStruct[] structArray = new IonStruct[1];
+        IonStruct[] extracted = seq.toArray(structArray);
+        assertSame(structArray, extracted);
+        assertSame(seq.get(0), structArray[0]);
     }
 
     public void checkArray(IonSequence expected, Object[] actual)
@@ -654,6 +683,8 @@ public abstract class SequenceTestCase
         }
     }
 
+
+    @Test
     public void testAddOfClone()
     {
         IonSequence s = newSequence();
@@ -678,6 +709,8 @@ public abstract class SequenceTestCase
         }
     }
 
+
+    @Test
     public void testRemoveViaIteratorThenDirect()
     {
         IonSequence s = newSequence();
@@ -695,6 +728,7 @@ public abstract class SequenceTestCase
     }
 
 
+    @Test
     public void testAddFactory()
     {
         IonSequence s = makeEmpty();
@@ -709,6 +743,8 @@ public abstract class SequenceTestCase
         assertSame(str, s.get(1));
     }
 
+
+    @Test
     public void testIndexOf()
     {
         IonNull nullValue1 = system().newNull();
@@ -755,6 +791,8 @@ public abstract class SequenceTestCase
         assertEquals(2, s.indexOf(nullValue2));
     }
 
+
+    @Test
     public void testListIteratorAtIndex()
     {
         IonSequence s = makeNull(); // Null when testing datagram
@@ -765,10 +803,10 @@ public abstract class SequenceTestCase
 
         s = wrapAndParse("0", "1", "2");
 
-        ListIterator<IonValue> i = s.listIterator(0);
-        assertSame(s.get(0), i.next());
-        assertSame(s.get(1), i.next());
-        assertSame(s.get(1), i.previous());
+        ListIterator<IonValue> i = s.listIterator(0); // position is .5
+        assertSame(s.get(0), i.next());  // next == 0, 1 is next next, pos is 1.5
+        assertSame(s.get(1), i.next());  // next == 1, 2 is next next, pos is 2.5
+        assertSame(s.get(1), i.previous());  // return is 1, pos is 1.5
         assertSame(s.get(1), i.next());
         assertSame(s.get(2), i.next());
         assertFalse(i.hasNext());

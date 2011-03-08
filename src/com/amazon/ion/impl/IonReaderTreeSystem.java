@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -27,25 +27,59 @@ import com.amazon.ion.Timestamp;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- * Provides a concrete implementation of {@link IonReader} that operates
- * over an {@link IonValue}, typically an {@link IonDatagram}.
+ *
  */
-public final class IonTreeReader
-    implements IonReader
+class IonReaderTreeSystem
+    implements IonReader, IonReaderWriterPrivate
 {
-    private Iterator<IonValue> _iter;
-    private IonValue _parent;
-    private IonValue _next;
-    private IonValue _curr;
-    private boolean  _eof;
+    protected IonSystem           _system;
+    protected SymbolTable         _symbols;
+    protected Iterator<IonValue>  _iter;
+    protected IonValue            _parent;
+    protected IonValue            _next;
+    protected IonValue            _curr;
+    protected boolean             _eof;
 
-    private Object[] _stack = new Object[10];
-    private int      _top;
+    protected Object[]           _stack = new Object[10];
+    protected int                _top;
+
+    public IonReaderTreeSystem(IonValue value)
+    {
+        if (value == null) {
+            // do nothing
+        }
+        else {
+            _system = value.getSystem();
+            if (value instanceof IonDatagram) {
+                // datagrams interacting with these readers must be
+                // IonContainerPrivate containers
+                assert(value instanceof IonContainerPrivate);
+                IonDatagram dg = (IonDatagram) value;
+                _parent = dg;
+                _iter = dg.systemIterator(); // we want a system reader not: new Children(dg);
+            }
+            else {
+                _next = value;
+            }
+        }
+    }
+
+    public void close()
+    {
+        _eof = true;
+    }
+
+    protected void set_symbol_table(SymbolTable symtab)
+    {
+        _symbols = symtab;
+        return;
+    }
 
     void push() {
         int oldlen = _stack.length;
@@ -75,37 +109,10 @@ public final class IonTreeReader
         _eof = false;
     }
 
-
-    public IonTreeReader(IonDatagram datagram, boolean returnSystemValues) {
-        this(returnSystemValues, datagram);
-    }
-
-    public IonTreeReader(IonValue value) {
-        this(false, value);
-    }
-
-    private IonTreeReader(boolean returnSystemValues, IonValue value) {
-        if (value instanceof IonDatagram) {
-            IonDatagram dg = (IonDatagram) value;
-            _parent = dg;
-            _iter = (returnSystemValues ? dg.systemIterator() : dg.iterator());
-        }
-        else {
-            _next = value;
-        }
-    }
-
-
     public boolean hasNext()
     {
-        if (this._eof) return false;
-        if (this._next != null) return true;
-
-        if (this._iter != null && this._iter.hasNext()) {
-            this._next = this._iter.next();
-        }
-        this._eof = (this._next == null);
-        return !this._eof;
+        IonType next_type = next_helper_system();
+        return (next_type != null);
     }
 
     public IonType next()
@@ -119,6 +126,21 @@ public final class IonTreeReader
         return this._curr.getType();
     }
 
+    IonType next_helper_system()
+    {
+        if (this._eof) return null;
+        if (this._next != null) return this._next.getType();
+
+        if (this._iter != null && this._iter.hasNext()) {
+            this._next = this._iter.next();
+        }
+
+        if ((this._eof =(this._next == null)) == true) {
+            return null;
+        }
+        return this._next.getType();
+    }
+
     public void stepIn()
     {
         if (!(this._curr instanceof IonContainer)) {
@@ -126,7 +148,7 @@ public final class IonTreeReader
         }
         push();
         _parent = _curr;
-        _iter = ((IonContainer)this._curr).iterator();
+        _iter = new Children(((IonContainer)this._curr));
         _curr = null;
     }
 
@@ -142,12 +164,12 @@ public final class IonTreeReader
         return _top/2;
     }
 
-    public void position(IonReader other)
+    private void XXXposition(IonReader other)
     {
-        if (!(other instanceof IonTreeReader)) {
+        if (!(other instanceof IonReaderTreeSystem)) {
             throw new IllegalArgumentException("invalid reader type, classes must match");
         }
-        IonTreeReader iother = (IonTreeReader)other;
+        IonReaderTreeSystem iother = (IonReaderTreeSystem)other;
 
         this._eof = iother._eof;
         this._curr = iother._curr;
@@ -158,7 +180,7 @@ public final class IonTreeReader
         }
         else {
             assert iother._parent instanceof IonContainer;
-            this._iter = ((IonContainer)iother._parent).iterator();
+            this._iter = new Children(((IonContainer)iother._parent));
             while (this.hasNext()) {
                 this.next();
                 if (this._curr == iother._curr) break;
@@ -238,7 +260,7 @@ public final class IonTreeReader
     public boolean isInStruct()
     {
         return (_parent instanceof IonStruct);
-        }
+    }
 
     public boolean isNullValue()
     {
@@ -261,10 +283,6 @@ public final class IonTreeReader
         return (_curr == null) ? null : _curr.getFieldName();
     }
 
-    public IonValue getIonValue(IonSystem sys)
-    {
-        return _curr;
-    }
 
     public boolean booleanValue()
     {
@@ -299,6 +317,20 @@ public final class IonTreeReader
         }
         if (_curr instanceof IonDecimal)  {
             return (long)((IonDecimal)_curr).doubleValue();
+        }
+        throw new IllegalStateException("current value is not an ion int, float, or decimal");
+    }
+
+    public BigInteger bigIntegerValue()
+    {
+        if (_curr instanceof IonInt)  {
+            return ((IonInt)_curr).bigIntegerValue();
+        }
+        if (_curr instanceof IonFloat)  {
+            return BigInteger.valueOf(longValue());
+        }
+        if (_curr instanceof IonDecimal)  {
+            return ((IonDecimal)_curr).bigDecimalValue().toBigInteger();
         }
         throw new IllegalStateException("current value is not an ion int, float, or decimal");
     }
@@ -417,13 +449,17 @@ public final class IonTreeReader
         throw new IllegalStateException("current value is not an ion blob or clob");
     }
 
+    public IonValue getIonValue(IonSystem sys)
+    {
+        return _curr;
+    }
 
     public String valueToString()
     {
         return (_curr == null) ? null : _curr.toString();
     }
 
-    static final class StringIterator implements Iterator<String>
+    private static final class StringIterator implements Iterator<String>
     {
         String [] _values;
         int       _pos;
@@ -443,7 +479,7 @@ public final class IonTreeReader
         }
     }
 
-    static final class IdIterator implements Iterator<Integer>
+    private static final class IdIterator implements Iterator<Integer>
     {
         int []  _values;
         int     _pos;
@@ -463,5 +499,86 @@ public final class IonTreeReader
             throw new UnsupportedOperationException();
         }
     }
+
+    private static final class Children implements Iterator<IonValue>
+    {
+        boolean             _eof;
+        int                 _next_idx;
+        IonContainerPrivate _parent;
+        IonValue            _curr;
+
+        Children(IonContainer parent)
+        {
+            if (parent instanceof IonContainerPrivate) {
+                _parent = (IonContainerPrivate)parent;
+
+if (_parent instanceof IonValueImpl) {
+((IonValueImpl)_parent).makeReady();
 }
 
+                _next_idx = 0;
+                _curr = null;
+                if (_parent.isNullValue()) {
+                    // otherwise the empty contents member will cause trouble
+                    _eof = true;
+                }
+            }
+            else {
+                throw new UnsupportedOperationException("this only supports IonContainerImpl instances");
+            }
+        }
+
+        public boolean hasNext()
+        {
+            if (_eof) return false;
+
+            int len = _parent.get_child_count();
+
+            if (_next_idx > 0) {
+                // first we have to verify the position of the
+                // current value, since it might move if local
+                // symbol tables get created.  In which case it
+                // will be moved down the list.
+                int ii = _next_idx - 1;
+                _next_idx = len; // if we can't find our current
+                                 // value we'll be at eof anyway
+                while (ii<len) {
+                    if (_curr == _parent.get_child(ii)) {
+                        _next_idx = ii+1;
+                        break;
+                    }
+                }
+            }
+            // if there anything left?
+            if (_next_idx >= _parent.get_child_count()) {
+                _eof = true;
+            }
+            return !_eof;
+        }
+
+        public IonValue next()
+        {
+            // the hasNext() is needed to adjust our _next_idx
+            // value if the underlying arraylist moved under us
+            if (!hasNext()) {
+                _curr = null;
+            }
+            else {
+                _curr = _parent.get_child(_next_idx);
+                _next_idx++;
+            }
+            return _curr;
+        }
+
+        public void remove()
+        {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    // system readers don't skip any symbol tables
+    public SymbolTable pop_passed_symbol_table()
+    {
+        return null;
+    }
+}

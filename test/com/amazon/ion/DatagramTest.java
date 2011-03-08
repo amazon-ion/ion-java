@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -6,12 +6,16 @@ import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0_SID;
+import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbolTable.SYMBOLS;
 
-import com.amazon.ion.impl.IonSystemImpl;
+import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.impl.IonValueImpl;
 import java.io.ByteArrayOutputStream;
 import java.util.Collection;
 import java.util.Iterator;
+import org.junit.Before;
+import org.junit.Test;
 
 
 public class DatagramTest
@@ -21,6 +25,7 @@ public class DatagramTest
 
 
     @Override
+    @Before
     public void setUp()
         throws Exception
     {
@@ -105,16 +110,17 @@ public class DatagramTest
     }
 
 
+    @Test
     public void testAutomaticSystemId()
         throws Exception
     {
-        IonSystemImpl system = system();
-        SymbolTable systemSymtab_1_0 = system.getSystemSymbolTable(ION_1_0);
+        IonSystemPrivate system = system();
+        SymbolTable      systemSymtab_1_0 = system.getSystemSymbolTable(ION_1_0);
 
         IonDatagram dg = system.newDatagram();
 
         IonNull v = system.newNull();
-        assertNull(v.getSymbolTable());
+        assertTrue(v.getSymbolTable() == null || v.getSymbolTable().isSystemTable());
 
         dg.add(v);
 
@@ -125,16 +131,17 @@ public class DatagramTest
         assertSame(systemSymtab_1_0, v.getSymbolTable());
     }
 
+    @Test
     public void testManualSystemId()
         throws Exception
     {
-        IonSystemImpl system = system();
-        SymbolTable systemSymtab_1_0 = system.getSystemSymbolTable(ION_1_0);
+        IonSystemPrivate system = system();
+        SymbolTable      systemSymtab_1_0 = system.getSystemSymbolTable(ION_1_0);
 
         IonDatagram dg = system.newDatagram();
 
         IonSymbol sysId = system.newSymbol(SystemSymbolTable.ION_1_0);
-        assertNull(sysId.getSymbolTable());
+        assertTrue(sysId.getSymbolTable() == null || sysId.getSymbolTable().isSystemTable());
 
         // $ion_1_0 at the front top-level is a systemId
         dg.add(sysId);
@@ -152,6 +159,7 @@ public class DatagramTest
     //               dg.systemGet(0).hasTypeAnnotation(ION_1_0));
     //}
 
+    @Test
     public void testBinaryData()
         throws Exception
     {
@@ -167,6 +175,10 @@ public class DatagramTest
         assertEquals(1, datagram1.size());
         checkSymbol("swamp", datagram1.get(0));
 
+        IonSymbol sym = (IonSymbol)datagram1.get(0);
+        sym.getSymbolId();
+        sym.stringValue();
+
         // System view should have IonVersionMarker(symbol), a symbol table then the symbol
         assertEquals(3, datagram1.systemSize()); // cas 22 apr 2008 was: 2
 
@@ -174,7 +186,7 @@ public class DatagramTest
         IonSymbol versionMarker = (IonSymbol)sysIter.next();      // the IVM symbol is first
         assertSame(versionMarker, datagram1.systemGet(0));
         IonStruct localSymtabStruct = (IonStruct) sysIter.next(); // then the smbol table
-        assertSame(localSymtabStruct, datagram1.systemGet(1));
+        assertEquals(localSymtabStruct, datagram1.systemGet(1));
 
         IonSymbol symbol = (IonSymbol) sysIter.next();
         assertSame(symbol, datagram1.systemGet(2)); // cas 22 apr 2008: was 1
@@ -186,6 +198,7 @@ public class DatagramTest
         // TODO if we keep max_id in the struct, should validate it here.
     }
 
+    @Test
     public void testBinaryDataWithNegInt()
         throws Exception
     {
@@ -214,12 +227,15 @@ public class DatagramTest
         s = ""+s;
     }
 
+    @Test
     public void testSystemDatagram()
         throws Exception
     {
         IonSystem system = system();
+
         IonInt i = system.newNullInt();
         i.setValue(65);
+
         IonStruct struct = system.newNullStruct();
         SymbolTable sym = struct.getSymbolTable();
         if (sym == null) {
@@ -227,7 +243,9 @@ public class DatagramTest
             ((IonValueImpl)struct).setSymbolTable(sym);
         }
         struct.put("ii", i);
+
         IonDatagram dg = system.newDatagram(struct);
+
         assertSame(struct, dg.get(0));
         IonStruct reloadedStruct = (IonStruct) dg.get(0);  // XXX
         assertEquals(struct, reloadedStruct);  // XXX
@@ -260,6 +278,7 @@ public class DatagramTest
     }
 
 
+    @Test
     public void testGetBytes()
         throws Exception
     {
@@ -308,6 +327,7 @@ public class DatagramTest
     }
 
 
+    @Test
     public void testEncodingAnnotatedSymbol()
     {
         IonSystem system = system();
@@ -317,6 +337,7 @@ public class DatagramTest
         dg.getBytes();
     }
 
+    @Test
     public void testEncodingSymbolInList()
     {
         IonSystem system = system();
@@ -329,6 +350,7 @@ public class DatagramTest
         dg.getBytes();
     }
 
+    @Test
     public void testEncodingSymbolInStruct()
     {
         IonSystem system = system();
@@ -343,6 +365,7 @@ public class DatagramTest
         dg.getBytes();
     }
 
+    @Test
     public void testEncodingStructInStruct()
     {
         IonSystem system = system();
@@ -363,6 +386,7 @@ public class DatagramTest
     }
 
 
+    @Test
     public void testNewSingletonDatagramWithSymbolTable()
     {
         IonSystem system = system();
@@ -381,6 +405,7 @@ public class DatagramTest
         assertTrue(v.hasTypeAnnotation("ann"));
     }
 
+    @Test
     public void testNoSymbols()
         throws Exception
     {
@@ -391,6 +416,7 @@ public class DatagramTest
         checkInt(123, value);
     }
 
+    @Test
     public void testNullField()
         throws Exception
     {
@@ -405,6 +431,7 @@ public class DatagramTest
         assertTrue(s.get("a").isNullValue());
     }
 
+    @Test
     public void testAddingDatagramToDatagram()
     {
         IonDatagram dg1 = loader().load("one");
@@ -427,28 +454,49 @@ public class DatagramTest
 //        catch (IllegalArgumentException e) { }
     }
 
+
+    @Test(expected = IllegalArgumentException.class)
     public void testNewDatagramFromDatagram()
     {
         IonDatagram dg1 = loader().load("one");
-        try
-        {
-            system().newDatagram(dg1);
-            fail("Expected IllegalArgumentException");
-        }
-        catch (IllegalArgumentException e) { }
+        system().newDatagram(dg1);
     }
 
+    @Test
+    public void testNewDatagramWithNoValue()
+    {
+        IonValue v = null;
 
+        IonDatagram dg = system().newDatagram(v);
+        assertEquals("datagram size", 0, dg.size());
+    }
+
+    @Test
+    public void testNewDatagramWithContainedValue()
+    {
+        IonList list = system().newEmptyList();
+        IonNull n = list.add().newNull();
+        n.addTypeAnnotation("ann");
+
+        IonDatagram dg = system().newDatagram(n);
+        assertNotSame(n, dg.get(0));
+        assertEquals(n, dg.get(0));
+    }
+
+    @Test
     public void testNewDatagramWithImports()
     {
         final int FRED_ID_OFFSET   = ION_1_0_MAX_ID;
         final int LOCAL_ID_OFFSET  = FRED_ID_OFFSET + FRED_MAX_IDS[1];
 
         SymbolTable fred1   = Symtabs.register("fred",   1, catalog());
+        IonSymbol   sym;
 
         IonDatagram dg = system().newDatagram(fred1);
-        dg.add(system().newSymbol("fred_2"));
-        dg.add(system().newSymbol("localSym"));
+        sym = system().newSymbol("fred_2");
+        dg.add(sym);
+        sym = system().newSymbol("localSym");
+        dg.add(sym);
 
 
         byte[] bytes = dg.getBytes();
@@ -470,6 +518,7 @@ public class DatagramTest
         assertSame(fred1, importedTables[0]);
     }
 
+    @Test
     public void testEmptyDatagram()
     {
         IonDatagram dg = loader().load("");
@@ -480,12 +529,14 @@ public class DatagramTest
 
 
     @Override
+    @Test
     public void testRemoveViaIteratorThenDirect()
     {
         // TODO JIRA ION-91 implement remove on datagram iterator
     }
 
 
+    @Test
     public void testCloningDatagram()
     {
         IonDatagram dg1 = loader().load("one 1 [1.0]");
@@ -501,6 +552,7 @@ public class DatagramTest
     /**
      * Catches a simple case that failed for some time.
      */
+    @Test
     public void testToString()
     {
         IonDatagram dg = loader().load("1");
@@ -522,7 +574,40 @@ public class DatagramTest
                    text.endsWith(" {a:b}"));
     }
 
+    @Test
+    public void testToStringWithoutSymbols()
+    {
+        IonDatagram dg = system().newDatagram();
+        dg.add().newInt(1);
+        assertEquals(ION_1_0 + " 1", dg.toString());
+    }
 
+    @Test
+    public void testToStringWithSymbols()
+    {
+        IonDatagram dg = system().newDatagram();
+        dg.add().newSymbol("x");
+        dg.getBytes();  // Force encoding and symtab construction
+
+        String result = dg.toString();
+
+        // Not all DOM impls will inject the symtab after getBytes()
+        if (dg.systemGet(1) instanceof IonStruct)
+        {
+            assertEquals(ION_1_0 + ' '
+                         + ION_SYMBOL_TABLE + "::{" + SYMBOLS + ":[\"x\"]}"
+                         + " x",
+                         result);
+        }
+        else
+        {
+            assertEquals(ION_1_0 + " x", result);
+
+        }
+    }
+
+
+    @Test
     public void testReadOnlyDatagram()
     {
         IonInt one = system().newInt(1);
@@ -537,11 +622,14 @@ public class DatagramTest
         }
         catch (ReadOnlyValueException e) { }
         assertEquals(1, dg.size());
+
+        dg.byteSize();
     }
 
     /**
      * Verifies that detachment from binary buffer does deep materialization.
      */
+    @Test
     public void testMaterializationOnRemove()
     {
         IonDatagram dg = loader().load("[[1]]");

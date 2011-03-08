@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.streaming;
 
@@ -13,8 +13,14 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.IonWriter;
+import com.amazon.ion.TestUtils;
 import com.amazon.ion.impl.IonImplUtils;
-import com.amazon.ion.system.SystemFactory;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.Iterator;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
  *
@@ -33,6 +39,9 @@ public class MiscStreamingTests
     static final String _QuotingString1_java = "s\"t1";
     static final String _QuotingString2_ion  = "s\\\'t2";  // 5 bytes
     static final String _QuotingString2_java = "s\'t2";
+
+    @Test
+    @SuppressWarnings("deprecation")
     public void testQuoting()
     throws Exception
     {
@@ -51,7 +60,9 @@ public class MiscStreamingTests
         //    value2 symbol 'str2' (2 bytes: 1 typedesc + 1 sid)
         IonReader ir = system().newReader(s);
 
-        IonBinaryWriter wr = system().newBinaryWriter();
+        IonSystem system = system();
+        IonBinaryWriter wr = system.newBinaryWriter();
+        wr = system.newBinaryWriter();
         wr.writeValues(ir);
 
         byte[] buffer = wr.getBytes();
@@ -76,6 +87,7 @@ public class MiscStreamingTests
     }
 
 
+    @Test
     public void testValue2()
     throws Exception
     {
@@ -88,7 +100,7 @@ public class MiscStreamingTests
             +",index_suppressed:true,"
             +"offline_store_only:true,version:2,}";
 
-        IonSystem sys = SystemFactory.newSystem();
+        IonSystem sys = system();
         IonDatagram dg = sys.getLoader().load(s);
         IonValue v = dg.get(0);
         IonType t = v.getType();
@@ -126,6 +138,7 @@ public class MiscStreamingTests
                 tree_count, bin_count);
     }
 
+    @Test
     public void testBinaryAnnotation()
     throws Exception
     {
@@ -138,7 +151,7 @@ public class MiscStreamingTests
             +",index_suppressed:true,"
             +"offline_store_only:true,version:2,}";
 
-        IonSystem sys = SystemFactory.newSystem();
+        IonSystem sys = system();
         IonDatagram dg = sys.getLoader().load(s);
         IonValue v = dg.get(0);
         IonType t = v.getType();
@@ -168,12 +181,14 @@ public class MiscStreamingTests
     }
 
 
+    @Test
     public void testTextNullStringValue()
     {
         IonReader reader = system().newReader("null.string");
         testNullStringValue(reader);
     }
 
+    @Test
     public void testBinaryNullStringValue()
     {
         // TODO load this from test file
@@ -183,6 +198,7 @@ public class MiscStreamingTests
         testNullStringValue(reader);
     }
 
+    @Test
     public void testTreeNullStringValue()
     {
         IonString nullString = system().newNullString();
@@ -191,12 +207,14 @@ public class MiscStreamingTests
     }
 
 
+    @Test
     public void testTextNullSymbolValue()
     {
         IonReader reader = system().newReader("null.symbol");
         testNullSymbolValue(reader);
     }
 
+    @Test
     public void testBinaryNullSymbolValue()
     {
         // TODO load this from test file
@@ -206,6 +224,7 @@ public class MiscStreamingTests
         testNullSymbolValue(reader);
     }
 
+    @Test
     public void testTreeNullSymbolValue()
     {
         IonSymbol nullSymbol = system().newNullSymbol();
@@ -223,6 +242,7 @@ public class MiscStreamingTests
         testNullTextValue(reader, IonType.SYMBOL);
     }
 
+    @SuppressWarnings("deprecation")
     private void testNullTextValue(IonReader reader, IonType textType)
     {
         if (! IonImplUtils.READER_HASNEXT_REMOVED) {
@@ -232,5 +252,74 @@ public class MiscStreamingTests
         assertEquals(textType, reader.getType());
         assertTrue(reader.isNullValue());
         assertEquals(null, reader.stringValue());
+    }
+
+    @Test
+    public void testSkippingListWithQuotedSymbol()
+    {
+        IonReader reader = system().newReader("['\\']'] 2");
+        assertEquals(IonType.LIST, reader.next());
+        assertEquals(IonType.INT, reader.next());
+        assertEquals(2, reader.intValue());
+        assertEquals(null, reader.next());
+    }
+
+    @Test
+    public void testSkippingOperator()
+    {
+        IonReader reader = system().newReader("(+()) 2");
+        assertEquals(IonType.SEXP, reader.next());
+        reader.stepIn();
+        assertEquals(IonType.SYMBOL, reader.next());
+        reader.stepOut();
+        assertEquals(IonType.INT, reader.next());
+        assertEquals(2, reader.intValue());
+        assertEquals(null, reader.next());
+    }
+
+
+    /** ION-184 */
+    @Test
+    public void testReaderDataMangling()
+    throws Exception
+    {
+        String dataText = "a/**/b";
+        byte[] dataBytes = dataText.getBytes("UTF-8");
+
+        IonReader reader = system().newReader(dataBytes);
+        TestUtils.deepRead(reader);
+
+        Assert.assertArrayEquals("UTF-8 text",
+                                 dataText.getBytes("UTF-8"), dataBytes);
+    }
+
+
+    /** ION-184 */
+    @Test
+    public void testIteratorDataMangling()
+    throws Exception
+    {
+        String dataText = "a/**/b";
+        byte[] dataBytes = dataText.getBytes("UTF-8");
+
+        Iterator<IonValue> reader = system().iterate(dataBytes);
+        while (reader.hasNext()) reader.next();
+
+        Assert.assertArrayEquals("UTF-8 text",
+                                 dataText.getBytes("UTF-8"), dataBytes);
+    }
+
+
+    /** ION-140 IMSVT-2863 IMSVT-2573 */
+    @Test
+    public void testTextWriterSymtabs()
+    throws IOException
+    {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonWriter writer = system().newTextWriter(out);
+        writer.writeValue(system().newSymbol("foo"));
+        writer.close();
+
+        assertEquals("$ion_1_0 foo", new String(out.toByteArray(), "UTF-8"));
     }
 }

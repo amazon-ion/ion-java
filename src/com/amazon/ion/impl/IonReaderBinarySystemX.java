@@ -1,8 +1,10 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import com.amazon.ion.Decimal;
+import com.amazon.ion.IonException;
+import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
@@ -18,32 +20,34 @@ import java.util.Iterator;
 /**
  *
  */
-public class IonReaderBinarySystemX extends IonReaderBinaryRawX
+class IonReaderBinarySystemX
+    extends IonReaderBinaryRawX
+    implements IonReaderWriterPrivate
 {
-
+    IonSystem _system;
     // ValueVariant _v; actually owned by the raw reader so it can be cleared at appropriate times
-
-    public IonReaderBinarySystemX(byte[] bytes) {
-        UnifiedInputStreamX uis = UnifiedInputStreamX.makeStream(bytes);
-        init(uis);
-    }
-    public IonReaderBinarySystemX(byte[] bytes, int offset, int length) {
+    protected IonReaderBinarySystemX(IonSystem system, byte[] bytes, int offset, int length) {
+        super();
         UnifiedInputStreamX uis = UnifiedInputStreamX.makeStream(bytes, offset, length);
         init(uis);
-
+        _system = system;
     }
-    public IonReaderBinarySystemX(InputStream userBytes) {
+    protected IonReaderBinarySystemX(IonSystem system, InputStream userBytes) {
+        super();
         UnifiedInputStreamX uis;
         try {
             uis = UnifiedInputStreamX.makeStream(userBytes);
         }
         catch (IOException e) {
-            throw new IonReaderBinaryExceptionX(e);
+            throw new IonException(e);
         }
         init(uis);
+        _system = system;
     }
-    public IonReaderBinarySystemX(UnifiedInputStreamX userBytes) {
+    protected IonReaderBinarySystemX(IonSystem system, UnifiedInputStreamX userBytes) {
+        super();
         init(userBytes);
+        _system = system;
     }
 
 
@@ -53,20 +57,18 @@ public class IonReaderBinarySystemX extends IonReaderBinaryRawX
     // or the user reader.  Here they just fail.
     //
 
-    @Override
-    public int getFieldId()
+    public final int getFieldId()
     {
         return _value_field_id;
     }
 
-    @Override
     public Iterator<Integer> iterateTypeAnnotationIds()
     {
         Iterator<Integer> it = new IonReaderTextUserX.IntIterator(_annotation_ids, 0, _annotation_count);
         return it;
     }
     private static int[] _empty_int_array = new int[0];
-    @Override
+
     public int[] getTypeAnnotationIds()
     {
         try {
@@ -101,15 +103,16 @@ public class IonReaderBinarySystemX extends IonReaderBinaryRawX
         if (as_type != 0 && !_v.hasValueOfType(as_type)) {
             // we should never get here with a symbol asking for anything other
             // than a numeric cast (from some other numeric already loaded)
-            assert( !IonType.SYMBOL.equals(_value_type)
-                 || (_v.hasNumericType() && ValueVariant.isNumericType(as_type)));
+            if (IonType.SYMBOL.equals(_value_type) && !ValueVariant.isNumericType(as_type)) {
+                assert(IonType.SYMBOL.equals(_value_type) && !ValueVariant.isNumericType(as_type));
+            }
 
             if (!_v.can_convert(as_type)) {
                 String message = "can't cast from "
                     +IonScalarConversionsX.getValueTypeName(_v.getAuthoritativeType())
                     +" to "
                     +IonScalarConversionsX.getValueTypeName(as_type);
-                error_at(message);
+                throwErrorAt(message);
             }
             int fnid = _v.get_conversion_fnid(as_type);
             _v.cast(fnid);
@@ -134,8 +137,8 @@ public class IonReaderBinarySystemX extends IonReaderBinaryRawX
         }
     }
 
-    static final int MAX_BINARY_LENGTH_INT = Integer.SIZE;
-    static final int MAX_BINARY_LENGTH_LONG = Long.SIZE;
+    static final int MAX_BINARY_LENGTH_INT = 4;
+    static final int MAX_BINARY_LENGTH_LONG = 8;
 
     private final void load_scalar_value() throws IOException
     {
@@ -177,11 +180,20 @@ public class IonReaderBinarySystemX extends IonReaderBinaryRawX
             }
             else if (_value_len <= MAX_BINARY_LENGTH_LONG) {
                 long v = readULong(_value_len);
-                if (_value_tid == IonConstants.tidNegInt) {
-                    v = -v;
+
+                if (v < 0) {
+                    // we really can't fit this magnitude properly into a Java long
+                    int signum = _value_tid == IonConstants.tidPosInt ? 1 : -1;
+                    BigInteger big = IonBinary.unsignedLongToBigInteger(signum, v);
+                    _v.setValue(big);
+                    _v.setAuthoritativeType(AS_TYPE.bigInteger_value);
+                } else {
+                    if (_value_tid == IonConstants.tidNegInt) {
+                        v = -v;
+                    }
+                    _v.setValue(v);
+                    _v.setAuthoritativeType(AS_TYPE.long_value);
                 }
-                _v.setValue(v);
-                _v.setAuthoritativeType(AS_TYPE.long_value);
             }
             else {
                 boolean is_negative = (_value_tid == IonConstants.tidNegInt);
@@ -221,7 +233,7 @@ public class IonReaderBinarySystemX extends IonReaderBinaryRawX
                                + "(1-"
                                + Integer.MAX_VALUE
                                + ")";
-                error_at(message);
+                throwErrorAt(message);
             }
             // TODO: is treating this as an int too misleading?
             _v.setValue((int)sid);
@@ -239,67 +251,83 @@ public class IonReaderBinarySystemX extends IonReaderBinaryRawX
     //
     // public value routines
     //
-    @Override
+
     public boolean isNullValue()
     {
         return _value_is_null;
     }
-    @Override
+
     public boolean booleanValue()
     {
         prepare_value(AS_TYPE.boolean_value);
         return _v.getBoolean();
     }
-    @Override
+
     public double doubleValue()
     {
         prepare_value(AS_TYPE.double_value);
         return _v.getDouble();
     }
-    @Override
+
     public int intValue()
     {
         prepare_value(AS_TYPE.int_value);
         return _v.getInt();
     }
-    @Override
+
     public long longValue()
     {
         prepare_value(AS_TYPE.long_value);
         return _v.getLong();
     }
-    @Override
+
     public BigInteger bigIntegerValue()
     {
+        if (_value_is_null) {
+            return null;
+        }
         prepare_value(AS_TYPE.bigInteger_value);
         return _v.getBigInteger();
     }
-    @Override
+
     public BigDecimal bigDecimalValue()
     {
+        if (_value_is_null) {
+            return null;
+        }
         prepare_value(AS_TYPE.decimal_value);
         return _v.getBigDecimal();
     }
+
     public Decimal decimalValue()
     {
         prepare_value(AS_TYPE.decimal_value);
         return _v.getDecimal();
     }
-    @Override
+
     public Date dateValue()
     {
+        if (_value_is_null) {
+            return null;
+        }
         prepare_value(AS_TYPE.date_value);
         return _v.getDate();
     }
-    @Override
+
     public Timestamp timestampValue()
     {
+        if (_value_is_null) {
+            return null;
+        }
         prepare_value(AS_TYPE.timestamp_value);
         return _v.getTimestamp();
     }
-    @Override
+
     public String stringValue()
     {
+        if (_value_is_null) {
+            return null;
+        }
         if (IonType.SYMBOL.equals(_value_type)) {
             throw new UnsupportedOperationException("not supported - use UserReader");
         }
@@ -307,29 +335,48 @@ public class IonReaderBinarySystemX extends IonReaderBinaryRawX
         return _v.getString();
     }
 
+    public int getSymbolId()
+    {
+        if (!IonType.SYMBOL.equals(_value_type)) {
+            String message = "can't cast from "
+                +IonScalarConversionsX.getValueTypeName(_v.getAuthoritativeType())
+                +" to SYMBOL ID";
+            throwErrorAt(message);
+        }
+        int sid = intValue();
+        return sid;
+    }
+
     //
     // unsupported public methods that require a symbol table
     // to operate - which is only supported on a user reader
     //
-    @Override
     public String getFieldName()
     {
-        throw new UnsupportedOperationException("not supported - use UserReader");
+        return null;
+//        throw new UnsupportedOperationException("not supported - use UserReader");
     }
-    @Override
+
     public Iterator<String> iterateTypeAnnotations()
     {
-        throw new UnsupportedOperationException("not supported - use UserReader");
+        return null;
+//        throw new UnsupportedOperationException("not supported - use UserReader");
     }
-    @Override
+
     public String[] getTypeAnnotations()
     {
-        throw new UnsupportedOperationException("not supported - use UserReader");
+        return null;
+//        throw new UnsupportedOperationException("not supported - use UserReader");
     }
-    @Override
+
     public SymbolTable getSymbolTable()
     {
         return null;
     }
 
+    // system readers don't skip any symbol tables
+    public SymbolTable pop_passed_symbol_table()
+    {
+        return null;
+    }
 }

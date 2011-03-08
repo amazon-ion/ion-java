@@ -1,91 +1,78 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
+import com.amazon.ion.junit.Injected.Inject;
 import java.io.File;
 import junit.framework.AssertionFailedError;
-import junit.framework.TestSuite;
+import org.junit.Test;
 
 public class EquivsTests
-    extends DirectoryTestSuite
+    extends IonTestCase
 {
-    private static class EquivsTest
-        extends FileTestCase
+    @Inject("testFile")
+    public static final File[] FILES =
+        TestUtils.testdataFiles(TestUtils.GLOBAL_SKIP_LIST, "equivs");
+
+    private File myTestFile;
+
+    public void setTestFile(File file)
     {
-        public EquivsTest(File ionText)
-        {
-            super(ionText);
+        myTestFile = file;
+    }
+
+
+    @Test
+    public void test()
+    throws Exception
+    {
+        runEquivs("Datagram Load", load(myTestFile));
+        final IonDatagram dgFromString = loadAsJavaString(myTestFile);
+        if (dgFromString != null) {
+            runEquivs("Datagram Java String Load", dgFromString);
         }
+    }
 
-        @Override
-        public void runTest()
-            throws Exception
+    private void runEquivs(final String type, final IonDatagram sequences) {
+        int sequenceCount = sequences.size();
+
+        assertTrue(type + ": File must have at least one sequence",
+                   sequenceCount > 0);
+
+        for (int i = 0; i < sequenceCount; i++)
         {
-            IonDatagram sequences = load(myTestFile);
-            int sequenceCount = sequences.size();
+            IonSequence sequence = (IonSequence) sequences.get(i);
 
-            assertTrue("File must have at least one sequence",
-                       sequenceCount > 0);
+            int valueCount = sequence.size();
 
-            for (int i = 0; i < sequenceCount; i++)
+            assertTrue(type + ": Each sequence must have at least two values",
+                       valueCount > 1);
+
+            for (int j = 0; j < valueCount - 1; j++)
             {
-                IonSequence sequence = (IonSequence) sequences.get(i);
+                IonValue current = sequence.get(j);
+                IonValue next    = sequence.get(j + 1);
 
-                int valueCount = sequence.size();
-
-                assertTrue("Each sequence must have at least two values",
-                           valueCount > 1);
-
-                for (int j = 0; j < valueCount - 1; j++)
+                try
                 {
-                    IonValue current = sequence.get(j);
-                    IonValue next    = sequence.get(j + 1);
-
-                    try
-                    {
-                        assertEquals("Equivalent Ion not equal", current, next);
-                        assertEquals("Equal values have unequal hashes",
-                                     current.hashCode(), next.hashCode());
+                    // the extra if allows us (me) to set a break point on failures here, specifically here.
+                    if (current == null || next == null || current.equals(next) == false) {
+                        assertEquals(type + ": Equivalent Ion not equal", current, next);
                     }
-                    catch (Throwable e)
-                    {
-                        String message =
-                            "Error comparing children " + j + " and " + (j+1) +
-                            " of equivalence sequence " + i + " (zero-based)";
-                        Error wrap = new AssertionFailedError(message);
-                        wrap.initCause(e);
-                        throw wrap;
-                    }
+                    assertEquals(type + ": Equal values have unequal hashes",
+                                 current.hashCode(), next.hashCode());
+                }
+                catch (Throwable e)
+                {
+                    String message =
+                        type +
+                        ": Error comparing children " + j + " and " + (j+1) +
+                        " of equivalence sequence " + i + " (zero-based)";
+                    Error wrap = new AssertionFailedError(message);
+                    wrap.initCause(e);
+                    throw wrap;
                 }
             }
         }
-    }
-
-
-    public static TestSuite suite()
-    {
-        return new EquivsTests();
-    }
-
-
-    public EquivsTests()
-    {
-        super("equivs");
-    }
-
-
-    @Override
-    protected EquivsTest makeTest(File ionFile)
-    {
-        return new EquivsTest(ionFile);
-    }
-
-    @Override
-    protected String[] getFilesToSkip()
-    {
-        return new String[]
-        {
-            // "equivs/symbols.ion",
-        };
     }
 }

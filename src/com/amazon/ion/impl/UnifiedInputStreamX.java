@@ -1,15 +1,46 @@
+// Copyright (c) 2009-2010 Amazon.com, Inc.  All rights reserved.
+
 package com.amazon.ion.impl;
 
 import com.amazon.ion.impl.IonReaderTextRawTokensX.IonReaderTextTokenException;
 import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 
-
+/**
+ * This is a local stream abstraction, and implementation, that
+ * allows the calling code to operate over final methods even
+ * when the original data source is an interface, such a
+ * <code>Reader</code>.
+ *
+ * When passed a users data buffer it simply operates of the
+ * entire buffer directly.
+ *
+ * When the input source is a stream is creates it's own local
+ * buffers, using {@link #UnifiedInputBufferX} and {@link #UnifiedDataPageX}.
+ * These allocate pages and loads them, a page at a time, from
+ * the stream using the highest bandwitdh stream interface available.
+ *
+ * In this class the unread is only allowed to unread characters
+ * that it actually read.  This is checked, when possible, when
+ * the local {@link #_debug} is true.  This is checked when
+ * the unread is bad into data that is present in the current
+ * buffer.  When the unread crosses a buffer boundary the unread
+ * value is simply written into the space at the beginning of the
+ * block, which is reserved for that purpose.  On all system
+ * allocated pages the user data starts at an offset in from
+ * the front of the buffer,  The offset is set by {@link #UNREAD_LIMIT}.
+ * This is not necessary at either the beginning of the input
+ * or for a user supplied buffer since the entire input is a
+ * single buffer.
+ *
+ */
 public abstract class UnifiedInputStreamX
+    implements Closeable
 {
-    public  static final int     EOF = -1;
+    public static final int      EOF = -1;
 
     private static final boolean _debug = false;
             static final int     UNREAD_LIMIT = 10;
@@ -42,6 +73,7 @@ public abstract class UnifiedInputStreamX
     InputStream             _stream;
     byte[]                  _bytes;
     char[]                  _chars;
+
 
     UnifiedSavePointManagerX _save_points;
 
@@ -82,6 +114,12 @@ public abstract class UnifiedInputStreamX
         _eof = false;
         _max_char_value = _buffer.maxValue();
         _save_points = new UnifiedSavePointManagerX(this);
+    }
+
+    public void close()
+        throws IOException
+    {
+        _eof = true;
     }
 
     public final boolean isEOF() {
@@ -166,20 +204,77 @@ public abstract class UnifiedInputStreamX
         }
         _pos--;
         if (_pos >= 0) {
-            if (is_byte_data()) {
-                _bytes[_pos] = (byte)c;
-            }
-            else {
-                _chars[_pos] = (char)c;
-            }
             UnifiedDataPageX curr = _buffer.getCurrentPage();
             if (_pos < curr.getStartingOffset()) {
+                // here we've backed up past the beginning of the current
+                // buffer.  This can only happen when this is a system
+                // managed buffer, not a use supplied buffer (which has
+                // only one page).  Or when the user has backed up past
+                // the actual beginning of the input - which is an error.
                 curr.inc_unread_count();
+                if (is_byte_data()) {
+                    _bytes[_pos] = (byte)c;
+                }
+                else {
+                    _chars[_pos] = (char)c;
+                }
+            }
+            else {
+                // we only allow unreading the character that was actually
+                // read - and when we can, we verify this.  We will miss
+                // cases when the character was in the preceding buffer
+                // (handled above) when we just have to believe them.
+                // TODO: add test only code that checks the previous buffer
+                //       case.
+                verify_matched_unread(c);
             }
         }
         else {
+            // We don't seem to check for that elsewhere.
             _buffer.putCharAt(getPosition(), c);
         }
+    }
+    private final void verify_matched_unread(int c) {
+        if (_debug) {
+            if (is_byte_data()) {
+                assert(_bytes[_pos] == (byte)c);
+            }
+            else {
+                assert(_chars[_pos] == (char)c);
+            }
+        }
+    }
+    public final boolean unread_optional_cr()
+    {
+        boolean did_unread = false;
+        UnifiedDataPageX curr = _buffer.getCurrentPage();
+        int c;
+
+        // if we're in the current buffer and we unread a
+        // new line and we can see we were preceded by a
+        // carriage return in which case we need to back up
+        // 1 more position.
+        // If we can't back up into a real data we don't
+        // care about this since our next unread/read will
+        // be work the same anyway since a new line will
+        // just be a lone new line.
+        // This corrects bug where the scanner reads a char
+        // then a \r\n unreads the \n (the \r was eaten by
+        // read()) unreads the char and that overwrites
+        // the \r and has editted the buffer.  That's a bad
+        // thing.
+        if (_pos > curr.getStartingOffset()) {
+            if (is_byte_data()) {
+                c = _bytes[_pos-1] & 0xff;
+            }
+            else {
+                c = _chars[_pos-1];
+            }
+            if (c == '\r') {
+                _pos--;
+            }
+        }
+        return did_unread;
     }
 
     public final int read() throws IOException {
@@ -216,9 +311,9 @@ public abstract class UnifiedInputStreamX
 
     public final void skip(int skipDistance) throws IOException
     {
-        int remaining;
+        int remaining = _limit - _pos;
 
-        if (_pos <= _limit - skipDistance) {
+        if (remaining >= skipDistance) {
             _pos += skipDistance;
             remaining = 0;
         }
@@ -229,6 +324,7 @@ public abstract class UnifiedInputStreamX
                 if (ready > remaining) {
                     ready = remaining;
                 }
+                _pos += ready;
                 remaining -= ready;
                 if (remaining > 0) {
                     if (refill_helper()) {
@@ -246,6 +342,8 @@ public abstract class UnifiedInputStreamX
         }
         return;
     }
+    // ION-175 - NB this method does not follow the contract of InputStream.read, it will return 0 at EOF
+    //           I don't know the implication to the rest of the system to make it 'conform' (almann@)
     public final int read(byte[] dst, int offset, int length) throws IOException
     {
         if (!is_byte_data()) {
@@ -504,6 +602,15 @@ public abstract class UnifiedInputStreamX
             _buffer = UnifiedInputBufferX.makePageBuffer(UnifiedInputBufferX.BufferType.BYTES, DEFAULT_PAGE_SIZE);
             super.init();
             _limit = refill();
+        }
+
+        @Override
+        public void close()
+            throws IOException
+        {
+            super.close();
+            _stream.close();
+            _buffer.clear();
         }
     }
 }

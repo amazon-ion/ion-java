@@ -1,7 +1,4 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
-
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonSymbol;
@@ -9,6 +6,7 @@ import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonValue;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import org.junit.Test;
 
 /**
  *
@@ -34,6 +32,7 @@ public class IterationTest
     //=========================================================================
     // Test cases
 
+    @Test
     public void testSimpleIteration()
     {
         Iterator<IonValue> i = system().iterate("abc");
@@ -47,6 +46,7 @@ public class IterationTest
     }
 
 
+    @Test
     public void testIteratorTermination()
     {
         Iterator<IonValue> scanner = system().iterate("");
@@ -59,10 +59,12 @@ public class IterationTest
 
 
         Iterator<IonValue> iterator = system().systemIterate("");
+iterator.next(); // skip $ion_1_0, this is a system iterator after all
         checkEmptyIterator(iterator);
 
         // Try calling next before hasNext
         iterator = system().systemIterate("1");
+iterator.next(); // skip $ion_1_0, this is a system iterator after all
         iterator.next();
         checkEmptyIterator(iterator);
     }

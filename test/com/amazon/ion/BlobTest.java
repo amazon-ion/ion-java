@@ -1,10 +1,11 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import org.junit.Test;
 
 
 public class BlobTest
@@ -117,6 +118,7 @@ public class BlobTest
     //=========================================================================
     // Test cases
 
+    @Test
     public void testFactoryBlob()
         throws Exception
     {
@@ -125,6 +127,7 @@ public class BlobTest
         modifyBlob(value);
     }
 
+    @Test
     public void testTextNullBlob()
         throws Exception
     {
@@ -141,6 +144,7 @@ public class BlobTest
         checkAnnotation("a", value);
     }
 
+    @Test
     public void testEmptyBlob()
         throws IOException
     {
@@ -158,6 +162,7 @@ public class BlobTest
         assertEquals(0, buf.length());
     }
 
+    @Test
     public void testByteSize()
     {
         for (int i = 0; i < TEST_DATA.length; i++)
@@ -267,6 +272,7 @@ public class BlobTest
     };
 
 
+    @Test
     public void testBlobData()
         throws IOException
     {
@@ -280,6 +286,7 @@ public class BlobTest
     }
 
 
+    @Test
     public void testUnterminatedBlob()
         throws IOException
     {
@@ -297,6 +304,7 @@ public class BlobTest
     }
 
 
+    @Test
     public void testBlobWithSlashes()
         throws IOException
     {
@@ -304,12 +312,14 @@ public class BlobTest
         oneValue("{{ /PsAAQID//79BAU= }}");
     }
 
+    @Test
     public void testBlobWithTooMuchPadding()
     {
         badValue("{{ zg=== }}");
         badValue("{{ nonsense= }}");
     }
 
+    @Test
     public void testBlobWithTooLittlePadding()
     {
         badValue("{{ Zg  }}");

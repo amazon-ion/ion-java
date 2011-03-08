@@ -5,7 +5,8 @@ package com.amazon.ion.util;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.impl.IonBinaryWriterImpl;
+import com.amazon.ion.impl.IonWriterSystemBinary;
+import com.amazon.ion.impl.IonWriterUserBinary;
 import java.io.IOException;
 
 /**
@@ -26,8 +27,12 @@ public class IonStreamUtils
     public void writeBoolList(IonWriter writer, boolean[] values)
         throws IOException
     {
-        if (writer instanceof IonBinaryWriterImpl) {
-            ((IonBinaryWriterImpl)writer).writeBoolList(values);
+        if (writer instanceof IonWriterUserBinary) {
+            ((IonWriterUserBinary)writer).writeBoolList(values);
+            return;
+        }
+        if (writer instanceof IonWriterSystemBinary) {
+            ((IonWriterSystemBinary)writer).writeBoolList(values);
             return;
         }
 
@@ -51,8 +56,12 @@ public class IonStreamUtils
     public void writeFloatList(IonWriter writer, float[] values)
         throws IOException
     {
-        if (writer instanceof IonBinaryWriterImpl) {
-            ((IonBinaryWriterImpl)writer).writeFloatList(values);
+        if (writer instanceof IonWriterUserBinary) {
+            ((IonWriterUserBinary)writer).writeFloatList(values);
+            return;
+        }
+        if (writer instanceof IonWriterSystemBinary) {
+            ((IonWriterSystemBinary)writer).writeFloatList(values);
             return;
         }
 
@@ -74,8 +83,12 @@ public class IonStreamUtils
     public void writeFloatList(IonWriter writer, double[] values)
         throws IOException
     {
-        if (writer instanceof IonBinaryWriterImpl) {
-            ((IonBinaryWriterImpl)writer).writeFloatList(values);
+        if (writer instanceof IonWriterUserBinary) {
+            ((IonWriterUserBinary)writer).writeFloatList(values);
+            return;
+        }
+        if (writer instanceof IonWriterSystemBinary) {
+            ((IonWriterSystemBinary)writer).writeFloatList(values);
             return;
         }
 
@@ -98,8 +111,12 @@ public class IonStreamUtils
     public void writeIntList(IonWriter writer, byte[] values)
         throws IOException
     {
-        if (writer instanceof IonBinaryWriterImpl) {
-            ((IonBinaryWriterImpl)writer).writeIntList(values);
+        if (writer instanceof IonWriterUserBinary) {
+            ((IonWriterUserBinary)writer).writeIntList(values);
+            return;
+        }
+        if (writer instanceof IonWriterSystemBinary) {
+            ((IonWriterSystemBinary)writer).writeIntList(values);
             return;
         }
 
@@ -121,8 +138,12 @@ public class IonStreamUtils
     public void writeIntList(IonWriter writer, short[] values)
         throws IOException
     {
-        if (writer instanceof IonBinaryWriterImpl) {
-            ((IonBinaryWriterImpl)writer).writeIntList(values);
+        if (writer instanceof IonWriterUserBinary) {
+            ((IonWriterUserBinary)writer).writeIntList(values);
+            return;
+        }
+        if (writer instanceof IonWriterSystemBinary) {
+            ((IonWriterSystemBinary)writer).writeIntList(values);
             return;
         }
 
@@ -144,8 +165,12 @@ public class IonStreamUtils
     public void writeIntList(IonWriter writer, int[] values)
         throws IOException
     {
-        if (writer instanceof IonBinaryWriterImpl) {
-            ((IonBinaryWriterImpl)writer).writeIntList(values);
+        if (writer instanceof IonWriterUserBinary) {
+            ((IonWriterUserBinary)writer).writeIntList(values);
+            return;
+        }
+        if (writer instanceof IonWriterSystemBinary) {
+            ((IonWriterSystemBinary)writer).writeIntList(values);
             return;
         }
 
@@ -167,8 +192,12 @@ public class IonStreamUtils
     public void writeIntList(IonWriter writer, long[] values)
         throws IOException
     {
-        if (writer instanceof IonBinaryWriterImpl) {
-            ((IonBinaryWriterImpl)writer).writeIntList(values);
+        if (writer instanceof IonWriterUserBinary) {
+            ((IonWriterUserBinary)writer).writeIntList(values);
+            return;
+        }
+        if (writer instanceof IonWriterSystemBinary) {
+            ((IonWriterSystemBinary)writer).writeIntList(values);
             return;
         }
 
@@ -191,8 +220,12 @@ public class IonStreamUtils
     public void writeStringList(IonWriter writer, String[] values)
         throws IOException
     {
-        if (writer instanceof IonBinaryWriterImpl) {
-            ((IonBinaryWriterImpl)writer).writeStringList(values);
+        if (writer instanceof IonWriterUserBinary) {
+            ((IonWriterUserBinary)writer).writeStringList(values);
+            return;
+        }
+        if (writer instanceof IonWriterSystemBinary) {
+            ((IonWriterSystemBinary)writer).writeStringList(values);
             return;
         }
 

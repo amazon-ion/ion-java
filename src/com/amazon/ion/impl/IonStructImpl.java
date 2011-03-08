@@ -13,8 +13,8 @@ import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonBinary.Reader;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
@@ -38,7 +38,8 @@ public final class IonStructImpl
     private static final int HASH_SIGNATURE =
         IonType.STRUCT.toString().hashCode();
 
-    private boolean _isOrdered = false;
+    // TODO: add support for _isOrdered: private boolean _isOrdered = false;
+    private static final boolean _isOrdered = false;
 
 
     /**
@@ -47,7 +48,7 @@ public final class IonStructImpl
     public IonStructImpl(IonSystemImpl system)
     {
         this(system, NULL_STRUCT_TYPEDESC);
-        _hasNativeValue = true;
+        _hasNativeValue(true);
     }
 
     /**
@@ -76,6 +77,71 @@ public final class IonStructImpl
         }
 
         return clone;
+    }
+
+    private HashMap<String, Integer> _field_map;
+    private int                      _field_map_duplicate_count;
+    @Override
+    protected void transitionToLargeSize(int size)
+    {
+        if (_field_map != null) return;
+        _field_map = new HashMap<String, Integer>(size);
+        int count = get_child_count();
+        for (int ii=0; ii<count; ii++) {
+            IonValueImpl v = (IonValueImpl)get_child(ii);
+            String name = v.getFieldName();
+            _field_map.put(name, ii);
+        }
+        return;
+    }
+    private int find_duplicate(String fieldName)
+    {
+        int size = get_child_count();
+        for (int ii=0; ii<size; ii++) {
+            IonValueImpl field = (IonValueImpl)get_child(ii);
+            if (fieldName.equals(field.getFieldName())) {
+                return ii;
+            }
+        }
+        return -1;
+    }
+    private void add_field(String fieldName, int newFieldIdx)
+    {
+        Integer idx = _field_map.get(fieldName);
+        if (idx == null) {
+            // TODO: should we put the latest field over the top of the
+            //       previous duplicate?
+            _field_map.put(fieldName, newFieldIdx);
+        }
+        else {
+            _field_map_duplicate_count++;
+        }
+
+    }
+    private void remove_field(String fieldName, int idx)
+    {
+        _field_map.remove(fieldName);
+        if (_field_map_duplicate_count > 0) {
+            int ii = find_duplicate(fieldName);
+            if (ii >= 0) {
+                _field_map.put(fieldName, ii);
+                _field_map_duplicate_count--;
+            }
+        }
+    }
+    protected void updateFieldName(String oldname, String name, IonValue field)
+    {
+        assert(name != null && name.equals(field.getFieldName()));
+        if (oldname == null) return;
+        if (_field_map == null) return;
+        Integer idx = _field_map.get(oldname);
+        if (idx == null) return;
+        IonValue oldfield = get_child(idx);
+        // yes, we want object identity in this test
+        if (oldfield == field) {
+            remove_field(oldname, idx);
+            add_field(name, idx);
+        }
     }
 
     /**
@@ -146,16 +212,15 @@ public final class IonStructImpl
     }
 
 
-    @Override
-    public boolean isNullValue()
-    {
-        if (_hasNativeValue || !_isPositionLoaded) {
-            return (_contents == null);
-        }
-
-        int ln = this.pos_getLowNibble();
-        return (ln == IonConstants.lnIsNullStruct);
-    }
+    //public boolean oldisNullValue()
+    //{
+    //    if (_hasNativeValue() || !_isPositionLoaded()) {
+    //        return (_children == null);
+    //    }
+    //
+    //    int ln = this.pos_getLowNibble();
+    //    return (ln == IonConstants.lnIsNullStruct);
+    //}
 
 
     public IonValue get(IonSymbol fieldName)
@@ -184,26 +249,27 @@ public final class IonStructImpl
 
         makeReady();
 
-        for (IonValue field : this) {
-            if (fieldName.equals(field.getFieldName())) {
-                return field;
+        IonValue field = null;
+        if (_field_map != null) {
+            Integer idx = _field_map.get(fieldName);
+            if (idx != null) {
+                field = get_child(idx);
             }
         }
-        return null;
+        else {
+            int ii, size = get_child_count();
+            for (ii=0; ii<size; ii++) {
+                field = get_child(ii);
+                if (fieldName.equals(field.getFieldName())) {
+                    break;
+                }
+            }
+            if (ii>=size) {
+                field = null;
+            }
+        }
+        return field;
     }
-
-//    public IonValueImpl findField(String name, IonValueImpl prev)
-//    {
-//        makeReady();
-//
-//        int sid = this.getSymbolTable().findSymbol(name);
-//        for (IonValue v : this) {
-//            IonValueImpl vi = (IonValueImpl)v;
-//            if (vi._fieldSid == sid) return vi;
-//        }
-//
-//        return null;
-//    }
 
     public void put(String fieldName, IonValue value)
     {
@@ -217,17 +283,17 @@ public final class IonStructImpl
         makeReady();
 
         int size;
-        if (_contents != null) {
+        if (_children != null) {
             try {
                 // Walk backwards to minimize array movement
                 int lowestRemovedIndex = -1;
-                for (int i = _contents.size() - 1; i >= 0; i--)
+                for (int i = get_child_count() - 1; i >= 0; i--)
                 {
-                    IonValue child = _contents.get(i);
+                    IonValue child = get_child(i);
                     if (fieldName.equals(child.getFieldName()))
                     {
                         ((IonValueImpl)child).detachFromContainer();
-                        _contents.remove(i);
+                        this.remove_child(i);
                         lowestRemovedIndex = i;
                     }
                 }
@@ -239,7 +305,7 @@ public final class IonStructImpl
             catch (IOException e) {
                 throw new IonException(e);
             }
-            size = _contents.size();
+            size = this.get_child_count();
         }
         else {
             size = 0;
@@ -293,6 +359,10 @@ public final class IonStructImpl
         // This should be true because we've validated that its not contained.
         assert value.getFieldName() == null;
         concrete.setFieldName(fieldName);
+
+        if (_field_map != null) {
+            add_field(fieldName, concrete._elementid);
+        }
     }
 
     public ValueFactory add(final String fieldName)
@@ -311,17 +381,15 @@ public final class IonStructImpl
     {
         checkForLock();
 
-        // TODO optimize
-        for (Iterator<IonValue> i = iterator(); i.hasNext();)
-        {
-            IonValue field = i.next();
-            if (fieldName.equals(field.getFieldName()))
-            {
-                i.remove();
-                return field;
+        IonValue field = get(fieldName);
+        if (field != null) {
+            super.remove(field);
+            if (_field_map != null) {
+                assert(field instanceof IonValueImpl);
+                remove_field(fieldName, ((IonValueImpl)field)._elementid);
             }
         }
-        return null;
+        return field;
     }
 
     public boolean removeAll(String... fieldNames)
@@ -330,15 +398,16 @@ public final class IonStructImpl
 
         checkForLock();
 
-        for (Iterator<IonValue> i = iterator(); i.hasNext();)
-        {
-            IonValue field = i.next();
-            if (isListedField(field, fieldNames))
-            {
-                i.remove();
+        int size = get_child_count();
+        for (int ii=size; ii>0; ) {
+            ii--;
+            IonValue field = get_child(ii);
+            if (isListedField(field, fieldNames)) {
+                field.removeFromContainer();
                 removedAny = true;
             }
         }
+
         return removedAny;
     }
 
@@ -347,12 +416,13 @@ public final class IonStructImpl
         checkForLock();
 
         boolean removedAny = false;
-        for (Iterator<IonValue> i = iterator(); i.hasNext();)
-        {
-            IonValue field = i.next();
+        int size = get_child_count();
+        for (int ii=size; ii>0; ) {
+            ii--;
+            IonValue field = get_child(ii);
             if (! isListedField(field, fieldNames))
             {
-                i.remove();
+                field.removeFromContainer();
                 removedAny = true;
             }
         }
@@ -425,11 +495,11 @@ public final class IonStructImpl
     @Override
     protected int computeLowNibble(int valuelen)
     {
-        assert _hasNativeValue;
+        assert _hasNativeValue();
 
-        if (_contents == null) return IonConstants.lnIsNullStruct;
+        if (_isNullValue())    { return IonConstants.lnIsNullSequence; }
 
-        if (_contents.isEmpty()) return IonConstants.lnIsEmptyContainer;
+        if (get_child_count() == 0) return IonConstants.lnIsEmptyContainer;
 
         if (_isOrdered) return IonConstants.lnIsOrderedStruct;
 
@@ -447,11 +517,11 @@ public final class IonStructImpl
                              int cumulativePositionDelta)
         throws IOException
     {
-        assert _hasNativeValue == true || _isPositionLoaded == false;
+        assert _hasNativeValue() == true || _isPositionLoaded() == false;
 
         writer.write(this.pos_getTypeDescriptorByte());
 
-        if (_contents != null && _contents.size() > 0)
+        if (get_child_count() > 0)
         {
             // TODO Rewrite this to avoid computing length again
             int vlen = this.getNativeValueLength();
@@ -490,10 +560,14 @@ public final class IonStructImpl
             reader.setPosition(pos);
             int sid = reader.readVarUInt7IntValue();
             child = makeValueFromReader(sid, reader, buffer, symtab, this, _system);
-            child._elementid = _contents.size();
-            _contents.add(child);
+            child._elementid = get_child_count();
+            add_child(child._elementid, child);
             pos = child.pos_getOffsetofNextValue();
         }
-        assert pos == end;  // TODO should throw IonException
+        if (pos != end) {
+            // TODO should we throw an IonException here?
+            // this would be caused by improperly formed binary
+            assert pos == end;
+        }
     }
 }

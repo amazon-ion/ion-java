@@ -4,6 +4,8 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
+
 import com.amazon.ion.IonLob;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSequence;
@@ -20,7 +22,8 @@ public class IonIteratorImpl
 {
     private final IonSystemImpl _system;
 
-    private IonReader _reader;
+    private IonReader    _reader;
+    private SymbolTable  _current_symbols;
 
     private boolean      _at_eof;
     private IonValueImpl _curr;
@@ -74,9 +77,29 @@ public class IonIteratorImpl
             IonType type = _reader.next();
             // FIXME second clause shouldn't be needed.  ION-27
 //            assert !_reader.isInStruct() || type==IonType.STRUCT;
+            assert(type != null);
 
             IonValue v = readValue(_reader);
             _next = (IonValueImpl) v;
+            SymbolTable symbols = _next.getAssignedSymbolTable();
+            if (UnifiedSymbolTable.isTrivialTable(symbols) == true
+             && UnifiedSymbolTable.isTrivialTable(this._current_symbols) == false
+            ) {
+                symbols = this._current_symbols;
+                _next.setSymbolTable(symbols);
+            }
+
+            if (UnifiedSymbolTable.isRealLocalTable(symbols) == false) {
+                // so we have to make it a real
+                assert(symbols == null || symbols.isSharedTable() || symbols.isSystemTable());
+                IonSystemImpl system = _next.getSystem();
+                SymbolTable local =
+                    makeNewLocalSymbolTable(system, system.getSystemSymbolTable());
+                _next.setSymbolTable(local);
+                symbols = local;
+            }
+
+            this._current_symbols = symbols;
         }
 
         return _next;

@@ -1,10 +1,8 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
-import java.nio.CharBuffer;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.Charset;
+import org.junit.Test;
 
 
 
@@ -12,34 +10,6 @@ import java.nio.charset.Charset;
 public class StringTest
     extends TextTestCase
 {
-    private static final boolean _debug_output = false;
-    public static void testDummy() {
-        int u =  0x10400; // 0x10FFFE; // 0xD800 + 2;  // 'a'; //
-
-        char[] c = Character.toChars(u);
-
-        CharBuffer cb = CharBuffer.wrap(c);
-
-        byte[] b = null;
-        try {
-            b = Charset.forName("UTF-8").newEncoder().encode(cb).array();
-        } catch (CharacterCodingException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-
-        for (int ii=0; ii<c.length; ii++) {
-            if (_debug_output) {
-                System.out.println("char "+ii+" = "+Integer.toHexString(((c[ii]))));
-            }
-        }
-        for (int ii=0; ii<b.length; ii++) {
-            if (_debug_output) {
-                System.out.println("byte "+ii+" = "+Integer.toHexString(((b[ii]) & 0xff)));
-            }
-        }
-        return;
-    }
     public static void checkNullString(IonString value)
     {
         assertSame(IonType.STRING, value.getType());
@@ -76,6 +46,7 @@ public class StringTest
     // Test cases
 
 
+    @Test
     public void testFactoryString()
     {
         IonString value = system().newNullString();
@@ -83,6 +54,7 @@ public class StringTest
         modifyString(value);
     }
 
+    @Test
     public void testTextNullString()
     {
         IonString value = (IonString) oneValue("null.string");
@@ -91,6 +63,7 @@ public class StringTest
     }
 
 
+    @Test
     public void testEmptyStrings()
     {
         IonString value = (IonString) oneValue("\"\"");
@@ -101,6 +74,7 @@ public class StringTest
     }
 
 
+    @Test
     public void testStringBasics()
     {
         IonString value = (IonString) oneValue("\"hello\"");
@@ -112,6 +86,7 @@ public class StringTest
     }
 
 
+    @Test
     public void testTruncatedStrings()
     {
         // Short string
@@ -142,6 +117,7 @@ public class StringTest
     }
 
 
+    @Test
     public void testBackslashEof()
     {
         try
@@ -154,6 +130,7 @@ public class StringTest
     }
 
 
+    @Test
     public void testStringEscapes()
     {
         IonString value = (IonString) oneValue(" \"\\\n\"");
@@ -188,6 +165,7 @@ public class StringTest
     /**
      * No octal, but we do have \0.
      */
+    @Test
     public void testOctal000()
     {
         IonString value = (IonString) oneValue("\"0\\0000\"");
@@ -200,6 +178,7 @@ public class StringTest
         assertEquals('0', str.charAt(4));
     }
 
+    @Test
     public void testUnicodeCharacters()
     {
         String expected;
@@ -214,6 +193,7 @@ public class StringTest
         checkString(expected, value);
     }
 
+    @Test
     public void testTrickyEscapes()
     {
         // Plowing them into a long string changes the parsing/encoding flow.
@@ -226,6 +206,7 @@ public class StringTest
         checkString(expected, value);
     }
 
+    @Test
     public void testReadStringsFromSuite()
         throws Exception
     {
@@ -238,6 +219,7 @@ public class StringTest
         }
     }
 
+    @Test
     public void testNewlineInString()
     {
         badValue(" \"123\n456\" ");
@@ -245,12 +227,14 @@ public class StringTest
         badValue(" \"123456789ABCDEF\nGHI\" ");
     }
 
+    @Test
     public void testTopLevelConcatenation()
     {
         IonValue value = oneValue("  '''a''' '''b'''  ");
         checkString("ab", value);
     }
 
+    @Test
     public void testQuotesOnMediumStringBoundary()
     {
         // Double-quote falls on the boundary.
@@ -260,6 +244,7 @@ public class StringTest
     }
 
 
+    @Test
     public void testStringClone()
         throws Exception
     {

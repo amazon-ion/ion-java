@@ -118,12 +118,12 @@ public final class Timestamp
      * _month and _day are 1 based (0 is an invalid value for
      * these in a non-null Timestamp.
      */
-    private int     _year;
-    private int     _month = 1; // Initialized to valid default
-    private int     _day   = 1; // Initialized to valid default
-    private int     _hour;
-    private int     _minute;
-    private int     _second;
+    private short   _year;
+    private byte    _month = 1; // Initialized to valid default
+    private byte    _day   = 1; // Initialized to valid default
+    private byte    _hour;
+    private byte    _minute;
+    private byte    _second;
     private BigDecimal     _fraction;  // fractional seconds, this will be between >= 0 and < 1
 
     /**
@@ -231,12 +231,12 @@ public final class Timestamp
      */
     @SuppressWarnings("deprecation")
     private void set_fields_from_millis(Date date) {
-        this._year    = date.getYear() + 1900;
-        this._month   = date.getMonth() + 1;  // calendar months are 0 based, timestamp months are 1 based
-        this._day     = date.getDate();
-        this._hour    = date.getHours();
-        this._minute  = date.getMinutes();
-        this._second = date.getSeconds();
+        this._year    = (short)(date.getYear() + 1900);
+        this._month   = (byte)(date.getMonth() + 1);  // calendar months are 0 based, timestamp months are 1 based
+        this._day     = (byte)date.getDate();
+        this._hour    = (byte)date.getHours();
+        this._minute  = (byte)date.getMinutes();
+        this._second  = (byte)date.getSeconds();
         // this is done because the y-m-d values are in the local timezone
         // so this adjusts the value back to zulu time (GMT)
         // Note that the sign on this is opposite of Ion (and Calendar) offset.
@@ -300,17 +300,17 @@ public final class Timestamp
         switch (p) {
             case FRACTION:
             case SECOND:
-                this._second = cal.get(Calendar.SECOND);
+                this._second = (byte)cal.get(Calendar.SECOND);
             case MINUTE:
-                this._hour = cal.get(Calendar.HOUR_OF_DAY);
-                this._minute = cal.get(Calendar.MINUTE);
+                this._hour   = (byte)cal.get(Calendar.HOUR_OF_DAY);
+                this._minute = (byte)cal.get(Calendar.MINUTE);
             case DAY:
-                this._day = cal.get(Calendar.DAY_OF_MONTH);
+                this._day    = (byte)cal.get(Calendar.DAY_OF_MONTH);
             case MONTH:
                 // calendar months are 0 based, timestamp months are 1 based
-                this._month = cal.get(Calendar.MONTH) + 1;
+                this._month  = (byte)(cal.get(Calendar.MONTH) + 1);
             case YEAR:
-                this._year = cal.get(Calendar.YEAR);
+                this._year   = (short)cal.get(Calendar.YEAR);
         }
 
         // Strangely, if this test is made before calling get(), it will return
@@ -324,24 +324,36 @@ public final class Timestamp
     }
 
 
-    void validate_fields()
+    private void validate_fields()
     {
-        if (_year < 1  || _year > 9999) throw new IllegalArgumentException("year must be between 1 and 9999 inclusive GMT, and local time");
-        if (_month < 1 || _month > 12) throw new IllegalArgumentException("month is between 1 and 12 inclusive");
-        if (_day < 1   || _day > last_day_in_month(_year, _month))
-            throw new IllegalArgumentException("day is between 1 and "+last_day_in_month(_year, _month)+" inclusive");
+        if (_year < 1  || _year > 9999) error_in_field("year must be between 1 and 9999 inclusive GMT, and local time");
+        if (_month < 1 || _month > 12) error_in_field("month is between 1 and 12 inclusive");
+        if (_day < 1   || _day > last_day_in_month(_year, _month)) {
+            error_in_field("Day in month " + _year + "-" + _month
+                           + " must between 1 and "
+                           + last_day_in_month(_year, _month) + " inclusive");
+        }
 
-        if (_hour < 0 || _hour > 23) throw new IllegalArgumentException("hour is between 0 and 23 inclusive");
-        if (_minute < 0 || _minute > 59) throw new IllegalArgumentException("minute is between 0 and 59 inclusive");
-        if (_second < 0 || _second > 59) throw new IllegalArgumentException("second is between 0 and 59 inclusive");
+        if (_hour < 0 || _hour > 23)     error_in_field("hour is between 0 and 23 inclusive");
+        if (_minute < 0 || _minute > 59) error_in_field("minute is between 0 and 59 inclusive");
+        if (_second < 0 || _second > 59) error_in_field("second is between 0 and 59 inclusive");
 
         if (this._precision == Precision.FRACTION) {
-            if (_fraction == null)
-                throw new IllegalArgumentException("fractional seconds cannot be null when the precision is Timestamp.TT_FRAC");
-            if (_fraction.signum() == -1) throw new IllegalArgumentException("fractional seconds must be greater than or equal to 0 and less than 1");
-            if (BigDecimal.ONE.compareTo(_fraction) != 1)
-                throw new IllegalArgumentException("fractional seconds must be greater than or equal to 0 and less than 1");
+            if (_fraction == null) error_in_field("fractional seconds cannot be null when the precision is Timestamp.TT_FRAC");
+            if (_fraction.signum() == -1) {
+                error_in_field("fractional seconds must be greater than or equal to 0 and less than 1");
+            }
+            if (BigDecimal.ONE.compareTo(_fraction) != 1) {
+                error_in_field("fractional seconds must be greater than or equal to 0 and less than 1");
+            }
         }
+    }
+
+    private static void error_in_field(String message)
+    {
+        IllegalArgumentException e = new IllegalArgumentException(message);
+        //throw new IonException(e);
+        throw e;
     }
 
     /**
@@ -357,11 +369,11 @@ public final class Timestamp
         int end_of_month = last_day_in_month(zyear, zmonth);
         if (zday < 1 || zday > end_of_month) throw new IllegalArgumentException("day is between 1 and "+end_of_month+" inclusive");
         this._precision = Precision.DAY;
-        this._day = zday;  // days are base 1 (as you'd expect)
-        this._month = zmonth;
-        this._year = zyear;
+        this._day       = (byte)zday;  // days are base 1 (as you'd expect)
+        this._month     = (byte)zmonth;
+        this._year      = (short)zyear;
         validate_fields();
-        this._offset = UNKNOWN_OFFSET;
+        this._offset    = UNKNOWN_OFFSET;
     }
 
     /**
@@ -378,17 +390,17 @@ public final class Timestamp
                      Integer offset)
     {
         this._precision = Precision.MINUTE;
-        this._minute = minute;
-        this._hour = hour;
-        this._day = day;  // days are base 1 (as you'd expect)
-        this._month = month;
-        this._year = year;
+        this._minute    = (byte)minute;
+        this._hour      = (byte)hour;
+        this._day       = (byte)day;  // days are base 1 (as you'd expect)
+        this._month     = (byte)month;
+        this._year      = (short)year;
 
         validate_fields();
         if (offset != null) {
-            this._offset = offset;
-            apply_offset(offset);
-        }
+        this._offset = offset;
+        apply_offset(offset);
+    }
     }
 
     /**
@@ -405,18 +417,18 @@ public final class Timestamp
                      Integer offset)
     {
         this._precision = Precision.SECOND;
-        this._second = second;
-        this._minute = minute;
-        this._hour = hour;
-        this._day = day;  // days are base 1 (as you'd expect)
-        this._month = month;
-        this._year = year;
+        this._second    = (byte)second;
+        this._minute    = (byte)minute;
+        this._hour      = (byte)hour;
+        this._day       = (byte)day;  // days are base 1 (as you'd expect)
+        this._month     = (byte)month;
+        this._year      = (short)year;
 
         validate_fields();
         if (offset != null) {
-            this._offset = offset;
-            apply_offset(offset);
-        }
+        this._offset = offset;
+        apply_offset(offset);
+    }
     }
 
     /**
@@ -437,18 +449,18 @@ public final class Timestamp
     {
         this._precision = Precision.FRACTION;
         this._fraction = frac.abs();
-        this._second = second;
-        this._minute = minute;
-        this._hour = hour;
-        this._day = day;  // days are base 1 (as you'd expect)
-        this._month = month;
-        this._year = year;
+        this._second   = (byte)second;
+        this._minute   = (byte)minute;
+        this._hour     = (byte)hour;
+        this._day      = (byte)day;  // days are base 1 (as you'd expect)
+        this._month    = (byte)month;
+        this._year     = (short)year;
 
         validate_fields();
         if (offset != null) {
-            this._offset = offset;
-            apply_offset(offset);
-        }
+        this._offset = offset;
+        apply_offset(offset);
+    }
     }
 
     /**
@@ -472,16 +484,16 @@ public final class Timestamp
         case FRACTION:
             this._fraction = frac.abs();
         case SECOND:
-            this._second = zsecond;
+            this._second = (byte)zsecond;
         case MINUTE:
-            this._minute = zminute;
-            this._hour = zhour;
+            this._minute = (byte)zminute;
+            this._hour   = (byte)zhour;
         case DAY:
-            this._day = zday;  // days are base 1 (as you'd expect)
+            this._day    = (byte)zday;  // days are base 1 (as you'd expect)
         case MONTH:
-            this._month = zmonth;
+            this._month  = (byte)zmonth;
         case YEAR:
-            this._year = zyear;
+            this._year   = (short)zyear;
         }
         validate_fields();
         this._offset = offset;
@@ -630,7 +642,7 @@ public final class Timestamp
             }
             pos = END_OF_YEAR;
             precision = Precision.YEAR;
-            year  = read_digits(image, 0, 4, -1, "invalid timestamp image: year field ");
+            year  = read_digits(image, 0, 4, -1, "year");
 
             char c = image.charAt(END_OF_YEAR);
             if (c == 'T') break;
@@ -642,7 +654,7 @@ public final class Timestamp
             }
             pos = END_OF_MONTH;
             precision = Precision.MONTH;
-            month = read_digits(image, END_OF_YEAR + 1, 2, -1, "invalid timestamp image: month field ");
+            month = read_digits(image, END_OF_YEAR + 1, 2, -1, "month");
 
             c = image.charAt(END_OF_MONTH);
             if (c == 'T') break;
@@ -654,7 +666,7 @@ public final class Timestamp
             }
             pos = END_OF_DAY;
             precision = Precision.DAY;
-            day   = read_digits(image, END_OF_MONTH + 1, 2, -1, "invalid timestamp image: day field");
+            day   = read_digits(image, END_OF_MONTH + 1, 2, -1, "day");
             if (length == END_OF_DAY) break;
             c = image.charAt(END_OF_DAY);
             if (c != 'T') {
@@ -666,8 +678,8 @@ public final class Timestamp
             if (length < END_OF_MINUTES) {
                 throw new IllegalArgumentException("invalid timestamp image: too short for yyyy-mm-ddThh:mm");
             }
-            hour   = read_digits(image, 11, 2, ':', "invalid timestamp image: hour field ");
-            minute = read_digits(image, 14, 2, -1, "invalid timestamp image: minute field ");
+            hour   = read_digits(image, 11, 2, ':', "hour");
+            minute = read_digits(image, 14, 2, -1, "minutes");
             pos = END_OF_MINUTES;
             precision = Precision.MINUTE;
 
@@ -676,7 +688,7 @@ public final class Timestamp
             if (length < END_OF_SECONDS) {
                 throw new IllegalArgumentException("invalid timestamp imagetoo short for yyyy-mm-ddThh:mm:ss");
             }
-            seconds = read_digits(image, 17, 2, -1, "invalid timestamp image: seconds field ");
+            seconds = read_digits(image, 17, 2, -1, "seconds");
             pos = END_OF_SECONDS;
             precision = Precision.SECOND;
 
@@ -686,7 +698,9 @@ public final class Timestamp
             while (length > pos && Character.isDigit(image.charAt(pos))) {
                 pos++;
             }
-            if (pos <= END_OF_SECONDS + 1) break;
+            if (pos <= END_OF_SECONDS + 1) {
+                throw new IllegalArgumentException("Timestamp must have at least one digit after decimal point: " + image);
+            }
             precision = Precision.FRACTION;
             fraction = new BigDecimal(image.subSequence(19, pos).toString());
         } while (false);
@@ -705,9 +719,9 @@ public final class Timestamp
             }
             // +/- hh:mm
             pos++;
-            temp = read_digits(image, pos, 2, ':', "invalid timestamp image: offset hours field ");
+            temp = read_digits(image, pos, 2, ':', "local offset hours");
             pos += 3;
-            temp = temp * 60 + read_digits(image, pos, 2, -1, "invalid timestamp image: offset mintues field ");
+            temp = temp * 60 + read_digits(image, pos, 2, -1, "local offset minutes");
             pos += 2;
             if (temp >= 24*60) throw new IllegalArgumentException("invalid timezone offset: timezone offset must not be more than 1 day");
             if (timezone_start == '-') {
@@ -728,12 +742,12 @@ public final class Timestamp
                 case DAY:
                     break;
                 default:
-                    throw new IllegalArgumentException("invalid timezone offset: missing timezone offset");
+                    error_in_field("Timestamp must have local offset: " + image);
             }
             offset = null;
         }
         if (image.length() > (pos + 1) && !isValidFollowChar(image.charAt(pos + 1))) {
-            throw new IllegalArgumentException("invalid excess characters encountered");
+            error_in_field("invalid excess characters encountered");
         }
 
         Timestamp ts =
@@ -746,25 +760,46 @@ public final class Timestamp
         return ts;
     }
 
-    private static int read_digits(CharSequence in, int start, int length, int terminator, String msg) {
+    private static int read_digits(CharSequence in, int start, int length,
+                                   int terminator, String field)
+    {
         int ii, value = 0;
         int end = start + length;
 
         if (in.length() < end) {
-            throw new IllegalArgumentException(msg+" too short");
+            error_in_field("Malformed timestamp, " + field
+                           + " requires " + length + " digits: " + in);
         }
 
         for (ii=start; ii<end; ii++) {
             char c = in.charAt(ii);
-            if (!Character.isDigit(c)) throw new IllegalArgumentException(msg+" has an invalid character: '"+c+"' encountered");
+            if (!Character.isDigit(c)) {
+                // FIXME this will give incorrect message if c is a surrogate
+                error_in_field("Malformed timestamp, " + field
+                               + " has non-digit character "
+                               + printCodePointAsString(c)
+                               + "\": " + in);
+            }
             value *= 10;
             value += c - '0';
         }
+
+        // Check the terminator if requested.
         if (terminator != -1) {
             if (ii >= in.length() || in.charAt(ii) != terminator) {
-                throw new IllegalArgumentException(msg+" has a bad terminator character: '"+terminator+"' expected");
+                error_in_field("Malformed timestamp, " + field
+                               + " should end with "
+                               + printCodePointAsString(terminator)
+                               + "\": " + in);
             }
         }
+        // Otherwise make sure we don't have too many digits.
+        else if (ii < in.length() && Character.isDigit(in.charAt(ii))) {
+            error_in_field("Malformed timestamp, " + field
+                           + " requires " + length + " digits but has more: "
+                           + in);
+        }
+
         return value;
     }
 
@@ -1181,8 +1216,8 @@ public final class Timestamp
 
         // Adjust UTC time back to local time
         if (this._offset != null && this._offset.intValue() != 0) {
-            adjusted = make_localtime();
-        }
+                adjusted = make_localtime();
+            }
 
         print(out, adjusted);
     }
@@ -1296,7 +1331,7 @@ public final class Timestamp
         while (length > 0) {
             length--;
             int next = value / 10;
-            temp[length] =  (char)((int)'0' + (value - next*10));
+            temp[length] =  (char)('0' + (value - next*10));
             value = next;
         }
         while (length > 0) {

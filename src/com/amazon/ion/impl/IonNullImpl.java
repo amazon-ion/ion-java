@@ -31,7 +31,7 @@ public final class IonNullImpl
     public IonNullImpl(IonSystemImpl system)
     {
         super(system, NULL_NULL_TYPEDESC);
-        _hasNativeValue = true;
+        _hasNativeValue(true);
     }
 
     /**
@@ -40,7 +40,7 @@ public final class IonNullImpl
     public IonNullImpl(IonSystemImpl system, int typeDesc)
     {
         super(system, typeDesc);
-        _hasNativeValue = true;
+        _hasNativeValue(true);
 
         // This is necessary to trap badly-encoded data.
         // FIXME don't error in this case.
@@ -87,11 +87,12 @@ public final class IonNullImpl
     }
 
 
-    @Override
-    public final boolean isNullValue()
-    {
-        return true;
-    }
+    //@Override
+    //public final boolean isNullValue()
+    //{
+    //    assert(this._isNullValue() == true);
+    //    return true;
+    //}
 
 
     @Override
@@ -110,16 +111,16 @@ public final class IonNullImpl
     @Override
     protected void doMaterializeValue(IonBinary.Reader reader)
     {
-        assert this._isPositionLoaded == true && this._buffer != null;
+        assert this._isPositionLoaded() == true && this._buffer != null;
 
         // a native value trumps a buffered value
-        if (_hasNativeValue) return;
+        if (_hasNativeValue()) return;
 
         // the reader will have been positioned for us
         assert reader.position() == this.pos_getOffsetAtValueTD();
         assert this.pos_getType() == IonConstants.tidNull;
 
-        _hasNativeValue = true;
+        _hasNativeValue(true);
     }
 
 

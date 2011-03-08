@@ -24,15 +24,12 @@ import java.math.MathContext;
 import java.util.ArrayList;
 import java.util.Stack;
 
-
-/**
- *
- */
 public class IonBinary
 {
     static boolean debugValidation = false;
 
     private static final BigInteger MAX_LONG_VALUE = new BigInteger(Long.toString(Long.MAX_VALUE));
+    private static final int SIZE_OF_LONG = 8;
 
     final static int _ib_TOKEN_LEN           =    1;
     final static int _ib_VAR_INT32_LEN_MAX   =    5; // 31 bits (java limit) / 7 bits per byte =  5 bytes
@@ -518,18 +515,21 @@ public class IonBinary
         return len;
     }
 
-    public static int lenVarUInt8(BigInteger bi)
+    public static int lenVarUInt8(BigInteger bigVal)
     {
-        if (bi.signum() < 0) {
+        if (bigVal.signum() < 0) {
             throw new IllegalArgumentException("lenVarUInt8 expects a non-negative a value");
         }
-        int bytes = lenVarInt8(bi, false);
-        return bytes;
-    }
-    private final static int lenVarInt8_helper(BigInteger bi)
-    {
-        int bits = bi.bitLength();
-        int bytes = (bits / 8) + 1;
+        final int bits = bigVal.bitLength();
+        // determine the number of octets needed to represent this bit pattern
+        // (div 8)
+        int bytes = bits >> 3;
+        // if we have a bit more than what can fit in an octet, we need to add
+        // an extra octet (mod 8)
+        if ((bits & 0x7) != 0)
+        {
+            bytes++;
+        }
         return bytes;
     }
 
@@ -623,7 +623,7 @@ public class IonBinary
             //      is the same, but that's also the bit pattern we need to
             //      write out, but the UInt method won't like it, so we just
             //      return then value that we actually know.
-            if (v == Long.MIN_VALUE) return Long.SIZE;
+            if (v == Long.MIN_VALUE) return SIZE_OF_LONG;
             return IonBinary.lenVarUInt8(-v);
         }
         else if (v > 0) {
@@ -633,7 +633,11 @@ public class IonBinary
     }
     public static int lenIonInt(BigInteger v)
     {
-        int len = lenVarInt8(v, false);
+        if (v.signum() < 0)
+        {
+            v = v.negate();
+        }
+        int len = lenVarUInt8(v);
         return len;
     }
 
@@ -964,6 +968,51 @@ public class IonBinary
     }
 
 
+    /** Utility method to convert an unsigned magnitude stored as a long to a {@link BigInteger}. */
+    public static BigInteger unsignedLongToBigInteger(int signum, long val)
+    {
+        byte[] magnitude = {
+            (byte) ((val >> 56) & 0xFF),
+            (byte) ((val >> 48) & 0xFF),
+            (byte) ((val >> 40) & 0xFF),
+            (byte) ((val >> 32) & 0xFF),
+            (byte) ((val >> 24) & 0xFF),
+            (byte) ((val >> 16) & 0xFF),
+            (byte) ((val >>  8) & 0xFF),
+            (byte) (val & 0xFF),
+        };
+        return new BigInteger(signum, magnitude);
+    }
+
+    /**
+     * Uses {@link InputStream#read(byte[], int, int)} until the entire length is read.
+     * This method will block until the request is satisfied.
+     *
+     * @param in        The stream to read from.
+     * @param buf       The buffer to read to.
+     * @param offset    The offset of the buffer to read from.
+     * @param len       The length of the data to read.
+     */
+    public static void readAll(InputStream in, byte[] buf, int offset, int len) throws IOException
+    {
+        int rem = len;
+        while (rem > 0)
+        {
+            int amount = in.read(buf, offset, rem);
+            if (amount <= 0)
+            {
+                // try to throw a useful exception
+                if (in instanceof Reader)
+                {
+                    ((Reader) in).throwUnexpectedEOFException();
+                }
+                // defer to a plain exception
+                throw new IonException("Unexpected EOF");
+            }
+            rem -= amount;
+            offset += amount;
+        }
+    }
 
     public static final class Reader
         extends BlockedBuffer.BlockedByteInputStream
@@ -1301,6 +1350,30 @@ public class IonBinary
             }
             return retvalue;
         }
+
+        /**
+         * Reads the specified magnitude as a {@link BigInteger}.
+         *
+         * @param len           The length of the UInt8 octets to read.
+         * @param signum        The sign as per {@link BigInteger#BigInteger(int, byte[])}.
+         * @return              The signed {@link BigInteger}.
+         *
+         * @throws IOException  Thrown if there are an I/O errors on the underlying stream.
+         */
+        public BigInteger readVarUInt8BigIntegerValue(int len, int signum) throws IOException {
+            byte[] magnitude = new byte[len];
+            for (int i = 0; i < len; i++) {
+                int octet = read();
+                if (octet < 0) {
+                    throwUnexpectedEOFException();
+                }
+                magnitude[i] = (byte) octet;
+            }
+
+            // both BigInteger and ion store this magnitude as big-endian
+            return new BigInteger(signum, magnitude);
+        }
+
         public long readVarUInt8LongValue(int len) throws IOException {
             long    retvalue = 0;
             int b;
@@ -1598,7 +1671,7 @@ done:       for (;;) {
                 if (bitlen > 0)
                 {
                     byte[] bits = new byte[bitlen];
-                    this.read(bits, 0, bitlen);
+                    readAll(this, bits, 0, bitlen);
 
                     signum = 1;
                     if (bits[0] < 0)
@@ -1687,10 +1760,15 @@ done:       for (;;) {
             }
 
             // now we let timestamp put it all together
-            val = Timestamp.createFromUtcFields(p, year, month, day,
-                                                hour, minute, second,
-                                                frac, offset);
-            return val;
+            try {
+                val = Timestamp.createFromUtcFields(p, year, month, day,
+                                                    hour, minute, second,
+                                                    frac, offset);
+                return val;
+            }
+            catch (IllegalArgumentException e) {
+                throw new IonException(e.getMessage() + " at: " + position());
+            }
         }
 
         public String readString(int len) throws IOException
@@ -2364,7 +2442,7 @@ done:       for (;;) {
          * Note that this will write from the lowest to highest
          * order bits in the long value given.
          */
-        public int writeVarUInt8Value(BigInteger value, int len, boolean forceContent) throws IOException
+        public int writeVarUInt8Value(BigInteger value, int len) throws IOException
         {
             int returnlen = 0;
             int signum = value.signum();
@@ -2383,16 +2461,15 @@ done:       for (;;) {
             else {
                 assert(signum > 0);
                 byte[] bits = value.toByteArray();
-                boolean needExtraByteForSign = ((bits[0] & 0x80) != 0);
-
-                // If the first bit is set, we can't use it for the sign,
-                // and we need to write an extra byte to hold it.
-                if (needExtraByteForSign) {
-                    this.write((byte)0x00);
-                    returnlen++;
+                // BigInteger will pad this with a null byte sometimes
+                // for negative numbers...let's skip past any leading null bytes
+                int offset = 0;
+                while (offset < bits.length && bits[offset] == 0) {
+                    offset++;
                 }
-                this.write(bits, 0, bits.length);
-                returnlen += bits.length;
+                int bitlen = bits.length - offset;
+                this.write(bits, offset, bitlen);
+                returnlen += bitlen;
             }
             assert(returnlen == len);
             return len;
@@ -2712,12 +2789,12 @@ done:       for (;;) {
          */
 
         /**
-         * @param symtab must be local, not shared, not null.
+         * @param sid must be valid id (>=1)
          */
-        public int writeSymbolWithTD(String s, SymbolTable symtab)
+        public int writeSymbolWithTD(int sid) // was: (String s, SymbolTable symtab)
             throws IOException
         {
-            int sid = symtab.addSymbol(s);
+            // was: int sid = symtab.addSymbol(s);
             assert sid > 0;
 
             int vlen = lenVarUInt8(sid);

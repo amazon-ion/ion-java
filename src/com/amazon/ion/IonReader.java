@@ -1,22 +1,49 @@
-// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Date;
 import java.util.Iterator;
 
+/* One design goal is for the readers and writers to be independent of an
+ * IonSystem or ValueFactory and thus independent of particular implementations
+ * of the DOM.
+ *
+ * The issue is that one needs a ValueFactory in order to construct the tree.
+ * So one either needs to pass a ValueFactory / IonSystem to the reader, or
+ * pass the reader to the system.  I decided that the dependencies were better
+ * the latter way.  So we have IonSystem.newValue(IonReader) instead of
+ * IonReader.nextValue(IonSystem).
+ */
 
 /**
  * Provides stream-based access to Ion data independent of its underlying
  * representation (text, binary, or {@link IonValue} tree).
  * <p>
+ * <b>WARNING:</b> This interface should not be implemented by applications.
+ * We still have some work to do before this interface is stable.
+ * See <a href="https://issue-tracking.amazon.com/browse/ION-183">JIRA issue
+ * ION-183</a>
+ * <p>
  * In general, method names are intended to parallel similar methods in the
  * {@link IonValue} hierarchy.  For example, to get the text of a symbol one
  * would use {@link #stringValue()} which mirrors
  * {@link IonSymbol#stringValue()}.
+ * <h2>Exception Handling</h2>
+ * {@code IonReader} is a generic interface for traversion Ion data, and it's
+ * not possible to fully specify the set of exceptions that could be thrown
+ * from the underlying data source.  Thus all failures are thrown as instances
+ * of {@link IonException}, wrapping the originating cause.  If an application
+ * wants to handle (say) {@link IOException}s specially, then it needs to
+ * extract that from the wrappers; the documentation of {@link IonException}
+ * explains how to do that.
  */
 public interface IonReader
+    extends Closeable
 {
 
     /**
@@ -83,11 +110,13 @@ public interface IonReader
      */
     public int getDepth();
 
+
     /**
      * Returns the symbol table that is applicable to the current value.
      * This may be either a system or local symbol table.
      */
     public SymbolTable getSymbolTable();
+
 
     /**
      * Returns the type of the current value, or null if there is no valid
@@ -142,16 +171,6 @@ public interface IonReader
      */
     public String getFieldName();
 
-    /**
-     * Return the current value as an IonValue using the passed in IonSystem
-     * context. This returns null if there is no valid current value.
-     *
-     * @param sys ion context for the returned value to be created under.
-     * This does not have be the same as the context of the iterators value,
-     * if it has one.
-     */
-     // TODO Probably more appropriate to be system.newIonValue(IonReader)
-//    public IonValue getIonValue(IonSystem sys);
 
     /**
      * Returns the whether or not the current value a null ion value.
@@ -193,11 +212,11 @@ public interface IonReader
     public long longValue();
 
     /**
-     * Returns the current value as a BigDecimal.  This is only valid if there
+     * Returns the current value as a {@link BigInteger}.  This is only valid if there
      * is an underlying value and the value is of a numeric type (int, float, or
      * decimal).
-     */  // TODO implement bigIntegerValue
-//    public BigInteger bigIntegerValue();
+     */
+    public BigInteger bigIntegerValue();
 
     /**
      * Returns the current value as a double.  This is only valid if there is
@@ -255,6 +274,9 @@ public interface IonReader
      * Returns the current value as an int symbol id.  This is only valid if
      * there is
      * an underlying value and the value is an Ion symbol.
+     * <p>
+     * If the reader cannot determine the symbol ID, this method returns
+     * {@link SymbolTable#UNKNOWN_SYMBOL_ID}.
      *
      * @see #stringValue()
      */

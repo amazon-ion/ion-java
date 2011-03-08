@@ -94,7 +94,7 @@ public class Base64Encoder
                 return letter.letter;
             }
         }
-        throw new RuntimeException(new IOException("fatal: invalid char map definition - missing terminator"));
+        throw new RuntimeException(new IonException("fatal: invalid char map definition - missing terminator"));
     }
     static private int[] init64IntToChar(EL[] els)
     {
@@ -124,8 +124,8 @@ public class Base64Encoder
         return output;
     }
     public final static boolean isBase64Character(int c) {
-    	if (c < 32 || c > 255) return false;
-    	return (URLSafe64CharToInt[c] >= 0);
+        if (c < 32 || c > 255) return false;
+        return (URLSafe64CharToInt[c] >= 0);
     }
     public Base64Encoder() {}
 
@@ -175,10 +175,10 @@ public class Base64Encoder
         private int characterToBinary(final int c) throws IOException {
             int result = -1;
             if (c >= 0 && c < _chartobin.length) {
-                result = _chartobin[c]; 
+                result = _chartobin[c];
             }
             if (result < 0) {
-                throw new IOException("invalid base64 character (" + c + ")");
+                throw new IonException("invalid base64 character (" + c + ")");
             }
             return result;
         }
@@ -206,7 +206,7 @@ public class Base64Encoder
                 }
                 if (IonTextUtils.isWhitespace(c)) continue;
                 cbin = characterToBinary(c);
-                
+
                 this._buffer[inlen++] = (char)cbin;
             }
             if (inlen != 4) {
@@ -221,10 +221,10 @@ public class Base64Encoder
                     c = this._source.read();
                 }
                 if (templen != 4) {
-                    throw new IOException("base64 character count must be divisible by 4, using '=' for padding");
+                    throw new IonException("base64 character count must be divisible by 4, using '=' for padding");
                 }
                 else if (inlen < 1) {
-                    throw new IOException("base64 character count must be divisible by 4, but using no more than 3 '=' chars for padding");
+                    throw new IonException("base64 character count must be divisible by 4, but using no more than 3 '=' chars for padding");
                 }
 
                 this._terminatingChar = c;
@@ -448,7 +448,7 @@ public class Base64Encoder
         {
             int outchar = -1;
             if (!_ready) {
-                throw new IOException(this.getClass().getName()+ " is not ready");
+                throw new IOException(this.getClass().getName()+ " is closed");
             }
             if (_state != 0) return  -1;
 
@@ -467,7 +467,7 @@ public class Base64Encoder
         public int read(char[] cbuf) throws IOException
         {
             if (!_ready) {
-                throw new IOException(this.getClass().getName()+ " is not ready");
+                throw new IOException(this.getClass().getName()+ " is closed");
             }
             if (_state != 0) return -1;
 
@@ -496,7 +496,7 @@ public class Base64Encoder
         public int read(char[] cbuf, int off, int rlen) throws IOException
         {
             if (!_ready) {
-                throw new IOException(this.getClass().getName()+ " is not ready");
+                throw new IOException(this.getClass().getName()+ " is closed");
             }
             if (_state != 0) return -1;
 
@@ -532,7 +532,7 @@ public class Base64Encoder
         @Override
         public void reset() throws IOException
         {
-            throw new IOException("mark not supported");
+            throw new IOException("reset not supported");
         }
 
         //Skip characters.
@@ -540,7 +540,7 @@ public class Base64Encoder
         public long skip(long n) throws IOException
         {
             if (!_ready) {
-                throw new IOException(this.getClass().getName()+ " is not ready");
+                throw new IOException(this.getClass().getName()+ " is closed");
             }
             if (n < 0) {
                 throw new IllegalArgumentException("error skip only support non-negative a values for n");

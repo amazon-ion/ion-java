@@ -26,7 +26,7 @@ public final class IonBoolImpl
 
     // TODO we can probably take less space by using two booleans
     // private boolean isNull, value;
-    private Boolean _bool_value;
+    // private Boolean _bool_value;
 
     /**
      * Constructs a null bool value.
@@ -34,7 +34,7 @@ public final class IonBoolImpl
     public IonBoolImpl(IonSystemImpl system)
     {
         super(system, NULL_BOOL_TYPEDESC);
-        _hasNativeValue = true; // Since this is null
+        _hasNativeValue(true); // Since this is null
     }
 
     /**
@@ -61,7 +61,8 @@ public final class IonBoolImpl
 
         makeReady();
         clone.copyAnnotationsFrom(this);
-        clone.setValue(this._bool_value);
+        clone.setValue(this._isBoolTrue());
+        clone._isNullValue(this._isNullValue());
 
         return clone;
     }
@@ -101,8 +102,10 @@ public final class IonBoolImpl
         throws NullValueException
     {
         makeReady();
-        if (_bool_value == null) throw new NullValueException();
-        return _bool_value;
+        if (_isNullValue()) { // if (_bool_value == null) {
+            throw new NullValueException();
+        }
+        return _isBoolTrue();
     }
 
     public void setValue(boolean b)
@@ -114,8 +117,17 @@ public final class IonBoolImpl
     public void setValue(Boolean b)
     {
         checkForLock();
-        _bool_value = b;
-        _hasNativeValue = true;
+        if (b == null) {
+            _isBoolTrue(false);
+            _isNullValue(true);
+        }
+        else {
+            _isBoolTrue(b.booleanValue());
+            _isNullValue(false);
+        }
+        //_bool_value = b;
+        //_isNullValue(b == null);
+        _hasNativeValue(true);
         setDirty();
     }
 
@@ -128,13 +140,13 @@ public final class IonBoolImpl
     @Override
     protected int computeLowNibble(int valuelen)
     {
-        assert _hasNativeValue == true;
+        assert _hasNativeValue() == true;
 
         int ln = 0;
-        if (_bool_value == null) {
+        if (_isNullValue()) {
             ln = IonConstants.lnIsNullAtom;
         }
-        else if (_bool_value.equals(true)) {
+        else if (_isBoolTrue()) {
             ln = IonConstants.lnBooleanTrue;
         }
         else {
@@ -143,21 +155,19 @@ public final class IonBoolImpl
         return ln;
     }
 
-
-    @Override
-    public synchronized boolean isNullValue()
-    {
-        if (!_hasNativeValue) return super.isNullValue();
-        return (_bool_value == null);
-    }
+    //public boolean oldisNullValue()
+    //{
+    //    if (!_hasNativeValue()) return super.oldisNullValue();
+    //    return (_bool_value == null);
+    //}
 
     @Override
     protected void doMaterializeValue(IonBinary.Reader reader)
     {
-        assert this._isPositionLoaded == true && this._buffer != null;
+        assert this._isPositionLoaded() == true && this._buffer != null;
 
         // a native value trumps a buffered value
-        if (_hasNativeValue) return;
+        if (_hasNativeValue()) return;
 
         // the reader will have been positioned for us
         assert reader.position() == this.pos_getOffsetAtValueTD();
@@ -166,19 +176,25 @@ public final class IonBoolImpl
         int ln = this.pos_getLowNibble();
         switch (ln) {
         case IonConstants.lnIsNullAtom:
-            _bool_value = null;
+            //_bool_value = null;
+            _isNullValue(true);
+            _isBoolTrue(false);
             break;
         case IonConstants.lnBooleanFalse:
-            _bool_value = Boolean.FALSE;
+            //_bool_value = Boolean.FALSE;
+            _isNullValue(false);
+            _isBoolTrue(false);
             break;
         case IonConstants.lnBooleanTrue:
-            _bool_value = Boolean.TRUE;
+            //_bool_value = Boolean.TRUE;
+            _isNullValue(false);
+            _isBoolTrue(true);
             break;
         default:
             throw new IonException("malformed binary boolean value");
         }
 
-        _hasNativeValue = true;
+        _hasNativeValue(true);
     }
 
 

@@ -1,10 +1,8 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
-
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion;
 
 import java.util.Iterator;
+import org.junit.Test;
 
 
 
@@ -21,6 +19,7 @@ public class NullTest
     //=========================================================================
     // Test cases
 
+    @Test
     public void testFactoryNull()
     {
         IonNull value = system().newNull();
@@ -30,6 +29,7 @@ public class NullTest
         assertEquals(value.hasTypeAnnotation("scram"), true);
     }
 
+    @Test
     public void testTextNull()
     {
         IonNull value = (IonNull) oneValue("null");
@@ -40,6 +40,7 @@ public class NullTest
     }
 
 
+    @Test
     public void testAllNulls()
         throws Exception
     {
@@ -59,18 +60,21 @@ public class NullTest
     }
 
 
+    @Test
     public void testNonNulls()
         throws Exception
     {
         IonDatagram values = loadTestFile("good/nonNulls.ion");
         // File contains a list of non-null values.
 
+        int idx = 0;
         for (IonValue value : values)
         {
             if (value.isNullValue())
             {
                 fail("Value should not be null: " + value);
             }
+            idx++;
         }
     }
 }

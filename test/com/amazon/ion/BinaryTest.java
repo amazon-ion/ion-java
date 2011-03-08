@@ -1,9 +1,10 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import com.amazon.ion.system.SystemFactory;
 import java.util.Arrays;
+import org.junit.Test;
 
 public class BinaryTest extends IonTestCase
 {
@@ -27,7 +28,7 @@ public class BinaryTest extends IonTestCase
         return data;
     }
 
-    private static String bytesToHex(final byte[] bytes)
+    public static String bytesToHex(final byte[] bytes)
     {
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < bytes.length; i++)
@@ -98,6 +99,7 @@ public class BinaryTest extends IonTestCase
         assertTrue(String.format("%X\n%X", test, bits), test == bits);
     }
 
+    @Test
     public void testBinReadNull01()
     {
         // null.null
@@ -107,6 +109,7 @@ public class BinaryTest extends IonTestCase
         assertTrue(val.isNullValue());
     }
 
+    @Test
     public void testBinReadNull02()
     {
         // name::null.null
@@ -116,6 +119,7 @@ public class BinaryTest extends IonTestCase
         assertTrue(val.isNullValue());
     }
 
+    @Test
     public void testBinReadFloat01()
     {
         // 1e0
@@ -125,6 +129,7 @@ public class BinaryTest extends IonTestCase
         assertTrue(((IonFloat) val).doubleValue() == 1.0);
     }
 
+    @Test
     public void testBinReadFloat02()
     {
         // was: $ion_1_0::{} 1e0
@@ -136,6 +141,7 @@ public class BinaryTest extends IonTestCase
         assertTrue(((IonFloat) val).doubleValue() == 1.0);
     }
 
+    @Test
     public void testBinReadFloat03()
     {
         // approx 1.79769313486231e300
@@ -143,6 +149,7 @@ public class BinaryTest extends IonTestCase
         assertDoubleBits(val, 0x7E45798EE2308C26L);
     }
 
+    @Test
     public void testBinReadFloat04()
     {
         // approx -1.2278379192877e-276
@@ -150,6 +157,7 @@ public class BinaryTest extends IonTestCase
         assertDoubleBits(val, 0x86A5C3F28D5EC54AL);
     }
 
+    @Test
     public void testBinWriteFloat01()
     {
         IonFloat fval = sys.newNullFloat();
@@ -160,6 +168,7 @@ public class BinaryTest extends IonTestCase
         assertTrue(dump(raw, ref), Arrays.equals(raw, ref));
     }
 
+    @Test
     public void testBinWriteFloat02()
     {
         IonFloat fval = sys.newNullFloat();
@@ -171,6 +180,7 @@ public class BinaryTest extends IonTestCase
         assertTrue(dump(raw, ref), Arrays.equals(raw, ref));
     }
 
+    @Test
     public void testBinWriteFloat03()
     {
         IonFloat fval = sys.newNullFloat();

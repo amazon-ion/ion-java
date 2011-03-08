@@ -1,10 +1,10 @@
-/* Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved. */
-
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import org.junit.Test;
 
 
 
@@ -69,6 +69,7 @@ public class SexpTest
     //=========================================================================
     // Test cases
 
+    @Test
     public void testFactoryNullSexp()
     {
         IonSexp value = system().newNullSexp();
@@ -77,6 +78,7 @@ public class SexpTest
         testFreshNullSequence(value);
     }
 
+    @Test
     public void testTextNullSexp()
     {
         IonSexp value = (IonSexp) oneValue("null.sexp");
@@ -84,6 +86,7 @@ public class SexpTest
         testFreshNullSequence(value);
     }
 
+    @Test
     public void testMakeNullSexp()
     {
         IonSexp value = (IonSexp) oneValue("(foo+bar)");
@@ -93,12 +96,14 @@ public class SexpTest
         testFreshNullSequence(value);
     }
 
+    @Test
     public void testClearNonMaterializedSexp()
     {
         IonSexp value = (IonSexp) oneValue("(foo+bar)");
         testClearContainer(value);
     }
 
+    @Test
     public void testEmptySexp()
     {
         IonSexp value = (IonSexp) oneValue("()");
@@ -106,6 +111,7 @@ public class SexpTest
         testEmptySequence(value);
     }
 
+    @Test
     public void testGetTwiceReturnsSame()
     {
         IonSexp value = (IonSexp) oneValue("(a b)");
@@ -115,6 +121,7 @@ public class SexpTest
     }
 
 
+    @Test
     public void testTrickyParsing()
         throws Exception
     {
@@ -127,6 +134,7 @@ public class SexpTest
         assertEquals(3, value.size());
     }
 
+    @Test
     public void testNegativeNumbersInSexp()
         throws Exception
     {
@@ -143,6 +151,7 @@ public class SexpTest
     }
 
     /** Ensure that triple-quote concatenation works inside sexp. */
+    @Test
     public void testConcatenation()
     {
         IonSexp value = (IonSexp) oneValue("(a '''a''' '''b''' \"c\")");
@@ -152,12 +161,14 @@ public class SexpTest
         assertEquals(3, value.size());
     }
 
+    @Test
     public void testSexpIteratorRemove()
     {
         IonSexp value = (IonSexp) oneValue("(a b c)");
         testIteratorRemove(value);
     }
 
+    @Test
     public void testCreatingNullSexp()
     {
         IonSexp sexp1 = system().newNullSexp();
@@ -167,6 +178,7 @@ public class SexpTest
         assertIonEquals(sexp1, sexp2);
     }
 
+    @Test
     public void testCreatingSexpFromCollection()
     {
         IonSystem system = system();
@@ -202,6 +214,7 @@ public class SexpTest
         catch (NullPointerException e) { }
     }
 
+    @Test
     public void testCreatingSexpFromIntArray()
     {
         IonSystem system = system();
@@ -222,6 +235,7 @@ public class SexpTest
         checkInt(14, v.get(2));
     }
 
+    @Test
     public void testCreatingSexpFromLongArray()
     {
         IonSystem system = system();
@@ -242,6 +256,7 @@ public class SexpTest
         checkInt(14, v.get(2));
     }
 
+    @Test
     public void testCreatingSexpFromValueArray()
     {
         IonSystem system = system();
@@ -279,6 +294,7 @@ public class SexpTest
         catch (NullPointerException e) { }
     }
 
+    @Test
     public void testCreatingSexpWithString()
     {
         IonSexp sexp1 = system().newNullSexp();
@@ -313,6 +329,7 @@ public class SexpTest
                 "(1001-12-31\t)"
     };
 
+    @Test
     public void testNumericTerminationCharacters()
     {
         IonSexp value = null;

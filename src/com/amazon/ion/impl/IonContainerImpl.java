@@ -14,9 +14,9 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.IonBinary.Reader;
 import com.amazon.ion.impl.IonBinary.Writer;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.ListIterator;
+import java.util.NoSuchElementException;
 
 
 /**
@@ -24,16 +24,143 @@ import java.util.ListIterator;
  */
 abstract public class IonContainerImpl
     extends IonValueImpl
-    implements IonContainer
+    implements IonContainerPrivate
 {
+    /**
+     * sizes for the various types of containers
+     * expected to be tuned.
+     */
+    static final int[] INITIAL_SIZE = make_initial_size_array();
+    static int[] make_initial_size_array() {
+        int[] sizes = new int[IonConstants.tidDATAGRAM + 1];
+        sizes[IonConstants.tidList]     = 1;
+        sizes[IonConstants.tidSexp]     = 4;
+        sizes[IonConstants.tidStruct]   = 5;
+        sizes[IonConstants.tidDATAGRAM] = 3;
+        return sizes;
+    }
+    static final int[] NEXT_SIZE = make_next_size_array();
+    static int[] make_next_size_array() {
+        int[] sizes = new int[IonConstants.tidDATAGRAM + 1];
+        sizes[IonConstants.tidList]     = 4;
+        sizes[IonConstants.tidSexp]     = 8;
+        sizes[IonConstants.tidStruct]   = 8;
+        sizes[IonConstants.tidDATAGRAM] = 10;
+        return sizes;
+    }
+    static final protected int initialSize(int typeDesc)
+    {
+        int tid = IonConstants.getTypeCode(typeDesc & 0xff);
+        if (tid < 0 || tid >= INITIAL_SIZE.length) {
+            assert("this should never happen: type id's should be in range".length() < 0);
+            return 4;
+        }
+        int new_size = INITIAL_SIZE[tid];
+        return new_size;
+    }
+    final protected int nextSize(int current_size)
+    {
+        int typeDesc = pos_getTypeDescriptorByte();
+        int tid = IonConstants.getTypeCode(typeDesc & 0xff);
+
+        if (current_size == 0) {
+            int new_size = initialSize(typeDesc);
+            return new_size;
+        }
+
+        if (tid < 0 || tid >= NEXT_SIZE.length) {
+            assert("this should never happen: type id's should be in range".length() < 0);
+            return current_size * 2;
+        }
+
+        int next_size = NEXT_SIZE[tid];
+        if (next_size == current_size) {
+            // note that unrecognized sizes, either due to unrecognized type id
+            // or some sort of custom size in the initial allocation, meh.
+            transitionToLargeSize(next_size);
+            next_size = current_size * 2;
+        }
+        else {
+            // includes if (next_size == 0) { ...
+            assert(current_size > 0);  // we should have bailed earlier if this was 0
+            next_size = current_size * 2;
+        }
+
+        return next_size;
+    }
+    // this is overridden in IonStructImpl to add the hashmap
+    // of field names when the struct becomes modestly large
+    protected void transitionToLargeSize(int size)
+    {
+        return;
+    }
     /**
      * Only meaningful if {@link #_hasNativeValue}.
      */
-    protected ArrayList<IonValue> _contents;
+    //protected ArrayList<IonValue> _contents;
+    protected int        _child_count;
+    protected IonValue[] _children;
+    public int get_child_count() {
+        return _child_count;
+    }
+    public IonValue get_child(int idx)
+    {
+        if (idx < 0 || idx >= _child_count) {
+            throw new IndexOutOfBoundsException(""+idx);
+        }
+        return _children[idx];
+    }
+    public IonValue set_child(int idx, IonValue child)
+    {
+        if (idx < 0 || idx >= _child_count) {
+            throw new IndexOutOfBoundsException(""+idx);
+        }
+        IonValue prev = _children[idx];
+        _children[idx] = child;
+        return prev;
+    }
+    public int add_child(int idx, IonValue child)
+    {
+        _isNullValue(false); // if we add children we're not null anymore
+        if (_children == null || _child_count >= _children.length) {
+            int old_len = (_children == null) ? 0 : _children.length;
+            int new_len = this.nextSize(old_len);
+            assert(new_len > idx);
+            IonValue[] temp = new IonValue[new_len];
+            if (old_len > 0) {
+                System.arraycopy(_children, 0, temp, 0, old_len);
+            }
+            _children = temp;
+        }
+        if (idx < _child_count) {
+            // TODO: verify copying backwards works!
+            System.arraycopy(_children, idx, _children, idx+1, _child_count-idx);
+        }
+        _child_count++;
+        _children[idx] = child;
+        return idx;
+    }
+    public void remove_child(int idx) {
+        assert(idx >=0 && idx < _child_count); // this also asserts child count > 0
+        if (idx + 1 <= _child_count) {
+            System.arraycopy(_children, idx+1, _children, idx, _child_count - idx - 1);
+        }
+        _child_count--;
+        _children[_child_count] = null;
+    }
+    public int find_Child(IonValue child) {
+        for (int ii=0; ii<_child_count; ii++) {
+            if (_children[ii] == child) {
+                return ii;
+            }
+        }
+        return -1;
+    }
 
     protected IonContainerImpl(IonSystemImpl system, int typeDesc)
     {
         super(system, typeDesc);
+      //  _children = new IonValue[initialSize(typeDesc)];
     }
 
 
@@ -79,17 +206,24 @@ abstract public class IonContainerImpl
         else {
             // it's not null so there better be something there
             // at least 0 children :)
-            assert source._contents != null;
+            assert source.get_child_count() == 0 || source._children != null;
+            _isNullValue(source._isNullValue()); // this will be false
 
             // and we'll need a contents array to hold at least 0
             // children
-            if (this._contents == null) {
-                int len = source._contents.size();
-                if (len < 1) len = 10;
-                this._contents = new ArrayList<IonValue>(len);
+            if (this._children == null) {
+                int current_size = (source._children == null) ? 0 : source._children.length;
+                int next_size = current_size;
+                if (next_size < 1) {
+                    next_size = initialSize(pos_getTypeDescriptorByte());
+                }
+                this._children = new IonValue[next_size];
+                if (next_size >= this.nextSize(next_size)) {
+                    this.transitionToLargeSize(next_size);
+                }
             }
             // we should have an empty content list at this point
-            assert this._contents.size() == 0;
+            assert this.get_child_count() == 0;
 
             if (false && source._buffer != null && !source.isDirty()) {
                 // if this is buffer backed, and not dirty
@@ -106,12 +240,12 @@ abstract public class IonContainerImpl
                 // do a deep copy
                 final boolean cloningFields = (this instanceof IonStruct);
 
-                ArrayList<IonValue> sourceContents = source._contents;
-                int size = sourceContents.size();
+                IonValue[] sourceContents = source._children;
+                int size = source.get_child_count();
 
                 for (int i = 0; i < size; i++)
                 {
-                    IonValue child = sourceContents.get(i);
+                    IonValue child = sourceContents[i];
                     IonValue copy = child.clone();
                     if (cloningFields) {
                         String name = child.getFieldName();
@@ -128,7 +262,7 @@ abstract public class IonContainerImpl
         throws NullValueException
     {
         makeReady();
-        return (_contents == null ? 0 : _contents.size());
+        return get_child_count();
     }
 
     @Override
@@ -139,14 +273,10 @@ abstract public class IonContainerImpl
 
         if (this.isDirty())
         {
-            assert _hasNativeValue == true || _isPositionLoaded == false;
-            if (_contents != null)
-            {
-                for (IonValue child : _contents)
-                {
-                    IonValueImpl aChild = (IonValueImpl) child;
-                    length += aChild.getFullEncodedSize();
-                }
+            assert _hasNativeValue() == true || _isPositionLoaded() == false;
+            for (int ii=0; ii<get_child_count(); ii++) {
+                IonValueImpl aChild = (IonValueImpl) get_child(ii);
+                length += aChild.getFullEncodedSize();
             }
         }
         else
@@ -171,8 +301,10 @@ abstract public class IonContainerImpl
         checkForLock();
         if (isNullValue())
         {
-            _contents = new ArrayList<IonValue>();
-            _hasNativeValue = true;
+            _children = null;
+            _child_count = 0;
+            _isNullValue(false);    // TODO: really?  It seems to be true, based on previous behavior, but why does "clear" make something "nonNull"?
+            _hasNativeValue(true);
             setDirty();
         }
         /*
@@ -184,45 +316,65 @@ abstract public class IonContainerImpl
         else if (!isEmpty())
         {
             detachAllChildren();
-            _contents.clear();
+            _child_count = 0;
             setDirty();
         }
     }
 
     @Override
+    // this is split so that the public version is called only
+    // by the user, not internally.  This allows us to know
+    // when we're at the originating value for checks and symbol
+    // table processing.
     public void makeReadOnly() {
-        if (_isLocked) return;
+        // FIXME: it sure seems to me this should be true - but it seems not. hmmm.
+        // IonValuePrivate parent = this.get_symbol_table_root();
+        // if (parent != this) {
+        //     throw new IonException("child members can't be make read only by themselves");
+        // }
+        make_read_only_helper(true);
+    }
+    @Override
+    void make_read_only_helper(boolean is_root) {
+        if (_isLocked()) return;
         synchronized (this) { // TODO why is this needed?
             deepMaterialize();
-            if (_contents != null) {
-                for (IonValue child : this._contents) {
-                    child.makeReadOnly();
+            if (is_root) {
+                this.populateSymbolValues(this._symboltable);
+            }
+            if (_children != null) {
+                for (int ii=0; ii<_child_count; ii++) {
+                    IonValue child = _children[ii];
+                    ((IonValueImpl)child).make_read_only_helper(false);
                 }
             }
-            _isLocked = true;
+            _isLocked(true);
         }
     }
 
     public void makeNull()
     {
         checkForLock();
-        if (!isNullValue())
+
+        if (_children != null)
         {
-            if (_contents != null)
-            {
-                detachAllChildren();
-                _contents = null;
-            }
-            _hasNativeValue = true;
-            setDirty();
+            detachAllChildren();
+            _children = null;
+            _child_count = 0;
         }
+
+        _hasNativeValue(true);
+        _isNullValue(true);
+        setDirty();
     }
 
     private void detachAllChildren()
     {
         try {
-            for (IonValue child : _contents) {
+            for (int ii=0; ii<_child_count; ii++) {
+                IonValue child = _children[ii];
                 ((IonValueImpl)child).detachFromContainer();
+                _children[ii] = null;
             }
         } catch (IOException ioe) {
             throw new IonException(ioe);
@@ -231,8 +383,8 @@ abstract public class IonContainerImpl
 
     void move_start_helper(int offset)
     {
-        for (IonValue v : _contents)
-        {
+        for (int ii=0; ii<_child_count; ii++) {
+            IonValue v = _children[ii];
             ((IonValueImpl) v).pos_moveAll(offset);
         }
         this.pos_moveAll(offset);
@@ -247,20 +399,20 @@ abstract public class IonContainerImpl
      * @throws IOException
      */
     @Override
-    protected void materialize()
+    protected synchronized void materialize_helper()
         throws IOException
     {
         // TODO throw IonException not IOException
 
-        if (!_hasNativeValue)
+        if (!_hasNativeValue())
         {
             // First materialization must be from clean state.
             assert !isDirty() || _buffer == null;
-            assert _contents == null;
+            assert get_child_count() == 0; // _children == null;
 
             if (_buffer != null)
             {
-                assert _isPositionLoaded == true;
+                assert _isPositionLoaded() == true;
 
                 IonBinary.Reader reader = this._buffer.reader();
                 reader.sync();
@@ -268,7 +420,8 @@ abstract public class IonContainerImpl
 
                 if (!isNullValue())
                 {
-                    _contents = new ArrayList<IonValue>();
+                    _children = null;
+                    _child_count = 0;
                     // this skips past then td and value len
                     reader.setPosition(this.pos_getOffsetAtActualValue());
                     doMaterializeValue(reader);
@@ -276,10 +429,10 @@ abstract public class IonContainerImpl
             }
             else
             {
-                assert _isPositionLoaded == false;
+                assert _isPositionLoaded() == false;
             }
 
-            _hasNativeValue = true;
+            _hasNativeValue(true);
         }
     }
 
@@ -306,8 +459,8 @@ abstract public class IonContainerImpl
             IonValueImpl child;
             reader.setPosition(pos);
             child = IonValueImpl.makeValueFromReader(0, reader, buffer, symtab, this, _system);
-            child._elementid = _contents.size();
-            _contents.add(child);
+            child._elementid = get_child_count(); //_children.length;
+            add_child(child._elementid, child);
             pos = child.pos_getOffsetofNextValue();
         }
     }
@@ -325,12 +478,9 @@ abstract public class IonContainerImpl
             throw new IonException(e);
         }
 
-        if (_contents != null)
-        {
-            for (IonValue contained : _contents)
-            {
-                contained.deepMaterialize();
-            }
+        for (int ii=0; ii<_child_count; ii++) {
+            IonValue contained = get_child(ii);
+            contained.deepMaterialize();
         }
     }
 
@@ -339,12 +489,9 @@ abstract public class IonContainerImpl
         throws IOException
     {
         materialize();
-        if (_contents != null)
-        {
-            for (IonValue contained : _contents)
-            {
-                ((IonValueImpl) contained).detachFromBuffer();
-            }
+        for (int ii=0; ii<_child_count; ii++) {
+            IonValue contained = get_child(ii);
+            ((IonValueImpl) contained).detachFromBuffer();
         }
         _buffer = null;
     }
@@ -356,28 +503,24 @@ abstract public class IonContainerImpl
 
         this.pos_moveAll(delta);
 
-        if (_contents != null)
-        {
+        for (int ii=0; ii<_child_count; ii++) {
             // Move our children's tokens.
-            for (IonValue child : _contents)
-            {
-                IonValueImpl aChild = (IonValueImpl) child;
-                aChild.shiftTokenAndChildren(delta);
-            }
+            IonValueImpl aChild = (IonValueImpl)get_child(ii);
+            aChild.shiftTokenAndChildren(delta);
         }
     }
 
 
     @Override
-    public void updateSymbolTable(SymbolTable symtab)
+    public SymbolTable populateSymbolValues(SymbolTable symtab)
     {
         // the "super" copy of this method will check the lock
-        super.updateSymbolTable(symtab);
-        if (this._contents != null) {
-            for (IonValue v : this._contents) {
-                ((IonValueImpl)v).updateSymbolTable(symtab);
-            }
+        symtab = super.populateSymbolValues(symtab);
+        for (int ii=0; ii<_child_count; ii++) {
+            IonValue v = get_child(ii);
+            symtab = ((IonValueImpl)v).populateSymbolValues(symtab);
         }
+        return symtab;
     }
 
     @Override
@@ -458,16 +601,12 @@ abstract public class IonContainerImpl
         throws IOException
     {
         // overriden in sexp and datagram to handle Ion Version Marker (magic cookie)
-        if (_contents != null)
-        {
-            for (int ii = 0; ii < _contents.size(); ii++)
-            {
-                IonValueImpl child = (IonValueImpl) _contents.get(ii);
+        for (int ii=0; ii<_child_count; ii++) {
+            IonValueImpl child = (IonValueImpl)get_child(ii);
 
-                cumulativePositionDelta =
-                    child.updateBuffer2(writer, writer.position(),
-                                        cumulativePositionDelta);
-            }
+            cumulativePositionDelta =
+                child.updateBuffer2(writer, writer.position(),
+                                    cumulativePositionDelta);
         }
         return cumulativePositionDelta;
     }
@@ -497,7 +636,7 @@ abstract public class IonContainerImpl
 
         makeReady();
 
-        return _contents.get(index);
+        return get_child(index);
     }
 
     /**
@@ -525,7 +664,7 @@ abstract public class IonContainerImpl
         validateNewChild(child);
 
         makeReady();
-        int size = (_contents == null ? 0 : _contents.size());
+        int size = get_child_count();
 
         add(size, child, true);
         return true;
@@ -632,13 +771,14 @@ abstract public class IonContainerImpl
 
         makeReady();
 
-        if (_contents == null)
+        if (_children == null || _child_count == 0)
         {
-            _contents = new ArrayList<IonValue>();
-            _hasNativeValue = true;
+            _children = new IonValue[initialSize(pos_getTypeDescriptorByte())];
+            _hasNativeValue(true);
         }
 
-        _contents.add(index, element);
+        add_child(index, element);
+        //_contents.add(index, element);
         concrete._elementid = index;
         updateElementIds(index + 1); // start at the next element, this one is fine
 
@@ -654,8 +794,8 @@ abstract public class IonContainerImpl
     }
     void updateElementIds(int startingIndex)
     {
-        while (startingIndex<this._contents.size()) {
-            IonValueImpl v = (IonValueImpl)this._contents.get(startingIndex);
+        while (startingIndex<this.get_child_count()) {
+            IonValueImpl v = (IonValueImpl)this.get_child(startingIndex);
             v._elementid = startingIndex;
             startingIndex++;
         }
@@ -666,12 +806,9 @@ abstract public class IonContainerImpl
     {
         makeReady();
 
-        if (this._contents != null)
-        {
-            for (IonValue v : this._contents)
-            {
-                ((IonValueImpl) v).clear_position_and_buffer();
-            }
+        for (int ii=0; ii<get_child_count(); ii++) {
+            IonValueImpl v = (IonValueImpl)get_child(ii);
+            v.clear_position_and_buffer();
         }
         super.clear_position_and_buffer();
     }
@@ -679,12 +816,10 @@ abstract public class IonContainerImpl
     @Override
     void detachFromSymbolTable()
     {
-        assert _hasNativeValue; // else we don't know if _contents is valid
-        if (this._contents != null) {
-            for (int ii=0; ii<this._contents.size(); ii++) {
-                IonValueImpl v = (IonValueImpl)this._contents.get(ii);
-                v.detachFromSymbolTable();
-            }
+        assert _hasNativeValue(); // else we don't know if _contents is valid
+        for (int ii=0; ii<get_child_count(); ii++) {
+            IonValueImpl v = (IonValueImpl)get_child(ii);
+            v.detachFromSymbolTable();
         }
         super.detachFromSymbolTable();
     }
@@ -696,21 +831,22 @@ abstract public class IonContainerImpl
             return false;
 
         // We must already be materialized, else we wouldn't have a child.
-        assert _hasNativeValue;
+        assert _hasNativeValue();
 
         // Get all the data into the DOM, since the element will be losing
         // its backing store.
         IonValueImpl concrete = (IonValueImpl) element;
 
         int pos = concrete._elementid;
-        IonValue child = _contents.get(pos);
+        IonValue child = get_child(pos);
         if (child == concrete) // Yes, instance identity.
         {
             try {
                 // TODO improve final state if this method throws.
                 // Should be able to have the container be ok at least.
                 concrete.detachFromContainer();
-                _contents.remove(pos);
+                remove_child(pos);
+                //_contents.remove(pos);
                 updateElementIds(pos);
                 this.setDirty();
             }
@@ -723,7 +859,7 @@ abstract public class IonContainerImpl
         throw new AssertionError("element's index is not correct");
     }
 
-    public final Iterator<IonValue> iterator()
+    public Iterator<IonValue> iterator()
     {
         return listIterator(0);
     }
@@ -743,63 +879,147 @@ abstract public class IonContainerImpl
         }
 
         makeReady();
-        return new IonContainerIterator(_contents.listIterator(index),
-                                        isReadOnly());
+        return new SequenceContentIterator(index, isReadOnly());
     }
 
     /** Encapsulates an iterator and implements a custom remove method */
-    protected final class IonContainerIterator
+    /*  this is tied to the _child array of the IonSequenceImpl
+     *  through the _children and _child_count members which this
+     *  iterator directly uses.
+     *
+     *  TODO with the updated next and previous logic, particularly
+     *  the force_position_sync logic and lastMoveWasPrevious flag
+     *  we could implment add and set correctly.
+     */
+    protected final class SequenceContentIterator
         implements ListIterator<IonValue>
     {
-        private final ListIterator<IonValue> it;
+        private final boolean  __readOnly;
+        private       boolean  __lastMoveWasPrevious;
+        private       int      __pos;
+        private       IonValue __current;
 
-        private final boolean readOnly;
-
-        private IonValue current;
-
-        public IonContainerIterator(ListIterator<IonValue> it,
-                                    boolean readOnly)
+        public SequenceContentIterator(int index, boolean readOnly)
         {
-            this.it = it;
-            this.readOnly = readOnly;
+            if (index < 0 || index > _child_count) {
+                throw new IndexOutOfBoundsException(""+index);
+            }
+            __pos = index;
+            __readOnly = readOnly;
         }
 
+        // split to encourage the in-lining of the common
+        // case where we don't actually do anything
+        private final void force_position_sync()
+        {
+            if (__pos <= 0 || __pos > _child_count) {
+                return;
+            }
+            if (__current == null || __current == _children[__pos - 1]) {
+                return;
+            }
+            force_position_sync_helper();
+        }
+        private final void force_position_sync_helper()
+        {
+            if (__readOnly) {
+                throw new IonException("read only sequence was changed");
+            }
+            int idx = __pos - 1;
+            if (__lastMoveWasPrevious) {
+                idx++;
+            }
+            // look forward, which happens on insert
+            // notably insert of a local symbol table
+            // or a IVM if this is in a datagram
+            for (int ii=__pos; ii<_child_count; ii++) {
+                if (_children[ii] == __current) {
+                    __pos = ii;
+                    if (!__lastMoveWasPrevious) {
+                        __pos++;
+                    }
+                    return;
+                }
+            }
+            // look backward, which happens on delete
+            // of a member preceding us, but should not
+            // happen if the delete is through this
+            // operator
+            for (int ii=__pos-1; ii>=0; ii--) {
+                if (_children[ii] == __current) {
+                    __pos = ii;
+                    if (!__lastMoveWasPrevious) {
+                        __pos++;
+                    }
+                    return;
+                }
+            }
+            throw new IonException("current member of iterator has been removed from the containing sequence");
+        }
 
         public void add(IonValue element)
         {
             throw new UnsupportedOperationException();
         }
 
-        public boolean hasNext()
+        public final boolean hasNext()
         {
-            return it.hasNext();
+            // called in nextIndex(): force_position_sync();
+            return (nextIndex() < _child_count);
         }
 
-        public boolean hasPrevious()
+        public final boolean hasPrevious()
         {
-            return it.hasPrevious();
+            // called in previousIndex(): force_position_sync();
+            return (previousIndex() >= 0);
         }
 
         public IonValue next()
         {
-            current = it.next();
-            return current;
+            int next_idx = nextIndex();
+            if (next_idx >= _child_count) {
+                throw new NoSuchElementException();
+            }
+            __current = _children[next_idx];
+            __pos = next_idx + 1; // after a next the pos will be past the current
+            __lastMoveWasPrevious = false;
+            return __current;
         }
 
-        public int nextIndex()
+        public final int nextIndex()
         {
-            return it.nextIndex();
+            force_position_sync();
+            if (__pos >= _child_count) {
+                return _child_count;
+            }
+            int next_idx = __pos;
+            // whether we previous-ed to get here or
+            // next-ed to get here the next index is
+            // whatever the current position is
+            return next_idx;
         }
 
         public IonValue previous()
         {
-            current = it.previous();
-            return current;
+            force_position_sync();
+            int prev_idx = previousIndex();
+            if (prev_idx < 0) {
+                throw new NoSuchElementException();
+            }
+            __current = _children[prev_idx];
+            __pos = prev_idx;
+            __lastMoveWasPrevious = true;
+            return __current;
         }
 
-        public int previousIndex()
+        public final int previousIndex()
         {
-            return it.previousIndex();
+            force_position_sync();
+            int prev_idx = __pos - 1;
+            if (prev_idx < 0) {
+                return -1;
+            }
+            return prev_idx;
         }
 
         /**
@@ -808,13 +1028,29 @@ abstract public class IonContainerImpl
          */
         public void remove()
         {
-            if (readOnly) {
+            if (__readOnly) {
                 throw new UnsupportedOperationException();
             }
+            force_position_sync();
 
-            IonValueImpl concrete = (IonValueImpl) current;
+            int idx = __pos;
+            if (!__lastMoveWasPrevious) {
+                // position is 1 ahead of the array index
+                idx--;
+            }
+            if (idx < 0) {
+                throw new ArrayIndexOutOfBoundsException();
+            }
 
-            it.remove();
+            IonValueImpl concrete = (IonValueImpl) __current;
+            int concrete_idx = concrete.getElementId();
+            assert(concrete_idx == idx);
+
+            // here we remove the member from the containers list of elements
+            remove_child(idx);
+
+            // and here we patch up the member
+            // and then the remaining members index values
             try
             {
                 concrete.detachFromContainer();
@@ -825,9 +1061,16 @@ abstract public class IonContainerImpl
             }
             finally
             {
-                updateElementIds(concrete.getElementId());
+                updateElementIds(concrete_idx);
                 setDirty();
             }
+            if (!__lastMoveWasPrevious) {
+                // if we next-ed onto this member we have to back up
+                // because the next member is now current (otherwise
+                // the position is fine where it is)
+                __pos--;
+            }
+            __current = null;
         }
 
         public void set(IonValue element)

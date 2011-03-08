@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved. */
+/* Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion.impl;
 
@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.io.PushbackReader;
 import java.io.Reader;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Stack;
 
 /**
@@ -118,7 +119,7 @@ public class IonTokenReader
         public static class timeinfo {  // TODO remove vestigial class timeinfo
 
             static public Timestamp parse(String s) {
-            	Timestamp t = null;
+                Timestamp t = null;
                 s = s.trim(); // TODO why is this necessary?
                 try {
                     t = Timestamp.valueOf(s);  // TODO should Timestamp just throw an IonException?
@@ -204,19 +205,19 @@ public class IonTokenReader
             case constNegInt:
             case constPosInt:
                 if (NumberType.NT_HEX.equals(tr.numberType)) {
-                    tr.intValue = Long.parseLong(s, 16);
+                    tr.intValue = new BigInteger(s, 16);
                     // In hex case we've discarded the prefix [+-]?0x so
                     // reconstruct the sign
-                    if (this == constNegInt) tr.intValue = -tr.intValue;
+                    if (this == constNegInt) tr.intValue = tr.intValue.negate();
                 }
                 else {
-                    tr.intValue = Long.parseLong(s);
+                    tr.intValue = new BigInteger(s, 10);
 
                     // Make sure that sign aligns with type.
                     // Note that this allows negative zero.
-                    assert (tr.intValue == 0
+                    assert (BigInteger.ZERO.equals(tr.intValue)
                              ? true
-                             : this == (tr.intValue < 0 ? constNegInt : constPosInt));
+                             : this == (tr.intValue.signum() < 0 ? constNegInt : constPosInt));
                 }
                 return this;
             case constFloat:
@@ -309,12 +310,12 @@ public class IonTokenReader
 
     // easy to use number types
     static enum NumberType {
-    	NT_POSINT,
-    	NT_NEGINT,
-    	NT_HEX, // pos or neg
-    	NT_FLOAT,
-    	NT_DECIMAL,
-    	NT_DECIMAL_NEGATIVE_ZERO
+        NT_POSINT,
+        NT_NEGINT,
+        NT_HEX, // pos or neg
+        NT_FLOAT,
+        NT_DECIMAL,
+        NT_DECIMAL_NEGATIVE_ZERO
     }
 
     /**
@@ -374,7 +375,7 @@ public class IonTokenReader
 
     public String           stringValue;
     public Double           doubleValue;
-    public Long             intValue;
+    public BigInteger       intValue;
 
     public Timestamp        dateValue;
     public BigDecimal       decimalValue;
@@ -684,7 +685,12 @@ public class IonTokenReader
                                 char uc = value.charAt(ii);
                                 unread(uc);
                             }
-                            this.keyword = Type.kwNull;
+
+                            String message =
+                                position()
+                                + ": Expected Ion type after 'null.' but found: "
+                                + value;
+                            throw new IonException(message);
                         }
                     }
                     else {
@@ -1168,22 +1174,22 @@ sizedloop:
     public static int readEscapedCharacter(PushbackReader r, boolean inClob)
         throws IOException, UnexpectedEofException
     {
-            //    \\ The backslash character
-            //    \0 The character 0 (nul terminator char, for some)
-            //    \xhh The character with hexadecimal value 0xhh
-            //    \ u hhhh The character with hexadecimal value 0xhhhh
-            //    \t The tab character ('\u0009')
-            //    \n The newline (line feed) character ('\ u 000A')
-            //    \v The vertical tab character ('\u000B')
-            //    \r The carriage-return character ('\ u 000D')
-            //    \f The form-feed character ('\ u 000C')
-            //    \a The alert (bell) character ('\ u 0007')
-            //    \" The double quote character
-            //    \' The single quote character
-            //    \? The question mark character
+        //    \\ The backslash character
+        //    \0 The character 0 (nul terminator char, for some)
+        //    \xhh The character with hexadecimal value 0xhh
+        //    \ u hhhh The character with hexadecimal value 0xhhhh
+        //    \t The tab character ('\u0009')
+        //    \n The newline (line feed) character ('\ u 000A')
+        //    \v The vertical tab character ('\u000B')
+        //    \r The carriage-return character ('\ u 000D')
+        //    \f The form-feed character ('\ u 000C')
+        //    \a The alert (bell) character ('\ u 0007')
+        //    \" The double quote character
+        //    \' The single quote character
+        //    \? The question mark character
 
-            int c2 = 0, c = r.read();
-            switch (c) {
+        int c2 = 0, c = r.read();
+        switch (c) {
             case -1:
                 throw new UnexpectedEofException();
             case 't':  return '\t';
@@ -1244,9 +1250,9 @@ sizedloop:
                 return EMPTY_ESCAPE_SEQUENCE;
             default:
                 break;
-            }
-            throw new IonException("invalid escape sequence \"\\"
-                                       + (char) c + "\" [" + c + "]");
+        }
+        throw new IonException("invalid escape sequence \"\\"
+                               + (char) c + "\" [" + c + "]");
     }
 
     public static int readDigit(/*EscapedCharacterReader*/PushbackReader r, int radix, boolean isRequired) throws IOException {
@@ -1283,22 +1289,22 @@ sizedloop:
         }
     }
 
-	private final boolean isValueTerminatingCharacter(int c) throws IOException
-	{
-		boolean isTerminator;
+    private final boolean isValueTerminatingCharacter(int c) throws IOException
+    {
+        boolean isTerminator;
 
-    	if (c == '/') {
-    		// this is terminating only if it starts a comment of some sort
-    		c = this.read();
-    		this.unread(c);  // we never "keep" this character
-    		isTerminator = (c == '/' || c == '*');
-    	}
-    	else {
-    	    isTerminator = IonTextUtils.isNumericStop(c);
-    	}
+        if (c == '/') {
+            // this is terminating only if it starts a comment of some sort
+            c = this.read();
+            this.unread(c);  // we never "keep" this character
+            isTerminator = (c == '/' || c == '*');
+        }
+        else {
+            isTerminator = IonTextUtils.isNumericStop(c);
+        }
 
-    	return isTerminator;
-	}
+        return isTerminator;
+    }
 
     public Type readNumber(int c) throws IOException {
         // clear out our string buffer
@@ -1532,105 +1538,109 @@ sizedloop:
     /**
      * Scans a timestamp after reading <code>yyyy-</code>.
      *
+     * We can be a little lenient here since the result will be reparsed and
+     * validated more thoroughly by {@link Timestamp#valueOf(CharSequence)}.
+     *
      * @param c the last character scanned; must be <code>'-'</code>.
      * @return {@link Type#constTime}
-     * @throws IOException
      */
     Type scanTimestamp(int c) throws IOException {
 
 endofdate:
-		for (;;) {  // fake for loop to create a label we can jump out of,
-					// because 4 or 5 levels of nested if's is just ugly
+        for (;;) {  // fake for loop to create a label we can jump out of,
+                    // because 4 or 5 levels of nested if's is just ugly
 
-	        // at this point we will have read leading digits and exactly 1 dash
-	        // in other words, we'll have read the year
-	    	if (c == 'T') {
-	    		// yearT is a valid timestamp value
-	    		value.append((char)c);
-	    		c = this.read(); // because we'll unread it before we return
-	    		break endofdate;
-	    	}
-	    	if (c != '-') {
-	    		// not a dash or a T after the year - so this is a bad value
-	            throw new IllegalStateException("invalid timestamp, expecting a dash here at " + this.position());
-	    	}
+            // at this point we will have read leading digits and exactly 1 dash
+            // in other words, we'll have read the year
+            if (c == 'T') {
+                // yearT is a valid timestamp value
+                value.append((char)c);
+                c = this.read(); // because we'll unread it before we return
+                break endofdate;
+            }
+            if (c != '-') {
+                // not a dash or a T after the year - so this is a bad value
+                throw new IllegalStateException("invalid timestamp, expecting a dash here at " + this.position());
+            }
 
-			// append the dash and then read the month field
-	        value.append((char)c); // so append it, because we haven't already
-	        c = readDigits(2, "month");
-	        if (c == 'T') {
-	    		// year-monthT is a valid timestamp value
-	    		value.append((char)c);
-	    		c = this.read(); // because we'll unread it before we return
-	    		break endofdate;
-	        }
-	        if (c != '-') {
-	        	// if the month isn't followed by a dash or a T it's an invalid month
-	            throw new IonException("invalid timestamp, expecting month at " + this.position());
-	        }
+            // append the dash and then read the month field
+            value.append((char)c); // so append it, because we haven't already
+            c = readDigits(2, "month");
+            if (c == 'T') {
+                // year-monthT is a valid timestamp value
+                value.append((char)c);
+                c = this.read(); // because we'll unread it before we return
+                break endofdate;
+            }
+            if (c != '-') {
+                // if the month isn't followed by a dash or a T it's an invalid month
+                throw new IonException("invalid timestamp, expecting month at " + this.position());
+            }
 
-	        // append the dash and read the day (or day-of-month) field
-	        value.append((char)c);
-	        c = readDigits(2, "day of month");
-	        if (c == 'T') {
+            // append the dash and read the day (or day-of-month) field
+            value.append((char)c);
+            c = readDigits(2, "day of month");
+            if (c == 'T') {
 
 check4timezone:
-		        for (;;) { // another fake label/ for=goto
+                for (;;) { // another fake label/ for=goto
 
-		        	// attach the 'T' to the value we're collecting
-		            value.append((char)c);
+                    // attach the 'T' to the value we're collecting
+                    value.append((char)c);
 
-		            // we're going to "watch" how many digits we read in the hours
-		            // field.  It's 0 that's actually ok, since we can end at the
-		            // 'T' we just read
-		            int length_before_reading_hours = value.length();
-		            // so read the hours
-		            c = readDigits(2, "hours");
-		        	if (length_before_reading_hours == value.length()) {
-		        		break check4timezone;
-		        	}
-		            if (c != ':') {
-		                throw new IonException("invalid timestamp, expecting hours at " + this.position());
-		            }
-		            value.append((char)c);
-		            // so read the minutes
-		            c = readDigits(2, "minutes");
-		            if (c != ':') {
-		                if (c == '-' || c == '+' || c == 'Z') {
-		                    break check4timezone;
-		                }
-		                break endofdate;
-		            }
-		            value.append((char)c);
-		            // so read the seconds
-		            c = readDigits(2, "seconds");
-		            if (c != '.') {
-		                if (c == '-' || c == '+' || c == 'Z') {
-		                    break check4timezone;
-		                }
-		                break endofdate;
-		            }
-		            value.append((char)c);
-		            // so read the fractional seconds
-		            c = readDigits(32, "fractional seconds");
-		            break check4timezone;
-		        }//check4timezone
+                    // we're going to "watch" how many digits we read in the hours
+                    // field.  It's 0 that's actually ok, since we can end at the
+                    // 'T' we just read
+                    int length_before_reading_hours = value.length();
+                    // so read the hours
+                    c = readDigits(2, "hours");
+                    if (length_before_reading_hours == value.length()) {
+                        // FIXME I don't think there should be a timezone here
+                        break check4timezone;
+                    }
+                    if (c != ':') {
+                        throw new IonException("invalid timestamp, expecting hours at " + this.position());
+                    }
+                    value.append((char)c);
+                    // so read the minutes
+                    c = readDigits(2, "minutes");
+                    if (c != ':') {
+                        if (c == '-' || c == '+' || c == 'Z') {
+                            break check4timezone;
+                        }
+                        break endofdate;
+                    }
+                    value.append((char)c);
+                    // so read the seconds
+                    c = readDigits(2, "seconds");
+                    if (c != '.') {
+                        if (c == '-' || c == '+' || c == 'Z') {
+                            break check4timezone;
+                        }
+                        break endofdate;
+                    }
+                    value.append((char)c);
+                    // so read the fractional seconds
+                    // FIXME ION-169 precision should be unlimited
+                    c = readDigits(32, "fractional seconds");
+                    break check4timezone;
+                }//check4timezone
 
-		        // now check to see if it's a timezone offset we're looking at
-		        if (c == '-' || c == '+') {
-		            value.append((char)c);
-		            // so read the timezone offset
-		            c = readDigits(2, "timezone offset");
-		            if (c != ':') break endofdate;
-		            value.append((char)c);
-		            c = readDigits(2, "timezone offset");
-		        }
-		        else if (c == 'Z') {
-		            value.append((char)c);
-		            c = this.read(); // because we'll unread it before we return
-		        }
-	        }
-	        break endofdate;
+                // now check to see if it's a timezone offset we're looking at
+                if (c == '-' || c == '+') {
+                    value.append((char)c);
+                    // so read the timezone offset
+                    c = readDigits(2, "timezone offset");
+                    if (c != ':') break endofdate;
+                    value.append((char)c);
+                    c = readDigits(2, "timezone offset");
+                }
+                else if (c == 'Z') {
+                    value.append((char)c);
+                    c = this.read(); // because we'll unread it before we return
+                }
+            }
+            break endofdate;
         }//endofdate
 
         checkAndUnreadNumericStopper(c);

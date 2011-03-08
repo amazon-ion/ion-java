@@ -84,6 +84,9 @@ public abstract class UnifiedDataPageX
 
     public int getBufferLimit()    { return _page_limit; }
     public int getOriginalStartingOffset() { return _base_offset; }
+
+    // FIXME document lower-bound of the result.  Can it be negative?
+    // If not, why not?
     public int getStartingOffset() { return _base_offset - _unread_count; }
     public int getUnreadCount()    { return _unread_count; }
 
@@ -145,11 +148,12 @@ public abstract class UnifiedDataPageX
      * Specialized versions of DataPage.  One to handle bytes the
      * other to handle chars
      */
-    static final class Bytes extends UnifiedDataPageX
+    // FIXME: remove "public" when UnifiedOutputBufferX is
+    //        integrated back into ion.impl
+    public static final class Bytes extends UnifiedDataPageX
     {
         public Bytes(int size) {
-            _page_type   = PageType.BYTES;
-            _bytes = new byte[size];
+            this(new byte[size], 0, size);
         }
         public Bytes(byte[] bytes, int offset, int len) {
             _page_type   = PageType.BYTES;
@@ -186,11 +190,12 @@ public abstract class UnifiedDataPageX
         }
     }
 
-    static final class Chars extends UnifiedDataPageX
+    // FIXME: remove "public" when UnifiedOutputBufferX is
+    //        integrated back into ion.impl
+    public static final class Chars extends UnifiedDataPageX
     {
         public Chars(int size) {
-            _page_type   = PageType.CHARS;
-            _characters = new char[size];
+            this(new char[size], 0, size);
         }
         public Chars(char[] chars, int offset, int len) {
             _page_type   = PageType.CHARS;

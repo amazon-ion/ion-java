@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.apps;
 
@@ -9,6 +9,7 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.system.SimpleCatalog;
 import com.amazon.ion.system.SystemFactory;
+import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -31,14 +32,14 @@ abstract class BaseApp
     protected static byte[] loadAsByteArray(InputStream in)
         throws IOException
     {
-	byte[] buf = new byte[4096];
-	ByteArrayOutputStream bos = new ByteArrayOutputStream();
-	int cnt;
+    byte[] buf = new byte[4096];
+    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+    int cnt;
 
-	while ((cnt = in.read(buf)) != -1) {
-	    bos.write(buf, 0, cnt);
-	}
-	return bos.toByteArray();
+    while ((cnt = in.read(buf)) != -1) {
+        bos.write(buf, 0, cnt);
+    }
+    return bos.toByteArray();
     }
 
 
@@ -148,21 +149,21 @@ abstract class BaseApp
     }
 
     protected void processStdIn() {
-	try
-	    {
-		byte[] buffer = loadAsByteArray(System.in);
-		IonReader reader = mySystem.newReader(buffer);
-		process(reader);
+    try
+        {
+        byte[] buffer = loadAsByteArray(System.in);
+        IonReader reader = mySystem.newReader(buffer);
+        process(reader);
             }
-	catch (IonException e)
+    catch (IonException e)
             {
                 System.err.println("An error occurred while processing stdin");
                 System.err.println(e.getMessage());
             }
-	catch (IOException e)
+    catch (IOException e)
             {
                 System.err.println("An error occurred while processing stdin");
-		System.err.println(e.getMessage());
+        System.err.println(e.getMessage());
             }
     }
 
@@ -195,19 +196,21 @@ abstract class BaseApp
         File catalogFile = new File(catalogPath);
         try
         {
-            FileInputStream fis = new FileInputStream(catalogFile);
+            InputStream in =
+                new BufferedInputStream(new FileInputStream(catalogFile));
             try
             {
-                IonReader reader = mySystem.newReader(fis);
-                while (reader.hasNext())
+                IonReader reader = mySystem.newReader(in);
+                while (reader.next() != null)
                 {
-                    SymbolTable symtab = mySystem.newSharedSymbolTable(reader);
+                    SymbolTable symtab =
+                        mySystem.newSharedSymbolTable(reader, true);
                     myCatalog.putTable(symtab);
                 }
             }
             finally
             {
-                fis.close();
+                in.close();
             }
         }
         catch (Exception e)
