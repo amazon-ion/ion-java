@@ -6,9 +6,9 @@ import com.amazon.ion.impl.IonSystemImpl;
 import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.junit.Injected;
 import com.amazon.ion.junit.Injected.Inject;
+import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.SimpleCatalog;
 import com.amazon.ion.system.SystemFactory;
-import com.amazon.ion.system.SystemFactory.SystemCapabilities;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -37,9 +37,11 @@ import org.junit.runner.RunWith;
 public abstract class IonTestCase
     extends TestCase
 {
-    @Inject("systemCapabilities")
-    public static final SystemCapabilities[] TEST_DIMENSION =
-    { SystemCapabilities.ORIGINAL, SystemCapabilities.LITE };
+    protected enum DomType { LITE, BACKED }
+
+    @Inject("domType")
+    public static final DomType[] DOM_TYPES = DomType.values();
+
 
     public static enum StreamingMode {
         OLD_STREAMING,
@@ -58,21 +60,19 @@ public abstract class IonTestCase
     protected IonLoader        myLoader;
 
     //  FIXME: needs java docs
-    private SystemCapabilities desiredSystemType =
-        SystemCapabilities.DEFAULT;
+    private DomType domType;
+    private StreamingMode desiredStreamingMode;
 
-    private StreamingMode desiredStreamingMode =
-        StreamingMode.NEW_STREAMING;
-
-    public void setSystemCapabilities(SystemCapabilities systype)
+    public DomType getDomType()
     {
-        desiredSystemType = systype;
+        return domType;
     }
 
-    public SystemCapabilities getSystemCapabilities()
+    public void setDomType(DomType type)
     {
-        return desiredSystemType;
+        domType = type;
     }
+
 
     public void setStreamingMode(StreamingMode mode) {
         desiredStreamingMode = mode;
@@ -254,12 +254,7 @@ public abstract class IonTestCase
     {
         if (mySystem == null)
         {
-            mySystem = (IonSystemPrivate)SystemFactory.newSystem(getSystemCapabilities()); // was: new IonSystemImpl();
-            if (mySystem instanceof IonSystemImpl)
-            {
-                // TODO we really should phase this out...
-                ((IonSystemImpl) mySystem).useNewReaders_UNSUPPORTED_MAGIC = getStreamingMode() == StreamingMode.NEW_STREAMING;
-            }
+            mySystem = system(null);
         }
         return mySystem;
     }
@@ -267,15 +262,28 @@ public abstract class IonTestCase
     // added helper, this returns a separate system
     // every time since the user is passing in a catalog
     // which changes the state of the system object
+    @SuppressWarnings("deprecation")
     protected IonSystemPrivate system(IonCatalog catalog)
     {
-        IonSystemPrivate system = (IonSystemPrivate)SystemFactory.newSystem(getSystemCapabilities(), catalog);
+        IonSystem system;
+        if (getDomType() == DomType.BACKED)
+        {
+            system = SystemFactory.newSystem(catalog);
+        }
+        else
+        {
+            system = IonSystemBuilder.standard()
+                                     .withCatalog(catalog)
+                                     .build();
+        }
+
         if (system instanceof IonSystemImpl)
         {
             // TODO we really should phase this out...
-            ((IonSystemImpl) system).useNewReaders_UNSUPPORTED_MAGIC = getStreamingMode() == StreamingMode.NEW_STREAMING;
+            ((IonSystemImpl) system).useNewReaders_UNSUPPORTED_MAGIC =
+                (getStreamingMode() == StreamingMode.NEW_STREAMING);
         }
-        return system;
+        return (IonSystemPrivate) system;
     }
 
     protected SimpleCatalog catalog()

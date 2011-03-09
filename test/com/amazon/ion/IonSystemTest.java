@@ -3,7 +3,6 @@
 package com.amazon.ion;
 
 import com.amazon.ion.system.SystemFactory;
-import com.amazon.ion.system.SystemFactory.SystemCapabilities;
 import java.util.Arrays;
 import java.util.Iterator;
 import org.junit.Test;
@@ -75,7 +74,7 @@ public class IonSystemTest
     public void testNewDatagramImporting()
     {
         // FIXME ION-75
-        if (getSystemCapabilities() == SystemCapabilities.LITE)
+        if (getDomType() == DomType.LITE)
         {
             logSkippedTest();
             return;

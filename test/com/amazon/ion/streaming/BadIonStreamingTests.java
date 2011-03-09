@@ -7,7 +7,6 @@ import com.amazon.ion.IonTestCase;
 import com.amazon.ion.TestUtils;
 import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.junit.Injected.Inject;
-import com.amazon.ion.system.SystemFactory.SystemCapabilities;
 import java.io.File;
 import java.io.IOException;
 import org.junit.Ignore;
@@ -44,7 +43,7 @@ extends IonTestCase
     public void testSkippingScalars()
     throws Exception
     {
-        if (getSystemCapabilities() != SystemCapabilities.LITE)
+        if (getDomType() != DomType.LITE)
         {
             // Newer readers don't validate while skipping scalars
             // so we won't throw exceptions for all bad files.
