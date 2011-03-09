@@ -25,7 +25,6 @@ import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.system.SystemFactory.SystemCapabilities;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -215,7 +214,7 @@ public class PrinterTest
         // We shouldn't jnject a local table if its not needed.
 
         // TODO ION-165
-        if (getSystemCapabilities() == SystemCapabilities.LITE)
+        if (getDomType() == DomType.LITE)
         {
             // This is a hack to make the lite dom work like the original.
             // It's hiding some uglyness, disable to see.

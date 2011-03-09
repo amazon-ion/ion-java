@@ -86,15 +86,6 @@ public class IonSystemBuilder
         return STANDARD;
     }
 
-    /**
-     * @deprecated Will be removed before R10.
-     */
-    @Deprecated
-    public static IonSystemBuilder defaultBuilder()
-    {
-        return STANDARD;
-    }
-
 
     //=========================================================================
 
@@ -228,7 +219,7 @@ public class IonSystemBuilder
      * Builds a new {@link IonSystem} instance based on this builder's
      * configuration properties.
      */
-    public IonSystem build()
+    public final IonSystem build()
     {
         IonCatalog catalog =
             (myCatalog != null ? myCatalog : new SimpleCatalog());
