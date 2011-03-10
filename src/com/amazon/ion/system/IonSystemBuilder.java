@@ -42,7 +42,7 @@ import com.amazon.ion.impl.lite.IonSystemLite;
  *                                  .withCatalog(catalog)
  *                                  .build();
  *</pre>
- *
+ * <!--
  * <h2>IonValue Implementation</h2>
  * Compared to the older {@link SystemFactory} API, systems built by this
  * class construct {@link IonValue}s using a new, lightweight implementation
@@ -61,7 +61,7 @@ import com.amazon.ion.impl.lite.IonSystemLite;
  * This class will eventually be expanded to support selection between these
  * implementations, but for now those applications that require the
  * binary-backed value tree should stick with {@link SystemFactory}.
- *
+ * -->
  * <h2>Configuration Properties</h2>
  *
  * <p>This builder provides the following configurable properties:
@@ -73,6 +73,18 @@ import com.amazon.ion.impl.lite.IonSystemLite;
  */
 public class IonSystemBuilder
 {
+    /**
+     * This is a back-door for allowing a JVM-level override of the default
+     * DOM implementation.  The only reliable way to use this property is to
+     * set via the command-line.
+     * <p>
+     * <b>DO NOT USE THIS WITHOUT APPROVAL FROM JONKER@AMAZON.COM!</b>
+     * This private feature is subject to change without notice.
+     */
+    private static final String BINARY_BACKED_DOM_PROPERTY =
+        "com.amazon.ion.system.IonSystemBuilder.useBinaryBackedDom";
+
+
     private static final IonSystemBuilder STANDARD = new IonSystemBuilder();
 
     /**
@@ -89,12 +101,15 @@ public class IonSystemBuilder
 
     //=========================================================================
 
-    protected IonCatalog myCatalog;
-    protected boolean myBinaryBacked = false;
+    IonCatalog myCatalog;
+    boolean myBinaryBacked;
 
 
     /** You no touchy. */
-    private IonSystemBuilder() { }
+    private IonSystemBuilder()
+    {
+        myBinaryBacked = Boolean.getBoolean(BINARY_BACKED_DOM_PROPERTY);
+    }
 
     private IonSystemBuilder(IonSystemBuilder that)
     {

@@ -38,12 +38,15 @@ before calling {@link com.amazon.ion.system.IonSystemBuilder#build() build()}.
 <h2>SystemFactory is Deprecated</h2>
 As of early 2011, the {@link com.amazon.ion.system.SystemFactory SystemFactory}
 class has been deprecated in favor of {@code IonSystemBuilder}.
-This should be a straightforward application change, but at the moment the 
+This should be a straightforward application change and we strongly recommend
+that all applications update.
+<!--, but at the moment the 
 builder behaves differently in that it produces systems using a different
 {@link com.amazon.ion.IonValue IonValue} implementation.
 <b>Read the documentation of
 {@link com.amazon.ion.system.IonSystemBuilder IonSystemBuilder}
 to determine if your application should change.</b>
+-->
 
 <h2>An Important Caveat</h2>
 Objects
