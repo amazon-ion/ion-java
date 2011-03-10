@@ -2,7 +2,7 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.system.SystemFactory;
+import com.amazon.ion.system.SimpleCatalog;
 import java.util.Arrays;
 import java.util.Iterator;
 import org.junit.Test;
@@ -39,7 +39,7 @@ public class IonSystemTest
     public void testTwoSystemsClone()
     {
         IonSystem system1 = system();
-        IonSystem system2 = SystemFactory.newSystem();
+        IonSystem system2 = system(new SimpleCatalog());
 
         IonValue v1 = system1.singleValue("just_a_symbol");
         IonValue v2 = system2.clone(v1);

@@ -15,7 +15,6 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.IonTokenReader;
-import com.amazon.ion.system.SystemFactory;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -923,9 +922,9 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
 
     @Test
     public void testBinaryStepOut() throws IOException {
-    	// Jira issue 133
+        // Jira issue 133
 
-    	IonReader       r  = system().newReader("{s:{a:1, b:2}, c:3}");
+        IonReader       r  = system().newReader("{s:{a:1, b:2}, c:3}");
         IonBinaryWriter wr = system().newBinaryWriter();
 
         IonType t = r.next();
@@ -957,7 +956,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
     @Test
     public void testBinaryStepOut2() throws IOException {
 
-        IonSystem ionSystem = SystemFactory.newSystem();
+        IonSystem ionSystem = system();
         IonValue value = ionSystem.singleValue("{a:{b:1,c:2},d:false}");
 
         IonReader r = ionSystem.newReader(value);

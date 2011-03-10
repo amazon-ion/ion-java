@@ -19,7 +19,7 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
-import com.amazon.ion.system.SystemFactory;
+import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -1180,7 +1180,7 @@ public final class UnifiedSymbolTable
             rep = getIonRepresentation();
         }
         catch (IonExceptionNoSystem e) {
-            IonSystem sys = SystemFactory.newSystem();
+            IonSystem sys = IonSystemBuilder.standard().build();
             rep = makeIonRepresentation(sys);
             clear_image(); // don't keep this one around
         }

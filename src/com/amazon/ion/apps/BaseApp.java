@@ -7,8 +7,8 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.SimpleCatalog;
-import com.amazon.ion.system.SystemFactory;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -23,7 +23,9 @@ import java.io.InputStream;
 abstract class BaseApp
 {
     protected SimpleCatalog myCatalog = new SimpleCatalog();
-    protected IonSystem mySystem = SystemFactory.newSystem(myCatalog);
+    protected IonSystem mySystem = IonSystemBuilder.standard()
+                                                   .withCatalog(myCatalog)
+                                                   .build();
 
 
     //=========================================================================

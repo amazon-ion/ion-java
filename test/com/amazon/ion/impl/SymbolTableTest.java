@@ -26,7 +26,6 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.system.SimpleCatalog;
-import com.amazon.ion.system.SystemFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -489,7 +488,7 @@ public class SymbolTableTest
     // JIRA ION-75
     @Test @Ignore
     public void testDupLocalSymbolOnDatagram() throws Exception {
-        final IonSystem ion1 = SystemFactory.newSystem();
+        final IonSystem ion1 = system();
         final SymbolTable st = ion1.newSharedSymbolTable("foobar", 1, Arrays.asList("s1").iterator());
         final IonMutableCatalog cat = new SimpleCatalog();
         cat.putTable(st);
@@ -501,7 +500,7 @@ public class SymbolTableTest
         dg.add().newSymbol("s1");
         dg.add().newSymbol("l1");
 
-        final IonSystem ion2 = SystemFactory.newSystem(cat);
+        final IonSystem ion2 = system(cat);
 
         dg = ion2.getLoader().load(dg.getBytes());
         final IonSymbol sym1 = (IonSymbol) dg.get(0);

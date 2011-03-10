@@ -2,14 +2,11 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.system.SystemFactory;
 import java.util.Arrays;
 import org.junit.Test;
 
 public class BinaryTest extends IonTestCase
 {
-    private static final IonSystem sys = SystemFactory.newSystem();
-
     public static byte[] hexToBytes(final String hex)
     {
         String[] hexChunks = hex.split("\\s+");
@@ -60,15 +57,15 @@ public class BinaryTest extends IonTestCase
      *
      * @param   hex     A simple space delimited hex encoding.
      */
-    private static IonValue ion(final String hex)
+    private IonValue ion(final String hex)
     {
-        return sys.singleValue(hexToBytes(MAGIC_COOKIE + hex));
+        return system().singleValue(hexToBytes(MAGIC_COOKIE + hex));
     }
 
     /** Converts a single value to bytes using an empty datagram */
-    private static byte[] ionBytes(IonValue val)
+    private byte[] ionBytes(IonValue val)
     {
-        IonDatagram dg = sys.newDatagram(val);
+        IonDatagram dg = system().newDatagram(val);
         return dg.getBytes();
     }
 
@@ -133,8 +130,8 @@ public class BinaryTest extends IonTestCase
     public void testBinReadFloat02()
     {
         // was: $ion_1_0::{} 1e0
-    	// now: $ion_symbol_table::{} 1e0
-    	String symbolTableAnnotation = Integer.toHexString((SystemSymbolTable.ION_SYMBOL_TABLE_SID + 0x80));
+        // now: $ion_symbol_table::{} 1e0
+        String symbolTableAnnotation = Integer.toHexString((SystemSymbolTable.ION_SYMBOL_TABLE_SID + 0x80));
         IonValue val = ion("E3 81 " + symbolTableAnnotation +" D0 48 3F F0 00 00 00 00 00 00");
 
         assertTrue(val instanceof IonFloat);
@@ -160,7 +157,7 @@ public class BinaryTest extends IonTestCase
     @Test
     public void testBinWriteFloat01()
     {
-        IonFloat fval = sys.newNullFloat();
+        IonFloat fval = system().newNullFloat();
         fval.setValue(-1.0);
         byte[] raw = ionBytes(fval);
         byte[] ref = hexToBytes(EMPTY_HEADER + "48 BF F0 00 00 00 00 00 00");
@@ -171,7 +168,7 @@ public class BinaryTest extends IonTestCase
     @Test
     public void testBinWriteFloat02()
     {
-        IonFloat fval = sys.newNullFloat();
+        IonFloat fval = system().newNullFloat();
         // approx 1.79769313486231e300
         fval.setValue(Double.longBitsToDouble(0x7E45798EE2308C26L));
         byte[] raw = ionBytes(fval);
@@ -183,7 +180,7 @@ public class BinaryTest extends IonTestCase
     @Test
     public void testBinWriteFloat03()
     {
-        IonFloat fval = sys.newNullFloat();
+        IonFloat fval = system().newNullFloat();
         // approx -1.2278379192877e-276
         fval.setValue(Double.longBitsToDouble(0x86A5C3F28D5EC54AL));
         byte[] raw = ionBytes(fval);
