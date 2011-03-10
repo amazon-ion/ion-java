@@ -4,7 +4,6 @@ package com.amazon.ion.system;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
-import com.amazon.ion.IonValue;
 
 /**
  * The bootstrap factory to create an application's {@link IonSystem}.
@@ -14,8 +13,8 @@ import com.amazon.ion.IonValue;
  * {@link IonCatalog} implementation rather than using the default
  * {@link SimpleCatalog}.
  *
- * @deprecated This class is being replaced by {@link IonSystemBuilder}, but
- * see its documentation for important limitations.
+ * @deprecated As of release R10, this class is replaced by
+ * {@link IonSystemBuilder}.
  */
 @Deprecated
 public final class SystemFactory
@@ -29,14 +28,14 @@ public final class SystemFactory
      *
      * @return a new {@link IonSystem} instance; not null.
      *
-     * @deprecated Use the more configurable {@link IonSystemBuilder} instead
-     * (assuming your application can use the new lightweight {@link IonValue}
-     * implementation).
+     * @deprecated Use the more configurable {@link IonSystemBuilder} instead.
+     * You can use your IDE to inline this method with the equivalent code:
+     * <pre>IonSystemBuilder.standard().build()</pre>
      */
     @Deprecated
     public static IonSystem newSystem()
     {
-        return newSystem(null);
+        return IonSystemBuilder.standard().build();
     }
 
     /**
@@ -46,17 +45,13 @@ public final class SystemFactory
      *   If null, a new {@link SimpleCatalog} will be used.
      * @return a new {@link IonSystem} instance; not null.
      *
-     * @deprecated Use the more configurable {@link IonSystemBuilder} instead
-     * (assuming your application can use the new lightweight {@link IonValue}
-     * implementation).
+     * @deprecated Use the more configurable {@link IonSystemBuilder} instead.
+     * You can use your IDE to inline this method with the equivalent code:
+     * <pre>IonSystemBuilder.standard().withCatalog(catalog).build()</pre>
      */
     @Deprecated
     public static IonSystem newSystem(IonCatalog catalog)
     {
-        IonSystem sys = IonSystemBuilder.standard()
-                                        .withCatalog(catalog)
-                                        .withBinaryBacked(true)
-                                        .build();
-        return sys;
+        return IonSystemBuilder.standard().withCatalog(catalog).build();
     }
 }

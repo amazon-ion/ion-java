@@ -6,9 +6,9 @@ import com.amazon.ion.impl.IonSystemImpl;
 import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.junit.Injected;
 import com.amazon.ion.junit.Injected.Inject;
+import com.amazon.ion.system.BuilderHack;
 import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.SimpleCatalog;
-import com.amazon.ion.system.SystemFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -262,20 +262,11 @@ public abstract class IonTestCase
     // added helper, this returns a separate system
     // every time since the user is passing in a catalog
     // which changes the state of the system object
-    @SuppressWarnings("deprecation")
     protected IonSystemPrivate system(IonCatalog catalog)
     {
-        IonSystem system;
-        if (getDomType() == DomType.BACKED)
-        {
-            system = SystemFactory.newSystem(catalog);
-        }
-        else
-        {
-            system = IonSystemBuilder.standard()
-                                     .withCatalog(catalog)
-                                     .build();
-        }
+        IonSystemBuilder b = IonSystemBuilder.standard().withCatalog(catalog);
+        BuilderHack.setBinaryBacked(b, getDomType() == DomType.BACKED);
+        IonSystem system = b.build();
 
         if (system instanceof IonSystemImpl)
         {
