@@ -9,7 +9,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.Reader;
 import com.amazon.ion.impl.IonWriterUserText.TextOptions;
-import com.amazon.ion.system.SystemFactory;
+import com.amazon.ion.system.IonSystemBuilder;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -167,7 +167,7 @@ public final class IonImplUtils // TODO this class shouldn't be public
         TextOptions options = new TextOptions(false, true, false); // pretty print, ascii only, filter symbol tables
 
         // This is vaguely inappropriate.
-        IonSystem system = SystemFactory.newSystem();
+        IonSystem system = IonSystemBuilder.standard().build();
         SymbolTable systemSymtab = system.getSystemSymbolTable();
         IonWriterSystemText writer =
             new IonWriterSystemText(system, systemSymtab, out, options);

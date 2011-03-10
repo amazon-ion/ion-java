@@ -1,12 +1,10 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.profile;
 
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.system.SystemFactory;
+import com.amazon.ion.system.IonSystemBuilder;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,7 +19,7 @@ public class IteratorTiming
 {
     public static void main(String[] args)
     {
-        IonSystem ion = SystemFactory.newSystem();
+        IonSystem ion = IonSystemBuilder.standard().build();
 
         System.out.println("Start at " + new Date());
 

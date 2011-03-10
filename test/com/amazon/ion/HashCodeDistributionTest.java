@@ -2,10 +2,6 @@
 
 package com.amazon.ion;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import com.amazon.ion.system.SystemFactory;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -16,7 +12,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -25,14 +21,12 @@ import org.junit.Test;
  * confidence interval.  See Knuth vol. 2 sec 3.3.1 for background.
  */
 public class HashCodeDistributionTest
+extends IonTestCase
 {
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @BeforeClass
-    public static void setUpBeforeClass() throws Exception
+    @Override @Before
+    public void setUp() throws Exception
     {
+        super.setUp();
         File data_dir = findDataDir();
         if (data_dir != null)  {
             loadTestData(data_dir);
@@ -261,7 +255,7 @@ public class HashCodeDistributionTest
      * Loads test data
      * @param data_dir Directory w data files
      */
-    protected static void loadTestData(File data_dir)
+    protected void loadTestData(File data_dir)
     throws IOException
     {
         File[] data_files = data_dir.listFiles(new FilenameFilter()
@@ -271,6 +265,8 @@ public class HashCodeDistributionTest
                 return name.endsWith(".ion") || name.endsWith(".10n");
             }
         });
+
+        IonSystem ionSys = system();
         for (File data_file : data_files)  {
             InputStream in =
                 new BufferedInputStream(new FileInputStream(data_file));
@@ -290,7 +286,7 @@ public class HashCodeDistributionTest
      * Loads an IonValue into the test data set.
      * @param value
      */
-    protected static void loadValue(IonValue value)
+    protected void loadValue(IonValue value)
     {
         testData.add(value);
         if (value instanceof IonContainer)
@@ -314,12 +310,11 @@ public class HashCodeDistributionTest
         return cooked_hash ^ (cooked_hash >>> 7) ^ (cooked_hash >>> 4);
     }
 
-    protected static final Set<IonValue> testData
+    protected final Set<IonValue> testData
             = new HashSet<IonValue>(4096);
 
     protected int dataSize;
 
-    protected static final IonSystem ionSys = SystemFactory.newSystem();
 
     /** From http://www.itl.nist.gov/div898/handbook/eda/section3/eda3674.htm */
     protected static final double[] chiSquared95Table = {

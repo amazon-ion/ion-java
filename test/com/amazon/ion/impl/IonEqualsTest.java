@@ -1,24 +1,13 @@
 package com.amazon.ion.impl;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import com.amazon.ion.IonFloat;
-import com.amazon.ion.IonSystem;
+import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.system.SystemFactory;
-import org.junit.Before;
 import org.junit.Test;
 
-public class IonEqualsTest {
-
-    private IonSystem m_ion = null;
-
-    @Before
-    public void setup() {
-        m_ion = SystemFactory.newSystem();
-    }
-
+public class IonEqualsTest
+extends IonTestCase
+{
     private static void assertIonEq(final IonValue v1, final IonValue v2) {
         assertTrue(v1.equals(v2));
     }
@@ -28,11 +17,11 @@ public class IonEqualsTest {
     }
 
     private IonValue ion(final String raw) {
-        return m_ion.singleValue(raw);
+        return system().singleValue(raw);
     }
 
     private IonFloat ionFloat(final double value) {
-        IonFloat f = m_ion.newNullFloat();
+        IonFloat f = system().newNullFloat();
         f.setValue(value);
         return f;
     }

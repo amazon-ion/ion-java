@@ -1,9 +1,8 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import com.amazon.ion.impl.IonImplUtils;
-import com.amazon.ion.system.SystemFactory;
 import java.io.UnsupportedEncodingException;
 import org.junit.Before;
 import org.junit.Test;
@@ -12,7 +11,6 @@ public class SurrogateEscapeTest extends IonTestCase {
     // TODO when text reader is ready, run tests on those
     private static final boolean RUN_TEXT_READER_ASSERTS = false;
 
-    private final IonSystem ion = SystemFactory.newSystem();
     private final StringBuilder buf = new StringBuilder();
 
     private IonDatagram load() {
@@ -25,7 +23,7 @@ public class SurrogateEscapeTest extends IonTestCase {
 
     private IonReader reader() {
         try {
-            return ion.newReader(buf.toString().getBytes("UTF-8"));
+            return system().newReader(buf.toString().getBytes("UTF-8"));
         } catch (final UnsupportedEncodingException e) {
             throw new IllegalArgumentException(e);
         }
