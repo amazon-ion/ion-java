@@ -1,0 +1,191 @@
+<?xml version="1.0"?>
+
+<project name="IonJava" basedir="." default="test" 
+         xmlns:ht="happytrails">
+
+  <import file="${happytrails.root}/happytrails.xml"/>
+  <ht:import file="javadoc.xml"/>
+
+  <target name="build.properties">
+    <property name="dir.output"  location="${output.dir}/private"/>
+    <property name="dir.src"     location="${basedir}/src"/>
+    <property name="dir.doc"     location="${output.dir}/docs"/>
+    <property name="dir.classes" location="${dir.output}/classes"/>
+    <property name="dir.release" location="${output.dir}/lib"/>
+
+    <property name="dir.test"         location="${basedir}/test"/>
+    <property name="dir.test.src"     location="${dir.test}"/>
+    <property name="dir.test.classes" location="${dir.output}/test"/>
+
+
+    <propertycopy property="dir.IonTests.src" from="bp:{IonTests}pkg.src"/>
+    <property name="dir.test.data" 
+              location="${dir.IonTests.src}/iontestdata"/>
+
+    <property name="jar.output.src"  location="${dir.release}/${ant.project.name}.jar"/>
+    <property name="jar.output.test" location="${dir.release}/${ant.project.name}-test.jar"/>
+
+    <property name="dir.output.logs" location="${dir.output}/log"/>
+  </target>
+
+  <target name="build.dirs" depends="build.properties">
+    <mkdir dir="${dir.doc}" />
+    <mkdir dir="${dir.classes}" />
+    <mkdir dir="${dir.release}" />
+    <mkdir dir="${dir.output}" />
+    <mkdir dir="${dir.test.classes}" />
+    <mkdir dir="${dir.output.logs}" />
+  </target>
+
+
+  <!-- ==================================================================== -->
+
+
+  <target name="build" depends="build.dirs">
+    <javac srcdir="${dir.src}" debug="on" 
+           destdir="${dir.classes}"
+           source="1.5" target="1.5">
+      <classpath>
+        <path path="${bp:direct.classpath}"/>
+      </classpath>
+    </javac>
+
+    <!-- Copy resource files -->
+    <copy todir="${dir.classes}">
+      <fileset dir="${dir.src}">
+        <include name="**/*.properties" />
+      </fileset>
+    </copy>
+    
+    <!-- Update build.properties with current Brazil info -->
+    <propertyfile file="${dir.classes}/com/amazon/ion/impl/build.properties">
+      <entry key="brazil_major_version" value="${bp:package-major-version}" />
+      <entry key="brazil_package_version" 
+             value="${bp:package-name-full-version}" />
+      <entry key="build_time" type="date" value="now" 
+             pattern="yyyy-MM-dd'T'HH:mm:ssZ" />
+    </propertyfile>
+  </target>
+
+
+  <target name="jars" depends="build">
+    <jar destfile="${jar.output.src}"
+         basedir="${dir.classes}">
+      <manifest>
+        <attribute name="Main-Class" value="com.amazon.ion.impl.IonBuild"/>
+      </manifest>
+    </jar>
+  </target>
+
+  <target name="build.test" depends="jars">
+    <javac srcdir="${dir.test.src}"
+           destdir="${dir.test.classes}"
+           debug="true"
+           source="1.5" target="1.5">
+      <classpath>
+        <path path="${bp:testlib.classpath}"/>
+      </classpath>
+    </javac>
+  </target>
+
+  <target name="jars.test" depends="build.test">
+    <jar destfile="${jar.output.test}" basedir="${dir.test.classes}"/>
+  </target>
+
+  <target name="test" depends="jars.test" 
+      description="Run unit tests">
+    <property name="teardown" value="true"/>
+    <property name="testcaseOverride" value="()"/>
+    <property name="domain" value="test"/>
+    <property name="loglevel" value="DEBUG"/>
+    <property name="suite" value="AllTests"/>
+
+    <junit printsummary="false"
+           haltonfailure="false" haltonerror="false"
+           failureproperty="test.failure"
+           dir="${basedir}"
+           fork="true"
+           includeantruntime="false">
+      <test name="${suite}" todir="${dir.output.logs}" outfile="TEST" />
+
+      <!-- JUnit task adds the minimum Ant libs to make things work. -->
+      <classpath>
+        <path path="${bp:testrun.classpath}"/>
+        <path path="${bp:tool.classpath}"/><!-- for Ant's JUnitTestRunner -->
+        <pathelement location="${jar.output.test}"/> 
+      </classpath>
+
+      <sysproperty key="java.library.path" value="${java.libraryPath.test}" />
+      <sysproperty key="com.amazon.iontests.iontestdata.path"
+                   value="${dir.test.data}"/>
+
+      <assertions enableSystemAssertions="true">
+        <!--
+          This syntax gives no easy way to turn assertions on/off by property
+          -->
+        <enable />
+      </assertions>
+
+      <!-- Log messages to the console. -->
+      <formatter type="brief" usefile="false" />
+
+      <!-- Long logs to file. -->
+      <formatter type="xml" />
+    </junit>
+
+    <fail message="Test(s) failed" if="test.failure" />
+  </target>
+
+
+  <!-- ==================================================================== -->
+
+
+  <target name="javadoc" depends="build.properties">
+    <tstamp>
+      <format property="javadoc.year" pattern="yyyy" />
+    </tstamp>
+    <!-- Good luck finding documentation on this task. -->
+    <ht:javadoc
+        overview= "${dir.src}/com/amazon/ion/overview.html"
+        windowtitle="IonJava API"
+        doctitle="The IonJava API Reference"
+        header="IonJava API Reference"
+        docencoding="UTF-8"
+        useexternalfile="true">
+      <fileset dir="${dir.src}">
+        <include name="**/*.java"/>
+        <exclude name="com/amazon/ion/apps/**" />
+        <exclude name="com/amazon/ion/impl/**" />
+      </fileset>
+      <classpath>
+       <path path="${bp:testrun.classpath}"/>
+      </classpath>
+      <!-- Don't break this line. Ant 1.7 is buggy. Ant 1.8 fixes it but HT3
+           seems to block use of it. --> 
+      <bottom><![CDATA[<center>Copyright &#169; 2007&ndash;${javadoc.year} Amazon.com. All Rights Reserved.</center>]]></bottom>
+    </ht:javadoc>
+  </target>
+
+
+  <target name="doc" depends="javadoc">
+    <!-- Also build manuals etc. -->
+  </target>
+
+
+  <!-- ==================================================================== -->
+
+
+  <target name="release" depends="test, doc"
+          description="Build and test all release artifacts.">
+  </target>
+
+
+  <target name="all" depends="release"
+          description="Build everything.">
+  </target>
+
+  <target name="cruise" depends="test"
+          description="Run CruiseControl continuous build">
+  </target>
+
+</project>
