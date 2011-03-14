@@ -99,6 +99,7 @@
     <property name="domain" value="test"/>
     <property name="loglevel" value="DEBUG"/>
     <property name="suite" value="AllTests"/>
+    <mkdir dir="${unit.test.dir}" />        
 
     <junit printsummary="false"
            haltonfailure="false" haltonerror="false"
@@ -106,7 +107,7 @@
            dir="${basedir}"
            fork="true"
            includeantruntime="false">
-      <test name="${suite}" todir="${dir.output.logs}" outfile="TEST" />
+      <test name="${suite}" todir="${unit.test.dir}" outfile="TEST" />
 
       <!-- JUnit task adds the minimum Ant libs to make things work. -->
       <classpath>
@@ -132,10 +133,22 @@
       <!-- Long logs to file. -->
       <formatter type="xml" />
     </junit>
-
+    
+    <junitreport todir="${unit.test.dir}" tofile="BRAZIL-UNIT-TESTS.xml">
+      <fileset dir="${unit.test.dir}">
+        <include name="TEST*.xml" />
+      </fileset>
+      <report format="frames" todir="${unit.test.dir}" />
+    </junitreport>
+    
     <fail message="Test(s) failed" if="test.failure" />
   </target>
-
+  
+  
+  <!-- 
+    http://w.amazon.com/?BrazilBuildSystem/Concepts/UnitTestingInBrazil/JavaUnitTesting
+  -->
+  <target name="unit-tests" depends="test" />
 
   <!-- ==================================================================== -->
 
@@ -182,10 +195,6 @@
 
   <target name="all" depends="release"
           description="Build everything.">
-  </target>
-
-  <target name="cruise" depends="test"
-          description="Run CruiseControl continuous build">
   </target>
 
 </project>
