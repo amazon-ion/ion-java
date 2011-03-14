@@ -158,17 +158,18 @@ public class TestUtils
                     break;
 
                 default:
-                    Assert.fail("unexpected type: " + t);
+                    throw new IllegalStateException("unexpected type: " + t);
             }
         }
     }
 
+    @SuppressWarnings("deprecation")
     private static IonType doNext(IonReader reader)
     {
         boolean hasnext = true;
         IonType t = null;
 
-        if (READER_HASNEXT_REMOVED == false) {
+        if (! READER_HASNEXT_REMOVED) {
             hasnext = reader.hasNext();
         }
         if (hasnext) {
@@ -178,6 +179,7 @@ public class TestUtils
     }
 
 
+    @SuppressWarnings("unused")
     private static void materializeScalar(IonReader reader)
     {
         IonType t = reader.getType();
@@ -230,7 +232,7 @@ public class TestUtils
                 break;
 
             default:
-                Assert.fail("unexpected type: " + t);
+                throw new IllegalStateException("unexpected type: " + t);
         }
     }
 
@@ -295,7 +297,10 @@ public class TestUtils
     {
         try
         {
-            Assert.assertEquals(FERMATA, new String(FERMATA_UTF8, "UTF-8"));
+            if (! new String(FERMATA_UTF8, "UTF-8").equals(FERMATA))
+            {
+                throw new AssertionError("Broken encoding");
+            }
         }
         catch (UnsupportedEncodingException e)
         {
