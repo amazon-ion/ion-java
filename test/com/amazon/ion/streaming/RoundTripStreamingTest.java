@@ -25,7 +25,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-public class RoundTripStreamingTests
+public class RoundTripStreamingTest
 extends IonTestCase
 {
     static final boolean _debug_flag = true;

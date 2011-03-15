@@ -25,7 +25,7 @@ import org.junit.Test;
 /**
  *
  */
-public class MiscStreamingTests
+public class MiscStreamingTest
     extends IonTestCase
 {
     static final boolean _debug_flag = false;

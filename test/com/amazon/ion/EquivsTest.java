@@ -7,7 +7,7 @@ import java.io.File;
 import junit.framework.AssertionFailedError;
 import org.junit.Test;
 
-public class EquivsTests
+public class EquivsTest
     extends IonTestCase
 {
     @Inject("testFile")

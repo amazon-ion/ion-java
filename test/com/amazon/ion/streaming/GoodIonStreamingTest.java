@@ -15,7 +15,7 @@ import org.junit.Test;
 
 
 
-public class GoodIonStreamingTests
+public class GoodIonStreamingTest
 extends IonTestCase
 {
     @Inject("testFile")

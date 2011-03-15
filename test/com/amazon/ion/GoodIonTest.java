@@ -12,7 +12,7 @@ import java.util.Iterator;
 import org.junit.Test;
 
 
-public class GoodIonTests
+public class GoodIonTest
     extends IonTestCase
 {
     @Inject("testFile")
