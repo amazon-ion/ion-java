@@ -107,8 +107,12 @@
            dir="${basedir}"
            fork="true"
            includeantruntime="false">
-      <test name="${suite}" todir="${unit.test.dir}" outfile="TEST" />
-
+      <batchtest todir="${unit.test.dir}">
+        <fileset dir="${dir.test.classes}">
+          <include name="**/*Test.class"/>
+        </fileset>
+      </batchtest>
+      
       <!-- JUnit task adds the minimum Ant libs to make things work. -->
       <classpath>
         <path path="${bp:testrun.classpath}"/>
