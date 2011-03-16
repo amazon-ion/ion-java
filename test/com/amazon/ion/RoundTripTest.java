@@ -19,7 +19,7 @@ import org.junit.Test;
  * Processes all text files in the "good" suite, transforming between text and
  * binary twice to ensure that the process is equivalent.
  */
-public class RoundTripTests
+public class RoundTripTest
     extends IonTestCase
 {
     /**

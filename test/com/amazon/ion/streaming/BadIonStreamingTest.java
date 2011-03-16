@@ -12,7 +12,7 @@ import java.io.IOException;
 import org.junit.Ignore;
 import org.junit.Test;
 
-public class BadIonStreamingTests
+public class BadIonStreamingTest
 extends IonTestCase
 {
     private static final boolean _debug_output_errors = false;

@@ -7,7 +7,7 @@ import java.io.IOException;
 import org.junit.Test;
 
 
-public class BadIonTests
+public class BadIonTest
     extends IonTestCase
 {
     @Inject("testFile")

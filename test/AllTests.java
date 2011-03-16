@@ -1,18 +1,18 @@
 // Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 import com.amazon.ion.AnnotationEscapesTest;
-import com.amazon.ion.BadIonTests;
+import com.amazon.ion.BadIonTest;
 import com.amazon.ion.BinaryTest;
 import com.amazon.ion.BlobTest;
 import com.amazon.ion.BoolTest;
 import com.amazon.ion.ClobTest;
 import com.amazon.ion.DatagramTest;
 import com.amazon.ion.DecimalTest;
-import com.amazon.ion.EquivsTests;
+import com.amazon.ion.EquivsTest;
 import com.amazon.ion.ExtendedDecimalTest;
 import com.amazon.ion.FieldNameEscapesTest;
 import com.amazon.ion.FloatTest;
-import com.amazon.ion.GoodIonTests;
+import com.amazon.ion.GoodIonTest;
 import com.amazon.ion.HashCodeCorrectnessTest;
 import com.amazon.ion.HashCodeDistributionTest;
 import com.amazon.ion.IntTest;
@@ -23,7 +23,7 @@ import com.amazon.ion.ListTest;
 import com.amazon.ion.LoaderTest;
 import com.amazon.ion.LongStringTest;
 import com.amazon.ion.NullTest;
-import com.amazon.ion.RoundTripTests;
+import com.amazon.ion.RoundTripTest;
 import com.amazon.ion.SexpTest;
 import com.amazon.ion.StringFieldNameEscapesTest;
 import com.amazon.ion.StringTest;
@@ -41,11 +41,11 @@ import com.amazon.ion.impl.IterationTest;
 import com.amazon.ion.impl.ReaderTest;
 import com.amazon.ion.impl.SymbolTableTest;
 import com.amazon.ion.impl.TreeReaderTest;
-import com.amazon.ion.streaming.BadIonStreamingTests;
+import com.amazon.ion.streaming.BadIonStreamingTest;
 import com.amazon.ion.streaming.BinaryStreamingTest;
-import com.amazon.ion.streaming.GoodIonStreamingTests;
-import com.amazon.ion.streaming.MiscStreamingTests;
-import com.amazon.ion.streaming.RoundTripStreamingTests;
+import com.amazon.ion.streaming.GoodIonStreamingTest;
+import com.amazon.ion.streaming.MiscStreamingTest;
+import com.amazon.ion.streaming.RoundTripStreamingTest;
 import com.amazon.ion.system.IonSystemBuilderTest;
 import com.amazon.ion.system.SimpleCatalogTest;
 import com.amazon.ion.util.EquivalenceTest;
@@ -111,10 +111,10 @@ import org.junit.runners.Suite;
     HashCodeDistributionTest.class,
 
     // General processing test suite
-    GoodIonTests.class,
-    BadIonTests.class,
-    EquivsTests.class,
-    RoundTripTests.class,
+    GoodIonTest.class,
+    BadIonTest.class,
+    EquivsTest.class,
+    RoundTripTest.class,
 
     // Subclasses of SystemProcessingTestCase are collected to make it
     // easier to run that subset.
@@ -124,12 +124,12 @@ import org.junit.runners.Suite;
     IonWriterTests.class,
 
     TreeReaderTest.class,
-    MiscStreamingTests.class,  // TODO misnamed
+    MiscStreamingTest.class,
     BinaryStreamingTest.class,
 
-    BadIonStreamingTests.class,  // TODO misnamed
-    GoodIonStreamingTests.class,  // TODO misnamed
-    RoundTripStreamingTests.class,  // TODO misnamed
+    BadIonStreamingTest.class,
+    GoodIonStreamingTest.class,
+    RoundTripStreamingTest.class,
 
     IonSystemTest.class,
     ValueFactorySequenceTest.class,

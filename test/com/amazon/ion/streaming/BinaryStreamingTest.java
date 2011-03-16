@@ -963,14 +963,13 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         r.next();
         r.stepIn();
         r.next();
-        System.out.println(r.getFieldName()); // a
+        assertEquals("a", r.getFieldName());
         r.stepIn();
         r.next();
-        System.out.println(r.getFieldName()); // b
+        assertEquals("b", r.getFieldName());
         r.stepOut(); // skip c
         r.next();
-        System.out.println(r.getFieldName()); // d
-        System.out.println("------------");
+        assertEquals("d", r.getFieldName());
 
         IonBinaryWriter writer = ionSystem.newBinaryWriter();
         writer.writeValue(value);
@@ -978,13 +977,13 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         r.next();
         r.stepIn();
         r.next();
-        System.out.println(r.getFieldName()); //a
+        assertEquals("a", r.getFieldName());
         r.stepIn();
         r.next();
-        System.out.println(r.getFieldName()); // b
+        assertEquals("b", r.getFieldName());
         r.stepOut(); // skip c
         r.next();
-        System.out.println(r.getFieldName()); //d
+        assertEquals("d", r.getFieldName());
     }
 
 }

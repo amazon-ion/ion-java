@@ -38,14 +38,14 @@ public abstract class SystemProcessingTestCase
         String classid = getDebugClassId();
 
 // FIXME: set these to null so we don't stop or print anything
-        String interesting_classid = "NewDatagramIteratorSystemProcessingTest";
-        String interesting_testid = "testSystemIterationShowsIvm";
+        String interesting_classid = null;
+        String interesting_testid = null;
 
 
         current_test = testid;
         current_class = classid;
 
-        if (interesting_testid.equals(testid) && interesting_classid.equals(classid)) {
+        if (testid.equals(interesting_testid) && classid.equals(interesting_classid)) {
             System.out.println("Interesting test encountered.");
             System.out.println("\tClass: "+classid);
             System.out.println("\tTestCase: "+testid);
