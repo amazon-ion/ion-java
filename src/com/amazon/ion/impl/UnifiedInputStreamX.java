@@ -169,13 +169,9 @@ public abstract class UnifiedInputStreamX
 
     protected final void make_page_current(UnifiedDataPageX curr, int idx, int pos, int limit)
     {
-        if (pos > limit) {
-            refill_is_eof();
-            return;
-        }
-        _eof = false;
         _limit = limit;
         _pos = pos;
+        _eof = false;
         if (is_byte_data()) {
             _bytes = curr.getByteBuffer();
         }
@@ -183,6 +179,10 @@ public abstract class UnifiedInputStreamX
             _chars = curr.getCharBuffer();
         }
         _buffer.setCurrentPage(idx, curr);
+        if (pos > limit) {
+            refill_is_eof();
+            return;
+        }
     }
 
     private final boolean is_byte_data() {
