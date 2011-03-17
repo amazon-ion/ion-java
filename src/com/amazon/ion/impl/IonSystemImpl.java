@@ -168,11 +168,13 @@ public final class IonSystemImpl
                 throw new IonException(message);
             }
 
+            // FIXME ION-188 This is wrong, we need to retain the exact
+            // symbols from the prior version.
             addAllNonNull(syms, prior.iterateDeclaredSymbolNames());
         }
 
         for (SymbolTable imported : imports)
-    {
+        {
             addAllNonNull(syms, imported.iterateDeclaredSymbolNames());
         }
 

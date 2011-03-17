@@ -23,8 +23,11 @@ import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 
 /**
  *
@@ -118,8 +121,9 @@ public final class UnifiedSymbolTable
 
     /**
      * The set of system symbols as defined by Ion 1.0.
+     * We keep this private to (help) prevent it from being modified.
      */
-    public static final String[] SYSTEM_SYMBOLS =
+    private static final String[] SYSTEM_SYMBOLS =
     {
         UnifiedSymbolTable.ION,
         UnifiedSymbolTable.ION_1_0,
@@ -132,38 +136,6 @@ public final class UnifiedSymbolTable
         UnifiedSymbolTable.ION_SHARED_SYMBOL_TABLE
     };
 
-    private enum SYSTEM_ONLY { SYSTEM_SYMBOL_TABLE }
-
-    /**
-     * this should be used by IonSystem Impl's to create
-     * their own copy of the system symbol table.
-     *
-     * @param sys IonSystem
-     * @return UnifiedSymbolTable initialized as a system symbol table
-     */
-    protected UnifiedSymbolTable makeSystemSymbolTable(IonSystem sys)
-    {
-        UnifiedSymbolTable sys_table = new UnifiedSymbolTable(sys);
-
-        sys_table._symbols = new UnifiedSymbolTableSymbol[SYSTEM_SYMBOLS.length];
-
-
-        for (int ii=0; ii<SYSTEM_SYMBOLS.length; ii++) {
-            int sid = sys_table.convertLocalOffsetToSid(ii);
-            UnifiedSymbolTableSymbol sym = new UnifiedSymbolTableSymbol(SYSTEM_SYMBOLS[ii], sid, sys_table);
-            sys_table.defineSymbol(sym);
-        }
-
-        sys_table.share(SystemSymbolTable.ION, 1);
-
-        return sys_table;
-    }
-
-
-
-    private static final UnifiedSymbolTableSymbol[] NO_SYMBOLS = new UnifiedSymbolTableSymbol[0];
-
-    private final int DEFAULT_SYMBOL_LENGTH = 10;
 
     private String                    _name;              // name of shared (or system) table, null if local, "$ion" if system
     private int                       _version;           // version of the shared table
@@ -173,36 +145,35 @@ public final class UnifiedSymbolTable
     private IonSystem                 _image_system;      // Ion system of the previous image
     private boolean                   _is_changed;        // set if anything changed, cleared at image set time
     private boolean                   _maintain_image;    // set if we want to keep the image up to date as we add symbols
-                                                          // for the moment this is always "true", but this should change
 
     /**
-     * All symbols from the system symtab, imported tables, and locals.
-     * The index in the array is the sid.
-     * Can't be private (yet) since its used by the binary writer.
+     * The local symbol names declared in this symtab; never null.
+     * The sid of the first element is {@link #_first_local_sid}.
+     * Only the first {@link #_local_symbol_count} elements are valid.
      */
-    /**
-     * just the symbols that are defined locally.
-     */
-    UnifiedSymbolTableSymbol[]      _symbols;
+    private String[] _symbols;
+
+    /** The initial length of {@link #_symbols}. */
+    private static final int DEFAULT_SYMBOL_LENGTH = 10;
 
     /**
      * This is the number of symbols defined in this symbol table
      * locally, that is not imported from some other table.
-     *
      */
     private int _local_symbol_count;
 
     /**
-     * the sid of the first local symbol which will be stored at
-     * offset 0 in the local symbol list.  See convertSidToLocalOffset
-     * and convertLocalOffsetToSid.
+     * The sid of the first local symbol, which is stored at
+     * {@link #_symbols}[0].
+     *
+     * @see #convertSidToLocalOffset
+     * @see #convertLocalOffsetToSid
      */
-    private int _sid_base;
+    private int _first_local_sid;
 
-    private final HashMap<String, Integer> _id_map;  // map from symbol name to SID of local symbols only
-//    private IonSystem                    _system;  use _sys_holder below
-//    private IonStruct                      _ion_rep;         // Ion DOM representation of this symbol table
-//    private IonList                        _ion_symbols_rep; // list that mimics the _symbols list of local symbols as an IonList
+    /** Map from symbol name to SID of local symbols only. */
+    private final HashMap<String, Integer> _id_map;
+
 
     /*
      * SymbolTable constructors that are mostly intended to be used
@@ -217,8 +188,8 @@ public final class UnifiedSymbolTable
 
         _name = null;
         _version = 0;
-        _sid_base = 0;
-        _symbols = NO_SYMBOLS;
+        _first_local_sid = 1;
+        _symbols = IonImplUtils.EMPTY_STRING_ARRAY;
         _local_symbol_count = 0;
         _id_map = new HashMap<String, Integer>(10);
         _import_list = UnifiedSymbolTableImports.emptyImportList;
@@ -229,7 +200,7 @@ public final class UnifiedSymbolTable
     }
     private void init(SymbolTable systemSymbols) {
         _import_list = new UnifiedSymbolTableImports(systemSymbols);
-        _sid_base = _import_list.getMaxId();
+        _first_local_sid = _import_list.getMaxId() + 1;
     }
 
     /**
@@ -249,43 +220,46 @@ public final class UnifiedSymbolTable
             if (! (systemSymbols instanceof UnifiedSymbolTable)) {
                 throw new IllegalArgumentException();
             }
-            _sid_base = _import_list.getMaxId();
         }
     }
+
     /*
      * load helpers that fill in the contents of the symbol table
      * from various sources
      */
+
+    /**
+     * @param symbols will be retained by this symtab (but not modified).
+     * It must not contain any empty strings.
+     */
     private void loadSharedSymbolTableContents(String name, int version, String[] symbols)
     {
-        assert name != null;
-        assert version >= 0;
         assert symbols != null;
 
-        _symbols = new UnifiedSymbolTableSymbol[symbols.length];
-        for (int ii=0; ii<symbols.length; ii++) {
+        _symbols = symbols;
+        _local_symbol_count = symbols.length;
+        for (int ii=0, sid= 1; ii < _local_symbol_count; ii++, sid++) {
             String symName = symbols[ii];
-            if (findSymbol(symName) == UnifiedSymbolTable.UNKNOWN_SID) {
-                int sid = convertLocalOffsetToSid(ii);
-                UnifiedSymbolTableSymbol sym = new UnifiedSymbolTableSymbol(symName, sid, this);
-                defineSymbol(sym);
+            assert symName == null || symName.length() > 0;
+            // When there's a duplicate name, don't replace the lower sid.
+            if (! _id_map.containsKey(symName)) {
+                _id_map.put(symName, sid);
             }
         }
 
         share(name, version);
     }
+
     private void loadSharedSymbolTableContents(String name, int version, Iterator<String> symbols)
     {
-        assert name != null;
-        assert version >= 0;
         assert symbols != null;
 
         int sid = convertLocalOffsetToSid(0);
         while (symbols.hasNext()) {
             String symName = symbols.next();
+            // FIXME what about empty?  ION-189
             if (findSymbol(symName) == UnifiedSymbolTable.UNKNOWN_SID) {
-                UnifiedSymbolTableSymbol sym = new UnifiedSymbolTableSymbol(symName, sid, this);
-                defineSymbol(sym);
+                putSymbol(symName, sid);
                 sid++;
             }
         }
@@ -362,10 +336,17 @@ public final class UnifiedSymbolTable
     }
 
     //
-    //   shared symbol table constructors
+    //   shared symbol table factories
     //       they don't take a catalog since they don't use a catalog
     //       the local symbol table uses the catalog for import resolution
     //
+
+    /**
+     * As per {@link IonSystem#newSharedSymbolTable(String, int, Iterator, SymbolTable...)},
+     * any duplicate or null symbol texts are skipped.
+     * Therefore, <b>THIS METHOD IS NOT SUITABLE WHEN READING SERIALIZED
+     * SHARED SYMBOL TABLES</b> since that scenario must preserve all sids.
+     */
     static public UnifiedSymbolTable makeNewSharedSymbolTable(IonSystem sys, String name, int version, Iterator<String> symbols)
     {
         if (name == null || name.length() < 1) {
@@ -486,7 +467,7 @@ public final class UnifiedSymbolTable
                 UnifiedSymbolTable symbolTable = (UnifiedSymbolTable) imports[ii];
                 table._import_list.addImport(symbolTable, symbolTable.getMaxId());
             }
-            table._sid_base = table._import_list.getMaxId();
+            table._first_local_sid = table._import_list.getMaxId() + 1;
         }
 
         return table;
@@ -823,57 +804,9 @@ public final class UnifiedSymbolTable
     synchronized
     Iterator<String> iterateDeclaredSymbolNames()
     {
-        return new Iterator<String>()
-        {
-            String[] names = makeNameArray();
-            int      myCurrentId = 0;
-            int      myMaxId = getNameCount();
-
-            // slightly more expensive, but this yields
-            // the correct results.  The alternative
-            // correct form has to embed this logic (from
-            // both makeNameArray() and getNameCount())
-            // in the hasNext and next routines - which
-            // will be messy.
-            private String[] makeNameArray() {
-                int      size = _local_symbol_count;
-                String[] temp = new String[size];
-                int      symid = 0;
-                for (int ii=0; ii<_local_symbol_count; ii++) {
-                    UnifiedSymbolTableSymbol sym = _symbols[ii];
-                    if (sym == null) continue;
-                    if (sym.name == null || sym.name.length() < 1) continue;
-                    temp[symid++] = sym.name;
-                }
-                return temp;
-            }
-            private int getNameCount() {
-//                int count = 0;
-                for (int ii=0; ii<names.length; ii++) {
-                    if (names[ii] == null) {
-                        return ii;
-                    }
-                }
-                return names.length;
-            }
-
-            public boolean hasNext()
-            {
-                return myCurrentId < myMaxId;
-            }
-
-            public String next()
-            {
-                int    id = myCurrentId++;
-                String name = names[id];
-                return name;
-            }
-
-            public void remove()
-            {
-                throw new UnsupportedOperationException();
-            }
-        };
+        List<String> slice =
+            Arrays.asList(_symbols).subList(0, _local_symbol_count);
+        return Collections.unmodifiableList(slice).iterator();
     }
 
 
@@ -886,16 +819,13 @@ public final class UnifiedSymbolTable
         if (id < 1) {
             throw new IllegalArgumentException("symbol IDs are greater than 0");
         }
-        else if (id <= _sid_base) {
+        else if (id < _first_local_sid) {
             name = _import_list.findKnownSymbol(id);
         }
         else  {
             int offset = convertSidToLocalOffset(id);
             if (offset < _symbols.length) {
-                UnifiedSymbolTableSymbol sym = _symbols[offset];
-                if (sym != null) {
-                    name = sym.name;
-                }
+                name = _symbols[offset];
             }
         }
 
@@ -980,7 +910,7 @@ public final class UnifiedSymbolTable
             }
             validateSymbol(name);
             sid = getMaxId() + 1;
-            defineSymbol(new UnifiedSymbolTableSymbol(name, sid, this));
+            putSymbol(name, sid);
         }
         return sid;
     }
@@ -1027,7 +957,7 @@ public final class UnifiedSymbolTable
         if (name == null || name.length() < 1 || id < 1) {
             throw new IllegalArgumentException("invalid symbol definition");
         }
-        if (id <= _sid_base) {
+        if (id < _first_local_sid) {
             throw new IllegalArgumentException("invalid symbol definition");
         }
 
@@ -1036,7 +966,7 @@ public final class UnifiedSymbolTable
             throw new IllegalArgumentException("it's not valid to change a symbols id");
         }
         else if (sid == UNKNOWN_SID) {
-            defineSymbol(new UnifiedSymbolTableSymbol(name, id, this));
+            putSymbol(name, id);
         }
 
         // TODO disallow using sid within imports range
@@ -1047,28 +977,27 @@ public final class UnifiedSymbolTable
      *
      * TODO streamline: we no longer accept arbitrary sid, its always > max_id
      * (After we remove {@link #defineSymbol(String, int)} at least)
+     *
+     * @param symbolName may be null, indicating a gap in the symbol table.
      */
-    private void defineSymbol(UnifiedSymbolTableSymbol sym)
+    private void putSymbol(String symbolName, int sid)
     {
-        assert _name == null;
+        assert _name == null && _symbols != null;
 
-        int idx = convertSidToLocalOffset(sym.sid); // sym.sid - _sid_base - 1;
-        int oldlen, newlen;
+        int idx = convertSidToLocalOffset(sid);
+        assert idx >= 0;
 
-        if (idx < 0 || _symbols == null) {
-            assert idx >= 0 && _symbols != null;
-        }
         if (idx >= _local_symbol_count) {
-            oldlen = _local_symbol_count;
+            int oldlen = _local_symbol_count;
             if (oldlen >= _symbols.length) {
-                newlen = oldlen * 2;
+                int newlen = oldlen * 2;
                 if (newlen < DEFAULT_SYMBOL_LENGTH) {
                     newlen = DEFAULT_SYMBOL_LENGTH;
                 }
                 while (newlen < idx) {
                     newlen *= 2;
                 }
-                UnifiedSymbolTableSymbol[] temp = new UnifiedSymbolTableSymbol[newlen];
+                String[] temp = new String[newlen];
                 if (oldlen > 0) {
                     System.arraycopy(_symbols, 0, temp, 0, oldlen);
                 }
@@ -1077,25 +1006,23 @@ public final class UnifiedSymbolTable
         }
         else if (_symbols[idx] != null) {
             String message =
-                "Cannot redefine $" + sym.sid + " from "
-                + printQuotedSymbol(_symbols[idx].name)
-                + " to " + printQuotedSymbol(sym.name);
+                "Cannot redefine $" + sid + " from "
+                + printQuotedSymbol(_symbols[idx])
+                + " to " + printQuotedSymbol(symbolName);
             throw new IonException(message);
         }
 
-        _id_map.put(sym.name, sym.sid);
-        _symbols[idx] = sym;
+        _id_map.put(symbolName, sid);
+        _symbols[idx] = symbolName;
 
         if (idx >= _local_symbol_count) {
             _local_symbol_count = idx + 1;
         }
 
-        if (_maintain_image && sym.source == this) {
+        if (_maintain_image) {
             assert _local_symbol_count > 0;
-            recordLocalSymbolInIonRep(_image_system, _image, sym, sym.sid);
+            recordLocalSymbolInIonRep(_image_system, _image, symbolName, sid);
         }
-
-        return;
     }
 
     public SymbolTable getSystemSymbolTable()
@@ -1161,9 +1088,11 @@ public final class UnifiedSymbolTable
         //}
     }
 
-    public
-    synchronized   // TODO: why is this synchronized?  are we just protecting the writer?  might we only synchoronize if this is a local sym tab?
-    void writeTo(IonWriter writer) throws IOException
+    /**
+     * Synchronized to ensure that this symtab isn't changed while being
+     * written.
+     */
+    public synchronized void writeTo(IonWriter writer) throws IOException
     {
         IonStruct rep = safeGetIonRepresentation();
         writer.writeValue(rep);
@@ -1173,7 +1102,7 @@ public final class UnifiedSymbolTable
     // this whole construct is a terrible hack
     // it should be replace by a custom reader
     // that "reads" the current state of a symbol table
-    private IonStruct safeGetIonRepresentation()
+    private synchronized IonStruct safeGetIonRepresentation()
     {
         IonStruct rep;
         try {
@@ -1315,31 +1244,22 @@ public final class UnifiedSymbolTable
         ionRep.remove(UnifiedSymbolTable.SYMBOLS);  // to cover the "replace existing" case
         ionRep.add(UnifiedSymbolTable.SYMBOLS, symbolsList);
 
-        // TODO I think this can be optimized quite a bit.
-        for (int offset = 0; offset < _local_symbol_count; offset++) {
-            UnifiedSymbolTableSymbol sym = _symbols[offset];
-            int    sid;
-            if (sym != null) {
-                assert sym.source == this;
-                sid = sym.sid;
-            }
-            else {
-                sid = this.convertLocalOffsetToSid(offset);
-            }
-            recordLocalSymbolInIonRep(sys, ionRep, sym, sid);
+        int sid = _first_local_sid;
+        for (int offset = 0; offset < _local_symbol_count; offset++, sid++) {
+            String symbolName = _symbols[offset];
+            recordLocalSymbolInIonRep(sys, ionRep, symbolName, sid);
         }
     }
 
 
     /**
      * NOT SYNCHRONIZED! Call within constructor or from synched method.
+     * @param symbolName can be null when there's a gap in the local symbols list.
      */
-    private void recordLocalSymbolInIonRep(IonSystem sys, IonStruct ionRep, UnifiedSymbolTableSymbol sym, int sid)
+    private void recordLocalSymbolInIonRep(IonSystem sys, IonStruct ionRep,
+                                           String symbolName, int sid)
     {
-        // TODO document why sym would be null.  It's not obvious.
-        assert sym == null || sym.source == this; // sym may be null
-        assert sym == null || sym.sid == sid;
-        assert sid > _sid_base;
+        assert sid >= _first_local_sid;
         assert ionRep != null;
         assert ionRep.getSystem() == sys;
 
@@ -1356,28 +1276,17 @@ public final class UnifiedSymbolTable
         }
 
         int this_offset = convertSidToLocalOffset(sid);
-        IonValue name;
-        if (sym == null) {
-            name = sys.newNull(IonType.STRING);
-        }
-        else {
-            name = sys.newString(sym.name);
-        }
-
+        IonValue name = sys.newString(symbolName);
         ((IonList)syms).add(this_offset, name);
 
     }
 
     private final int convertSidToLocalOffset(int sid) {
-        int offset = sid;
-        offset -= _sid_base;
-        offset--;
+        int offset = sid - _first_local_sid;
         return offset;
     }
     private final int convertLocalOffsetToSid(int local_offset) {
-        int sid = local_offset;
-        sid += _sid_base;
-        sid++;
+        int sid = local_offset + _first_local_sid;
         return sid;
     }
 
@@ -1462,44 +1371,37 @@ public final class UnifiedSymbolTable
                 throw new IonException(message);
             }
 
-            assert _id_map.isEmpty();
-
-            if (symbols != null)
-            {
-                int sid = 0;
-                for (String symbolText : symbols) {
-                    // Allocate a sid even when the symbols's text is malformed
-                    sid++;
-                    if (symbolText != null && findSymbol(symbolText) != UNKNOWN_SID) {
-                        // if the symbol is already defined elsewhere we don't
-                        // want a second copy (that would be invalid)
-                        // but we do need to preserve the SID position
-                        symbolText = null;
-                    }
-                    UnifiedSymbolTableSymbol sym = new UnifiedSymbolTableSymbol(symbolText, sid, this);
-                    defineSymbol(sym);
-                }
-            }
-
             if (version < 1) {
                 version = 1;
             }
 
-            share(name, version);
+            assert _symbols == IonImplUtils.EMPTY_STRING_ARRAY;
+            assert _id_map.isEmpty();
+
+            if (symbols != null && symbols.size() != 0)
+            {
+                String[] syms = symbols.toArray(new String[symbols.size()]);
+                loadSharedSymbolTableContents(name, version, syms);
+            }
+            else
+            {
+                share(name, version);
+            }
         }
         else {
             // Imports have already been processed above.
             if (symbols != null)
             {
-                int sid = _sid_base;
+                int sid = _first_local_sid;
                 for (String symbolText : symbols) {
                     // Allocate a sid even when the symbols's text is malformed
+                    // FIXME ION-189 this needs to retain the text in case
+                    // there's a reference to the corresponding sid.
                     if (symbolText != null && findSymbol(symbolText) != UNKNOWN_SID) {
                         symbolText = null;
                     }
+                    putSymbol(symbolText, sid);
                     sid++;
-                    UnifiedSymbolTableSymbol sym = new UnifiedSymbolTableSymbol(symbolText, sid, this);
-                    defineSymbol(sym);
                 }
             }
         }
@@ -1653,7 +1555,7 @@ public final class UnifiedSymbolTable
         }
 
         _import_list.addImport(itab, maxid);
-        _sid_base = _import_list.getMaxId();
+        _first_local_sid = _import_list.getMaxId() + 1;
     }
 
 

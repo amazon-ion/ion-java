@@ -792,7 +792,6 @@ public class SymbolTableTest
       Symtabs.assertEqualSymtabs(stFromReader, reloaded);
     }
 
-
     @Test
     public void testBasicSharedSymtabCreation()
     {
@@ -811,6 +810,73 @@ public class SymbolTableTest
             system().newSharedSymbolTable("ST", 2,
                                           Arrays.asList(syms2).iterator());
         checkSharedTable("ST", 2, new String[]{"a", "b", "c"}, st2);
+    }
+
+
+    @Test
+    public void testSharedSymtabCreationWithDuplicates()
+    {
+        String[] syms = { "a", "b", "a", "c" };
+        SymbolTable st =
+            system().newSharedSymbolTable("ST", 1,
+                                          Arrays.asList(syms).iterator());
+        checkSharedTable("ST", 1, new String[]{"a", "b", "c"}, st);
+    }
+
+
+    @Test @Ignore // TODO ION-189
+    public void testSharedSymtabCreationWithEmptyName()
+    {
+        String[] syms = { "a", "b", "", "c" };
+        SymbolTable st =
+            system().newSharedSymbolTable("ST", 1,
+                                          Arrays.asList(syms).iterator());
+        checkSharedTable("ST", 1, new String[]{"a", "b", "c"}, st);
+    }
+
+
+    /**
+     * We need to retain duplicate symbols in a shared symtab, because there
+     * may be data encoded non-canonically that uses the higher sid.  If we
+     * remove those duplicates then we can't decode such data.
+     */
+    @Test
+    public void testReadingSharedSymtabWithDuplicates()
+    {
+        String symtab =
+            SharedSymbolTablePrefix +
+            "{" +
+            "  name:'''ST''', version:1," +
+            "  symbols:['''a''', '''b''', '''a''', '''c''']" +
+            "}";
+
+        SymbolTable st =
+            system().newSharedSymbolTable(system().newReader(symtab));
+        checkSharedTable("ST", 1, new String[]{"a", "b", "a", "c"}, st);
+
+        assertEquals(1, st.findSymbol("a"));  // lowest sid wins
+    }
+
+    /**
+     * We need to normalize invalid values in a shared symtab, because there
+     * may be data encoded non-canonically that uses the higher sid.  If we
+     * remove those values then we can't decode such data.
+     */
+    @Test
+    public void testReadingSharedSymtabWithBadValues()
+    {
+        String symtab =
+            SharedSymbolTablePrefix +
+            "{" +
+            "  name:'''ST''', version:1," +
+            "  symbols:['''a''', null, \"\", '''c''', 12]" +
+            "}";
+
+        SymbolTable st =
+            system().newSharedSymbolTable(system().newReader(symtab));
+        checkSharedTable("ST", 1, new String[]{"a", null, null, "c", null}, st);
+
+        assertEquals(4, st.findSymbol("c"));
     }
 
     @Test
@@ -1181,4 +1247,21 @@ public class SymbolTableTest
         data.add(contents);
     }
 
+
+    @Test
+    public void testIterateDeclaredSymbolNames()
+    {
+        SymbolTable fred3 = Symtabs.CATALOG.getTable("fred", 3);
+        int sid = fred3.getImportedMaxId();
+
+        Iterator<String> names = fred3.iterateDeclaredSymbolNames();
+        while (names.hasNext())
+        {
+            sid++;
+            String name = names.next();
+            assertSame(fred3.findKnownSymbol(sid), name);
+        }
+
+        assertEquals("last sid", fred3.getMaxId(), sid);
+    }
 }
