@@ -1,6 +1,7 @@
 // Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 import com.amazon.ion.AnnotationEscapesTest;
+import com.amazon.ion.AssertionsEnabledTest;
 import com.amazon.ion.BadIonTest;
 import com.amazon.ion.BinaryTest;
 import com.amazon.ion.BlobTest;
@@ -60,6 +61,7 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     // Low-level facilities.
+    AssertionsEnabledTest.class,
     IonExceptionTest.class,
     ByteBufferTest.class,
     TextTest.class,
