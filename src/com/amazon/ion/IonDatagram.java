@@ -96,7 +96,12 @@ public interface IonDatagram
     public int size();
 
     /**
-     * Gets the number of elements in the datagram, including system elements.
+     * Gets the number of elements in the datagram, including system elements
+     * such as version markers and symbol tables.
+     * Unless your application needs to be aware of such low-level details,
+     * you almost certainly want to use {@link #size()} instead.
+     *
+     * @see #size()
      */
     public int systemSize();
 
@@ -114,10 +119,14 @@ public interface IonDatagram
     /**
      * Gets a selected element from this datagram, potentially getting a
      * hidden system element (such as a symbol table).
+     * Unless your application needs to be aware of such low-level details,
+     * you almost certainly want to use {@link #get(int)} instead.
      *
      * @param index must be less than <code>{@link #systemSize()}</code>.
      * @return the selected element; not <code>null</code>.
      * @throws IndexOutOfBoundsException if the index is bad.
+     *
+     * @see #get(int)
      */
     public IonValue systemGet(int index)
         throws IndexOutOfBoundsException;
@@ -138,12 +147,17 @@ public interface IonDatagram
 
     /**
      * Iterate all values in the datagram, including the otherwise-hidden
-     * system values.
+     * system values such as version markers and symbol tables.
+     * Unless your application needs to be aware of such low-level details,
+     * you almost certainly want to use {@link #iterator()} instead.
+     * <p>
      * This iterator does not support the modification methods
      * {@link Iterator#remove()}, {@link ListIterator#add(Object)}, or
      * {@link ListIterator#set(Object)}.
      * operation.
-     * @return not <code>null</code>.
+     * @return not null.
+     *
+     * @see #iterator()
      */
     public ListIterator<IonValue> systemIterator();
 
