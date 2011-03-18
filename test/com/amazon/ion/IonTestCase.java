@@ -200,7 +200,10 @@ public abstract class IonTestCase
         return dg;
     }
 
-    /** Returns the file decoded as UTF-8 as an IonDatagram loaded as a Java String, or <tt>null</tt> if the file is not UTF-8. */
+    /**
+     * Returns the file decoded as UTF-8 as an IonDatagram loaded as a Java
+     * String, or <tt>null</tt> if the file is not UTF-8.
+     */
     public IonDatagram loadAsJavaString(File ionFile)
         throws IonException, IOException
     {

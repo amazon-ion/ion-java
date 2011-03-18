@@ -4,6 +4,7 @@ package com.amazon.ion;
 
 import static com.amazon.ion.TestUtils.testdataFiles;
 
+import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.streaming.ReaderCompare;
 import java.io.File;
@@ -84,6 +85,19 @@ public class GoodIonTest
             IonReader binaryReader = system().newReader(encoded);
 
             ReaderCompare.compare(treeReader, binaryReader);
+        }
+    }
+
+    @Test
+    public void testIterateByteArray()
+    throws Exception
+    {
+        byte[] bytes = IonImplUtils.loadFileBytes(myTestFile);
+
+        Iterator<IonValue> i = system().iterate(bytes);
+        while (i.hasNext())
+        {
+            i.next();
         }
     }
 }
