@@ -189,12 +189,7 @@ public abstract class IonWriterBaseImpl
     {
         SymbolTable symbol_table = _symbol_table;
         if (symbol_table == null) {
-            if (sid <= UnifiedSymbolTable.MAX_ID_SID) {
-                symbol_table = _default_system_symbol_table;
-            }
-            else {
-                throw new UnsupportedOperationException("a user supplied symbol table is required for MIXED id and string use");
-            }
+            symbol_table = _default_system_symbol_table;
         }
         String name = symbol_table.findSymbol(sid);
         assert(name != null && name.length() > 0);

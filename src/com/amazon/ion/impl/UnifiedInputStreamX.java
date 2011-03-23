@@ -481,8 +481,11 @@ public abstract class UnifiedInputStreamX
         }
         else {
             assert(!isEOF());
-            if (sp != null && sp.getEndIdx() < new_idx/*_buffer.getCurrentPageIdx()*/) {
-                return refill_is_eof();
+            if (sp != null) {
+                int endidx = sp.getEndIdx();
+                if (endidx != -1 && endidx < new_idx/*_buffer.getCurrentPageIdx()*/) {
+                    return refill_is_eof();
+                }
             }
 
             curr = _buffer.getPage(new_idx);

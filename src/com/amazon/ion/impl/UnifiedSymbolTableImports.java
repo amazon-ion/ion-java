@@ -123,12 +123,10 @@ public class UnifiedSymbolTableImports
         int ii, sid = -1;
 
         for (ii=0; ii<_import_count; ii++) {
-            int local_sid = _imports[ii].findSymbol(name);
+            int local_sid = _imports[ii].findLocalSymbol(name);
             if (local_sid > 0) {
                 int this_base = _import_base_sid[ii];
-                // int next_base = (ii+1 >= _import_count) ? _max_id : _import_base_sid[ii+1];
-                //int local_max = next_base - this_base;
-                int local_max = getMaxIdForIdChecking(ii); // this_base + _imports_max_id[ii] - 1;
+                int local_max = getMaxIdForIdChecking(ii);
                 if (local_sid <= local_max) {
                     sid = local_sid + this_base;
                     break;

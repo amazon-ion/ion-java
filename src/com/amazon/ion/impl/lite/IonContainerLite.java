@@ -369,6 +369,13 @@ public abstract class IonContainerLite
                     child.makeReadOnly();
                 }
             }
+            // we don't need to call our copy of clear symbol ID's
+            // which recurses since the calls to child.makeReadOnly
+            // will have clear out the child symbol ID's already
+            // as the children were marked read only.  But we do need
+            // to call the base clear which will clear out the symbol
+            // table reference if one exists.
+            super.clearSymbolIDValues();
             _isLocked(true);
         }
     }
@@ -439,14 +446,39 @@ public abstract class IonContainerLite
     @Override
     public SymbolTable populateSymbolValues(SymbolTable symbols)
     {
-        symbols = super.populateSymbolValues(symbols);
-        for (int ii=0; ii<get_child_count(); ii++) {
-            IonValueLite child = get_child_lite(ii);
-            symbols = child.populateSymbolValues(symbols);
+        if (_isLocked()) {
+            // we can't, and don't need to, update symbol id's
+            // for a locked value - there are none - so do nothing here
+        }
+        else {
+            // for an unlocked value we populate the symbols for
+            // everyone and his brother
+            symbols = super.populateSymbolValues(symbols);
+            for (int ii=0; ii<get_child_count(); ii++) {
+                IonValueLite child = get_child_lite(ii);
+                symbols = child.populateSymbolValues(symbols);
+            }
         }
         return symbols;
     }
 
+    @Override
+    void clearSymbolIDValues()
+    {
+        super.clearSymbolIDValues();
+        for (int ii=0; ii<get_child_count(); ii++) {
+            IonValueLite child = get_child_lite(ii);
+            child.clearSymbolIDValues();
+        }
+        return;
+    }
+
+    public void clearLocalSymbolTable()
+    {
+        if (_context != null) {
+            _context.clearLocalSymbolTable();
+        }
+    }
 
     /**
      * @param child

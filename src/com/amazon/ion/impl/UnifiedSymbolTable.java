@@ -840,13 +840,10 @@ public final class UnifiedSymbolTable
         if (name.length() < 1) {
             throw new EmptySymbolException();
         }
-        int sid = UNKNOWN_SYMBOL_ID;
 
-        Integer isid = _id_map.get(name);
-        if (isid != null) {
-            sid = isid;
-        }
-        else if (isSystemTable() == false) {
+        int sid = findLocalSymbol(name);
+
+        if (sid == UNKNOWN_SYMBOL_ID && isSystemTable() == false) {
             sid = _import_list.findSymbol(name);
             if (sid < 1 && name.charAt(0) == '$') {
                 if (name.length() > 1 && Character.isDigit(name.charAt(1))) {
@@ -869,6 +866,17 @@ public final class UnifiedSymbolTable
             }
         }
         return sid;
+    }
+
+    int findLocalSymbol(String name)
+    {
+        assert(name.length() > 0);
+
+        Integer isid = _id_map.get(name);
+        if (isid != null) {
+            return isid.intValue();
+        }
+        return UNKNOWN_SYMBOL_ID;
     }
 
     public static int decodeIntegerSymbol(String name)

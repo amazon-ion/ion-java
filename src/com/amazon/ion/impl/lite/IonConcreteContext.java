@@ -86,6 +86,11 @@ public class IonConcreteContext
         _symbols = null;
     }
 
+    public void clearLocalSymbolTable()
+    {
+        _symbols = null;
+    }
+
     public SymbolTable getLocalSymbolTable(IonValueLite child)
     {
         SymbolTable local;
