@@ -121,7 +121,7 @@ class IonReaderBinaryUserX
             name = null;
         }
         else {
-            name = _symbols.findKnownSymbol(_value_field_id);
+            name = _symbols.findSymbol(_value_field_id);
         }
         return name;
     }

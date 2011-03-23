@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl.lite;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.util.Equivalence.ionEquals;
 
@@ -324,8 +325,8 @@ public abstract class IonValueLite
     public final int getFieldId()
     {
         SymbolTable symbolTable = getSymbolTable();
-        if (_fieldName == null || symbolTable == null) {
-            return -1;
+        if (_fieldName == null || symbolTable == null || _isLocked()) {
+            return UNKNOWN_SYMBOL_ID;
         }
         int sid = symbolTable.findSymbol(_fieldName);
         if (sid < 1) {
@@ -338,28 +339,41 @@ public abstract class IonValueLite
 
     public SymbolTable populateSymbolValues(SymbolTable symbols)
     {
-        checkForLock();
-
-        if (symbols == null) {
-            symbols = getSymbolTable();
-            assert(symbols != null); // we should get a system symbol table if nothing else
+        if (_isLocked()) {
+            // we can't, and don't need to, update symbol id's
+            // for a locked value - there are none - so do nothing here
         }
+        else {
+            // this is redundant now:  checkForLock();
+            if (symbols == null) {
+                symbols = getSymbolTable();
+                assert(symbols != null); // we should get a system symbol table if nothing else
+            }
 
-        if (_fieldName != null) {
-            symbols = resolve_symbol(symbols, _fieldName);
-        }
+            if (_fieldName != null) {
+                symbols = resolve_symbol(symbols, _fieldName);
+            }
 
-        if (_annotations != null) {
-            for (int ii=0; ii<_annotations.length; ii++) {
-                String name = _annotations[ii];
-                if (name == null) {
-                    break;
+            if (_annotations != null) {
+                for (int ii=0; ii<_annotations.length; ii++) {
+                    String name = _annotations[ii];
+                    if (name == null) {
+                        break;
+                    }
+                    symbols = resolve_symbol(symbols, name);
                 }
-                symbols = resolve_symbol(symbols, name);
             }
         }
-
         return symbols;
+    }
+
+    void clearSymbolIDValues()
+    {
+        IonContext context = getContext();
+        if (context != null) {
+            context.clearLocalSymbolTable();
+        }
+        return;
     }
 
     protected final SymbolTable resolve_symbol(SymbolTable symbols, String name)
@@ -586,7 +600,8 @@ public abstract class IonValueLite
 
     public void makeReadOnly()
     {
-        populateSymbolValues(null);
+        // nope, we just want to clear them ... populateSymbolValues(null);
+        clearSymbolIDValues();
         _isLocked(true);
     }
 
