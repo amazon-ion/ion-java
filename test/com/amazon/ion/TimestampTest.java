@@ -819,4 +819,34 @@ public class TimestampTest
     {
         Timestamp.valueOf("2010-11-17T12:34:56.Z");
     }
+
+    /** Trap for ION-193 */
+    @Test
+    public void testLocalBoundaryPositive() {
+        // UTC is last month
+        final Timestamp ts = Timestamp.valueOf("2010-07-01T02:00:41+02:15");
+        assertEquals(7, ts.getMonth());
+        assertEquals(6, ts.getZMonth());
+        assertEquals(1, ts.getDay());
+        assertEquals(30, ts.getZDay());
+        assertEquals(2, ts.getHour());
+        assertEquals(23, ts.getZHour());
+        assertEquals(0, ts.getMinute());
+        assertEquals(45, ts.getZMinute());
+    }
+
+    /** Trap for ION-193 */
+    @Test
+    public void testLocalBoundaryNegative() {
+        // UTC is next month
+        final Timestamp ts = Timestamp.valueOf("2010-02-28T22:00:41-07:00");
+        assertEquals(2, ts.getMonth());
+        assertEquals(3, ts.getZMonth());
+        assertEquals(28, ts.getDay());
+        assertEquals(1, ts.getZDay());
+        assertEquals(22, ts.getHour());
+        assertEquals(5, ts.getZHour());
+        assertEquals(0, ts.getMinute());
+        assertEquals(0, ts.getZMinute());
+    }
 }
