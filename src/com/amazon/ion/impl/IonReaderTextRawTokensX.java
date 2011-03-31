@@ -1389,6 +1389,8 @@ public class IonReaderTextRawTokensX
             // the only non-digit it could have been was a
             // sign character, and we'll have read past that
             // by now
+            // TODO this will be a confusing error message,
+            // but I can't figure out when it will be reached.
             bad_token(c);
         }
 
@@ -1400,7 +1402,7 @@ public class IonReaderTextRawTokensX
             if (c2 == 'x' || c2 == 'X') {
                 sb.append((char)c);
                 c = load_hex_value(sb, has_sign, c2);
-                return load_finish_number(c, IonTokenConstsX.TOKEN_HEX);
+                return load_finish_number(sb, c, IonTokenConstsX.TOKEN_HEX);
             }
             // not a next value, back up and try again
             unread_char(c2);
@@ -1412,20 +1414,28 @@ public class IonReaderTextRawTokensX
         if (c == '-' || c == 'T') {
             // this better be a timestamp and it starts with a 4 digit
             // year followed by a dash and no leading sign
-            if (has_sign) bad_token(c);
+            if (has_sign) {
+                error("Numeric value followed by invalid character: "
+                      + sb + (char)c);
+            }
             int len = sb.length();
-            if (len != 4) bad_token(c);
+            if (len != 4) {
+                error("Numeric value followed by invalid character: "
+                      + sb + (char)c);
+            }
             IonType tt = load_timestamp(sb, c);
             return tt;
         }
 
         if (starts_with_zero) {
+            // Ion doesn't allow leading zeros, so make sure our buffer only
+            // has one character.
             int len = sb.length();
             if (has_sign) {
                 len--; // we don't count the sign
             }
             if (len != 1) {
-                bad_token(c);
+                error("Invalid leading zero in number: " + sb);
             }
         }
 
@@ -1453,17 +1463,23 @@ public class IonReaderTextRawTokensX
             sb.append((char)c);
             c = load_exponent(sb);
         }
-        return load_finish_number(c, t);
+        return load_finish_number(sb, c, t);
     }
-    private final IonType load_finish_number(int c, int t) throws IOException
+
+    private final IonType load_finish_number(CharSequence numericText, int c,
+                                             int token)
+    throws IOException
     {
         // all forms of numeric need to stop someplace rational
-        if (! is_value_terminating_character(c)) bad_token(c);
+        if (! is_value_terminating_character(c)) {
+            error("Numeric value followed by invalid character: "
+                  + numericText + (char)c);
+        }
 
         // we read off the end of the number, so put back
         // what we don't want, but what ever we have is an int
         unread_char(c);
-        IonType it = IonTokenConstsX.ion_type_of_scalar(t);
+        IonType it = IonTokenConstsX.ion_type_of_scalar(token);
         return it;
     }
     // this returns the lookahead character it didn't use so the caller
@@ -1485,6 +1501,14 @@ public class IonReaderTextRawTokensX
         return c;
     }
 
+    /**
+     * Accumulates digits into the buffer, starting with the given character.
+     *
+     * @return the first non-digit character on the input. Could be the given
+     *  character if its not a digit.
+     *
+     * @see IonTokenConstsX#isDigit(int)
+     */
     private final int load_digits(StringBuilder sb, int c) throws IOException
     {
         while (IonTokenConstsX.isDigit(c)) {
@@ -1542,7 +1566,7 @@ public class IonReaderTextRawTokensX
         // if it's 'T' we done: yyyyT
         if (c == 'T') {
             c = read_char(); // because we'll unread it before we return
-            return load_finish_number(c, IonTokenConstsX.TOKEN_TIMESTAMP);
+            return load_finish_number(sb, c, IonTokenConstsX.TOKEN_TIMESTAMP);
         }
 
         // read month
@@ -1552,7 +1576,7 @@ public class IonReaderTextRawTokensX
         if (c == 'T') {
             sb.append((char)c);
             c = read_char(); // because we'll unread it before we return
-            return load_finish_number(c, IonTokenConstsX.TOKEN_TIMESTAMP);
+            return load_finish_number(sb, c, IonTokenConstsX.TOKEN_TIMESTAMP);
         }
         if (c != '-') bad_token(c);
 
@@ -1563,7 +1587,7 @@ public class IonReaderTextRawTokensX
         // look for the 'T', otherwise we're done (and happy about it)
         c = read_char();
         if (c != 'T') {
-            return load_finish_number(c, IonTokenConstsX.TOKEN_TIMESTAMP);
+            return load_finish_number(sb, c, IonTokenConstsX.TOKEN_TIMESTAMP);
         }
 
         // so either we're done or we must at least hours and minutes
@@ -1571,7 +1595,7 @@ public class IonReaderTextRawTokensX
         sb.append((char)c);
         c = read_char();
         if (!IonTokenConstsX.isDigit(c)) {
-            return load_finish_number(c, IonTokenConstsX.TOKEN_TIMESTAMP);
+            return load_finish_number(sb, c, IonTokenConstsX.TOKEN_TIMESTAMP);
         }
         sb.append((char)c);
         load_fixed_digits(sb,1); // we already read the first digit
@@ -1626,7 +1650,7 @@ public class IonReaderTextRawTokensX
             // if it wasn't a 'z' (above) then it has to be a +/- hours { : minutes }
             bad_token(c);
         }
-        return load_finish_number(c, IonTokenConstsX.TOKEN_TIMESTAMP);
+        return load_finish_number(sb, c, IonTokenConstsX.TOKEN_TIMESTAMP);
     }
     private final int load_hex_value(StringBuilder sb, boolean has_sign, int c2) throws IOException
     {
