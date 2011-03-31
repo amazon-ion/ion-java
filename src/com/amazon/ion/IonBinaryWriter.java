@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -7,12 +7,9 @@ import java.io.OutputStream;
 
 /**
  * An {@link IonWriter} that encodes Ion binary data.
- * This interface as such is deprecated.  Instead
- * construct an IonWriter whose output type is binary
- * and pass in an OutputStream to accept the bytes.
- * A buffered OutputStream that supports the getBytes()
- * methods can be constructed by BlockedBuffer.BufferedOutputStream
- * if this functionality is needed.
+ *
+ * @deprecated As of R10, use
+ * {@link IonSystem#newBinaryWriter(OutputStream, SymbolTable...)}.
  */
 @Deprecated
 public interface IonBinaryWriter
