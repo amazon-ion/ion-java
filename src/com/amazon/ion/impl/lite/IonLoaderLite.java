@@ -55,6 +55,8 @@ public class IonLoaderLite
 
     /**
      * This doesn't wrap IOException because some callers need to propagate it.
+     *
+     * @return a new datagram; not null.
      */
     private IonDatagramLite load_helper(IonReader reader)
     throws IOException

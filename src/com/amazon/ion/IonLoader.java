@@ -42,7 +42,7 @@ public interface IonLoader
      *
      * @param ionFile a file containing Ion data.
      *
-     * @return a datagram containing all the values in the file.
+     * @return a datagram containing all the values in the file; not null.
      *
      * @throws IonException if there's a syntax error in the Ion content.
      * @throws IOException if reading from the specified file results
@@ -56,7 +56,9 @@ public interface IonLoader
      * Loads Ion text in its entirety.
      *
      * @param ionText must not be null.
-     * @return a datagram containing the input values.
+     *
+     * @return a datagram containing the input values; not null.
+     *
      * @throws NullPointerException if <code>ionText</code> is null.
      * @throws IonException if there's a syntax error in the Ion content.
      */
@@ -70,7 +72,10 @@ public interface IonLoader
      * The specified reader remains open after this method returns.
      *
      * @param ionText the reader from which to read Ion text.
-     * @return a datagram containing all the elements on the input stream.
+     *
+     * @return a datagram containing all the elements on the input stream;
+     *   not null.
+     *
      * @throws NullPointerException if <code>ionText</code> is null.
      * @throws IonException if there's a syntax error in the Ion content.
      * @throws IOException if reading from the specified input stream results
@@ -88,7 +93,8 @@ public interface IonLoader
      * <em>This method assumes ownership of the array</em> and may modify it at
      * will.
      *
-     * @return a datagram containing all the values on the input stream.
+     * @return a datagram containing all the values on the input stream;
+     *   not null.
      *
      * @throws NullPointerException if <code>ionData</code> is null.
      * @throws IonException if there's a syntax error in the Ion content.
@@ -105,7 +111,8 @@ public interface IonLoader
      *
      * @param ionData the stream from which to read Ion data.
      *
-     * @return a datagram containing all the values on the input stream.
+     * @return a datagram containing all the values on the input stream;
+     *   not null.
      *
      * @throws NullPointerException if <code>ionData</code> is null.
      * @throws IonException if there's a syntax error in the Ion content.

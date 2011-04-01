@@ -727,6 +727,8 @@ public class IonTextUtils
      *
      * @throws EmptySymbolException if {@code text} is empty.
      * @throws IOException if the {@link Appendable} throws an exception.
+     *
+     * @see #printSymbol(CharSequence)
      */
     public static void printSymbol(Appendable out, CharSequence text)
         throws IOException
@@ -754,6 +756,8 @@ public class IonTextUtils
      * @param text the symbol text; may be {@code null}.
      *
      * @return a string containing the resulting Ion data.
+     *
+     * @see #printSymbol(Appendable, CharSequence)
      */
     public static String printSymbol(CharSequence text)
     {
