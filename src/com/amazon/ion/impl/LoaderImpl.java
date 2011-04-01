@@ -153,7 +153,7 @@ public class LoaderImpl
 
     public IonDatagramImpl load(byte[] ionData)
     {
-        IonDatagramImpl dg = null;
+        IonDatagramImpl dg;
 
         try
         {
