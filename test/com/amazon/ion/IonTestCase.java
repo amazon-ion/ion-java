@@ -6,6 +6,7 @@ import com.amazon.ion.impl.IonSystemImpl;
 import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.junit.Injected;
 import com.amazon.ion.junit.Injected.Inject;
+import com.amazon.ion.junit.IonAssert;
 import com.amazon.ion.system.BuilderHack;
 import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.SimpleCatalog;
@@ -27,7 +28,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 import junit.framework.TestCase;
-import org.junit.Assert;
 import org.junit.runner.RunWith;
 
 /**
@@ -485,6 +485,10 @@ public abstract class IonTestCase
         return dg.getBytes();
     }
 
+    /**
+     * @deprecated this is in JUnit now
+     */
+    @Deprecated
     public static void assertArrayEquals(final Object[] expected, final Object[] actual) {
         assertTrue(String.format("Expected array <%s> got <%s>", expected, actual), Arrays.equals(expected, actual));
     }
@@ -776,160 +780,14 @@ public abstract class IonTestCase
                      expected.isNegativeZero(), actual.isNegativeZero());
     }
 
+
     /**
-     * @deprecated use {@link #assertEquals(Object, Object)} instead.
+     * @deprecated Use {@link IonAssert#assertIonEquals(IonValue, IonValue)}
      */
     @Deprecated
     public static void assertIonEquals(IonValue expected, final IonValue found)
     {
-        assertSame("element classes", expected.getClass(), found.getClass());
-
-        String[] found_annotations = found.getTypeAnnotations();
-        String[] annotations = expected.getTypeAnnotations();
-        assertNotNull(found_annotations);
-        assertNotNull(annotations);
-        assertEquals(annotations.length, found_annotations.length);
-        for (String s : annotations) {
-            checkAnnotation(s, found);
-        }
-
-        boolean expectNull = expected.isNullValue();
-        assertEquals("isNullValue", expectNull, found.isNullValue());
-
-        if (! expectNull)
-        {
-            ValueVisitor visitor =
-                new ValueVisitor()
-                {
-                    public void visit(IonBlob expected) throws Exception
-                    {
-                        Assert.assertArrayEquals("blob data",
-                                                 expected.getBytes(),
-                                                 ((IonBlob)found).getBytes());
-                    }
-
-                    public void visit(IonBool expected) throws Exception
-                    {
-                        assertEquals("bool value",
-                                     expected.booleanValue(),
-                                     ((IonBool)found).booleanValue());
-                    }
-
-                    public void visit(IonClob expected) throws Exception
-                    {
-                        Assert.assertArrayEquals("clob data",
-                                                 expected.getBytes(),
-                                                 ((IonClob)found).getBytes());
-                    }
-
-                    /**
-                     * NOTE: Datagram equality is currently only based on
-                     * user data, not system data.
-                     */
-                    public void visit(IonDatagram expected) throws Exception
-                    {
-                        assertEquals("datagram user size",
-                                     expected.size(),
-                                     ((IonDatagram)found).size());
-
-                        Iterator<IonValue> foundValues =
-                            ((IonDatagram)found).iterator();
-                        for (IonValue value : expected)
-                        {
-                            assertIonEquals(value, foundValues.next());
-                        }
-                    }
-
-                    public void visit(IonDecimal expected) throws Exception
-                    {
-                        assertEquals("decimal value", expected, found);
-                    }
-
-                    public void visit(IonFloat expected) throws Exception
-                    {
-                        assertEquals("float value",
-                                     expected.doubleValue(),
-                                     ((IonFloat)found).doubleValue());
-                    }
-
-                    public void visit(IonInt expected) throws Exception
-                    {
-                        assertEquals("int value",
-                                     expected.bigIntegerValue(),
-                                     ((IonInt)found).bigIntegerValue());
-                    }
-
-                    public void visit(IonList expected) throws Exception
-                    {
-                        assertEquals("list size",
-                                     expected.size(),
-                                     ((IonList)found).size());
-
-                        Iterator<IonValue> foundValues =
-                            ((IonList)found).iterator();
-                        for (IonValue value : expected)
-                        {
-                            assertIonEquals(value, foundValues.next());
-                        }
-                    }
-
-                    public void visit(IonNull expected) throws Exception
-                    {
-                        assertTrue(found instanceof IonNull);
-                    }
-
-                    public void visit(IonSexp expected) throws Exception
-                    {
-                        assertEquals("sexp size",
-                                     expected.size(),
-                                     ((IonSexp)found).size());
-
-                        Iterator<IonValue> foundValues =
-                            ((IonSexp)found).iterator();
-                        for (IonValue value : expected)
-                        {
-                            assertIonEquals(value, foundValues.next());
-                        }
-                    }
-
-                    public void visit(IonString expected) throws Exception
-                    {
-                        assertEquals("IonString text",
-                                     expected.stringValue(),
-                                     ((IonString)found).stringValue());
-                    }
-
-                    public void visit(IonStruct expected) throws Exception
-                    {
-                        assertEquals("struct", expected, found);
-                    }
-
-                    public void visit(IonSymbol expected) throws Exception
-                    {
-                        assertEquals("IonSymbol text",
-                                     expected.stringValue(),
-                                     ((IonSymbol)found).stringValue());
-                    }
-
-                    public void visit(IonTimestamp expected) throws Exception
-                    {
-                        assertEquals(expected.timestampValue(),
-                                     ((IonTimestamp)found).timestampValue());
-                    }
-                };
-
-            try
-            {
-                expected.accept(visitor);
-            }
-            catch (Exception e)
-            {
-                throw new AssertionError(e);
-            }
-        }
-
-        // Finally, cross-check against IonValue.equals()
-        assertEquals(expected, found);
+        IonAssert.assertIonEquals(expected, found);
     }
 
 

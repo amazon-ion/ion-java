@@ -11,8 +11,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
-import junit.framework.Assert;
 
 /**
  *
@@ -234,21 +232,6 @@ public class TestUtils
             default:
                 throw new IllegalStateException("unexpected type: " + t);
         }
-    }
-
-
-    public static void assertEqualValues(Iterator<?> expectedValues,
-                                         Iterator<?> actualValues)
-    {
-        Object expected;
-        Object actual;
-        while (expectedValues.hasNext())
-        {
-            expected = expectedValues.next();
-            actual = actualValues.next();
-            Assert.assertEquals(expected, actual);
-        }
-        Assert.assertFalse("unexpected next value", actualValues.hasNext());
     }
 
 
