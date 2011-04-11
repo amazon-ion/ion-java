@@ -35,6 +35,7 @@ public abstract class OutputStreamWriterTestCase
         @Override
         public void close() throws IOException
         {
+            assertFalse("stream already closed", closed);
             closed = true;
             super.close();
         }
