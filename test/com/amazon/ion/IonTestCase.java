@@ -14,6 +14,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FilePermission;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
@@ -23,6 +24,7 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CodingErrorAction;
+import java.security.Permission;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
@@ -37,6 +39,39 @@ import org.junit.runner.RunWith;
 public abstract class IonTestCase
     extends TestCase
 {
+    static {
+        // ION-199 - attempt to class load Ion in a "secured" thread like how applets run
+        // XXX we have to intercept this *really* early since ION-199 happens at class initialization time
+        final SecurityManager manager = new SecurityManager()
+        {
+            @Override
+            public void checkPermission(Permission perm)
+            {
+                if (perm instanceof FilePermission) {
+                    // local class loading
+                    return;
+                }
+                if (perm instanceof RuntimePermission
+                        && "setSecurityManager".equals(perm.getName())) {
+                    // unset the security manager
+                    return;
+                }
+                throw new SecurityException();
+            }
+        };
+        // install it globally
+        System.setSecurityManager(manager);
+        try
+        {
+            IonSystemBuilder.standard().build();
+        }
+        finally
+        {
+            // uninstall it globally
+            System.setSecurityManager(null);
+        }
+    }
+
     protected enum DomType { LITE, BACKED }
 
     @Inject("domType")
