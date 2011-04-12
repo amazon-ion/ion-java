@@ -108,7 +108,14 @@ public class IonSystemBuilder
     /** You no touchy. */
     private IonSystemBuilder()
     {
-        myBinaryBacked = Boolean.getBoolean(BINARY_BACKED_DOM_PROPERTY);
+        try
+        {
+            myBinaryBacked = Boolean.getBoolean(BINARY_BACKED_DOM_PROPERTY);
+        }
+        catch (final SecurityException e)
+        {
+            // NO-OP in the case where system properties are not accessible.
+        }
     }
 
     private IonSystemBuilder(IonSystemBuilder that)
