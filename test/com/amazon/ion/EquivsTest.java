@@ -3,6 +3,7 @@
 package com.amazon.ion;
 
 import com.amazon.ion.junit.Injected.Inject;
+import com.amazon.ion.junit.IonAssert;
 import java.io.File;
 import junit.framework.AssertionFailedError;
 import org.junit.Test;
@@ -56,8 +57,8 @@ public class EquivsTest
                 try
                 {
                     // the extra if allows us (me) to set a break point on failures here, specifically here.
-                    if (current == null || next == null || current.equals(next) == false) {
-                        assertEquals(type + ": Equivalent Ion not equal", current, next);
+                    if (current.equals(next) == false) {
+                        IonAssert.assertIonEquals(type, current, next);
                     }
                     assertEquals(type + ": Equal values have unequal hashes",
                                  current.hashCode(), next.hashCode());

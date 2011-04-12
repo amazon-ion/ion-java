@@ -15,6 +15,7 @@ import com.amazon.ion.TestUtils;
 import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import com.amazon.ion.junit.Injected.Inject;
+import com.amazon.ion.junit.IonAssert;
 import com.amazon.ion.util.Equivalence;
 import com.amazon.ion.util.Printer;
 import java.io.ByteArrayOutputStream;
@@ -225,16 +226,8 @@ extends IonTestCase
             IonDatagram dg1 = loader.load(this.string);
             IonDatagram dg2 = loader.load(other.string);
 
-            if (dg1 == null || dg2 == null) {
-                assertTrue("if one datagram is null both must be null in "+title, dg1 == dg2);
-            }
-            boolean datagrams_are_equal = Equivalence.ionEquals(dg1, dg2);
-            if (!datagrams_are_equal) {
-                // For breakpointing and better error indication.
-                assertIonEquals(dg1, dg2);
-            }
-
-            assertTrue("resulting datagrams should be the same in "+title, datagrams_are_equal);
+            // Set breakpoint on AssertionException if desired.
+            IonAssert.assertIonEquals(title, dg1, dg2);
         }
 
         void compareUTF8AsTree(String title, roundTripBufferResults other, IonLoader loader) {
@@ -244,14 +237,8 @@ extends IonTestCase
             IonDatagram dg1 = loader.load(this.utf8_buf);
             IonDatagram dg2 = loader.load(other.utf8_buf);
 
-            if (dg1 == null || dg2 == null) {
-                assertTrue("if one datagram is null both must be null in "+title, dg1 == dg2);
-            }
-            boolean datagrams_are_equal = Equivalence.ionEquals(dg1, dg2);
-            if (!datagrams_are_equal) {
-                datagrams_are_equal = Equivalence.ionEquals(dg1, dg2);
-            }
-            assertTrue("resulting datagrams should be the same in "+title, datagrams_are_equal);
+            // Set breakpoint on AssertionException if desired.
+            IonAssert.assertIonEquals(title, dg1, dg2);
         }
 
         void comparePrettyUTF8AsTree(String title, roundTripBufferResults other, IonLoader loader) {
@@ -261,14 +248,10 @@ extends IonTestCase
             IonDatagram dg1 = loader.load(this.utf8_pretty);
             IonDatagram dg2 = loader.load(other.utf8_pretty);
 
-            if (dg1 == null || dg2 == null) {
-                assertTrue("if one datagram is null both must be null in "+title, dg1 == dg2);
-            }
             boolean datagrams_are_equal = Equivalence.ionEquals(dg1, dg2);
             if (!datagrams_are_equal) {
-                datagrams_are_equal = Equivalence.ionEquals(dg1, dg2);
+                IonAssert.assertIonEquals(title, dg1, dg2);
             }
-            assertTrue("resulting datagrams should be the same in "+title, datagrams_are_equal);
         }
 
         void compareBinaryAsTree(String title, roundTripBufferResults other, IonLoader loader) {
@@ -278,15 +261,11 @@ extends IonTestCase
             IonDatagram dg1 = loader.load(this.binary);
             IonDatagram dg2 = loader.load(other.binary);
 
-            if (dg1 == null || dg2 == null) {
-                assertTrue("if one datagram is null both must be null in "+title, dg1 == dg2);
-            }
             boolean datagrams_are_equal = Equivalence.ionEquals(dg1, dg2);
             if (!datagrams_are_equal) {
                 dump_datagrams(other);
-                datagrams_are_equal = Equivalence.ionEquals(dg1, dg2);
+                IonAssert.assertIonEquals(title, dg1, dg2);
             }
-            assertTrue("resulting datagrams should be the same in "+title, datagrams_are_equal);
         }
 
         void dump_datagrams(roundTripBufferResults other) {

@@ -3,6 +3,7 @@
 package com.amazon.ion;
 
 import static com.amazon.ion.TestUtils.testdataFiles;
+import static com.amazon.ion.junit.IonAssert.assertIonIteratorEquals;
 
 import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.junit.Injected.Inject;
@@ -65,11 +66,10 @@ public class GoodIonTest
         // Pass 3: Use Iterator
         in = new FileInputStream(myTestFile);
         try {
-            Iterator<IonValue> i = system().iterate(in);
-
             Iterator<IonValue> expected = datagram.iterator();
+            Iterator<IonValue> actual = system().iterate(in);
 
-            TestUtils.assertEqualValues(expected, i);
+            assertIonIteratorEquals(expected, actual);
         }
         finally {
             in.close();
