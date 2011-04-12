@@ -1,6 +1,10 @@
-// Copyright (c) 2009-2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
+
+import static com.amazon.ion.impl.IonTokenConstsX.TOKEN_CLOSE_BRACE;
+import static com.amazon.ion.impl.IonTokenConstsX.TOKEN_CLOSE_PAREN;
+import static com.amazon.ion.impl.IonTokenConstsX.TOKEN_CLOSE_SQUARE;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonTextReader;
@@ -569,11 +573,39 @@ public abstract class IonReaderTextRawX
         }
         return state_after_annotation;
     }
+
     private final int get_state_after_container() {
         IonType container = top_state();
         int new_state = get_state_after_container(container);
         return new_state;
     }
+
+    private final int get_state_after_container(int token) {
+        IonType container = top_state();
+
+        switch(container) {
+            case STRUCT:
+                check_container_close(container, TOKEN_CLOSE_BRACE, token);
+                break;
+            case LIST:
+                check_container_close(container, TOKEN_CLOSE_SQUARE, token);
+                break;
+            case SEXP:
+                check_container_close(container, TOKEN_CLOSE_PAREN, token);
+                break;
+            case DATAGRAM:
+                // We shouldn't get here.  Fall through.
+            default:
+                String message = "invalid container type encountered during parsing "
+                    + container
+                    + _scanner.input_position();
+                throw new IonException(message);
+        }
+
+        int new_state = get_state_after_container(container);
+        return new_state;
+    }
+
     private final int get_state_after_container(IonType container) {
         int new_state;
         if (container == null) {
@@ -599,6 +631,16 @@ public abstract class IonReaderTextRawX
             }
         }
         return new_state;
+    }
+
+    private final void check_container_close(IonType container, int expectedToken, int actualToken)
+    {
+        if (actualToken != expectedToken) {
+            String message = container.toString().toLowerCase() + " closed by "
+                + IonTokenConstsX.describeToken(actualToken)
+                + _scanner.input_position();
+            throw new IonException(message);
+        }
     }
 
     private final int get_state_at_container_start(IonType container) {
@@ -899,7 +941,7 @@ public abstract class IonReaderTextRawX
                 t = _scanner.nextToken();
                 break;
             case ACTION_FINISH_CONTAINER:
-                new_state = get_state_after_container();
+                new_state = get_state_after_container(t);
                 set_state(new_state);
                 _eof = true;
                 return;
