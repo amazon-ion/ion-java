@@ -47,6 +47,9 @@ public class IonWriterSystemBinary
 
     boolean           _in_struct;
 
+    /** Ensure we don't use a closed {@link #output} stream. */
+    private boolean _closed;
+
     private final static int TID_FOR_SYMBOL_TABLE_PATCH = IonConstants.tidDATAGRAM + 1;
     private final static int DEFAULT_PATCH_COUNT        = 10;
     private final static int DEFAULT_PATCH_DEPTH        = 10;
@@ -548,17 +551,31 @@ public class IonWriterSystemBinary
     }
 
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The {@link OutputStream} spec is mum regarding the behavior of flush on
+     * a closed stream, so we shouldn't assume that our stream can handle that.
+     */
     public void flush() throws IOException
     {
-        _user_output_stream.flush();
+        if (! _closed) {
+            _user_output_stream.flush();
+        }
     }
 
     public void close() throws IOException
     {
-        if (getDepth() == 0) {
-            finish();
+        if (! _closed) {
+            if (getDepth() == 0) {
+                finish();
+            }
+
+            // Do this first so we are closed even if the call below throws.
+            _closed = true;
+
+            _user_output_stream.close();
         }
-        _user_output_stream.close();
     }
 
 

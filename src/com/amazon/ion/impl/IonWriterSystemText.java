@@ -38,6 +38,8 @@ public class IonWriterSystemText
 
     BufferManager _manager;
 
+    /** Ensure we don't use a closed {@link #output} stream. */
+    private boolean _closed;
     boolean     _in_struct;
     boolean     _pending_separator;
     int         _separator_character;
@@ -661,20 +663,35 @@ public class IonWriterSystemText
         closeValue();
     }
 
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The {@link OutputStream} spec is mum regarding the behavior of flush on
+     * a closed stream, so we shouldn't assume that our stream can handle that.
+     */
     public void flush() throws IOException
     {
-        if (_output instanceof Flushable) {
-            ((Flushable)_output).flush();
+        if (! _closed) {
+            if (_output instanceof Flushable) {
+                ((Flushable)_output).flush();
+            }
         }
     }
 
     public void close() throws IOException
     {
-        if (getDepth() == 0) {
-            finish();
-        }
-        if (_output instanceof Closeable) {
-            ((Closeable)_output).close();
+        if (! _closed) {
+            if (getDepth() == 0) {
+                finish();
+            }
+
+            // Do this first so we are closed even if the call below throws.
+            _closed = true;
+
+            if (_output instanceof Closeable) {
+                ((Closeable)_output).close();
+            }
         }
     }
 }
