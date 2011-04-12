@@ -1,4 +1,4 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -120,6 +120,21 @@ public class IonTokenConstsX
         case TOKEN_CLOSE_DOUBLE_BRACE: return "TOKEN_CLOSE_DOUBLE_BRACE";
 
         default: return "<invalid token "+t+">";
+        }
+    }
+    public final static String describeToken(int t) {
+        switch (t) {
+        case TOKEN_OPEN_PAREN:         return "(";
+        case TOKEN_CLOSE_PAREN:        return ")";
+        case TOKEN_OPEN_BRACE:         return "{";
+        case TOKEN_CLOSE_BRACE:        return "}";
+        case TOKEN_OPEN_SQUARE:        return "[";
+        case TOKEN_CLOSE_SQUARE:       return "]";
+
+        case TOKEN_OPEN_DOUBLE_BRACE:  return "{{";
+        case TOKEN_CLOSE_DOUBLE_BRACE: return "}}";
+
+        default: return getTokenName(t);
         }
     }
     public static final IonType ion_type_of_scalar(int token) {
