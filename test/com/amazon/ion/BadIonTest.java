@@ -23,7 +23,7 @@ public class BadIonTest
 
 
     @Test
-    public void test()
+    public void testLoadFile()
     throws Exception
     {
         try
@@ -34,16 +34,17 @@ public class BadIonTest
         }
         catch (IonException e) { /* good */ }
         catch (IOException e) { /* good?  (e.g. EOF error) */ }
+    }
 
-        try
-        {
-            // attempt to load as a string
-            final IonDatagram dg = loadAsJavaString(myTestFile);
-            if (dg != null) {
-                fail("Expected IonException parsing as a Java String "
-                     + myTestFile.getAbsolutePath());
-            }
+
+    @Test(expected=IonException.class)
+    public void testLoadString()
+    throws Exception
+    {
+        // attempt to load as a string
+        final IonDatagram dg = loadAsJavaString(myTestFile);
+        if (dg == null) {
+            throw new IonException("Not valid UTF-8");
         }
-        catch (IonException e) { /* good */ }
     }
 }
