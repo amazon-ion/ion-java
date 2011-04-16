@@ -39,7 +39,7 @@ package com.amazon.ion;
  *<pre>
  *    if (v instanceof IonString)
  *    {
- *        useStruct((IonString) v);
+ *        useString((IonString) v);
  *    }
  *    else if (v instanceof IonStruct)
  *    {
