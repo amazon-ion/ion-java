@@ -3,6 +3,7 @@
 package com.amazon.ion;
 
 import com.amazon.ion.util.IonStreamUtils;
+import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
@@ -19,7 +20,7 @@ import java.util.Date;
  * <p>
  * <b>WARNING:</b> This interface should not be implemented by applications.
  * We still have some work to do before this interface is stable.
- * See <a href="https://issue-tracking.amazon.com/browse/ION-182">JIRA issue
+ * See <a href="https://jira2.amazon.com/browse/ION-182">JIRA issue
  * ION-182</a>
  * <p>
  * A value is written via the set of typed {@code write*()} methods such as
@@ -41,16 +42,9 @@ import java.util.Date;
  * Then write each child value in order.
  * Finally, call {@link #stepOut()} to close the container.
  * <p>
- * Several {@code write*List()}
- * helper routines are included to simplify writing arrays of
- * common scalars to the output.  For binary this output can be
- * optimized for some performance gain, but for text and tree
- * these are simply convenience covers.
- * <p>
- * Once all the values have been written into the writer the
- * caller can use getBytes() or writeBytes() to get the cached output
- * as a byte array (either a new one allocated by the writer or
- * a user supplied buffer), or output to an output stream.
+ * Once all the top-level values have been written, the caller must
+ * {@link #stepOut()} all the way and call {@link #close()} before accessing
+ * the data (for example, via {@link ByteArrayOutputStream#toByteArray()}).
  *
  * <h2>Exception Handling</h2>
  * {@code IonWriter} is a generic interface for generating Ion data, and it's
@@ -60,6 +54,8 @@ import java.util.Date;
  * wants to handle (say) {@link IOException}s specially, then it needs to
  * extract that from the wrappers; the documentation of {@link IonException}
  * explains how to do that.
+ *
+ * @see IonStreamUtils
  */
 public interface IonWriter
     extends Closeable, Flushable
