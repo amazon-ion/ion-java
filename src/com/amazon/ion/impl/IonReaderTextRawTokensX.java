@@ -1112,6 +1112,7 @@ public class IonReaderTextRawTokensX
                     // move on, there's nothing to see here ...
                 }
                 else {
+                    unread_char(c);
                     skip_over_container('}');
                 }
                 break;
