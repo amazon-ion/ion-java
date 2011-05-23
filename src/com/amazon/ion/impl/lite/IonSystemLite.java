@@ -61,7 +61,7 @@ public final class IonSystemLite
     extends ValueFactoryLite
     implements IonSystemPrivate, IonContext
 {
-    private static int DEFAULT_CONTEXT_FREE_LIST_SIZE = 1000;
+    private static int DEFAULT_CONTEXT_FREE_LIST_SIZE = 120;
 
     private final UnifiedSymbolTable _system_symbol_table = UnifiedSymbolTable.makeSystemSymbolTable(this, 1);
 

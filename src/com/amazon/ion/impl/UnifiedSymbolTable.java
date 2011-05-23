@@ -144,6 +144,7 @@ public final class UnifiedSymbolTable
     private IonStruct                 _image;             // previous image of a symbol table
     private IonSystem                 _image_system;      // Ion system of the previous image
     private boolean                   _is_changed;        // set if anything changed, cleared at image set time
+    private boolean                   _is_read_only;      // set to mark this symbol table as being (now) immutable
     private boolean                   _maintain_image;    // set if we want to keep the image up to date as we add symbols
 
     /**
@@ -365,16 +366,26 @@ public final class UnifiedSymbolTable
         IonReader reader = new IonReaderTreeSystem(ionRep);
         IonSystem sys    = ionRep.getSystem();
 
-        UnifiedSymbolTable table = makeNewSharedSymbolTable(sys, reader, false);
-
-        // table._ion_rep = ionRep;
+        UnifiedSymbolTable table = makeNewSharedSymbolTable_helper(sys, reader, false);
         table.set_image(sys, ionRep);
+        table.makeReadOnly();  // public APIs force shared tables to read only
 
         return table;
     }
 
     static public UnifiedSymbolTable
     makeNewSharedSymbolTable(IonSystem sys, IonReader reader,
+                             boolean alreadyInStruct)
+    {
+        UnifiedSymbolTable table = makeNewSharedSymbolTable_helper(sys, reader,
+                                        alreadyInStruct);
+        table.makeReadOnly();  // public APIs force shared tables to read only
+        return table;
+    }
+
+
+    static private UnifiedSymbolTable
+    makeNewSharedSymbolTable_helper(IonSystem sys, IonReader reader,
                              boolean alreadyInStruct)
     {
         UnifiedSymbolTable table = new UnifiedSymbolTable(sys);
@@ -567,6 +578,8 @@ public final class UnifiedSymbolTable
      */
     private void share(String name, int version)
     {
+        verify_not_read_only();
+
         if (name == null || name.length() == 0) {
             throw new IllegalArgumentException("name must be non-empty");
         }
@@ -650,6 +663,37 @@ public final class UnifiedSymbolTable
     }
 
     /**
+     * checks the _is_read_only flag and if the flag is set
+     * this throws an error.  This is used by the various
+     * methods that may modify a value.
+     */
+    private void verify_not_read_only() {
+        if (_is_read_only) {
+            throw new IonException("modifications to read only symbol table not allowed");
+        }
+    }
+
+    /**
+     * public accessor to determine if this symbol table
+     * has been marked as immutable.
+     *
+     * @return boolean true if this table is locked, false if editing is allowed
+     */
+    public boolean isReadOnly() {
+        return _is_read_only;
+    }
+
+    public synchronized void makeReadOnly() {
+        if (isReadOnly()) {
+            return;
+        }
+        if (_import_list != null) {
+            _import_list.makeReadOnly();
+        }
+        _is_read_only = true;
+    }
+
+    /**
      * Checks the passed in value and returns whether or not
      * the value could be a local symbol table.  It does this
      * by checking the type, the annotations and verifying that
@@ -718,6 +762,8 @@ public final class UnifiedSymbolTable
 
     private void set_image(IonSystem sys, IonStruct ionRep)
     {
+        verify_not_read_only();
+
         _image = ionRep;
         _image_system = sys;
         _is_changed = false;
@@ -725,6 +771,8 @@ public final class UnifiedSymbolTable
     }
     private void clear_image()
     {
+        verify_not_read_only();
+
         _image = null;
         _image_system = null; // TODO: or should we keep this around until the system-symboltable binding hack is cleaned up?
         _is_changed = true;
@@ -911,6 +959,8 @@ public final class UnifiedSymbolTable
     synchronized
     int addSymbol(String name)
     {
+        verify_not_read_only();
+
         int sid = this.findSymbol(name);
         if (sid == UNKNOWN_SID) {
             if (_name != null) {
@@ -959,6 +1009,8 @@ public final class UnifiedSymbolTable
     synchronized
     void defineSymbol(String name, int id)
     {
+        verify_not_read_only();
+
         if (_name != null) {
             throw new UnsupportedOperationException("can't change shared symbol table");
         }
@@ -991,6 +1043,8 @@ public final class UnifiedSymbolTable
     private void putSymbol(String symbolName, int sid)
     {
         assert _name == null && _symbols != null;
+
+        verify_not_read_only();
 
         int idx = convertSidToLocalOffset(sid);
         assert idx >= 0;
@@ -1045,11 +1099,18 @@ public final class UnifiedSymbolTable
     }
 
     // TODO add to interface to let caller avoid getImports which makes a copy
+
+    /**
+     * this checks the import list for symbol tabls other than the
+     * system symbol table, which is doesn't count.  If any non system
+     * imports exist it return true.  Otherwise it return false.
+     */
     public boolean hasImports()
     {
         // Not synchronized since this member never changes after construction.
         return _import_list.getImportCount() > 0;
     }
+
 
     //
     // TODO: there needs to be a better way to associate a System with
@@ -1069,6 +1130,7 @@ public final class UnifiedSymbolTable
     void setSystem(IonSystem sys) {
         // Not synchronized since this member is only called from system when
         // the symtab is created.
+        verify_not_read_only();
         if (_sys_holder != null) {
             // Changing system will cause problems!
             assert _sys_holder == sys;
@@ -1102,8 +1164,8 @@ public final class UnifiedSymbolTable
      */
     public synchronized void writeTo(IonWriter writer) throws IOException
     {
-        IonStruct rep = safeGetIonRepresentation();
-        writer.writeValue(rep);
+        IonReader reader = new UnifiedSymbolTableReader(this);
+        writer.writeValues(reader);
     }
 
     // FIXME don't create a new system.
@@ -1125,9 +1187,7 @@ public final class UnifiedSymbolTable
     }
 
     @Deprecated
-    public
-    synchronized
-    IonStruct getIonRepresentation()
+    public synchronized IonStruct getIonRepresentation()
     {
         if (_image != null && !_is_changed) return _image;
 
@@ -1135,6 +1195,7 @@ public final class UnifiedSymbolTable
             if (this._sys_holder == null) {
                 throw new IonExceptionNoSystem("can't create representation without a system");
             }
+            verify_not_read_only();
             _image_system = _sys_holder;
         }
 
@@ -1152,6 +1213,8 @@ public final class UnifiedSymbolTable
         if (sys == null) {
             throw new IonExceptionNoSystem("can't create representation without a system");
         }
+
+        verify_not_read_only();
 
         if (_image == null || sys != _image_system) {
             _image = makeIonRepresentation(sys);
@@ -1242,7 +1305,7 @@ public final class UnifiedSymbolTable
     /**
      * NOT SYNCHRONIZED! Call within constructor or from synched method.
      */
-    void replaceSymbols(IonSystem sys, IonStruct ionRep)
+    private void replaceSymbols(IonSystem sys, IonStruct ionRep)
     {
         assert ionRep != null;
         assert sys == ionRep.getSystem();
@@ -1270,6 +1333,8 @@ public final class UnifiedSymbolTable
         assert sid >= _first_local_sid;
         assert ionRep != null;
         assert ionRep.getSystem() == sys;
+
+        verify_not_read_only();
 
         // TODO this is crazy inefficient and not as reliable as it looks
         // since it doesn't handle the case where's theres more than one list
@@ -1349,6 +1414,9 @@ public final class UnifiedSymbolTable
                     reader.stepIn();
                     while (reader.hasNext()) {
                         IonType type = reader.next();
+                        if (type == null) {
+                            break;
+                        }
 
                         String text = null;
                         if (type == IonType.STRING && !reader.isNullValue()) {
@@ -1465,6 +1533,9 @@ public final class UnifiedSymbolTable
         reader.stepIn();
         while (reader.hasNext()) {
             IonType t = reader.next();
+            if (t == null) {
+                break;
+            }
             if (IonType.STRUCT.equals(t)) {
                 readOneImport(reader, catalog);
             }
@@ -1492,6 +1563,9 @@ public final class UnifiedSymbolTable
         ionRep.stepIn();
         while (ionRep.hasNext()) {
             IonType t = ionRep.next();
+            if (t == null) {
+                break;
+            }
 
             if (ionRep.isNullValue()) continue;
 
@@ -1598,10 +1672,55 @@ public final class UnifiedSymbolTable
 
     static class IonExceptionNoSystem extends IonException
     {
+        private static final long serialVersionUID = 1L;
+
         IonExceptionNoSystem(String msg)
         {
             super(msg);
         }
 
     }
+
+    @SuppressWarnings("unchecked")
+    Iterator<String> getLocalSymbolIterator()
+    {
+        return new SymbolIterator();
+    }
+
+    Iterator<UnifiedSymbolTable> getImportIterator()
+    {
+        return _import_list.getImportIterator();
+    }
+
+    final class SymbolIterator implements Iterator
+    {
+        int _idx = 0;
+
+        public boolean hasNext()
+        {
+            if (_idx < _local_symbol_count) {
+                return true;
+            }
+            return false;
+        }
+
+        public Object next()
+        {
+            if (_idx < _local_symbol_count) {
+                String name = _symbols[_idx];
+                _idx++;
+                if (name == null) {
+                    name = "";
+                }
+                return name;
+            }
+            return null;
+        }
+
+        public void remove()
+        {
+            throw new UnsupportedOperationException();
+        }
+    }
+
 }

@@ -2,6 +2,10 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonException;
+
+import java.util.Iterator;
+
 import com.amazon.ion.SymbolTable;
 import java.util.Arrays;
 
@@ -16,6 +20,7 @@ public class UnifiedSymbolTableImports
     static final int DEFAULT_IMPORT_LENGTH = 4;
 
     private int                  _max_id;
+    private boolean              _is_read_only;
 
     private int                  _import_count;
     private UnifiedSymbolTable[] _imports;
@@ -34,6 +39,38 @@ public class UnifiedSymbolTableImports
     }
 
     /**
+     * checks the _is_read_only flag and if the flag is set
+     * this throws an error.  This is used by the various
+     * methods that may modify a value.
+     */
+    private void verify_not_read_only() {
+        if (_is_read_only) {
+            throw new IonException("modifications to read only symbol table not allowed");
+        }
+    }
+
+    /**
+     * checks the _is_read_only flag and if the flag is set
+     * this throws an error.  This is used by the various
+     * methods that may modify a value.
+     */
+    synchronized void makeReadOnly() {
+        if (_is_read_only) {
+            return;
+        }
+        for (int ii=0; ii<_import_count; ii++) {
+            UnifiedSymbolTable table = _imports[ii];
+            if (table.isReadOnly() == false) {
+                throw new IonException("imported symbol tables must be immutable to mark the importer as immutable");
+            }
+        }
+
+        _is_read_only = true;
+        return;
+    }
+
+
+    /**
      * @throws IllegalArgumentException if the table is local or system.
      * @throws NullPointerException if the table is null.
      */
@@ -47,6 +84,8 @@ public class UnifiedSymbolTableImports
 
     private final void add_import_helper(UnifiedSymbolTable symtab, int maxId)
     {
+        verify_not_read_only();
+
         // (_import_count+1) so we have room for the base_sid sentinel
         if (_imports == null || (_import_count+1) >= _imports.length) {
             do {
@@ -201,9 +240,51 @@ public class UnifiedSymbolTableImports
         System.arraycopy(_imports, non_system_base_offset, imports, 0, count);
     }
 
+
     @Override
     public String toString()
     {
         return Arrays.toString(_imports);
+    }
+
+    Iterator<UnifiedSymbolTable> getImportIterator() {
+        return new ImportIterator();
+    }
+
+    final class ImportIterator implements Iterator<UnifiedSymbolTable>
+    {
+        int _idx;
+
+        ImportIterator() {
+            _idx = 0;
+            if (hasSystemSymbolsImported()) {
+                _idx++;
+                assert(UnifiedSymbolTable.isSharedTable(_imports[0]));
+            }
+        }
+
+        public boolean hasNext()
+        {
+            if (_idx < _import_count) {
+                return true;
+            }
+            return false;
+        }
+
+        public UnifiedSymbolTable next()
+        {
+            while (_idx < _import_count) {
+                UnifiedSymbolTable obj = _imports[_idx];
+                _idx++;
+                assert(UnifiedSymbolTable.isSystemTable(obj) == false);
+                return obj;
+            }
+            return null;
+        }
+
+        public void remove()
+        {
+            throw new UnsupportedOperationException();
+        }
     }
 }

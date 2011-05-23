@@ -5,8 +5,9 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.IonType.DATAGRAM;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
-import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
+
+import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
@@ -191,22 +192,57 @@ abstract class IonWriterUser
         // to an internal interface.
     }
 
-
-    // TODO this method needs documentation, I have no idea what's going on.
+    /**
+     * creates a tree representation of a local symbol table as the
+     * writer notices it is being written  this copy will be used to
+     * handle symbol table resolution in following values.
+     *
+     * this, in essence, creates a fork in the data stream with one
+     * copy going to the original output stream and the other to a
+     * writer that will build up the ion value copy of the table
+     * that can be used to construct the symbol table once it is
+     * complete.
+     *
+     * Once the value image of the symbol table is complete (which
+     * happens when the caller steps out of the containing struct)
+     * the fork gets cut off and the symbol table gets constructed.
+     *
+     * If there was a makeSymbolTable(Reader) this copy might be,
+     * at least partially, avoided.
+     *
+     * CSuver@
+     */
     private void open_local_symbol_table_copy()
     {
         assert(!_symbol_table_being_copied);
         assert(_system != null);
 
         _symbol_table_value = _system.newEmptyStruct();
-        _symbol_table_value.addTypeAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE);
+
+        // WAS: _symbol_table_value.addTypeAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE);
+        // while the previous version did create a valid symbol table, it dropped
+        // any extra annotations.  The local symbol table annotation will exist in the
+        // annotation list, since it's presence is what got us here.
+        assert(_current_writer.has_annotation(
+                           UnifiedSymbolTable.ION_SYMBOL_TABLE,
+                           UnifiedSymbolTable.ION_SYMBOL_TABLE_SID)
+        );
+        for (int ii=0; ii<_current_writer._annotation_count; ii++) {
+            String annotation = _current_writer._annotations[ii];
+            _symbol_table_value.addTypeAnnotation(annotation);
+        }
 
         _symbol_table_writer       = new IonWriterSystemTree(_system, _catalog, _symbol_table_value);
-
-        _symbol_table_being_copied = true;
         _current_writer            = _symbol_table_writer;
+        _symbol_table_being_copied = true;
     }
 
+    /**
+     * this closes the forked writer since the symbol table
+     * is complete (i.e. the struct is closed, on stepOut).
+     *
+     * @throws IOException forwarded from the
+     */
     private void close_local_symbol_table_copy() throws IOException
     {
         assert(_symbol_table_being_copied);
@@ -232,7 +268,8 @@ abstract class IonWriterUser
     abstract void set_symbol_table_helper(SymbolTable prev_symbols, SymbolTable new_symbols) throws IOException;
 
     @Override
-    public final void setSymbolTable(SymbolTable symbols) throws IOException
+    public final void setSymbolTable(SymbolTable symbols)
+        throws IOException
     {
         SymbolTable prev = _symbol_table;
 

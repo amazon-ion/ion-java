@@ -492,22 +492,28 @@ public class DatagramTest
         SymbolTable fred1   = Symtabs.register("fred",   1, catalog());
         IonSymbol   sym;
 
-        IonDatagram dg = system().newDatagram(fred1);
+        IonDatagram db_raw = system().newDatagram(fred1);
         sym = system().newSymbol("fred_2");
-        dg.add(sym);
+        db_raw.add(sym);
         sym = system().newSymbol("localSym");
-        dg.add(sym);
+        db_raw.add(sym);
 
+        byte[] bytes = db_raw.getBytes();
 
-        byte[] bytes = dg.getBytes();
-        dg = loader().load(bytes);
+        IonDatagram dg_frombytes = loader().load(bytes);
         // TODO dg is dirty at this point... why? It's freshly loaded!
 
-        assertEquals(4, dg.systemSize());
+        assertEquals(4, dg_frombytes.systemSize());
 
-        IonValue f2sym = dg.systemGet(2);
-        IonValue local = dg.systemGet(3);
+        IonValue f2sym = dg_frombytes.systemGet(2);
+        IonValue local = dg_frombytes.systemGet(3);
 
+        if (f2sym == null
+           || f2sym.getType().equals(IonType.SYMBOL) == false
+           || ((IonSymbol)f2sym).stringValue().equals("fred_2") == false)
+        {
+            checkSymbol("fred_2",   FRED_ID_OFFSET + 2,   f2sym);
+        }
         checkSymbol("fred_2",   FRED_ID_OFFSET + 2,   f2sym);
         checkSymbol("localSym", LOCAL_ID_OFFSET + 1,  local);
 

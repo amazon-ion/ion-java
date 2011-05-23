@@ -101,7 +101,8 @@ public class IonWriterUserText
 
 
     @Override
-    public void set_symbol_table_helper(SymbolTable prev_symbols, SymbolTable new_symbols) throws IOException
+    public void set_symbol_table_helper(SymbolTable prev_symbols, SymbolTable new_symbols)
+        throws IOException
     {
         // for the text user writer if the symbol table
         // isn't changing we don't care
