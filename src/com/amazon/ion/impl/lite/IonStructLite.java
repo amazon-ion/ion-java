@@ -17,8 +17,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 
 /**
  *
@@ -721,9 +721,13 @@ public class IonStructLite
      */
     private static void validateFieldName(String fieldName)
     {
+        if (fieldName == null)
+        {
+            throw new NullPointerException("fieldName is null");
+        }
         if (fieldName.length() == 0)
         {
-            throw new IllegalArgumentException("fieldName must not be empty");
+            throw new IllegalArgumentException("fieldName is empty");
         }
     }
 
@@ -733,6 +737,4 @@ public class IonStructLite
     {
         visitor.visit(this);
     }
-
-
 }
