@@ -724,6 +724,12 @@ public class TimestampTest
         assertEquals(12, ts.getSecond());
         assertEquals(PST_OFFSET, ts.getLocalOffset().intValue());
 
+        cal.set(Calendar.MILLISECOND, 345);
+        ts = new Timestamp(cal);
+        assertEquals(Timestamp.Precision.FRACTION, ts.getPrecision());
+        assertEquals(12, ts.getSecond());
+        assertEquals("2009-02-01T10:11:12.345-08:00", ts.toString());
+        assertEquals(new BigDecimal("0.345"), ts.getFractionalSecond());
 
         cal = makeUtcCalendar(); // reset time zone
         cal.clear();
@@ -736,6 +742,16 @@ public class TimestampTest
         assertEquals(3, ts.getMonth());
         assertEquals(18, ts.getDay());
     }
+
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testNewTimestampFromClearCalendar()
+    {
+        Calendar cal = makeUtcCalendar();
+        cal.clear();
+        new Timestamp(cal);
+    }
+
 
     @Test
     public void testTimestampWithNegativeFraction()
