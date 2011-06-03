@@ -233,8 +233,14 @@ public abstract class UnifiedInputBufferX
         for (int ii=0; ii<_buffers.length; ii++) {
             _buffers[ii] = null;
         }
-        _buffers[0] = curr;
-        curr.reset(0);
+
+        // curr is null when underlying stream is empty.
+        if (curr != null)
+        {
+            _buffers[0] = curr;
+            curr.reset(0);
+        }
+
         _buffer_count = 0;
         _buffer_current = 0;
     }

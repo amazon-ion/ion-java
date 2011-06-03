@@ -5,6 +5,10 @@ import com.amazon.ion.BinaryTest;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
+import java.io.ByteArrayInputStream;
+import java.io.FilterInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -16,6 +20,25 @@ import org.junit.Test;
 public class ReaderTest
     extends IonTestCase
 {
+    class InputStreamWrapper extends FilterInputStream
+    {
+        protected InputStreamWrapper(InputStream in)
+        {
+            super(in);
+        }
+
+        boolean closed = false;
+
+        @Override
+        public void close() throws IOException
+        {
+            assertFalse("stream already closed", closed);
+            closed = true;
+            super.close();
+        }
+    }
+
+
     /**
      * Fails if the iterator has a next element.
      */
@@ -35,7 +58,33 @@ public class ReaderTest
     // Test cases
 
     @Test
-    public void testNullInt() {
+    public void testClosingStream()
+    throws Exception
+    {
+        byte[] data = "test".getBytes("UTF-8");
+        InputStreamWrapper stream =
+            new InputStreamWrapper(new ByteArrayInputStream(data));
+        IonReader reader = system().newReader(stream);
+        assertSame(IonType.SYMBOL, reader.next());
+        reader.close();
+        assertTrue("stream not closed", stream.closed);
+    }
+
+    @Test
+    public void testClosingEmptyStream()
+    throws Exception
+    {
+        InputStreamWrapper stream =
+            new InputStreamWrapper(new ByteArrayInputStream(new byte[0]));
+        IonReader reader = system().newReader(stream);
+        assertSame(null, reader.next());
+        reader.close();
+        assertTrue("stream not closed", stream.closed);
+    }
+
+    @Test
+    public void testNullInt()
+    {
         {
             IonReader scanner = system().newReader("null.int");
             assertEquals(IonType.INT, scanner.next());
