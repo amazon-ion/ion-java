@@ -7,6 +7,7 @@ import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
 import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemReader;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
+import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
 import com.amazon.ion.ContainedValueException;
@@ -436,7 +437,7 @@ public final class IonSystemImpl
 
     public IonReader newReader(byte[] ionData, int offset, int len)
     {
-        boolean isBinary = IonBinary.matchBinaryVersionMarker(ionData);
+        boolean isBinary = isIonBinary(ionData, offset, len);
         if (isBinary)
         {
             return new IonReaderBinaryUserX(this, myCatalog, ionData, offset, len);
@@ -448,7 +449,7 @@ public final class IonSystemImpl
 
     public IonReader newSystemReader(byte[] ionData, int offset, int len)
     {
-        boolean isBinary = IonBinary.matchBinaryVersionMarker(ionData);
+        boolean isBinary = isIonBinary(ionData, offset, len);
         if (isBinary)
         {
             return new IonReaderBinarySystemX(this, ionData, offset, len);
@@ -472,7 +473,7 @@ public final class IonSystemImpl
             }
 
             Reader reader = new InputStreamReader(pushback, "UTF-8");
-            return new IonReaderTextUserX(this, null, reader);
+            return new IonReaderTextUserX(this, null, reader); // FIXME wrong catalog?
         }
         catch (IOException e)
         {
@@ -666,8 +667,7 @@ public final class IonSystemImpl
     public SystemValueIterator newLegacySystemReader(IonCatalog catalog, byte[] ionData)
     {
         if (catalog == null) catalog = getCatalog();
-        boolean isBinary =
-            IonBinary.matchBinaryVersionMarker(ionData);
+        boolean isBinary = isIonBinary(ionData);
 
         SystemValueIterator sysReader;
         if (isBinary) {

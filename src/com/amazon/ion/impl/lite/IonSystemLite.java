@@ -1000,7 +1000,7 @@ public final class IonSystemLite
 
     public IonReader newReader(byte[] ionData, int offset, int len)
     {
-        IonReader reader = newReader(getCatalog(), ionData, 0, ionData.length);
+        IonReader reader = newReader(getCatalog(), ionData, offset, len);
         return reader;
     }
 

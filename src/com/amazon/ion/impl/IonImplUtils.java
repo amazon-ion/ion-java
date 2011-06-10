@@ -2,6 +2,8 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
+
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
@@ -82,6 +84,61 @@ public final class IonImplUtils // TODO this class shouldn't be public
     }
 
 
+    /**
+     * Calls {@link InputStream#read(byte[], int, int)} until the buffer is
+     * filled or EOF is encountered.
+     * This method will block until the request is satisfied.
+     *
+     * @param in        The stream to read from.
+     * @param buf       The buffer to read to.
+     *
+     * @return the number of bytes read from the stream.  May be less than
+     *  {@code buf.length} if EOF is encountered before reading that far.
+     *
+     * @see #readFully(InputStream, byte[], int, int)
+     */
+    public static int readFully(InputStream in, byte[] buf)
+    throws IOException
+    {
+        return readFully(in, buf, 0, buf.length);
+    }
+
+
+    /**
+     * Calls {@link InputStream#read(byte[], int, int)} until the requested
+     * length is read or EOF is encountered.
+     * This method will block until the request is satisfied.
+     *
+     * @param in        The stream to read from.
+     * @param buf       The buffer to read to.
+     * @param offset    The offset of the buffer to read from.
+     * @param length    The length of the data to read.
+     *
+     * @return the number of bytes read from the stream.  May be less than
+     *  {@code length} if EOF is encountered before reading that far.
+     *
+     * @see #readFully(InputStream, byte[])
+     */
+    public static int readFully(InputStream in, byte[] buf,
+                                int offset, int length)
+    throws IOException
+    {
+        int readBytes = 0;
+        while (readBytes < length)
+        {
+            int amount = in.read(buf, offset, length - readBytes);
+            if (amount < 0)
+            {
+                // EOF
+                return readBytes;
+            }
+            readBytes += amount;
+            offset += amount;
+        }
+        return readBytes;
+    }
+
+
     public static byte[] loadFileBytes(File file)
         throws IOException
     {
@@ -144,9 +201,9 @@ public final class IonImplUtils // TODO this class shouldn't be public
         boolean isBinary = false;
         byte[] cookie = new byte[IonConstants.BINARY_VERSION_MARKER_SIZE];
 
-        int len = pushback.read(cookie);
+        int len = readFully(pushback, cookie);
         if (len == IonConstants.BINARY_VERSION_MARKER_SIZE) {
-            isBinary = IonBinary.matchBinaryVersionMarker(cookie);
+            isBinary = isIonBinary(cookie);
         }
         if (len > 0) {
             pushback.unread(cookie, 0, len);

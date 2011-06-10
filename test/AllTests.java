@@ -50,6 +50,7 @@ import com.amazon.ion.streaming.RoundTripStreamingTest;
 import com.amazon.ion.system.IonSystemBuilderTest;
 import com.amazon.ion.system.SimpleCatalogTest;
 import com.amazon.ion.util.EquivalenceTest;
+import com.amazon.ion.util.IonStreamUtilsTest;
 import com.amazon.ion.util.PrinterTest;
 import com.amazon.ion.util.TextTest;
 import org.junit.runner.RunWith;
@@ -125,6 +126,7 @@ import org.junit.runners.Suite;
     // Ditto for WriterTestCase
     IonWriterTests.class,
 
+    IonStreamUtilsTest.class,
     TreeReaderTest.class,
     MiscStreamingTest.class,
     BinaryStreamingTest.class,
