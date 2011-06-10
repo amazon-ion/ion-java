@@ -68,16 +68,28 @@ public final class IonImplUtils // TODO this class shouldn't be public
     };
 
 
+    public static <T> void addAll(Collection<T> dest, Iterator<T> src)
+    {
+        if (src != null)
+        {
+            while (src.hasNext())
+            {
+                T value = src.next();
+                dest.add(value);
+            }
+        }
+    }
+
     public static <T> void addAllNonNull(Collection<T> dest, Iterator<T> src)
     {
         if (src != null)
         {
             while (src.hasNext())
             {
-                T sym = src.next();
-                if (sym != null)
+                T value = src.next();
+                if (value != null)
                 {
-                    dest.add(sym);
+                    dest.add(value);
                 }
             }
         }
