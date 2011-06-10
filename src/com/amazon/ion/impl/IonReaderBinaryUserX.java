@@ -34,7 +34,8 @@ class IonReaderBinaryUserX
         init_user(catalog);
     }
 
-    private final void init_user(IonCatalog catalog)
+    //FIXME: PERF_TEST was :private
+    final void init_user(IonCatalog catalog)
     {
         _symbols = _system.getSystemSymbolTable();
         _catalog = catalog;

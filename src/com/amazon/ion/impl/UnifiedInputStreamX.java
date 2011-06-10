@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2010 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -120,7 +120,6 @@ public abstract class UnifiedInputStreamX
         throws IOException
     {
         _eof = true;
-        _buffer.clear();
     }
 
     public final boolean isEOF() {
@@ -582,17 +581,12 @@ public abstract class UnifiedInputStreamX
             super.init();
             _limit = refill();
         }
-
-        @Override
-        public void close()
-            throws IOException
-        {
-            super.close();
-            _reader.close();
-        }
     }
 
-    private static class FromByteArray extends UnifiedInputStreamX
+
+// FIXME: PERF_TEST was: private
+
+static class FromByteArray extends UnifiedInputStreamX
     {
         FromByteArray(byte[] bytes, int offset, int length)
         {
@@ -623,6 +617,7 @@ public abstract class UnifiedInputStreamX
         {
             super.close();
             _stream.close();
+            _buffer.clear();
         }
     }
 }

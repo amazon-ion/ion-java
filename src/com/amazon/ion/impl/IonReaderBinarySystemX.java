@@ -29,7 +29,7 @@ class IonReaderBinarySystemX
     protected IonReaderBinarySystemX(IonSystem system, byte[] bytes, int offset, int length) {
         super();
         UnifiedInputStreamX uis = UnifiedInputStreamX.makeStream(bytes, offset, length);
-        init(uis);
+        init_raw(uis);
         _system = system;
     }
     protected IonReaderBinarySystemX(IonSystem system, InputStream userBytes) {
@@ -41,12 +41,12 @@ class IonReaderBinarySystemX
         catch (IOException e) {
             throw new IonException(e);
         }
-        init(uis);
+        init_raw(uis);
         _system = system;
     }
     protected IonReaderBinarySystemX(IonSystem system, UnifiedInputStreamX userBytes) {
         super();
-        init(userBytes);
+        init_raw(userBytes);
         _system = system;
     }
 
