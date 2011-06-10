@@ -581,6 +581,15 @@ public abstract class UnifiedInputStreamX
             super.init();
             _limit = refill();
         }
+
+        @Override
+        public void close()
+            throws IOException
+        {
+            super.close();
+            _reader.close();
+            _buffer.clear();
+        }
     }
 
 
