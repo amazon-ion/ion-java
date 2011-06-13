@@ -40,7 +40,7 @@ import java.util.Date;
  * applicable to the container itself.
  * Then call {@link #stepIn(IonType)} with the desired container type.
  * Then write each child value in order.
- * Finally, call {@link #stepOut()} to close the container.
+ * Finally, call {@link #stepOut()} to complete the container.
  * <p>
  * Once all the top-level values have been written, the caller must
  * {@link #stepOut()} all the way and call {@link #close()} before accessing
@@ -99,7 +99,7 @@ public interface IonWriter
      * write all top-level values, and then flush.
      * <p>
      * This method may only be called when all top-level values are
-     * completely written and {@link #stepOut() stepped-out}.
+     * completely written and {@linkplain #stepOut() stepped-out}.
      * <p>
      * Implementations should allow the application to continue writing further
      * top-level values following the semantics for concatenating Ion data
@@ -110,9 +110,29 @@ public interface IonWriter
      * @throws IOException if thrown by the underlying output target.
      * @throws IllegalStateException when not between top-level values.
      *
-     * @see #flush
+     * @see #flush()
+     * @see #close()
      */
     public void finish() throws IOException;
+
+
+    /**
+     * Closes this stream and releases any system resources associated with it.
+     * If the stream is already closed then invoking this method has no effect.
+     * <p>
+     * If the cursor is between top-level values, this method will
+     * {@link #finish()} before closing the underlying output stream.
+     * If not, the resulting data may be incomplete and invalid Ion.
+     * <p>
+     * In other words: unless you're recovering from a failure condition,
+     * <b>don't close the writer until you've
+     * {@linkplain #stepOut() stepped-out} completely.</b>
+     *
+     * @throws IOException if thrown by the underlying output target.
+     *
+     * @see #finish()
+     */
+    public void close() throws IOException;
 
 
     /**
@@ -257,8 +277,8 @@ public interface IonWriter
     /**
      * Writes values from a reader until the end of the current container.
      * This method iterates until {@link IonReader#next()} returns {@code null}
-     * and does not {@link IonReader#stepOut() step out} to the container of
-     * the current cursor position.
+     * and does not {@linkplain IonReader#stepOut() step out} to the container
+     * of the current cursor position.
      * <p>
      * This method also writes annotations and field names (if in a struct),
      * and performs a deep write, including the contents of
