@@ -251,11 +251,36 @@ public final class UnifiedSymbolTable
         share(name, version);
     }
 
-    private void loadSharedSymbolTableContents(String name, int version, Iterator<String> symbols)
+    private void loadSharedSymbolTableContents(String name, int version,
+                                               SymbolTable priorSymtab,
+                                               Iterator<String> symbols)
     {
         assert symbols != null;
+        assert version == (priorSymtab == null
+                            ? 1
+                            : priorSymtab.getVersion() + 1);
 
         int sid = convertLocalOffsetToSid(0);
+
+        if (priorSymtab != null)
+        {
+            Iterator<String> priorSymbols =
+                priorSymtab.iterateDeclaredSymbolNames();
+            while (priorSymbols.hasNext())
+            {
+                String symName = priorSymbols.next();
+                if (symName != null)
+                {
+                    assert symName.length() > 0;
+                    putSymbol(symName, sid);
+                }
+
+                // Null entries must leave a gap in the sid sequence
+                // so we retain compatability with the prior version.
+                sid++;
+            }
+        }
+
         while (symbols.hasNext()) {
             String symName = symbols.next();
             // FIXME what about empty?  ION-189
@@ -348,7 +373,10 @@ public final class UnifiedSymbolTable
      * Therefore, <b>THIS METHOD IS NOT SUITABLE WHEN READING SERIALIZED
      * SHARED SYMBOL TABLES</b> since that scenario must preserve all sids.
      */
-    static public UnifiedSymbolTable makeNewSharedSymbolTable(IonSystem sys, String name, int version, Iterator<String> symbols)
+    static public UnifiedSymbolTable
+    makeNewSharedSymbolTable(IonSystem sys, String name, int version,
+                             SymbolTable priorSymtab,
+                             Iterator<String> symbols)
     {
         if (name == null || name.length() < 1) {
             throw new IllegalArgumentException("invalid name for shared symbol table");
@@ -357,7 +385,7 @@ public final class UnifiedSymbolTable
             throw new IllegalArgumentException("invalid version for shared symbol table");
         }
         UnifiedSymbolTable table = new UnifiedSymbolTable(sys);
-        table.loadSharedSymbolTableContents(name, version, symbols);
+        table.loadSharedSymbolTableContents(name, version, priorSymtab, symbols);
 
         return table;
     }

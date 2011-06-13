@@ -7,6 +7,7 @@ import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
 import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemReader;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
+import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewSharedSymbolTable;
 import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
@@ -156,10 +157,11 @@ public final class IonSystemImpl
         // TODO streamline to avoid making this collection
         ArrayList<String> syms = new ArrayList<String>();
 
+        SymbolTable prior = null;
         if (version > 1)
         {
             int priorVersion = version - 1;
-            SymbolTable prior = myCatalog.getTable(name, priorVersion);
+            prior = myCatalog.getTable(name, priorVersion);
             if (prior == null || prior.getVersion() != priorVersion)
             {
                 String message =
@@ -168,10 +170,6 @@ public final class IonSystemImpl
                     " required to create version " + version;
                 throw new IonException(message);
             }
-
-            // FIXME ION-188 This is wrong, we need to retain the exact
-            // symbols from the prior version.
-            addAllNonNull(syms, prior.iterateDeclaredSymbolNames());
         }
 
         for (SymbolTable imported : imports)
@@ -181,7 +179,8 @@ public final class IonSystemImpl
 
         addAllNonNull(syms, newSymbols);
 
-        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewSharedSymbolTable(this, name, version, syms.iterator());
+        UnifiedSymbolTable st =
+            makeNewSharedSymbolTable(this, name, version, prior, syms.iterator());
 
         return st;
     }

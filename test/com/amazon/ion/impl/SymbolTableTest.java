@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -1263,5 +1264,32 @@ public class SymbolTableTest
         }
 
         assertEquals("last sid", fred3.getMaxId(), sid);
+    }
+
+
+    /** For ION-188 */
+    @Test
+    public void testExtendingSharedSymbolTableWithHoles()
+    {
+        String serializedSymtab =
+            "$ion_shared_symbol_table::{" +
+            "  name:\"Test\", version:3," +
+            "  symbols:[ \"one\", 2, \"three\", null, \"\" ]" +
+            "}";
+
+        SymbolTable v3 =
+            system().newSharedSymbolTable(system().newReader(serializedSymtab));
+        catalog().putTable(v3);
+
+        Iterator<String> newSymbols =
+            Arrays.asList("four", null, "five").iterator();
+        SymbolTable v4 = system().newSharedSymbolTable("Test", 4, newSymbols);
+
+        ArrayList<String> v4Symbols = new ArrayList<String>();
+        IonImplUtils.addAll(v4Symbols, v4.iterateDeclaredSymbolNames());
+
+        Assert.assertArrayEquals(new String[]{"one", null, "three", null, null,
+                                              "four", "five"},
+                                 v4Symbols.toArray());
     }
 }
