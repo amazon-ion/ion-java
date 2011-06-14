@@ -16,8 +16,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 
 /**
  * Implements the Ion <code>struct</code> type.
@@ -456,9 +456,13 @@ public final class IonStructImpl
      */
     private static void validateFieldName(String fieldName)
     {
+        if (fieldName == null)
+        {
+            throw new NullPointerException("fieldName is null");
+        }
         if (fieldName.length() == 0)
         {
-            throw new IllegalArgumentException("fieldName must not be empty");
+            throw new IllegalArgumentException("fieldName is empty");
         }
     }
 

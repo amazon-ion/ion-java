@@ -32,7 +32,8 @@ class IonWriterUserTree
 
 
     @Override
-    public void set_symbol_table_helper(SymbolTable prev_symbols, SymbolTable new_symbols) throws IOException
+    public void set_symbol_table_helper(SymbolTable prev_symbols, SymbolTable new_symbols)
+        throws IOException
     {
         // we do nothing here, the symbol tables will get picked up as
         // tree writer picks up symbol tables on the values as they

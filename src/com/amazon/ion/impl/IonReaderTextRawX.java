@@ -416,7 +416,7 @@ public abstract class IonReaderTextRawX
         if (!hasNext()) {
             return null;
         }
-        if (_value_type == null && _scanner.isUnfishedToken()) {
+        if (_value_type == null && _scanner.isUnfinishedToken()) {
             try {
                 token_contents_load(_scanner.getToken());
             }
@@ -437,7 +437,7 @@ public abstract class IonReaderTextRawX
     }
     private final void finish_value(SavePoint sp) throws IOException
     {
-        if (_scanner.isUnfishedToken()) {
+        if (_scanner.isUnfinishedToken()) {
             if (sp != null && _value_type != null) {
                 switch (_value_type) {
                 case STRUCT:
@@ -971,7 +971,7 @@ public abstract class IonReaderTextRawX
             return sb;
         }
         else if (_current_value_save_point_loaded) {
-            assert(!_scanner.isUnfishedToken() && !_current_value_save_point.isClear());
+            assert(!_scanner.isUnfinishedToken() && !_current_value_save_point.isClear());
             // _scanner.load_save_point_contents( _current_value_save_point, sb);
 
             _scanner.save_point_activate(_current_value_save_point);

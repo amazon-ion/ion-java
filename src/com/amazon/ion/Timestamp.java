@@ -253,6 +253,15 @@ public final class Timestamp
         dec_ms = dec_ms.movePointLeft(3); // set value to milliseconds
         this._fraction = dec_ms;
     }
+
+    /**
+     * Copies data from a {@link Calendar} into this timestamp.
+     * Must only be called during construction due to timestamp immutabliity.
+     *
+     * @param cal must have at least one field set.
+     *
+     * @throws IllegalArgumentException if the calendar has no fields set.
+     */
     private void set_fields_from_calendar(Calendar cal)
     {
         if (cal.isSet(Calendar.MILLISECOND)) {
@@ -274,31 +283,13 @@ public final class Timestamp
             this._precision = Precision.YEAR;
         }
         else {
-            throw new IllegalArgumentException("unset Calendar is not valid for set");
+            throw new IllegalArgumentException("Calendar has no fields set");
         }
 
-        copy_from_calendar_fields(this._precision, cal);
-        // TODO why doesn't this happen in copy_from_calendar_fields ?
-        if (this._precision == Precision.FRACTION) {
-            BigDecimal millis = new BigDecimal(cal.get(Calendar.MILLISECOND));
-            this._fraction = millis.movePointRight(3); // make these actually 1/1000's of a second
-        }
-    }
-
-    /**
-     * this creates a new calendar member on this value.  The new member
-     * will have some of it's fields set, based on the precision specified.
-     * This does not do anything with the millisecond field.  The calendar
-     * millisecond field is not used internally, but may be specified if
-     * an external party passes in the calendar instance.  The millisecond
-     * portion needs to be handled by the caller if necessary.
-     * @param p the precision which control which fields are copied
-     * @param cal the source calendar value
-     */
-    private void copy_from_calendar_fields(Precision p, Calendar cal) {
-        assert this._day == 1;
-        switch (p) {
+        switch (this._precision) {
             case FRACTION:
+                BigDecimal millis = new BigDecimal(cal.get(Calendar.MILLISECOND));
+                this._fraction = millis.movePointLeft(3); // convert to fraction
             case SECOND:
                 this._second = (byte)cal.get(Calendar.SECOND);
             case MINUTE:
@@ -307,7 +298,7 @@ public final class Timestamp
             case DAY:
                 this._day    = (byte)cal.get(Calendar.DAY_OF_MONTH);
             case MONTH:
-                // calendar months are 0 based, timestamp months are 1 based
+                // Calendar months are 0 based, Timestamp months are 1 based
                 this._month  = (byte)(cal.get(Calendar.MONTH) + 1);
             case YEAR:
                 this._year   = (short)cal.get(Calendar.YEAR);
@@ -527,10 +518,12 @@ public final class Timestamp
 
 
     /**
-     * Creates a new Timestamp instance from an instance of Calendar.  This
-     * uses the calendar's offset as the offset.
+     * Creates a new Timestamp instance from a {@link Calendar}, preserving
+     * precision and local offset.
      *
-     * @param cal Calendar time value to base new instance time on
+     * @param cal provides the data for the new timestamp.
+     *
+     * @throws IllegalArgumentException if the calendar has no fields set.
      */
     public Timestamp(Calendar cal)
     {

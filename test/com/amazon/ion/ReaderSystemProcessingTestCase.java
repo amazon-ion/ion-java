@@ -8,6 +8,7 @@ import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
 
 import com.amazon.ion.impl.IonImplUtils;
 import java.util.Date;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -21,6 +22,12 @@ public abstract class ReaderSystemProcessingTestCase
     private IonReader myReader;
     private IonType   myValueType;
 
+    @After @Override
+    public void tearDown() throws Exception
+    {
+        super.tearDown();
+        if (myReader != null) myReader.close();
+    }
 
     protected abstract IonReader read()
         throws Exception;
@@ -183,8 +190,8 @@ public abstract class ReaderSystemProcessingTestCase
         assertEquals("next() at eof", null, myReader.next());
 
         if (!IonImplUtils.READER_HASNEXT_REMOVED) {
-        assertFalse("not at eof", myReader.hasNext());
-    }
+            assertFalse("not at eof", myReader.hasNext());
+        }
 
         assertEquals("next() at eof", null, myReader.next());
     }
@@ -435,5 +442,55 @@ public abstract class ReaderSystemProcessingTestCase
         r.stepOut(); // skip c
         r.next();
         assertEquals("d", r.getFieldName());
+    }
+
+
+
+    /** Trap for ION-201 */
+    @Test
+    public void testSkippingFieldsNoQuote()
+    throws Exception
+    {
+        testSkippingFields("");
+    }
+
+    /** Trap for ION-201 */
+    @Test
+    public void testSkippingFieldsSingleQuote()
+    throws Exception
+    {
+        testSkippingFields("'");
+    }
+
+    /** Trap for ION-201 */
+    @Test
+    public void testSkippingFieldsDoubleQuote()
+    throws Exception
+    {
+        testSkippingFields("\"");
+    }
+
+    /** Trap for ION-201 */
+    @Test
+    public void testSkippingFieldsTripleQuote()
+    throws Exception
+    {
+        testSkippingFields("'''");
+    }
+
+    public void testSkippingFields(String quote)
+    throws Exception
+    {
+        String text = "{X:{Y:{" + quote + "Z" + quote + ":{w:W}}}}";
+
+        startIteration(text);
+        IonReader r = myReader;
+        r.next();
+        r.stepIn();
+        r.next();
+        assertEquals("X", r.getFieldName());
+        assertEquals(null, r.next());
+        r.stepOut();
+        assertEquals(null, r.next());
     }
 }

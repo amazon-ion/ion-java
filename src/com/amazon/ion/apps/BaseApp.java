@@ -31,17 +31,20 @@ abstract class BaseApp
     //=========================================================================
     // Static methods
 
+    /**
+     * @param in doesn't need to be buffered; this method will read in bulk.
+     */
     protected static byte[] loadAsByteArray(InputStream in)
         throws IOException
     {
-    byte[] buf = new byte[4096];
-    ByteArrayOutputStream bos = new ByteArrayOutputStream();
-    int cnt;
+        byte[] buf = new byte[4096];
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        int cnt;
 
-    while ((cnt = in.read(buf)) != -1) {
-        bos.write(buf, 0, cnt);
-    }
-    return bos.toByteArray();
+        while ((cnt = in.read(buf)) != -1) {
+            bos.write(buf, 0, cnt);
+        }
+        return bos.toByteArray();
     }
 
 

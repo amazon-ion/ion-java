@@ -140,7 +140,8 @@ public abstract class IonWriterBaseImpl
      * @param symbols base symbol table for encoding
      * @throws IllegalArgumentException if symbols is null or a shared symbol table
      */
-    public void setSymbolTable(SymbolTable symbols) throws IOException
+    public void setSymbolTable(SymbolTable symbols)
+        throws IOException
     {
         if (UnifiedSymbolTable.isAssignableTable(symbols) == false) {
             throw new IllegalArgumentException("symbol table must be local or system to be set, or reset");
@@ -771,7 +772,10 @@ public abstract class IonWriterBaseImpl
     }
     public void write_values_helper(IonReader reader) throws IOException
     {
-        while (reader.next() != null) {
+        IonType t;
+        for (;;) {
+            t = reader.next();
+            if (t == null) break;
             writeValue(reader);
         }
         return;

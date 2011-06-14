@@ -30,6 +30,7 @@ public class RoundTripStreamingTest
 extends IonTestCase
 {
     static final boolean _debug_flag = true;
+    static final boolean _debug_dump_datagrams = false;
 
     @Inject("testFile")
     public static final File[] FILES =
@@ -269,11 +270,13 @@ extends IonTestCase
         }
 
         void dump_datagrams(roundTripBufferResults other) {
-            System.out.println("\n------------------------------\n");
-            System.out.println(this.string);
-            dump_binary(this.title, this.binary);
-            System.out.println("\n");
-            dump_binary(other.title, other.binary);
+            if (_debug_dump_datagrams) {
+                System.out.println("\n------------------------------\n");
+                System.out.println(this.string);
+                dump_binary(this.title, this.binary);
+                System.out.println("\n");
+                dump_binary(other.title, other.binary);
+            }
         }
 
         void dump_binary(String title, byte[] buf)

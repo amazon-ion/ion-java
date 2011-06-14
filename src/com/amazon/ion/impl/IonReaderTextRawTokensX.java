@@ -90,7 +90,7 @@ public class IonReaderTextRawTokensX
                 + getLineOffset();
         return s;
     }
-    public final boolean isUnfishedToken() { return  _unfinished_token; }
+    public final boolean isUnfinishedToken() { return  _unfinished_token; }
 
     public final void tokenIsFinished() {
         _unfinished_token = false;
@@ -1112,6 +1112,7 @@ public class IonReaderTextRawTokensX
                     // move on, there's nothing to see here ...
                 }
                 else {
+                    unread_char(c);
                     skip_over_container('}');
                 }
                 break;

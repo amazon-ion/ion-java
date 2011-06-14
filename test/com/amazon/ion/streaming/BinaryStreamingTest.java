@@ -986,4 +986,31 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         assertEquals("d", r.getFieldName());
     }
 
+
+    @Test
+    public void testNewReaderOffset()
+    throws Exception
+    {
+        int startPadding = 5;
+        int endPadding = 7;
+
+        byte[] dg = encode("hello");
+
+        byte[] paddedBuffer = new byte[startPadding + dg.length + endPadding];
+        System.arraycopy(dg, 0, paddedBuffer, startPadding, dg.length);
+
+        IonReader r = system().newReader(paddedBuffer, startPadding, dg.length);
+        assertEquals(IonType.SYMBOL, r.next());
+        assertEquals("hello", r.stringValue());
+        assertEquals(null, r.next());
+
+
+        r = system().newSystemReader(paddedBuffer, startPadding, dg.length);
+        assertEquals(IonType.SYMBOL, r.next());
+        assertEquals(IonType.STRUCT, r.next());
+        assertEquals(IonType.SYMBOL, r.next());
+        assertEquals(null, r.next());
+    }
+
+
 }
