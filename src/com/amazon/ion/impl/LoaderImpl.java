@@ -2,6 +2,8 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
+
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonLoader;
@@ -157,7 +159,7 @@ public class LoaderImpl
 
         try
         {
-            boolean isBinary = IonBinary.matchBinaryVersionMarker(ionData);
+            boolean isBinary = isIonBinary(ionData);
             if (USE_NEW_READERS && !isBinary) {
                 IonReader reader = mySystem.newSystemReader(ionData);
 

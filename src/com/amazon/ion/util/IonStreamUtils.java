@@ -1,6 +1,9 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
+
+import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_1_0;
+import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
 
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
@@ -15,6 +18,59 @@ import java.io.IOException;
  */
 public class IonStreamUtils
 {
+    /**
+     * Determines whether a buffer contains Ion binary data by looking for the
+     * presence of the Ion Version Marker at its start.
+     * A {@code false} result does not imply that the buffer has Ion text,
+     * just that it's not Ion binary.
+     *
+     * @param buffer the data to check.
+     *
+     * @return {@code true} if the buffer contains Ion binary (starting from
+     *  offset zero); {@code false} if the buffer is null or too short.
+     *
+     * @see #isIonBinary(byte[], int, int)
+     */
+    public static boolean isIonBinary(byte[] buffer)
+    {
+        return buffer != null && isIonBinary(buffer, 0, buffer.length);
+    }
+
+
+    /**
+     * Determines whether a buffer contains Ion binary data by looking for the
+     * presence of the Ion Version Marker at a given offset.
+     * A {@code false} result does not imply that the buffer has Ion text,
+     * just that it's not Ion binary.
+     *
+     * @param buffer the data to check.
+     * @param offset the position in the buffer at which to start reading.
+     * @param length the number of bytes in the buffer that are valid,
+     *  starting from {@code offset}.
+     *
+     * @return {@code true} if the buffer contains Ion binary (starting from
+     *  {@code offset}); {@code false} if the buffer is null or if the
+     *  {@code length} is too short.
+     *
+     * @see #isIonBinary(byte[])
+     */
+    public static boolean isIonBinary(byte[] buffer, int offset, int length)
+    {
+        if (buffer == null || length < BINARY_VERSION_MARKER_SIZE)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < BINARY_VERSION_MARKER_SIZE; i++)
+        {
+            if (BINARY_VERSION_MARKER_1_0[i] != buffer[offset + i])
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
 
     /**
      * writes an IonList with a series of IonBool values. This

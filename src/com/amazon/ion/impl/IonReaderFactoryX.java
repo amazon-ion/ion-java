@@ -1,6 +1,8 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
+
+import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
@@ -154,7 +156,7 @@ public class IonReaderFactoryX
     }
     public static final IonReader makeReader(byte[] bytes, int offset, int length)
     {
-        IonReader r = makeSystemReader((IonSystem)null, bytes, 0, bytes.length);
+        IonReader r = makeSystemReader((IonSystem)null, bytes, offset, length);
 //        IonReader r;
 //        if (has_binary_cookie(bytes, offset, length)) {
 //            r = new IonReaderBinarySystemX(null, bytes, offset, length);
@@ -198,7 +200,7 @@ public class IonReaderFactoryX
     public static final IonReader makeReader(IonSystem system, IonCatalog catalog, byte[] bytes, int offset, int length)
     {
         IonReader r;
-        if (has_binary_cookie(bytes, offset, length)) {
+        if (isIonBinary(bytes, offset, length)) {
             r = new IonReaderBinaryUserX(system, catalog, bytes, offset, length);
         }
         else {
@@ -239,7 +241,7 @@ public class IonReaderFactoryX
     public static final IonReader makeSystemReader(IonSystem system, byte[] bytes, int offset, int length)
     {
         IonReader r;
-        if (has_binary_cookie(bytes, offset, length)) {
+        if (isIonBinary(bytes, offset, length)) {
             r = new IonReaderBinarySystemX(system, bytes, offset, length);
         }
         else {
@@ -287,19 +289,7 @@ public class IonReaderFactoryX
             ii--;
             uis.unread(bytes[ii] & 0xff);
         }
-        boolean is_cookie = has_binary_cookie(bytes, 0 , len);
+        boolean is_cookie = isIonBinary(bytes, 0, len);
         return is_cookie;
-    }
-    private static final boolean has_binary_cookie(byte[] bytes, int offset, int length)
-    {
-        if (length < IonConstants.BINARY_VERSION_MARKER_SIZE) {
-            return false;
-        }
-        for (int ii=0; ii<IonConstants.BINARY_VERSION_MARKER_SIZE; ii++) {
-            if (bytes[offset + ii] != IonConstants.BINARY_VERSION_MARKER_1_0[ii]) {
-                return false;
-            }
-        }
-        return true;
     }
 }
