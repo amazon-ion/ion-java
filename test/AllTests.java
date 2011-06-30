@@ -46,6 +46,7 @@ import com.amazon.ion.streaming.BadIonStreamingTest;
 import com.amazon.ion.streaming.BinaryStreamingTest;
 import com.amazon.ion.streaming.GoodIonStreamingTest;
 import com.amazon.ion.streaming.MiscStreamingTest;
+import com.amazon.ion.streaming.ReaderPositioningTest;
 import com.amazon.ion.streaming.ReaderSkippingTest;
 import com.amazon.ion.streaming.RoundTripStreamingTest;
 import com.amazon.ion.system.IonSystemBuilderTest;
@@ -136,6 +137,7 @@ import org.junit.runners.Suite;
     GoodIonStreamingTest.class,
     RoundTripStreamingTest.class,
     ReaderSkippingTest.class,
+    ReaderPositioningTest.class,
 
     IonSystemTest.class,
     ValueFactorySequenceTest.class,
