@@ -380,7 +380,7 @@ abstract public class IonReaderBinaryRawX
     private final int read_type_id() throws IOException
     {
 int start_of_tid   = _input._pos;                      // FIXME: for repositionable reader
-int start_of_value = _input._pos;                      // FIXME: for repositionable reader
+int start_of_value = start_of_tid + 1;                 // FIXME: for repositionable reader
 
         int td = read();
         if (td < 0) {

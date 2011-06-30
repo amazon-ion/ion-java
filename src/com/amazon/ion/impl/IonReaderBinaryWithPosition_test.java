@@ -2,14 +2,11 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.SymbolTable;
-
-import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
-
-import com.amazon.ion.impl.UnifiedInputStreamX.FromByteArray;
-
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
+import com.amazon.ion.SymbolTable;
+import com.amazon.ion.impl.UnifiedInputStreamX.FromByteArray;
+import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
 
 /**
  * Prototype impl of a relocatable reader.  This version only supports
@@ -59,6 +56,7 @@ public class IonReaderBinaryWithPosition_test
  //       FromByteArray input = (FromByteArray)this._input;
 
         pos._offset = _position_start;
+        assert _position_len > 0;
         pos._limit = _position_len + _position_start;
         pos._symbol_table = _symbols;
 
