@@ -5,6 +5,7 @@ package com.amazon.ion.streaming;
 
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonTestCase;
+import com.amazon.ion.IonType;
 import com.amazon.ion.impl.IonReaderBinaryWithPosition_test;
 import com.amazon.ion.impl.IonReaderBinaryWithPosition_test.IonReaderPosition;
 import com.amazon.ion.junit.IonAssert;
@@ -58,6 +59,67 @@ public class ReaderPositioningTest
         }
     }
 
+
+    @Test
+    public void testSeekingIntoContainers()
+    {
+        IonReaderBinaryWithPosition_test in = read("{f:v,g:[c]} s");
+
+        in.next();
+        in.stepIn();
+            in.next();
+            IonReaderPosition fPos = in.getCurrentPosition();
+            assertEquals("v", in.stringValue());
+            in.next();
+            IonReaderPosition gPos = in.getCurrentPosition();
+            in.stepIn();
+                in.next();
+                assertEquals("c", in.stringValue());
+                IonReaderPosition cPos = in.getCurrentPosition();
+                assertEquals(null, in.next());
+            in.stepOut();
+            assertEquals(null, in.next());
+        in.stepOut();
+        in.next();
+        IonReaderPosition sPos = in.getCurrentPosition();
+        assertEquals(null, in.next());
+
+
+        in.seek(fPos);
+        assertEquals(IonType.SYMBOL, in.next());
+        assertEquals(null, in.getFieldName());
+        assertEquals("v", in.stringValue());
+        assertEquals(null, in.next());
+
+        in.seek(cPos);
+        in.next();
+        assertEquals("c", in.stringValue());
+        assertEquals(null, in.getFieldName());
+        assertEquals(null, in.next());
+
+        in.seek(gPos);
+        assertEquals(IonType.LIST, in.next());
+        assertEquals(null, in.getFieldName());
+        in.stepIn();
+            in.next();
+            assertEquals("c", in.stringValue());
+            assertEquals(null, in.next());
+        in.stepOut();
+        assertEquals(null, in.next());
+
+        in.seek(fPos);
+        assertEquals(null, in.getFieldName());
+        assertEquals(IonType.SYMBOL, in.next());
+        assertEquals("v", in.stringValue());
+        assertEquals(null, in.next());
+
+        in.seek(sPos);
+        assertEquals(IonType.SYMBOL, in.next());
+        assertEquals("s", in.stringValue());
+        assertEquals(null, in.next());
+    }
+
+
     @Test @Ignore // TODO this throws assertion failure
     public void testGetPosBeforeFirstTopLevel()
     {
@@ -74,6 +136,7 @@ public class ReaderPositioningTest
         IonReaderPosition pos = in.getCurrentPosition();
         in.stepOut();
         in.seek(pos);
+        // TODO what state should we be in?
         in.next();
     }
 
