@@ -21,7 +21,7 @@ import java.io.Reader;
  * When the input source is a stream is creates it's own local
  * buffers, using {@link #UnifiedInputBufferX} and {@link #UnifiedDataPageX}.
  * These allocate pages and loads them, a page at a time, from
- * the stream using the highest bandwitdh stream interface available.
+ * the stream using the highest bandwidth stream interface available.
  *
  * In this class the unread is only allowed to unread characters
  * that it actually read.  This is checked, when possible, when
@@ -626,6 +626,7 @@ static class FromByteArray extends UnifiedInputStreamX
         {
             super.close();
             _stream.close();
+            _buffer.clear();
         }
     }
 }

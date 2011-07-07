@@ -3,7 +3,6 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_ITERATOR;
-import static com.amazon.ion.impl.IonImplUtils.readFully;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBool;
@@ -52,22 +51,37 @@ class IonReaderTreeSystem
 
     public IonReaderTreeSystem(IonValue value)
     {
+        init(value);
+    }
+
+    void init(IonValue value) {
         if (value == null) {
             // do nothing
         }
         else {
             _system = value.getSystem();
-            if (value instanceof IonDatagram) {
-                // datagrams interacting with these readers must be
-                // IonContainerPrivate containers
-                assert(value instanceof IonContainerPrivate);
-                IonDatagram dg = (IonDatagram) value;
-                _parent = dg;
-                _iter = dg.systemIterator(); // we want a system reader not: new Children(dg);
-            }
-            else {
-                _next = value;
-            }
+            re_init(value);
+        }
+    }
+
+    void re_init(IonValue value)
+    {
+        _symbols = null;
+        _curr = null;
+        _eof = false;
+        _top = 0;
+        if (value instanceof IonDatagram) {
+            // datagrams interacting with these readers must be
+            // IonContainerPrivate containers
+            assert(value instanceof IonContainerPrivate);
+            IonDatagram dg = (IonDatagram) value;
+            _parent = dg;
+            _next = null;
+            _iter = dg.systemIterator(); // we want a system reader not: new Children(dg);
+        }
+        else {
+            _parent = null;
+            _next = value;
         }
     }
 
@@ -415,7 +429,7 @@ class IonReaderTreeSystem
             InputStream is = lob.newInputStream();
             int retlen;
             try {
-                retlen = readFully(is, buffer, 0, loblen);
+                retlen = is.read(buffer, 0, loblen);
                 is.close();
             }
             catch (IOException e) {
@@ -438,7 +452,7 @@ class IonReaderTreeSystem
             InputStream is = lob.newInputStream();
             int retlen;
             try {
-                retlen = readFully(is, buffer, offset, loblen);
+                retlen = is.read(buffer, offset, loblen);
                 is.close();
             }
             catch (IOException e) {

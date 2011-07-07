@@ -28,6 +28,7 @@ import java.io.Reader;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
+import java.util.Iterator;
 
 /**
  * This reader calls the IonTextReaderRaw for low level events.
@@ -45,6 +46,7 @@ public class IonReaderTextSystemX
 {
     private static int UNSIGNED_BYTE_MAX_VALUE = 255;
 
+    Iterator<String> EMPTY_ITERATOR = new StringIterator(null);
     protected IonSystem _system;
 
     protected IonReaderTextSystemX(IonSystem system, char[] chars, int offset, int length) {

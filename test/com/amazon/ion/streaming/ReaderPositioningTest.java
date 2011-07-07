@@ -4,10 +4,10 @@ package com.amazon.ion.streaming;
 
 
 import com.amazon.ion.IonDatagram;
+import com.amazon.ion.IonReaderPosition;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.impl.IonReaderBinaryWithPosition_test;
-import com.amazon.ion.impl.IonReaderBinaryWithPosition_test.IonReaderPosition;
 import com.amazon.ion.junit.IonAssert;
 import org.junit.Ignore;
 import org.junit.Test;
