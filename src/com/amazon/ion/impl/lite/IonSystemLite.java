@@ -5,6 +5,7 @@ package com.amazon.ion.impl.lite;
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
 import static com.amazon.ion.impl.IonWriterFactory.makeWriter;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
+import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewSharedSymbolTable;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
 import com.amazon.ion.IonBlob;
@@ -326,10 +327,11 @@ public final class IonSystemLite
         // TODO streamline to avoid making this collection
         ArrayList<String> syms = new ArrayList<String>();
 
+        SymbolTable prior = null;
         if (version > 1)
         {
             int priorVersion = version - 1;
-            SymbolTable prior = _catalog.getTable(name, priorVersion);
+            prior = _catalog.getTable(name, priorVersion);
             if (prior == null || prior.getVersion() != priorVersion)
             {
                 String message =
@@ -338,10 +340,6 @@ public final class IonSystemLite
                     " required to create version " + version;
                 throw new IonException(message);
             }
-
-            // FIXME ION-188 This is wrong, we need to retain the exact
-            // symbols from the prior version.
-            addAllNonNull(syms, prior.iterateDeclaredSymbolNames());
         }
 
         for (SymbolTable imported : imports)
@@ -351,7 +349,8 @@ public final class IonSystemLite
 
         addAllNonNull(syms, newSymbols);
 
-        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewSharedSymbolTable(this, name, version, syms.iterator());
+        UnifiedSymbolTable st =
+            makeNewSharedSymbolTable(this, name, version, prior, syms.iterator());
 
         return st;
     }
@@ -1000,7 +999,7 @@ public final class IonSystemLite
 
     public IonReader newReader(byte[] ionData, int offset, int len)
     {
-        IonReader reader = newReader(getCatalog(), ionData, 0, ionData.length);
+        IonReader reader = newReader(getCatalog(), ionData, offset, len);
         return reader;
     }
 

@@ -619,7 +619,7 @@ public abstract class IonWriterTestCase
         iw.close();
         checkClosed();
 
-        if (false) // TODO ION-181
+        if (false) // Per ION-181, close() doesn't stepOut()
         {
             IonDatagram dg = reload();
             assertEquals("datagram size", 1, dg.size());

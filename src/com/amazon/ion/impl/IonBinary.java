@@ -2,16 +2,17 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_1_0;
 import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
+import static com.amazon.ion.impl.IonImplUtils.readFully;
 import static com.amazon.ion.impl.IonTimestampImpl.precisionIncludes;
+import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.Timestamp.Precision;
+import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.impl.IonConstants.HighNibble;
 import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
@@ -41,22 +42,6 @@ public class IonBinary
 
     private IonBinary() { }
 
-    public static boolean matchBinaryVersionMarker(byte[] buffer)
-    {
-        return matchBinaryVersionMarker(buffer, 0, buffer.length);
-    }
-
-    public static boolean matchBinaryVersionMarker(byte[] buffer, int offset,
-                                                   int len)
-    {
-        if (len < BINARY_VERSION_MARKER_SIZE) return false;
-
-        for (int i = 0; i < BINARY_VERSION_MARKER_SIZE; i++)
-        {
-            if (BINARY_VERSION_MARKER_1_0[i] != buffer[offset + i]) return false;
-        }
-        return true;
-    }
 
     /**
      * Verifies that a reader starts with a valid Ion cookie, throwing an
@@ -75,7 +60,7 @@ public class IonBinary
             //reader.sync();
             //reader.setPosition(0);
             byte[] bvm = new byte[BINARY_VERSION_MARKER_SIZE];
-            int len = reader.read(bvm);
+            int len = readFully(reader, bvm);
             if (len < BINARY_VERSION_MARKER_SIZE)
             {
                 String message =
@@ -86,7 +71,7 @@ public class IonBinary
 
             }
 
-            if (! matchBinaryVersionMarker(bvm))
+            if (! isIonBinary(bvm))
             {
                 StringBuilder buf = new StringBuilder();
                 buf.append("Binary data has unrecognized header");
@@ -1047,7 +1032,7 @@ public class IonBinary
             this.setPosition(0);
             int len = _buf.size();
             byte[] buf = new byte[len];
-            if (this.read(buf) != len) {
+            if (readFully(this, buf) != len) {
                 throw new UnexpectedEofException();
             }
             return buf;

@@ -567,14 +567,19 @@ public class IonWriterSystemBinary
     public void close() throws IOException
     {
         if (! _closed) {
-            if (getDepth() == 0) {
-                finish();
+            try
+            {
+                if (getDepth() == 0) {
+                    finish();
+                }
             }
+            finally
+            {
+                // Do this first so we are closed even if the call below throws.
+                _closed = true;
 
-            // Do this first so we are closed even if the call below throws.
-            _closed = true;
-
-            _user_output_stream.close();
+                _user_output_stream.close();
+            }
         }
     }
 

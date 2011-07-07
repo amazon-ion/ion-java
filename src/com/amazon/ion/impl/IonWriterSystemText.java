@@ -682,15 +682,21 @@ public class IonWriterSystemText
     public void close() throws IOException
     {
         if (! _closed) {
-            if (getDepth() == 0) {
-                finish();
+            try
+            {
+                if (getDepth() == 0) {
+                    finish();
+                }
             }
+            finally
+            {
 
-            // Do this first so we are closed even if the call below throws.
-            _closed = true;
+                // Do this first so we are closed even if the call below throws.
+                _closed = true;
 
-            if (_output instanceof Closeable) {
-                ((Closeable)_output).close();
+                if (_output instanceof Closeable) {
+                    ((Closeable)_output).close();
+                }
             }
         }
     }

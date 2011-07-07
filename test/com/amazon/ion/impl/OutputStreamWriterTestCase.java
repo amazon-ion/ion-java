@@ -8,6 +8,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import org.junit.Test;
 
 /**
  *
@@ -15,6 +16,9 @@ import java.io.OutputStream;
 public abstract class OutputStreamWriterTestCase
     extends IonWriterTestCase
 {
+    private IOException myFlushException = null;
+
+
     class OutputStreamWrapper extends FilterOutputStream
     {
         boolean flushed = false;
@@ -29,6 +33,7 @@ public abstract class OutputStreamWriterTestCase
         public void flush() throws IOException
         {
             flushed = true;
+            if (myFlushException != null) throw myFlushException;
             super.flush();
         }
 
@@ -76,5 +81,23 @@ public abstract class OutputStreamWriterTestCase
     {
         assertTrue("output stream not flushed", myOutputStreamWrapper.flushed);
         assertTrue("output stream not closed",  myOutputStreamWrapper.closed);
+    }
+
+    @Test
+    public void testCloseFinishThrows()
+    throws Exception
+    {
+        iw = makeWriter();
+        iw.writeInt(12L);
+        myFlushException = new IOException();
+        try {
+            iw.close();
+            fail("Expected exception");
+        }
+        catch (IOException e)
+        {
+            assertSame(myFlushException, e);
+        }
+        checkClosed();
     }
 }

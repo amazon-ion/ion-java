@@ -47,7 +47,7 @@ public class IonReaderTextSystemX
     private static int UNSIGNED_BYTE_MAX_VALUE = 255;
 
     Iterator<String> EMPTY_ITERATOR = new StringIterator(null);
-    IonSystem _system;
+    protected IonSystem _system;
 
     protected IonReaderTextSystemX(IonSystem system, char[] chars, int offset, int length) {
         super();

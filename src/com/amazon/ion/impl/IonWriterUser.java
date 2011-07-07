@@ -5,9 +5,8 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.IonType.DATAGRAM;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
-import com.amazon.ion.IonException;
-
 import com.amazon.ion.IonCatalog;
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
@@ -159,12 +158,24 @@ abstract class IonWriterUser
 
     public void close() throws IOException
     {
-        if (getDepth() == 0) {
-            assert(_current_writer == _system_writer);
-            finish();
+        try
+        {
+            try
+            {
+                if (getDepth() == 0) {
+                    assert(_current_writer == _system_writer);
+                    finish();
+                }
+            }
+            finally
+            {
+                _current_writer.close();
+            }
         }
-        _current_writer.close();
-        _system_writer.close();
+        finally
+        {
+            _system_writer.close();
+        }
     }
 
     @Override
