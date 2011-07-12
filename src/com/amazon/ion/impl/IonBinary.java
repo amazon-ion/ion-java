@@ -120,7 +120,7 @@ public class IonBinary
         if (valueLength >= IonConstants.lnIsVarLen) {
             td |= IonConstants.lnIsVarLen;
             userstream.write((byte)(td & 0xff));
-            int lenOfLength = IonBinary.lenVarUInt7(valueLength);
+            int lenOfLength = IonBinary.lenVarUInt(valueLength);
             written_len += writeVarUInt(userstream, (long)valueLength, lenOfLength, true);
         }
         else {
@@ -175,7 +175,7 @@ public class IonBinary
     static public int writeVarUInt(OutputStream userstream, long value, int len, boolean force_zero_write) throws IOException
     {
         int mask = 0x7F;
-        assert len == IonBinary.lenVarUInt7(value);
+        assert len == IonBinary.lenVarUInt(value);
         assert value > 0;
 
         switch (len - 1) {
@@ -295,28 +295,6 @@ public class IonBinary
         throw new IOException("Invalid UTF-8 character encountered");
     }
 
-
-    static public int writeVarUInt7Value(OutputStream userstream, int value, boolean force_zero_write) throws IOException
-    {
-        int mask = 0x7F;
-        int len = lenVarUInt7(value);
-
-        switch (len - 1) {
-        case 4: userstream.write((byte)((value >> (7*4)) & mask));
-        case 3: userstream.write((byte)((value >> (7*3)) & mask));
-        case 2: userstream.write((byte)((value >> (7*2)) & mask));
-        case 1: userstream.write((byte)((value >> (7*1)) & mask));
-        case 0: userstream.write((byte)((value & mask) | 0x80L));
-                break;
-        case -1: // or 0
-            if (force_zero_write) {
-                userstream.write((byte)0x80);
-                len = 1;
-            }
-            break;
-        }
-        return len;
-    }
 
     public static class BufferManager
     {
@@ -440,7 +418,7 @@ public class IonBinary
     /**
      * Variable-length, high-bit-terminating integer, 7 data bits per byte.
      */
-    public static int lenVarUInt7(int intVal) {  // we write a lot of these
+    public static int lenVarUInt(int intVal) {  // we write a lot of these
         int len = 0;
 
         if (intVal != 0) {
@@ -457,7 +435,7 @@ public class IonBinary
         }
         return len;
     }
-    public static int lenVarUInt7(long longVal) {
+    public static int lenVarUInt(long longVal) {
         int len = 0;
 
         if (longVal != 0) {
@@ -478,7 +456,7 @@ public class IonBinary
     /**
      * @return zero if input is zero
      */
-    public static int lenVarUInt8(long longVal) {
+    public static int lenUInt(long longVal) {
         int len = 0;
 
         // figure out how many we have bytes we have to write out
@@ -500,10 +478,10 @@ public class IonBinary
         return len;
     }
 
-    public static int lenVarUInt8(BigInteger bigVal)
+    public static int lenUInt(BigInteger bigVal)
     {
         if (bigVal.signum() < 0) {
-            throw new IllegalArgumentException("lenVarUInt8 expects a non-negative a value");
+            throw new IllegalArgumentException("lenUInt expects a non-negative a value");
         }
         final int bits = bigVal.bitLength();
         // determine the number of octets needed to represent this bit pattern
@@ -518,9 +496,9 @@ public class IonBinary
         return bytes;
     }
 
-    // TODO maybe add lenVarInt8(int) to micro-optimize, or?
+    // TODO maybe add lenInt(int) to micro-optimize, or?
 
-    public static int lenVarInt8(long longVal) {
+    public static int lenInt(long longVal) {
         int len = 0;
 
         // figure out how many we have bytes we have to write out
@@ -549,7 +527,7 @@ public class IonBinary
         return len;
     }
 
-    public static int lenVarInt8(BigInteger bi, boolean force_zero_writes)
+    public static int lenInt(BigInteger bi, boolean force_zero_writes)
     {
         int len = bi.abs().bitLength() + 1; // add 1 for the sign bit (which must always be present)
         int bytelen = 0;
@@ -568,9 +546,9 @@ public class IonBinary
     }
 
 
-    // TODO maybe add lenVarInt7(int) to micro-optimize, or?
+    // TODO maybe add lenVarInt(int) to micro-optimize, or?
 
-    public static int lenVarInt7(long longVal) {
+    public static int lenVarInt(long longVal) {
         int len = 0;
 
         // figure out how many we have bytes we have to write out
@@ -609,10 +587,10 @@ public class IonBinary
             //      write out, but the UInt method won't like it, so we just
             //      return then value that we actually know.
             if (v == Long.MIN_VALUE) return SIZE_OF_LONG;
-            return IonBinary.lenVarUInt8(-v);
+            return IonBinary.lenUInt(-v);
         }
         else if (v > 0) {
-            return IonBinary.lenVarUInt8(v);
+            return IonBinary.lenUInt(v);
         }
         return 0; // CAS UPDATE, was 1
     }
@@ -622,7 +600,7 @@ public class IonBinary
         {
             v = v.negate();
         }
-        int len = lenVarUInt8(v);
+        int len = lenUInt(v);
         return len;
     }
 
@@ -636,7 +614,7 @@ public class IonBinary
         if (valuelen < IonConstants.lnIsVarLen) {
             return 0;
         }
-        return lenVarUInt7(valuelen);
+        return lenVarUInt(valuelen);
     }
 
     public static int lenTypeDescWithAppropriateLenField(int type, int valuelen)
@@ -662,7 +640,7 @@ public class IonBinary
             if (valuelen < IonConstants.lnIsVarLen) {
                 return IonConstants.BB_TOKEN_LEN;
             }
-            return IonConstants.BB_TOKEN_LEN + lenVarUInt7(valuelen);
+            return IonConstants.BB_TOKEN_LEN + lenVarUInt(valuelen);
 
         case IonConstants.tidUnused: // unused(15)
         default:
@@ -705,12 +683,12 @@ public class IonBinary
 
         // negative zero forces the zero to be written, positive zero does not
         forceContent = forceContent || Decimal.isNegativeZero(bd);
-        int mantissaByteCount = lenVarInt8(mantissa, forceContent);
+        int mantissaByteCount = lenInt(mantissa, forceContent);
 
         // We really need the length of the exponent (-scale) but in our
         // representation the length is the same regardless of sign.
         int scale = bd.scale();
-        int exponentByteCount = lenVarInt7(scale);
+        int exponentByteCount = lenVarInt(scale);
 
         // Exponent is always at least one byte.
         if (exponentByteCount == 0) exponentByteCount = 1;
@@ -747,7 +725,7 @@ public class IonBinary
     	case MONTH:
     		len += 1; // len of month and day (both < 127)
     	case YEAR:
-    		len += IonBinary.lenVarUInt7(di.getZYear());
+    		len += IonBinary.lenVarUInt(di.getZYear());
      	}
     	Integer offset = di.getLocalOffset();
     	if (offset == null) {
@@ -757,7 +735,7 @@ public class IonBinary
     	    len++;
     	}
     	else {
-    	    len += IonBinary.lenVarInt7(offset.longValue());
+    	    len += IonBinary.lenVarInt(offset.longValue());
     	}
         return len;
     }
@@ -861,11 +839,11 @@ public class IonBinary
             // add up the length of the encoded symbols
             for (int ii=0; ii<annotations.length; ii++) {
                 int symid = symbolTable.findSymbol(annotations[ii]);
-                annotationLen += IonBinary.lenVarUInt7(symid);
+                annotationLen += IonBinary.lenVarUInt(symid);
             }
 
             // now the len of the list
-            annotationLen += IonBinary.lenVarUInt7(annotationLen);
+            annotationLen += IonBinary.lenVarUInt(annotationLen);
         }
         return annotationLen;
     }
@@ -877,11 +855,11 @@ public class IonBinary
         // add up the length of the encoded symbols
         for (Integer ii : annotations) {
             int symid = ii.intValue();
-            annotationLen += IonBinary.lenVarUInt7(symid);
+            annotationLen += IonBinary.lenVarUInt(symid);
         }
 
         // now the len of the list
-        annotationLen += IonBinary.lenVarUInt7(annotationLen);
+        annotationLen += IonBinary.lenVarUInt(annotationLen);
 
         return annotationLen;
     }
@@ -1068,7 +1046,7 @@ public class IonBinary
                 }
                 else {
                     this.readLength(typeid, lownibble);
-                    int alen = this.readVarInt7IntValue();
+                    int alen = this.readVarIntAsInt();
                     // TODO add skip(int) method instead of this loop.
                     while (alen > 0) {
                         if (this.read() < 0) throwUnexpectedEOFException();
@@ -1085,7 +1063,7 @@ public class IonBinary
         {
             int[] annotations = null;
 
-            int annotationLen = this.readVarUInt7IntValue();
+            int annotationLen = this.readVarUIntAsInt();
             int annotationPos = this.position(); // pos at the first ann sid
             int annotationEnd = annotationPos + annotationLen;
             int annotationCount = 0;
@@ -1095,7 +1073,7 @@ public class IonBinary
                 // read the annotation symbol id itself
                 // and for this first pass we just throw that
                 // value away, since we're just counting
-                this.readVarUInt7IntValue();
+                this.readVarUIntAsInt();
                 annotationCount++;
             }
             if (annotationCount > 0) {
@@ -1107,7 +1085,7 @@ public class IonBinary
                 this.setPosition(annotationPos);
                 while(this.position() < annotationEnd) {
                     // read the annotation symbol id itself
-                    int sid = this.readVarUInt7IntValue();
+                    int sid = this.readVarUIntAsInt();
                     annotations[annotationIdx++] = sid;
                 }
             }
@@ -1119,7 +1097,7 @@ public class IonBinary
         {
             String[] annotations = null;
 
-            int annotationLen = this.readVarUInt7IntValue();
+            int annotationLen = this.readVarUIntAsInt();
             int annotationPos = this.position(); // pos at the first ann sid
             int annotationEnd = annotationPos + annotationLen;
             int annotationCount = 0;
@@ -1129,7 +1107,7 @@ public class IonBinary
                 // read the annotation symbol id itself
                 // and for this first pass we just throw that
                 // value away, since we're just counting
-                this.readVarUInt7IntValue();
+                this.readVarUIntAsInt();
                 annotationCount++;
             }
             if (annotationCount > 0) {
@@ -1141,7 +1119,7 @@ public class IonBinary
                 this.setPosition(annotationPos);
                 while(this.position() < annotationEnd) {
                     // read the annotation symbol id itself
-                    int sid = this.readVarUInt7IntValue();
+                    int sid = this.readVarUIntAsInt();
                     annotations[annotationIdx++] = symbolTable.findSymbol(sid);
                 }
             }
@@ -1173,7 +1151,7 @@ public class IonBinary
                 case IonConstants.lnIsNullAtom:
                     return 0;
                 case IonConstants.lnIsVarLen:
-                    return readVarUInt7IntValue();
+                    return readVarUIntAsInt();
                 default:
                     return ln;
                 }
@@ -1184,7 +1162,7 @@ public class IonBinary
                     return 0;
                 case IonConstants.lnIsOrderedStruct:
                 case IonConstants.lnIsVarLen:
-                    return readVarUInt7IntValue();
+                    return readVarUIntAsInt();
                 default:
                     return ln;
                 }
@@ -1249,7 +1227,7 @@ public class IonBinary
             return retvalue;
         }
         */
-        public long readVarInt8LongValue(int len) throws IOException {
+        public long readIntAsLong(int len) throws IOException {
             long    retvalue = 0;
             boolean is_negative = false;
             int     b;
@@ -1300,7 +1278,7 @@ public class IonBinary
         /** @throws IOException
          * @deprecated */
         @Deprecated
-        public int readVarInt8IntValue(int len) throws IOException {
+        public int readIntAsInt(int len) throws IOException {
             int retvalue = 0;
             boolean is_negative = false;
             int b;
@@ -1339,13 +1317,13 @@ public class IonBinary
         /**
          * Reads the specified magnitude as a {@link BigInteger}.
          *
-         * @param len           The length of the UInt8 octets to read.
+         * @param len           The length of the UInt octets to read.
          * @param signum        The sign as per {@link BigInteger#BigInteger(int, byte[])}.
          * @return              The signed {@link BigInteger}.
          *
          * @throws IOException  Thrown if there are an I/O errors on the underlying stream.
          */
-        public BigInteger readVarUInt8BigIntegerValue(int len, int signum) throws IOException {
+        public BigInteger readUIntAsBigInteger(int len, int signum) throws IOException {
             byte[] magnitude = new byte[len];
             for (int i = 0; i < len; i++) {
                 int octet = read();
@@ -1359,7 +1337,7 @@ public class IonBinary
             return new BigInteger(signum, magnitude);
         }
 
-        public long readVarUInt8LongValue(int len) throws IOException {
+        public long readUIntAsLong(int len) throws IOException {
             long    retvalue = 0;
             int b;
 
@@ -1394,7 +1372,7 @@ public class IonBinary
             }
             return retvalue;
         }
-        public int readVarUInt8IntValue(int len) throws IOException {
+        public int readUIntAsInt(int len) throws IOException {
             int retvalue = 0;
             int b;
 
@@ -1417,7 +1395,7 @@ public class IonBinary
             }
             return retvalue;
         }
-        public long readVarUInt7LongValue() throws IOException {
+        public long readVarUIntAsLong() throws IOException {
             long retvalue = 0;
             int  b;
 
@@ -1434,7 +1412,7 @@ public class IonBinary
             }
             return retvalue;
         }
-        public int readVarUInt7IntValue() throws IOException {
+        public int readVarUIntAsInt() throws IOException {
             int retvalue = 0;
             int  b;
 
@@ -1464,7 +1442,7 @@ public class IonBinary
             }
             return retvalue;
         }
-        public long readVarInt7LongValue() throws IOException
+        public long readVarIntAsLong() throws IOException
         {
             long    retvalue = 0;
             boolean is_negative = false;
@@ -1505,7 +1483,7 @@ done:       for (;;) {
             }
             return retvalue;
         }
-        public int readVarInt7IntValue() throws IOException
+        public int readVarIntAsInt() throws IOException
         {
             int     retvalue = 0;
             boolean is_negative = false;
@@ -1556,7 +1534,7 @@ done:       for (;;) {
          * Reads an integer value, returning null to mean -0.
          * @throws IOException
          */
-        public Integer readVarInt7WithNegativeZero() throws IOException
+        public Integer readVarIntWithNegativeZero() throws IOException
         {
             int     retvalue = 0;
             boolean is_negative = false;
@@ -1624,7 +1602,7 @@ done:       for (;;) {
                 throw new IonException("Length of float read must be 0 or 8");
             }
 
-            long dBits = readVarUInt8LongValue(len);
+            long dBits = readUIntAsLong(len);
             return Double.longBitsToDouble(dBits);
         }
 
@@ -1648,7 +1626,7 @@ done:       for (;;) {
             else {
                 // otherwise we to it the hard way ....
                 int         startpos = this.position();
-                int         exponent = this.readVarInt7IntValue();
+                int         exponent = this.readVarIntAsInt();
                 int         bitlen = len - (this.position() - startpos);
 
                 BigInteger value;
@@ -1704,32 +1682,32 @@ done:       for (;;) {
 
             // first up is the offset, which requires a special int reader
             // to return the -0 as a null Integer
-            offset = this.readVarInt7WithNegativeZero();
+            offset = this.readVarIntWithNegativeZero();
 
             // now we'll read the struct values from the input stream
             assert position() < end;
             if (position() < end) {  // FIXME remove
                 // year is from 0001 to 9999
                 // or 0x1 to 0x270F or 14 bits - 1 or 2 bytes
-            	year  = readVarUInt7IntValue();
+            	year  = readVarUIntAsInt();
                 p = Precision.YEAR; // our lowest significant option
 
             	if (position() < end) {
-	            	month = readVarUInt7IntValue();
+	            	month = readVarUIntAsInt();
 	                p = Precision.MONTH; // our lowest significant option
 
 	            	if (position() < end) {
-	            	day   = readVarUInt7IntValue();
+	            	day   = readVarUIntAsInt();
 	                p = Precision.DAY; // our lowest significant option
 
 	                // now we look for hours and minutes
 	                if (position() < end) {
-	                    hour   = readVarUInt7IntValue();
-	                    minute = readVarUInt7IntValue();
+	                    hour   = readVarUIntAsInt();
+	                    minute = readVarUIntAsInt();
 	                    p = Precision.MINUTE;
 
 	                    if (position() < end) {
-	                        second = readVarUInt7IntValue();
+	                        second = readVarUIntAsInt();
 	                        p = Precision.SECOND;
 
 	                        remaining = end - position();
@@ -1860,7 +1838,7 @@ done:       for (;;) {
                 return null;
             }
             else if (len == IonConstants.lnIsVarLen) {
-                len = this.readVarUInt7IntValue();
+                len = this.readVarUIntAsInt();
             }
             return readString(len);
         }
@@ -1996,7 +1974,7 @@ done:       for (;;) {
 
            // This is the length of the length (it does NOT
            // count the typedesc byte however)
-           int len_o_len = IonBinary.lenVarUInt7(writtenValueLen);
+           int len_o_len = IonBinary.lenVarUInt(writtenValueLen);
 
            // TODO cleanup this logic.  lengthFollows == is struct
            if (n._length_follows) {
@@ -2044,7 +2022,7 @@ done:       for (;;) {
            // replacement type descriptor and the length and the reset the pos
            this.writeByte(IonConstants.makeTypeDescriptor(hn, lownibble));
            if (len_o_len > 0) {
-               this.writeVarUInt7Value(writtenValueLen, true);
+               this.writeVarUIntValue(writtenValueLen, true);
            }
 
            if (needed < 0) {
@@ -2347,15 +2325,15 @@ done:       for (;;) {
             }
             return len;
         }
-        public int writeVarUInt7Value(int value, int fixed_size) throws IOException
+        public int writeVarUIntValue(int value, int fixed_size) throws IOException
         {
             int mask = 0x7F;
-            int len = lenVarUInt7(value);
+            int len = lenVarUInt(value);
 
             if (fixed_size > 0) {
                 if (fixed_size < len) {
                     throwException(
-                             "VarUInt7 overflow, fixed size ("
+                             "VarUInt overflow, fixed size ("
                             +fixed_size
                             +") too small for value ("
                             +value
@@ -2375,10 +2353,10 @@ done:       for (;;) {
             }
             return len;
         }
-        public int writeVarUInt7Value(int value, boolean force_zero_write) throws IOException
+        public int writeVarUIntValue(int value, boolean force_zero_write) throws IOException
         {
             int mask = 0x7F;
-            int len = lenVarUInt7(value);
+            int len = lenVarUInt(value);
 
             switch (len - 1) {
             case 4: write((byte)((value >> (7*4)) & mask));
@@ -2402,7 +2380,7 @@ done:       for (;;) {
          * Note that this will write from the lowest to highest
          * order bits in the long value given.
          */
-        public int writeVarUInt8Value(long value, int len) throws IOException
+        public int writeUIntValue(long value, int len) throws IOException
         {
             long mask = 0xffL;
 
@@ -2427,7 +2405,7 @@ done:       for (;;) {
          * Note that this will write from the lowest to highest
          * order bits in the long value given.
          */
-        public int writeVarUInt8Value(BigInteger value, int len) throws IOException
+        public int writeUIntValue(BigInteger value, int len) throws IOException
         {
             int returnlen = 0;
             int signum = value.signum();
@@ -2441,7 +2419,7 @@ done:       for (;;) {
             }
             else if (value.compareTo(MAX_LONG_VALUE) == -1) {
                 long lvalue = value.longValue();
-                returnlen = writeVarUInt8Value(lvalue, len);
+                returnlen = writeUIntValue(lvalue, len);
             }
             else {
                 assert(signum > 0);
@@ -2461,7 +2439,7 @@ done:       for (;;) {
         }
 
 
-        public int writeVarInt7Value(int value, boolean force_zero_write) throws IOException
+        public int writeVarIntValue(int value, boolean force_zero_write) throws IOException
         {
             int len = 0;
 
@@ -2469,7 +2447,7 @@ done:       for (;;) {
                 int mask = 0x7F;
                 boolean is_negative = false;
 
-                len = lenVarInt7(value);
+                len = lenVarInt(value);
                 if (is_negative = (value < 0)) {
                     value = -value;
                 }
@@ -2496,7 +2474,7 @@ done:       for (;;) {
             }
             return len;
         }
-        public int writeVarInt7Value(long value, boolean force_zero_write) throws IOException
+        public int writeVarIntValue(long value, boolean force_zero_write) throws IOException
         {
             int len = 0;
 
@@ -2504,7 +2482,7 @@ done:       for (;;) {
                 long mask = 0x7fL;
                 boolean is_negative = false;
 
-                len = lenVarInt8(value);
+                len = lenInt(value);
                 if (is_negative = (value < 0)) {
                     // note that for Long.MIN_VALUE (0x8000000000000000) the negative
                     //      is the same, but that's also the bit pattern we need to
@@ -2540,7 +2518,7 @@ done:       for (;;) {
 
             return len;
         }
-        public int writeVarInt8Value(long value) throws IOException {
+        public int writeIntValue(long value) throws IOException {
             int  len = 0;
 
             // figure out how many we have bytes we have to write out
@@ -2548,7 +2526,7 @@ done:       for (;;) {
                 long mask = 0xffL;
                 boolean is_negative = (value < 0);
 
-                len = lenVarInt8(value) - 1;
+                len = lenInt(value) - 1;
                 if (is_negative) {
                     // we just let MIN_VALUE wrap back to itself
                     value = -value;
@@ -2590,7 +2568,7 @@ done:       for (;;) {
             // TODO write "custom" serialization or verify that
             //      the java routine is doing the right thing
             long dBits = Double.doubleToRawLongBits(d);
-            return writeVarUInt8Value(dBits, _ib_FLOAT64_LEN);
+            return writeUIntValue(dBits, _ib_FLOAT64_LEN);
         }
         public int writeUnicodeScalarAsUTF8(int c) throws IOException
         {
@@ -2702,16 +2680,16 @@ done:       for (;;) {
             int annotationLen = 0;
             for (int ii=0; ii<annotations.length; ii++) {
                 symbols[ii] = symbolTable.findSymbol(annotations[ii]);
-                annotationLen += IonBinary.lenVarUInt7(symbols[ii]);
+                annotationLen += IonBinary.lenVarUInt(symbols[ii]);
             }
 
             // write the len of the list
-            this.writeVarUInt7Value(annotationLen, true);
+            this.writeVarUIntValue(annotationLen, true);
 
             // write the symbol id's
             for (int ii=0; ii<annotations.length; ii++) {
                 symbols[ii] = symbolTable.findSymbol(annotations[ii]);
-                this.writeVarUInt7Value(symbols[ii], true);
+                this.writeVarUIntValue(symbols[ii], true);
             }
 
             return this.position() - startPosition;
@@ -2724,15 +2702,15 @@ done:       for (;;) {
 
             int annotationLen = 0;
             for (Integer ii : annotations) {
-                annotationLen += IonBinary.lenVarUInt7(ii.intValue());
+                annotationLen += IonBinary.lenVarUInt(ii.intValue());
             }
 
             // write the len of the list
-            this.writeVarUInt7Value(annotationLen, true);
+            this.writeVarUIntValue(annotationLen, true);
 
             // write the symbol id's
             for (Integer ii : annotations) {
-                this.writeVarUInt7Value(ii.intValue(), true);
+                this.writeVarUIntValue(ii.intValue(), true);
             }
 
             return this.position() - startPosition;
@@ -2760,7 +2738,7 @@ done:       for (;;) {
             }
             else {
                 returnlen += writeByte(IonConstants.makeTypeDescriptor(hn, IonConstants.lnIsVarLen));
-                returnlen += writeVarUInt7Value(len, false);
+                returnlen += writeVarUIntValue(len, false);
             }
             return returnlen;
         }
@@ -2782,12 +2760,12 @@ done:       for (;;) {
             // was: int sid = symtab.addSymbol(s);
             assert sid > 0;
 
-            int vlen = lenVarUInt8(sid);
+            int vlen = lenUInt(sid);
             int len = this.writeCommonHeader(
                                  IonConstants.tidSymbol
                                 ,vlen
                            );
-            len += this.writeVarUInt8Value(sid, vlen);
+            len += this.writeUIntValue(sid, vlen);
 
             return len;
         }
@@ -2902,28 +2880,28 @@ done:       for (;;) {
                 returnlen ++;
         	}
         	else {
-        		returnlen += this.writeVarInt7Value(offset.intValue(), true);
+        		returnlen += this.writeVarIntValue(offset.intValue(), true);
         	}
 
         	// now the date - year, month, day as varUint7's
         	// if we have a non-null value we have at least the date
         	if (precisionIncludes(precision_flags, Precision.YEAR)) {
-        		returnlen += this.writeVarUInt7Value(di.getZYear(), true);
+        		returnlen += this.writeVarUIntValue(di.getZYear(), true);
         	}
         	if (precisionIncludes(precision_flags, Precision.MONTH)) {
-        		returnlen += this.writeVarUInt7Value(di.getZMonth(), true);
+        		returnlen += this.writeVarUIntValue(di.getZMonth(), true);
         	}
         	if (precisionIncludes(precision_flags, Precision.DAY)) {
-        		returnlen += this.writeVarUInt7Value(di.getZDay(), true);
+        		returnlen += this.writeVarUIntValue(di.getZDay(), true);
         	}
 
         	// now the time portion
         	if (precisionIncludes(precision_flags, Precision.MINUTE)) {
-        		returnlen += this.writeVarUInt7Value(di.getZHour(), true);
-        		returnlen += this.writeVarUInt7Value(di.getZMinute(), true);
+        		returnlen += this.writeVarUIntValue(di.getZHour(), true);
+        		returnlen += this.writeVarUIntValue(di.getZMinute(), true);
         	}
         	if (precisionIncludes(precision_flags, Precision.SECOND)) {
-        		returnlen += this.writeVarUInt7Value(di.getZSecond(), true);
+        		returnlen += this.writeVarUIntValue(di.getZSecond(), true);
         	}
         	if (precisionIncludes(precision_flags, Precision.FRACTION)) {
                 // and, finally, any fractional component that is known
@@ -2965,7 +2943,7 @@ done:       for (;;) {
                 					, IonConstants.lnIsVarLen
                 			)
                       	);
-                	this.writeVarInt7Value(len, false);
+                	this.writeVarIntValue(len, false);
                 }
                 int wroteDecimalLen = writeDecimalContent(bd, false);
                 assert wroteDecimalLen == len;
@@ -2992,18 +2970,19 @@ done:       for (;;) {
             // otherwise we do it the hard way ....
             BigInteger mantissa = bd.unscaledValue();
 
-            byte[] bits;
+            byte[] mantissaBits;
             boolean isNegative;
             boolean needExtraByteForSign;
             switch (mantissa.signum()) {
             default:
             	throw new IllegalStateException("mantissa signum out of range");
             case 0:
+                // FIXME ION-105 (?) Why does forceContent imply negative zero?
                 if (forceContent || Decimal.isNegativeZero(bd)) {
-                    bits = negativeZeroBitArray;
+                    mantissaBits = negativeZeroBitArray;
             	}
             	else {
-            	    bits = positiveZeroBitArray;
+            	    mantissaBits = positiveZeroBitArray;
             	}
             	// NOTE: we're lieing about this, since the negative zero bit
             	// array has the sign bit set already
@@ -3011,13 +2990,13 @@ done:       for (;;) {
             	needExtraByteForSign = false;
             	break;
             case -1:
-            	bits = mantissa.negate().toByteArray();
-            	needExtraByteForSign = ((bits[0] & 0x80) != 0);
+            	mantissaBits = mantissa.negate().toByteArray();
+            	needExtraByteForSign = ((mantissaBits[0] & 0x80) != 0);
             	isNegative = true;
             	break;
             case 1:
-            	bits = mantissa.toByteArray();
-            	needExtraByteForSign = ((bits[0] & 0x80) != 0);
+            	mantissaBits = mantissa.toByteArray();
+            	needExtraByteForSign = ((mantissaBits[0] & 0x80) != 0);
             	isNegative = false;
             	break;
             }
@@ -3025,7 +3004,7 @@ done:       for (;;) {
 
             // Ion stores exponent, BigDecimal uses the negation "scale"
             int exponent = -bd.scale();
-            returnlen += this.writeVarInt7Value(exponent, true);
+            returnlen += this.writeVarIntValue(exponent, true);
 
             // If the first bit is set, we can't use it for the sign,
             // and we need to write an extra byte to hold it.
@@ -3037,10 +3016,10 @@ done:       for (;;) {
             else if (isNegative) {
             	// note that bits must always have at least 1 byte for negative values
             	// since negative zero is handled specially
-            	bits[0] |= 0x80;
+            	mantissaBits[0] |= 0x80;
             }
-            this.write(bits, 0, bits.length);
-            returnlen += bits.length;
+            this.write(mantissaBits, 0, mantissaBits.length);
+            returnlen += mantissaBits.length;
 
             return returnlen;
         }

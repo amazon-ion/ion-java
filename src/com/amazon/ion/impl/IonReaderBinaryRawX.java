@@ -483,7 +483,7 @@ _position_start = start_of_tid;   // FIXME: for repositionable reader
             t = null;  // we don't know yet
             break;
         default:
-            throw new IonException("unrecognized value type encountered: "+tid);
+            throw newErrorAt("unrecognized value type encountered: "+tid);
         }
         return t;
     }
@@ -1082,7 +1082,7 @@ done:   for (;;) {
         _local_remaining = len;
         // first up is the offset, which requires a special int reader
         // to return the -0 as a null Integer
-        offset = readVarInteger(); // this.readVarInt7WithNegativeZero();
+        offset = readVarInteger();
         // now we'll read the struct values from the input stream
         if (_local_remaining > 0) {  // FIXME remove
             // year is from 0001 to 9999
