@@ -172,13 +172,13 @@ public class IonReaderTextUserX
     @Override
     public int getFieldId()
     {
-        if (!isInStruct()) {
-            // TODO: should this be return IllegalStateException ?
+        String fieldname = getFieldName();
+        if (fieldname == null) {
             return SymbolTable.UNKNOWN_SYMBOL_ID;
         }
-        String      fieldname = getFieldName();
-        SymbolTable symbols   = getSymbolTable();
-        int         id        = symbols.findSymbol(fieldname);
+
+        SymbolTable symbols = getSymbolTable();
+        int         id      = symbols.findSymbol(fieldname);
         return id;
     }
 

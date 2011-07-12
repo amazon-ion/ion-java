@@ -8,6 +8,7 @@ import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
 
 import com.amazon.ion.impl.IonImplUtils;
 import java.util.Date;
+import java.util.Iterator;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -196,11 +197,55 @@ public abstract class ReaderSystemProcessingTestCase
         assertEquals("next() at eof", null, myReader.next());
     }
 
-    protected void badNext()
+    private void checkNoCurrentValue()
     {
-        assertEquals("result from IonReader.next()", null, myReader.next());
+        IonReader r = myReader;
+
+        assertEquals(null, r.getType());
+
+        assertEquals(null, r.getFieldName());
+        assertTrue(r.getFieldId() < 0);
+
+        // TODO ION-213 Text reader doesn't throw, but others do.
+        try {
+            String[] ann = r.getTypeAnnotations();
+            assertEquals(0, ann.length);
+//            fail("expected exception");
+        }
+        catch (IllegalStateException e) { }
+
+        try {
+            Iterator<String> ann = r.iterateTypeAnnotations();
+            assertEquals(false, ann.hasNext());
+//            fail("expected exception");
+        }
+        catch (IllegalStateException e) { }
+
+        try {
+            int[] ann = r.getTypeAnnotationIds();
+            assertEquals(0, ann.length);
+//            fail("expected exception");
+        }
+        catch (IllegalStateException e) { }
+
+        try {
+            Iterator<Integer> ann = r.iterateTypeAnnotationIds();
+            assertEquals(false, ann.hasNext());
+//            fail("expected exception");
+        }
+        catch (IllegalStateException e) { }
     }
 
+    private void checkNoNextValue()
+    {
+        assertFalse(myReader.hasNext());
+        assertFalse(myReader.hasNext());
+        assertEquals(null, myReader.next());
+        checkNoCurrentValue();
+        assertEquals(null, myReader.next());
+        assertFalse(myReader.hasNext());
+        assertEquals(null, myReader.next());
+    }
 
     //=========================================================================
 
@@ -228,18 +273,18 @@ public abstract class ReaderSystemProcessingTestCase
         startIteration(text);
         myReader.next();
         myReader.stepIn();
-        badNext();
+        checkNoNextValue();
         myReader.stepOut();
-        badNext();
+        checkNoNextValue();
 
         text = "[1]";
         startIteration(text);
         myReader.next();
         myReader.stepIn();
         myReader.next();
-        badNext();
+        checkNoNextValue();
         myReader.stepOut();
-        badNext();
+        checkNoNextValue();
     }
 
 
@@ -280,7 +325,7 @@ public abstract class ReaderSystemProcessingTestCase
                 assertFalse(myReader.isInStruct());
                 assertEquals(2, myReader.getDepth());
 
-                assertFalse(myReader.hasNext());
+                checkNoNextValue();
                 assertFalse(myReader.isInStruct());
                 assertEquals(2, myReader.getDepth());
 
@@ -290,7 +335,7 @@ public abstract class ReaderSystemProcessingTestCase
             }
             myReader.stepOut();
 
-            assertFalse(myReader.hasNext());
+            checkNoNextValue();
             assertTrue(myReader.isInStruct());
             assertEquals(1, myReader.getDepth());
 
@@ -303,7 +348,7 @@ public abstract class ReaderSystemProcessingTestCase
         assertFalse(myReader.isInStruct());
         assertEquals(0, myReader.getDepth());
 
-        assertFalse(myReader.hasNext());
+        checkNoNextValue();
         assertFalse(myReader.isInStruct());
         assertEquals(0, myReader.getDepth());
 
@@ -382,38 +427,28 @@ public abstract class ReaderSystemProcessingTestCase
                                 {
                                     reader.next();
                                     assertEquals("12.5", reader.stringValue());
-                                    assertFalse(reader.hasNext());
-                                    assertNull(reader.next());
+                                    checkNoNextValue();
                                 }
                                 reader.stepOut();
-                                assertFalse(reader.hasNext());
-                                assertNull(reader.next());
+                                checkNoNextValue();
                             }
                             reader.stepOut();
-                            assertFalse(reader.hasNext());
-                            IonType t = reader.next();
-                            assertNull("reader should not find a value", t);
-                            assertFalse(reader.hasNext());
+                            checkNoNextValue();
                         }
                         reader.stepOut();
-                        assertFalse(reader.hasNext());
-                        assertNull(reader.next());
+                        checkNoNextValue();
                     }
-                    reader.stepOut(); //
-                    assertFalse(reader.hasNext());
-                    assertNull(reader.next());
+                    reader.stepOut();
+                    checkNoNextValue();
                 }
                 reader.stepOut();
-                assertFalse(reader.hasNext());
-                assertNull(reader.next());
+                checkNoNextValue();
             }
             reader.stepOut();
-            assertFalse(reader.hasNext());
-            assertNull(reader.next());
+            checkNoNextValue();
         }
         reader.stepOut();
-        assertFalse(reader.hasNext());
-        assertNull(reader.next());
+        checkNoNextValue();
         assertEquals(0, reader.getDepth());
         try {
             reader.stepOut();
@@ -440,10 +475,10 @@ public abstract class ReaderSystemProcessingTestCase
         r.next();
         assertEquals("b", r.getFieldName());
         r.stepOut(); // skip c
+        checkNoCurrentValue();
         r.next();
         assertEquals("d", r.getFieldName());
     }
-
 
 
     /** Trap for ION-201 */
@@ -489,8 +524,8 @@ public abstract class ReaderSystemProcessingTestCase
         r.stepIn();
         r.next();
         assertEquals("X", r.getFieldName());
-        assertEquals(null, r.next());
+        checkNoNextValue();
         r.stepOut();
-        assertEquals(null, r.next());
+        checkNoNextValue();
     }
 }

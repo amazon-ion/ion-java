@@ -36,6 +36,7 @@ class IonReaderTreeUserX
     public IonType next()
     {
         if (!next_helper_user()) {
+            this._curr = null;
             return null;
         }
         this._curr = this._next;
