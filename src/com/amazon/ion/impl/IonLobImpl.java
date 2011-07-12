@@ -201,7 +201,7 @@ public abstract class IonLobImpl
             _isNullValue(false);
             break;
         case IonConstants.lnIsVarLen:
-            ln = reader.readVarUInt7IntValue();
+            ln = reader.readVarUIntAsInt();
             // fall through to default:
         default:
             _lob_value = new byte[ln];

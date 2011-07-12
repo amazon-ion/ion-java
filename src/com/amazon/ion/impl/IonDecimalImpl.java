@@ -290,7 +290,7 @@ public final class IonDecimalImpl
             _decimal_value = Decimal.ZERO;
             break;
         case IonConstants.lnIsVarLen:
-            ln = reader.readVarUInt7IntValue();
+            ln = reader.readVarUIntAsInt();
             // fall through to default:
         default:
             setValue(reader.readDecimalValue(ln));

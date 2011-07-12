@@ -338,7 +338,7 @@ public class SystemValueIteratorImpl
             if (ln == IonConstants.lnIsVarLen) {
                 // we need to count the length of the variable int len field too
                 // fixed ion binary reader bug manifesting in good/submission.10n
-                len += IonBinary.lenVarUInt7(len);
+                len += IonBinary.lenVarUInt(len);
             }
             len += 1; // add in the type desc byte length
         }

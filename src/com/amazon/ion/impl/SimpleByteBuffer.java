@@ -504,7 +504,7 @@ done:       for (;;) {
 
             // first up is the offset, which requires a special int reader
             // to return the -0 as a null Integer
-            offset = this.readVarInteger(); // this.readVarInt7WithNegativeZero();
+            offset = this.readVarInteger();
 
             // now we'll read the struct values from the input stream
             assert position() < end;
@@ -941,7 +941,7 @@ done:       for (;;) {
             if (valueLength >= IonConstants.lnIsVarLen) {
                 td |= IonConstants.lnIsVarLen;
                 writeTypeDesc(td);
-                int lenOfLength = IonBinary.lenVarUInt7(valueLength);
+                int lenOfLength = IonBinary.lenVarUInt(valueLength);
                 written_len += writeVarUInt(valueLength, lenOfLength, true);
             }
             else {
@@ -959,7 +959,7 @@ done:       for (;;) {
                 int mask = 0x7F;
                 boolean is_negative = false;
 
-                assert len == IonBinary.lenVarInt7(value);
+                assert len == IonBinary.lenVarInt(value);
                 if (is_negative = (value < 0)) {
                     value = -value;
                 }
@@ -995,7 +995,7 @@ done:       for (;;) {
 
         public int writeVarInt(int value, boolean force_zero_write)
         {
-            int len = IonBinary.lenVarInt7(value);
+            int len = IonBinary.lenVarInt(value);
             len = writeVarInt(value, len, force_zero_write);
             return len;
         }
@@ -1006,7 +1006,7 @@ done:       for (;;) {
             if (value < 0) {
                 throw new IllegalArgumentException("signed int where unsigned (>= 0) was expected");
             }
-            assert len == IonBinary.lenVarUInt7(value);
+            assert len == IonBinary.lenVarUInt(value);
 
             switch (len - 1) {
             case 4: write((byte)((value >> (7*4)) & mask));
@@ -1027,7 +1027,7 @@ done:       for (;;) {
 
         public int writeVarUInt(int value, boolean force_zero_write)
         {
-            int len = IonBinary.lenVarUInt7(value);
+            int len = IonBinary.lenVarUInt(value);
             len = writeVarUInt(value, len, force_zero_write);
             return len;
         }
@@ -1080,7 +1080,7 @@ done:       for (;;) {
 
             if (value != 0) {
                 long mask = 0x7fL;
-                assert len == IonBinary.lenVarInt8(value);
+                assert len == IonBinary.lenInt(value);
                 int b;
                 if (value < 0) {
                     value = -value;
@@ -1137,7 +1137,7 @@ done:       for (;;) {
         public int writeVarUInt(long value, int len, boolean force_zero_write)
         {
             int mask = 0x7F;
-            assert len == IonBinary.lenVarUInt7(value);
+            assert len == IonBinary.lenVarUInt(value);
             assert value > 0;
 
             switch (len - 1) {
@@ -1224,10 +1224,10 @@ done:       for (;;) {
                 // Ion stores exponent, BigDecimal uses the negation "scale"
                 int exponent = -scale;
                 if (userWriter != null) {
-                    returnlen += userWriter.writeIonInt(exponent, IonBinary.lenVarUInt7(exponent));
+                    returnlen += userWriter.writeIonInt(exponent, IonBinary.lenVarUInt(exponent));
                 }
                 else {
-                    returnlen += this.writeIonInt(exponent, IonBinary.lenVarUInt7(exponent));
+                    returnlen += this.writeIonInt(exponent, IonBinary.lenVarUInt(exponent));
                 }
 
                 // If the first bit is set, we can't use it for the sign,

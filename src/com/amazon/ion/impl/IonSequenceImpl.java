@@ -411,7 +411,7 @@ public abstract class IonSequenceImpl
         {
             if (vlen >= IonConstants.lnIsVarLen)
             {
-                writer.writeVarUInt7Value(vlen, true);
+                writer.writeVarUIntValue(vlen, true);
                 // Fall through...
             }
 

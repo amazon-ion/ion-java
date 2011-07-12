@@ -1100,7 +1100,7 @@ public abstract class IonValueImpl
             }
             else {
                 // read past the annotation list
-                int annotationListLength = valueReader.readVarUInt7IntValue();
+                int annotationListLength = valueReader.readVarUIntAsInt();
                 assert annotationListLength > 0;  // TODO throw if bad
                 this._value_td_start = valueReader.position() + annotationListLength;
                 valueReader.setPosition(this._value_td_start);
@@ -1113,7 +1113,7 @@ public abstract class IonValueImpl
                     || (this._type_desc == IonStructImpl.ORDERED_STRUCT_TYPEDESC))
                 {
                     // Skip over the extended length to find the content start.
-                    valueReader.readVarUInt7IntValue();
+                    valueReader.readVarUIntAsInt();
                 }
                 this._value_content_start = valueReader.position();
             }
@@ -1145,7 +1145,7 @@ public abstract class IonValueImpl
     }
     public final int pos_getFieldIdLen()
     {
-        return IonBinary.lenVarUInt7(_fieldSid);
+        return IonBinary.lenVarUInt(_fieldSid);
     }
     public final void pos_setFieldId(int fieldNameSid)
     {
@@ -1176,7 +1176,7 @@ public abstract class IonValueImpl
     }
     public final boolean pos_isAnnotated()
     {
-        return (this._entry_start + IonBinary.lenVarUInt7(this._fieldSid) != this._value_td_start);
+        return (this._entry_start + IonBinary.lenVarUInt(this._fieldSid) != this._value_td_start);
     }
     public final int pos_getOffsetAtAnnotationTD()
     {
@@ -1328,7 +1328,7 @@ public abstract class IonValueImpl
         }
         if (IonConstants.getLowNibble(td) == IonConstants.lnIsVarLen) {
             // skip past the overall length, which we don't care about here
-            reader.readVarInt7IntValue();
+            reader.readVarIntAsInt();
         }
 
         // now we load the annotation SID list from the buffer
@@ -1512,17 +1512,17 @@ public abstract class IonValueImpl
             if (symId <= 0) {
                 throw new IllegalStateException("the annotation must be in the symbol table");
             }
-            int vlen = IonBinary.lenVarUInt7(symId);
+            int vlen = IonBinary.lenVarUInt(symId);
             len += vlen;
         }
         // then add the length of the symbol list which will preceed the symbols
-        len += IonBinary.lenVarUInt7(len);
+        len += IonBinary.lenVarUInt(len);
 
         return len;
     }
 
     /**
-     * Gets the size of the encoded field name (a single VarUInt7).
+     * Gets the size of the encoded field name (a single VarUInt).
      * @return the size, or zero if there's no field name.
      */
     public int getFieldNameOverheadLength()
@@ -1541,7 +1541,7 @@ public abstract class IonValueImpl
         }
 
         if (this._fieldSid > 0) {
-            len = IonBinary.lenVarUInt7(this._fieldSid);
+            len = IonBinary.lenVarUInt(this._fieldSid);
             assert len > 0;
         }
 
@@ -1651,7 +1651,7 @@ public abstract class IonValueImpl
             if (newFieldSid < 1) {
                 newFieldSid = this.addSymbol(_fieldName);
             }
-            fieldSidLen  = IonBinary.lenVarUInt7(newFieldSid);
+            fieldSidLen  = IonBinary.lenVarUInt(newFieldSid);
         }
 
         int valuelen      = this.getNakedValueLength();
@@ -1919,7 +1919,7 @@ public abstract class IonValueImpl
             assert fieldSid > 0;
             assert writer.position() == this.pos_getOffsetAtFieldId();
 
-            writer.writeVarUInt7Value(fieldSid, true);
+            writer.writeVarUIntValue(fieldSid, true);
         }
     }
 
@@ -1978,7 +1978,7 @@ public abstract class IonValueImpl
                 // we don't need to do anything here
                 break;
             case IonConstants.lnIsVarLen:
-                writer.writeVarUInt7Value(vlen, true);
+                writer.writeVarUIntValue(vlen, true);
             default:
                 this.doWriteNakedValue(writer, vlen);
                 break;
