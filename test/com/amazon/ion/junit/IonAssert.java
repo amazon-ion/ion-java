@@ -202,7 +202,7 @@ public class IonAssert
                 : expectedFields.entrySet())
         {
             String fieldName = expectedEntry.getKey();
-            String fieldPath = path + printSymbol(fieldName);
+            String fieldPath = path + '.' + printSymbol(fieldName);
 
             List<IonValue> actualList = actualFields.get(fieldName);
             if (actualList == null)
@@ -245,8 +245,9 @@ public class IonAssert
         if (expectedFieldValues.size() == 1 && actualFieldValues.size() == 1)
         {
             // Easy squeezy
-            assertIonEquals(expectedFieldValues.get(0),
-                            actualFieldValues.get(0));
+            doAssertIonEquals(path,
+                              expectedFieldValues.get(0),
+                              actualFieldValues.get(0));
         }
         else
         {

@@ -348,13 +348,13 @@ public final class IonIntImpl
             // no-op, we're already zeroed
             break;
         case IonConstants.lnIsVarLen:
-            ln = reader.readVarUInt7IntValue();
+            ln = reader.readVarUIntAsInt();
             // fall through to default:
         default:
             int signum = type == IonConstants.tidNegInt ? -1 : 1;
             if (ln <= 8)
             {
-                long val = reader.readVarUInt8LongValue(ln);
+                long val = reader.readUIntAsLong(ln);
                 if (val < 0)
                 {
                     // we really can't fit this magnitude properly into a Java long
@@ -370,7 +370,7 @@ public final class IonIntImpl
             }
             else
             {
-                _big_int_value = reader.readVarUInt8BigIntegerValue(ln, signum);
+                _big_int_value = reader.readUIntAsBigInteger(ln, signum);
 
             }
             break;
@@ -394,18 +394,18 @@ public final class IonIntImpl
             {
                 big = _big_int_value.negate();
             }
-            wlen = writer.writeVarUInt8Value(big, valueLen);
+            wlen = writer.writeUIntValue(big, valueLen);
         }
         else if (_long_value == Long.MIN_VALUE)
         {
             // Long.MIN_VALUE is a bit special since we can't negate it (overflow truncation)
-            wlen = writer.writeVarUInt8Value(LONG_ABS_MIN_VALUE, valueLen);
+            wlen = writer.writeUIntValue(LONG_ABS_MIN_VALUE, valueLen);
         }
         else
         {
             // emit the native long
             long l = (_long_value < 0) ? -_long_value : _long_value;
-            wlen = writer.writeVarUInt8Value(l, valueLen);
+            wlen = writer.writeUIntValue(l, valueLen);
         }
         assert wlen == valueLen;
     }

@@ -80,9 +80,8 @@ public class IonTokenConstsX
     public static final int KEYWORD_SEXP      = 14;
     public static final int KEYWORD_STRUCT    = 15;
     public static final int KEYWORD_NAN       = 16;
-    public static final int KEYWORD_INF       = 17;
-    public static final int KEYWORD_PLUS_INF  = 18;
-    public static final int KEYWORD_MINUS_INF = 19;
+    public static final int KEYWORD_PLUS_INF  = 17;
+    public static final int KEYWORD_MINUS_INF = 18;
 
     public final static String getTokenName(int t) {
         switch (t) {
@@ -547,9 +546,6 @@ public class IonTokenConstsX
                 if (word.charAt(start_word+1) == 'n') {
                     if (word.charAt(start_word+2) == 't') {
                         return KEYWORD_INT;
-                    }
-                    else if (word.charAt(start_word+2) == 'f') {
-                        return KEYWORD_INF;
                     }
                 }
             }

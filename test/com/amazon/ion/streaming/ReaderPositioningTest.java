@@ -9,7 +9,6 @@ import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.impl.IonReaderBinaryWithPosition_test;
 import com.amazon.ion.junit.IonAssert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -119,29 +118,37 @@ public class ReaderPositioningTest
         assertEquals(null, in.next());
     }
 
+    // TODO test annotations
 
-    @Test @Ignore // TODO this throws assertion failure
+    @Test(expected=IllegalStateException.class)
     public void testGetPosBeforeFirstTopLevel()
     {
         IonReaderBinaryWithPosition_test in = read("foo");
         IonReaderPosition pos = in.getCurrentPosition();
     }
 
-    @Test  // TODO similar for list/sexp
+    @Test(expected=IllegalStateException.class)  // TODO similar for list/sexp
     public void testGetPosBeforeFirstStructChild()
     {
         IonReaderBinaryWithPosition_test in = read("{f:v}");
         in.next();
         in.stepIn();
-        IonReaderPosition pos = in.getCurrentPosition();
-        in.stepOut();
-        in.seek(pos);
-        // TODO what state should we be in?
+        in.getCurrentPosition();
+    }
+
+    @Test(expected=IllegalStateException.class)  // TODO similar for list/sexp
+    public void testGetPosAfterLastStructChild()
+    {
+        IonReaderBinaryWithPosition_test in = read("{f:v}");
         in.next();
+        in.stepIn();
+        in.next();
+        in.next();
+        in.getCurrentPosition();
     }
 
 
-    @Test
+    @Test(expected=IllegalStateException.class)
     public void testGetPosAtEndOfStream()
     {
         IonReaderBinaryWithPosition_test in = read("foo");

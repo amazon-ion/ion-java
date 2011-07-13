@@ -3,6 +3,7 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_ITERATOR;
+import static com.amazon.ion.impl.IonImplUtils.readFully;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBool;
@@ -70,20 +71,20 @@ class IonReaderTreeSystem
         _curr = null;
         _eof = false;
         _top = 0;
-        if (value instanceof IonDatagram) {
-            // datagrams interacting with these readers must be
-            // IonContainerPrivate containers
-            assert(value instanceof IonContainerPrivate);
-            IonDatagram dg = (IonDatagram) value;
-            _parent = dg;
+            if (value instanceof IonDatagram) {
+                // datagrams interacting with these readers must be
+                // IonContainerPrivate containers
+                assert(value instanceof IonContainerPrivate);
+                IonDatagram dg = (IonDatagram) value;
+                _parent = dg;
             _next = null;
-            _iter = dg.systemIterator(); // we want a system reader not: new Children(dg);
-        }
-        else {
+                _iter = dg.systemIterator(); // we want a system reader not: new Children(dg);
+            }
+            else {
             _parent = null;
-            _next = value;
+                _next = value;
+            }
         }
-    }
 
     public void close()
     {
@@ -173,6 +174,7 @@ class IonReaderTreeSystem
             throw new IllegalStateException(IonMessages.CANNOT_STEP_OUT);
         }
         pop();
+        _curr = null;
     }
 
     public int getDepth() {
@@ -429,7 +431,7 @@ class IonReaderTreeSystem
             InputStream is = lob.newInputStream();
             int retlen;
             try {
-                retlen = is.read(buffer, 0, loblen);
+                retlen = readFully(is, buffer, 0, loblen);
                 is.close();
             }
             catch (IOException e) {
@@ -452,7 +454,7 @@ class IonReaderTreeSystem
             InputStream is = lob.newInputStream();
             int retlen;
             try {
-                retlen = is.read(buffer, offset, loblen);
+                retlen = readFully(is, buffer, 0, loblen);
                 is.close();
             }
             catch (IOException e) {

@@ -355,7 +355,7 @@ public final class IonTimestampImpl
             _isNullValue(false);
             break;
         case IonConstants.lnIsVarLen:
-            ln = reader.readVarUInt7IntValue();
+            ln = reader.readVarUIntAsInt();
             // fall through to default:
         default:
             _timestamp_value = reader.readTimestampValue(ln);

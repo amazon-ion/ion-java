@@ -626,7 +626,6 @@ static class FromByteArray extends UnifiedInputStreamX
         {
             super.close();
             _stream.close();
-            _buffer.clear();
         }
     }
 }

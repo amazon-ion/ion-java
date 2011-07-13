@@ -490,7 +490,7 @@ public final class IonStructImpl
 
         if (_isOrdered || contentLength >= IonConstants.lnIsVarLen)
         {
-            len += IonBinary.lenVarUInt7(contentLength);
+            len += IonBinary.lenVarUInt(contentLength);
         }
 
         return len;
@@ -532,7 +532,7 @@ public final class IonStructImpl
 
             if (_isOrdered || vlen >= IonConstants.lnIsVarLen)
             {
-                writer.writeVarUInt7Value(vlen, true);
+                writer.writeVarUIntValue(vlen, true);
             }
 
             cumulativePositionDelta =
@@ -562,7 +562,7 @@ public final class IonStructImpl
 
         while (pos < end) {
             reader.setPosition(pos);
-            int sid = reader.readVarUInt7IntValue();
+            int sid = reader.readVarUIntAsInt();
             child = makeValueFromReader(sid, reader, buffer, symtab, this, _system);
             child._elementid = get_child_count();
             add_child(child._elementid, child);

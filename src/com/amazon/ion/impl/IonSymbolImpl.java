@@ -197,7 +197,7 @@ public final class IonSymbolImpl
         }
 
         assert mySid >= 0;
-        return IonBinary.lenVarUInt8(mySid);
+        return IonBinary.lenUInt(mySid);
     }
 
     protected boolean isIonVersionMarker() {
@@ -347,10 +347,10 @@ public final class IonSymbolImpl
             case 0:
                 throw new IonException("invalid symbol id for value, must be > 0");
             case IonConstants.lnIsVarLen:
-                ln = reader.readVarUInt7IntValue();
+                ln = reader.readVarUIntAsInt();
                 // fall through to default:
             default:
-                mySid = reader.readVarUInt8IntValue(ln);
+                mySid = reader.readUIntAsInt(ln);
                 if (mySid == 0) {
                     throw new IonException("invalid symbol id for value, must be > 0");
                 }
@@ -378,7 +378,7 @@ public final class IonSymbolImpl
             // We've already been through updateSymbolTable().
             assert mySid > 0;
 
-            int wlen = writer.writeVarUInt8Value(mySid, valueLen);
+            int wlen = writer.writeUIntValue(mySid, valueLen);
             assert wlen == valueLen;
         }
     }

@@ -721,12 +721,11 @@ public abstract class IonReaderTextRawX
                     case IonTokenConstsX.KEYWORD_FALSE:
                     case IonTokenConstsX.KEYWORD_TRUE:
                     case IonTokenConstsX.KEYWORD_NULL:
-                    case IonTokenConstsX.KEYWORD_INF:
                     case IonTokenConstsX.KEYWORD_NAN:
                         // keywords are not OK unless they're quoted
                         String reason = "Cannot use unquoted keyword "
                                         + sb.toString()
-                                        + " a field name";
+                                        + " as a field name";
                         parse_error(reason);
                     default:
                         break;
@@ -767,12 +766,11 @@ public abstract class IonReaderTextRawX
                     case IonTokenConstsX.KEYWORD_FALSE:
                     case IonTokenConstsX.KEYWORD_TRUE:
                     case IonTokenConstsX.KEYWORD_NULL:
-                    case IonTokenConstsX.KEYWORD_INF:
                     case IonTokenConstsX.KEYWORD_NAN:
                         // keywords are not ok unless they're quoted
                         String reason =
                             "Cannot use unquoted keyword " +
-                            sb.toString() + " as annotation";
+                            sb.toString() + " as an annotation";
                         parse_error(reason);
                     default:
                         break;
@@ -870,7 +868,6 @@ public abstract class IonReaderTextRawX
                     case IonTokenConstsX.KEYWORD_PLUS_INF:
                         // TODO: this case probably can't be encountered since it is now
                         //       recognized as a special case in tokens starting with '+'
-                    case IonTokenConstsX.KEYWORD_INF:
                         _value_type = IonType.FLOAT;
                         clear_current_value_buffer();
                         _v.setValue(Double.POSITIVE_INFINITY);
@@ -926,7 +923,7 @@ public abstract class IonReaderTextRawX
                 return;
             case ACTION_EAT_COMMA:
                 if (_container_prohibits_commas) {
-                    parse_error("comma's aren't used to separate values in "+getContainerType().toString());
+                    parse_error("commas aren't used to separate values in "+getContainerType().toString());
                 }
                 int new_state = STATE_BEFORE_ANNOTATION_CONTAINED;
                 //if (_v._is_null) {
@@ -1100,18 +1097,17 @@ public abstract class IonReaderTextRawX
         set_container_flags(newContainer);
         _container_state_stack[_container_state_top++] = newContainer;
     }
-    private final IonType pop_container_state() {
+
+    private final void pop_container_state() {
         _container_state_top--;
-        IonType poppedContainer = _container_state_stack[_container_state_top];
         set_container_flags(top_state());
         _eof = false;
         _has_next_called = false;
 
         int new_state = get_state_after_container();
         set_state(new_state);
-
-        return poppedContainer;
     }
+
     private final IonType top_state() {
         int top = _container_state_top - 1;
         IonType top_container = _container_state_stack[top];
@@ -1220,7 +1216,7 @@ public abstract class IonReaderTextRawX
         catch (IOException e) {
             throw new IonException(e);
         }
-        _value_type = pop_container_state();
+        pop_container_state();
         _scanner.tokenIsFinished();
         try {
             finish_value(null);
@@ -1228,6 +1224,8 @@ public abstract class IonReaderTextRawX
         catch (IOException e) {
             throw new IonException(e);
         }
+
+        clear_value();
 
         if (_debug) System.out.println("stepOUT() new depth: "+getDepth());
     }
