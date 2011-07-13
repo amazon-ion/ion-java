@@ -3,6 +3,7 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_ITERATOR;
+import static com.amazon.ion.impl.IonImplUtils.readFully;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBool;
@@ -430,7 +431,7 @@ class IonReaderTreeSystem
             InputStream is = lob.newInputStream();
             int retlen;
             try {
-                retlen = is.read(buffer, 0, loblen);
+                retlen = readFully(is, buffer, 0, loblen);
                 is.close();
             }
             catch (IOException e) {
@@ -453,7 +454,7 @@ class IonReaderTreeSystem
             InputStream is = lob.newInputStream();
             int retlen;
             try {
-                retlen = is.read(buffer, offset, loblen);
+                retlen = readFully(is, buffer, 0, loblen);
                 is.close();
             }
             catch (IOException e) {
