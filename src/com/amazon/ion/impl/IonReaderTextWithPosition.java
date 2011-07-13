@@ -2,25 +2,18 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonReaderWithPosition;
-
-import com.amazon.ion.IonReaderPosition;
-
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
 
 /**
  *
  */
-public class IonReaderTextWithPosition_test
+public class IonReaderTextWithPosition
     extends IonReaderTextUserX
     implements IonReaderWithPosition
 {
-
-    static class IonReaderTextPosition implements IonReaderPosition
-    {
-
-    }
+    // FIXME implement this
+    static class IonReaderTextPosition extends IonReaderPositionBase {}
 
     /**
      * @param system
@@ -29,7 +22,7 @@ public class IonReaderTextWithPosition_test
      * @param offset
      * @param length
      */
-    protected IonReaderTextWithPosition_test(IonSystem system,
+    protected IonReaderTextWithPosition(IonSystem system,
                                              IonCatalog catalog,
                                              char[] chars,
                                              int offset,
@@ -37,16 +30,18 @@ public class IonReaderTextWithPosition_test
     {
         super(system, catalog, chars, offset, length);
     }
+
     /**
      * @param system
      * @param catalog
      */
-    protected IonReaderTextWithPosition_test(IonSystem system,
-                                             IonCatalog catalog,
-                                             String chars
-    ) {
+    protected IonReaderTextWithPosition(IonSystem system,
+                                        IonCatalog catalog,
+                                        String chars)
+    {
         this(system, catalog, chars.toCharArray(), 0, chars.length());
     }
+
     public IonReaderPosition getCurrentPosition()
     {
         IonReaderTextPosition pos = new IonReaderTextPosition();
@@ -55,16 +50,14 @@ public class IonReaderTextWithPosition_test
 
         return pos;
     }
+
     public void seek(IonReaderPosition position)
     {
-        if (position instanceof IonReaderTextPosition) {
-            // TODO Auto-generated method stub
-
-        }
-        else {
+        if (!(position instanceof IonReaderTextPosition)) {
             throw new IllegalArgumentException("position must match the reader");
         }
-
+        // FIXME implement this
+        throw new UnsupportedOperationException("Seek not currently implemented on text reader");
     }
 
 }

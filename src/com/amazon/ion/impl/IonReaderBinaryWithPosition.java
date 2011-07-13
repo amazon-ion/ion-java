@@ -3,8 +3,6 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonCatalog;
-import com.amazon.ion.IonReaderPosition;
-import com.amazon.ion.IonReaderWithPosition;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
@@ -20,11 +18,11 @@ import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
  *
  *
  */
-public class IonReaderBinaryWithPosition_test
+public class IonReaderBinaryWithPosition
     extends IonReaderBinaryUserX
     implements IonReaderWithPosition
 {
-    public static class IonReaderBinaryPosition implements IonReaderPosition
+    public static class IonReaderBinaryPosition extends IonReaderPositionBase
     {
         State       _state;
         int         _offset;
@@ -45,9 +43,9 @@ public class IonReaderBinaryWithPosition_test
      * @param offset
      * @param length
      */
-    public IonReaderBinaryWithPosition_test(IonSystem system,
-                                            IonCatalog catalog, byte[] bytes,
-                                            int offset, int length)
+    public IonReaderBinaryWithPosition(IonSystem system,
+                                       IonCatalog catalog, byte[] bytes,
+                                       int offset, int length)
     {
         super(system, catalog, bytes, offset, length);
     }
