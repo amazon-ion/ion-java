@@ -1097,18 +1097,17 @@ public abstract class IonReaderTextRawX
         set_container_flags(newContainer);
         _container_state_stack[_container_state_top++] = newContainer;
     }
-    private final IonType pop_container_state() {
+
+    private final void pop_container_state() {
         _container_state_top--;
-        IonType poppedContainer = _container_state_stack[_container_state_top];
         set_container_flags(top_state());
         _eof = false;
         _has_next_called = false;
 
         int new_state = get_state_after_container();
         set_state(new_state);
-
-        return poppedContainer;
     }
+
     private final IonType top_state() {
         int top = _container_state_top - 1;
         IonType top_container = _container_state_stack[top];
@@ -1217,7 +1216,7 @@ public abstract class IonReaderTextRawX
         catch (IOException e) {
             throw new IonException(e);
         }
-        _value_type = pop_container_state();
+        pop_container_state();
         _scanner.tokenIsFinished();
         try {
             finish_value(null);
@@ -1225,6 +1224,8 @@ public abstract class IonReaderTextRawX
         catch (IOException e) {
             throw new IonException(e);
         }
+
+        clear_value();
 
         if (_debug) System.out.println("stepOUT() new depth: "+getDepth());
     }

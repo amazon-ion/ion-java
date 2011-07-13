@@ -519,6 +519,9 @@ abstract public class IonReaderBinaryRawX
             _state = State.S_BEFORE_TID;
         }
         _has_next_needed = true;
+
+        clear_value();
+
         long curr_position = getPosition();
         if (next_position > curr_position) {
             try {

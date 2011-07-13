@@ -159,6 +159,7 @@ class IonReaderTreeSystem
             throw new IllegalStateException(IonMessages.CANNOT_STEP_OUT);
         }
         pop();
+        _curr = null;
     }
 
     public int getDepth() {
