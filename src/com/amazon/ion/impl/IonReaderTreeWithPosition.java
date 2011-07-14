@@ -2,21 +2,17 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonReaderPosition;
-
-import com.amazon.ion.IonReaderWithPosition;
-
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonValue;
 
 /**
  *
  */
-public class IonReaderTreeWithPosition_test
+public class IonReaderTreeWithPosition
     extends IonReaderTreeUserX
     implements IonReaderWithPosition
 {
-    static class IonReaderTreePosition implements IonReaderPosition
+    static class IonReaderTreePosition extends IonReaderPositionBase
     {
         IonValue _value;
     }
@@ -25,7 +21,7 @@ public class IonReaderTreeWithPosition_test
      * @param value
      * @param catalog
      */
-    public IonReaderTreeWithPosition_test(IonValue value, IonCatalog catalog)
+    public IonReaderTreeWithPosition(IonValue value, IonCatalog catalog)
     {
         super(value, catalog);
     }

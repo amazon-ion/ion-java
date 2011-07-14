@@ -2,12 +2,11 @@
 
 package com.amazon.ion.streaming;
 
-
 import com.amazon.ion.IonDatagram;
-import com.amazon.ion.IonReaderPosition;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
-import com.amazon.ion.impl.IonReaderBinaryWithPosition_test;
+import com.amazon.ion.impl.IonReaderBinaryWithPosition;
+import com.amazon.ion.impl.IonReaderPosition;
 import com.amazon.ion.junit.IonAssert;
 import org.junit.Test;
 
@@ -17,12 +16,12 @@ import org.junit.Test;
 public class ReaderPositioningTest
     extends IonTestCase
 {
-    private IonReaderBinaryWithPosition_test read(String text)
+    private IonReaderBinaryWithPosition read(String text)
     {
         byte[] binary = encode(text);
 
-        IonReaderBinaryWithPosition_test in =
-            new IonReaderBinaryWithPosition_test(system(), catalog(),
+        IonReaderBinaryWithPosition in =
+            new IonReaderBinaryWithPosition(system(), catalog(),
                                                  binary, 0, binary.length);
         return in;
     }
@@ -39,8 +38,8 @@ public class ReaderPositioningTest
 
         IonReaderPosition[] positions = new IonReaderPosition[dg.size()];
 
-        IonReaderBinaryWithPosition_test in =
-            new IonReaderBinaryWithPosition_test(system(), catalog(),
+        IonReaderBinaryWithPosition in =
+            new IonReaderBinaryWithPosition(system(), catalog(),
                                                  binary, 0, binary.length);
         for (int i = 0; i < dg.size(); i++)
         {
@@ -62,7 +61,7 @@ public class ReaderPositioningTest
     @Test
     public void testSeekingIntoContainers()
     {
-        IonReaderBinaryWithPosition_test in = read("{f:v,g:[c]} s");
+        IonReaderBinaryWithPosition in = read("{f:v,g:[c]} s");
 
         in.next();
         in.stepIn();
@@ -123,14 +122,14 @@ public class ReaderPositioningTest
     @Test(expected=IllegalStateException.class)
     public void testGetPosBeforeFirstTopLevel()
     {
-        IonReaderBinaryWithPosition_test in = read("foo");
+        IonReaderBinaryWithPosition in = read("foo");
         IonReaderPosition pos = in.getCurrentPosition();
     }
 
     @Test(expected=IllegalStateException.class)  // TODO similar for list/sexp
     public void testGetPosBeforeFirstStructChild()
     {
-        IonReaderBinaryWithPosition_test in = read("{f:v}");
+        IonReaderBinaryWithPosition in = read("{f:v}");
         in.next();
         in.stepIn();
         in.getCurrentPosition();
@@ -139,7 +138,7 @@ public class ReaderPositioningTest
     @Test(expected=IllegalStateException.class)  // TODO similar for list/sexp
     public void testGetPosAfterLastStructChild()
     {
-        IonReaderBinaryWithPosition_test in = read("{f:v}");
+        IonReaderBinaryWithPosition in = read("{f:v}");
         in.next();
         in.stepIn();
         in.next();
@@ -151,7 +150,7 @@ public class ReaderPositioningTest
     @Test(expected=IllegalStateException.class)
     public void testGetPosAtEndOfStream()
     {
-        IonReaderBinaryWithPosition_test in = read("foo");
+        IonReaderBinaryWithPosition in = read("foo");
         in.next();
         assertEquals(null, in.next());
         IonReaderPosition pos = in.getCurrentPosition();

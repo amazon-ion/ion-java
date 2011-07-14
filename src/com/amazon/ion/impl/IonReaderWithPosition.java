@@ -1,8 +1,9 @@
 // Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
 
-package com.amazon.ion;
+package com.amazon.ion.impl;
 
-import com.amazon.ion.IonReaderPosition;
+import com.amazon.ion.IonReader;
+
 
 /**
  *  This interface is an extension to the basic IonReader which
