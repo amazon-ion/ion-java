@@ -41,6 +41,9 @@ public abstract class IonWriterTestCase
 {
     protected IonWriter iw;
 
+    /**
+     * Closes {@link #iw} if it's not null.
+     */
     @After
     public void closeWriter()
     throws IOException
@@ -59,20 +62,26 @@ public abstract class IonWriterTestCase
     /**
      * Extracts bytes from the current writer and loads it into a datagram.
      */
+    @SuppressWarnings("unused")
     protected IonDatagram reload()
         throws Exception
     {
         byte[] bytes = outputByteArray();
         IonDatagram dg;
-        try {
-            // force all the classes to load to we can step
-            // into the next time we try this and actually
-            // see what's going on
-            dg = loader().load(bytes);
+
+        if (false) // Edit for debugging
+        {
+            try {
+                // force all the classes to load to we can step
+                // into the next time we try this and actually
+                // see what's going on
+                dg = loader().load(bytes);
+            }
+            catch (IonException e) {
+                // do nothing
+            }
         }
-        catch (IonException e) {
-            // do nothing
-        }
+
         dg = loader().load(bytes);
         return dg;
     }
@@ -385,7 +394,7 @@ public abstract class IonWriterTestCase
         ir.next();
         ir.stepIn();
         ir.next();
-        // Reader is now positioned at field a
+        assertEquals("a", ir.getFieldName());
 
         iw = makeWriter();
         iw.stepIn(IonType.STRUCT);
@@ -404,7 +413,7 @@ public abstract class IonWriterTestCase
         ir.next();
         ir.stepIn();
         ir.next();
-        // Reader is now positioned at field a
+        assertEquals("a", ir.getFieldName());
 
         iw = makeWriter();
         iw.stepIn(IonType.STRUCT);

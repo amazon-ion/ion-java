@@ -2,7 +2,6 @@
 
 package com.amazon.ion.streaming;
 
-
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
