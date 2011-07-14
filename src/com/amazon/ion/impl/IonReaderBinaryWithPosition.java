@@ -88,7 +88,7 @@ public class IonReaderBinaryWithPosition
         else
         {
             pos._offset = _position_start;
-            pos._limit = _position_len + _position_start + 1;   // +1 for the type desc byte
+            pos._limit = _position_len + _position_start;   // +1 for the type desc byte
             pos._symbol_table = _symbols;
         }
 

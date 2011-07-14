@@ -382,7 +382,7 @@ abstract public class IonReaderBinaryRawX
     private final int read_type_id() throws IOException
     {
 int start_of_tid   = _input._pos;                      // FIXME: for repositionable reader
-int start_of_value = _input._pos; // WAS: start_of_tid + 1;                 // FIXME: for repositionable reader
+int start_of_value = start_of_tid + 1;                 // FIXME: for repositionable reader
 
         int td = read();
         if (td < 0) {
@@ -427,6 +427,7 @@ start_of_value = _input._pos;                      // FIXME: for repositionable 
                 // special case of an ordered struct, it gets the
                 // otherwise impossible to have length of 1
                 len = readVarUInt();
+start_of_value = _input._pos;                      // FIXME: for repositionable reader
             }
         }
         _value_tid = tid;
