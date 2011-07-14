@@ -381,8 +381,8 @@ abstract public class IonReaderBinaryRawX
     }
     private final int read_type_id() throws IOException
     {
-int start_of_tid   = _input._pos;                      // FIXME: for repositionable reader
-int start_of_value = _input._pos; // WAS: start_of_tid + 1;                 // FIXME: for repositionable reader
+        int start_of_tid   = _input._pos;                      // FIXME: for repositionable reader
+        int start_of_value = _input._pos + 1; // WAS: start_of_tid + 1;                 // FIXME: for repositionable reader
 
         int td = read();
         if (td < 0) {
@@ -392,7 +392,7 @@ int start_of_value = _input._pos; // WAS: start_of_tid + 1;                 // F
         int len = IonConstants.getLowNibble(td);
         if (len == IonConstants.lnIsVarLen) {
             len = readVarUInt();
-start_of_value = _input._pos;                      // FIXME: for repositionable reader
+            start_of_value = _input._pos;                      // FIXME: for repositionable reader
         }
         else if (tid == IonConstants.tidNull) {
             if (len != IonConstants.lnIsNull) {
@@ -431,8 +431,8 @@ start_of_value = _input._pos;                      // FIXME: for repositionable 
         }
         _value_tid = tid;
         _value_len = len;
-_position_len = len + (start_of_value - start_of_tid);           // FIXME: for repositionable reader
-_position_start = start_of_tid;   // FIXME: for repositionable reader
+        _position_len = len + (start_of_value - start_of_tid);           // FIXME: for repositionable reader
+        _position_start = start_of_tid;                                  // FIXME: for repositionable reader
         return tid;
     }
     private final IonType get_iontype_from_tid(int tid)
