@@ -38,8 +38,8 @@ public class PrivateDmsdkUtils
             throw new UnsupportedOperationException("buffer isn't Ion binary");
         }
 
-        return new IonReaderBinaryWithPosition(system, catalog,
-                                               buffer, offset, length);
+        return new IonReaderBinaryUserX(system, catalog,
+                                        buffer, offset, length);
     }
 
 
@@ -52,7 +52,7 @@ public class PrivateDmsdkUtils
      */
     public static Object currentValuePosition(IonReader reader)
     {
-        return ((IonReaderBinaryWithPosition)reader).getCurrentPosition();
+        return ((IonReaderWithPosition)reader).getCurrentPosition();
     }
 
 
@@ -69,7 +69,7 @@ public class PrivateDmsdkUtils
     public static void rereadValue(IonReader reader, Object valuePosition)
     {
         IonReaderPosition position = (IonReaderPosition) valuePosition;
-        ((IonReaderBinaryWithPosition)reader).seek(position);
+        ((IonReaderWithPosition)reader).seek(position);
         reader.next();
     }
 }
