@@ -18,7 +18,8 @@ import java.util.Date;
  * the user to logically write the values as they view the data
  * without being concerned about which output format is needed.
  * <p>
- * <b>WARNING:</b> This interface should not be implemented by applications.
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  * We still have some work to do before this interface is stable.
  * See <a href="https://jira2.amazon.com/browse/ION-182">JIRA issue
  * ION-182</a>
@@ -142,6 +143,9 @@ public interface IonWriter
      * <p>
      * The pending field name is cleared when the current value is written via
      * one of the {@code write*()} or {@code open*()} methods.
+     * <p>
+     * <b>This is an "expert method": correct use requires deep understanding
+     * of the Ion binary format. You almost certainly don't want to use it.</b>
      *
      * @param id symbol id of the field name
      *
@@ -190,6 +194,9 @@ public interface IonWriter
      * <p>
      * The list of pending annotations is cleared when the current value is
      * written via one of the {@code write*()} or {@code open*()} methods.
+     * <p>
+     * <b>This is an "expert method": correct use requires deep understanding
+     * of the Ion binary format. You almost certainly don't want to use it.</b>
      *
      * @param annotationIds array with the annotation symbol ids.
      * If null or empty, any pending annotations are cleared.
@@ -211,6 +218,9 @@ public interface IonWriter
      * <p>
      * The list of pending annotations is cleared when the current value is
      * written via one of the {@code write*()} or {@code open*()} methods.
+     * <p>
+     * <b>This is an "expert method": correct use requires deep understanding
+     * of the Ion binary format. You almost certainly don't want to use it.</b>
      *
      * @param annotationId symbol id to append to the annotation list
      */
@@ -461,6 +471,10 @@ public interface IonWriter
      * write symbolId out as an IonSymbol value.  The value does not
      * have to be valid in the symbol table, unless the output is
      * text, in which case it does.
+     * <p>
+     * <b>This is an "expert method": correct use requires deep understanding
+     * of the Ion binary format. You almost certainly don't want to use it.</b>
+     *
      * @param symbolId symbol table id to write
      */
     public void writeSymbol(int symbolId) throws IOException;

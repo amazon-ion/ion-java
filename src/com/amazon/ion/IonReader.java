@@ -24,15 +24,15 @@ import java.util.Iterator;
  * Provides stream-based access to Ion data independent of its underlying
  * representation (text, binary, or {@link IonValue} tree).
  * <p>
- * <b>WARNING:</b> This interface should not be implemented by applications.
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  * We still have some work to do before this interface is stable.
- * See <a href="https://issue-tracking.amazon.com/browse/ION-183">JIRA issue
+ * See <a href="https://jira2.amazon.com/browse/ION-183">JIRA issue
  * ION-183</a>
  * <p>
  * In general, method names are intended to parallel similar methods in the
  * {@link IonValue} hierarchy.  For example, to get the text of a symbol one
- * would use {@link #stringValue()} which mirrors
- * {@link IonSymbol#stringValue()}.
+ * would use {@link #stringValue()}, mirroring {@link IonSymbol#stringValue()}.
  * <h2>Exception Handling</h2>
  * {@code IonReader} is a generic interface for traversion Ion data, and it's
  * not possible to fully specify the set of exceptions that could be thrown
@@ -81,11 +81,12 @@ public interface IonReader
 
 
     /**
-     * Positions the iterator in the contents of the current value.  The current
-     * value must be a container (sexp, list, or struct).
-     * After calling this method, {@link #hasNext()} and {@link #next()} will
-     * iterate the child values.
-     * There's no current value immediately after stepping in.
+     * Positions the reader just before the contents of the current value,
+     * which must be a container (list, sexp, or struct).
+     * There's no current value immediately after stepping in, so the next
+     * thing you'll want to do is call {@link #next()} to move onto the first
+     * child value (or learn that there's not one).
+     *
      * <p>
      * At any time {@link #stepOut()} may be called to move the cursor back to
      * (just after) the parent value, even if there's more children remaining.
@@ -95,18 +96,20 @@ public interface IonReader
     public void stepIn();
 
     /**
-     * Positions the iterator after the current parents value.  Once stepOut()
-     * has been called hasNext() must be called to see if a value follows
-     * the parent. In other words, there's no current value immediately after
-     * stepping out.
+     * Positions the iterator after the current parent's value, moving up one
+     * level in the data hierarchy.
+     * There's no current value immediately after stepping out, so the next
+     * thing you'll want to do is call {@link #next()} to move onto the
+     * following value.
      *
      * @throws IllegalStateException if the current value wasn't stepped into.
      */
     public void stepOut();
 
     /**
-     * returns the depth into the Ion value this iterator has traversed. The
-     * top level, where it started out is depth 0.
+     * Returns the depth into the Ion value that this reader has traversed.
+     * At top level the depth is 0, and it increases by one on each call to
+     * {@link #stepIn()}.
      */
     public int getDepth();
 
@@ -119,7 +122,7 @@ public interface IonReader
 
 
     /**
-     * Returns the type of the current value, or null if there is no valid
+     * Returns the type of the current value, or null if there is no
      * current value.
      */
     public IonType getType();
@@ -133,8 +136,11 @@ public interface IonReader
     public String[] getTypeAnnotations();
 
     /**
-     * Return the symbol id's of the annotations on the current value as an
+     * Return the symbol IDs of the annotations on the current value as an
      * array of ints.
+     * <p>
+     * <b>This is an "expert method": correct use requires deep understanding
+     * of the Ion binary format. You almost certainly don't want to use it.</b>
      *
      * @return the (ordered) annotations on the current value, or an empty
      * array (not {@code null}) if there are none.
@@ -145,18 +151,28 @@ public interface IonReader
      * Return the annotations on the curent value as an iterator.  The
      * iterator is empty (hasNext() returns false on the first call) if
      * there are no annotations on the current value.
+     *
+     * @return not null.
      */
     public Iterator<String> iterateTypeAnnotations();
 
     /**
-     * Return the symbol table ids of the current values annotation as
+     * Return the symbol table IDs of the current value's annotation as
      * an iterator.  The iterator is empty (hasNext() returns false on
      * the first call) if there are no annotations on the current value.
+     * <p>
+     * <b>This is an "expert method": correct use requires deep understanding
+     * of the Ion binary format. You almost certainly don't want to use it.</b>
+     *
+     * @return not null.
      */
     public Iterator<Integer> iterateTypeAnnotationIds();
 
     /**
      * Gets the symbol ID of the field name attached to the current value.
+     * <p>
+     * <b>This is an "expert method": correct use requires deep understanding
+     * of the Ion binary format. You almost certainly don't want to use it.</b>
      *
      * @return the symbol ID of the field name, if the current value is a
      * field within a struct.
@@ -173,16 +189,17 @@ public interface IonReader
 
 
     /**
-     * Returns the whether or not the current value a null ion value.
-     * This is valid on all Ion types.  It should be called before
+     * Determines whether the current value is a null Ion value of any type
+     * (for example, <code>null</code> or <code>null.int</code>).
+     * It should be called before
      * calling getters that return value types (int, long, boolean,
      * double).
      */
     public boolean isNullValue();
 
     /**
-     * returns true if the iterator is currently operating over
-     * fields of a structure.  It returns false if the iteration
+     * Determines whether this reader is currently traversing the fields of an
+     * Ion struct. It returns false if the iteration
      * is in a list, a sexp, or a datagram.
      */
     public boolean isInStruct();
@@ -192,8 +209,8 @@ public interface IonReader
     // Value reading
 
     /**
-     * Returns the current value as an boolean.  This is only valid if there is
-     * an underlying value and the value is an ion boolean value.
+     * Returns the current value as an boolean.
+     * This is only valid when {@link #getType()} returns {@link IonType#BOOL}.
      */
     public boolean booleanValue();
 
@@ -265,18 +282,22 @@ public interface IonReader
     public Timestamp timestampValue();
 
     /**
-     * Returns the current value as a Java String.  This is only valid if there
-     * is an underlying value and the value is either string or symbol.
+     * Returns the current value as a Java String.
+     * This is only valid when {@link #getType()} returns
+     * {@link IonType#STRING} or {@link IonType#SYMBOL}.
      */
     public String stringValue();
 
     /**
-     * Returns the current value as an int symbol id.  This is only valid if
-     * there is
-     * an underlying value and the value is an Ion symbol.
+     * Returns the current value as an int symbol ID.
+     * This is only valid when {@link #getType()} returns
+     * {@link IonType#SYMBOL}.
      * <p>
      * If the reader cannot determine the symbol ID, this method returns
      * {@link SymbolTable#UNKNOWN_SYMBOL_ID}.
+     * <p>
+     * <b>This is an "expert method": correct use requires deep understanding
+     * of the Ion binary format. You almost certainly don't want to use it.</b>
      *
      * @see #stringValue()
      */
