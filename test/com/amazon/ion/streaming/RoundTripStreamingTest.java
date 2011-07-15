@@ -13,6 +13,7 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.TestUtils;
 import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.impl.IonWriterUserBinary;
 import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
@@ -32,22 +33,38 @@ extends IonTestCase
     static final boolean _debug_flag = true;
     static final boolean _debug_dump_datagrams = false;
 
+    private Printer       myPrinter;
+    private StringBuilder myBuilder;
+    private byte[]        myBuffer;
+
+    //------------------------------------------------------------------------
+
     @Inject("testFile")
     public static final File[] FILES =
         testdataFiles(TestUtils.GLOBAL_SKIP_LIST,
                       "good", "equivs");
 
-
     private File myTestFile;
-    private Printer       myPrinter;
-    private StringBuilder myBuilder;
-    private byte[]        myBuffer;
 
     public void setTestFile(File file)
     {
         myTestFile = file;
     }
 
+    //------------------------------------------------------------------------
+
+    // Using an enum makes the test output more understandable than a boolean.
+    private enum CopySpeed { slow, fast }
+
+    @Inject("copySpeed")
+    public static final CopySpeed[] COPY_SPEEDS = CopySpeed.values();
+
+    public void setCopySpeed(CopySpeed speed)
+    {
+        IonWriterUserBinary.ourFastCopyEntabled = (speed == CopySpeed.fast);
+    }
+
+    //------------------------------------------------------------------------
 
     @Override
     @Before

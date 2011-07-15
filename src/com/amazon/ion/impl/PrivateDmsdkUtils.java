@@ -39,7 +39,7 @@ public class PrivateDmsdkUtils
         }
 
         return new IonReaderBinaryUserX(system, catalog,
-                                        buffer, offset, length);
+                                               buffer, offset, length);
     }
 
 
@@ -71,5 +71,16 @@ public class PrivateDmsdkUtils
         IonReaderPosition position = (IonReaderPosition) valuePosition;
         ((IonReaderWithPosition)reader).seek(position);
         reader.next();
+    }
+
+
+    public static boolean isFastCopyEnabled()
+    {
+        return IonWriterUserBinary.ourFastCopyEntabled;
+    }
+
+    public static void setFastCopyEnabled(boolean enable)
+    {
+        IonWriterUserBinary.ourFastCopyEntabled = enable;
     }
 }
