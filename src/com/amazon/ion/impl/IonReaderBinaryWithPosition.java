@@ -8,6 +8,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.UnifiedInputStreamX.FromByteArray;
 import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
+import java.io.InputStream;
 
 /**
  * Prototype impl of a relocatable reader.  This version only supports
@@ -22,7 +23,7 @@ public class IonReaderBinaryWithPosition
     extends IonReaderBinaryUserX
     implements IonReaderWithPosition
 {
-    public static class IonReaderBinaryPosition extends IonReaderPositionBase
+    public static class IonReaderBinaryPosition extends IonReaderPositionBase implements IonReaderOctetPosition
     {
         State       _state;
         int         _offset;
@@ -32,22 +33,31 @@ public class IonReaderBinaryWithPosition
         boolean     _value_is_true;
         SymbolTable _symbol_table;
 
-        IonReaderBinaryPosition() {
+        public long getOffset()
+        {
+            return _offset;
         }
+
+        public long getLength()
+        {
+            return _limit - _offset;
+        }
+
+
     }
 
-    /**
-     * @param system
-     * @param catalog
-     * @param bytes
-     * @param offset
-     * @param length
-     */
     public IonReaderBinaryWithPosition(IonSystem system,
                                        IonCatalog catalog, byte[] bytes,
                                        int offset, int length)
     {
         super(system, catalog, bytes, offset, length);
+    }
+
+    public IonReaderBinaryWithPosition(IonSystem system,
+                                       IonCatalog catalog,
+                                       InputStream input)
+    {
+        super(system, catalog, input);
     }
 
     /**
@@ -70,7 +80,7 @@ public class IonReaderBinaryWithPosition
         //     - not in the middle of a value
         //        TODO what does that mean?
 
-        IonReaderBinaryPosition pos = new IonReaderBinaryPosition ();
+        IonReaderBinaryPosition pos = new IonReaderBinaryPosition();
 
         if (getType() == null)
         {
@@ -88,7 +98,7 @@ public class IonReaderBinaryWithPosition
         else
         {
             pos._offset = _position_start;
-            pos._limit = _position_len + _position_start;   // +1 for the type desc byte
+            pos._limit = _position_len + _position_start;
             pos._symbol_table = _symbols;
         }
 
@@ -103,14 +113,21 @@ public class IonReaderBinaryWithPosition
 
     public void seek(IonReaderPosition position)
     {
-        if (position instanceof IonReaderBinaryPosition)
+        IonReaderBinaryPosition pos = position.asFacet(IonReaderBinaryPosition.class);
+
+        if (pos == null)
         {
-            IonReaderBinaryPosition pos = (IonReaderBinaryPosition)position;
+            throw new IllegalArgumentException("Position invalid for binary reader");
+        }
+        if (!(_input instanceof FromByteArray))
+        {
+            throw new UnsupportedOperationException("Binary seek not implemented for non-byte array backed sources");
+        }
 
         // manually reset the input specific type of input stream
         FromByteArray input = (FromByteArray)_input;
-            input._pos = pos._offset;
-            input._limit = pos._limit;
+        input._pos = pos._offset;
+        input._limit = pos._limit;
 
         // TODO: these (eof and save points) should be put into
         //       a re-init method on the input stream
@@ -132,22 +149,15 @@ public class IonReaderBinaryWithPosition
         init_user(this._catalog);
 
         // now we need to set our symbol table
-            _symbols = pos._symbol_table;
+        _symbols = pos._symbol_table;
 
-            // and the other misc state variables we had
-            // read past before getPosition gets called
-            _state         = pos._state;
-            _value_type    = pos._value_type;
-            _value_is_null = pos._value_is_null;
-            _value_is_true = pos._value_is_true;
+        // and the other misc state variables we had
+        // read past before getPosition gets called
+        _state         = pos._state;
+        _value_type    = pos._value_type;
+        _value_is_null = pos._value_is_null;
+        _value_is_true = pos._value_is_true;
 
         _is_in_struct = false;
-        }
-        else
-        {
-            throw new IllegalArgumentException("position must match the reader");
-        }
-
-        return;
     }
 }
