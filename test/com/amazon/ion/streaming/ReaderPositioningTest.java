@@ -6,7 +6,6 @@ import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.impl.IonImplUtils;
-import com.amazon.ion.impl.IonReaderBinaryWithPosition;
 import com.amazon.ion.impl.IonReaderOctetPosition;
 import com.amazon.ion.impl.IonReaderPosition;
 import com.amazon.ion.impl.IonReaderWithPosition;
@@ -25,23 +24,20 @@ import org.junit.Test;
 public class ReaderPositioningTest
     extends IonTestCase
 {
-    private IonReaderBinaryWithPosition read(byte[] binary)
+    private IonReaderWithPosition read(byte[] binary)
     {
-        IonReaderBinaryWithPosition in =
-            new IonReaderBinaryWithPosition(system(), catalog(),
-                                                 binary, 0, binary.length);
-        return in;
+        return (IonReaderWithPosition) system().newReader(binary);
     }
 
-    private IonReaderBinaryWithPosition read(String text)
+    private IonReaderWithPosition read(String text)
     {
         byte[] binary = encode(text);
         return read(binary);
     }
 
-    private IonReaderBinaryWithPosition readAsStream(String text)
+    private IonReaderWithPosition readAsStream(String text)
     {
-        return new IonReaderBinaryWithPosition(system(), catalog(), new ByteArrayInputStream(encode(text)));
+        return (IonReaderWithPosition) system().newReader(new ByteArrayInputStream(encode(text)));
     }
 
     private InputStream repeatStream(final String text, final long times)
@@ -110,9 +106,7 @@ public class ReaderPositioningTest
 
         IonReaderPosition[] positions = new IonReaderPosition[dg.size()];
 
-        IonReaderBinaryWithPosition in =
-            new IonReaderBinaryWithPosition(system(), catalog(),
-                                                 binary, 0, binary.length);
+        IonReaderWithPosition in = read(binary);
         for (int i = 0; i < dg.size(); i++)
         {
             assertEquals(dg.get(i).getType(), in.next());
@@ -133,7 +127,7 @@ public class ReaderPositioningTest
     @Test
     public void testSeekingIntoContainers()
     {
-        IonReaderBinaryWithPosition in = read("{f:v,g:[c]} s");
+        IonReaderWithPosition in = read("{f:v,g:[c]} s");
 
         in.next();
         in.stepIn();
@@ -194,7 +188,7 @@ public class ReaderPositioningTest
     {
         // This value is "long" in that it has a length subfield in the prefix.
         String text = " \"123456789012345\" ";
-        IonReaderBinaryWithPosition in = read(text);
+        IonReaderWithPosition in = read(text);
 
         in.next();
         IonReaderPosition pos = in.getCurrentPosition();
@@ -213,7 +207,7 @@ public class ReaderPositioningTest
         File file = getTestdataFile("good/structOrdered.10n");
         byte[] binary = IonImplUtils.loadFileBytes(file);
 
-        IonReaderBinaryWithPosition in = read(binary);
+        IonReaderWithPosition in = read(binary);
 
         in.next();
         IonReaderPosition pos = in.getCurrentPosition();
@@ -230,14 +224,14 @@ public class ReaderPositioningTest
     @Test(expected=IllegalStateException.class)
     public void testGetPosBeforeFirstTopLevel()
     {
-        IonReaderBinaryWithPosition in = read("foo");
+        IonReaderWithPosition in = read("foo");
         IonReaderPosition pos = in.getCurrentPosition();
     }
 
     @Test(expected=IllegalStateException.class)  // TODO similar for list/sexp
     public void testGetPosBeforeFirstStructChild()
     {
-        IonReaderBinaryWithPosition in = read("{f:v}");
+        IonReaderWithPosition in = read("{f:v}");
         in.next();
         in.stepIn();
         in.getCurrentPosition();
@@ -246,7 +240,7 @@ public class ReaderPositioningTest
     @Test(expected=IllegalStateException.class)  // TODO similar for list/sexp
     public void testGetPosAfterLastStructChild()
     {
-        IonReaderBinaryWithPosition in = read("{f:v}");
+        IonReaderWithPosition in = read("{f:v}");
         in.next();
         in.stepIn();
         in.next();
@@ -258,7 +252,7 @@ public class ReaderPositioningTest
     @Test(expected=IllegalStateException.class)
     public void testGetPosAtEndOfStream()
     {
-        IonReaderBinaryWithPosition in = read("foo");
+        IonReaderWithPosition in = read("foo");
         in.next();
         assertEquals(null, in.next());
         IonReaderPosition pos = in.getCurrentPosition();
@@ -298,9 +292,7 @@ public class ReaderPositioningTest
     public void testGetPosFromStreamBig() {
         final String text = "'''Kumo the fluffy dog! He is so fluffy and yet so happy!'''";
         final long repeat = 40000000L;
-        IonReaderWithPosition in = new IonReaderBinaryWithPosition(
-            system(),
-            catalog(),
+        IonReaderWithPosition in = (IonReaderWithPosition) system().newReader(
             repeatStream(text, repeat) // make sure we go past Integer.MAX_VALUE
         );
 
