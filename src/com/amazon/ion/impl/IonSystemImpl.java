@@ -264,7 +264,7 @@ public final class IonSystemImpl
     {
         // TODO optimize to use IonTextReader, but first that must truly stream
         // instead of requiring a full-stream buffer.
-        // See https://issue-tracking.amazon.com/browse/ION-31
+        // See https://jira2.amazon.com/browse/ION-31
         UserValueIterator userReader =
             new UserValueIterator(this, this.newLocalSymbolTable(), reader);
         userReader.setBufferToRecycle();

@@ -20,7 +20,7 @@ class IonReaderBinaryUserX
     SymbolTable _symbols;
     IonCatalog  _catalog;
 
-    public static class IonReaderBinaryPosition extends IonReaderPositionBase implements IonReaderOctetPosition
+    private static class IonReaderBinaryPosition extends IonReaderPositionBase implements IonReaderOctetPosition
     {
         State       _state;
         int         _offset;
