@@ -5,12 +5,14 @@ package com.amazon.ion.streaming;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
+import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.IonReaderBinaryWithPosition;
 import com.amazon.ion.impl.IonReaderOctetPosition;
 import com.amazon.ion.impl.IonReaderPosition;
 import com.amazon.ion.impl.IonReaderWithPosition;
 import com.amazon.ion.junit.IonAssert;
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -23,14 +25,18 @@ import org.junit.Test;
 public class ReaderPositioningTest
     extends IonTestCase
 {
-    private IonReaderBinaryWithPosition read(String text)
+    private IonReaderBinaryWithPosition read(byte[] binary)
     {
-        byte[] binary = encode(text);
-
         IonReaderBinaryWithPosition in =
             new IonReaderBinaryWithPosition(system(), catalog(),
                                                  binary, 0, binary.length);
         return in;
+    }
+
+    private IonReaderBinaryWithPosition read(String text)
+    {
+        byte[] binary = encode(text);
+        return read(binary);
     }
 
     private IonReaderBinaryWithPosition readAsStream(String text)
@@ -182,6 +188,42 @@ public class ReaderPositioningTest
         assertEquals("s", in.stringValue());
         assertEquals(null, in.next());
     }
+
+    @Test
+    public void testSeekingToLongValue()
+    {
+        // This value is "long" in that it has a length subfield in the prefix.
+        String text = " \"123456789012345\" ";
+        IonReaderBinaryWithPosition in = read(text);
+
+        in.next();
+        IonReaderPosition pos = in.getCurrentPosition();
+        assertEquals(null, in.next());
+
+        in.seek(pos);
+        assertEquals(IonType.STRING, in.next());
+        assertEquals(null, in.next());
+    }
+
+    @Test
+    public void testSeekingToOrderedStruct()
+    throws IOException
+    {
+
+        File file = getTestdataFile("good/structOrdered.10n");
+        byte[] binary = IonImplUtils.loadFileBytes(file);
+
+        IonReaderBinaryWithPosition in = read(binary);
+
+        in.next();
+        IonReaderPosition pos = in.getCurrentPosition();
+        assertEquals(null, in.next());
+
+        in.seek(pos);
+        assertEquals(IonType.STRUCT, in.next());
+        assertEquals(null, in.next());
+    }
+
 
     // TODO test annotations
 
