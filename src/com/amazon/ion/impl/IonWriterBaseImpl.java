@@ -6,6 +6,7 @@ import com.amazon.ion.Decimal;
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonNumber;
+import com.amazon.ion.IonNumber.Classification;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
@@ -13,7 +14,6 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.IonNumber.Classification;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
@@ -768,8 +768,8 @@ public abstract class IonWriterBaseImpl
         else {
             write_values_helper(reader);
         }
-        return;
     }
+
     public void write_values_helper(IonReader reader) throws IOException
     {
         IonType t;
@@ -778,7 +778,6 @@ public abstract class IonWriterBaseImpl
             if (t == null) break;
             writeValue(reader);
         }
-        return;
     }
 
     private final void transfer_symbol_tables(IonReaderWriterPrivate private_reader) throws IOException
@@ -793,8 +792,8 @@ public abstract class IonWriterBaseImpl
                 reader_symbols = private_reader.pop_passed_symbol_table();
             }
         }
-        return;
     }
+
     private final void write_value_field_name_helper(IonReader reader)
     {
         if (this.isInStruct() && !isFieldNameSet())
@@ -840,7 +839,20 @@ public abstract class IonWriterBaseImpl
         return;
     }
 
+    /**
+     * Overrides can optimize special cases.
+     */
     public void writeValue(IonReader reader) throws IOException
+    {
+        writeValueSlowly(reader);
+    }
+
+    /**
+     * Unoptimized copy. This must not recurse back to the public
+     * {@link #writeValue(IonReader)} method since that will cause the
+     * optimization test to happen repeatedly.
+     */
+    protected final void writeValueSlowly(IonReader reader) throws IOException
     {
         write_value_field_name_helper(reader);
         write_value_annotations_helper(reader);
@@ -898,29 +910,17 @@ public abstract class IonWriterBaseImpl
                 break;
             case STRUCT:
                 if (_debug_on) System.out.print("{");
-                stepIn(IonType.STRUCT);
-                reader.stepIn();
-                write_values_helper(reader);
-                reader.stepOut();
-                stepOut();
+                writeContainerSlowly(IonType.STRUCT, reader);
                 if (_debug_on) System.out.print("}");
                 break;
             case LIST:
                 if (_debug_on) System.out.print("[");
-                stepIn(IonType.LIST);
-                reader.stepIn();
-                write_values_helper(reader);
-                reader.stepOut();
-                stepOut();
+                writeContainerSlowly(IonType.LIST, reader);
                 if (_debug_on) System.out.print("]");
                 break;
             case SEXP:
                 if (_debug_on) System.out.print("(");
-                stepIn(IonType.SEXP);
-                reader.stepIn();
-                write_values_helper(reader);
-                reader.stepOut();
-                stepOut();
+                writeContainerSlowly(IonType.SEXP, reader);
                 if (_debug_on) System.out.print(")");
                 break;
             default:
@@ -928,6 +928,20 @@ public abstract class IonWriterBaseImpl
             }
         }
     }
+
+    protected final void writeContainerSlowly(IonType type, IonReader reader)
+        throws IOException
+    {
+        stepIn(type);
+        reader.stepIn();
+        while (reader.next() != null)
+        {
+            writeValueSlowly(reader);
+        }
+        reader.stepOut();
+        stepOut();
+    }
+
 
     //
     //  This code handles the skipped symbol table

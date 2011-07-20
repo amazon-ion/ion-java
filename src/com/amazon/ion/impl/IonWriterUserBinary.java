@@ -120,6 +120,8 @@ public class IonWriterUserBinary
             }
         }
 
-        super.writeValue(reader);
+        // From here on, we won't call back into this method, so we won't
+        // bother doing all those checks again.
+        writeValueSlowly(reader);
     }
 }
