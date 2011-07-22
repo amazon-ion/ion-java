@@ -8,6 +8,7 @@ import static com.amazon.ion.impl.IonConstants.tidSexp;
 import static com.amazon.ion.impl.IonConstants.tidStruct;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
+import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
@@ -125,7 +126,7 @@ public class IonWriterSystemBinary
      * handle its work then let this class finish up.
      */
     @Override
-    protected final void reset()
+    protected final void writeAllBufferedData()
     throws IOException
     {
         writeBytes(_user_output_stream);
@@ -143,12 +144,15 @@ public class IonWriterSystemBinary
         catch (IOException e) {
             throw new IonException(e);
         }
+    }
 
+    @Override
+    protected void resetSystemContext()
+    {
         if (_symbol_table != null && !_symbol_table.isSystemTable()) {
             _assure_ivm = true;
             _symbol_table = null;
         }
-
     }
 
     protected final OutputStream getOutputStream()
@@ -563,7 +567,23 @@ public class IonWriterSystemBinary
      */
     public final void flush() throws IOException
     {
-        if (! _closed) {
+        if (! _closed)
+        {
+            if (atDatagramLevel() && _annotation_count == 0)
+            {
+                UnifiedSymbolTable symtab = (UnifiedSymbolTable)
+                    getSymbolTable();
+
+                if (symtab != null &&
+                    symtab.isReadOnly() &&
+                    symtab.isLocalTable())
+                {
+                    // It's no longer possible to add more symbols to the local
+                    // symtab, so we can safely write everything out.
+                    writeAllBufferedData();
+                }
+            }
+
             _user_output_stream.flush();
         }
     }
@@ -1210,15 +1230,24 @@ public class IonWriterSystemBinary
         patch(patch_len);
     }
 
-    // TODO make private?
-    public int writeBytes(OutputStream userstream) throws IOException
+    // TODO make private after IonBinaryWriter is removed
+    /**
+     * Writes everything we've got into the output stream, performing all
+     * necessary patches along the way.
+     *
+     * This implements {@link IonBinaryWriter#writeBytes(OutputStream)}
+     * via our subclass {@link IonWriterBinaryCompatibility.System}.
+     */
+    int writeBytes(OutputStream userstream) throws IOException
     {
+        int buffer_length = _manager.buffer().size();
+        if (buffer_length == 0) return 0;
+
         int pos = 0;
         int total_written = 0;
         BlockedByteInputStream datastream =
             new BlockedByteInputStream(_manager.buffer());
 
-        int buffer_length = _manager.buffer().size();
         int patch_idx = 0;
         int patch_pos;
         if (patch_idx < _patch_count) {

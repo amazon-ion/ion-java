@@ -95,4 +95,31 @@ public class BinaryWriterTest
         // TODO reader is subset of writer: optimize
         // TODO reader is superset of writer: no optimize
     }
+
+    @Test
+    public void testFlushingUnlockedSymtab()
+    throws Exception
+    {
+        iw = makeWriter();
+        SymbolTable symtab = iw.getSymbolTable();
+        symtab.addSymbol("fred_1");
+        symtab.addSymbol("fred_2");
+
+        iw.writeSymbol("fred_1");
+        iw.flush();
+        byte[] bytes = myOutputStream.toByteArray();
+        assertEquals(0, bytes.length);
+    }
+
+    @Test
+    public void testFlushingUnlockedSymtabWithImports()
+    throws Exception
+    {
+        SymbolTable fred1 = Symtabs.register("fred",   1, catalog());
+        iw = makeWriter(fred1);
+        iw.writeSymbol("fred_1");
+        iw.flush();
+        byte[] bytes = myOutputStream.toByteArray();
+        assertEquals(0, bytes.length);
+    }
 }

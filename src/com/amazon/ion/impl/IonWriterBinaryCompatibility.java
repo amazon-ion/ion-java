@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -74,7 +74,17 @@ public abstract class IonWriterBinaryCompatibility
             int written = get_output_stream().getBytes(bytes, offset, len);
             return written;
         }
+
+        @Deprecated @Override
+        public int writeBytes(OutputStream userStream)
+            throws IOException
+        {
+            // This is just widening the access modifier on the superclass.
+            return super.writeBytes(userStream);
+        }
     }
+
+
     public static class User
         extends IonWriterUserBinary
         implements IonBinaryWriter

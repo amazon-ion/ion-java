@@ -5,6 +5,7 @@ package com.amazon.ion.impl;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.util.IonStreamUtils;
 
 /**
@@ -82,5 +83,11 @@ public class PrivateDmsdkUtils
     public static void setFastCopyEnabled(boolean enable)
     {
         IonWriterUserBinary.ourFastCopyEntabled = enable;
+    }
+
+
+    public static void lockLocalSymbolTable(SymbolTable symtab)
+    {
+        ((UnifiedSymbolTable)symtab).makeReadOnly();
     }
 }

@@ -86,7 +86,17 @@ public abstract class IonWriterBaseImpl
     /**
      * Must only be called at top-level!
      */
-    abstract void reset() throws IOException;
+    protected void writeAllBufferedData() throws IOException
+    {
+    }
+
+    /**
+     * Called by finish after flushing all the known data, to prepare for the
+     * case where the user sends some more.
+     * <p>
+     * FIXME this should never write anything and should never throw!
+     */
+    protected abstract void resetSystemContext() throws IOException;
 
     public final void finish() throws IOException
     {
@@ -96,8 +106,9 @@ public abstract class IonWriterBaseImpl
             throw new IllegalStateException(message);
         }
 
-        reset();
+        writeAllBufferedData();
         flush();
+        resetSystemContext();
     }
 
 
