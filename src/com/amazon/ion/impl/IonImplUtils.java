@@ -35,6 +35,9 @@ public final class IonImplUtils // TODO this class shouldn't be public
     public static final boolean READER_HASNEXT_REMOVED = false;
 
 
+    /** Just a zero-length byte array, used to avoid allocation. */
+    public static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
+
     /** Just a zero-length String array, used to avoid allocation. */
     public final static String[] EMPTY_STRING_ARRAY = new String[0];
 
@@ -342,5 +345,4 @@ public final class IonImplUtils // TODO this class shouldn't be public
             throw new UnsupportedOperationException();
         }
     }
-
 }
