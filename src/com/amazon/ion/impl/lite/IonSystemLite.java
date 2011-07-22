@@ -32,6 +32,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.UnsupportedIonVersionException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonReaderFactoryX;
@@ -537,40 +538,31 @@ public final class IonSystemLite
         this._catalog = catalog;
     }
 
-    public IonValue singleValue(String ionText)
+    private IonValue singleValue(Iterator<IonValue> it)
     {
-        Iterator<IonValue> it = this.iterate(ionText);
-        IonValue value = null;
+        IonValue value;
         try {
             value = it.next();
         }
         catch (NoSuchElementException e) {
-            // value is already null, just
-            // fall through where we'll throw
-            // an IonException
+            throw new UnexpectedEofException("no value found on input stream");
         }
-        if (value == null || it.hasNext()) {
+        if (it.hasNext()) {
             throw new IonException("not a single value");
         }
         return value;
     }
 
+    public IonValue singleValue(String ionText)
+    {
+        Iterator<IonValue> it = iterate(ionText);
+        return singleValue(it);
+    }
+
     public IonValue singleValue(byte[] ionData)
     {
-        Iterator<IonValue> it = this.iterate(ionData);
-        IonValue value = null;
-        try {
-            value = it.next();
-        }
-        catch (NoSuchElementException e) {
-            // value is already null, just
-            // fall through where we'll throw
-            // an IonException
-        }
-        if (value == null || it.hasNext()) {
-            throw new IonException("not a single value");
-        }
-        return value;
+        Iterator<IonValue> it = iterate(ionData);
+        return singleValue(it);
     }
 
     /**

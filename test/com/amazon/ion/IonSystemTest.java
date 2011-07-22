@@ -2,7 +2,13 @@
 
 package com.amazon.ion;
 
+import static com.amazon.ion.impl.IonImplUtils.EMPTY_BYTE_ARRAY;
+
 import com.amazon.ion.system.SimpleCatalog;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.io.Reader;
+import java.io.StringReader;
 import java.util.Arrays;
 import java.util.Iterator;
 import org.junit.Test;
@@ -13,6 +19,92 @@ import org.junit.Test;
 public class IonSystemTest
     extends IonTestCase
 {
+    //========================================================================
+    // iterate(Reader)
+
+    @Test(expected = NullPointerException.class)
+    public void testIterateNullReader()
+    {
+        system().iterate((Reader) null);
+    }
+
+    @Test
+    public void testIterateEmptyReader()
+    {
+        Reader in = new StringReader("");
+        Iterator<IonValue> i = system().iterate(in);
+        assertFalse(i.hasNext());
+    }
+
+
+    //========================================================================
+    // iterate(InputStream)
+
+    @Test(expected = NullPointerException.class)
+    public void testIterateNullInputStream()
+    {
+        system().iterate((InputStream) null);
+    }
+
+    @Test
+    public void testIterateEmptyInputStream()
+    {
+        InputStream in = new ByteArrayInputStream(EMPTY_BYTE_ARRAY);
+        Iterator<IonValue> i = system().iterate(in);
+        assertFalse(i.hasNext());
+    }
+
+
+    //========================================================================
+    // iterate(String)
+
+    @Test(expected = NullPointerException.class)
+    public void testIterateNullString()
+    {
+        system().iterate((String) null);
+    }
+
+    @Test
+    public void testIterateEmptyString()
+    {
+        Iterator<IonValue> i = system().iterate("");
+        assertFalse(i.hasNext());
+    }
+
+
+    //========================================================================
+    // iterate(byte[])
+
+    @Test(expected = NullPointerException.class)
+    public void testIterateNullBytes()
+    {
+        system().iterate((byte[]) null);
+    }
+
+    @Test
+    public void testIterateEmptyBytes()
+    {
+        Iterator<IonValue> i = system().iterate(EMPTY_BYTE_ARRAY);
+        assertFalse(i.hasNext());
+    }
+
+
+    //========================================================================
+    // singleValue(String)
+
+    @Test(expected = NullPointerException.class)
+    public void testSingleValueNullString()
+    {
+        system().singleValue((String) null);
+    }
+
+    @Test(expected = UnexpectedEofException.class)
+    public void testSingleValueEmptyString()
+    {
+        system().singleValue("");
+    }
+
+
     /**
      * Ensure that singleValue() can handle Unicode.
      */
@@ -29,6 +121,26 @@ public class IonSystemTest
         v = (IonString) system().singleValue(binary);
         assertEquals(utf8Text, v.stringValue());
     }
+
+
+    //========================================================================
+    // singleValue(byte[])
+
+    @Test(expected = NullPointerException.class)
+    public void testSingleValueNullBytes()
+    {
+        system().singleValue((byte[]) null);
+    }
+
+    @Test(expected = UnexpectedEofException.class)
+    public void testSingleValueEmptyBytes()
+    {
+        system().singleValue(EMPTY_BYTE_ARRAY);
+    }
+
+
+    //========================================================================
+    // clone(IonValue)
 
     /**
      * check for clone across two systems failing to
