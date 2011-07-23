@@ -2,3 +2,4 @@
 .p4config
 build
 junit*.properties
+tmp*
