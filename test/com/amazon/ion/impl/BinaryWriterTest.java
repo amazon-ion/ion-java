@@ -5,7 +5,9 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.impl.UnifiedSymbolTable.ION_SYMBOL_TABLE;
 import static com.amazon.ion.junit.IonAssert.assertIonIteratorEquals;
 
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
+import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
@@ -95,6 +97,38 @@ public class BinaryWriterTest
         // TODO reader is subset of writer: optimize
         // TODO reader is superset of writer: no optimize
     }
+
+
+    @Test(expected = IonException.class)
+    public void testWriteSymbolWithLockedSymtab()
+        throws Exception
+    {
+        iw = makeWriter();
+        PrivateDmsdkUtils.lockLocalSymbolTable(iw.getSymbolTable());
+        iw.writeSymbol("s");
+    }
+
+    @Test(expected = IonException.class)
+    public void testAddTypeAnnotationWithLockedSymtab()
+        throws Exception
+    {
+        iw = makeWriter();
+        PrivateDmsdkUtils.lockLocalSymbolTable(iw.getSymbolTable());
+        iw.addTypeAnnotation("a");
+        iw.writeNull();
+    }
+
+    @Test(expected = IonException.class)
+    public void testSetFieldNameWithLockedSymtab()
+        throws Exception
+    {
+        iw = makeWriter();
+        PrivateDmsdkUtils.lockLocalSymbolTable(iw.getSymbolTable());
+        iw.stepIn(IonType.STRUCT);
+        iw.setFieldName("f");
+        iw.writeNull();
+    }
+
 
     @Test
     public void testFlushingUnlockedSymtab()
