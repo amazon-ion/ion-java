@@ -11,8 +11,10 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
+import com.amazon.ion.junit.IonAssert;
 import java.io.OutputStream;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -155,5 +157,41 @@ public class BinaryWriterTest
         iw.flush();
         byte[] bytes = myOutputStream.toByteArray();
         assertEquals(0, bytes.length);
+    }
+
+    @Test @Ignore // TODO ION-218  and see below for another case
+    public void testMinimalSymtab()
+    throws Exception
+    {
+        iw = makeWriter();
+        iw.writeNull();
+        byte[] bytes = outputByteArray();
+
+        // 4 bytes for IVM, 1 byte for null
+        assertEquals(5, bytes.length);
+    }
+
+    @Test
+    public void testBinaryWriterReuse()
+        throws Exception
+    {
+        iw = makeWriter();
+        iw.writeString(null);
+        iw.finish();
+
+        byte[] bytes1 = myOutputStream.toByteArray();
+        myOutputStream.reset();
+
+        iw.writeString(null);
+        iw.finish();
+        byte[] bytes2 = myOutputStream.toByteArray();
+
+        IonAssert.assertIonEquals(loader().load(bytes1),
+                                  loader().load(bytes2));
+
+        // FIXME ION-218 this fails because bytes1 has an empty local symtab.
+        if (false) {
+            Assert.assertArrayEquals(bytes1, bytes2);
+        }
     }
 }
