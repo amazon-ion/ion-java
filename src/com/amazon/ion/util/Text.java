@@ -373,7 +373,7 @@ public class Text
         }
         else {
             // FIXME JSON doesn't support eight-digit \U syntax!
-            // https://issue-tracking.amazon.com/browse/ION-33
+            // https://jira2.amazon.com/browse/ION-33
             printCodePointAsEightHexDigits(out, c);
         }
     }

@@ -66,6 +66,10 @@ abstract public class IonReaderBinaryRawX
     int                 _value_lob_remaining;
     boolean             _value_lob_is_ready;
 
+    int                 _position_start;    // FIXME:  used for repositionable reader
+    int                 _position_len;      // FIXME:  used for repositionable reader
+
+
     SavePoint           _annotations;
     int[]               _annotation_ids;
     int                 _annotation_count;
@@ -80,17 +84,40 @@ abstract public class IonReaderBinaryRawX
     protected IonReaderBinaryRawX() {
     }
 
-    protected final void init(UnifiedInputStreamX uis) {
+    protected final void init_raw(UnifiedInputStreamX uis) {
         _input = uis;
-        _local_remaining = NO_LIMIT;
-        _parent_tid = IonConstants.tidDATAGRAM;
-        _value_field_id = UnifiedSymbolTable.UNKNOWN_SID;
-        _state = State.S_BEFORE_TID; // this is where we always start
         _container_stack = new long[DEFAULT_CONTAINER_STACK_SIZE];
         _annotations = uis.savePointAllocate();
         _v = new ValueVariant();
         _annotation_ids = new int[DEFAULT_ANNOTATION_SIZE];
+
+        re_init_raw();
+
+        _position_start = -1;
+    }
+
+    final void re_init_raw() {
+        _local_remaining = NO_LIMIT;
+        _parent_tid = IonConstants.tidDATAGRAM;
+        _value_field_id = UnifiedSymbolTable.UNKNOWN_SID;
+        _state = State.S_BEFORE_TID; // this is where we always start
         _has_next_needed = true;
+
+        _eof = false;
+        _value_type = null;
+        _value_is_null = false;
+        _value_is_true = false;
+
+        _value_len = 0;
+        _value_lob_remaining = 0;
+        _value_lob_is_ready = false;
+
+        _annotation_count = 0;
+
+        _is_in_struct = false;
+        _struct_is_ordered = false;
+        _parent_tid = 0;
+        _container_top = 0;
     }
 
     public void close()
@@ -354,6 +381,9 @@ abstract public class IonReaderBinaryRawX
     }
     private final int read_type_id() throws IOException
     {
+        int start_of_tid   = _input._pos;                      // FIXME: for repositionable reader
+        int start_of_value = start_of_tid + 1;                 // FIXME: for repositionable reader
+
         int td = read();
         if (td < 0) {
             return UnifiedInputStreamX.EOF;
@@ -362,6 +392,7 @@ abstract public class IonReaderBinaryRawX
         int len = IonConstants.getLowNibble(td);
         if (len == IonConstants.lnIsVarLen) {
             len = readVarUInt();
+            start_of_value = _input._pos;                      // FIXME: for repositionable reader
         }
         else if (tid == IonConstants.tidNull) {
             if (len != IonConstants.lnIsNull) {
@@ -396,10 +427,13 @@ abstract public class IonReaderBinaryRawX
                 // special case of an ordered struct, it gets the
                 // otherwise impossible to have length of 1
                 len = readVarUInt();
+                start_of_value = _input._pos;                      // FIXME: for repositionable reader
             }
         }
         _value_tid = tid;
         _value_len = len;
+        _position_len = len + (start_of_value - start_of_tid);           // FIXME: for repositionable reader
+        _position_start = start_of_tid;                                  // FIXME: for repositionable reader
         return tid;
     }
     private final IonType get_iontype_from_tid(int tid)
@@ -984,7 +1018,7 @@ done:   for (;;) {
     }
     /**
      * Near clone of {@link SimpleByteBuffer.SimpleByteReader#readDecimal(int)}
-     * and {@link IonBinary.Reader#readDecimalValue(IonDecimalImpl, int)}
+     * and {@link IonBinary.Reader#readDecimalValue(int)}
      * so keep them in sync!
      */
     protected final Decimal readDecimal(int len) throws IOException

@@ -388,7 +388,7 @@ public interface IonSequence
      *
      * @throws UnsupportedOperationException at every call.
      *
-     * @see <a href="https://issue-tracking.amazon.com/browse/ION-92">ION-92</a>
+     * @see <a href="https://jira2.amazon.com/browse/ION-92">ION-92</a>
      */
     public List<IonValue> subList(int fromIndex, int toIndex);
 

@@ -357,7 +357,7 @@ public final class UnifiedSymbolTable
 
         UnifiedSymbolTable table = new UnifiedSymbolTable(sys);
         table.loadSharedSymbolTableContents(SystemSymbolTable.ION, version, SYSTEM_SYMBOLS);
-
+        table.makeReadOnly();
         return table;
     }
 
@@ -386,7 +386,7 @@ public final class UnifiedSymbolTable
         }
         UnifiedSymbolTable table = new UnifiedSymbolTable(sys);
         table.loadSharedSymbolTableContents(name, version, priorSymtab, symbols);
-
+        table.makeReadOnly();
         return table;
     }
     static public UnifiedSymbolTable makeNewSharedSymbolTable(IonStruct ionRep)
@@ -987,8 +987,6 @@ public final class UnifiedSymbolTable
     synchronized
     int addSymbol(String name)
     {
-        verify_not_read_only();
-
         int sid = this.findSymbol(name);
         if (sid == UNKNOWN_SID) {
             if (_name != null) {
@@ -1037,8 +1035,6 @@ public final class UnifiedSymbolTable
     synchronized
     void defineSymbol(String name, int id)
     {
-        verify_not_read_only();
-
         if (_name != null) {
             throw new UnsupportedOperationException("can't change shared symbol table");
         }
@@ -1338,6 +1334,7 @@ public final class UnifiedSymbolTable
         assert ionRep != null;
         assert sys == ionRep.getSystem();
 
+        // TODO Why can't we just append to the end of the existing ionRep?
         IonList symbolsList = sys.newEmptyList();
 
         ionRep.remove(UnifiedSymbolTable.SYMBOLS);  // to cover the "replace existing" case

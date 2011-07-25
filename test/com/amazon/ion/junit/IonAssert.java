@@ -92,6 +92,11 @@ public class IonAssert
         while (expected.hasNext())
         {
             IonValue expectedValue = expected.next();
+            if (! actual.hasNext())
+            {
+                fail("actual iteration ends before [" + i + "]=" + expectedValue);
+            }
+
             IonValue actualValue   = actual.next();
             doAssertIonEquals("iterator[" + i + ']',
                               expectedValue, actualValue);

@@ -70,11 +70,8 @@ class IonWriterSystemTree
     }
 
     @Override
-    void reset() throws IOException
+    protected void resetSystemContext() throws IOException
     {
-        if (getDepth() != 0) {
-            throw new IllegalStateException("you can't reset a writer that is in the middle of writing a value");
-        }
         setSymbolTable(_system.getSystemSymbolTable());
     }
 

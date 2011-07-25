@@ -8,6 +8,7 @@ import static com.amazon.ion.impl.IonConstants.tidSexp;
 import static com.amazon.ion.impl.IonConstants.tidStruct;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
+import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
@@ -125,7 +126,7 @@ public class IonWriterSystemBinary
      * handle its work then let this class finish up.
      */
     @Override
-    protected void reset()
+    protected final void writeAllBufferedData()
     throws IOException
     {
         writeBytes(_user_output_stream);
@@ -143,40 +144,45 @@ public class IonWriterSystemBinary
         catch (IOException e) {
             throw new IonException(e);
         }
+    }
 
+    @Override
+    protected void resetSystemContext()
+    {
         if (_symbol_table != null && !_symbol_table.isSystemTable()) {
             _assure_ivm = true;
             _symbol_table = null;
         }
-
     }
 
-    protected OutputStream getOutputStream()
+    protected final OutputStream getOutputStream()
     {
         return _user_output_stream;
     }
-    public boolean isInStruct()
+
+    public final boolean isInStruct()
     {
         return _in_struct;
     }
-    boolean topInStruct() {
+
+    private final boolean topInStruct() {
         if (_top == 0) return false;
         boolean in_struct = _patch_in_struct[_patch_stack[_top - 1]];
         return in_struct;
     }
     protected final boolean atDatagramLevel()
     {
-        boolean is_datagram = (topType() == IonConstants.tidDATAGRAM);
-        return is_datagram;
+        return (topType() == IonConstants.tidDATAGRAM);
+//        return is_datagram;
     }
 
     @Override
-    public int getDepth()
+    public final int getDepth()
     {
         return _user_depth;
     }
 
-    protected IonType getContainer()
+    protected final IonType getContainer()
     {
         IonType type;
         int tid = parentType();
@@ -200,7 +206,7 @@ public class IonWriterSystemBinary
     }
 
 
-    void push(int typeid) {
+    private final void push(int typeid) {
         int pos = _writer.position();
         if (_top >= _patch_stack.length) {
             growStack();
@@ -217,14 +223,16 @@ public class IonWriterSystemBinary
         _patch_in_struct[_patch_count] = _in_struct;
         _patch_count++;
     }
-    void growStack() {
+
+    private final void growStack() {
         int oldlen = _patch_stack.length;
         int newlen = oldlen * 2;
         int[] temp = new int[newlen];
         System.arraycopy(_patch_stack, 0, temp, 0, oldlen);
         _patch_stack = temp;
     }
-    void growList() {
+
+    private final void growList() {
         int oldlen = _patch_lengths.length ;
         int newlen = oldlen * 2; // _patch_list.length * 2;
         int[] temp1 = new int[newlen];
@@ -245,7 +253,8 @@ public class IonWriterSystemBinary
         _patch_types     = temp4;
         _patch_in_struct = temp5;
     }
-    void growSymbolPatchList() {
+
+    private final void growSymbolPatchList() {
         int oldlen = _patch_symbol_tables.length;
         int newlen = oldlen * 2;
 
@@ -256,7 +265,7 @@ public class IonWriterSystemBinary
         _patch_symbol_tables = temp1;
     }
 
-    void patch(int addedLength) {
+    final void patch(int addedLength) {
         if (addedLength > 0 && _top > 0) {
             int patch_id = _patch_stack[_top - 1];
             _patch_lengths[patch_id] += addedLength;
@@ -322,7 +331,7 @@ public class IonWriterSystemBinary
         _symbol_table = symbols;
     }
 
-    private void set_symbol_table_prepend_new_local_table(SymbolTable symbols) throws IOException
+    private final void set_symbol_table_prepend_new_local_table(SymbolTable symbols) throws IOException
     {
 
         // patch this symbol table in "here" at the end
@@ -367,7 +376,7 @@ public class IonWriterSystemBinary
     }
 
     @Override
-    UnifiedSymbolTable inject_local_symbol_table() throws IOException
+    final UnifiedSymbolTable inject_local_symbol_table() throws IOException
     {
         // no catalog since it doesn't matter as this is a
         // pure local table, with no imports
@@ -377,7 +386,7 @@ public class IonWriterSystemBinary
         return symbols;
     }
 
-    protected void patchInSymbolTable(SymbolTable symbols) throws IOException
+    protected final void patchInSymbolTable(SymbolTable symbols) throws IOException
     {
         if (_assure_ivm) { //  && !_any_values_written) {
             // we have to check for this here since we
@@ -404,7 +413,7 @@ public class IonWriterSystemBinary
         _patch_count++;
     }
 
-    void pop() {
+    private final void pop() {
         // first grab the length since this container will now be
         // closed and fixed, we'll back patch it's len 'o len into
         // it's parents -- after we pop it off the stack
@@ -424,17 +433,21 @@ public class IonWriterSystemBinary
             patch(lenolen);
         }
     }
-    int topLength() {
+
+    private final int topLength() {
         return _patch_lengths[_patch_stack[_top - 1]];
     }
-    int topPosition(){
+
+    private final int topPosition(){
         return _patch_offsets[_patch_stack[_top - 1]];
     }
-    int topType() {
+
+    private final int topType() {
         if (_top == 0) return IonConstants.tidDATAGRAM;
         return _patch_types[_patch_stack[_top - 1]];
     }
-    int parentType() {
+
+    private final int parentType() {
         int ii = _top - 2;
         while (ii >= 0) {
             int type = _patch_types[_patch_stack[ii]];
@@ -444,7 +457,8 @@ public class IonWriterSystemBinary
         return IonConstants.tidDATAGRAM;
     }
 
-    void startValue(IonType value_type, int value_length) throws IOException
+    private final void startValue(IonType value_type, int value_length)
+        throws IOException
     {
         int patch_len = 0;
 
@@ -528,25 +542,20 @@ public class IonWriterSystemBinary
         }
     }
 
-    void closeValue() {
-        if (_top > 0) {
-            // check for annotations, which we need to pop off now
-            // since once we close a value out, we won't need to path
-            // the annotations it (might have) had
-            if (topType() == IonConstants.tidTypedecl) {
-                pop();
-            }
-        }
-        if (atDatagramLevel() && _auto_flush) {
-            try {
-                this.flush();
-            }
-            catch (IOException e) {
-                // FIXME should not swallow this
-                throw new IonException(e);
-            }
-        }
+    private final void closeValue()
+        throws IOException
+    {
+        int topType = topType();
 
+        // check for annotations, which we need to pop off now
+        // since once we close a value out, we won't need to patch
+        // the annotations it (might have) had
+        if (topType == IonConstants.tidTypedecl) {
+            pop();
+        }
+        else if ((topType == IonConstants.tidDATAGRAM) && _auto_flush) {
+            this.flush();
+        }
     }
 
 
@@ -556,14 +565,30 @@ public class IonWriterSystemBinary
      * The {@link OutputStream} spec is mum regarding the behavior of flush on
      * a closed stream, so we shouldn't assume that our stream can handle that.
      */
-    public void flush() throws IOException
+    public final void flush() throws IOException
     {
-        if (! _closed) {
+        if (! _closed)
+        {
+            if (atDatagramLevel() && _annotation_count == 0)
+            {
+                UnifiedSymbolTable symtab = (UnifiedSymbolTable)
+                    getSymbolTable();
+
+                if (symtab != null &&
+                    symtab.isReadOnly() &&
+                    symtab.isLocalTable())
+                {
+                    // It's no longer possible to add more symbols to the local
+                    // symtab, so we can safely write everything out.
+                    writeAllBufferedData();
+                }
+            }
+
             _user_output_stream.flush();
         }
     }
 
-    public void close() throws IOException
+    public final void close() throws IOException
     {
         if (! _closed) {
             try
@@ -583,7 +608,7 @@ public class IonWriterSystemBinary
     }
 
 
-    public void stepIn(IonType containerType) throws IOException
+    public final void stepIn(IonType containerType) throws IOException
     {
         startValue(containerType, UNKNOWN_LENGTH);
         patch(1);
@@ -603,7 +628,7 @@ public class IonWriterSystemBinary
         _user_depth++;
     }
 
-    public void stepOut() throws IOException
+    public final void stepOut() throws IOException
     {
         if (_top < 1) {
             throw new IllegalStateException(IonMessages.CANNOT_STEP_OUT);
@@ -615,7 +640,7 @@ public class IonWriterSystemBinary
     }
 
     @Override
-    public void setFieldId(int id)
+    public final void setFieldId(int id)
     {
         if (!_in_struct) {
             throw new IllegalStateException();
@@ -1205,15 +1230,24 @@ public class IonWriterSystemBinary
         patch(patch_len);
     }
 
-    // TODO make private?
-    public int writeBytes(OutputStream userstream) throws IOException
+    // TODO make private after IonBinaryWriter is removed
+    /**
+     * Writes everything we've got into the output stream, performing all
+     * necessary patches along the way.
+     *
+     * This implements {@link IonBinaryWriter#writeBytes(OutputStream)}
+     * via our subclass {@link IonWriterBinaryCompatibility.System}.
+     */
+    int writeBytes(OutputStream userstream) throws IOException
     {
+        int buffer_length = _manager.buffer().size();
+        if (buffer_length == 0) return 0;
+
         int pos = 0;
         int total_written = 0;
         BlockedByteInputStream datastream =
             new BlockedByteInputStream(_manager.buffer());
 
-        int buffer_length = _manager.buffer().size();
         int patch_idx = 0;
         int patch_pos;
         if (patch_idx < _patch_count) {
