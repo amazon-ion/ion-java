@@ -236,7 +236,7 @@ public final class IonFloatImpl
             _float_value = ZERO_DOUBLE;
             break;
         case IonConstants.lnIsVarLen:
-            ln = reader.readVarUInt7IntValue();
+            ln = reader.readVarUIntAsInt();
             // fall through to default:
         default:
             _float_value = new Double(reader.readFloatValue(ln));

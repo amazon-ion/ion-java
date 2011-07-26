@@ -8,6 +8,7 @@ import static com.amazon.ion.impl.IonConstants.tidSexp;
 import static com.amazon.ion.impl.IonConstants.tidStruct;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
+import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
@@ -125,7 +126,7 @@ public class IonWriterSystemBinary
      * handle its work then let this class finish up.
      */
     @Override
-    protected void reset()
+    protected final void writeAllBufferedData()
     throws IOException
     {
         writeBytes(_user_output_stream);
@@ -143,40 +144,45 @@ public class IonWriterSystemBinary
         catch (IOException e) {
             throw new IonException(e);
         }
-
-        if (_symbol_table != null && !_symbol_table.isSystemTable()) {
-            _assure_ivm = true;
-            _symbol_table = null;
-        }
-
     }
 
-    protected OutputStream getOutputStream()
+    @Override
+    protected void resetSystemContext()
+    {
+        _assure_ivm = true;
+        if (_symbol_table != null && !_symbol_table.isSystemTable()) {
+            _symbol_table = null;
+        }
+    }
+
+    protected final OutputStream getOutputStream()
     {
         return _user_output_stream;
     }
-    public boolean isInStruct()
+
+    public final boolean isInStruct()
     {
         return _in_struct;
     }
-    boolean topInStruct() {
+
+    private final boolean topInStruct() {
         if (_top == 0) return false;
         boolean in_struct = _patch_in_struct[_patch_stack[_top - 1]];
         return in_struct;
     }
     protected final boolean atDatagramLevel()
     {
-        boolean is_datagram = (topType() == IonConstants.tidDATAGRAM);
-        return is_datagram;
+        return (topType() == IonConstants.tidDATAGRAM);
+//        return is_datagram;
     }
 
     @Override
-    public int getDepth()
+    public final int getDepth()
     {
         return _user_depth;
     }
 
-    protected IonType getContainer()
+    protected final IonType getContainer()
     {
         IonType type;
         int tid = parentType();
@@ -200,7 +206,7 @@ public class IonWriterSystemBinary
     }
 
 
-    void push(int typeid) {
+    private final void push(int typeid) {
         int pos = _writer.position();
         if (_top >= _patch_stack.length) {
             growStack();
@@ -217,14 +223,16 @@ public class IonWriterSystemBinary
         _patch_in_struct[_patch_count] = _in_struct;
         _patch_count++;
     }
-    void growStack() {
+
+    private final void growStack() {
         int oldlen = _patch_stack.length;
         int newlen = oldlen * 2;
         int[] temp = new int[newlen];
         System.arraycopy(_patch_stack, 0, temp, 0, oldlen);
         _patch_stack = temp;
     }
-    void growList() {
+
+    private final void growList() {
         int oldlen = _patch_lengths.length ;
         int newlen = oldlen * 2; // _patch_list.length * 2;
         int[] temp1 = new int[newlen];
@@ -245,7 +253,8 @@ public class IonWriterSystemBinary
         _patch_types     = temp4;
         _patch_in_struct = temp5;
     }
-    void growSymbolPatchList() {
+
+    private final void growSymbolPatchList() {
         int oldlen = _patch_symbol_tables.length;
         int newlen = oldlen * 2;
 
@@ -256,7 +265,7 @@ public class IonWriterSystemBinary
         _patch_symbol_tables = temp1;
     }
 
-    void patch(int addedLength) {
+    final void patch(int addedLength) {
         if (addedLength > 0 && _top > 0) {
             int patch_id = _patch_stack[_top - 1];
             _patch_lengths[patch_id] += addedLength;
@@ -322,7 +331,7 @@ public class IonWriterSystemBinary
         _symbol_table = symbols;
     }
 
-    private void set_symbol_table_prepend_new_local_table(SymbolTable symbols) throws IOException
+    private final void set_symbol_table_prepend_new_local_table(SymbolTable symbols) throws IOException
     {
 
         // patch this symbol table in "here" at the end
@@ -367,7 +376,7 @@ public class IonWriterSystemBinary
     }
 
     @Override
-    UnifiedSymbolTable inject_local_symbol_table() throws IOException
+    final UnifiedSymbolTable inject_local_symbol_table() throws IOException
     {
         // no catalog since it doesn't matter as this is a
         // pure local table, with no imports
@@ -377,7 +386,7 @@ public class IonWriterSystemBinary
         return symbols;
     }
 
-    protected void patchInSymbolTable(SymbolTable symbols) throws IOException
+    protected final void patchInSymbolTable(SymbolTable symbols) throws IOException
     {
         if (_assure_ivm) { //  && !_any_values_written) {
             // we have to check for this here since we
@@ -404,7 +413,7 @@ public class IonWriterSystemBinary
         _patch_count++;
     }
 
-    void pop() {
+    private final void pop() {
         // first grab the length since this container will now be
         // closed and fixed, we'll back patch it's len 'o len into
         // it's parents -- after we pop it off the stack
@@ -424,17 +433,21 @@ public class IonWriterSystemBinary
             patch(lenolen);
         }
     }
-    int topLength() {
+
+    private final int topLength() {
         return _patch_lengths[_patch_stack[_top - 1]];
     }
-    int topPosition(){
+
+    private final int topPosition(){
         return _patch_offsets[_patch_stack[_top - 1]];
     }
-    int topType() {
+
+    private final int topType() {
         if (_top == 0) return IonConstants.tidDATAGRAM;
         return _patch_types[_patch_stack[_top - 1]];
     }
-    int parentType() {
+
+    private final int parentType() {
         int ii = _top - 2;
         while (ii >= 0) {
             int type = _patch_types[_patch_stack[ii]];
@@ -444,7 +457,8 @@ public class IonWriterSystemBinary
         return IonConstants.tidDATAGRAM;
     }
 
-    void startValue(IonType value_type, int value_length) throws IOException
+    private final void startValue(IonType value_type, int value_length)
+        throws IOException
     {
         int patch_len = 0;
 
@@ -461,7 +475,7 @@ public class IonWriterSystemBinary
             if (sid < 1) {
                 throw new UnsupportedOperationException("symbol resolution must be handled by the user writer");
             }
-            patch_len += _writer.writeVarUInt7Value(sid, true);
+            patch_len += _writer.writeVarUIntValue(sid, true);
             super.clearFieldName();
         }
 
@@ -476,7 +490,7 @@ public class IonWriterSystemBinary
                 if (sids[ii] < 1) {
                     throw new UnsupportedOperationException("symbol resolution must be handled by the user writer");
                 }
-                annotations_len += IonBinary.lenVarUInt7(sids[ii]);
+                annotations_len += IonBinary.lenVarUInt(sids[ii]);
             }
 
             // THEN write the td byte, optional annotations, this is before the caller
@@ -498,7 +512,7 @@ public class IonWriterSystemBinary
                 // if we know the value length we can write the
                 // annotation header out in full (and avoid the back patching)
                 // <ann,ln><totallen><annlen><ann><valuetd,ln><valuelen><value>
-                int annotation_len_o_len = IonBinary.lenVarUInt7(annotations_len); // len(<annlen>)
+                int annotation_len_o_len = IonBinary.lenVarUInt(annotations_len); // len(<annlen>)
                 int total_ann_value_len = annotation_len_o_len + annotations_len + value_length;
                 if (total_ann_value_len < IonConstants.lnIsVarLen) {
                     td |= (total_ann_value_len & 0xf);
@@ -508,18 +522,17 @@ public class IonWriterSystemBinary
                     td |= (IonConstants.lnIsVarLen & 0xf);
                     _writer.write((byte)td);
                     // add the len of len to the patch total (since we just learned about it)
-                    //patch_len += _writer.writeVarUInt7Value(annotation_header_len, annotation_len_o_len, true);
-                    patch_len += _writer.writeVarUInt7Value(total_ann_value_len, true);
+                    patch_len += _writer.writeVarUIntValue(total_ann_value_len, true);
                 }
                 patch_len++;  // the size of the ann type desc byte
             }
 
             patch_len += annotations_len;
-            patch_len += _writer.writeVarUInt7Value(annotations_len, true);                              /// CAS late night added "len +="
+            patch_len += _writer.writeVarUIntValue(annotations_len, true);                              /// CAS late night added "len +="
             for (int ii=0; ii<sid_count; ii++) {
                 // note that len already has the sum of the actual lengths
                 // added into it so that we could write it out in front
-                _writer.writeVarUInt7Value(sids[ii], true);
+                _writer.writeVarUIntValue(sids[ii], true);
             }
             // we patch any wrapper the annotation is in with whatever we wrote here
             super.clearAnnotations();
@@ -529,25 +542,20 @@ public class IonWriterSystemBinary
         }
     }
 
-    void closeValue() {
-        if (_top > 0) {
-            // check for annotations, which we need to pop off now
-            // since once we close a value out, we won't need to path
-            // the annotations it (might have) had
-            if (topType() == IonConstants.tidTypedecl) {
-                pop();
-            }
-        }
-        if (atDatagramLevel() && _auto_flush) {
-            try {
-                this.flush();
-            }
-            catch (IOException e) {
-                // FIXME should not swallow this
-                throw new IonException(e);
-            }
-        }
+    private final void closeValue()
+        throws IOException
+    {
+        int topType = topType();
 
+        // check for annotations, which we need to pop off now
+        // since once we close a value out, we won't need to patch
+        // the annotations it (might have) had
+        if (topType == IonConstants.tidTypedecl) {
+            pop();
+        }
+        else if ((topType == IonConstants.tidDATAGRAM) && _auto_flush) {
+            this.flush();
+        }
     }
 
 
@@ -557,14 +565,30 @@ public class IonWriterSystemBinary
      * The {@link OutputStream} spec is mum regarding the behavior of flush on
      * a closed stream, so we shouldn't assume that our stream can handle that.
      */
-    public void flush() throws IOException
+    public final void flush() throws IOException
     {
-        if (! _closed) {
+        if (! _closed)
+        {
+            if (atDatagramLevel() && _annotation_count == 0)
+            {
+                UnifiedSymbolTable symtab = (UnifiedSymbolTable)
+                    getSymbolTable();
+
+                if (symtab != null &&
+                    symtab.isReadOnly() &&
+                    symtab.isLocalTable())
+                {
+                    // It's no longer possible to add more symbols to the local
+                    // symtab, so we can safely write everything out.
+                    writeAllBufferedData();
+                }
+            }
+
             _user_output_stream.flush();
         }
     }
 
-    public void close() throws IOException
+    public final void close() throws IOException
     {
         if (! _closed) {
             try
@@ -584,7 +608,7 @@ public class IonWriterSystemBinary
     }
 
 
-    public void stepIn(IonType containerType) throws IOException
+    public final void stepIn(IonType containerType) throws IOException
     {
         startValue(containerType, UNKNOWN_LENGTH);
         patch(1);
@@ -604,7 +628,7 @@ public class IonWriterSystemBinary
         _user_depth++;
     }
 
-    public void stepOut() throws IOException
+    public final void stepOut() throws IOException
     {
         if (_top < 1) {
             throw new IllegalStateException(IonMessages.CANNOT_STEP_OUT);
@@ -616,7 +640,7 @@ public class IonWriterSystemBinary
     }
 
     @Override
-    public void setFieldId(int id)
+    public final void setFieldId(int id)
     {
         if (!_in_struct) {
             throw new IllegalStateException();
@@ -660,11 +684,11 @@ public class IonWriterSystemBinary
         startValue(IonType.INT, len + 1); // int's are always less than varlen long
         if (value < 0) {
             _writer.write((IonConstants.tidNegInt << 4) | len);
-            _writer.writeVarUInt8Value(-value, len);
+            _writer.writeUIntValue(-value, len);
         }
         else {
             _writer.write((IonConstants.tidPosInt << 4) | len);
-            _writer.writeVarUInt8Value(value, len);
+            _writer.writeUIntValue(value, len);
         }
         patch(1 + len);
     }
@@ -674,11 +698,11 @@ public class IonWriterSystemBinary
         startValue(IonType.INT, len + 1); // int's are always less than varlen long
         if (value < 0) {
             _writer.write((IonConstants.tidNegInt << 4) | len);
-            _writer.writeVarUInt8Value(-value, len);
+            _writer.writeUIntValue(-value, len);
         }
         else {
             _writer.write((IonConstants.tidPosInt << 4) | len);
-            _writer.writeVarUInt8Value(value, len);
+            _writer.writeUIntValue(value, len);
         }
         patch(1 + len);
     }
@@ -696,7 +720,7 @@ public class IonWriterSystemBinary
         int patch_len = 1 + len;
         if (len >= IonConstants.lnIsVarLen) {
             ln = IonConstants.lnIsVarLen;
-            patch_len += IonBinary.lenVarUInt7(len);
+            patch_len += IonBinary.lenVarUInt(len);
         }
         startValue(IonType.INT, patch_len);
 
@@ -708,10 +732,10 @@ public class IonWriterSystemBinary
             _writer.write((IonConstants.tidPosInt << 4) | ln);
         }
         if (ln == IonConstants.lnIsVarLen) {
-            _writer.writeVarUInt7Value(len, false);
+            _writer.writeVarUIntValue(len, false);
         }
 
-        int wroteLen = _writer.writeVarUInt8Value(positive, len);
+        int wroteLen = _writer.writeUIntValue(positive, len);
         assert wroteLen == len;
         patch(patch_len);
 
@@ -739,14 +763,14 @@ public class IonWriterSystemBinary
         int ln = len;
         if (len >= IonConstants.lnIsVarLen) {
             ln = IonConstants.lnIsVarLen;
-            patch_len += IonBinary.lenVarUInt7(len);
+            patch_len += IonBinary.lenVarUInt(len);
         }
 
         startValue(IonType.DECIMAL, patch_len + len);
 
         _writer.write((IonConstants.tidDecimal << 4) | ln);
         if (len >= IonConstants.lnIsVarLen) {
-            _writer.writeVarUInt7Value(len, true);
+            _writer.writeVarUIntValue(len, true);
         }
         int wroteLen = _writer.writeDecimalContent(value, false);
         assert wroteLen == len;
@@ -779,14 +803,14 @@ public class IonWriterSystemBinary
         int ln = len;
         if (len >= IonConstants.lnIsVarLen) {
             ln = IonConstants.lnIsVarLen;
-            patch_len += IonBinary.lenVarUInt7(len);
+            patch_len += IonBinary.lenVarUInt(len);
         }
 
         startValue(IonType.TIMESTAMP, patch_len + len); // int's are always less than varlen long
 
         _writer.write((IonConstants.tidTimestamp << 4) | ln);
         if (len >= IonConstants.lnIsVarLen) {
-            _writer.writeVarUInt7Value(len, true);
+            _writer.writeVarUIntValue(len, true);
         }
         patch_len += _writer.writeTimestamp(di);
         patch(patch_len);
@@ -804,14 +828,14 @@ public class IonWriterSystemBinary
         int ln = len;
         if (len >= IonConstants.lnIsVarLen) {
             ln = IonConstants.lnIsVarLen;
-            patch_len += IonBinary.lenVarUInt7(len);
+            patch_len += IonBinary.lenVarUInt(len);
         }
 
         startValue(IonType.STRING, patch_len + len);
 
         _writer.write((IonConstants.tidString << 4) | ln);
         if (len >= IonConstants.lnIsVarLen) {
-            _writer.writeVarUInt7Value(len, true);
+            _writer.writeVarUIntValue(len, true);
         }
         patch_len += _writer.writeStringData(value);
         patch(patch_len);
@@ -826,10 +850,10 @@ public class IonWriterSystemBinary
         }
         else {
             int patch_len = 1;
-            int len = IonBinary.lenVarUInt8(symbolId);
+            int len = IonBinary.lenUInt(symbolId);
             startValue(IonType.SYMBOL, len + 1);
             _writer.write((IonConstants.tidSymbol << 4) | len);
-            patch_len += _writer.writeVarUInt8Value(symbolId, len);
+            patch_len += _writer.writeUIntValue(symbolId, len);
             patch(patch_len);
         }
     }
@@ -851,14 +875,14 @@ public class IonWriterSystemBinary
         int ln = len;
         if (len >= IonConstants.lnIsVarLen) {
             ln = IonConstants.lnIsVarLen;
-            patch_len += IonBinary.lenVarUInt7(len);
+            patch_len += IonBinary.lenVarUInt(len);
         }
 
         startValue(IonType.CLOB, patch_len + len);
 
         _writer.write((IonConstants.tidClob << 4) | ln);
         if (len >= IonConstants.lnIsVarLen) {
-            _writer.writeVarUInt7Value(len, true);
+            _writer.writeVarUIntValue(len, true);
         }
         _writer.write(value, start, len);
         patch_len += len;
@@ -875,14 +899,14 @@ public class IonWriterSystemBinary
         int ln = len;
         if (len >= IonConstants.lnIsVarLen) {
             ln = IonConstants.lnIsVarLen;
-            patch_len += IonBinary.lenVarUInt7(len);
+            patch_len += IonBinary.lenVarUInt(len);
         }
 
         startValue(IonType.BLOB, patch_len + len); // int's are always less than varlen long
 
         _writer.write((IonConstants.tidBlob << 4) | ln);
         if (len >= IonConstants.lnIsVarLen) {
-            _writer.writeVarUInt7Value(len, true);
+            _writer.writeVarUIntValue(len, true);
         }
         _writer.write(value, start, len);
         patch_len += len;
@@ -899,14 +923,14 @@ public class IonWriterSystemBinary
         int ln = len;
         if (len >= IonConstants.lnIsVarLen) {
             ln = IonConstants.lnIsVarLen;
-            patch_len += IonBinary.lenVarUInt7(len);
+            patch_len += IonBinary.lenVarUInt(len);
         }
 
         startValue(IonType.LIST, patch_len + len); // int's are always less than varlen long
 
         _writer.write((IonConstants.tidList << 4) | ln);
         if (len >= IonConstants.lnIsVarLen) {
-            _writer.writeVarUInt7Value(len, true);
+            _writer.writeVarUIntValue(len, true);
         }
 
         for (int ii=0; ii<values.length; ii++) {
@@ -930,14 +954,14 @@ public class IonWriterSystemBinary
         int ln = len;
         if (len >= IonConstants.lnIsVarLen) {
             ln = IonConstants.lnIsVarLen;
-            patch_len += IonBinary.lenVarUInt7(len);
+            patch_len += IonBinary.lenVarUInt(len);
         }
 
         startValue(IonType.LIST, patch_len + len); // int's are always less than varlen long
 
         _writer.write((IonConstants.tidList << 4) | ln);
         if (len >= IonConstants.lnIsVarLen) {
-            _writer.writeVarUInt7Value(len, true);
+            _writer.writeVarUIntValue(len, true);
         }
 
         for (int ii=0; ii<values.length; ii++) {
@@ -947,11 +971,11 @@ public class IonWriterSystemBinary
             }
             else if (v < 0) {
                 _writer.write(int_tid_neg);
-                _writer.writeVarUInt8Value(-v, 1);
+                _writer.writeUIntValue(-v, 1);
             }
             else {
                 _writer.write(int_tid_pos);
-                _writer.writeVarUInt8Value(v, 1);
+                _writer.writeUIntValue(v, 1);
             }
         }
         patch_len += len;
@@ -968,14 +992,14 @@ public class IonWriterSystemBinary
         int ln = len;
         if (len >= IonConstants.lnIsVarLen) {
             ln = IonConstants.lnIsVarLen;
-            patch_len += IonBinary.lenVarUInt7(len);
+            patch_len += IonBinary.lenVarUInt(len);
         }
 
         startValue(IonType.LIST, patch_len + len); // int's are always less than varlen long
 
         _writer.write((IonConstants.tidList << 4) | ln);
         if (len >= IonConstants.lnIsVarLen) {
-            _writer.writeVarUInt7Value(len, true);
+            _writer.writeVarUIntValue(len, true);
         }
 
         for (int ii=0; ii<values.length; ii++) {
@@ -986,11 +1010,11 @@ public class IonWriterSystemBinary
             }
             else if (v < 0) {
                 _writer.write(int_tid_neg);
-                _writer.writeVarUInt8Value(-v, ln);
+                _writer.writeUIntValue(-v, ln);
             }
             else {
                 _writer.write(int_tid_pos);
-                _writer.writeVarUInt8Value(v, ln);
+                _writer.writeUIntValue(v, ln);
             }
         }
         patch_len += len;
@@ -1011,7 +1035,7 @@ public class IonWriterSystemBinary
         int ln = len;
         if (len >= IonConstants.lnIsVarLen) {
             ln = IonConstants.lnIsVarLen;
-            tmp = IonBinary.lenVarUInt7(len);
+            tmp = IonBinary.lenVarUInt(len);
             patch_len += tmp;
         }
 
@@ -1019,7 +1043,7 @@ public class IonWriterSystemBinary
 
         _writer.write((IonConstants.tidList << 4) | ln);
         if (len >= IonConstants.lnIsVarLen) {
-            tmp = _writer.writeVarUInt7Value(len, true);
+            tmp = _writer.writeVarUIntValue(len, true);
         }
 
         for (int ii=0; ii<values.length; ii++) {
@@ -1031,15 +1055,15 @@ public class IonWriterSystemBinary
             else if (v < 0) {
                 _writer.write(int_tid_neg);
                 if (v == Integer.MIN_VALUE) {
-                    _writer.writeVarUInt8Value(-((long)v), ln);
+                    _writer.writeUIntValue(-((long)v), ln);
                 }
                 else {
-                    _writer.writeVarUInt8Value(-v, ln);
+                    _writer.writeUIntValue(-v, ln);
                 }
             }
             else {
                 _writer.write(int_tid_pos);
-                _writer.writeVarUInt8Value(v, ln);
+                _writer.writeUIntValue(v, ln);
             }
         }
         patch_len += len;
@@ -1058,14 +1082,14 @@ public class IonWriterSystemBinary
         int ln = len;
         if (len >= IonConstants.lnIsVarLen) {
             ln = IonConstants.lnIsVarLen;
-            patch_len += IonBinary.lenVarUInt7(len);
+            patch_len += IonBinary.lenVarUInt(len);
         }
 
         startValue(IonType.LIST, patch_len + len); // int's are always less than varlen long
 
         _writer.write((IonConstants.tidList << 4) | ln);
         if (len >= IonConstants.lnIsVarLen) {
-            _writer.writeVarUInt7Value(len, true);
+            _writer.writeVarUIntValue(len, true);
         }
 
         for (int ii=0; ii<values.length; ii++) {
@@ -1076,11 +1100,11 @@ public class IonWriterSystemBinary
             }
             else if (v < 0) {
                 _writer.write(int_tid_neg);
-                _writer.writeVarUInt8Value(-v, ln);
+                _writer.writeUIntValue(-v, ln);
             }
             else {
                 _writer.write(int_tid_pos);
-                _writer.writeVarUInt8Value(v, ln);
+                _writer.writeUIntValue(v, ln);
             }
         }
         patch_len += len;
@@ -1099,14 +1123,14 @@ public class IonWriterSystemBinary
         int ln = len;
         if (len >= IonConstants.lnIsVarLen) {
             ln = IonConstants.lnIsVarLen;
-            patch_len += IonBinary.lenVarUInt7(len);
+            patch_len += IonBinary.lenVarUInt(len);
         }
 
         startValue(IonType.LIST, patch_len + len); // int's are always less than varlen long
 
         _writer.write((IonConstants.tidList << 4) | ln);
         if (len >= IonConstants.lnIsVarLen) {
-            _writer.writeVarUInt7Value(len, true);
+            _writer.writeVarUIntValue(len, true);
         }
 
         for (int ii=0; ii<values.length; ii++) {
@@ -1132,14 +1156,14 @@ public class IonWriterSystemBinary
         int ln = len;
         if (len >= IonConstants.lnIsVarLen) {
             ln = IonConstants.lnIsVarLen;
-            patch_len += IonBinary.lenVarUInt7(len);
+            patch_len += IonBinary.lenVarUInt(len);
         }
 
         startValue(IonType.LIST, patch_len + len); // int's are always less than varlen long
 
         _writer.write((IonConstants.tidList << 4) | ln);
         if (len >= IonConstants.lnIsVarLen) {
-            _writer.writeVarUInt7Value(len, true);
+            _writer.writeVarUIntValue(len, true);
         }
 
         for (int ii=0; ii<values.length; ii++) {
@@ -1165,7 +1189,7 @@ public class IonWriterSystemBinary
             if (s != null) {
                 int vlen = IonBinary.lenIonString(s);
                 if (vlen >= IonConstants.lnIsVarLen) {
-                    len += IonBinary.lenVarUInt7(vlen);
+                    len += IonBinary.lenVarUInt(vlen);
                 }
                 len += vlen;
             }
@@ -1174,14 +1198,14 @@ public class IonWriterSystemBinary
         int ln = len;
         if (len >= IonConstants.lnIsVarLen) {
             ln = IonConstants.lnIsVarLen;
-            patch_len += IonBinary.lenVarUInt7(len);
+            patch_len += IonBinary.lenVarUInt(len);
         }
 
         startValue(IonType.LIST, patch_len + len); // int's are always less than varlen long
 
         _writer.write((IonConstants.tidList << 4) | ln);
         if (len >= IonConstants.lnIsVarLen) {
-            _writer.writeVarUInt7Value(len, true);
+            _writer.writeVarUIntValue(len, true);
         }
 
         for (int ii=0; ii<values.length; ii++) {
@@ -1196,7 +1220,7 @@ public class IonWriterSystemBinary
                 }
                 else {
                     _writer.write((IonConstants.tidString << 4) | IonConstants.lnIsVarLen);
-                    len += IonBinary.lenVarUInt7(vlen);
+                    len += IonBinary.lenVarUInt(vlen);
                 }
                 _writer.writeStringData(s);
             }
@@ -1206,15 +1230,24 @@ public class IonWriterSystemBinary
         patch(patch_len);
     }
 
-    // TODO make private?
-    public int writeBytes(OutputStream userstream) throws IOException
+    // TODO make private after IonBinaryWriter is removed
+    /**
+     * Writes everything we've got into the output stream, performing all
+     * necessary patches along the way.
+     *
+     * This implements {@link IonBinaryWriter#writeBytes(OutputStream)}
+     * via our subclass {@link IonWriterBinaryCompatibility.System}.
+     */
+    int writeBytes(OutputStream userstream) throws IOException
     {
+        int buffer_length = _manager.buffer().size();
+        if (buffer_length == 0) return 0;
+
         int pos = 0;
         int total_written = 0;
         BlockedByteInputStream datastream =
             new BlockedByteInputStream(_manager.buffer());
 
-        int buffer_length = _manager.buffer().size();
         int patch_idx = 0;
         int patch_pos;
         if (patch_idx < _patch_count) {
@@ -1365,7 +1398,7 @@ public class IonWriterSystemBinary
             // int vlen = _patch_list[patch_idx + IonBinaryWriter.POSITION_OFFSET];
             int vlen = _patch_lengths[patch_idx];
             if (vlen >= IonConstants.lnIsVarLen) {
-                int ln = IonBinary.lenVarUInt7(vlen);
+                int ln = IonBinary.lenVarUInt(vlen);
                 patch_amount += ln;
             }
         }

@@ -149,7 +149,7 @@ public final class IonStringImpl
             _set_value("");
             break;
         case IonConstants.lnIsVarLen:
-            ln = reader.readVarUInt7IntValue();
+            ln = reader.readVarUIntAsInt();
             // fall through to default:
         default:
             _set_value(reader.readString(ln));

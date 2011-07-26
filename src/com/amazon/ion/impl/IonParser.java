@@ -171,7 +171,7 @@ public class IonParser
         _annotationList = new ArrayList<Integer>();
         this._out.writer().pushPosition(_annotationList);
         this._out.writer().write(IonConstants.makeTypeDescriptor(IonConstants.tidTypedecl, 0));
-        this._out.writer().writeVarInt7Value(1, true); // we'll have at least 1 byte of annotations
+        this._out.writer().writeVarIntValue(1, true); // we'll have at least 1 byte of annotations
         this._out.writer().write((byte)0);       // and here's at least 1 annotation
     }
 
@@ -536,7 +536,7 @@ loop:   for (;;) {
         }
 
         int sid = this._reader_for_symbols.addSymbol(s); // was ._symboltable
-        this._out.writer().writeVarUInt7Value(sid, true);
+        this._out.writer().writeVarUIntValue(sid, true);
     }
 
     private static final int ION_1_0_LENGTH = UnifiedSymbolTable.ION_1_0.length();
@@ -627,28 +627,28 @@ loop:   for (;;) {
         case constPosInt:
             {
                 BigInteger val = this._in.intValue;
-                int size = IonBinary.lenVarUInt8(val);
+                int size = IonBinary.lenUInt(val);
                 this._out.writer().writeByte(
                         castto.getHighNibble(),
                         size);
                 if (size >= IonConstants.lnIsVarLen) {
-                    this._out.writer().writeVarUInt7Value(size, false);
+                    this._out.writer().writeVarUIntValue(size, false);
                 }
-                int wroteLen = this._out.writer().writeVarUInt8Value(val, size);
+                int wroteLen = this._out.writer().writeUIntValue(val, size);
                 assert wroteLen == size;
             }
             break;
         case constNegInt:
             {
                 BigInteger val = this._in.intValue.negate();
-                int size = IonBinary.lenVarUInt8(val);
+                int size = IonBinary.lenUInt(val);
                 this._out.writer().writeByte(
                         castto.getHighNibble(),
                         size);
                 if (size >= IonConstants.lnIsVarLen) {
-                    this._out.writer().writeVarUInt7Value(size, false);
+                    this._out.writer().writeVarUIntValue(size, false);
                 }
-                int wroteLen = this._out.writer().writeVarUInt8Value(val, size);
+                int wroteLen = this._out.writer().writeUIntValue(val, size);
                 assert wroteLen == size;
             }
             break;

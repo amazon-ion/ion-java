@@ -18,6 +18,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PushbackInputStream;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.ListIterator;
@@ -33,6 +34,9 @@ public final class IonImplUtils // TODO this class shouldn't be public
      */
     public static final boolean READER_HASNEXT_REMOVED = false;
 
+
+    /** Just a zero-length byte array, used to avoid allocation. */
+    public static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
 
     /** Just a zero-length String array, used to avoid allocation. */
     public final static String[] EMPTY_STRING_ARRAY = new String[0];
@@ -254,6 +258,47 @@ public final class IonImplUtils // TODO this class shouldn't be public
         return s;
     }
 
+    public static boolean symtabExtends(SymbolTable superset, SymbolTable subset)
+    {
+        if (superset == subset) return true;
+
+        if (superset.isLocalTable() && subset.isLocalTable())
+        {
+            // TODO compare Ion version
+
+            if (superset.getMaxId() < subset.getMaxId()) return false;
+
+            // Stupid hack to prevent this from running away on big symtabs.
+            if (20 < subset.getMaxId()) return false;
+
+            // TODO Optimize more by checking name, version, max ids of each import
+            SymbolTable[] superImports = superset.getImportedTables();
+            SymbolTable[] subImports = subset.getImportedTables();
+
+            if (! Arrays.equals(superImports, subImports)) return false;
+
+            // TODO This is a ridiculous thing to do frequently.
+            // What happen when we do this repeatedly (eg copying a stream)
+            // and the symtabs are large?  That's O(n) effort each time!!
+            // Can we memoize the result somehow?
+            // Or just limit this comparison to "small" symtabs?
+            Iterator<String> subSymbols = subset.iterateDeclaredSymbolNames();
+            Iterator<String> superSymbols = superset.iterateDeclaredSymbolNames();
+            while (subSymbols.hasNext())
+            {
+                if (! superSymbols.hasNext()) return false;
+
+                String sub = subSymbols.next();
+                String sup = superSymbols.next();
+                if (! sub.equals(sup)) return false;
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+
     static final class StringIterator implements Iterator<String>
     {
         String [] _values;
@@ -300,5 +345,4 @@ public final class IonImplUtils // TODO this class shouldn't be public
             throw new UnsupportedOperationException();
         }
     }
-
 }

@@ -145,6 +145,31 @@ public class SymbolTableTest
         assertSame(systemTable, st.getSystemSymbolTable());
     }
 
+    @Test(expected = UnsupportedOperationException.class)
+    public void testSystemSymtabAddSymbol()
+    {
+        SymbolTable st = system().getSystemSymbolTable();
+        st.addSymbol("hello");
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test(expected = UnsupportedOperationException.class)
+    public void testSystemSymtabDefineSymbol()
+    {
+        SymbolTable st = system().getSystemSymbolTable();
+        st.defineSymbol("hello", st.getMaxId() + 1);
+    }
+
+    @Test
+    public void testSystemSymtabIsReadOnly()
+    {
+        SymbolTable st = system().getSystemSymbolTable();
+        assertTrue(st.isSharedTable());
+        assertTrue("system symtab should be read-only",
+                   ((UnifiedSymbolTable)st).isReadOnly());
+    }
+
+
     @Test
     public void testLocalTable()
     {
@@ -971,6 +996,10 @@ public class SymbolTableTest
     {
         assertTrue(actual.isSharedTable());
         assertFalse(actual.isSystemTable());
+
+        assertTrue("shared symtab should be read-only",
+                   ((UnifiedSymbolTable)actual).isReadOnly());
+
         assertEquals(name, actual.getName());
         assertEquals(version, actual.getVersion());
         assertEquals(0, ((UnifiedSymbolTable)actual).getImportedMaxId());

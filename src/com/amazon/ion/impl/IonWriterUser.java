@@ -179,28 +179,22 @@ abstract class IonWriterUser
     }
 
     @Override
-    protected void reset() throws IOException
+    protected void writeAllBufferedData() throws IOException
     {
         if (_symbol_table_being_copied) {
-            throw new IllegalStateException("you can't reset a user writer while a local symbol table value is being written");
+            throw new IllegalStateException("you can't finish a user writer while a local symbol table value is being written");
         }
         assert(_current_writer == _system_writer);
 
-        _system_writer.finish();
+        _system_writer.writeAllBufferedData();
+    }
 
+    @Override
+    protected void resetSystemContext() throws IOException
+    {
         _after_ion_version_marker = false;
-
-
-        // Note:
-        //
-        // You don't have to reset the system writer
-        // since this is called from flush and you
-        // just need to flush the system write - it
-        // will call reset if it needs to.
-        //
-        // this avoids having to add reset to the
-        // public interface or cast the writers
-        // to an internal interface.
+        _system_writer.resetSystemContext();
+        _symbol_table = _system_writer.getSymbolTable();
     }
 
     /**

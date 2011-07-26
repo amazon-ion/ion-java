@@ -6,6 +6,7 @@ import static com.amazon.ion.TestUtils.TEXT_ONLY_FILTER;
 import static com.amazon.ion.TestUtils.testdataFiles;
 
 import com.amazon.ion.TestUtils.And;
+import com.amazon.ion.impl.IonWriterUserBinary;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.util.Printer;
 import java.io.File;
@@ -22,6 +23,11 @@ import org.junit.Test;
 public class RoundTripTest
     extends IonTestCase
 {
+    private Printer       myPrinter;
+    private StringBuilder myBuilder;
+
+    //------------------------------------------------------------------------
+
     /**
      * We don't use binary files since some of those have non-canonical
      * encodings that won't round-trip.
@@ -31,18 +37,27 @@ public class RoundTripTest
         testdataFiles(new And(TEXT_ONLY_FILTER, TestUtils.GLOBAL_SKIP_LIST),
                       "good", "equivs");
 
-
     private File myTestFile;
-    private Printer       myPrinter;
-    private StringBuilder myBuilder;
-
 
     public void setTestFile(File file)
     {
         myTestFile = file;
     }
 
+    //------------------------------------------------------------------------
 
+    // Using an enum makes the test names more understandable than a boolean.
+    private enum CopySpeed { slow, fast }
+
+    @Inject("copySpeed")
+    public static final CopySpeed[] COPY_SPEEDS = CopySpeed.values();
+
+    public void setCopySpeed(CopySpeed speed)
+    {
+        IonWriterUserBinary.ourFastCopyEntabled = (speed == CopySpeed.fast);
+    }
+
+    //------------------------------------------------------------------------
 
     @Override
     @Before

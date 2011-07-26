@@ -317,6 +317,8 @@ public interface IonSystem
      * @return the first (and only) user value in the data.
      *
      * @throws NullPointerException if <code>ionText</code> is null.
+     * @throws UnexpectedEofException if the data doesn't contain any user
+     * values.
      * @throws IonException if the data does not contain exactly one user
      * value.
      */
@@ -332,6 +334,9 @@ public interface IonSystem
      *
      * @return the first (and only) user value in the data.
      *
+     * @throws NullPointerException if {@code ionData} is null.
+     * @throws UnexpectedEofException if the data doesn't contain any user
+     * values.
      * @throws IonException if the data does not contain exactly one user
      * value.
      */

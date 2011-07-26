@@ -320,7 +320,6 @@ public class IonReaderTextSystemX
                     case IonTokenConstsX.KEYWORD_NAN:
                         _v.setValue(Double.NaN);
                         break;
-                    case IonTokenConstsX.KEYWORD_INF:
                     case IonTokenConstsX.KEYWORD_PLUS_INF:
                         _v.setValue(Double.POSITIVE_INFINITY);
                         break;

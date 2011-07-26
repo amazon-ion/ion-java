@@ -1232,10 +1232,18 @@ private static boolean hasUnresolvedSymbols(IonValueLite value) {
                     if ((new_symbol_table instanceof UnifiedSymbolTable) == false) {
                         throw new IonException("only UnifiedSymbolTable instances are currently supported by IonDatagramLite");
                     }
-                    IonValue rep = ((UnifiedSymbolTable)new_symbol_table).getIonRepresentation(this.__iterator.get_datagram_system());
+
+                    final boolean new_symbol_table_is_system = new_symbol_table.isSystemTable();
+                    IonValue rep;
+                    if (new_symbol_table_is_system) {
+                        rep = __iterator.get_datagram_ivm();
+                    }
+                    else {
+                        rep = ((UnifiedSymbolTable)new_symbol_table).getIonRepresentation(this.__iterator.get_datagram_system());
+                    }
                     assert(rep != null && __iterator.get_datagram_system() == rep.getSystem());
 
-                    if (rep == prev_value || (is_ivm(curr_value) && new_symbol_table.isSystemTable())) {
+                    if (rep == prev_value || (is_ivm(curr_value) && new_symbol_table_is_system)) {
                         int prev_idx = (prev_value == null) ? -1 : (prev_value._elementid() - 1);
                         if (prev_idx >= 0) {
                             prev_value = __iterator.get_datagram_child(prev_idx);
@@ -1245,17 +1253,11 @@ private static boolean hasUnresolvedSymbols(IonValueLite value) {
                         }
                     }
                     else {
-                        if (new_symbol_table.isSystemTable()) {
-                            IonValueLite ivm = __iterator.get_datagram_ivm();
-                            push_system_value(ivm);
-                        }
-                        else {
-                            push_system_value((IonValueLite)rep);
-                        }
+                        push_system_value((IonValueLite)rep);
                         prev_value = null; // end of the matches
                     }
                     new_symbol_table = rep.getSymbolTable();
-                    if (new_symbol_table == null || new_symbol_table.isSharedTable()) {
+                    if (new_symbol_table == null || new_symbol_table.isSystemTable()) {
                         break;
                     }
                 }

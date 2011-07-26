@@ -40,6 +40,7 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.UnsupportedIonVersionException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonWriterUserText.TextOptions;
@@ -264,7 +265,7 @@ public final class IonSystemImpl
     {
         // TODO optimize to use IonTextReader, but first that must truly stream
         // instead of requiring a full-stream buffer.
-        // See https://issue-tracking.amazon.com/browse/ION-31
+        // See https://jira2.amazon.com/browse/ION-31
         UserValueIterator userReader =
             new UserValueIterator(this, this.newLocalSymbolTable(), reader);
         userReader.setBufferToRecycle();
@@ -343,6 +344,8 @@ public final class IonSystemImpl
 
     private Iterator<IonValue> iterate(InputStream ionData, boolean system)
     {
+        if (ionData == null) throw new NullPointerException();
+
         SystemValueIterator systemReader;
         boolean binaryData;
         try
@@ -896,13 +899,15 @@ public final class IonSystemImpl
      */
     private IonValue singleValue(IonReader reader)
     {
-        if (reader.next() != null)
+        if (reader.next() == null)
         {
-            IonValue value = newValue(reader);
-            if (reader.next() == null)
-            {
-                return value;
-            }
+            throw new UnexpectedEofException("no value found on input stream");
+        }
+
+        IonValue value = newValue(reader);
+        if (reader.next() == null)
+        {
+            return value;
         }
 
         throw new IonException("not a single value");

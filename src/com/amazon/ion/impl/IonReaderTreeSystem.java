@@ -52,24 +52,39 @@ class IonReaderTreeSystem
 
     public IonReaderTreeSystem(IonValue value)
     {
+        init(value);
+    }
+
+    void init(IonValue value) {
         if (value == null) {
             // do nothing
         }
         else {
             _system = value.getSystem();
+            re_init(value);
+        }
+    }
+
+    void re_init(IonValue value)
+    {
+        _symbols = null;
+        _curr = null;
+        _eof = false;
+        _top = 0;
             if (value instanceof IonDatagram) {
                 // datagrams interacting with these readers must be
                 // IonContainerPrivate containers
                 assert(value instanceof IonContainerPrivate);
                 IonDatagram dg = (IonDatagram) value;
                 _parent = dg;
+            _next = null;
                 _iter = dg.systemIterator(); // we want a system reader not: new Children(dg);
             }
             else {
+            _parent = null;
                 _next = value;
             }
         }
-    }
 
     public void close()
     {
@@ -159,6 +174,7 @@ class IonReaderTreeSystem
             throw new IllegalStateException(IonMessages.CANNOT_STEP_OUT);
         }
         pop();
+        _curr = null;
     }
 
     public int getDepth() {
@@ -438,7 +454,7 @@ class IonReaderTreeSystem
             InputStream is = lob.newInputStream();
             int retlen;
             try {
-                retlen = readFully(is, buffer, offset, loblen);
+                retlen = readFully(is, buffer, 0, loblen);
                 is.close();
             }
             catch (IOException e) {

@@ -2,12 +2,15 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.Symtabs;
 import java.io.ByteArrayOutputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Iterator;
 import org.junit.Test;
 
 /**
@@ -37,6 +40,11 @@ public abstract class OutputStreamWriterTestCase
             super.flush();
         }
 
+        public void assertWasFlushed()
+        {
+            assertTrue("stream was not flushed", flushed);
+        }
+
         @Override
         public void close() throws IOException
         {
@@ -46,8 +54,8 @@ public abstract class OutputStreamWriterTestCase
         }
     }
 
-    private ByteArrayOutputStream myOutputStream;
-    private OutputStreamWrapper myOutputStreamWrapper;
+    protected ByteArrayOutputStream myOutputStream;
+    protected OutputStreamWrapper myOutputStreamWrapper;
     protected IonWriter myWriter;
 
 
@@ -99,5 +107,63 @@ public abstract class OutputStreamWriterTestCase
             assertSame(myFlushException, e);
         }
         checkClosed();
+    }
+
+    @Test
+    public void testFlushingLockedSymtab()
+        throws Exception
+    {
+        iw = makeWriter();
+        SymbolTable symtab = iw.getSymbolTable();
+        symtab.addSymbol("fred_1");
+        symtab.addSymbol("fred_2");
+        testFlushing();
+    }
+
+    @Test
+    public void testFlushingLockedSymtabWithImports()
+        throws Exception
+    {
+        SymbolTable fred1 = Symtabs.register("fred",   1, catalog());
+        iw = makeWriter(fred1);
+        testFlushing();
+    }
+
+    private void testFlushing()
+        throws IOException
+    {
+        PrivateDmsdkUtils.lockLocalSymbolTable(iw.getSymbolTable());
+
+        iw.writeSymbol("fred_1");
+        iw.flush();
+        myOutputStreamWrapper.assertWasFlushed();
+        myOutputStreamWrapper.flushed = false;
+
+        byte[] bytes = myOutputStream.toByteArray();
+        checkSymbol("fred_1", system().singleValue(bytes));
+
+        // Try flushing when there's just a pending annotation.
+        iw.addTypeAnnotation("fred_1");
+        iw.flush();
+        myOutputStreamWrapper.assertWasFlushed();
+        myOutputStreamWrapper.flushed = false;
+
+        bytes = myOutputStream.toByteArray();
+        checkSymbol("fred_1", system().singleValue(bytes));
+
+        iw.writeSymbol("fred_2");
+        iw.flush();
+        myOutputStreamWrapper.assertWasFlushed();
+        myOutputStreamWrapper.flushed = false;
+
+        bytes = myOutputStream.toByteArray();
+        Iterator<IonValue> values = system().iterate(bytes);
+        checkSymbol("fred_1", values.next());
+
+        IonValue v = values.next();
+        checkSymbol("fred_2", v);
+        checkAnnotation("fred_1", v);
+
+        assertFalse(values.hasNext());
     }
 }
