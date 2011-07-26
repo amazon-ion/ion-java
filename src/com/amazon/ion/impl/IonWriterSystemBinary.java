@@ -149,8 +149,8 @@ public class IonWriterSystemBinary
     @Override
     protected void resetSystemContext()
     {
+        _assure_ivm = true;
         if (_symbol_table != null && !_symbol_table.isSystemTable()) {
-            _assure_ivm = true;
             _symbol_table = null;
         }
     }

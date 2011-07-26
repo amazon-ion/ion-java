@@ -8,6 +8,7 @@ import static com.amazon.ion.junit.IonAssert.assertIonIteratorEquals;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
+import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
@@ -172,26 +173,56 @@ public class BinaryWriterTest
     }
 
     @Test
-    public void testBinaryWriterReuse()
+    public void testBinaryWriterReuseWithNoSymbols()
+        throws Exception
+    {
+        testBinaryWriterReuseWithSymbols(null, false);
+    }
+
+    @Test
+    public void testBinaryWriterReuseWithSystemSymbols()
+        throws Exception
+    {
+        testBinaryWriterReuseWithSymbols("name", false);
+    }
+
+    @Test
+    public void testBinaryWriterReuseWithUserSymbols()
+        throws Exception
+    {
+        testBinaryWriterReuseWithSymbols("s", true);
+    }
+
+    public void testBinaryWriterReuseWithSymbols(String symbol,
+                                                 boolean fixedIon218)
         throws Exception
     {
         iw = makeWriter();
-        iw.writeString(null);
+        iw.writeSymbol(symbol);
         iw.finish();
 
         byte[] bytes1 = myOutputStream.toByteArray();
         myOutputStream.reset();
+        IonValue dg1 = loader().load(bytes1);
 
-        iw.writeString(null);
+        iw.writeSymbol(symbol);
         iw.finish();
         byte[] bytes2 = myOutputStream.toByteArray();
+        myOutputStream.reset();
+        IonValue dg2 = loader().load(bytes2);
 
-        IonAssert.assertIonEquals(loader().load(bytes1),
-                                  loader().load(bytes2));
-
+        IonAssert.assertIonEquals(dg1, dg2);
         // FIXME ION-218 this fails because bytes1 has an empty local symtab.
-        if (false) {
+        if (fixedIon218) {
             Assert.assertArrayEquals(bytes1, bytes2);
         }
+
+        iw.writeSymbol(symbol);
+        iw.finish();
+        byte[] bytes3 = myOutputStream.toByteArray();
+        IonValue dg3 = loader().load(bytes3);
+
+        IonAssert.assertIonEquals(dg1, dg3);
+        Assert.assertArrayEquals(bytes2, bytes3);
     }
 }

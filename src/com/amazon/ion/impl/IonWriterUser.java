@@ -194,6 +194,7 @@ abstract class IonWriterUser
     {
         _after_ion_version_marker = false;
         _system_writer.resetSystemContext();
+        _symbol_table = _system_writer.getSymbolTable();
     }
 
     /**
