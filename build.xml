@@ -42,6 +42,11 @@
 
 
   <target name="build" depends="build.dirs">
+    <tstamp>
+      <format property="build_time" 
+        pattern="yyyy-MM-dd'T'HH:mm:ss'Z'" timezone="GMT"/>
+    </tstamp>
+      
     <javac srcdir="${dir.src}" debug="on" 
            destdir="${dir.classes}"
            source="1.5" target="1.5">
@@ -57,13 +62,15 @@
       </fileset>
     </copy>
     
-    <!-- Update build.properties with current Brazil info -->
-    <propertyfile file="${dir.classes}/com/amazon/ion/impl/build.properties">
+    <!-- Update JarInfo utility with current Brazil info -->
+    <property name="jar_info_file" 
+      location="${dir.classes}/com/amazon/ion/util/JarInfo.properties" />
+    <copy file="${basedir}/build.properties" tofile="${jar_info_file}" />
+    <propertyfile file="${jar_info_file}">
       <entry key="brazil_major_version" value="${bp:package-major-version}" />
       <entry key="brazil_package_version" 
              value="${bp:package-name-full-version}" />
-      <entry key="build_time" type="date" value="now" 
-             pattern="yyyy-MM-dd'T'HH:mm:ssZ" />
+      <entry key="build_time" value="${build_time}" />
     </propertyfile>
   </target>
 

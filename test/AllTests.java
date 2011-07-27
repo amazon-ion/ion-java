@@ -53,6 +53,7 @@ import com.amazon.ion.system.IonSystemBuilderTest;
 import com.amazon.ion.system.SimpleCatalogTest;
 import com.amazon.ion.util.EquivalenceTest;
 import com.amazon.ion.util.IonStreamUtilsTest;
+import com.amazon.ion.util.JarInfoTest;
 import com.amazon.ion.util.PrinterTest;
 import com.amazon.ion.util.TextTest;
 import org.junit.runner.RunWith;
@@ -101,6 +102,7 @@ import org.junit.runners.Suite;
     BinaryTest.class,
 
     // Utility tests
+    JarInfoTest.class,
     LoaderTest.class,
     IterationTest.class,
     ReaderTest.class,
