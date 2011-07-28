@@ -210,6 +210,7 @@
 
   <target name="eclipse-build" depends="build.properties"
           description="Called from Eclipse to perform custom build logic">
+    <mkdir dir="${basedir}/.eclipseout"/>
     <propertyfile file="${basedir}/.eclipseout/system.properties">
       <entry key="com.amazon.iontests.iontestdata.path" 
              value="${dir.test.data}" />
