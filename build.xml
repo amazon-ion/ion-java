@@ -41,7 +41,7 @@
   <!-- ==================================================================== -->
 
 
-  <target name="build" depends="build.dirs">
+  <target name="build" depends="build.dirs, eclipse-build">
     <tstamp>
       <format property="build_time" 
         pattern="yyyy-MM-dd'T'HH:mm:ss'Z'" timezone="GMT"/>
@@ -208,4 +208,12 @@
           description="Build everything.">
   </target>
 
+  <target name="eclipse-build" depends="build.properties"
+          description="Called from Eclipse to perform custom build logic">
+    <propertyfile file="${basedir}/.eclipseout/system.properties">
+      <entry key="com.amazon.iontests.iontestdata.path" 
+             value="${dir.test.data}" />
+    </propertyfile>
+  </target>
+  
 </project>
