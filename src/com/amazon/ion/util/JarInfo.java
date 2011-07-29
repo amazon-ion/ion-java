@@ -80,9 +80,10 @@ public class JarInfo
     //========================================================================
 
     /**
+     * Gets a property, ensuring a non-empty value.
      * @return null but not empty string
      */
-    private static String nonEmptyProperty(Properties props, String name)
+    private String nonEmptyProperty(Properties props, String name)
     {
         String value = props.getProperty(name, "");
         if (value.length() == 0) value = null;

@@ -7,6 +7,11 @@
   <ht:import file="javadoc.xml"/>
 
   <target name="build.properties">
+    <tstamp>
+      <format property="build_time" 
+        pattern="yyyy-MM-dd'T'HH:mm:ss'Z'" timezone="GMT"/>
+    </tstamp>
+    
     <property name="dir.output"  location="${output.dir}/private"/>
     <property name="dir.src"     location="${basedir}/src"/>
     <property name="dir.doc"     location="${output.dir}/docs"/>
@@ -42,11 +47,6 @@
 
 
   <target name="build" depends="build.dirs, eclipse-build">
-    <tstamp>
-      <format property="build_time" 
-        pattern="yyyy-MM-dd'T'HH:mm:ss'Z'" timezone="GMT"/>
-    </tstamp>
-      
     <javac srcdir="${dir.src}" debug="on" 
            destdir="${dir.classes}"
            source="1.5" target="1.5">
@@ -61,17 +61,8 @@
         <include name="**/*.properties" />
       </fileset>
     </copy>
-    
-    <!-- Update JarInfo utility with current Brazil info -->
-    <property name="jar_info_file" 
-      location="${dir.classes}/com/amazon/ion/util/JarInfo.properties" />
-    <copy file="${basedir}/build.properties" tofile="${jar_info_file}" />
-    <propertyfile file="${jar_info_file}">
-      <entry key="brazil_major_version" value="${bp:package-major-version}" />
-      <entry key="brazil_package_version" 
-             value="${bp:package-name-full-version}" />
-      <entry key="build_time" value="${build_time}" />
-    </propertyfile>
+
+    <copy-jar-info classes-dir="${dir.classes}"/>
   </target>
 
 
@@ -208,6 +199,25 @@
           description="Build everything.">
   </target>
 
+  
+  <macrodef name="copy-jar-info"
+      description="Update JarInfo utility with current Brazil info">
+    <attribute name="classes-dir" />
+    
+    <sequential>
+      <!--property name="jar_info_file" 
+        location="${classes-dir}/com/amazon/ion/util/JarInfo.properties" /-->
+      <copy file="${basedir}/build.properties" 
+            tofile="@{classes-dir}/com/amazon/ion/util/JarInfo.properties" />
+      <propertyfile file="@{classes-dir}/com/amazon/ion/util/JarInfo.properties">
+        <entry key="brazil_major_version" value="${bp:package-major-version}" />
+        <entry key="brazil_package_version" 
+               value="${bp:package-name-full-version}" />
+        <entry key="build_time" value="${build_time}" />
+      </propertyfile>
+    </sequential>
+  </macrodef>
+  
   <target name="eclipse-build" depends="build.properties"
           description="Called from Eclipse to perform custom build logic">
     <mkdir dir="${basedir}/.eclipseout"/>
@@ -215,6 +225,7 @@
       <entry key="com.amazon.iontests.iontestdata.path" 
              value="${dir.test.data}" />
     </propertyfile>
+    <copy-jar-info classes-dir="${basedir}/.eclipseout"/>
   </target>
   
 </project>

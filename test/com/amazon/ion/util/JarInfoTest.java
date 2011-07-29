@@ -2,6 +2,9 @@
 
 package com.amazon.ion.util;
 
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import org.junit.Test;
 
 /**
@@ -12,9 +15,11 @@ public class JarInfoTest
     @Test
     public void testConstruction()
     {
-        // This attempts to load the properties file, but within Eclipse its
-        // not on the classpath.  At least we'll make sure the constructor
-        // doesn't die when the file is missing.
         JarInfo info = new JarInfo();
+
+        assertTrue(info.getReleaseLabel().startsWith("R1"));
+        assertTrue(info.getBrazilMajorVersion().startsWith("1."));
+        assertTrue(info.getBrazilPackageVersion().startsWith("IonJava-1."));
+        assertNotNull(info.getBuildTime());
     }
 }
