@@ -349,8 +349,8 @@ extends IonTestCase
         roundTripBufferResults tree =
             new roundTripBufferResults(pass + " tree");
 
-        stream.name = this.getName() + " (as stream)";
-        tree.name = this.getName() + " (as IonValue)";
+        stream.name = myTestFile.getName() + " (as stream)";
+        tree.name = myTestFile.getName() + " (as IonValue)";
 
         // load() takes ownership of the buffer
         IonDatagram inputDatagram = loader().load(testBuffer.clone());
@@ -399,21 +399,6 @@ extends IonTestCase
         //     output with datagram
         //  test comparison again with the resulting binary
         //  and resulting text (1 level recurse or 2?
-
-        // FIXME tests are disabled due to issues in Ion Java Lite.
-        String filename = this.myTestFile.getAbsolutePath();
-        if (filename.contains("__")) {
-            if (_debug_flag) {
-                System.out.println();
-                System.out.println("WARNING: debugging "+this.getName()+", with in line text symbol tables (with triple underscore flag in name)");
-                int w = 3;
-                w = break_point_point(w);
-                System.out.println(""+w);
-            }
-            else {
-                System.err.println("skipping: "+this.getName());
-            }
-        }
 
         roundTripBufferResults pass1 = roundTripBuffer("original buffer", myBuffer);
         roundTripBufferResults pass2bin = roundTripBuffer("binary from pass 1",pass1.binary);

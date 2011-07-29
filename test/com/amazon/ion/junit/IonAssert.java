@@ -3,11 +3,11 @@
 package com.amazon.ion.junit;
 
 import static com.amazon.ion.util.IonTextUtils.printSymbol;
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertFalse;
-import static junit.framework.Assert.fail;
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.fail;
 
 import com.amazon.ion.IonLob;
 import com.amazon.ion.IonSequence;
@@ -19,7 +19,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
-import junit.framework.Assert;
 
 /**
  *
@@ -212,9 +211,9 @@ public class IonAssert
             List<IonValue> actualList = actualFields.get(fieldName);
             if (actualList == null)
             {
-                Assert.fail("Missing field " + fieldPath
-                            + ", expected: " + expected
-                            + " actual: " + actual);
+                fail("Missing field " + fieldPath
+                     + ", expected: " + expected
+                     + " actual: " + actual);
             }
 
             assertFieldEquals(fieldPath,

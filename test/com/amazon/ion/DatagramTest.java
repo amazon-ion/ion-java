@@ -261,23 +261,6 @@ public class DatagramTest
     }
 
 
-    // TODO move elsewhere
-    public void assertArrayEquals(byte[] expected, byte[] actual)
-    {
-        assertEquals("array length",
-                     expected.length,
-                     actual.length);
-
-        for (int i = 0; i < expected.length; i++)
-        {
-            if (expected[i] != actual[i])
-            {
-                fail("byte[] differs at index " + i);
-            }
-        }
-    }
-
-
     @Test
     public void testGetBytes()
         throws Exception

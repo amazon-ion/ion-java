@@ -27,7 +27,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
-import junit.framework.TestCase;
+import org.junit.Assert;
 import org.junit.runner.RunWith;
 
 /**
@@ -35,7 +35,7 @@ import org.junit.runner.RunWith;
  */
 @RunWith(Injected.class)
 public abstract class IonTestCase
-    extends TestCase
+    extends Assert
 {
     protected enum DomType { LITE, BACKED }
 
@@ -576,7 +576,7 @@ public abstract class IonTestCase
         else
         {
             assertEquals("decimal content",
-                         expected.doubleValue(), i.doubleValue());
+                         expected.doubleValue(), i.doubleValue(), 0d);
         }
     }
 
@@ -642,7 +642,7 @@ public abstract class IonTestCase
         else
         {
             assertEquals("decimal content",
-                         expected.doubleValue(), i.doubleValue());
+                         expected.doubleValue(), i.doubleValue(), 0d);
         }
     }
 
@@ -814,7 +814,24 @@ public abstract class IonTestCase
 
     public void logSkippedTest()
     {
-        System.err.println("WARNING: skipped " + getClass().getName() + '.'
-                           + getName());
+        System.err.println("WARNING: skipped a test in " + getClass().getName());
+    }
+
+    /** Temporary bridge from JUnit 3 */
+    public void setUp() throws Exception { }
+
+    /** Temporary bridge from JUnit 3 */
+    public void tearDown() throws Exception { }
+
+    /** JUnit 4 disables this */
+    public static void assertEquals(double expected, double actual)
+    {
+        assertEquals(expected, actual, 0d);
+    }
+
+    /** JUnit 4 disables this */
+    public static void assertEquals(String message, double expected, double actual)
+    {
+        assertEquals(message, expected, actual, 0d);
     }
 }

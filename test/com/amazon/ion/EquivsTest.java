@@ -5,7 +5,6 @@ package com.amazon.ion;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
 import java.io.File;
-import junit.framework.AssertionFailedError;
 import org.junit.Test;
 
 public class EquivsTest
@@ -69,7 +68,7 @@ public class EquivsTest
                         type +
                         ": Error comparing children " + j + " and " + (j+1) +
                         " of equivalence sequence " + i + " (zero-based)";
-                    Error wrap = new AssertionFailedError(message);
+                    Error wrap = new AssertionError(message);
                     wrap.initCause(e);
                     throw wrap;
                 }

@@ -5,6 +5,7 @@ package com.amazon.ion.impl;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -41,9 +42,9 @@ public class ValueWriterTest
 
 
 
-    @Override @Test
-    public void testWritingBadSurrogates()
+    @Override @Test @Ignore
+    public void testWritingBadSurrogates() throws Exception
     {
-        logSkippedTest();
+        super.testWritingBadSurrogates();
     }
 }
