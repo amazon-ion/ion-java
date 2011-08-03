@@ -1,0 +1,52 @@
+# -*-perl-*- 
+#  //brazil/src/shared/platform/IonJava/mainline perforce:9591/Config 
+
+package.IonJava = {
+  interfaces = (1.0);
+  flavors = {
+    map = single;
+    generation = 1;
+  };
+  deploy = {
+    generic = true;
+  };
+  scope = framework;
+
+  dependencies = {
+    1.0 = {
+      # Note no run-time dependency on JDK, as per https://w?JDK
+    };
+  };
+
+
+  caching-behavior = {
+    additional-directories = (brazil-documentation);
+  };
+
+
+  build-system = happytrails;
+
+  build-tools = {
+    1.0 = {
+    # ApacheAnt-1.8 is broken on RHEL5_65
+    # http://devcentral.amazon.com/contact-us/ContactUsIssue.cgi?profile=dev-support;issue=10035526
+#     ApacheAnt = 1.8;
+      BrazilJavadoc = 1.1;
+      HappyTrails = 3.1;
+      JDK = 1.5;
+    };
+  };
+
+  test-dependencies = {
+    1.0 = {
+      IonTests = 1.0;
+      junit = 4.7;
+    };
+  };
+
+  targets = {
+    IonJava = { type = javalibrary; };
+#    antlr-3.0b6 = { type = javalibrary; };
+#    stringtemplate-3.0 = { type = javalibrary; }; 
+  };
+};
