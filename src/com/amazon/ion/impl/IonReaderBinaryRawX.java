@@ -381,7 +381,8 @@ abstract public class IonReaderBinaryRawX
     }
     private final int read_type_id() throws IOException
     {
-        int start_of_tid   = _input._pos;                      // FIXME: for repositionable reader
+        // FIXME ION-216
+        int start_of_tid   = (int) _input.getPosition();       // FIXME: for repositionable reader
         int start_of_value = start_of_tid + 1;                 // FIXME: for repositionable reader
 
         int td = read();
@@ -392,7 +393,8 @@ abstract public class IonReaderBinaryRawX
         int len = IonConstants.getLowNibble(td);
         if (len == IonConstants.lnIsVarLen) {
             len = readVarUInt();
-            start_of_value = _input._pos;                      // FIXME: for repositionable reader
+            // FIXME ION-216
+            start_of_value = (int) _input.getPosition();        // FIXME: for repositionable reader
         }
         else if (tid == IonConstants.tidNull) {
             if (len != IonConstants.lnIsNull) {
