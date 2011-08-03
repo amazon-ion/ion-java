@@ -56,6 +56,7 @@ public abstract class IonTestCase
 
 
     private static boolean ourSystemPropertiesLoaded = false;
+    protected SimpleCatalog    myCatalog;
     protected IonSystemPrivate mySystem;
     protected IonLoader        myLoader;
 
@@ -252,12 +253,11 @@ public abstract class IonTestCase
     // ========================================================================
     // Fixture Helpers
 
-
     protected IonSystemPrivate system()
     {
         if (mySystem == null)
         {
-            mySystem = system(null);
+            mySystem = system(myCatalog);
         }
         return mySystem;
     }
@@ -282,7 +282,11 @@ public abstract class IonTestCase
 
     protected SimpleCatalog catalog()
     {
-        return (SimpleCatalog) system().getCatalog();
+        if (myCatalog == null)
+        {
+            myCatalog = (SimpleCatalog) system().getCatalog();
+        }
+        return myCatalog;
     }
 
     protected IonLoader loader()
@@ -347,6 +351,9 @@ public abstract class IonTestCase
 
 
 
+    /**
+     * Materializes a shared symtab.  No catalog registration is performed.
+     */
     public SymbolTable loadSharedSymtab(String serializedSymbolTable)
     {
         IonReader reader = system().newReader(serializedSymbolTable);
@@ -355,6 +362,12 @@ public abstract class IonTestCase
         return shared;
     }
 
+    /**
+     * Materializes a shared symtab and registeres it in the default
+     * catalog.
+     *
+     * @see #catalog()
+     */
     public SymbolTable registerSharedSymtab(String serializedSymbolTable)
     {
         SymbolTable shared = loadSharedSymtab(serializedSymbolTable);
