@@ -2,6 +2,7 @@
 
 package com.amazon.ion.streaming;
 
+import com.amazon.ion.BinaryTest;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
@@ -11,6 +12,7 @@ import com.amazon.ion.impl.IonReaderPosition;
 import com.amazon.ion.impl.IonReaderWithPosition;
 import com.amazon.ion.junit.IonAssert;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -284,6 +286,30 @@ public class ReaderPositioningTest
         assertNotNull(pos);
         assertEquals(30, pos.getOffset());
         assertEquals(56, pos.getLength());
+    }
+
+    // Capture for ION-219
+    @Test
+    public void testGetPosFromStreamMed() throws IOException {
+        final ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        final int count = 8000;
+        for (int i = 0; i < count; i++) {
+            buf.write(BinaryTest.hexToBytes("E0 01 00 EA"));
+            buf.write(BinaryTest.hexToBytes("22 03 E8"));
+        }
+
+        final IonReaderWithPosition reader =
+            (IonReaderWithPosition)
+                system().newReader(new ByteArrayInputStream(buf.toByteArray()));
+        int offset = 4;
+        for (int i = 0; i < count; i++) {
+            assertSame(IonType.INT, reader.next());
+            IonReaderOctetPosition pos = reader.getCurrentPosition().asFacet(IonReaderOctetPosition.class);
+            assertEquals(offset, pos.getOffset());
+            assertEquals(3, pos.getLength());
+            offset += 7;
+        }
+        assertNull(reader.next());
     }
 
     // FIXME ION-216
