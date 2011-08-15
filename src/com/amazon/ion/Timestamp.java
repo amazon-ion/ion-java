@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -20,8 +20,8 @@ import java.util.Date;
  * <p>
  * This implementation preserves the "signficant digits" of the value.  The
  * precision defines which fields have been included.  Only common break
- * points in the values are supported.  Any unspecified values are treated
- * as 0 (aka midnight, beginning of the new day).
+ * points in the values are supported.  Any unspecified field are handled
+ * as the start of the new year/month/day.
  *
  * <h4>Equality and Comparison</h4>
  *
@@ -963,9 +963,11 @@ public final class Timestamp
         return _offset;
     }
 
+
     /**
-     * get the year of this value in the local time.
-     * @return int local time year
+     * Gets the year of this timestamp, in its local time.
+     *
+     * @return the year (1-9999), in this timestamp's local time.
      */
     public int getYear()
     {
@@ -993,9 +995,13 @@ public final class Timestamp
         return adjusted._year;
     }
 
+
     /**
-     * get the month of the year of this value in the local time.  January is month 1.
-     * @return int local time month of the year
+     * Gets the month of this timestamp, in its local time.
+     * January is month 1.
+     *
+     * @return the month (1-12), in this timestamp's local time;
+     * one if the timestamp isn't that precise.
      */
     public int getMonth()
     {
@@ -1009,9 +1015,12 @@ public final class Timestamp
         return adjusted._month;
     }
 
+
     /**
-     * get the day of the month of this value in the local time.
-     * @return int local time day of the month
+     * Gets the day (within the month) of this timestamp, in its local time.
+     *
+     * @return the day (1-31), in this timestamp's local time;
+     * one if the timestamp isn't that precise.
      */
     public int getDay()
     {
@@ -1024,9 +1033,12 @@ public final class Timestamp
         return adjusted._day;
     }
 
+
     /**
-     * get the hours field of the time of this value in the local time.
-     * @return int local time hours
+     * Gets the hour of this timestamp, in its local time.
+     *
+     * @return the hour (0-23), in this timestamp's local time;
+     * zero if the timestamp isn't that precise.
      */
     public int getHour()
     {
@@ -1039,9 +1051,12 @@ public final class Timestamp
         return adjusted._hour;
     }
 
+
     /**
-     * get the minutes of this value in the local time.
-     * @return int local time minutes
+     * Gets the minute of this timestamp, in its local time.
+     *
+     * @return the minute (0-59), in this timestamp's local time;
+     * zero if the timestamp isn't that precise.
      */
     public int getMinute()
     {
@@ -1054,91 +1069,126 @@ public final class Timestamp
         return adjusted._minute;
     }
 
+
     /**
-     * get the seconds of this value in the local time.
-     * @return int local time seconds
+     * Gets the second of this timestamp, in its local time.
+     *
+     * @return the second (0-59), in this timestamp's local time;
+     * zero if the timestamp isn't that precise.
      */
     public int getSecond()
     {
         return this._second;
     }
 
+
     /**
-     * get the fraction seconds portion of the time this value in the local time.
-     * If the precision doesn't include fraction seconds this will return null.
-     * @return int local time fractional seconds if specified otherwise null
+     * Gets the fractional sub-second of this timestamp, in its local time.
+     * The result will be non-negative and less than one, since it denotes all
+     * significant digits <em>after</em> the timestam's decimal point.
+     *
+     * @return the fractional second in this timestamp's local time;
+     * null if the timestamp isn't that precise.
      */
     public BigDecimal getFractionalSecond()
     {
         return this._fraction;
     }
 
+
     /**
-     * get the year portion of the date of this value as a Zulu time (in GMT time).
-     * @return int year portion of the date in Zulu time
+     * Gets the year of this timestamp, in GMT.
+     *
+     * @return the year (1-9999), in GMT.
      */
     public int getZYear()
     {
         return this._year;
     }
 
+
     /**
-     * get the the month portion of the date of this value as a Zulu time (in GMT time).
-     * In Timestamp January is month 1 (the GregorianCalendar class numbers months
-     * from 0, but days of the month from 1).
-     * @return int the month in Zulu time
+     * Gets the month of this timestamp, in GMT.
+     * January is month 1.
+     *
+     * @return the month (1-12), in GMT;
+     * one if the timestamp isn't that precise.
      */
     public int getZMonth()
     {
         return this._month;
     }
 
+
     /**
-     * get the day of the month portion of the date of this value as a Zulu time (in GMT time).
-     * @return int day of the month in Zulu time
+     * Gets the day (within the month) of this timestamp, in GMT.
+     *
+     * @return the day (1-31), in GMT;
+     * one if the timestamp isn't that precise.
      */
     public int getZDay()
     {
         return this._day;
     }
 
+
     /**
-     * get the hours portion of the time this value as a Zulu time (in GMT time).
-     * @return int hours of time in Zulu time
+     * Gets the hour of this timestamp, in GMT.
+     *
+     * @return the hour (0-23), in GMT;
+     * zero if the timestamp isn't that precise.
      */
     public int getZHour()
     {
         return this._hour;
     }
 
+
     /**
-     * get the minutes portion of the time this value as a Zulu time (in GMT time).
-     * @return int minutes of time in Zulu time
+     * Gets the minute of this timestamp, in GMT.
+     *
+     * @return the minute (0-59), in GMT;
+     * zero if the timestamp isn't that precise.
      */
     public int getZMinute()
     {
         return this._minute;
     }
 
+
     /**
-     * get the seconds portion of the time this value as a Zulu time (in GMT time).
-     * @return int seconds of time in Zulu time
+     * Gets the second of this timestamp, in GMT.
+     *
+     * @return the second (0-59), in GMT;
+     * zero if the timestamp isn't that precise.
      */
     public int getZSecond()
     {
         return this._second;
     }
 
+
     /**
-     * get the fraction seconds portion of the time this value as a Zulu time (in GMT time).
-     * If the precision doesn't include fraction seconds this will return null.
-     * @return int fractional seconds of time in Zulu time, if specified otherwise null
+     * Gets the fractional sub-second of this timestamp, in GMT.
+     * The result will be non-negative and less than one, since it denotes all
+     * significant digits <em>after</em> the timestam's decimal point.
+     *
+     * @return the fractional second in GMT;
+     * null if the timestamp isn't that precise.
      */
     public BigDecimal getZFractionalSecond()
     {
         return this._fraction;
     }
 
+
+    /**
+     * Returns a string representation of this timestamp, in its own local
+     * offset, using the valid Ion format.
+     *
+     * @see #toZString()
+     * @see #print(Appendable)
+     */
     @Override
     public String toString()
     {
@@ -1155,12 +1205,12 @@ public final class Timestamp
         return buffer.toString();
     }
 
+
     /**
-     * a variant of the standard toString that returns the value
-     * as if it had been specified in zulu time.  This is especially
-     * useful for debugging as the resulting value has had the
-     * local offset "applied".
+     * Returns a string representation of this timestamp in GMT,
+     * using the valid Ion format.
      *
+     * @see #toString()
      * @see #printZ(Appendable)
      */
     public String toZString()
@@ -1178,12 +1228,17 @@ public final class Timestamp
         return buffer.toString();
     }
 
+
     /**
-     * Prints this timestamp in Ion format.
+     * Prints this timestamp, in its own local offset,
+     * using the valid Ion format.
+     * This method gives the same output as {@link #toString()}.
      *
      * @param out must not be null.
      *
      * @throws IOException propagated when the {@link Appendable} throws it.
+     *
+     * @see #printZ(Appendable)
      */
     public void print(Appendable out)
         throws IOException
@@ -1201,14 +1256,16 @@ public final class Timestamp
         print(out, adjusted);
     }
 
+
     /**
-     * Prints this timestamp in Ion format but without the timezone.
-     * Technically this method treats the timezone as if it had been
-     * zulu time.
+     * Prints this timestamp, in GMT, using the valid Ion format.
+     * This method gives the same output as {@link #toZString()}.
      *
      * @param out must not be null.
      *
      * @throws IOException propagated when the {@link Appendable} throws it.
+     *
+     * @see #print(Appendable)
      */
     public void printZ(Appendable out)
         throws IOException
@@ -1217,6 +1274,7 @@ public final class Timestamp
         ztime._offset = UTC_OFFSET;
         ztime.print(out);
     }
+
 
     /**
      * helper for print(out) and printZ(out) so that printZ can create
