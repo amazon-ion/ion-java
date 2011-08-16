@@ -11,6 +11,7 @@ import com.amazon.ion.DatagramTest;
 import com.amazon.ion.DecimalTest;
 import com.amazon.ion.EquivsTest;
 import com.amazon.ion.ExtendedDecimalTest;
+import com.amazon.ion.FacetsTest;
 import com.amazon.ion.FieldNameEscapesTest;
 import com.amazon.ion.FloatTest;
 import com.amazon.ion.GoodIonTest;
@@ -67,6 +68,7 @@ import org.junit.runners.Suite;
     // Low-level facilities.
     AssertionsEnabledTest.class,
     IonExceptionTest.class,
+    FacetsTest.class,
     ByteBufferTest.class,
     TextTest.class,
     CharacterReaderTest.class,
