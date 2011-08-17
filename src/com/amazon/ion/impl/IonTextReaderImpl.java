@@ -281,6 +281,15 @@ public final class IonTextReaderImpl
         _state = IonTextReaderImpl.State_read_datagram;
     }
 
+
+    /**
+     * @return This implementation always returns null.
+     */
+    public <T> T asFacet(Class<T> facetType)
+    {
+        return null;
+    }
+
     public void close()
         throws IOException
     {

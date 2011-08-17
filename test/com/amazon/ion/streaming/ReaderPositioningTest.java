@@ -4,11 +4,12 @@ package com.amazon.ion.streaming;
 
 import com.amazon.ion.BinaryTest;
 import com.amazon.ion.IonDatagram;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
+import com.amazon.ion.Span;
 import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.IonReaderOctetPosition;
-import com.amazon.ion.impl.IonReaderPosition;
 import com.amazon.ion.impl.IonReaderWithPosition;
 import com.amazon.ion.junit.IonAssert;
 import java.io.ByteArrayInputStream;
@@ -26,20 +27,29 @@ import org.junit.Test;
 public class ReaderPositioningTest
     extends IonTestCase
 {
-    private IonReaderWithPosition read(byte[] binary)
+    private IonReader in;
+    private IonReaderWithPosition p;
+
+    private IonReader read(byte[] binary)
     {
-        return (IonReaderWithPosition) system().newReader(binary);
+        in = system().newReader(binary);
+        p = in.asFacet(IonReaderWithPosition.class);
+        return in;
     }
 
-    private IonReaderWithPosition read(String text)
+    private IonReader read(String text)
     {
         byte[] binary = encode(text);
-        return read(binary);
+        in = read(binary);
+        return in;
     }
 
-    private IonReaderWithPosition readAsStream(String text)
+    private IonReader readAsStream(String text)
     {
-        return (IonReaderWithPosition) system().newReader(new ByteArrayInputStream(encode(text)));
+        ByteArrayInputStream bytesIn = new ByteArrayInputStream(encode(text));
+        in = system().newReader(bytesIn);
+        p = in.asFacet(IonReaderWithPosition.class);
+        return in;
     }
 
     private InputStream repeatStream(final String text, final long times)
@@ -106,20 +116,20 @@ public class ReaderPositioningTest
         IonDatagram dg = loader().load(text);
         byte[] binary = dg.getBytes();
 
-        IonReaderPosition[] positions = new IonReaderPosition[dg.size()];
+        Span[] positions = new Span[dg.size()];
 
-        IonReaderWithPosition in = read(binary);
+        read(binary);
         for (int i = 0; i < dg.size(); i++)
         {
             assertEquals(dg.get(i).getType(), in.next());
-            positions[i] = in.getCurrentPosition();
+            positions[i] = p.currentSpan();
             // TODO test reading the value before calling getPos
         }
         assertEquals(null, in.next());
 
         for (int i = dg.size() - 1; i >= 0; i--)
         {
-            in.seek(positions[i]);
+            p.hoist(positions[i]);
             assertEquals(dg.get(i).getType(), in.next());
             IonAssert.assertIonEquals(dg.get(i), system().newValue(in));
         }
@@ -129,41 +139,41 @@ public class ReaderPositioningTest
     @Test
     public void testSeekingIntoContainers()
     {
-        IonReaderWithPosition in = read("{f:v,g:[c]} s");
+        read("{f:v,g:[c]} s");
 
         in.next();
         in.stepIn();
             in.next();
-            IonReaderPosition fPos = in.getCurrentPosition();
+            Span fPos = p.currentSpan();
             assertEquals("v", in.stringValue());
             in.next();
-            IonReaderPosition gPos = in.getCurrentPosition();
+            Span gPos = p.currentSpan();
             in.stepIn();
                 in.next();
                 assertEquals("c", in.stringValue());
-                IonReaderPosition cPos = in.getCurrentPosition();
+                Span cPos = p.currentSpan();
                 assertEquals(null, in.next());
             in.stepOut();
             assertEquals(null, in.next());
         in.stepOut();
         in.next();
-        IonReaderPosition sPos = in.getCurrentPosition();
+        Span sPos = p.currentSpan();
         assertEquals(null, in.next());
 
 
-        in.seek(fPos);
+        p.hoist(fPos);
         assertEquals(IonType.SYMBOL, in.next());
         assertEquals(null, in.getFieldName());
         assertEquals("v", in.stringValue());
         assertEquals(null, in.next());
 
-        in.seek(cPos);
+        p.hoist(cPos);
         in.next();
         assertEquals("c", in.stringValue());
         assertEquals(null, in.getFieldName());
         assertEquals(null, in.next());
 
-        in.seek(gPos);
+        p.hoist(gPos);
         assertEquals(IonType.LIST, in.next());
         assertEquals(null, in.getFieldName());
         in.stepIn();
@@ -173,13 +183,13 @@ public class ReaderPositioningTest
         in.stepOut();
         assertEquals(null, in.next());
 
-        in.seek(fPos);
+        p.hoist(fPos);
         assertEquals(null, in.getFieldName());
         assertEquals(IonType.SYMBOL, in.next());
         assertEquals("v", in.stringValue());
         assertEquals(null, in.next());
 
-        in.seek(sPos);
+        p.hoist(sPos);
         assertEquals(IonType.SYMBOL, in.next());
         assertEquals("s", in.stringValue());
         assertEquals(null, in.next());
@@ -190,13 +200,13 @@ public class ReaderPositioningTest
     {
         // This value is "long" in that it has a length subfield in the prefix.
         String text = " \"123456789012345\" ";
-        IonReaderWithPosition in = read(text);
+        read(text);
 
         in.next();
-        IonReaderPosition pos = in.getCurrentPosition();
+        Span pos = p.currentSpan();
         assertEquals(null, in.next());
 
-        in.seek(pos);
+        p.hoist(pos);
         assertEquals(IonType.STRING, in.next());
         assertEquals(null, in.next());
     }
@@ -209,13 +219,13 @@ public class ReaderPositioningTest
         File file = getTestdataFile("good/structOrdered.10n");
         byte[] binary = IonImplUtils.loadFileBytes(file);
 
-        IonReaderWithPosition in = read(binary);
+        read(binary);
 
         in.next();
-        IonReaderPosition pos = in.getCurrentPosition();
+        Span pos = p.currentSpan();
         assertEquals(null, in.next());
 
-        in.seek(pos);
+        p.hoist(pos);
         assertEquals(IonType.STRUCT, in.next());
         assertEquals(null, in.next());
     }
@@ -226,66 +236,71 @@ public class ReaderPositioningTest
     @Test(expected=IllegalStateException.class)
     public void testGetPosBeforeFirstTopLevel()
     {
-        IonReaderWithPosition in = read("foo");
-        IonReaderPosition pos = in.getCurrentPosition();
+        read("foo");
+        p.currentSpan();
     }
 
     @Test(expected=IllegalStateException.class)  // TODO similar for list/sexp
     public void testGetPosBeforeFirstStructChild()
     {
-        IonReaderWithPosition in = read("{f:v}");
+        read("{f:v}");
         in.next();
         in.stepIn();
-        in.getCurrentPosition();
+        p.currentSpan();
     }
 
     @Test(expected=IllegalStateException.class)  // TODO similar for list/sexp
     public void testGetPosAfterLastStructChild()
     {
-        IonReaderWithPosition in = read("{f:v}");
+        read("{f:v}");
         in.next();
         in.stepIn();
         in.next();
         in.next();
-        in.getCurrentPosition();
+        p.currentSpan();
     }
 
 
     @Test(expected=IllegalStateException.class)
     public void testGetPosAtEndOfStream()
     {
-        IonReaderWithPosition in = read("foo");
+        read("foo");
         in.next();
         assertEquals(null, in.next());
-        IonReaderPosition pos = in.getCurrentPosition();
-        // TODO what does this mean?
+        p.currentSpan();
     }
 
     @Test
     public void testGetPosFromStream()
     {
-        IonReaderWithPosition in = readAsStream("'''hello''' 1 2 3 4 5 6 7 8 9 10 '''Kumo the fluffy dog! He is so fluffy and yet so happy!'''");
+        readAsStream("'''hello''' 1 2 3 4 5 6 7 8 9 10 '''Kumo the fluffy dog! He is so fluffy and yet so happy!'''");
         assertSame(IonType.STRING, in.next());
-        IonReaderOctetPosition pos = in.getCurrentPosition().asFacet(IonReaderOctetPosition.class);
+        IonReaderOctetPosition pos = p.currentSpan().asFacet(IonReaderOctetPosition.class);
         assertNotNull(pos);
-        assertEquals(4, pos.getOffset());
-        assertEquals(6, pos.getLength());
+        assertEquals( 4, pos.getOffset());
+        assertEquals( 4, pos.getStartOffset());
+        assertEquals( 6, pos.getLength());
+        assertEquals(10, pos.getFinishOffset());
         for (int i = 1; i <= 10; i++) {
             assertSame(IonType.INT, in.next());
             assertEquals(i, in.intValue());
         }
 
-        pos = in.getCurrentPosition().asFacet(IonReaderOctetPosition.class);
+        pos = p.currentSpan().asFacet(IonReaderOctetPosition.class);
         assertNotNull(pos);
         assertEquals(28, pos.getOffset());
-        assertEquals(2, pos.getLength());
+        assertEquals(28, pos.getStartOffset());
+        assertEquals( 2, pos.getLength());
+        assertEquals(30, pos.getFinishOffset());
 
         // Capture for ION-217
         assertSame(IonType.STRING, in.next());
-        pos = in.getCurrentPosition().asFacet(IonReaderOctetPosition.class);
+        pos = p.currentSpan().asFacet(IonReaderOctetPosition.class);
         assertNotNull(pos);
         assertEquals(30, pos.getOffset());
+        assertEquals(30, pos.getStartOffset());
         assertEquals(56, pos.getLength());
+        assertEquals(86, pos.getFinishOffset());
     }
 
     // Capture for ION-219
@@ -298,18 +313,18 @@ public class ReaderPositioningTest
             buf.write(BinaryTest.hexToBytes("22 03 E8"));
         }
 
-        final IonReaderWithPosition reader =
-            (IonReaderWithPosition)
-                system().newReader(new ByteArrayInputStream(buf.toByteArray()));
+        read(buf.toByteArray());
         int offset = 4;
         for (int i = 0; i < count; i++) {
-            assertSame(IonType.INT, reader.next());
-            IonReaderOctetPosition pos = reader.getCurrentPosition().asFacet(IonReaderOctetPosition.class);
+            assertSame(IonType.INT, in.next());
+            IonReaderOctetPosition pos = p.currentSpan().asFacet(IonReaderOctetPosition.class);
             assertEquals(offset, pos.getOffset());
+            assertEquals(offset, pos.getStartOffset());
             assertEquals(3, pos.getLength());
+            assertEquals(offset+3, pos.getFinishOffset());
             offset += 7;
         }
-        assertNull(reader.next());
+        assertNull(in.next());
     }
 
     // FIXME ION-216
@@ -318,18 +333,21 @@ public class ReaderPositioningTest
     public void testGetPosFromStreamBig() {
         final String text = "'''Kumo the fluffy dog! He is so fluffy and yet so happy!'''";
         final long repeat = 40000000L;
-        IonReaderWithPosition in = (IonReaderWithPosition) system().newReader(
+        in = system().newReader(
             repeatStream(text, repeat) // make sure we go past Integer.MAX_VALUE
         );
+        p = in.asFacet(IonReaderWithPosition.class);
 
         long iterLimit = repeat - 10;
         for (long i = 0; i < iterLimit; i++)
         {
             assertSame(IonType.STRING, in.next());
         }
-        IonReaderOctetPosition pos = in.getCurrentPosition().asFacet(IonReaderOctetPosition.class);
+        IonReaderOctetPosition pos = p.currentSpan().asFacet(IonReaderOctetPosition.class);
         assertNotNull(pos);
         assertEquals(iterLimit * 60, pos.getOffset());
+        assertEquals(iterLimit * 60, pos.getStartOffset());
         assertEquals(56, pos.getLength());
+        assertEquals(iterLimit * 60 + 56, pos.getFinishOffset());
     }
 }

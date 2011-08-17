@@ -4,13 +4,12 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonType;
 import com.amazon.ion.IonReader;
+import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.IonImplUtils.IntIterator;
 import com.amazon.ion.impl.IonImplUtils.StringIterator;
-
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -450,6 +449,18 @@ public class UnifiedSymbolTableReader
             set_flag(HAS_SYMBOL_LIST, true);
         }
     }
+
+
+    /**
+     * @return This implementation always returns null.
+     */
+    public <T> T asFacet(Class<T> facetType)
+    {
+        return null;
+    }
+
+    //========================================================================
+
 
     private final void set_flag(int flag_bit, boolean flag_state)
     {

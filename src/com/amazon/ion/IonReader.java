@@ -43,7 +43,7 @@ import java.util.Iterator;
  * explains how to do that.
  */
 public interface IonReader
-    extends Closeable
+    extends Closeable, Faceted
 {
 
     /**

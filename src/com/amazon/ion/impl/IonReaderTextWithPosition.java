@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
+import com.amazon.ion.Span;
 
 /**
  *
@@ -60,4 +61,13 @@ public class IonReaderTextWithPosition
         throw new UnsupportedOperationException("Seek not currently implemented on text reader");
     }
 
+    public Span currentSpan()
+    {
+        throw new UnsupportedOperationException();
+    }
+
+    public void hoist(Span span)
+    {
+        throw new UnsupportedOperationException();
+    }
 }

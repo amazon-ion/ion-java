@@ -55,6 +55,17 @@ class IonReaderTreeSystem
         init(value);
     }
 
+
+    /**
+     * @return This implementation always returns null.
+     */
+    public <T> T asFacet(Class<T> facetType)
+    {
+        return null;
+    }
+
+    //========================================================================
+
     void init(IonValue value) {
         if (value == null) {
             // do nothing
@@ -71,20 +82,20 @@ class IonReaderTreeSystem
         _curr = null;
         _eof = false;
         _top = 0;
-            if (value instanceof IonDatagram) {
-                // datagrams interacting with these readers must be
-                // IonContainerPrivate containers
-                assert(value instanceof IonContainerPrivate);
-                IonDatagram dg = (IonDatagram) value;
-                _parent = dg;
+        if (value instanceof IonDatagram) {
+            // datagrams interacting with these readers must be
+            // IonContainerPrivate containers
+            assert(value instanceof IonContainerPrivate);
+            IonDatagram dg = (IonDatagram) value;
+            _parent = dg;
             _next = null;
-                _iter = dg.systemIterator(); // we want a system reader not: new Children(dg);
-            }
-            else {
-            _parent = null;
-                _next = value;
-            }
+            _iter = dg.systemIterator(); // we want a system reader not: new Children(dg);
         }
+        else {
+            _parent = null;
+            _next = value;
+        }
+    }
 
     public void close()
     {

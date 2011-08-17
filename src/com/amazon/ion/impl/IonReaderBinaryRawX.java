@@ -84,6 +84,14 @@ abstract public class IonReaderBinaryRawX
     protected IonReaderBinaryRawX() {
     }
 
+    /**
+     * @return This implementation always returns null.
+     */
+    public <T> T asFacet(Class<T> facetType)
+    {
+        return null;
+    }
+
     protected final void init_raw(UnifiedInputStreamX uis) {
         _input = uis;
         _container_stack = new long[DEFAULT_CONTAINER_STACK_SIZE];

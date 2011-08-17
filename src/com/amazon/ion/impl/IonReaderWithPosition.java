@@ -2,7 +2,8 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonReader;
+import com.amazon.ion.SpanReader;
+
 
 
 /**
@@ -11,8 +12,11 @@ import com.amazon.ion.IonReader;
  *  input stream.  This is only supported over input sources that
  *  support seek() or its equivalent or are fully buffered.
  *
+ * @deprecated Use {@link SpanReader}.
  */
-public interface IonReaderWithPosition extends IonReader
+@Deprecated
+public interface IonReaderWithPosition
+    extends SpanReader
 {
     /**
      * returns an IonReaderPosition based on the current
@@ -25,7 +29,10 @@ public interface IonReaderWithPosition extends IonReader
      * used with the reader which returned them.
      *
      * @return IonReaderPosition
+     *
+     * @deprecated Use {@link #currentSpan()}.
      */
+    @Deprecated
     public IonReaderPosition getCurrentPosition();
 
     /**
@@ -35,7 +42,10 @@ public interface IonReaderWithPosition extends IonReader
      * state of the reader.
      *
      * @param position retrieved from this reader
+     *
+     * @deprecated Use {@link #hoist(com.amazon.ion.Span)}
      */
+    @Deprecated
     public void seek(IonReaderPosition position);
 
     /**

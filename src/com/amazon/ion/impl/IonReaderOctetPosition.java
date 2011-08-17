@@ -2,12 +2,17 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.OctetSpan;
+
 
 /**
  * Provides octet level positioning information for an {@link IonReaderPosition}.
+ *
+ * @deprecated Use {@link OctetSpan}.
  */
+@Deprecated
 public interface IonReaderOctetPosition
-    extends IonReaderPosition
+    extends IonReaderPosition, OctetSpan
 {
     /** Returns the octet position in the logical byte stream sourcing the position. */
     public long getOffset();

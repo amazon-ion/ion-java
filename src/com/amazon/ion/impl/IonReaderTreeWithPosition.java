@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.Span;
 
 /**
  *
@@ -41,13 +42,25 @@ public class IonReaderTreeWithPosition
 
     public void seek(IonReaderPosition position)
     {
-        if (position instanceof IonReaderTreePosition) {
-            IonReaderTreePosition pos = (IonReaderTreePosition)position;
+        hoist(position);
+    }
+
+
+    public Span currentSpan()
+    {
+        // FIXME implementation not to spec
+        return getCurrentPosition();
+    }
+
+    public void hoist(Span span)
+    {
+        if (span instanceof IonReaderTreePosition) {
+            IonReaderTreePosition pos = (IonReaderTreePosition)span;
             this.re_init(pos._value);
         }
         else {
-            throw new IllegalArgumentException("position must match the reader");
+            // TODO custom exception
+            throw new IllegalArgumentException("Span not appropriate for this reader");
         }
     }
-
 }

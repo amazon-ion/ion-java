@@ -5,6 +5,9 @@ package com.amazon.ion.impl;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
+import com.amazon.ion.OctetSpan;
+import com.amazon.ion.Span;
+import com.amazon.ion.SpanReader;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
 import com.amazon.ion.impl.UnifiedInputStreamX.FromByteArray;
@@ -15,12 +18,14 @@ import java.util.Iterator;
 
 class IonReaderBinaryUserX
     extends IonReaderBinarySystemX
-    implements IonReaderWriterPrivate, IonReaderWithPosition
+    implements IonReaderWriterPrivate, IonReaderWithPosition, SpanReader
 {
     SymbolTable _symbols;
     IonCatalog  _catalog;
 
-    private static class IonReaderBinaryPosition extends IonReaderPositionBase implements IonReaderOctetPosition
+    private static class IonReaderBinaryPosition
+        extends IonReaderPositionBase
+        implements IonReaderOctetPosition, OctetSpan
     {
         State       _state;
         int         _offset;
@@ -40,7 +45,15 @@ class IonReaderBinaryUserX
             return _limit - _offset;
         }
 
+        public long getStartOffset()
+        {
+            return _offset;
+        }
 
+        public long getFinishOffset()
+        {
+            return _limit;
+        }
     }
 
     public IonReaderBinaryUserX(IonSystem system, IonCatalog catalog, byte[] bytes, int offset, int length) {
@@ -63,6 +76,22 @@ class IonReaderBinaryUserX
         _catalog = catalog;
     }
 
+
+    /**
+     *
+     */
+    @Override
+    public <T> T asFacet(Class<T> facetType)
+    {
+        if ((facetType == IonReaderWithPosition.class) ||
+            (facetType == SpanReader.class))
+        {
+            return facetType.cast(this);
+        }
+        return super.asFacet(facetType);
+    }
+
+
     /**
      * Determines the abstract position of the reader, such that one can
      * later {@link #seek} back to it.
@@ -76,7 +105,7 @@ class IonReaderBinaryUserX
      * @throws IllegalStateException if the reader doesn't have a current
      * value.
      */
-    public IonReaderPosition getCurrentPosition()
+    public IonReaderBinaryPosition getCurrentPosition()
     {
         // check to see that the reader is in a valid position
         // to mark it
@@ -111,6 +140,12 @@ class IonReaderBinaryUserX
         pos._value_is_true = _value_is_true;
 
         return pos;
+    }
+
+
+    public Span currentSpan()
+    {
+        return getCurrentPosition();
     }
 
 
@@ -163,6 +198,17 @@ class IonReaderBinaryUserX
 
         _is_in_struct = false;
     }
+
+    public void hoist(Span span)
+    {
+        if (! (span instanceof IonReaderBinaryPosition))
+        {
+            throw new IllegalArgumentException("Span isn't compatible with this reader.");
+        }
+
+        seek((IonReaderBinaryPosition) span);
+    }
+
 
     @Override
     public IonType next()

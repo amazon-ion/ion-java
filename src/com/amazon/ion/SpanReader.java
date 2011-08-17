@@ -81,7 +81,7 @@ public interface SpanReader
      *
      * @throws IonException if the given span is unbalanced or at top-level.
      */
-    public void stepIn(Span span);
+//  public void stepIn(Span span);
 
 
     /**

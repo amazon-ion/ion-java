@@ -276,6 +276,17 @@ public abstract class IonReaderTextRawX
         super();
     }
 
+
+    /**
+     * @return This implementation always returns null.
+     */
+    public <T> T asFacet(Class<T> facetType)
+    {
+        return null;
+    }
+
+    //========================================================================
+
     protected final void init(UnifiedInputStreamX iis) {
         _scanner = new IonReaderTextRawTokensX(iis);
         _current_value_save_point = iis.savePointAllocate();
@@ -286,6 +297,7 @@ public abstract class IonReaderTextRawX
         _eof = false;
         push_container_state(IonType.DATAGRAM);
     }
+
 
     public void close()
         throws IOException
