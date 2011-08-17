@@ -2,9 +2,14 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.Facets.assumeFacet;
+
 import com.amazon.ion.IonCatalog;
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
+import com.amazon.ion.Span;
+import com.amazon.ion.SpanReader;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.util.IonStreamUtils;
 
@@ -50,10 +55,13 @@ public class PrivateDmsdkUtils
      * {@link #newBinaryReaderWithPosition}.
      *
      * @return an opaque position marker.
+     *
+     * @throws IonException if reader is null or doesn't have the
+     * {@link SpanReader} facet.
      */
     public static Object currentValuePosition(IonReader reader)
     {
-        return ((IonReaderWithPosition)reader).getCurrentPosition();
+        return assumeFacet(SpanReader.class, reader).currentSpan();
     }
 
 
@@ -69,8 +77,8 @@ public class PrivateDmsdkUtils
      */
     public static void rereadValue(IonReader reader, Object valuePosition)
     {
-        IonReaderPosition position = (IonReaderPosition) valuePosition;
-        ((IonReaderWithPosition)reader).seek(position);
+        Span position = (Span) valuePosition;
+        assumeFacet(SpanReader.class, reader).hoist(position);
         reader.next();
     }
 

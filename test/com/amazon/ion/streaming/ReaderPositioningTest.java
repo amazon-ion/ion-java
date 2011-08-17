@@ -7,10 +7,11 @@ import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
+import com.amazon.ion.OctetSpan;
 import com.amazon.ion.Span;
+import com.amazon.ion.SpanReader;
 import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.IonReaderOctetPosition;
-import com.amazon.ion.impl.IonReaderWithPosition;
 import com.amazon.ion.junit.IonAssert;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -28,12 +29,12 @@ public class ReaderPositioningTest
     extends IonTestCase
 {
     private IonReader in;
-    private IonReaderWithPosition p;
+    private SpanReader p;
 
     private IonReader read(byte[] binary)
     {
         in = system().newReader(binary);
-        p = in.asFacet(IonReaderWithPosition.class);
+        p = in.asFacet(SpanReader.class);
         return in;
     }
 
@@ -48,7 +49,7 @@ public class ReaderPositioningTest
     {
         ByteArrayInputStream bytesIn = new ByteArrayInputStream(encode(text));
         in = system().newReader(bytesIn);
-        p = in.asFacet(IonReaderWithPosition.class);
+        p = in.asFacet(SpanReader.class);
         return in;
     }
 
@@ -270,37 +271,42 @@ public class ReaderPositioningTest
         p.currentSpan();
     }
 
+    private void checkCurrentSpan(long start, long finish)
+    {
+        OctetSpan span = p.currentSpan().asFacet(OctetSpan.class);
+        assertNotNull(span);
+        assertEquals(start,  span.getStartOffset());
+        assertEquals(finish, span.getFinishOffset());
+
+        // Transitional APIs
+        long len = finish - start;
+
+        IonReaderOctetPosition pos = p.currentSpan().asFacet(IonReaderOctetPosition.class);
+        assertNotNull(pos);
+        assertEquals(start,  pos.getOffset());
+        assertEquals(start,  pos.getStartOffset());
+        assertEquals(len,    pos.getLength());
+        assertEquals(finish, pos.getFinishOffset());
+    }
+
+
     @Test
     public void testGetPosFromStream()
     {
         readAsStream("'''hello''' 1 2 3 4 5 6 7 8 9 10 '''Kumo the fluffy dog! He is so fluffy and yet so happy!'''");
         assertSame(IonType.STRING, in.next());
-        IonReaderOctetPosition pos = p.currentSpan().asFacet(IonReaderOctetPosition.class);
-        assertNotNull(pos);
-        assertEquals( 4, pos.getOffset());
-        assertEquals( 4, pos.getStartOffset());
-        assertEquals( 6, pos.getLength());
-        assertEquals(10, pos.getFinishOffset());
+        checkCurrentSpan(4, 10);
+
         for (int i = 1; i <= 10; i++) {
             assertSame(IonType.INT, in.next());
             assertEquals(i, in.intValue());
         }
 
-        pos = p.currentSpan().asFacet(IonReaderOctetPosition.class);
-        assertNotNull(pos);
-        assertEquals(28, pos.getOffset());
-        assertEquals(28, pos.getStartOffset());
-        assertEquals( 2, pos.getLength());
-        assertEquals(30, pos.getFinishOffset());
+        checkCurrentSpan(28, 30);
 
         // Capture for ION-217
         assertSame(IonType.STRING, in.next());
-        pos = p.currentSpan().asFacet(IonReaderOctetPosition.class);
-        assertNotNull(pos);
-        assertEquals(30, pos.getOffset());
-        assertEquals(30, pos.getStartOffset());
-        assertEquals(56, pos.getLength());
-        assertEquals(86, pos.getFinishOffset());
+        checkCurrentSpan(30, 86);
     }
 
     // Capture for ION-219
@@ -317,11 +323,7 @@ public class ReaderPositioningTest
         int offset = 4;
         for (int i = 0; i < count; i++) {
             assertSame(IonType.INT, in.next());
-            IonReaderOctetPosition pos = p.currentSpan().asFacet(IonReaderOctetPosition.class);
-            assertEquals(offset, pos.getOffset());
-            assertEquals(offset, pos.getStartOffset());
-            assertEquals(3, pos.getLength());
-            assertEquals(offset+3, pos.getFinishOffset());
+            checkCurrentSpan(offset, offset+3);
             offset += 7;
         }
         assertNull(in.next());
@@ -336,18 +338,13 @@ public class ReaderPositioningTest
         in = system().newReader(
             repeatStream(text, repeat) // make sure we go past Integer.MAX_VALUE
         );
-        p = in.asFacet(IonReaderWithPosition.class);
+        p = in.asFacet(SpanReader.class);
 
         long iterLimit = repeat - 10;
         for (long i = 0; i < iterLimit; i++)
         {
             assertSame(IonType.STRING, in.next());
         }
-        IonReaderOctetPosition pos = p.currentSpan().asFacet(IonReaderOctetPosition.class);
-        assertNotNull(pos);
-        assertEquals(iterLimit * 60, pos.getOffset());
-        assertEquals(iterLimit * 60, pos.getStartOffset());
-        assertEquals(56, pos.getLength());
-        assertEquals(iterLimit * 60 + 56, pos.getFinishOffset());
+        checkCurrentSpan(iterLimit * 60, iterLimit * 60 + 56);
     }
 }
