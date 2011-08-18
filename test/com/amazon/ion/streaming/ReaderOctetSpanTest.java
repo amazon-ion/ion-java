@@ -3,19 +3,14 @@
 package com.amazon.ion.streaming;
 
 import com.amazon.ion.BinaryTest;
-import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.OctetSpan;
-import com.amazon.ion.Span;
 import com.amazon.ion.SpanReader;
-import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.IonReaderOctetPosition;
-import com.amazon.ion.junit.IonAssert;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -25,7 +20,7 @@ import org.junit.Test;
 /**
  *
  */
-public class ReaderPositioningTest
+public class ReaderOctetSpanTest
     extends IonTestCase
 {
     private IonReader in;
@@ -35,13 +30,6 @@ public class ReaderPositioningTest
     {
         in = system().newReader(binary);
         p = in.asFacet(SpanReader.class);
-        return in;
-    }
-
-    private IonReader read(String text)
-    {
-        byte[] binary = encode(text);
-        in = read(binary);
         return in;
     }
 
@@ -108,168 +96,6 @@ public class ReaderPositioningTest
         };
     }
 
-    @Test
-    public void testWalkingBackwards()
-    {
-        String text =
-            "null true 3 4e0 5.0 6666-06-06T '7' \"8\" {{\"\"}} {{}} [] () {}";
-
-        IonDatagram dg = loader().load(text);
-        byte[] binary = dg.getBytes();
-
-        Span[] positions = new Span[dg.size()];
-
-        read(binary);
-        for (int i = 0; i < dg.size(); i++)
-        {
-            assertEquals(dg.get(i).getType(), in.next());
-            positions[i] = p.currentSpan();
-            // TODO test reading the value before calling getPos
-        }
-        assertEquals(null, in.next());
-
-        for (int i = dg.size() - 1; i >= 0; i--)
-        {
-            p.hoist(positions[i]);
-            assertEquals(dg.get(i).getType(), in.next());
-            IonAssert.assertIonEquals(dg.get(i), system().newValue(in));
-        }
-    }
-
-
-    @Test
-    public void testSeekingIntoContainers()
-    {
-        read("{f:v,g:[c]} s");
-
-        in.next();
-        in.stepIn();
-            in.next();
-            Span fPos = p.currentSpan();
-            assertEquals("v", in.stringValue());
-            in.next();
-            Span gPos = p.currentSpan();
-            in.stepIn();
-                in.next();
-                assertEquals("c", in.stringValue());
-                Span cPos = p.currentSpan();
-                assertEquals(null, in.next());
-            in.stepOut();
-            assertEquals(null, in.next());
-        in.stepOut();
-        in.next();
-        Span sPos = p.currentSpan();
-        assertEquals(null, in.next());
-
-
-        p.hoist(fPos);
-        assertEquals(IonType.SYMBOL, in.next());
-        assertEquals(null, in.getFieldName());
-        assertEquals("v", in.stringValue());
-        assertEquals(null, in.next());
-
-        p.hoist(cPos);
-        in.next();
-        assertEquals("c", in.stringValue());
-        assertEquals(null, in.getFieldName());
-        assertEquals(null, in.next());
-
-        p.hoist(gPos);
-        assertEquals(IonType.LIST, in.next());
-        assertEquals(null, in.getFieldName());
-        in.stepIn();
-            in.next();
-            assertEquals("c", in.stringValue());
-            assertEquals(null, in.next());
-        in.stepOut();
-        assertEquals(null, in.next());
-
-        p.hoist(fPos);
-        assertEquals(null, in.getFieldName());
-        assertEquals(IonType.SYMBOL, in.next());
-        assertEquals("v", in.stringValue());
-        assertEquals(null, in.next());
-
-        p.hoist(sPos);
-        assertEquals(IonType.SYMBOL, in.next());
-        assertEquals("s", in.stringValue());
-        assertEquals(null, in.next());
-    }
-
-    @Test
-    public void testSeekingToLongValue()
-    {
-        // This value is "long" in that it has a length subfield in the prefix.
-        String text = " \"123456789012345\" ";
-        read(text);
-
-        in.next();
-        Span pos = p.currentSpan();
-        assertEquals(null, in.next());
-
-        p.hoist(pos);
-        assertEquals(IonType.STRING, in.next());
-        assertEquals(null, in.next());
-    }
-
-    @Test
-    public void testSeekingToOrderedStruct()
-    throws IOException
-    {
-
-        File file = getTestdataFile("good/structOrdered.10n");
-        byte[] binary = IonImplUtils.loadFileBytes(file);
-
-        read(binary);
-
-        in.next();
-        Span pos = p.currentSpan();
-        assertEquals(null, in.next());
-
-        p.hoist(pos);
-        assertEquals(IonType.STRUCT, in.next());
-        assertEquals(null, in.next());
-    }
-
-
-    // TODO test annotations
-
-    @Test(expected=IllegalStateException.class)
-    public void testGetPosBeforeFirstTopLevel()
-    {
-        read("foo");
-        p.currentSpan();
-    }
-
-    @Test(expected=IllegalStateException.class)  // TODO similar for list/sexp
-    public void testGetPosBeforeFirstStructChild()
-    {
-        read("{f:v}");
-        in.next();
-        in.stepIn();
-        p.currentSpan();
-    }
-
-    @Test(expected=IllegalStateException.class)  // TODO similar for list/sexp
-    public void testGetPosAfterLastStructChild()
-    {
-        read("{f:v}");
-        in.next();
-        in.stepIn();
-        in.next();
-        in.next();
-        p.currentSpan();
-    }
-
-
-    @Test(expected=IllegalStateException.class)
-    public void testGetPosAtEndOfStream()
-    {
-        read("foo");
-        in.next();
-        assertEquals(null, in.next());
-        p.currentSpan();
-    }
 
     private void checkCurrentSpan(long start, long finish)
     {
