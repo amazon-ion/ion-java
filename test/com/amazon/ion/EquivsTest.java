@@ -2,6 +2,7 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
 import java.io.File;
@@ -23,20 +24,26 @@ public class EquivsTest
 
 
     @Test
-    public void test()
+    public void testEquivsOverFile()
     throws Exception
     {
-        runEquivs("Datagram Load", load(myTestFile));
-        final IonDatagram dgFromString = loadAsJavaString(myTestFile);
-        if (dgFromString != null) {
-            runEquivs("Datagram Java String Load", dgFromString);
-        }
+        IonDatagram dg = loader().load(myTestFile);
+        runEquivs(dg);
     }
 
-    private void runEquivs(final String type, final IonDatagram sequences) {
+    @Test
+    public void testEquivsOverString()
+    throws Exception
+    {
+        String ionText = IonImplUtils.utf8FileToString(myTestFile);
+        IonDatagram dg = loader().load(ionText);
+        runEquivs(dg);
+    }
+
+    private void runEquivs(final IonDatagram sequences) {
         int sequenceCount = sequences.size();
 
-        assertTrue(type + ": File must have at least one sequence",
+        assertTrue("File must have at least one sequence",
                    sequenceCount > 0);
 
         for (int i = 0; i < sequenceCount; i++)
@@ -45,7 +52,7 @@ public class EquivsTest
 
             int valueCount = sequence.size();
 
-            assertTrue(type + ": Each sequence must have at least two values",
+            assertTrue("Each sequence must have at least two values",
                        valueCount > 1);
 
             for (int j = 0; j < valueCount - 1; j++)
@@ -57,16 +64,15 @@ public class EquivsTest
                 {
                     // the extra if allows us (me) to set a break point on failures here, specifically here.
                     if (current.equals(next) == false) {
-                        IonAssert.assertIonEquals(type, current, next);
+                        IonAssert.assertIonEquals(current, next);
                     }
-                    assertEquals(type + ": Equal values have unequal hashes",
+                    assertEquals("Equal values have unequal hashes",
                                  current.hashCode(), next.hashCode());
                 }
                 catch (Throwable e)
                 {
                     String message =
-                        type +
-                        ": Error comparing children " + j + " and " + (j+1) +
+                        "Error comparing children " + j + " and " + (j+1) +
                         " of equivalence sequence " + i + " (zero-based)";
                     Error wrap = new AssertionError(message);
                     wrap.initCause(e);

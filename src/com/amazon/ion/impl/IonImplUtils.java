@@ -316,6 +316,13 @@ public final class IonImplUtils // TODO this class shouldn't be public
         return buf;
     }
 
+    public static String utf8FileToString(File file)
+        throws IonException, IOException
+    {
+        byte[] utf8Bytes = IonImplUtils.loadFileBytes(file);
+        String s = utf8(utf8Bytes);
+        return s;
+    }
 
     public static byte[] loadStreamBytes(InputStream in)
         throws IOException

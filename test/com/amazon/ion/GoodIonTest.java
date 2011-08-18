@@ -92,8 +92,11 @@ public class GoodIonTest
     {
         if (! myFileIsBinary)
         {
-            // Pull the file into a String, then load it.
-            loadAsJavaString(myTestFile);
+            String ionText = IonImplUtils.utf8FileToString(myTestFile);
+            IonDatagram dg = loader().load(ionText);
+
+            // Flush out any encoding problems in the data.
+            forceMaterialization(dg);
         }
     }
 

@@ -2,7 +2,6 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.IonSystemImpl;
 import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.junit.Injected;
@@ -11,9 +10,7 @@ import com.amazon.ion.junit.IonAssert;
 import com.amazon.ion.system.BuilderHack;
 import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.SimpleCatalog;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -195,36 +192,6 @@ public abstract class IonTestCase
         return dg;
     }
 
-    /**
-     * Reads the file into a {@link String} then loads it via
-     * {@link IonLoader#load(String)}.
-     */
-    public IonDatagram loadAsJavaString(File ionFile)
-        throws IonException, IOException
-    {
-        // slurp file into a byte sink
-        final ByteArrayOutputStream sink = new ByteArrayOutputStream();
-        // BufferedInputStream isn't needed, we are reading in bulk.
-        final InputStream in = new FileInputStream(ionFile);
-        try {
-            final byte[] buf = new byte[131072];
-            int read = 0;
-            while ((read = in.read(buf)) != -1) {
-                sink.write(buf, 0, read);
-            }
-        } finally {
-            in.close();
-        }
-
-        String ionText = IonImplUtils.utf8(sink.toByteArray());
-
-        final IonDatagram dg = loader().load(ionText);
-
-        // Flush out any encoding problems in the data.
-        forceMaterialization(dg);
-
-        return dg;
-    }
 
     @SuppressWarnings("deprecation")
     public void forceMaterialization(IonValue value)
