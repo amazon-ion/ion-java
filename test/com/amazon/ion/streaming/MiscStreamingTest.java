@@ -2,6 +2,8 @@
 
 package com.amazon.ion.streaming;
 
+import static com.amazon.ion.impl.IonImplUtils.utf8;
+
 import com.amazon.ion.BinaryTest;
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonDatagram;
@@ -284,13 +286,13 @@ public class MiscStreamingTest
     throws Exception
     {
         String dataText = "a/**/b";
-        byte[] dataBytes = dataText.getBytes("UTF-8");
+        byte[] dataBytes = utf8(dataText);
 
         IonReader reader = system().newReader(dataBytes);
         TestUtils.deepRead(reader);
 
-        Assert.assertArrayEquals("UTF-8 text",
-                                 dataText.getBytes("UTF-8"), dataBytes);
+        // Make sure we didn't modify the dataBytes while reading from it.
+        Assert.assertArrayEquals("UTF-8 text", utf8(dataText), dataBytes);
     }
 
 
@@ -300,13 +302,13 @@ public class MiscStreamingTest
     throws Exception
     {
         String dataText = "a/**/b";
-        byte[] dataBytes = dataText.getBytes("UTF-8");
+        byte[] dataBytes = utf8(dataText);
 
         Iterator<IonValue> reader = system().iterate(dataBytes);
         while (reader.hasNext()) reader.next();
 
-        Assert.assertArrayEquals("UTF-8 text",
-                                 dataText.getBytes("UTF-8"), dataBytes);
+        // Make sure we didn't modify the dataBytes while reading from it.
+        Assert.assertArrayEquals("UTF-8 text", utf8(dataText), dataBytes);
     }
 
 
@@ -320,6 +322,6 @@ public class MiscStreamingTest
         writer.writeValue(system().newSymbol("foo"));
         writer.close();
 
-        assertEquals("$ion_1_0 foo", new String(out.toByteArray(), "UTF-8"));
+        assertEquals("$ion_1_0 foo", utf8(out.toByteArray()));
     }
 }

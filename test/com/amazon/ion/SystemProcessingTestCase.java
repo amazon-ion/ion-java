@@ -7,6 +7,7 @@ import static com.amazon.ion.SystemSymbolTable.ION_1_0;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
 import static com.amazon.ion.TestUtils.FERMATA;
 
+import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.IonReaderTextRawTokensX;
 import com.amazon.ion.impl.IonUTF8;
 import com.amazon.ion.impl.SymbolTableTest;
@@ -137,6 +138,9 @@ public abstract class SystemProcessingTestCase
 
     //=========================================================================
 
+    /**
+     * TODO how is this different from {@link IonImplUtils#utf8(String)}?
+     */
     public static byte[] convertUtf16UnitsToUtf8(String text)
     {
         byte[] data = new byte[4*text.length()];

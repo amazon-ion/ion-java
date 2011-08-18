@@ -3,12 +3,15 @@
 package com.amazon.ion;
 
 import static com.amazon.ion.impl.IonImplUtils.READER_HASNEXT_REMOVED;
+import static com.amazon.ion.impl.IonImplUtils.UTF8_CHARSET_NAME;
 
+import com.amazon.ion.impl.IonImplUtils;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -17,6 +20,18 @@ import java.util.Arrays;
  */
 public class TestUtils
 {
+    public static final String US_ASCII_CHARSET_NAME = "US-ASCII";
+
+    public static final Charset US_ASCII_CHARSET =
+        Charset.forName(US_ASCII_CHARSET_NAME);
+
+    public static final String UTF16BE_CHARSET_NAME = "UTF-16BE";
+
+    public static final Charset UTF16BE_CHARSET =
+        Charset.forName(UTF16BE_CHARSET_NAME);
+
+
+
     public static final FilenameFilter TEXT_ONLY_FILTER = new FilenameFilter()
     {
         public boolean accept(File dir, String name)
@@ -237,18 +252,13 @@ public class TestUtils
 
     public static String hexDump(final String str)
     {
-        try {
-            final byte[] utf16Bytes = str.getBytes("UTF-16BE");
-            StringBuilder buf = new StringBuilder(utf16Bytes.length * 4);
-            for (byte b : utf16Bytes) {
-                buf.append(Integer.toString(0x00FF & b, 16));
-                buf.append(' ');
-            }
-            return buf.toString();
+        final byte[] utf16Bytes = IonImplUtils.encode(str, UTF16BE_CHARSET);
+        StringBuilder buf = new StringBuilder(utf16Bytes.length * 4);
+        for (byte b : utf16Bytes) {
+            buf.append(Integer.toString(0x00FF & b, 16));
+            buf.append(' ');
         }
-        catch (final UnsupportedEncodingException e) {
-            throw new IllegalArgumentException(e);
-        }
+        return buf.toString();
     }
 
     /**
@@ -280,7 +290,7 @@ public class TestUtils
     {
         try
         {
-            if (! new String(FERMATA_UTF8, "UTF-8").equals(FERMATA))
+            if (! new String(FERMATA_UTF8, UTF8_CHARSET_NAME).equals(FERMATA))
             {
                 throw new AssertionError("Broken encoding");
             }

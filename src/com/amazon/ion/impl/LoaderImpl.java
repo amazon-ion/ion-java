@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.IonImplUtils.UTF8_CHARSET;
 import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
 
 import com.amazon.ion.IonCatalog;
@@ -214,7 +215,7 @@ public class LoaderImpl
                 return dg;
             }
 
-            Reader reader = new InputStreamReader(pushback, "UTF-8");
+            Reader reader = new InputStreamReader(pushback, UTF8_CHARSET);
             return load(reader);
         }
         catch (IonException e)

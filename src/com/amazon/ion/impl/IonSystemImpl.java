@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbolTable.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
+import static com.amazon.ion.impl.IonImplUtils.UTF8_CHARSET;
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
 import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemReader;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
@@ -53,7 +54,6 @@ import java.io.OutputStream;
 import java.io.PushbackInputStream;
 import java.io.Reader;
 import java.io.StringReader;
-import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -358,7 +358,7 @@ public final class IonSystemImpl
             }
             else
             {
-                Reader reader = new InputStreamReader(pushback, "UTF-8");
+                Reader reader = new InputStreamReader(pushback, UTF8_CHARSET);
                 // This incrementally transcodes the whole stream into
                 // a buffer. However, when system==false we wrap this with a
                 // UserReader below, and then flip a switch to recycle the
@@ -474,7 +474,7 @@ public final class IonSystemImpl
                 return new IonReaderBinaryUserX(this, myCatalog, pushback);
             }
 
-            Reader reader = new InputStreamReader(pushback, "UTF-8");
+            Reader reader = new InputStreamReader(pushback, UTF8_CHARSET);
             return new IonReaderTextUserX(this, null, reader); // FIXME wrong catalog?
         }
         catch (IOException e)
@@ -496,7 +496,7 @@ public final class IonSystemImpl
                 return new IonReaderBinarySystemX(this, pushback);
             }
 
-            Reader reader = new InputStreamReader(pushback, "UTF-8");
+            Reader reader = new InputStreamReader(pushback, UTF8_CHARSET);
             return new IonReaderTextSystemX(this, reader);
         }
         catch (IOException e)
@@ -718,13 +718,7 @@ public final class IonSystemImpl
     {
         if (catalog == null) catalog = getCatalog();
         ByteArrayInputStream stream = new ByteArrayInputStream(ionText);
-        Reader reader;
-        try {
-            reader = new InputStreamReader(stream, "UTF-8");
-        }
-        catch (UnsupportedEncodingException e) {
-            throw new IonException(e);
-        }
+        Reader reader = new InputStreamReader(stream, UTF8_CHARSET);
 
         // return new SystemReader(this, catalog, reader);
         SystemValueIterator sysreader = makeSystemReader(this, catalog, reader);

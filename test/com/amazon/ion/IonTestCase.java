@@ -2,6 +2,7 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.IonSystemImpl;
 import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.junit.Injected;
@@ -16,13 +17,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
-import java.nio.ByteBuffer;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CodingErrorAction;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
@@ -179,7 +174,6 @@ public abstract class IonTestCase
      * @param path is relative to the {@code testdata} directory.
      *
      * @throws FileNotFoundException
-     * @throws UnsupportedEncodingException
      * @throws IOException
      */
     public IonDatagram loadTestFile(String path)
@@ -202,8 +196,8 @@ public abstract class IonTestCase
     }
 
     /**
-     * Returns the file decoded as UTF-8 as an IonDatagram loaded as a Java
-     * String, or <tt>null</tt> if the file is not UTF-8.
+     * Reads the file into a {@link String} then loads it via
+     * {@link IonLoader#load(String)}.
      */
     public IonDatagram loadAsJavaString(File ionFile)
         throws IonException, IOException
@@ -222,20 +216,8 @@ public abstract class IonTestCase
             in.close();
         }
 
-        String ionText = null;
-        try {
-            // we jump through these hoops because the default decoding is to put replacement characters
-            // which is NOT useful for this purpose
-            final CharsetDecoder decoder =
-                Charset.forName("UTF-8")
-                       .newDecoder()
-                       .onMalformedInput(CodingErrorAction.REPORT)
-                       .onUnmappableCharacter(CodingErrorAction.REPORT)
-                       ;
-            ionText = decoder.decode(ByteBuffer.wrap(sink.toByteArray())).toString();
-        } catch (CharacterCodingException e) {
-            return null;
-        }
+        String ionText = IonImplUtils.utf8(sink.toByteArray());
+
         final IonDatagram dg = loader().load(ionText);
 
         // Flush out any encoding problems in the data.

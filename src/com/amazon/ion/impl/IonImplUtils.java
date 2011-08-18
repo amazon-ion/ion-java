@@ -18,6 +18,12 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PushbackInputStream;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CharsetEncoder;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
@@ -56,6 +62,14 @@ public final class IonImplUtils // TODO this class shouldn't be public
     public static final int MAX_LOOKAHEAD_UTF16 = 11;
 
 
+    /** The string {@code "UTF-8"}. */
+    public static final String UTF8_CHARSET_NAME = "UTF-8";
+
+    public static final Charset UTF8_CHARSET =
+        Charset.forName(UTF8_CHARSET_NAME);
+
+
+
     public static final ListIterator<?> EMPTY_ITERATOR = new ListIterator() {
         public boolean hasNext()     { return false; }
         public boolean hasPrevious() { return false; }
@@ -71,6 +85,15 @@ public final class IonImplUtils // TODO this class shouldn't be public
         public void set(Object o) { throw new UnsupportedOperationException(); }
     };
 
+    /**
+     * Replacement for Java6 {@link Arrays#copyOf(byte[], int)}.
+     */
+    public static byte[] copyOf(byte[] bytes, int limit)
+    {
+        byte[] result = new byte[limit];
+        System.arraycopy(bytes, 0, result, 0, Math.min(limit, bytes.length));
+        return result;
+    }
 
     public static <T> void addAll(Collection<T> dest, Iterator<T> src)
     {
@@ -99,6 +122,118 @@ public final class IonImplUtils // TODO this class shouldn't be public
         }
     }
 
+
+    //========================================================================
+
+    /**
+     * Encodes a String into bytes of a given encoding.
+     * <p>
+     * This method is preferred to {@link Charset#encode(String)} and
+     * {@link String#getBytes(String)} (<em>etc.</em>)
+     * since those methods will replace or ignore bad input, and here we throw
+     * an exception.
+     *
+     * @param s the string to encode.
+     *
+     * @return the encoded string, not null.
+     *
+     * @throws IonException if there's a {@link CharacterCodingException}.
+     */
+    public static byte[] encode(String s, Charset charset)
+    {
+        CharsetEncoder encoder = charset.newEncoder();
+        try
+        {
+            ByteBuffer buffer = encoder.encode(CharBuffer.wrap(s));
+            byte[] bytes = buffer.array();
+
+            // Make another copy iff there's garbage after the limit.
+            int limit = buffer.limit();
+            if (limit < bytes.length)
+            {
+                bytes = copyOf(bytes, limit);
+            }
+
+            return bytes;
+        }
+        catch (CharacterCodingException e)
+        {
+            throw new IonException("Invalid string data", e);
+        }
+    }
+
+
+    /**
+     * Decodes a byte sequence into a string, given a {@link Charset}.
+     * <p>
+     * This method is preferred to {@link Charset#decode(ByteBuffer)} and
+     * {@link String#String(byte[], Charset)} (<em>etc.</em>)
+     * since those methods will replace or ignore bad input, and here we throw
+     * an exception.
+     *
+     * @param bytes the data to decode.
+     *
+     * @return the decoded string, not null.
+     *
+     * @throws IonException if there's a {@link CharacterCodingException}.
+     */
+    public static String decode(byte[] bytes, Charset charset)
+    {
+        CharsetDecoder decoder = charset.newDecoder();
+        try
+        {
+            CharBuffer buffer = decoder.decode(ByteBuffer.wrap(bytes));
+            return buffer.toString();
+        }
+        catch (CharacterCodingException e)
+        {
+            String message =
+                "Input is not valid " + charset.displayName() + " data";
+            throw new IonException(message, e);
+        }
+    }
+
+
+    /**
+     * Encodes a String into UTF-8 bytes.
+     * <p>
+     * This method is preferred to {@link Charset#encode(String)} and
+     * {@link String#getBytes(String)} (<em>etc.</em>)
+     * since those methods will replace or ignore bad input, and here we throw
+     * an exception.
+     *
+     * @param s the string to encode.
+     *
+     * @return the encoded UTF-8 bytes, not null.
+     *
+     * @throws IonException if there's a {@link CharacterCodingException}.
+     */
+    public static byte[] utf8(String s)
+    {
+        return encode(s, UTF8_CHARSET);
+    }
+
+    /**
+     * Decodes a UTF-8 byte sequence to a String.
+     * <p>
+     * This method is preferred to {@link Charset#decode(ByteBuffer)} and
+     * {@link String#String(byte[], Charset)} (<em>etc.</em>)
+     * since those methods will replace or ignore bad input, and here we throw
+     * an exception.
+     *
+     * @param bytes the data to decode.
+     *
+     * @return the decoded string, not null.
+     *
+     * @throws IonException if there's a {@link CharacterCodingException}.
+     */
+    public static String utf8(byte[] bytes)
+    {
+        return decode(bytes, UTF8_CHARSET);
+    }
+
+
+    //========================================================================
 
     /**
      * Calls {@link InputStream#read(byte[], int, int)} until the buffer is

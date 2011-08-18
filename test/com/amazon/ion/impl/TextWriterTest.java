@@ -25,7 +25,7 @@ public class TextWriterTest
         throws Exception
     {
         byte[] utf8Bytes = outputByteArray();
-        return new String(utf8Bytes, "UTF-8");
+        return IonImplUtils.utf8(utf8Bytes);
     }
 
     @Test

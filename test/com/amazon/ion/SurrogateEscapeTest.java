@@ -3,7 +3,6 @@
 package com.amazon.ion;
 
 import com.amazon.ion.impl.IonImplUtils;
-import java.io.UnsupportedEncodingException;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -14,19 +13,13 @@ public class SurrogateEscapeTest extends IonTestCase {
     private final StringBuilder buf = new StringBuilder();
 
     private IonDatagram load() {
-        try {
-            return loader().load(buf.toString().getBytes("UTF-8"));
-        } catch (final UnsupportedEncodingException e) {
-            throw new IllegalArgumentException(e);
-        }
+        byte[] utf8 = IonImplUtils.utf8(buf.toString());
+        return loader().load(utf8);
     }
 
     private IonReader reader() {
-        try {
-            return system().newReader(buf.toString().getBytes("UTF-8"));
-        } catch (final UnsupportedEncodingException e) {
-            throw new IllegalArgumentException(e);
-        }
+        byte[] utf8 = IonImplUtils.utf8(buf.toString());
+        return system().newReader(utf8);
     }
 
     private void assertSingleCodePoint(final int expectedCode, final String str) {

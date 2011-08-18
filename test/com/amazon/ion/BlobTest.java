@@ -2,9 +2,11 @@
 
 package com.amazon.ion;
 
+import static com.amazon.ion.TestUtils.US_ASCII_CHARSET;
+import static com.amazon.ion.impl.IonImplUtils.encode;
+import com.amazon.ion.impl.IonImplUtils;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
 import org.junit.Test;
 
 
@@ -200,14 +202,7 @@ public class BlobTest
 
     private static byte[] EncodeAscii(String ascii)
     {
-        try
-        {
-            return ascii.getBytes("US-ASCII");
-        }
-        catch (UnsupportedEncodingException e)
-        {
-            return null;
-        }
+        return IonImplUtils.encode(ascii, US_ASCII_CHARSET);
     }
 
 

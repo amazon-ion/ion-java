@@ -3,6 +3,7 @@
 package com.amazon.ion.streaming;
 
 import static com.amazon.ion.TestUtils.testdataFiles;
+import static com.amazon.ion.impl.IonImplUtils.utf8;
 
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonDatagram;
@@ -137,8 +138,7 @@ extends IonTestCase
     throws IOException
     {
         byte[] buf = makeText(buffer, false);
-        String text = new String(buf, "UTF-8");
-
+        String text = utf8(buf);
         return text;
     }
 
@@ -364,8 +364,8 @@ extends IonTestCase
 
         // Turn the DOM back into text...
         tree.string        = makeString(inputDatagram);
-        tree.utf8_buf      = tree.string.getBytes("UTF-8");
-        tree.utf8_pretty   = tree.string.getBytes("UTF-8"); // FIXME hack
+        tree.utf8_buf      = utf8(tree.string);
+        tree.utf8_pretty   = utf8(tree.string); // FIXME hack
         tree.binary        = makeBinary(inputDatagram);
         tree.ion           = inputDatagram;
         checkBinaryHeader(tree.binary);

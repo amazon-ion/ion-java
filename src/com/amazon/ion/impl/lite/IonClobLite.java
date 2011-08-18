@@ -1,15 +1,14 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.IonClob;
-import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.ValueVisitor;
+import com.amazon.ion.impl.IonImplUtils;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 
 /**
@@ -80,15 +79,7 @@ public class IonClobLite
         byte[] bytes = getBytes();
         if (bytes == null) return null;
 
-        try
-        {
-            return new String(bytes, cs.name());
-        }
-        catch (UnsupportedEncodingException e)
-        {
-            // This shouldn't happen since the Charset already exits.
-            throw new IonException("Unsupported encoding " + cs.name(), e);
-        }
+        return IonImplUtils.decode(bytes, cs);
     }
 
     @Override

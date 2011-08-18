@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -17,7 +15,6 @@ public class LoadTextBytesSystemProcessingTest
     protected void prepare(String text)
         throws Exception
     {
-//        myBytes = text.getBytes("UTF-8");
         myBytes = convertUtf16UnitsToUtf8(text);
     }
 
