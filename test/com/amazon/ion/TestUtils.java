@@ -123,6 +123,53 @@ public class TestUtils
 
     //========================================================================
 
+    public static void consumeCurrentValue(IonReader reader)
+    {
+        consumeCurrentValue(reader, true);
+    }
+
+    public static void consumeCurrentValue(IonReader reader,
+                                           boolean flgMaterializeScalars)
+    {
+        IonType t = reader.getType();
+        if (t == null) return;
+
+        reader.getTypeAnnotationIds();
+        reader.getTypeAnnotations();
+
+        reader.getFieldName();
+        reader.getFieldId();
+
+        switch (t)
+        {
+            case NULL:
+            case BOOL:
+            case INT:
+            case FLOAT:
+            case DECIMAL:
+            case TIMESTAMP:
+            case STRING:
+            case SYMBOL:
+            case BLOB:
+            case CLOB:
+                if ( flgMaterializeScalars )
+                    materializeScalar(reader);
+                break;
+
+            case STRUCT:
+            case LIST:
+            case SEXP:
+                reader.stepIn();
+                deepRead( reader, flgMaterializeScalars );
+                reader.stepOut();
+                break;
+
+            default:
+                throw new IllegalStateException("unexpected type: " + t);
+        }
+    }
+
+
     /**
      * Reads everything until the end of the current container, traversing
      * down nested containers.
@@ -135,44 +182,12 @@ public class TestUtils
     {
         deepRead( reader, true );
     }
+
     public static void deepRead(IonReader reader, boolean flgMaterializeScalars)
     {
-        IonType t = null;
-        while ((t = doNext(reader)) != null )
+        while (doNext(reader) != null )
         {
-            reader.getTypeAnnotationIds();
-            reader.getTypeAnnotations();
-
-            reader.getFieldName();
-            reader.getFieldId();
-
-            switch (t)
-            {
-                case NULL:
-                case BOOL:
-                case INT:
-                case FLOAT:
-                case DECIMAL:
-                case TIMESTAMP:
-                case STRING:
-                case SYMBOL:
-                case BLOB:
-                case CLOB:
-                    if ( flgMaterializeScalars )
-                        materializeScalar(reader);
-                    break;
-
-                case STRUCT:
-                case LIST:
-                case SEXP:
-                    reader.stepIn();
-                    deepRead( reader, flgMaterializeScalars );
-                    reader.stepOut();
-                    break;
-
-                default:
-                    throw new IllegalStateException("unexpected type: " + t);
-            }
+            consumeCurrentValue(reader, flgMaterializeScalars);
         }
     }
 
