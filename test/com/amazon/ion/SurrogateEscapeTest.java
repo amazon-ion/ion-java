@@ -3,14 +3,12 @@
 package com.amazon.ion;
 
 import com.amazon.ion.impl.IonImplUtils;
-import org.junit.Before;
+import org.junit.After;
 import org.junit.Test;
 
 public class SurrogateEscapeTest extends IonTestCase {
-    // TODO when text reader is ready, run tests on those
-    private static final boolean RUN_TEXT_READER_ASSERTS = false;
 
-    private final StringBuilder buf = new StringBuilder();
+    private StringBuilder buf = new StringBuilder();
 
     private IonDatagram load() {
         byte[] utf8 = IonImplUtils.utf8(buf.toString());
@@ -38,23 +36,21 @@ public class SurrogateEscapeTest extends IonTestCase {
 
         assertSingleCodePoint(expectedCode, ((IonString) dg.get(0)).stringValue());
 
-        if (RUN_TEXT_READER_ASSERTS) {
-            final IonReader reader = reader();
-            if (! IonImplUtils.READER_HASNEXT_REMOVED) {
-                assertTrue(reader.hasNext());
-            }
-            assertEquals(IonType.STRING, reader.next());
-            assertSingleCodePoint(expectedCode, reader.stringValue());
+        final IonReader reader = reader();
+        if (! IonImplUtils.READER_HASNEXT_REMOVED) {
+            assertTrue(reader.hasNext());
         }
+        assertEquals(IonType.STRING, reader.next());
+        assertSingleCodePoint(expectedCode, reader.stringValue());
     }
 
-    @Override
-    @Before
-    public void setUp()
+
+    @Override @After
+    public void tearDown()
         throws Exception
     {
-        super.setUp();
-        buf.setLength(0);
+        buf = null;
+        super.tearDown();
     }
 
     @Test
