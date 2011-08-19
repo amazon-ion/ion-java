@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc. All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc. All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -869,13 +869,12 @@ abstract public class IonContainerImpl
         return listIterator(0);
     }
 
-    @SuppressWarnings("unchecked")
     public ListIterator<IonValue> listIterator(int index)
     {
         if (isNullValue())
         {
             if (index != 0) throw new IndexOutOfBoundsException();
-            return (ListIterator<IonValue>) IonImplUtils.EMPTY_ITERATOR;
+            return IonImplUtils.<IonValue>emptyIterator();
         }
 
         makeReady();

@@ -19,7 +19,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 
 /**
  * Reader implementation that reads the token stream and validates
@@ -1151,11 +1150,10 @@ public abstract class IonReaderTextRawX
     {
         return _field_name;
     }
+
     public Iterator<String> iterateTypeAnnotations()
     {
-        String[] ids = getTypeAnnotations();
-        if (ids == null) return StringIterator.EMPTY_ITERATOR;
-        return new StringIterator(ids);
+        return IonImplUtils.stringIterator(_annotations, _annotation_count);
     }
 
     public String[] getTypeAnnotations()
@@ -1323,29 +1321,6 @@ public abstract class IonReaderTextRawX
     //
     // helper classes
     //
-    public static final class StringIterator implements Iterator<String>
-    {
-        static StringIterator EMPTY_ITERATOR = new StringIterator(null);
-
-        String [] _values;
-        int       _length;
-        int       _pos;
-
-        public StringIterator(String[] values) {
-            _values = values;
-            _length = (values == null) ? 0 : values.length;
-        }
-        public boolean hasNext() {
-            return (_pos < _length);
-        }
-        public String next() {
-            if (!hasNext()) throw new NoSuchElementException();
-            return _values[_pos++];
-        }
-        public void remove() {
-            throw new UnsupportedOperationException();
-        }
-    }
 
     public static class IonReaderTextParsingException extends IonException {
         private static final long serialVersionUID = 1L;

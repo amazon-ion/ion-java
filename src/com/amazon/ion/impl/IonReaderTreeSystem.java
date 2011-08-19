@@ -2,7 +2,6 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl.IonImplUtils.EMPTY_ITERATOR;
 import static com.amazon.ion.impl.IonImplUtils.readFully;
 
 import com.amazon.ion.Decimal;
@@ -31,7 +30,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 
 /**
  *
@@ -240,19 +238,14 @@ class IonReaderTreeSystem
         if (_curr == null) {
             throw new IllegalStateException();
         }
-        String [] annotations = _curr.getTypeAnnotations();
-        if (annotations == null) {
-            annotations = _empty_string_array;
-        }
-        return annotations;
+        return _curr.getTypeAnnotations();
     }
 
-    private static int[] _empty_int_array = new int[0];
     public int[] getTypeAnnotationIds()
     {
         String [] annotations = getTypeAnnotations();
-        if (annotations == null || annotations.length < 1) {
-            return _empty_int_array;
+        if (annotations.length == 0) {
+            return IonImplUtils.EMPTY_INT_ARRAY;
         }
 
         int [] ids = new int[annotations.length];
@@ -265,23 +258,16 @@ class IonReaderTreeSystem
         return ids;
     }
 
-    private static String[] _empty_string_array = new String[0];
-    @SuppressWarnings("unchecked")
     public Iterator<Integer> iterateTypeAnnotationIds()
     {
         int [] ids = getTypeAnnotationIds();
-        if (ids == null || ids.length < 1) {
-            return (Iterator<Integer>) EMPTY_ITERATOR;
-        }
-        return new IdIterator(ids);
+        return IonImplUtils.intIterator(ids);
     }
 
-    @SuppressWarnings("unchecked")
     public Iterator<String> iterateTypeAnnotations()
     {
         String [] annotations = getTypeAnnotations();
-        if (annotations == null) return (Iterator<String>) EMPTY_ITERATOR;
-        return new StringIterator(annotations);
+        return IonImplUtils.stringIterator(annotations);
     }
 
 
@@ -487,46 +473,6 @@ class IonReaderTreeSystem
         return (_curr == null) ? null : _curr.toString();
     }
 
-    private static final class StringIterator implements Iterator<String>
-    {
-        String [] _values;
-        int       _pos;
-
-        StringIterator(String[] values) {
-            _values = values;
-        }
-        public boolean hasNext() {
-            return (_pos < _values.length);
-        }
-        public String next() {
-            if (!hasNext()) throw new NoSuchElementException();
-            return _values[_pos++];
-        }
-        public void remove() {
-            throw new UnsupportedOperationException();
-        }
-    }
-
-    private static final class IdIterator implements Iterator<Integer>
-    {
-        int []  _values;
-        int     _pos;
-
-        IdIterator(int[] values) {
-            _values = values;
-        }
-        public boolean hasNext() {
-            return (_pos < _values.length);
-        }
-        public Integer next() {
-            if (!hasNext()) throw new NoSuchElementException();
-            int value = _values[_pos++];
-            return value;
-        }
-        public void remove() {
-            throw new UnsupportedOperationException();
-        }
-    }
 
     private static final class Children implements Iterator<IonValue>
     {

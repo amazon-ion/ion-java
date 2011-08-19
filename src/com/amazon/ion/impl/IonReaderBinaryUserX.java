@@ -298,9 +298,8 @@ class IonReaderBinaryUserX
     @Override
     public Iterator<String> iterateTypeAnnotations()
     {
-        String[] anns = getTypeAnnotations();
-        IonReaderTextRawX.StringIterator it = new IonReaderTextRawX.StringIterator(anns);
-        return it;
+        String[] annotations = getTypeAnnotations();
+        return IonImplUtils.stringIterator(annotations);
     }
 
     @Override

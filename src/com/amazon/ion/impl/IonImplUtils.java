@@ -85,6 +85,12 @@ public final class IonImplUtils // TODO this class shouldn't be public
         public void set(Object o) { throw new UnsupportedOperationException(); }
     };
 
+    @SuppressWarnings("unchecked")
+    public static final <T> ListIterator<T> emptyIterator()
+    {
+        return (ListIterator<T>) EMPTY_ITERATOR;
+    }
+
     /**
      * Replacement for Java6 {@link Arrays#copyOf(byte[], int)}.
      */
@@ -441,16 +447,22 @@ public final class IonImplUtils // TODO this class shouldn't be public
     }
 
 
-    static final class StringIterator implements Iterator<String>
+    /**
+     * Private to route clients through the static methods, which can
+     * optimize the empty-list case.
+     */
+    private static final class StringIterator implements Iterator<String>
     {
-        String [] _values;
-        int       _pos;
+        private final String[] _values;
+        private int            _pos;
+        private final int      _len;
 
-        StringIterator(String[] values) {
+        StringIterator(String[] values, int len) {
             _values = values;
+            _len = len;
         }
         public boolean hasNext() {
-            return (_pos < _values.length);
+            return (_pos < _len);
         }
         public String next() {
             if (!hasNext()) throw new NoSuchElementException();
@@ -461,11 +473,33 @@ public final class IonImplUtils // TODO this class shouldn't be public
         }
     }
 
-    static final class IntIterator implements Iterator<Integer>
+    public static final Iterator<String> stringIterator(String[] values)
     {
-        int []  _values;
-        int     _pos;
-        int     _len;
+        if (values == null || values.length == 0)
+        {
+            return IonImplUtils.<String>emptyIterator();
+        }
+        return new StringIterator(values, values.length);
+    }
+
+    public static final Iterator<String> stringIterator(String[] values, int len)
+    {
+        if (values == null || values.length == 0 || len == 0)
+        {
+            return IonImplUtils.<String>emptyIterator();
+        }
+        return new StringIterator(values, len);
+    }
+
+    /**
+     * Private to route clients through the static methods, which can
+     * optimize the empty-list case.
+     */
+    private static final class IntIterator implements Iterator<Integer>
+    {
+        private final int []  _values;
+        private int           _pos;
+        private final int     _len;
 
         IntIterator(int[] values) {
             this(values, 0, values.length);
@@ -486,5 +520,14 @@ public final class IonImplUtils // TODO this class shouldn't be public
         public void remove() {
             throw new UnsupportedOperationException();
         }
+    }
+
+    public static final Iterator<Integer> intIterator(int[] values)
+    {
+        if (values == null || values.length == 0)
+        {
+            return IonImplUtils.<Integer>emptyIterator();
+        }
+        return new IntIterator(values);
     }
 }

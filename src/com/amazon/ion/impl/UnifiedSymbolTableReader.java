@@ -2,14 +2,17 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.UnifiedSymbolTable.ION_SHARED_SYMBOL_TABLE;
+import static com.amazon.ion.impl.UnifiedSymbolTable.ION_SHARED_SYMBOL_TABLE_SID;
+import static com.amazon.ion.impl.UnifiedSymbolTable.ION_SYMBOL_TABLE;
+import static com.amazon.ion.impl.UnifiedSymbolTable.ION_SYMBOL_TABLE_SID;
+
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.impl.IonImplUtils.IntIterator;
-import com.amazon.ion.impl.IonImplUtils.StringIterator;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -1032,47 +1035,43 @@ public class UnifiedSymbolTableReader
         return stateType(_current_state);
     }
 
-    private final String[] _local_symbol_table  = new String[] { UnifiedSymbolTable.ION_SYMBOL_TABLE };
-    private final String[] _shared_symbol_table = new String[] { UnifiedSymbolTable.ION_SHARED_SYMBOL_TABLE };
 
     public String[] getTypeAnnotations()
     {
         if (_current_state == S_STRUCT) {
-            if (_symbol_table.isLocalTable())  return _local_symbol_table;
-            if (_symbol_table.isSystemTable()) return _local_symbol_table;
-            if (_symbol_table.isSharedTable()) return _shared_symbol_table;
-            throw new IonException("Internal Error: symbol table type is not recognized");
+            // Must return a new array each time to prevent user from changing it
+            if (_symbol_table.isLocalTable() || _symbol_table.isSystemTable())
+            {
+                return new String[] { ION_SYMBOL_TABLE };
+            }
+            return new String[] { ION_SHARED_SYMBOL_TABLE };
         }
         return IonImplUtils.EMPTY_STRING_ARRAY;
     }
 
-    private final int[] _local_symbol_table_ids  = new int[] { UnifiedSymbolTable.ION_SYMBOL_TABLE_SID };
-    private final int[] _shared_symbol_table_ids = new int[] { UnifiedSymbolTable.ION_SHARED_SYMBOL_TABLE_SID };
 
     public int[] getTypeAnnotationIds()
     {
         if (_current_state == S_STRUCT) {
-            if (_symbol_table.isLocalTable())  return _local_symbol_table_ids;
-            if (_symbol_table.isSystemTable()) return _local_symbol_table_ids;
-            if (_symbol_table.isSharedTable()) return _shared_symbol_table_ids;
-            throw new IonException("Internal Error: symbol table type is not recognized");
+            if (_symbol_table.isLocalTable() || _symbol_table.isSystemTable())
+            {
+                return new int[] { ION_SYMBOL_TABLE_SID };
+            }
+            return new int[] { ION_SHARED_SYMBOL_TABLE_SID };
         }
-
         return IonImplUtils.EMPTY_INT_ARRAY;
     }
 
     public Iterator<String> iterateTypeAnnotations()
     {
         String[] annotations = getTypeAnnotations();
-        StringIterator iterator = new StringIterator(annotations);
-        return iterator;
+        return IonImplUtils.stringIterator(annotations);
     }
 
     public Iterator<Integer> iterateTypeAnnotationIds()
     {
-        int[] annotation_ids = getTypeAnnotationIds();
-        IntIterator iterator = new IntIterator(annotation_ids);
-        return iterator;
+        int[] ids = getTypeAnnotationIds();
+        return IonImplUtils.intIterator(ids);
     }
 
     public int getFieldId()
