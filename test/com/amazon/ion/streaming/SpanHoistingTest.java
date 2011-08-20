@@ -2,6 +2,7 @@
 
 package com.amazon.ion.streaming;
 
+import com.amazon.ion.Facets;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
@@ -39,23 +40,55 @@ public class SpanHoistingTest
                                     ReaderMaker.FROM_BYTES_OFFSET_TEXT,
                                     ReaderMaker.FROM_INPUT_STREAM_BINARY,
                                     ReaderMaker.FROM_INPUT_STREAM_TEXT,
-                                    ReaderMaker.FROM_DOM);
+                                    ReaderMaker.FROM_DOM
+                                    );
 
 
     private IonReader in;
     private SpanReader sr;
 
-    private IonReader read(byte[] ionData)
+
+
+    private void expectNoCurrentValue()
+    {
+        IonAssert.assertNoCurrentValue(in);
+    }
+
+    private void expectTopLevel()
+    {
+        IonAssert.assertTopLevel(in);
+    }
+
+    private void expectEof()
+    {
+        IonAssert.assertEof(in);
+    }
+
+    private void expectTopEof()
+    {
+        IonAssert.assertTopEof(in);
+    }
+
+
+
+    private void read(byte[] ionData)
     {
         in = myReaderMaker.newReader(system(), ionData);
-        sr = in.asFacet(SpanReader.class);
-        return in;
+        sr = Facets.assumeFacet(SpanReader.class, in);
     }
 
     private void read(String ionText)
     {
         in = myReaderMaker.newReader(system(), ionText);
-        sr = in.asFacet(SpanReader.class);
+        sr = Facets.assumeFacet(SpanReader.class, in);
+    }
+
+
+    private void hoist(Span s)
+    {
+        sr.hoist(s);
+        expectTopLevel();
+        if (false) expectNoCurrentValue();   // FIXME ION-234
     }
 
 
@@ -63,10 +96,12 @@ public class SpanHoistingTest
     {
         for (int i = dg.size() - 1; i >= 0; i--)
         {
-            sr.hoist(positions[i]);
+            hoist(positions[i]);
             assertEquals(dg.get(i).getType(), in.next());
+            expectTopLevel();
             IonAssert.assertIonEquals(dg.get(i), system().newValue(in));
         }
+        expectTopEof();
     }
 
 
@@ -86,7 +121,7 @@ public class SpanHoistingTest
             assertEquals(dg.get(i).getType(), in.next());
             positions[i] = sr.currentSpan();
         }
-        assertEquals(null, in.next());
+        expectEof();
 
         checkSpans(dg, positions);
 
@@ -104,7 +139,7 @@ public class SpanHoistingTest
             }
             positions[i] = sr.currentSpan();
         }
-        assertEquals(null, in.next());
+        expectTopEof();
 
         checkSpans(dg, positions);
     }
@@ -126,49 +161,50 @@ public class SpanHoistingTest
                 in.next();
                 assertEquals("c", in.stringValue());
                 Span cPos = sr.currentSpan();
-                assertEquals(null, in.next());
+                expectEof();
             in.stepOut();
-            assertEquals(null, in.next());
+            expectEof();
         in.stepOut();
         in.next();
         Span sPos = sr.currentSpan();
-        assertEquals(null, in.next());
+        expectTopEof();
 
 
-        sr.hoist(fPos);
+        hoist(fPos);
         assertEquals(IonType.SYMBOL, in.next());
-        assertEquals(null, in.getFieldName());
+        expectTopLevel();
         assertEquals("v", in.stringValue());
-        assertEquals(null, in.next());
+        expectTopEof();
 
-        sr.hoist(cPos);
+        hoist(cPos);
         in.next();
+        expectTopLevel();
         assertEquals("c", in.stringValue());
-        assertEquals(null, in.getFieldName());
-        assertEquals(null, in.next());
+        expectTopEof();
 
-        sr.hoist(gPos);
+        hoist(gPos);
         assertEquals(IonType.LIST, in.next());
-        assertEquals(null, in.getFieldName());
+        expectTopLevel();
         in.stepIn();
             in.next();
             assertEquals("c", in.stringValue());
             assertEquals(null, in.next());
+            expectEof();
         in.stepOut();
-        assertEquals(null, in.next());
+        expectTopEof();
 
-        sr.hoist(fPos);
+        hoist(fPos);
         assertEquals(null, in.getFieldName());
         assertEquals(IonType.SYMBOL, in.next());
-        assertEquals(null, in.getFieldName());
+        expectTopLevel();
         assertEquals("v", in.stringValue());
-        assertEquals(null, in.next());
+        expectTopEof();
 
-        sr.hoist(sPos);
+        hoist(sPos);
         assertEquals(IonType.SYMBOL, in.next());
-        assertEquals(null, in.getFieldName());
+        expectTopLevel();
         assertEquals("s", in.stringValue());
-        assertEquals(null, in.next());
+        expectTopEof();
     }
 
     @Test
@@ -180,11 +216,11 @@ public class SpanHoistingTest
 
         in.next();
         Span pos = sr.currentSpan();
-        assertEquals(null, in.next());
+        expectTopEof();
 
-        sr.hoist(pos);
+        hoist(pos);
         assertEquals(IonType.STRING, in.next());
-        assertEquals(null, in.next());
+        expectTopEof();
     }
 
     @Test
@@ -198,11 +234,11 @@ public class SpanHoistingTest
 
         in.next();
         Span pos = sr.currentSpan();
-        assertEquals(null, in.next());
+        expectTopEof();
 
-        sr.hoist(pos);
+        hoist(pos);
         assertEquals(IonType.STRUCT, in.next());
-        assertEquals(null, in.next());
+        expectTopEof();
     }
 
 
@@ -213,11 +249,13 @@ public class SpanHoistingTest
         read("a::v");
         in.next();
         Span span = sr.currentSpan();
-        in.next();
+        expectTopEof();
 
-        sr.hoist(span);
+        hoist(span);
         assertSame(IonType.SYMBOL, in.next());
+        expectTopLevel();
         Assert.assertArrayEquals(new String[]{"a"}, in.getTypeAnnotations());
+        expectTopEof();
     }
 
 
@@ -233,11 +271,16 @@ public class SpanHoistingTest
         in.stepOut();
         in.next();
 
-        sr.hoist(span);
+        hoist(span);
         assertSame(IonType.SYMBOL, in.next());
+        expectTopLevel();
         Assert.assertArrayEquals(new String[]{"a"}, in.getTypeAnnotations());
+        expectTopEof();
     }
 
+
+    //========================================================================
+    // Failure cases
 
     @Test(expected=IllegalStateException.class)
     public void testCurrentSpanBeforeFirstTopLevel()
