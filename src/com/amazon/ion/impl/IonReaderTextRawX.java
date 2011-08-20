@@ -10,14 +10,11 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
 import com.amazon.ion.impl.IonScalarConversionsX.ValueVariant;
 import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.Date;
 import java.util.Iterator;
 
 /**
@@ -1246,76 +1243,6 @@ public abstract class IonReaderTextRawX
     public SymbolTable getSymbolTable()
     {
         return null;
-    }
-    public int getSymbolId()
-    {
-        return SymbolTable.UNKNOWN_SYMBOL_ID;
-    }
-    public int getFieldId()
-    {
-        return -1;
-        // throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    public int[] getTypeAnnotationIds()
-    {
-        return null;
-//        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    public Iterator<Integer> iterateTypeAnnotationIds()
-    {
-        return null;
-//        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    //
-    // value getters - also inactive in this parser
-    //
-    public boolean isNullValue()
-    {
-        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    public boolean booleanValue()
-    {
-        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    public int intValue()
-    {
-        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    public long longValue()
-    {
-        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    public double doubleValue()
-    {
-        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    public BigDecimal bigDecimalValue()
-    {
-        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    public Timestamp timestampValue()
-    {
-        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    public Date dateValue()
-    {
-        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    public String stringValue()
-    {
-        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    public int byteSize()
-    {
-        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    public int getBytes(byte[] buffer, int offset, int len)
-    {
-        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    public byte[] newBytes()
-    {
-        throw new UnsupportedOperationException("not supported - use UserReader");
     }
 
     //

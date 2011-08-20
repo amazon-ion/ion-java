@@ -252,6 +252,7 @@ class IonReaderBinarySystemX
     // public value routines
     //
 
+    @Override
     public boolean isNullValue()
     {
         return _value_is_null;
@@ -329,6 +330,7 @@ class IonReaderBinarySystemX
             return null;
         }
         if (IonType.SYMBOL.equals(_value_type)) {
+            // TODO ION-233 implement symbol text for system readers
             throw new UnsupportedOperationException("not supported - use UserReader");
         }
         prepare_value(AS_TYPE.string_value);
@@ -353,19 +355,22 @@ class IonReaderBinarySystemX
     //
     public String getFieldName()
     {
+        // TODO ION-233 implement symbol text for system readers
         return null;
 //        throw new UnsupportedOperationException("not supported - use UserReader");
     }
 
     public Iterator<String> iterateTypeAnnotations()
     {
-        return null;
+        // TODO ION-233 implement symbol text for system readers
+        return IonImplUtils.<String>emptyIterator();
 //        throw new UnsupportedOperationException("not supported - use UserReader");
     }
 
     public String[] getTypeAnnotations()
     {
-        return null;
+        // TODO ION-233 implement symbol text for system readers
+        return IonImplUtils.EMPTY_STRING_ARRAY;
 //        throw new UnsupportedOperationException("not supported - use UserReader");
     }
 

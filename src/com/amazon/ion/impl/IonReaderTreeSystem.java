@@ -143,6 +143,7 @@ class IonReaderTreeSystem
     public IonType next()
     {
         if (this._next == null && !this.hasNext()) {
+            this._curr = null;
             return null;
         }
         this._curr = this._next;
@@ -289,12 +290,12 @@ class IonReaderTreeSystem
     public int getFieldId()
     {
         // FIXME IonValueImpl.getFieldId doesn't return -1 as specced here!
-        return (_curr == null) ? UnifiedSymbolTable.UNKNOWN_SID : _curr.getFieldId();
+        return (_curr == null || _top == 0) ? UnifiedSymbolTable.UNKNOWN_SID : _curr.getFieldId();
     }
 
     public String getFieldName()
     {
-        return (_curr == null) ? null : _curr.getFieldName();
+        return (_curr == null || _top == 0) ? null : _curr.getFieldName();
     }
 
 

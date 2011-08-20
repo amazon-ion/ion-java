@@ -5,10 +5,10 @@ package com.amazon.ion;
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_INT_ARRAY;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.junit.IonAssert.assertNoCurrentValue;
 
-import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.junit.IonAssert;
 import java.util.Date;
-import java.util.Iterator;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -184,68 +184,17 @@ public abstract class ReaderSystemProcessingTestCase
     }
 
     @Override
-    @SuppressWarnings("deprecation")
     protected void checkEof()
     {
-        // Doing this twice is intentional.
-        assertEquals("next() at eof", null, myReader.next());
-
-        if (!IonImplUtils.READER_HASNEXT_REMOVED) {
-            assertFalse("not at eof", myReader.hasNext());
-        }
-
-        assertEquals("next() at eof", null, myReader.next());
+        IonAssert.assertEof(myReader);
     }
 
-    private void checkNoCurrentValue()
+    protected void checkTopEof()
     {
-        IonReader r = myReader;
-
-        assertEquals(null, r.getType());
-
-        assertEquals(null, r.getFieldName());
-        assertTrue(r.getFieldId() < 0);
-
-        // TODO ION-213 Text reader doesn't throw, but others do.
-        try {
-            String[] ann = r.getTypeAnnotations();
-            assertEquals(0, ann.length);
-//            fail("expected exception");
-        }
-        catch (IllegalStateException e) { }
-
-        try {
-            Iterator<String> ann = r.iterateTypeAnnotations();
-            assertEquals(false, ann.hasNext());
-//            fail("expected exception");
-        }
-        catch (IllegalStateException e) { }
-
-        try {
-            int[] ann = r.getTypeAnnotationIds();
-            assertEquals(0, ann.length);
-//            fail("expected exception");
-        }
-        catch (IllegalStateException e) { }
-
-        try {
-            Iterator<Integer> ann = r.iterateTypeAnnotationIds();
-            assertEquals(false, ann.hasNext());
-//            fail("expected exception");
-        }
-        catch (IllegalStateException e) { }
+        IonAssert.assertTopEof(myReader);
     }
 
-    private void checkNoNextValue()
-    {
-        assertFalse(myReader.hasNext());
-        assertFalse(myReader.hasNext());
-        assertEquals(null, myReader.next());
-        checkNoCurrentValue();
-        assertEquals(null, myReader.next());
-        assertFalse(myReader.hasNext());
-        assertEquals(null, myReader.next());
-    }
+
 
     //=========================================================================
 
@@ -256,8 +205,8 @@ public abstract class ReaderSystemProcessingTestCase
     {
         startIteration("null");
         myReader.next();
-        assertArrayEquals(EMPTY_STRING_ARRAY,
-                          myReader.getTypeAnnotations());
+        Assert.assertArrayEquals(EMPTY_STRING_ARRAY,
+                                 myReader.getTypeAnnotations());
         Assert.assertArrayEquals(EMPTY_INT_ARRAY,
                                  myReader.getTypeAnnotationIds());
     }
@@ -273,18 +222,18 @@ public abstract class ReaderSystemProcessingTestCase
         startIteration(text);
         myReader.next();
         myReader.stepIn();
-        checkNoNextValue();
+        checkEof();
         myReader.stepOut();
-        checkNoNextValue();
+        checkTopEof();
 
         text = "[1]";
         startIteration(text);
         myReader.next();
         myReader.stepIn();
         myReader.next();
-        checkNoNextValue();
+        checkEof();
         myReader.stepOut();
-        checkNoNextValue();
+        checkTopEof();
     }
 
 
@@ -325,7 +274,7 @@ public abstract class ReaderSystemProcessingTestCase
                 assertFalse(myReader.isInStruct());
                 assertEquals(2, myReader.getDepth());
 
-                checkNoNextValue();
+                checkEof();
                 assertFalse(myReader.isInStruct());
                 assertEquals(2, myReader.getDepth());
 
@@ -335,7 +284,7 @@ public abstract class ReaderSystemProcessingTestCase
             }
             myReader.stepOut();
 
-            checkNoNextValue();
+            checkEof();
             assertTrue(myReader.isInStruct());
             assertEquals(1, myReader.getDepth());
 
@@ -345,16 +294,7 @@ public abstract class ReaderSystemProcessingTestCase
         }
         myReader.stepOut();
 
-        assertFalse(myReader.isInStruct());
-        assertEquals(0, myReader.getDepth());
-
-        checkNoNextValue();
-        assertFalse(myReader.isInStruct());
-        assertEquals(0, myReader.getDepth());
-
-        assertEquals(null, myReader.next());
-        assertFalse(myReader.isInStruct());
-        assertEquals(0, myReader.getDepth());
+        checkTopEof();
     }
 
 
@@ -385,7 +325,6 @@ public abstract class ReaderSystemProcessingTestCase
 
     // JIRA ION-79 reported by Scott Barber
     @Test
-    @SuppressWarnings("deprecation")
     public void testDeepNesting()
         throws Exception
     {
@@ -427,37 +366,28 @@ public abstract class ReaderSystemProcessingTestCase
                                 {
                                     reader.next();
                                     assertEquals("12.5", reader.stringValue());
-                                    checkNoNextValue();
+                                    checkEof();
                                 }
                                 reader.stepOut();
-                                checkNoNextValue();
+                                checkEof();
                             }
                             reader.stepOut();
-                            checkNoNextValue();
+                            checkEof();
                         }
                         reader.stepOut();
-                        checkNoNextValue();
+                        checkEof();
                     }
                     reader.stepOut();
-                    checkNoNextValue();
+                    checkEof();
                 }
                 reader.stepOut();
-                checkNoNextValue();
+                checkEof();
             }
             reader.stepOut();
-            checkNoNextValue();
+            checkEof();
         }
         reader.stepOut();
-        checkNoNextValue();
-        assertEquals(0, reader.getDepth());
-        try {
-            reader.stepOut();
-            fail("expected exception");
-        }
-        catch (IllegalStateException e) {
-            // TODO compare to IonMessages.CANNOT_STEP_OUT
-            // Can't do that right now due to permissions
-        }
+        checkTopEof();
     }
 
     @Test
@@ -475,7 +405,7 @@ public abstract class ReaderSystemProcessingTestCase
         r.next();
         assertEquals("b", r.getFieldName());
         r.stepOut(); // skip c
-        checkNoCurrentValue();
+        assertNoCurrentValue(r);
         r.next();
         assertEquals("d", r.getFieldName());
     }
@@ -524,8 +454,8 @@ public abstract class ReaderSystemProcessingTestCase
         r.stepIn();
         r.next();
         assertEquals("X", r.getFieldName());
-        checkNoNextValue();
+        checkEof();
         r.stepOut();
-        checkNoNextValue();
+        checkTopEof();
     }
 }

@@ -2,6 +2,8 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.junit.IonAssert.assertTopLevel;
+
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
@@ -68,5 +70,14 @@ public class TreeReaderTest
 
         r = system().newReader(dg);
         TestUtils.deepRead(r);
+    }
+
+    @Test
+    public void testHoistedReader()
+    {
+        IonStruct s = struct("{f:null}");
+        IonReader r = system().newReader(s.get("f"));
+        assertSame(IonType.NULL, r.next());
+        assertTopLevel(r);
     }
 }
