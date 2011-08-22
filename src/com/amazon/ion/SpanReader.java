@@ -18,7 +18,7 @@ public interface SpanReader
      * Gets the current span of this reader, generally covering a single value
      * on the source.
      *
-     * @throws IonException if there is no current value. This occurs at the
+     * @throws IllegalStateException if there is no current value. This occurs at the
      * start of the source, immediately after a call to {@link #stepIn()} or
      * {@link #stepOut()}, or when the prior call to {@link #next()} returned
      * null (meaning: end of container or end of stream).
