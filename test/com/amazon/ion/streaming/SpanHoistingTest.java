@@ -17,7 +17,6 @@ import com.amazon.ion.junit.IonAssert;
 import java.io.File;
 import java.io.IOException;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -33,15 +32,13 @@ public class SpanHoistingTest
         myReaderMaker = maker;
     }
 
-    @Inject("readerMaker") // TODO ION-230 ION-231 ION-232
+    @Inject("readerMaker") // TODO ION-230 ION-231
     public static final ReaderMaker[] READER_MAKERS =
         ReaderMaker.valuesExcluding(ReaderMaker.FROM_STRING,
                                     ReaderMaker.FROM_BYTES_TEXT,
                                     ReaderMaker.FROM_BYTES_OFFSET_TEXT,
                                     ReaderMaker.FROM_INPUT_STREAM_BINARY,
-                                    ReaderMaker.FROM_INPUT_STREAM_TEXT,
-                                    ReaderMaker.FROM_DOM
-                                    );
+                                    ReaderMaker.FROM_INPUT_STREAM_TEXT);
 
 
     private IonReader in;
@@ -244,10 +241,12 @@ public class SpanHoistingTest
     }
 
 
-    @Test @Ignore // TODO ION-229
+    @Test
     public void testHoistingAnnotatedTopLevelValue()
         throws IOException
     {
+        if (myReaderMaker.sourceIsBinary()) return; // TODO ION-229
+
         read("a::v");
         in.next();
         Span span = sr.currentSpan();
@@ -261,10 +260,12 @@ public class SpanHoistingTest
     }
 
 
-    @Test @Ignore // TODO ION-229
+    @Test
     public void testHoistingAnnotatedContainedValue()
         throws IOException
     {
+        if (myReaderMaker.sourceIsBinary()) return; // TODO ION-229
+
         read("[a::v]");
         in.next();
         in.stepIn();

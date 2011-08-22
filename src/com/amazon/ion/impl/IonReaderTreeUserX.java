@@ -9,6 +9,8 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.Span;
+import com.amazon.ion.SpanReader;
 import com.amazon.ion.SymbolTable;
 
 /**
@@ -16,7 +18,7 @@ import com.amazon.ion.SymbolTable;
  */
 class IonReaderTreeUserX
     extends IonReaderTreeSystem
-    implements IonReaderWriterPrivate
+    implements IonReaderWriterPrivate, IonReaderWithPosition
 {
     IonCatalog _catalog;
 
@@ -25,6 +27,20 @@ class IonReaderTreeUserX
         super(value);
         _catalog = catalog;
     }
+
+    @Override
+    public <T> T asFacet(Class<T> facetType)
+    {
+        if ((facetType == IonReaderWithPosition.class) ||
+            (facetType == SpanReader.class))
+        {
+            return facetType.cast(this);
+        }
+        return super.asFacet(facetType);
+    }
+
+    //========================================================================
+
 
     @Override
     public boolean hasNext()
@@ -139,5 +155,48 @@ class IonReaderTreeUserX
         SymbolTable symbols = _symbol_table_stack[_symbol_table_top];
         _symbol_table_stack[_symbol_table_top] = null;
         return symbols;
+    }
+
+
+    private static class TreeSpan extends IonReaderPositionBase
+    {
+        IonValue _value;
+    }
+
+    @Deprecated
+    public IonReaderPosition getCurrentPosition()
+    {
+        if (this._curr == null) {
+            throw new IllegalStateException("Reader has no current value");
+        }
+
+        TreeSpan span = new TreeSpan();
+        span._value = this._curr;
+
+        return span;
+    }
+
+    @Deprecated
+    public void seek(IonReaderPosition position)
+    {
+        hoist(position);
+    }
+
+
+    public Span currentSpan()
+    {
+        return getCurrentPosition();
+    }
+
+    public void hoist(Span span)
+    {
+        if (span instanceof TreeSpan) {
+            TreeSpan treeSpan = (TreeSpan)span;
+            this.re_init(treeSpan._value);
+        }
+        else {
+            // TODO custom exception
+            throw new IllegalArgumentException("Span not appropriate for this reader");
+        }
     }
 }
