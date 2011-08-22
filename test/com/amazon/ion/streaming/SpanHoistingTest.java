@@ -88,7 +88,9 @@ public class SpanHoistingTest
     {
         sr.hoist(s);
         expectTopLevel();
-        if (false) expectNoCurrentValue();   // FIXME ION-234
+        if (! myReaderMaker.sourceIsBinary()) {   // FIXME ION-234
+            expectNoCurrentValue();
+        }
     }
 
 

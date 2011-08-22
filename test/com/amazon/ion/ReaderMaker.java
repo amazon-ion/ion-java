@@ -2,10 +2,6 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.IonDatagram;
-import com.amazon.ion.IonReader;
-import com.amazon.ion.IonSystem;
-import com.amazon.ion.IonWriter;
 import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.util.IonStreamUtils;
 import java.io.ByteArrayInputStream;
@@ -24,7 +20,7 @@ public enum ReaderMaker
     /**
      * Invokes {@link IonSystem#newReader(String)}.
      */
-    FROM_STRING
+    FROM_STRING(false)
     {
         @Override
         public IonReader newReader(IonSystem system, String ionText)
@@ -37,7 +33,7 @@ public enum ReaderMaker
     /**
      * Invokes {@link IonSystem#newReader(byte[])} with Ion binary.
      */
-    FROM_BYTES_BINARY
+    FROM_BYTES_BINARY(true)
     {
         @Override
         public IonReader newReader(IonSystem system, byte[] ionData)
@@ -51,7 +47,7 @@ public enum ReaderMaker
     /**
      * Invokes {@link IonSystem#newReader(byte[])} with Ion text.
      */
-    FROM_BYTES_TEXT
+    FROM_BYTES_TEXT(false)
     {
         @Override
         public IonReader newReader(IonSystem system, byte[] ionData)
@@ -65,7 +61,7 @@ public enum ReaderMaker
     /**
      * Invokes {@link IonSystem#newReader(byte[],int,int)} with Ion binary.
      */
-    FROM_BYTES_OFFSET_BINARY
+    FROM_BYTES_OFFSET_BINARY(true)
     {
         @Override
         public IonReader newReader(IonSystem system, byte[] ionData)
@@ -81,7 +77,7 @@ public enum ReaderMaker
     /**
      * Invokes {@link IonSystem#newReader(byte[],int,int)} with Ion text.
      */
-    FROM_BYTES_OFFSET_TEXT
+    FROM_BYTES_OFFSET_TEXT(false)
     {
         @Override
         public IonReader newReader(IonSystem system, byte[] ionData)
@@ -97,7 +93,7 @@ public enum ReaderMaker
     /**
      * Invokes {@link IonSystem#newReader(InputStream)} with Ion binary.
      */
-    FROM_INPUT_STREAM_BINARY
+    FROM_INPUT_STREAM_BINARY(true)
     {
         @Override
         public IonReader newReader(IonSystem system, byte[] ionData)
@@ -112,7 +108,7 @@ public enum ReaderMaker
     /**
      * Invokes {@link IonSystem#newReader(InputStream)} with Ion text.
      */
-    FROM_INPUT_STREAM_TEXT
+    FROM_INPUT_STREAM_TEXT(false)
     {
         @Override
         public IonReader newReader(IonSystem system, byte[] ionData)
@@ -124,7 +120,7 @@ public enum ReaderMaker
     },
 
 
-    FROM_DOM
+    FROM_DOM(false)
     {
         @Override
         public IonReader newReader(IonSystem system, String ionText)
@@ -141,6 +137,20 @@ public enum ReaderMaker
         }
     };
 
+
+    //========================================================================
+
+    private final boolean mySourceIsBinary;
+
+    private ReaderMaker(boolean sourceIsBinary)
+    {
+        mySourceIsBinary = sourceIsBinary;
+    }
+
+    public boolean sourceIsBinary()
+    {
+        return mySourceIsBinary;
+    }
 
 
     public IonReader newReader(IonSystem system, String ionText)
