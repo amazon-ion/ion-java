@@ -571,8 +571,7 @@ public class IonWriterSystemBinary
         {
             if (atDatagramLevel() && _annotation_count == 0)
             {
-                UnifiedSymbolTable symtab = (UnifiedSymbolTable)
-                    getSymbolTable();
+                SymbolTable symtab = getSymbolTable();
 
                 if (symtab != null &&
                     symtab.isReadOnly() &&

@@ -19,7 +19,6 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
-import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -141,11 +140,20 @@ public final class UnifiedSymbolTable
     private int                       _version;           // version of the shared table
     private UnifiedSymbolTableImports _import_list;       // list of imported tables
 
-    private IonStruct                 _image;             // previous image of a symbol table
-    private IonSystem                 _image_system;      // Ion system of the previous image
-    private boolean                   _is_changed;        // set if anything changed, cleared at image set time
     private boolean                   _is_read_only;      // set to mark this symbol table as being (now) immutable
-    private boolean                   _maintain_image;    // set if we want to keep the image up to date as we add symbols
+
+    /**
+     * Memoized result of {@link #getIonRepresentation(IonSystem)}.
+     * Once this is created, we maintain it as symbols are added.
+     * This member can change even when {@link #_is_read_only}!
+     */
+    private IonStruct                 _image;
+
+    /**
+     * The system associated with the current {@link #_image}.
+     * This member can change even when {@link #_is_read_only}!
+     */
+    private IonSystem                 _image_system;
 
     /**
      * The local symbol names declared in this symtab; never null.
@@ -197,8 +205,8 @@ public final class UnifiedSymbolTable
 
         _image = null;
         _image_system = sys;
-        _is_changed = true;
     }
+
     private void init(SymbolTable systemSymbols) {
         _import_list = new UnifiedSymbolTableImports(systemSymbols);
         _first_local_sid = _import_list.getMaxId() + 1;
@@ -701,12 +709,6 @@ public final class UnifiedSymbolTable
         }
     }
 
-    /**
-     * public accessor to determine if this symbol table
-     * has been marked as immutable.
-     *
-     * @return boolean true if this table is locked, false if editing is allowed
-     */
     public boolean isReadOnly() {
         return _is_read_only;
     }
@@ -794,8 +796,6 @@ public final class UnifiedSymbolTable
 
         _image = ionRep;
         _image_system = sys;
-        _is_changed = false;
-        _maintain_image = (_image != null);
     }
     private void clear_image()
     {
@@ -803,8 +803,6 @@ public final class UnifiedSymbolTable
 
         _image = null;
         _image_system = null; // TODO: or should we keep this around until the system-symboltable binding hack is cleaned up?
-        _is_changed = true;
-        _maintain_image = false;
     }
 
     @Deprecated
@@ -1105,7 +1103,7 @@ public final class UnifiedSymbolTable
             _local_symbol_count = idx + 1;
         }
 
-        if (_maintain_image) {
+        if (_image != null) {
             assert _local_symbol_count > 0;
             recordLocalSymbolInIonRep(_image_system, _image, symbolName, sid);
         }
@@ -1192,98 +1190,60 @@ public final class UnifiedSymbolTable
         writer.writeValues(reader);
     }
 
-    // FIXME don't create a new system.
-    // this whole construct is a terrible hack
-    // it should be replace by a custom reader
-    // that "reads" the current state of a symbol table
-    private synchronized IonStruct safeGetIonRepresentation()
-    {
-        IonStruct rep;
-        try {
-            rep = getIonRepresentation();
-        }
-        catch (IonExceptionNoSystem e) {
-            IonSystem sys = IonSystemBuilder.standard().build();
-            rep = makeIonRepresentation(sys);
-            clear_image(); // don't keep this one around
-        }
-        return rep;
-    }
 
+    /**
+     * POSTCONDITION:  _image != null
+     *
+     * @return _image
+      */
     @Deprecated
     public synchronized IonStruct getIonRepresentation()
     {
-        if (_image != null && !_is_changed) return _image;
+        if (_image != null) return _image;
 
-        if (this._image_system == null) {
-            if (this._sys_holder == null) {
-                throw new IonExceptionNoSystem("can't create representation without a system");
-            }
-            verify_not_read_only();
-            _image_system = _sys_holder;
-        }
+        IonSystem sys = _image_system;
+        if (sys == null) sys = _sys_holder;
 
-        return getIonRepresentation(_image_system);
+        return getIonRepresentation(sys);
     }
 
+    /**
+     * POSTCONDITION: _image != null && _image_system==sys
+     *
+     * @param sys must not be null.
+     * @return _image
+     */
     public
     synchronized
     IonStruct getIonRepresentation(IonSystem sys)
     {
-        if (_is_changed == false && sys == _image_system) {
-            return _image;
-        }
-
         if (sys == null) {
             throw new IonExceptionNoSystem("can't create representation without a system");
         }
 
-        verify_not_read_only();
-
-        if (_image == null || sys != _image_system) {
+        if (_image == null || sys != _image_system)
+        {
+            // Start a new image from scratch
             _image = makeIonRepresentation(sys);
             _image_system = sys;
-            _maintain_image = true;
         }
-        else {
-            replaceSymbols(sys, _image);
-        }
-
-        _is_changed = false;
 
         return _image;
     }
 
-    // TODO: optimize this.  this is a quick and dirty version
-    //       to provide users the "correct" alternative.  Later
-    //       we should make a real synthetic read that does this
-    //       without requiring the underlying struct.
-    @Deprecated
-    public
-    IonReader getReader()
-    {
-        IonStruct rep = safeGetIonRepresentation();
-        IonReader reader = new IonReaderTreeSystem(rep);
-// cas FIXME:        IonReader reader = new USTReader(this);
-        return reader;
-    }
 
-    // TODO: optimize this.  this is a quick and dirty version
-    //       to provide users the "correct" alternative.  Later
-    //       we should make a real synthetic read that does this
-    //       without requiring the underlying struct.
     protected
     IonReader getReader(IonSystem sys)
     {
-        IonStruct rep = this.getIonRepresentation(sys);
-        IonReader reader = new IonReaderTreeSystem(rep);
-// cas FIXME:        IonReader reader = new USTReader(this);
+        IonReader reader = new UnifiedSymbolTableReader(this);
         return reader;
     }
 
 
     /**
      * NOT SYNCHRONIZED! Call only from a synch'd method.
+     *
+     * @return a new struct, not null.
      */
     private IonStruct makeIonRepresentation(IonSystem sys)
     {
@@ -1334,12 +1294,6 @@ public final class UnifiedSymbolTable
         assert ionRep != null;
         assert sys == ionRep.getSystem();
 
-        // TODO Why can't we just append to the end of the existing ionRep?
-        IonList symbolsList = sys.newEmptyList();
-
-        ionRep.remove(UnifiedSymbolTable.SYMBOLS);  // to cover the "replace existing" case
-        ionRep.add(UnifiedSymbolTable.SYMBOLS, symbolsList);
-
         int sid = _first_local_sid;
         for (int offset = 0; offset < _local_symbol_count; offset++, sid++) {
             String symbolName = _symbols[offset];
@@ -1358,8 +1312,6 @@ public final class UnifiedSymbolTable
         assert sid >= _first_local_sid;
         assert ionRep != null;
         assert ionRep.getSystem() == sys;
-
-        verify_not_read_only();
 
         // TODO this is crazy inefficient and not as reliable as it looks
         // since it doesn't handle the case where's theres more than one list

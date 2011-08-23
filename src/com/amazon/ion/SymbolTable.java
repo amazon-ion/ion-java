@@ -10,6 +10,9 @@ import java.util.Iterator;
  * used in the binary encoding.
  * <p>
  * Implementations of this interface must be safe for use by multiple threads.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  */
 public interface SymbolTable
 {
@@ -19,36 +22,6 @@ public interface SymbolTable
      * contained by a datagram.
      */
     public final static int UNKNOWN_SYMBOL_ID = -1;
-
-
-    /**
-     * Determines whether this symbol table is local, and therefore unnamed,
-     * unversioned, and modifiable.
-     * <p>
-     * If this method returns {@code true}, then both {@link #isSharedTable()}
-     * and {@link #isSystemTable()} will return {@code false}.
-     */
-    public boolean isLocalTable();
-
-    /**
-     * Determines whether this symbol table is shared, and therefore named,
-     * versioned, and unmodifiable.
-     * <p>
-     * If this method returns {@code true}, then {@link #isLocalTable()}
-     * will return {@code false}.
-     */
-    public boolean isSharedTable();
-
-
-    /**
-     * Determines whether this symbol table is a system symbol table, and
-     * therefore shared, named, versioned, and unmodifiable.
-     * <p>
-     * If this method returns {@code true}, then {@link #isLocalTable()}
-     * will return {@code false} and {@link #isSharedTable()} will return
-     * {@code true}.
-     */
-    public boolean isSystemTable();
 
 
     /**
@@ -65,6 +38,63 @@ public interface SymbolTable
      * @return at least one, or zero if {@link #isLocalTable()}.
      */
     public int getVersion();
+
+
+    /**
+     * Determines whether this symbol table is local, and therefore unnamed
+     * and unversioned.
+     * <p>
+     * If this method returns {@code true}, then both {@link #isSharedTable()}
+     * and {@link #isSystemTable()} will return {@code false}.
+     */
+    public boolean isLocalTable();
+
+    /**
+     * Determines whether this symbol table is shared, and therefore named,
+     * versioned, and {@linkplain #isReadOnly() read-only}.
+     * <p>
+     * If this method returns {@code true}, then {@link #isLocalTable()}
+     * will return {@code false}.
+     */
+    public boolean isSharedTable();
+
+
+    /**
+     * Determines whether this symbol table is a system symbol table, and
+     * therefore shared, named, versioned, and
+     * {@linkplain #isReadOnly() read-only}.
+     * <p>
+     * If this method returns {@code true}, then {@link #isLocalTable()}
+     * will return {@code false} and {@link #isSharedTable()} will return
+     * {@code true}.
+     */
+    public boolean isSystemTable();
+
+
+    /**
+     * Determines whether this symbol table can have symbols added to it.
+     * Shared symtabs are always read-only.
+     * Local symtabs can also be {@linkplain #makeReadOnly() made read-only}
+     * on demand, which enables some optimizations when writing data but will
+     * cause failures if new symbols are encountered.
+     *
+     * @return true if this table is read-only, false if symbols may
+     *  be added.
+     *
+     * @see #makeReadOnly()
+     */
+    public boolean isReadOnly();
+
+
+    /**
+     * Prevents this symbol table from accepting any more new symbols.
+     * Shared symtabs are always read-only.
+     * Making a local symtab read-only enables some optimizations when writing
+     * data, but will cause failures if new symbols are encountered.
+     *
+     * @see #isReadOnly()
+     */
+    public void makeReadOnly();
 
 
     /**
@@ -195,7 +225,7 @@ public interface SymbolTable
      * @param name must be non-empty.
      * @return a value greater than zero.
      *
-     * @throws UnsupportedOperationException if {@link #isSharedTable()}
+     * @throws IonException if {@link #isReadOnly()}
      * and the requested symbol is not already defined.
      */
     public int addSymbol(String name);
@@ -208,7 +238,7 @@ public interface SymbolTable
      * @param name must be non-empty.
      * @param id must be greater than zero.
      *
-     * @throws UnsupportedOperationException if {@link #isSharedTable()}
+     * @throws IonException if {@link #isReadOnly()}
      * and the requested symbol is not already defined.
      *
      * @deprecated Use {@link #addSymbol(String)}.

@@ -165,8 +165,7 @@ public class SymbolTableTest
     {
         SymbolTable st = system().getSystemSymbolTable();
         assertTrue(st.isSharedTable());
-        assertTrue("system symtab should be read-only",
-                   ((UnifiedSymbolTable)st).isReadOnly());
+        assertTrue("system symtab should be read-only", st.isReadOnly());
     }
 
 
@@ -189,6 +188,35 @@ public class SymbolTableTest
         assertEquals(-1, symbolTable.findSymbol("not there"));
         assertEquals("$33", symbolTable.findSymbol(33));
     }
+
+
+    @Test
+    @SuppressWarnings("deprecation")
+    public void testParsedLocalTableMakeReadOnly()
+        throws Exception
+    {
+        String text =
+            LocalSymbolTablePrefix +
+            "{" +
+            "  symbols:[ \"foo\", \"bar\"]," +
+            "}\n" +
+            "null";
+
+        SymbolTable symbolTable = oneValue(text).getSymbolTable();
+        symbolTable.addSymbol("baz");
+        symbolTable.makeReadOnly();
+        symbolTable.addSymbol("baz");
+
+        try {
+            symbolTable.addSymbol("boo");
+            fail("expected exception");
+        }
+        catch (IonException e) { }  // TODO should be ReadOnlyValueException
+
+        symbolTable.getIonRepresentation();
+        symbolTable.writeTo(system().newTextWriter(new StringBuilder()));
+    }
+
 
     @Test
     public void testImportsFollowSymbols()
@@ -997,12 +1025,11 @@ public class SymbolTableTest
         assertTrue(actual.isSharedTable());
         assertFalse(actual.isSystemTable());
 
-        assertTrue("shared symtab should be read-only",
-                   ((UnifiedSymbolTable)actual).isReadOnly());
+        assertTrue("shared symtab should be read-only", actual.isReadOnly());
 
         assertEquals(name, actual.getName());
         assertEquals(version, actual.getVersion());
-        assertEquals(0, ((UnifiedSymbolTable)actual).getImportedMaxId());
+        assertEquals(0, actual.getImportedMaxId());
 
         assertEquals("symbol count",
                      expectedSymbols.length, actual.getMaxId());
