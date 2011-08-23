@@ -111,6 +111,21 @@ public class IonAssert
     //========================================================================
     // DOM assertions
 
+    /**
+     * Verifies that the given value has exactly the given annotations, in the
+     * same order.
+     *
+     * @param actual must not be null.
+     * @param expectedAnns may be empty to expect no annotations.
+     */
+    public static void assertAnnotations(IonValue actual,
+                                         String... expectedAnns)
+    {
+        String[] actualAnns = actual.getTypeAnnotations();
+        assertArrayEquals("Ion annotations", expectedAnns, actualAnns);
+    }
+
+
     public static void assertEqualAnnotations(IonValue expected,
                                               IonValue actual)
     {

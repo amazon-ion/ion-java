@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -16,6 +16,7 @@ import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueVisitor;
+import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.IonValuePrivate;
 import com.amazon.ion.impl.UnifiedSymbolTable;
 import com.amazon.ion.util.Printer;
@@ -167,6 +168,11 @@ public abstract class IonValueLite
     private   int              _flags;
     protected IonContext       _context;
     private   String           _fieldName;
+
+    /**
+     * The annotation sequence. This array is overallocated and may have
+     * nulls at the end.
+     */
     private   String[]         _annotations;
 
     // current size 32 bit: 3*4 + 4 +  8 = 24 (32 bytes allocated)
@@ -534,6 +540,22 @@ public abstract class IonValueLite
     public final String[] getTypeAnnotations()
     {
         return getTypeAnnotationStrings();
+    }
+
+    public void setTypeAnnotations(String... annotations)
+    {
+        checkForLock();
+
+        if (annotations == null || annotations.length == 0)
+        {
+            // Normalize all empty lists to the same instance.
+            _annotations = EMPTY_STRING_ARRAY;
+        }
+        else
+        {
+            IonImplUtils.ensureNonEmptySymbols(annotations);
+            _annotations = annotations.clone();
+        }
     }
 
     public final boolean hasTypeAnnotation(String annotation)

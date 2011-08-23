@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -921,6 +921,24 @@ public abstract class IonValueImpl
         return this._annotations == null ? EMPTY_STRING_ARRAY : this._annotations;
     }
 
+    public void setTypeAnnotations(String... annotations)
+    {
+        checkForLock();
+        makeReady();
+
+        if (annotations == null || annotations.length == 0)
+        {
+            // Normalize all empty lists to the same instance.
+            _annotations = EMPTY_STRING_ARRAY;
+        }
+        else
+        {
+            IonImplUtils.ensureNonEmptySymbols(annotations);
+            _annotations = annotations.clone();
+        }
+        setDirty();
+    }
+
     public void clearTypeAnnotations()
     {
         checkForLock();
@@ -954,9 +972,8 @@ public abstract class IonValueImpl
             }
         }
         _annotations = temp;
-
-        return;
     }
+
     public void addTypeAnnotation(String annotation)
     {
         checkForLock();

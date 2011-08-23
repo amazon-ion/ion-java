@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
 
+import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
@@ -124,6 +125,24 @@ public final class IonImplUtils // TODO this class shouldn't be public
                 {
                     dest.add(value);
                 }
+            }
+        }
+    }
+
+
+    /**
+     * Throws {@link EmptySymbolException} if any of the strings are null or
+     * empty.
+     *
+     * @param strings must not be null array.
+     */
+    public static void ensureNonEmptySymbols(String[] strings)
+    {
+        for (String s : strings)
+        {
+            if (s == null || s.length() == 0)
+            {
+                throw new EmptySymbolException();
             }
         }
     }

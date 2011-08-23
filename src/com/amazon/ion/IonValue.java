@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -210,9 +210,19 @@ public interface IonValue
 
 
     /**
-     * Removes all the user type annotations attached to this value.
+     * Replaces all type annotations with the given ones.
      *
-     * @throws IonException if <code>annotations</code> is empty.
+     * @param annotations the new annotations.  If null or empty array, then
+     *  all annotations are removed.  Any duplicates are preserved.
+     *
+     * @throws EmptySymbolException if any of the annotations are null or
+     *  empty string.
+     */
+    public void setTypeAnnotations(String... annotations);
+
+
+    /**
+     * Removes all the user type annotations attached to this value.
      */
     public void clearTypeAnnotations();
 
