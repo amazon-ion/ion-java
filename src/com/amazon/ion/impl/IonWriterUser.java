@@ -31,6 +31,7 @@ import java.math.BigInteger;
 abstract class IonWriterUser
     extends IonWriterBaseImpl  // should be IonWriterSystem ?
 {
+    /** Not null. */
     protected final IonSystem _system;
 
     /** Used to make correct local symbol tables. May be null. */

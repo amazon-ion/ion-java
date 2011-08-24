@@ -1148,7 +1148,6 @@ public final class IonDatagramImpl
             SymbolTable symtab = ichild.getSymbolTable();
             if (UnifiedSymbolTable.isLocalTable(symtab)) {
                 currentSymtab = symtab;
-                assert UnifiedSymbolTable.isLocalTable(currentSymtab);
             }
             else
             {
