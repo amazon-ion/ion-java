@@ -175,7 +175,7 @@ public class SexpTest
         IonValue sexp2 = reload(sexp1);
 
         // FIXME ensure sexp1._isPositionLoaded && _isMaterialized
-        assertIonEquals(sexp1, sexp2);
+        assertEquals(sexp1, sexp2);
     }
 
     @Test
@@ -302,14 +302,14 @@ public class SexpTest
 
         IonValue sexp2 = reload(sexp1);
 
-        assertIonEquals(sexp1, sexp2);
+        assertEquals(sexp1, sexp2);
 
         // Again, starting from () instead of null.sexp
         sexp1 = system().newEmptySexp();
         sexp1.add(system().newString("Hello"));
 
         sexp2 = reload(sexp1);
-        assertIonEquals(sexp1, sexp2);
+        assertEquals(sexp1, sexp2);
     }
 
     private String[] termintor_test_values = {
@@ -345,7 +345,7 @@ public class SexpTest
             value = (IonSexp) oneValue(image);
         }
         IonValue value2 = reload(value);
-        assertIonEquals(value, value2);
+        assertEquals(value, value2);
     }
     void readAll(IonReader scanner)
     {

@@ -743,13 +743,9 @@ public abstract class IonTestCase
     }
 
 
-    /**
-     * @deprecated Use {@link IonAssert#assertIonEquals(IonValue, IonValue)}
-     */
-    @Deprecated
-    public static void assertIonEquals(IonValue expected, final IonValue found)
+    public static void assertEquals(IonValue expected, IonValue actual)
     {
-        IonAssert.assertIonEquals(expected, found);
+        IonAssert.assertIonEquals(expected, actual);
     }
 
 

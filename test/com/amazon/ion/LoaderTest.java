@@ -3,9 +3,7 @@
 package com.amazon.ion;
 
 import static com.amazon.ion.impl.IonImplUtils.UTF8_CHARSET;
-import static com.amazon.ion.impl.IonImplUtils.encode;
 import static com.amazon.ion.impl.IonImplUtils.utf8;
-import com.amazon.ion.impl.IonImplUtils;
 
 import com.amazon.ion.impl.UserValueIterator;
 import com.amazon.ion.system.SimpleCatalog;
@@ -19,8 +17,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
-import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Iterator;
 import org.junit.Test;
@@ -255,7 +251,7 @@ public class LoaderTest
 
         IonValue onePrime = system().clone(one);
         assertNotSame(one, onePrime);
-        assertIonEquals(one, onePrime);
+        assertEquals(one, onePrime);
         assertNull("cloned value has container", onePrime.getContainer());
 
         IonList parent = system().newNullList();

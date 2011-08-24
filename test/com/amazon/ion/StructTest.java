@@ -874,7 +874,7 @@ public class StructTest
 
         IonLoader loader = ionSystem.getLoader();
         IonDatagram v = loader.load(bytes);
-        assertIonEquals(s1, v.get(0));
+        assertEquals(s1, v.get(0));
         String i4 = v.toString();
         //System.out.println(i4);
 
