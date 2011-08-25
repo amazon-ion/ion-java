@@ -20,7 +20,7 @@ import org.junit.Test;
 public abstract class ReaderSystemProcessingTestCase
     extends SystemProcessingTestCase
 {
-    private IonReader myReader;
+    protected IonReader myReader;
     private IonType   myValueType;
 
     @After @Override
@@ -85,6 +85,16 @@ public abstract class ReaderSystemProcessingTestCase
             }
         }
         fail("Didn't find expected annotation: " + expected);
+    }
+
+    @Override
+    protected void checkAnnotations(String[] expecteds, int[] expectedSids)
+    {
+        String[] typeAnnotations = myReader.getTypeAnnotations();
+        Assert.assertArrayEquals(expecteds, typeAnnotations);
+
+        int[] sids = myReader.getTypeAnnotationIds();
+        Assert.assertArrayEquals(expectedSids, sids);
     }
 
     @Override

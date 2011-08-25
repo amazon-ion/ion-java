@@ -100,9 +100,22 @@ public class IonValueTest
         assertAnnotations(v, ann, ann);
     }
 
+    @Test
+    public void testCloneAndRetainDuplicateAnnotations()
+    {
+        IonStruct v = system().newNullStruct();
+        v.setTypeAnnotations(ann, ann);
 
-    /** Trap for ION-173 ION-144 */
-    @Test @Ignore
+        IonStruct v2 = v.cloneAndRetain(ann);
+        assertAnnotations(v2, ann, ann);
+
+        IonStruct v3 = v.cloneAndRemove(ben);
+        assertAnnotations(v3, ann, ann);
+    }
+
+
+    /** TODO Trap for ION-144 */
+    @Test
     public void testRemoveDuplicateAnnotation()
     {
         IonValue v = system().singleValue("ann::ann::null");

@@ -438,10 +438,8 @@ public final class IonSystemLite
             symbol_encountered = true;
         }
         String[] uta = reader.getTypeAnnotations();
-        if (uta != null && uta.length > 0) {
-            for (int ii=0; ii<uta.length; ii++) {
-                v.addTypeAnnotation(uta[ii]);
-            }
+        if (uta.length > 0) {
+            v.setTypeAnnotations(uta);
             symbol_encountered = true;
         }
         if (!reader.isNullValue()) {

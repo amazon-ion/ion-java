@@ -197,10 +197,7 @@ public final class IonStructImpl
             }
         }
 
-        // TODO add IonValue.setTypeAnnotations
-        for (String annotation : getTypeAnnotations()) {
-            clone.addTypeAnnotation(annotation);
-        }
+        clone.setTypeAnnotations(getTypeAnnotations());
 
         return clone;
     }

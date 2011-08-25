@@ -233,10 +233,7 @@ abstract class IonWriterUser
                            UnifiedSymbolTable.ION_SYMBOL_TABLE,
                            UnifiedSymbolTable.ION_SYMBOL_TABLE_SID)
         );
-        for (int ii=0; ii<_current_writer._annotation_count; ii++) {
-            String annotation = _current_writer._annotations[ii];
-            _symbol_table_value.addTypeAnnotation(annotation);
-        }
+        _symbol_table_value.setTypeAnnotations(getTypeAnnotations());
 
         _symbol_table_writer       = new IonWriterSystemTree(_system, _catalog, _symbol_table_value);
         _current_writer            = _symbol_table_writer;

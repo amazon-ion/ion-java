@@ -85,6 +85,11 @@ public abstract class SystemProcessingTestCase
     protected abstract void checkAnnotation(String expected, int expectedSid)
         throws Exception;
 
+    /** Check that all the annotations exist in the given order. */
+    protected abstract void checkAnnotations(String[] expecteds,
+                                             int[] expectedSids)
+        throws Exception;
+
     protected abstract void checkType(IonType expected)
         throws Exception;
 
@@ -906,5 +911,18 @@ if (table1 == table2) {
         assertSame(st, local.getSystemSymbolTable());
 
         checkEof();
+    }
+
+
+    @Test // Trap for ION-173
+    public void testDuplicateAnnotations()
+    throws Exception
+    {
+        int sid = ION_1_0_MAX_ID + 1;
+
+        startIteration("ann::ann::null");
+        nextValue();
+        checkAnnotations(new String[]{ "ann", "ann" },
+                         new int[]{ sid, sid });
     }
 }

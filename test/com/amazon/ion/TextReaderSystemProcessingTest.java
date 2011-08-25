@@ -1,6 +1,8 @@
-// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
+
+import org.junit.Assert;
 
 
 
@@ -43,5 +45,16 @@ public class TextReaderSystemProcessingTest
         // when missing from a shared table the symbol
         // will have been added to the local symbols
         return true;
+    }
+
+    @Override
+    protected void checkAnnotations(String[] expecteds, int[] expectedSids)
+    {
+        String[] typeAnnotations = myReader.getTypeAnnotations();
+        Assert.assertArrayEquals(expecteds, typeAnnotations);
+
+        // TODO ION-172
+//        int[] sids = myReader.getTypeAnnotationIds();
+//        Assert.assertArrayEquals(expectedSids, sids);
     }
 }

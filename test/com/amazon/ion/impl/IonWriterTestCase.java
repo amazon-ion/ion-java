@@ -5,6 +5,7 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
 import static com.amazon.ion.Symtabs.GINGER_MAX_IDS;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
+import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
 import static com.amazon.ion.TestUtils.FERMATA;
 
 import com.amazon.ion.EmptySymbolException;
@@ -30,6 +31,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Arrays;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -471,20 +473,22 @@ public abstract class IonWriterTestCase
         v.addTypeAnnotation("b");
         v.addTypeAnnotation("c");
 
-        // TODO ugh, writer and ionvalue behave differently  ION-173
-//        iw.addTypeAnnotation("b");
-//        iw.addTypeAnnotation("b");
-//        iw.writeNull();
-//        v = expected.add().newNull();
-//        v.addTypeAnnotation("b");
-//        v.addTypeAnnotation("b");
+        iw.addTypeAnnotation("b");
+        iw.addTypeAnnotation("b");
+        iw.writeNull();
+        v = expected.add().newNull();
+        v.setTypeAnnotations("b", "b");
+
+        iw.setTypeAnnotations(new String[]{"b", "b"});
+        iw.writeNull();
+        v = expected.add().newNull();
+        v.setTypeAnnotations("b", "b");
 
         iw.addTypeAnnotation("b");
         iw.setTypeAnnotations(new String[]{"c", "d"});
         iw.writeNull();
         v = expected.add().newNull();
-        v.addTypeAnnotation("c");
-        v.addTypeAnnotation("d");
+        v.setTypeAnnotations("c", "d");
 
         iw.addTypeAnnotation("b");
         iw.setTypeAnnotations(new String[0]);
@@ -635,5 +639,23 @@ public abstract class IonWriterTestCase
             IonStruct s = (IonStruct) dg.get(0);
             assertTrue("struct not empty", s.isEmpty());
         }
+    }
+
+    @Test @Ignore // TODO ION-236
+    public void testWritingSymtabWithExtraAnnotations()
+    throws Exception
+    {
+        String[] annotations =
+            new String[]{ ION_SYMBOL_TABLE,  ION_SYMBOL_TABLE};
+        iw = makeWriter();
+        iw.setTypeAnnotations(annotations);
+        iw.stepIn(IonType.STRUCT);
+        iw.stepOut();
+        iw.writeSymbol("foo");
+        iw.close();
+
+        IonDatagram dg = reload();
+        IonStruct v = (IonStruct) dg.systemGet(1);
+        Assert.assertArrayEquals(annotations, v.getTypeAnnotations());
     }
 }

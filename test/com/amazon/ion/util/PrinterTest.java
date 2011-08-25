@@ -108,6 +108,9 @@ public class PrinterTest
         checkRendering("(an::'+'::'\\0'::null)", s);
         myPrinter.setPrintStringAsJson(true);
         checkRendering("(an::'+'::'\\0'::null)", s);
+
+        value.setTypeAnnotations("boo", "boo");
+        checkRendering("boo::boo::null", value);
     }
 
 
