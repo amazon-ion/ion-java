@@ -1,6 +1,7 @@
 // Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.IonImplUtils.EMPTY_BYTE_ARRAY;
 import static com.amazon.ion.impl.IonImplUtils.utf8;
 
 import com.amazon.ion.BinaryTest;
@@ -77,7 +78,7 @@ public class ReaderTest
     throws Exception
     {
         InputStreamWrapper stream =
-            new InputStreamWrapper(new ByteArrayInputStream(new byte[0]));
+            new InputStreamWrapper(new ByteArrayInputStream(EMPTY_BYTE_ARRAY));
         IonReader reader = system().newReader(stream);
         assertSame(null, reader.next());
         reader.close();

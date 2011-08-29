@@ -3,6 +3,7 @@
 package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.util.Equivalence.ionEquals;
 
@@ -35,9 +36,6 @@ import java.io.IOException;
 public abstract class IonValueLite
     implements IonValuePrivate
 {
-    protected static final String[] EMPTY_STRING_ARRAY = new String[0];
-    protected static final int[] EMPTY_INT_ARRAY = new int[0];
-
     /**
      * this hold all the various boolean flags we have
      * in a single int.  Use set_flag(), clear_flag(), is_true()

@@ -3,6 +3,7 @@
 package com.amazon.ion.util;
 
 import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_1_0;
+import static com.amazon.ion.impl.IonImplUtils.EMPTY_BYTE_ARRAY;
 import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -45,7 +46,7 @@ public class IonStreamUtilsTest
     @Test
     public void testIsIonBinaryShortBufer()
     {
-        assertEquals(false, isIonBinary(new byte[0]));
+        assertEquals(false, isIonBinary(EMPTY_BYTE_ARRAY));
         assertEquals(false, isIonBinary(SHORT_BUFFER_1));
         assertEquals(false, isIonBinary(SHORT_BUFFER_2));
         assertEquals(false, isIonBinary(SHORT_BUFFER_3));

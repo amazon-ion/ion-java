@@ -2,6 +2,9 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.IonImplUtils.EMPTY_INT_ARRAY;
+import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
+
 import com.amazon.ion.Decimal;
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonException;
@@ -541,7 +544,6 @@ public abstract class IonWriterBaseImpl
         return false;
     }
 
-    private static final String[] EMPTY_STRING_ARRAY = new String[0];
     private String[] get_type_annotations_as_strings()
     {
         if (_annotation_count < 1) {
@@ -557,7 +559,7 @@ public abstract class IonWriterBaseImpl
         }
         return _annotations;
     }
-    private static final int[] EMPTY_INT_ARRAY = new int[0];
+
     protected int[] get_type_annotations_as_ints()
     {
         if (_annotation_count < 1) {

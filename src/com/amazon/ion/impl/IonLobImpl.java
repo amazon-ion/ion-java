@@ -1,6 +1,8 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
+
+import static com.amazon.ion.impl.IonImplUtils.EMPTY_BYTE_ARRAY;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonLob;
@@ -197,7 +199,7 @@ public abstract class IonLobImpl
             _isNullValue(true);
             break;
         case 0:
-            _lob_value = new byte[0];
+            _lob_value = EMPTY_BYTE_ARRAY;
             _isNullValue(false);
             break;
         case IonConstants.lnIsVarLen:

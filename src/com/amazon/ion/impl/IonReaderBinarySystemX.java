@@ -2,6 +2,8 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.IonImplUtils.EMPTY_INT_ARRAY;
+
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonSystem;
@@ -67,7 +69,6 @@ class IonReaderBinarySystemX
         Iterator<Integer> it = new IonReaderTextUserX.IntIterator(_annotation_ids, 0, _annotation_count);
         return it;
     }
-    private static int[] _empty_int_array = new int[0];
 
     public int[] getTypeAnnotationIds()
     {
@@ -79,7 +80,7 @@ class IonReaderBinarySystemX
         }
         int[] anns;
         if (_annotation_count < 1) {
-            anns = _empty_int_array;
+            anns = EMPTY_INT_ARRAY;
         }
         else {
             anns = new int[_annotation_count];
