@@ -965,9 +965,7 @@ public abstract class IonValueImpl
 
         String[] temp = (_annotations.length == 1) ? null : new String[_annotations.length - 1];
         for (int ii=0, jj=0; ii < _annotations.length; ii++) {
-            // FIXME ION-144 if the annotation exists more than once,
-            // the new array will have nulls at the end.
-            if (!_annotations[ii].equals(annotation)) {
+            if (ii != jj || !_annotations[ii].equals(annotation)) {
                 temp[jj++] = _annotations[ii];
             }
         }

@@ -114,11 +114,43 @@ public class IonValueTest
     }
 
 
-    /** TODO Trap for ION-144 */
+    @Test
+    public void testRemoveTypeAnnotation()
+    {
+        IonValue v = system().singleValue("null");
+        v.removeTypeAnnotation(ann);
+        assertAnnotations(v);
+
+        v = system().singleValue("ann::null");
+        v.removeTypeAnnotation(ben);
+        assertAnnotations(v, ann);
+        v.removeTypeAnnotation(null);
+        assertAnnotations(v, ann);
+        v.removeTypeAnnotation("");
+        assertAnnotations(v, ann);
+
+        v.removeTypeAnnotation(ann);
+        assertAnnotations(v);
+
+        v = system().singleValue("ann::ben::cam::null");
+        v.removeTypeAnnotation(ben);
+        assertAnnotations(v, ann, "cam");
+        v.removeTypeAnnotation(ben);
+        assertAnnotations(v, ann, "cam");
+        v.removeTypeAnnotation("cam");
+        assertAnnotations(v, ann);
+        v.removeTypeAnnotation(ann);
+        assertAnnotations(v);
+    }
+
+
+    /** Trap for ION-144 */
     @Test
     public void testRemoveDuplicateAnnotation()
     {
-        IonValue v = system().singleValue("ann::ann::null");
-        assertAnnotations(v, ann, ann);
+        IonValue v = system().singleValue("ann::ben::ann::null");
+        assertAnnotations(v, ann, ben, ann);
+        v.removeTypeAnnotation(ann);
+        assertAnnotations(v, ben, ann);
     }
 }

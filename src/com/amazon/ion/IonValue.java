@@ -237,9 +237,13 @@ public interface IonValue
 
     /**
      * Removes a user type annotation from the list of annotations
-     * attached to this value.  If the annotation does not exist
-     * the list does not change.
+     * attached to this value.
+     * If the annotation appears more than once, only the first occurrance is
+     * removed.
+     * If the annotation does not exist, the value does not change.
+     *
      * @param annotation as a string value.
+     *  If null or empty, the method has no effect.
      */
     public void removeTypeAnnotation(String annotation);
 
