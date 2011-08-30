@@ -1,10 +1,9 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonDecimal;
-import com.amazon.ion.IonNumber;
 import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ValueVisitor;
@@ -152,42 +151,6 @@ implements IonDecimal
         _isNullValue(value == null);
     }
 
-    @Deprecated
-    public void setValueSpecial(IonNumber.Classification valueClassification)
-    {
-        setValue(BigDecimal.ZERO, valueClassification);
-    }
-
-    @Deprecated
-    public void setValue(BigDecimal value, IonNumber.Classification valueClassification)
-    {
-        checkForLock();
-        switch (valueClassification)
-        {
-        case NORMAL:
-                _decimal_value = value;
-                _isNullValue(value == null);
-                break;
-        case NEGATIVE_ZERO:
-                if (value.signum() != 0) throw new IllegalArgumentException("to be a negative zero the value must be zero");
-                _decimal_value = Decimal.negativeZero(value.scale());
-                _isNullValue(false);
-                break;
-        default:
-                throw new IllegalArgumentException("IonDecimal values may only be NORMAL or NEGATIVE_ZERO");
-        }
-    }
-
-    /**
-     * Gets the number classification of this value. IonDecimal
-     * values may only be NORMAL or NEGATIVE_ZERO.
-     */
-    public IonNumber.Classification getClassification()
-    {
-        return (isNullValue() || ! Decimal.isNegativeZero(_decimal_value)
-                    ? Classification.NORMAL
-                    : Classification.NEGATIVE_ZERO);
-    }
 
     @Override
     public void accept(ValueVisitor visitor) throws Exception

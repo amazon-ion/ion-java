@@ -2,11 +2,8 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.Decimal;
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonNumber;
-import com.amazon.ion.IonNumber.Classification;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
@@ -605,36 +602,7 @@ public abstract class IonWriterBaseImpl
 
     abstract public void writeDecimal(BigDecimal value) throws IOException;
 
-    public void writeDecimal(BigDecimal value, IonNumber.Classification classification)
-        throws IOException
-    {
-        if (value == null)
-        {
-            writeNull(IonType.DECIMAL);
-            return;
-        }
-        if (Classification.NEGATIVE_ZERO.equals(classification)) {
-            if (!BigDecimal.ZERO.equals(value)) {
-                throw new IllegalArgumentException("the value must be zero if the classification is negative zero");
-            }
-            if (Decimal.isNegativeZero(value)) {
-                value = Decimal.negativeZero(value.scale());
-            }
-        }
-        writeDecimal(value);
-    }
 
-    public void writeDecimal(IonNumber.Classification classification)
-        throws IOException
-    {
-        switch(classification) {
-        case NEGATIVE_ZERO:
-            writeDecimal(Decimal.NEGATIVE_ZERO, classification);
-            break;
-        default:
-            throw new IllegalArgumentException("classification for IonDecimal special values may only be NEGATIVE_ZERO");
-        }
-    }
     public void writeFloat(float value) throws IOException
     {
         writeFloat((double)value);
