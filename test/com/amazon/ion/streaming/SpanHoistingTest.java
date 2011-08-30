@@ -95,9 +95,6 @@ public class SpanHoistingTest
     {
         for (int i = dg.size() - 1; i >= 0; i--)
         {
-if (i == 7) {  // FIXME - debug code - remove
-    System.err.println("7 is the bad one");
-}
             hoist(positions[i]);
             IonType dg_type = dg.get(i).getType();
             IonType span_type = in.next();
