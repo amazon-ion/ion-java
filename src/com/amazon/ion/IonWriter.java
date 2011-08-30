@@ -141,8 +141,9 @@ public interface IonWriter
      * The id is expected to be already present in the current symbol table
      * (but this is not checked).
      * <p>
-     * The pending field name is cleared when the current value is written via
-     * one of the {@code write*()} or {@code open*()} methods.
+     * The pending field name is cleared when the current value is
+     * written via {@link #stepIn(IonType) stepIn()} or one of the
+     * {@code write*()} methods.
      * <p>
      * <b>This is an "expert method": correct use requires deep understanding
      * of the Ion binary format. You almost certainly don't want to use it.</b>
@@ -159,8 +160,9 @@ public interface IonWriter
      * If the string is not present in the current symbol table,
      * it will be added.
      * <p>
-     * The pending field name is cleared when the current value is written via
-     * one of the {@code write*()} or {@code open*()} methods.
+     * The pending field name is cleared when the current value is
+     * written via {@link #stepIn(IonType) stepIn()} or one of the
+     * {@code write*()} methods.
      *
      * @param name text of the field name
      *
@@ -179,7 +181,8 @@ public interface IonWriter
      * writer, so the caller does not need to preserve the array.
      * <p>
      * The list of pending annotations is cleared when the current value is
-     * written via one of the {@code write*()} or {@code open*()} methods.
+     * written via {@link #stepIn(IonType) stepIn()} or one of the
+     * {@code write*()} methods.
      *
      * @param annotations string array with the annotations.
      * If null or empty, any pending annotations are cleared.
@@ -193,7 +196,8 @@ public interface IonWriter
      * writer, so the caller does not need to preserve the array.
      * <p>
      * The list of pending annotations is cleared when the current value is
-     * written via one of the {@code write*()} or {@code open*()} methods.
+     * written via {@link #stepIn(IonType) stepIn()} or one of the
+     * {@code write*()} methods.
      * <p>
      * <b>This is an "expert method": correct use requires deep understanding
      * of the Ion binary format. You almost certainly don't want to use it.</b>
@@ -207,7 +211,8 @@ public interface IonWriter
      * Adds a given string to the list of pending annotations.
      * <p>
      * The list of pending annotations is cleared when the current value is
-     * written via one of the {@code write*()} or {@code open*()} methods.
+     * written via {@link #stepIn(IonType) stepIn()} or one of the
+     * {@code write*()} methods.
      *
      * @param annotation string annotation to append to the annotation list
      */
@@ -217,7 +222,8 @@ public interface IonWriter
      * Adds a given symbol id to the list of pending annotations.
      * <p>
      * The list of pending annotations is cleared when the current value is
-     * written via one of the {@code write*()} or {@code open*()} methods.
+     * written via {@link #stepIn(IonType) stepIn()} or one of the
+     * {@code write*()} methods.
      * <p>
      * <b>This is an "expert method": correct use requires deep understanding
      * of the Ion binary format. You almost certainly don't want to use it.</b>
