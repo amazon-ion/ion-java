@@ -80,19 +80,6 @@ public interface SymbolTable
 
 
     /**
-     * Gets the identifier for the system symbol table used by this table.
-     * The system identifier is a string of the form {@code "$ion_X_Y"}.
-     *
-     * @return the system identifier; or {@code null} for non-system shared
-     *  tables.
-     *
-     * @deprecated Renamed to {@link #getIonVersionId()}.
-     */
-    @Deprecated
-    public String getSystemId();
-
-
-    /**
      * Gets the identifier for the Ion version (and thus the system symbol
      * table) used by this table.
      * The version identifier is a string of the form {@code "$ion_X_Y"}.
@@ -136,19 +123,6 @@ public interface SymbolTable
      * have a name defined.
      */
     public int getMaxId();
-
-
-    /**
-     * Returns the number of symbols in this table, not counting imported
-     * symbols (when {@link #isLocalTable()} is {@code true}).
-     * If it contains more than <code>Integer.MAX_VALUE</code> elements,
-     * returns <code>Integer.MAX_VALUE</code>.
-     *
-     * @return the number of symbols in this table.
-     * @deprecated Turns out this isn't particularly meaningful
-     */
-    @Deprecated
-    public int size();
 
 
     /**
@@ -202,22 +176,6 @@ public interface SymbolTable
 
 
     /**
-     * Adds a new symbol to this table using a specific id.  An exception is
-     * thrown if the given name is already defined with a different id.
-     *
-     * @param name must be non-empty.
-     * @param id must be greater than zero.
-     *
-     * @throws UnsupportedOperationException if {@link #isSharedTable()}
-     * and the requested symbol is not already defined.
-     *
-     * @deprecated Use {@link #addSymbol(String)}.
-     */
-    @Deprecated
-    public void defineSymbol(String name, int id);
-
-
-    /**
      * Creates an iterator that will return all non-imported symbol names, in
      * order of their symbol IDs. The iterator will return {@code null} where
      * there is an undefined sid.
@@ -229,19 +187,6 @@ public interface SymbolTable
      * @return a new iterator.
      */
     public Iterator<String> iterateDeclaredSymbolNames();
-
-
-    /**
-     * Gets the Ion structure representing this symbol table.  Changes to this
-     * object are reflected in the struct; it would be
-     * very unwise to modify the return value directly.
-     *
-     * @return a non-null struct.
-     *
-     * @deprecated For internal use only.
-     */
-    @Deprecated
-    public IonStruct getIonRepresentation();
 
 
     /**

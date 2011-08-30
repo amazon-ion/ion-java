@@ -347,14 +347,6 @@ if (table1 == table2) {
         startIteration(data);
         nextValue();
         checkSymbol("b", 11);
-
-        if (false)
-        {
-            // No such promises at the moment...
-            SymbolTable symtab = currentSymtab();
-            IonStruct symtabStruct = symtab.getIonRepresentation();
-            checkInt(33, symtabStruct.get("open"));
-        }
     }
 
 

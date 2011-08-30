@@ -152,13 +152,6 @@ public class SymbolTableTest
         st.addSymbol("hello");
     }
 
-    @SuppressWarnings("deprecation")
-    @Test(expected = UnsupportedOperationException.class)
-    public void testSystemSymtabDefineSymbol()
-    {
-        SymbolTable st = system().getSystemSymbolTable();
-        st.defineSymbol("hello", st.getMaxId() + 1);
-    }
 
     @Test
     public void testSystemSymtabIsReadOnly()
@@ -731,9 +724,9 @@ public class SymbolTableTest
     {
         SymbolTable st = system().newLocalSymbolTable();
         st.addSymbol("foo");
-        IonStruct image = st.getIonRepresentation();
+        IonStruct image = ((UnifiedSymbolTable)st).getIonRepresentation();
         st.addSymbol("bar");
-        image = st.getIonRepresentation();
+        image = ((UnifiedSymbolTable)st).getIonRepresentation();
         IonList symbols = (IonList) image.get(SystemSymbolTable.SYMBOLS);
         assertEquals("[\"foo\",\"bar\"]", symbols.toString());
     }

@@ -709,7 +709,8 @@ public final class IonDatagramImpl
             if (child_symtab != previous_symtab
                 && isNeededLocalSymbolTable(child_symtab))
             {
-                IonStruct sym = child_symtab.getIonRepresentation();
+                IonStruct sym =
+                    ((UnifiedSymbolTable)child_symtab).getIonRepresentation();
 
                 // this value symbol table might already be present
                 // in which case it will be the value just before us
