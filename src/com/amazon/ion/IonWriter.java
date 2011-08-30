@@ -319,33 +319,6 @@ public interface IonWriter
 
 
     /**
-     * writes a signed 8 bit value, a Java byte, as an IonInt.
-     * @param value signed int to write
-     *
-     * @deprecated Use {@link #writeInt(long)}.
-     */
-    @Deprecated
-    public void writeInt(byte value) throws IOException;
-
-    /**
-     * writes a signed 16 bit value, a Java short, as an IonInt.
-     * @param value signed int to write
-     *
-     * @deprecated Use {@link #writeInt(long)}.
-     */
-    @Deprecated
-    public void writeInt(short value) throws IOException;
-
-    /**
-     * writes a signed 32 bit value, a Java int, as an IonInt.
-     * @param value signed int to write
-     *
-     * @deprecated Use {@link #writeInt(long)}.
-     */
-    @Deprecated
-    public void writeInt(int value) throws IOException;
-
-    /**
      * writes a signed 64 bit value, a Java long, as an IonInt.
      * @param value signed int to write
      */
@@ -358,19 +331,6 @@ public interface IonWriter
      */
     public void writeInt(BigInteger value) throws IOException;
 
-
-    /**
-     * writes a 32 bit binary floating point value, a Java float,
-     * as an IonFloat.  Currently IonFloat values are output as
-     * 64 bit IEEE 754 big endian values.  As a result writeFloat
-     * is simply a convenience method which casts the float
-     * up to a double on output.
-     * @param value float to write
-     *
-     * @deprecated Use {@link #writeFloat(double)}.
-     */
-    @Deprecated
-    public void writeFloat(float value) throws IOException;
 
     /**
      * writes a 64 bit binary floating point value, a Java double,

@@ -639,14 +639,7 @@ public abstract class IonWriterBaseImpl
     {
         writeFloat((double)value);
     }
-    public void writeInt(byte value) throws IOException
-    {
-        writeInt((int)value);
-    }
-    public void writeInt(short value) throws IOException
-    {
-        writeInt((int)value);
-    }
+
     public void writeNull() throws IOException
     {
         writeNull(IonType.NULL);
