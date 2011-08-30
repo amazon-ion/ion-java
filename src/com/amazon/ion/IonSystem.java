@@ -59,18 +59,6 @@ public interface IonSystem
 
 
     /**
-     * Sets the default catalog used by this system.
-     *
-     * @param catalog the new system catalog.
-     * @throws NullPointerException if <code>catalog</code> is null.
-     *
-     * @deprecated  Catalog should be immutable.
-     */
-    @Deprecated
-    public void setCatalog(IonCatalog catalog);
-
-
-    /**
      * Creates a new local symbol table based on specific imported tables.
      * If the first imported table is a system table, then the local table will
      * use it appropriately. Otherwise, the local table will use this system's

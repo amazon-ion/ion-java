@@ -68,7 +68,7 @@ public final class IonSystemLite
     private final UnifiedSymbolTable _system_symbol_table = UnifiedSymbolTable.makeSystemSymbolTable(this, 1);
 
     /** Not null. */
-    private       IonCatalog         _catalog;
+    private final IonCatalog         _catalog;
     private       ValueFactoryLite   _value_factory;
     private final IonLoader          _loader;
 
@@ -530,12 +530,6 @@ public final class IonSystemLite
     {
         IonWriter writer = IonWriterFactory.makeWriter(container);
         return writer;
-    }
-
-    public void setCatalog(IonCatalog catalog)
-    {
-        if (catalog == null) throw new NullPointerException();
-        this._catalog = catalog;
     }
 
     private IonValue singleValue(Iterator<IonValue> it)

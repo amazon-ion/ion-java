@@ -75,7 +75,7 @@ public final class IonSystemImpl
     private final UnifiedSymbolTable mySystemSymbols;
 
     /** Not null. */
-    private IonCatalog  myCatalog;
+    private final IonCatalog myCatalog;
     private final IonLoader myLoader;
 
     /**
@@ -116,13 +116,6 @@ public final class IonSystemImpl
     public synchronized IonCatalog getCatalog()
     {
         return myCatalog;
-    }
-
-
-    public synchronized void setCatalog(IonCatalog catalog)
-    {
-        if (catalog == null) throw new NullPointerException();
-        myCatalog = catalog;
     }
 
 
