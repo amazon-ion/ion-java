@@ -845,13 +845,38 @@ public final class Timestamp
 
 
     /**
+     * Converts a {@link Date} to a GMT Timestamp.
+     *
+     * @param date the desired "millis since the Epoch".
+     *
+     * @return a timestamp representing the given point in time, localized to
+     * GMT; null if the given {@link Date} is null.
+     */
+    public static Timestamp forDateZ(Date date)
+    {
+        if (date == null) return null;
+        long millis = date.getTime();
+        return new Timestamp(millis, UTC_OFFSET);
+    }
+
+
+    /**
      * this returns the current time using the JVM clock and an unknown timezone
      */
     static public Timestamp now()
     {
         long millis = System.currentTimeMillis();
-        Timestamp t = new Timestamp(millis, null);
+        Timestamp t = new Timestamp(millis, UNKNOWN_OFFSET);
         return t;
+    }
+
+    /**
+     * Gets the current time as a GMT timestamp.
+     */
+    static public Timestamp nowZ()
+    {
+        long millis = System.currentTimeMillis();
+        return new Timestamp(millis, UTC_OFFSET);
     }
 
 

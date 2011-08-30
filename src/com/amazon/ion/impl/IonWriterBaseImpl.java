@@ -655,6 +655,7 @@ public abstract class IonWriterBaseImpl
     {
         writeNull(IonType.NULL);
     }
+
     public void writeTimestamp(Date value, Integer localOffset)
         throws IOException
     {
@@ -666,19 +667,12 @@ public abstract class IonWriterBaseImpl
             time = new Timestamp(value.getTime(), localOffset);
             writeTimestamp(time);
         }
-        return;
     }
+
     public void writeTimestampUTC(Date value) throws IOException
     {
-        Timestamp time;
-        if (value == null) {
-            writeNull(IonType.TIMESTAMP);
-        }
-        else {
-            time = new Timestamp(value.getTime(), Timestamp.UTC_OFFSET);
-            writeTimestamp(time);
-        }
-        return;
+        Timestamp time = Timestamp.forDateZ(value);
+        writeTimestamp(time);
     }
 
     //

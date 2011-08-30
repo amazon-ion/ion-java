@@ -452,7 +452,8 @@ public interface IonWriter
      * @param value java.util Date holding the UTC timestamp;
      * may be null to represent {@code null.timestamp}.
      *
-     * @deprecated Use {@link #writeTimestamp(Timestamp)}.
+     * @deprecated Use {@link Timestamp#forDateZ(Date)} and
+     *  {@link #writeTimestamp(Timestamp)}.
      */
     @Deprecated
     public void writeTimestampUTC(Date value) throws IOException;

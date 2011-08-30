@@ -865,4 +865,25 @@ public class TimestampTest
         assertEquals(0, ts.getMinute());
         assertEquals(0, ts.getZMinute());
     }
+
+    @Test
+    public void testForDateZ()
+    {
+        Date now = new Date();
+        Timestamp ts = Timestamp.forDateZ(now);
+        assertEquals(now.getTime(), ts.getMillis());
+        assertEquals(Timestamp.UTC_OFFSET, ts.getLocalOffset());
+
+        now.setTime(0);
+        ts = Timestamp.forDateZ(now);
+        assertEquals(0, ts.getMillis());
+        assertEquals(Timestamp.UTC_OFFSET, ts.getLocalOffset());
+        assertEquals(1970, ts.getYear());
+    }
+
+    @Test
+    public void testForDateZNull()
+    {
+        assertEquals(null, Timestamp.forDateZ(null));
+    }
 }
