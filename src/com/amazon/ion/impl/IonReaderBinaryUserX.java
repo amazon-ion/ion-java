@@ -35,6 +35,8 @@ class IonReaderBinaryUserX
         boolean     _value_is_true;
         SymbolTable _symbol_table;
 
+        IonReaderBinaryPosition() {}
+
         public long getOffset()
         {
             return _offset;

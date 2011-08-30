@@ -4,6 +4,9 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
+import com.amazon.ion.IonException;
+import com.amazon.ion.Span;
+import com.amazon.ion.TextSpan;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
@@ -37,7 +40,7 @@ import java.util.NoSuchElementException;
  */
 public class IonReaderTextUserX
     extends IonReaderTextSystemX
-    implements IonReaderWriterPrivate
+    implements IonReaderWriterPrivate, IonReaderWithPosition
 {
     // IonSystem   _system; now in IonReaderTextSystemX where it could be null
     IonCatalog  _catalog;
@@ -311,4 +314,147 @@ public class IonReaderTextUserX
         _symbol_table_stack[_symbol_table_top] = null;
         return symbols;
     }
+
+
+    static class IonReaderTextPosition
+        extends IonReaderPositionBase
+        implements TextSpan
+    {
+        private UnifiedDataPageX _data_page;
+        private long             _start_char_offset;
+        private IonType          _container_type;
+
+        private long             _start_line;
+        private long             _start_column;
+
+        IonReaderTextPosition(IonReaderTextUserX reader)
+        {
+            if (reader._scanner.isBufferedInput() == false) {
+                throw new IonException("span capable text reader is currently supported only over buffered input");
+            }
+            // TODO: convert _start_char_offset from a long and data page
+            //       to be an abstract reference into the Unified* data source
+
+            UnifiedInputStreamX current_stream = reader._scanner.getSourceStream();
+            //
+            // TODO: this page isn't safe, except where we have only a single
+            //       page of buffered input Which is the case for the time
+            //       being.  Later, when this is stream aware, this needs to change.
+            _data_page = current_stream._buffer.getCurrentPage();
+            _start_char_offset = reader._value_start_offset;
+            _container_type = reader.getContainerType();
+
+            _start_line = reader.getLineNumber();
+            _start_column = reader.getLineOffset();
+        }
+
+        public long getStartLine()
+        {
+            if (_start_line < 1) {
+                throw new IllegalStateException("not positioned on a reader");
+            }
+            return _start_line;
+        }
+
+        public long getStartColumn()
+        {
+            if (_start_column < 1) {
+                throw new IllegalStateException("not positioned on a reader");
+            }
+            return _start_column;
+        }
+
+        public long getFinishLine()
+        {
+            throw new RuntimeException("E_NOT_IMPL - line and column position is not yet available");
+        }
+
+        public long getFinishColumn()
+        {
+            throw new RuntimeException("E_NOT_IMPL - line and column position is not yet available");
+        }
+
+        long getStartPosition()
+        {
+            return _start_char_offset;
+        }
+
+        IonType getContainerType() {
+            return _container_type;
+        }
+
+        UnifiedDataPageX getDataPage() {
+            return _data_page;
+        }
+    }
+
+    public Span currentSpan()
+    {
+        return this.getCurrentPosition();
+    }
+
+    public IonReaderPosition getCurrentPosition()
+    {
+        if (getType() == null) {
+            throw new IllegalStateException("must be on a value");
+        }
+        IonReaderTextPosition pos = new IonReaderTextPosition(this);
+        return pos;
+    }
+
+    public void hoist(Span span)
+    {
+        if (!(span instanceof IonReaderTextPosition)) {
+            throw new IllegalArgumentException("position must match the reader");
+        }
+        IonReaderTextPosition text_span = (IonReaderTextPosition)span;
+
+        UnifiedInputStreamX current_stream = _scanner.getSourceStream();
+        UnifiedDataPageX    curr_page      = text_span.getDataPage();
+        int                 array_offset   = (int)text_span._start_char_offset;
+//int                 base_offset    = curr_page._base_offset;
+//int                 offset_delta   = array_offset - base_offset;
+        int                 page_limit     = curr_page._page_limit;
+        int                 array_length   = page_limit - array_offset;
+
+        // we're going to cast this value down.  Since we only support
+        // in memory single buffered chars here this is ok.
+        assert(text_span.getStartPosition() <= Integer.MAX_VALUE);
+
+        // Now - create a new stream
+        // TODO: this is a pretty expensive way to do this. UnifiedInputStreamX
+        //       needs to have a reset method added that can reset the position
+        //       and length of the input to be some subset of the original source.
+        //       This would avoid a lot of object creation (and wasted destruction.
+        //       But this is a time-to-market solution here.  The change can be
+        //       made as support for streams is added.
+        UnifiedInputStreamX iis;
+        if (current_stream._is_byte_data) {
+            byte[] bytes = current_stream.getByteArray();
+            assert(bytes != null);
+            iis = UnifiedInputStreamX.makeStream(
+                                            bytes
+                                          , array_offset
+                                          , array_length
+                                      );
+        }
+        else {
+            char[] chars = current_stream.getCharArray();
+            assert(chars != null);
+            iis = UnifiedInputStreamX.makeStream(
+                                            chars
+                                          , array_offset
+                                          , array_length
+                                      );
+        }
+        IonType container = text_span.getContainerType();
+        re_init(iis, container);
+    }
+
+    public void seek(IonReaderPosition position)
+    {
+        hoist(position);
+        return;
+    }
+
 }

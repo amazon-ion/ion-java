@@ -83,6 +83,14 @@ public class IonReaderTextRawTokensX
     public long getLineNumber() { return _line_count; }
     public long getLineOffset() { return _stream.getPosition() - _line_starting_position; }
 
+    UnifiedInputStreamX getSourceStream() { return this._stream; }
+
+    public final boolean isBufferedInput()
+    {
+        boolean is_buffered = ! _stream._is_stream;
+        return is_buffered;
+    }
+
     protected String input_position() {
         String s = " at line "
                 + getLineNumber()
@@ -507,6 +515,20 @@ public class IonReaderTextRawTokensX
         }
         _unfinished_token = false;
         return c;
+    }
+
+    public final long getStartingOffset() throws IOException
+    {
+        int c;
+        if (_unfinished_token) {
+            c = skip_to_end(null);
+        }
+        else {
+            c = skip_over_whitespace();
+        }
+        unread_char(c);
+        long pos = _stream.getPosition();
+        return pos;
     }
 
     public final int nextToken() throws IOException

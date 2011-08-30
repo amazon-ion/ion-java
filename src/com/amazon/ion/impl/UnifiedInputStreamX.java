@@ -133,7 +133,11 @@ public abstract class UnifiedInputStreamX
      * @return current "file" position
      */
     public long getPosition() {
-        long file_pos = _buffer.getCurrentPage().getFilePosition(_pos);
+        long file_pos = 0;
+        UnifiedDataPageX page = _buffer.getCurrentPage();
+        if (page != null) {
+            file_pos = page.getFilePosition(_pos);
+        }
         return file_pos;
     }
 

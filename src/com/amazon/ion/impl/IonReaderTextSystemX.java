@@ -53,14 +53,16 @@ public class IonReaderTextSystemX
         _system = system;
         UnifiedInputStreamX iis;
         iis = UnifiedInputStreamX.makeStream(chars, offset, length);
-        init(iis);
+        init_once();
+        init(iis, IonType.DATAGRAM);
     }
     protected IonReaderTextSystemX(IonSystem system, CharSequence chars, int offset, int length) {
         super();
         _system = system;
         UnifiedInputStreamX iis;
         iis = UnifiedInputStreamX.makeStream(chars, offset, length);
-        init(iis);
+        init_once();
+        init(iis, IonType.DATAGRAM);
     }
     protected IonReaderTextSystemX(IonSystem system, Reader userChars) {
         super();
@@ -72,14 +74,16 @@ public class IonReaderTextSystemX
         catch (IOException e) {
             throw new IonException(e);
         }
-        init(iis);
+        init_once();
+        init(iis, IonType.DATAGRAM);
     }
     protected IonReaderTextSystemX(IonSystem system, byte[] bytes, int offset, int length) {
         super();
         _system = system;
         UnifiedInputStreamX iis;
         iis = UnifiedInputStreamX.makeStream(bytes, offset, length);
-        init(iis);
+        init_once();
+        init(iis, IonType.DATAGRAM);
     }
     protected IonReaderTextSystemX(IonSystem system, InputStream userBytes) {
         super();
@@ -91,7 +95,8 @@ public class IonReaderTextSystemX
         catch (IOException e) {
             throw new IonException(e);
         }
-        init(iis);
+        init_once();
+        init(iis, IonType.DATAGRAM);
     }
     protected IonReaderTextSystemX(IonSystem system, File file) {
         super();
@@ -104,12 +109,14 @@ public class IonReaderTextSystemX
         catch (IOException e) {
             throw new IonException(e);
         }
-        init(iis);
+        init_once();
+        init(iis, IonType.DATAGRAM);
     }
     protected IonReaderTextSystemX(IonSystem system, UnifiedInputStreamX iis) {
         super();
         _system = system;
-        init(iis);
+        init_once();
+        init(iis, IonType.DATAGRAM);
     }
 
     public IonSystem getSystem()

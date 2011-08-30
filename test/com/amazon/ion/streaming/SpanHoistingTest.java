@@ -34,9 +34,9 @@ public class SpanHoistingTest
 
     @Inject("readerMaker") // TODO ION-230 ION-231
     public static final ReaderMaker[] READER_MAKERS =
-        ReaderMaker.valuesExcluding(ReaderMaker.FROM_STRING,
-                                    ReaderMaker.FROM_BYTES_TEXT,
-                                    ReaderMaker.FROM_BYTES_OFFSET_TEXT,
+        ReaderMaker.valuesExcluding(// ReaderMaker.FROM_STRING,
+                                    // ReaderMaker.FROM_BYTES_TEXT,
+                                    // ReaderMaker.FROM_BYTES_OFFSET_TEXT,
                                     ReaderMaker.FROM_INPUT_STREAM_BINARY,
                                     ReaderMaker.FROM_INPUT_STREAM_TEXT);
 
@@ -95,8 +95,15 @@ public class SpanHoistingTest
     {
         for (int i = dg.size() - 1; i >= 0; i--)
         {
+if (i == 7) {  // FIXME - debug code - remove
+    System.err.println("7 is the bad one");
+}
             hoist(positions[i]);
-            assertEquals(dg.get(i).getType(), in.next());
+            IonType dg_type = dg.get(i).getType();
+            IonType span_type = in.next();
+            if (dg_type.equals(span_type) == false) {
+                assertEquals(dg_type, span_type);
+            }
             expectTopLevel();
             IonAssert.assertIonEquals(dg.get(i), system().newValue(in));
         }
@@ -168,9 +175,9 @@ public class SpanHoistingTest
         Span sPos = sr.currentSpan();
         expectTopEof();
 
-
         hoist(fPos);
-        assertEquals(IonType.SYMBOL, in.next());
+        IonType in_type = in.next();
+        assertEquals(IonType.SYMBOL, in_type);
         expectTopLevel();
         assertEquals("v", in.stringValue());
         expectTopEof();
