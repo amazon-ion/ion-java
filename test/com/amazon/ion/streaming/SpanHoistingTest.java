@@ -85,9 +85,7 @@ public class SpanHoistingTest
     {
         sr.hoist(s);
         expectTopLevel();
-        if (! myReaderMaker.sourceIsBinary()) {   // FIXME ION-234
-            expectNoCurrentValue();
-        }
+        expectNoCurrentValue();
     }
 
 
@@ -107,6 +105,20 @@ public class SpanHoistingTest
         expectTopEof();
     }
 
+    @Test
+    public void testTrivialSpan()
+    {
+        String text = "null";
+        read(text);
+        in.next();
+        Span s = sr.currentSpan();
+        expectTopEof();
+
+        hoist(s);
+        assertSame(IonType.NULL, in.next());
+        expectTopLevel();
+        expectTopEof();
+    }
 
     @Test
     public void testWalkingBackwards()
@@ -171,6 +183,7 @@ public class SpanHoistingTest
         in.next();
         Span sPos = sr.currentSpan();
         expectTopEof();
+
 
         hoist(fPos);
         IonType in_type = in.next();

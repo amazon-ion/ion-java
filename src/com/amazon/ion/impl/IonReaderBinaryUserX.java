@@ -193,12 +193,16 @@ class IonReaderBinaryUserX
 
         // and the other misc state variables we had
         // read past before getPosition gets called
-        _state         = pos._state;
-        _value_type    = pos._value_type;
-        _value_is_null = pos._value_is_null;
-        _value_is_true = pos._value_is_true;
+        //   jonker: Don't do this, we'll re-read the data from the stream.
+        //           Otherwise, this reader will be in the wrong state.
+        //           For example, getType() will return non-null but that
+        //           shouldn't happen until the user calls next().
+//        _state         = pos._state;
+//        _value_type    = pos._value_type;
+//        _value_is_null = pos._value_is_null;
+//        _value_is_true = pos._value_is_true;
 
-        _is_in_struct = false;
+//        _is_in_struct = false;
     }
 
     public void hoist(Span span)
