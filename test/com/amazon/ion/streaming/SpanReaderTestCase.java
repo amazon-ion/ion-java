@@ -8,6 +8,7 @@ import com.amazon.ion.IonTestCase;
 import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.Span;
 import com.amazon.ion.SpanReader;
+import com.amazon.ion.TextSpan;
 import com.amazon.ion.junit.IonAssert;
 
 /**
@@ -16,11 +17,32 @@ import com.amazon.ion.junit.IonAssert;
 public abstract class SpanReaderTestCase
     extends IonTestCase
 {
+    /**
+     * These are the readers that don't support the {@link SpanReader} facet.
+     */
     public static final ReaderMaker[] NON_SPAN_READERS =
     {
         ReaderMaker.FROM_INPUT_STREAM_TEXT    // TODO ION-231
     };
 
+    /**
+     * These are the readers that don't support {@link TextSpan}s.
+     */
+    public static final ReaderMaker[] NON_TEXT_SPAN_READERS =
+    {
+        ReaderMaker.FROM_STRING,               // TODO ION-240
+        ReaderMaker.FROM_BYTES_BINARY,
+        ReaderMaker.FROM_BYTES_TEXT,           // TODO ION-240
+        ReaderMaker.FROM_BYTES_OFFSET_TEXT,    // TODO how does offset affect position?
+        ReaderMaker.FROM_BYTES_OFFSET_BINARY,
+        ReaderMaker.FROM_INPUT_STREAM_TEXT,    // TODO ION-231
+        ReaderMaker.FROM_INPUT_STREAM_BINARY,
+        ReaderMaker.FROM_DOM
+    };
+
+    /**
+     * These are the readers that don't support {@link SpanReader#hoist(Span)}.
+     */
     public static final ReaderMaker[] NON_HOISTING_READERS =
     {
         ReaderMaker.FROM_INPUT_STREAM_BINARY,    // TODO ION-231

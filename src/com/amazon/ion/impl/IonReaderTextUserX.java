@@ -4,12 +4,11 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
-import com.amazon.ion.IonException;
-import com.amazon.ion.Span;
-import com.amazon.ion.TextSpan;
 import com.amazon.ion.IonCatalog;
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
+import com.amazon.ion.Span;
 import com.amazon.ion.SymbolTable;
 import java.io.File;
 import java.io.InputStream;
@@ -318,7 +317,7 @@ public class IonReaderTextUserX
 
     static class IonReaderTextPosition
         extends IonReaderPositionBase
-        implements TextSpan
+//        implements TextSpan   FIXME ION-240
     {
         private UnifiedDataPageX _data_page;
         private long             _start_char_offset;
@@ -344,6 +343,10 @@ public class IonReaderTextUserX
             _start_char_offset = reader._value_start_offset;
             _container_type = reader.getContainerType();
 
+            // FIXME ION-240
+            // These are not correct, since in general the reader has already
+            // scanned beyond the start of the value and is now somewhere in
+            // the middle of it.
             _start_line = reader.getLineNumber();
             _start_column = reader.getLineOffset();
         }

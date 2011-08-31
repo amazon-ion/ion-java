@@ -1,9 +1,5 @@
 // Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
-import com.amazon.ion.streaming.NonHoistingReaderTest;
-
-import com.amazon.ion.streaming.NonSpanReaderTest;
-
 import com.amazon.ion.AnnotationEscapesTest;
 import com.amazon.ion.AssertionsEnabledTest;
 import com.amazon.ion.BadIonTest;
@@ -53,10 +49,14 @@ import com.amazon.ion.streaming.BinaryStreamingTest;
 import com.amazon.ion.streaming.CurrentSpanTest;
 import com.amazon.ion.streaming.GoodIonStreamingTest;
 import com.amazon.ion.streaming.MiscStreamingTest;
+import com.amazon.ion.streaming.NonHoistingReaderTest;
+import com.amazon.ion.streaming.NonSpanReaderTest;
+import com.amazon.ion.streaming.NonTextSpanTest;
 import com.amazon.ion.streaming.ReaderOctetSpanTest;
 import com.amazon.ion.streaming.ReaderSkippingTest;
 import com.amazon.ion.streaming.RoundTripStreamingTest;
 import com.amazon.ion.streaming.SpanHoistingTest;
+import com.amazon.ion.streaming.TextSpanTest;
 import com.amazon.ion.system.IonSystemBuilderTest;
 import com.amazon.ion.system.SimpleCatalogTest;
 import com.amazon.ion.util.EquivalenceTest;
@@ -66,6 +66,7 @@ import com.amazon.ion.util.PrinterTest;
 import com.amazon.ion.util.TextTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
+
 
 /**
  * Runs all tests for the Ion project.
@@ -152,6 +153,8 @@ import org.junit.runners.Suite;
     ReaderOctetSpanTest.class,
     NonSpanReaderTest.class,
     CurrentSpanTest.class,
+    NonTextSpanTest.class,
+    TextSpanTest.class,
     NonHoistingReaderTest.class,
     SpanHoistingTest.class,
 
