@@ -2,12 +2,10 @@
 
 package com.amazon.ion.streaming;
 
-import com.amazon.ion.Facets;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonType;
 import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.Span;
-import com.amazon.ion.SpanReader;
 import com.amazon.ion.TestUtils;
 import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.junit.Injected.Inject;
@@ -23,25 +21,16 @@ import org.junit.Test;
 public class SpanHoistingTest
     extends SpanReaderTestCase
 {
+    public SpanHoistingTest()
+    {
+        super(/* spanReaderRequired */ true);
+    }
+
+
     @Inject("readerMaker") // TODO ION-231
     public static final ReaderMaker[] READER_MAKERS =
         ReaderMaker.valuesExcluding(ReaderMaker.FROM_INPUT_STREAM_BINARY,
                                     ReaderMaker.FROM_INPUT_STREAM_TEXT);
-
-
-
-    protected void read(byte[] ionData)
-    {
-        in = myReaderMaker.newReader(system(), ionData);
-        sr = Facets.assumeFacet(SpanReader.class, in);
-    }
-
-    protected void read(String ionText)
-    {
-        in = myReaderMaker.newReader(system(), ionText);
-        sr = Facets.assumeFacet(SpanReader.class, in);
-    }
-
 
 
     private void checkSpans(IonDatagram dg, Span[] positions)

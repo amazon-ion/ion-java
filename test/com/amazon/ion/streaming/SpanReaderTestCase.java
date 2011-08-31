@@ -2,6 +2,7 @@
 
 package com.amazon.ion.streaming;
 
+import com.amazon.ion.Facets;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.ReaderMaker;
@@ -25,6 +26,36 @@ public abstract class SpanReaderTestCase
 
     protected IonReader in;
     protected SpanReader sr;
+    protected final boolean mySpanReaderRequired;
+
+    public SpanReaderTestCase(boolean spanReaderRequired)
+    {
+        mySpanReaderRequired = spanReaderRequired;
+    }
+
+    protected void initSpanReader()
+    {
+        if (mySpanReaderRequired)
+        {
+            sr = Facets.assumeFacet(SpanReader.class, in);
+        }
+        else
+        {
+            sr = in.asFacet(SpanReader.class);
+        }
+    }
+
+    protected final void read(byte[] ionData)
+    {
+        in = myReaderMaker.newReader(system(), ionData);
+        initSpanReader();
+    }
+
+    protected final void read(String ionText)
+    {
+        in = myReaderMaker.newReader(system(), ionText);
+        initSpanReader();
+    }
 
 
 

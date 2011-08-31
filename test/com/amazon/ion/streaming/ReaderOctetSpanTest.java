@@ -22,6 +22,11 @@ import org.junit.Test;
 public class ReaderOctetSpanTest
     extends SpanReaderTestCase
 {
+    public ReaderOctetSpanTest()
+    {
+        super(/* spanReaderRequired */ false);
+    }
+
     /**
      * None of these provide stable octet offsets.
      */
@@ -35,17 +40,6 @@ public class ReaderOctetSpanTest
                                     ReaderMaker.FROM_DOM);
 
 
-    private void read(byte[] ionData)
-    {
-        in = myReaderMaker.newReader(system(), ionData);
-        sr = in.asFacet(SpanReader.class);
-    }
-
-    protected void read(String ionText)
-    {
-        in = myReaderMaker.newReader(system(), ionText);
-        sr = in.asFacet(SpanReader.class);
-    }
 
     private InputStream repeatStream(final String text, final long times)
     {

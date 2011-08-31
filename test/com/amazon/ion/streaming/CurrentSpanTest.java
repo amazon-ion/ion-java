@@ -6,7 +6,6 @@ import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonType;
 import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.Span;
-import com.amazon.ion.SpanReader;
 import com.amazon.ion.TestUtils;
 import com.amazon.ion.junit.Injected.Inject;
 import org.junit.Test;
@@ -17,6 +16,12 @@ import org.junit.Test;
 public class CurrentSpanTest
     extends SpanReaderTestCase
 {
+    public CurrentSpanTest()
+    {
+        super(/* spanReaderRequired */ false);
+    }
+
+
     /**
      * DON'T DISABLE VALUES HERE! All readers must pass these tests if they
      * provide the SpanReader facet.
@@ -24,19 +29,6 @@ public class CurrentSpanTest
     @Inject("readerMaker")
     public static final ReaderMaker[] READER_MAKERS = ReaderMaker.values();
 
-
-
-    protected void read(byte[] ionData)
-    {
-        in = myReaderMaker.newReader(system(), ionData);
-        sr = in.asFacet(SpanReader.class);
-    }
-
-    protected void read(String ionText)
-    {
-        in = myReaderMaker.newReader(system(), ionText);
-        sr = in.asFacet(SpanReader.class);
-    }
 
 
     @Test
