@@ -4,8 +4,6 @@ package com.amazon.ion.streaming;
 
 import com.amazon.ion.Facets;
 import com.amazon.ion.IonDatagram;
-import com.amazon.ion.IonReader;
-import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.Span;
@@ -23,70 +21,27 @@ import org.junit.Test;
  *
  */
 public class SpanHoistingTest
-    extends IonTestCase
+    extends SpanReaderTestCase
 {
-    private ReaderMaker myReaderMaker;
-
-    public void setReaderMaker(ReaderMaker maker)
-    {
-        myReaderMaker = maker;
-    }
-
-    @Inject("readerMaker") // TODO ION-230 ION-231
+    @Inject("readerMaker") // TODO ION-231
     public static final ReaderMaker[] READER_MAKERS =
-        ReaderMaker.valuesExcluding(// ReaderMaker.FROM_STRING,
-                                    // ReaderMaker.FROM_BYTES_TEXT,
-                                    // ReaderMaker.FROM_BYTES_OFFSET_TEXT,
-                                    ReaderMaker.FROM_INPUT_STREAM_BINARY,
+        ReaderMaker.valuesExcluding(ReaderMaker.FROM_INPUT_STREAM_BINARY,
                                     ReaderMaker.FROM_INPUT_STREAM_TEXT);
 
 
-    private IonReader in;
-    private SpanReader sr;
 
-
-
-    private void expectNoCurrentValue()
-    {
-        IonAssert.assertNoCurrentValue(in);
-    }
-
-    private void expectTopLevel()
-    {
-        IonAssert.assertTopLevel(in);
-    }
-
-    private void expectEof()
-    {
-        IonAssert.assertEof(in);
-    }
-
-    private void expectTopEof()
-    {
-        IonAssert.assertTopEof(in);
-    }
-
-
-
-    private void read(byte[] ionData)
+    protected void read(byte[] ionData)
     {
         in = myReaderMaker.newReader(system(), ionData);
         sr = Facets.assumeFacet(SpanReader.class, in);
     }
 
-    private void read(String ionText)
+    protected void read(String ionText)
     {
         in = myReaderMaker.newReader(system(), ionText);
         sr = Facets.assumeFacet(SpanReader.class, in);
     }
 
-
-    private void hoist(Span s)
-    {
-        sr.hoist(s);
-        expectTopLevel();
-        expectNoCurrentValue();
-    }
 
 
     private void checkSpans(IonDatagram dg, Span[] positions)
@@ -301,77 +256,4 @@ public class SpanHoistingTest
 
     //========================================================================
     // Failure cases
-
-    @Test(expected=IllegalStateException.class)
-    public void testCurrentSpanBeforeFirstTopLevel()
-    {
-        read("foo");
-        sr.currentSpan();
-    }
-
-
-    private void callCurrentSpanBeforeFirstChild(String ionText)
-    {
-        read(ionText);
-        in.next();
-        in.stepIn();
-        sr.currentSpan();
-    }
-
-    @Test(expected=IllegalStateException.class)
-    public void testCurrentSpanBeforeFirstListChild()
-    {
-        callCurrentSpanBeforeFirstChild("[v]");
-    }
-
-    @Test(expected=IllegalStateException.class)
-    public void testCurrentSpanBeforeFirstSexpChild()
-    {
-        callCurrentSpanBeforeFirstChild("(v)");
-    }
-
-    @Test(expected=IllegalStateException.class)
-    public void testCurrentSpanBeforeFirstStructChild()
-    {
-        callCurrentSpanBeforeFirstChild("{f:v}");
-    }
-
-
-    private void callCurrentSpanAfterLastChild(String ionText)
-    {
-        read(ionText);
-        in.next();
-        in.stepIn();
-        in.next();
-        in.next();
-        sr.currentSpan();
-    }
-
-    @Test(expected=IllegalStateException.class)
-    public void testCurrentSpanAfterLastListChild()
-    {
-        callCurrentSpanAfterLastChild("[v]");
-    }
-
-    @Test(expected=IllegalStateException.class)
-    public void testCurrentSpanAfterLastSexpChild()
-    {
-        callCurrentSpanAfterLastChild("(v)");
-    }
-
-    @Test(expected=IllegalStateException.class)
-    public void testCurrentSpanAfterLastStructChild()
-    {
-        callCurrentSpanAfterLastChild("{f:v}");
-    }
-
-
-    @Test(expected=IllegalStateException.class)
-    public void testCurrentSpanAtEndOfStream()
-    {
-        read("foo");
-        in.next();
-        assertEquals(null, in.next());
-        sr.currentSpan();
-    }
 }

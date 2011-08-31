@@ -46,6 +46,7 @@ import com.amazon.ion.impl.SymbolTableTest;
 import com.amazon.ion.impl.TreeReaderTest;
 import com.amazon.ion.streaming.BadIonStreamingTest;
 import com.amazon.ion.streaming.BinaryStreamingTest;
+import com.amazon.ion.streaming.CurrentSpanTest;
 import com.amazon.ion.streaming.GoodIonStreamingTest;
 import com.amazon.ion.streaming.MiscStreamingTest;
 import com.amazon.ion.streaming.ReaderOctetSpanTest;
@@ -145,6 +146,7 @@ import org.junit.runners.Suite;
     RoundTripStreamingTest.class,
     ReaderSkippingTest.class,
     ReaderOctetSpanTest.class,
+    CurrentSpanTest.class,
     SpanHoistingTest.class,
 
     IonSystemTest.class,
