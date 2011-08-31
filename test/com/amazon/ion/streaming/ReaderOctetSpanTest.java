@@ -3,13 +3,12 @@
 package com.amazon.ion.streaming;
 
 import com.amazon.ion.BinaryTest;
-import com.amazon.ion.IonReader;
-import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.OctetSpan;
+import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.SpanReader;
 import com.amazon.ion.impl.IonReaderOctetPosition;
-import java.io.ByteArrayInputStream;
+import com.amazon.ion.junit.Injected.Inject;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,24 +20,31 @@ import org.junit.Test;
  *
  */
 public class ReaderOctetSpanTest
-    extends IonTestCase
+    extends SpanReaderTestCase
 {
-    private IonReader in;
-    private SpanReader p;
+    /**
+     * None of these provide stable octet offsets.
+     */
+    @Inject("readerMaker")
+    public static final ReaderMaker[] READER_MAKERS =
+        ReaderMaker.valuesExcluding(ReaderMaker.FROM_STRING,
+                                    ReaderMaker.FROM_BYTES_TEXT,
+                                    ReaderMaker.FROM_BYTES_OFFSET_TEXT,
+                                    ReaderMaker.FROM_BYTES_OFFSET_BINARY,
+                                    ReaderMaker.FROM_INPUT_STREAM_TEXT,
+                                    ReaderMaker.FROM_DOM);
 
-    private IonReader read(byte[] binary)
+
+    private void read(byte[] ionData)
     {
-        in = system().newReader(binary);
-        p = in.asFacet(SpanReader.class);
-        return in;
+        in = myReaderMaker.newReader(system(), ionData);
+        sr = in.asFacet(SpanReader.class);
     }
 
-    private IonReader readAsStream(String text)
+    protected void read(String ionText)
     {
-        ByteArrayInputStream bytesIn = new ByteArrayInputStream(encode(text));
-        in = system().newReader(bytesIn);
-        p = in.asFacet(SpanReader.class);
-        return in;
+        in = myReaderMaker.newReader(system(), ionText);
+        sr = in.asFacet(SpanReader.class);
     }
 
     private InputStream repeatStream(final String text, final long times)
@@ -99,7 +105,7 @@ public class ReaderOctetSpanTest
 
     private void checkCurrentSpan(long start, long finish)
     {
-        OctetSpan span = p.currentSpan().asFacet(OctetSpan.class);
+        OctetSpan span = sr.currentSpan().asFacet(OctetSpan.class);
         assertNotNull(span);
         assertEquals(start,  span.getStartOffset());
         assertEquals(finish, span.getFinishOffset());
@@ -107,7 +113,7 @@ public class ReaderOctetSpanTest
         // Transitional APIs
         long len = finish - start;
 
-        IonReaderOctetPosition pos = p.currentSpan().asFacet(IonReaderOctetPosition.class);
+        IonReaderOctetPosition pos = sr.currentSpan().asFacet(IonReaderOctetPosition.class);
         assertNotNull(pos);
         assertEquals(start,  pos.getOffset());
         assertEquals(start,  pos.getStartOffset());
@@ -119,7 +125,7 @@ public class ReaderOctetSpanTest
     @Test
     public void testGetPosFromStream()
     {
-        readAsStream("'''hello''' 1 2 3 4 5 6 7 8 9 10 '''Kumo the fluffy dog! He is so fluffy and yet so happy!'''");
+        read("'''hello''' 1 2 3 4 5 6 7 8 9 10 '''Kumo the fluffy dog! He is so fluffy and yet so happy!'''");
         assertSame(IonType.STRING, in.next());
         checkCurrentSpan(4, 10);
 
@@ -164,7 +170,7 @@ public class ReaderOctetSpanTest
         in = system().newReader(
             repeatStream(text, repeat) // make sure we go past Integer.MAX_VALUE
         );
-        p = in.asFacet(SpanReader.class);
+        sr = in.asFacet(SpanReader.class);
 
         long iterLimit = repeat - 10;
         for (long i = 0; i < iterLimit; i++)
