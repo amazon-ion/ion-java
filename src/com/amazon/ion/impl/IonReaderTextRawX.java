@@ -6,11 +6,10 @@ import static com.amazon.ion.impl.IonTokenConstsX.TOKEN_CLOSE_BRACE;
 import static com.amazon.ion.impl.IonTokenConstsX.TOKEN_CLOSE_PAREN;
 import static com.amazon.ion.impl.IonTokenConstsX.TOKEN_CLOSE_SQUARE;
 
-import com.amazon.ion.SpanReader;
-
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonType;
+import com.amazon.ion.SpanReader;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
 import com.amazon.ion.impl.IonScalarConversionsX.ValueVariant;
@@ -295,7 +294,10 @@ public abstract class IonReaderTextRawX
         if ((facetType == IonReaderWithPosition.class) ||
             (facetType == SpanReader.class))
         {
-            return facetType.cast(this);
+            if (_scanner.isBufferedInput())
+            {
+                return facetType.cast(this);
+            }
         }
         return null;
     }

@@ -27,10 +27,9 @@ public class SpanHoistingTest
     }
 
 
-    @Inject("readerMaker") // TODO ION-231
+    @Inject("readerMaker")
     public static final ReaderMaker[] READER_MAKERS =
-        ReaderMaker.valuesExcluding(ReaderMaker.FROM_INPUT_STREAM_BINARY,
-                                    ReaderMaker.FROM_INPUT_STREAM_TEXT);
+        ReaderMaker.valuesExcluding(NON_HOISTING_READERS);
 
 
     private void checkSpans(IonDatagram dg, Span[] positions)

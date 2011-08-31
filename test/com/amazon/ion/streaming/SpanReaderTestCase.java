@@ -16,6 +16,18 @@ import com.amazon.ion.junit.IonAssert;
 public abstract class SpanReaderTestCase
     extends IonTestCase
 {
+    public static final ReaderMaker[] NON_SPAN_READERS =
+    {
+        ReaderMaker.FROM_INPUT_STREAM_TEXT    // TODO ION-231
+    };
+
+    public static final ReaderMaker[] NON_HOISTING_READERS =
+    {
+        ReaderMaker.FROM_INPUT_STREAM_BINARY,    // TODO ION-231
+        ReaderMaker.FROM_INPUT_STREAM_TEXT
+    };
+
+
     protected ReaderMaker myReaderMaker;
 
     public void setReaderMaker(ReaderMaker maker)
