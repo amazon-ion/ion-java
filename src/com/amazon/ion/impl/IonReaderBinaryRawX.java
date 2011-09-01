@@ -251,7 +251,20 @@ abstract public class IonReaderBinaryRawX
                     }
                     else {
                         // if it's not a bvm then it's an ordinary annotated value
+
+                        // The next call changes our positions to that of the
+                        // wrapped value, but we need to remember the overall
+                        // wrapper position.
+                        int wrapperStart = _position_start;
+                        int wrapperLen   = _position_len;
+
                         _value_type = load_annotation_start_with_value_type();
+
+                        // Wrapper and wrapped value should finish together!
+                        assert ( wrapperStart + wrapperLen
+                                 == _position_start + _position_len);
+                        _position_start = wrapperStart;
+                        _position_len   = wrapperLen;
                     }
                 }
                 else {

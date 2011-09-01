@@ -205,8 +205,6 @@ public class SpanHoistingTest
     public void testHoistingAnnotatedTopLevelValue()
         throws IOException
     {
-        if (myReaderMaker.sourceIsBinary()) return; // TODO ION-229
-
         read("a::v");
         in.next();
         Span span = sr.currentSpan();
@@ -224,8 +222,6 @@ public class SpanHoistingTest
     public void testHoistingAnnotatedContainedValue()
         throws IOException
     {
-        if (myReaderMaker.sourceIsBinary()) return; // TODO ION-229
-
         read("[a::v]");
         in.next();
         in.stepIn();
