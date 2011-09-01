@@ -1,6 +1,8 @@
 // Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion.streaming;
 
+import static com.amazon.ion.impl.IonImplUtils.intIterator;
+
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonDatagram;
@@ -15,6 +17,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.IonTokenReader;
+import com.amazon.ion.junit.IonAssert;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -1012,5 +1015,15 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         assertEquals(null, r.next());
     }
 
+    @Test
+    public void testIterateTypeAnnotationIds()
+    throws Exception
+    {
+        byte[] ionData = encode("ann::ben::null");
 
+        IonReader r = system().newReader(ionData);
+        r.next();
+        Iterator<Integer> typeIds = r.iterateTypeAnnotationIds();
+        IonAssert.assertIteratorEquals(intIterator(10, 11), typeIds);
+    }
 }

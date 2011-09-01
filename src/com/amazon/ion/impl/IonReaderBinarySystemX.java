@@ -66,6 +66,12 @@ class IonReaderBinarySystemX
 
     public Iterator<Integer> iterateTypeAnnotationIds()
     {
+        try {
+            load_annotations();
+        }
+        catch (IOException e) {
+            error(e);
+        }
         Iterator<Integer> it = new IonReaderTextUserX.IntIterator(_annotation_ids, 0, _annotation_count);
         return it;
     }
