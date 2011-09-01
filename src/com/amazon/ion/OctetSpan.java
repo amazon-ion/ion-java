@@ -3,14 +3,13 @@
 package com.amazon.ion;
 
 /**
- * Exposes the edges of a span in the form of zero-based octet offsets within
- * the source stream.
+ * Exposes the edges of a {@link Span} in the form of zero-based octet offsets
+ * within the source stream.
  * <p>
  * As with all spans, positions lie <em>between</em> values, and when the start
  * and finish positions are equal, the span is said to be <em>empty</em>.
  */
 public interface OctetSpan
-    extends Span
 {
     /**
      * Returns this span's start position as an octet offset within the source

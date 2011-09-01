@@ -3,14 +3,13 @@
 package com.amazon.ion;
 
 /**
- * Exposes the edges of a span in the form of <em>one-based</em> line and
- * column numbers within the source text stream.
+ * Exposes the edges of a {@link Span} in the form of <em>one-based</em> line
+ * and column numbers within the source text stream.
  * <p>
  * As with all spans, positions lie <em>between</em> values, and when the start
  * and finish positions are equal, the span is said to be <em>empty</em>.
  */
 public interface TextSpan
-    extends Span
 {
     /**
      * Returns the line number of this span's start position, counting from
