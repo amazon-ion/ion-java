@@ -342,7 +342,8 @@ abstract public class IonReaderBinaryRawX
 
         return value_type;
     }
-    protected final int load_annotations() throws IOException {
+
+    protected final int load_annotations() {
         switch (_state) {
         case S_BEFORE_VALUE:
         case S_AFTER_VALUE:
@@ -351,13 +352,20 @@ abstract public class IonReaderBinaryRawX
                 _input._save_points.savePointPushActive(_annotations, getPosition(), 0);
                 _local_remaining =  NO_LIMIT; // limit will be handled by the save point
                 _annotation_count = 0;
-                do {
-                    int a = readVarUIntOrEOF();
-                    if (a == UnifiedInputStreamX.EOF) {
-                        break;
-                    }
-                    load_annotation_append(a);
-                } while (!isEOF());
+
+                try {
+                    do {
+                        int a = readVarUIntOrEOF();
+                        if (a == UnifiedInputStreamX.EOF) {
+                            break;
+                        }
+                        load_annotation_append(a);
+                    } while (!isEOF());
+                }
+                catch (IOException e) {
+                    error(e);
+                }
+
                 _input._save_points.savePointPopActive(_annotations);
                 _local_remaining = local_remaining_save;
                 _annotations.clear();
@@ -369,6 +377,7 @@ abstract public class IonReaderBinaryRawX
         }
         return _annotation_count;
     }
+
     private final void load_annotation_append(int a)
     {
         int oldlen = _annotation_ids.length;

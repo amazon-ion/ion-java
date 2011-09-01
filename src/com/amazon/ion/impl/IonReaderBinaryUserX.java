@@ -329,12 +329,7 @@ class IonReaderBinaryUserX
     @Override
     public String[] getTypeAnnotations()
     {
-        try {
-            load_annotations();
-        }
-        catch (IOException e) {
-            error(e);
-        }
+        load_annotations();
         String[] anns;
         if (_annotation_count < 1) {
             anns = IonImplUtils.EMPTY_STRING_ARRAY;

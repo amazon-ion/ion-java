@@ -3,6 +3,7 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_INT_ARRAY;
+import static com.amazon.ion.impl.IonImplUtils.intIterator;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
@@ -66,24 +67,14 @@ class IonReaderBinarySystemX
 
     public Iterator<Integer> iterateTypeAnnotationIds()
     {
-        try {
-            load_annotations();
-        }
-        catch (IOException e) {
-            error(e);
-        }
-        Iterator<Integer> it = new IonReaderTextUserX.IntIterator(_annotation_ids, 0, _annotation_count);
+        load_annotations();
+        Iterator<Integer> it = intIterator(_annotation_ids, _annotation_count);
         return it;
     }
 
     public int[] getTypeAnnotationIds()
     {
-        try {
-            load_annotations();
-        }
-        catch (IOException e) {
-            error(e);
-        }
+        load_annotations();
         int[] anns;
         if (_annotation_count < 1) {
             anns = EMPTY_INT_ARRAY;

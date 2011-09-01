@@ -550,4 +550,13 @@ public final class IonImplUtils // TODO this class shouldn't be public
         }
         return new IntIterator(values);
     }
+
+    public static final Iterator<Integer> intIterator(int[] values, int len)
+    {
+        if (values == null || values.length == 0 || len == 0)
+        {
+            return IonImplUtils.<Integer>emptyIterator();
+        }
+        return new IntIterator(values, 0, len);
+    }
 }

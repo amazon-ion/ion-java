@@ -14,7 +14,6 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.Reader;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 
 /**
  *    The text user reader add support for symbols and recognizes,
@@ -241,38 +240,9 @@ public class IonReaderTextUserX
     public Iterator<Integer> iterateTypeAnnotationIds()
     {
         int[] ids = getTypeAnnotationIds();
-        if (ids == null) return IntIterator.EMPTY_ITERATOR;
-        return new IntIterator(ids);
+        return IonImplUtils.intIterator(ids);
     }
 
-    public static final class IntIterator implements Iterator<Integer>
-    {
-        static IntIterator EMPTY_ITERATOR = new IntIterator(null);
-
-        int[] _values;
-        int   _length;
-        int   _pos;
-
-        public IntIterator(int[] values) {
-            _values = values;
-            _length = (values == null) ? 0 : values.length;
-        }
-        public IntIterator(int[] values, int offset, int len) {
-            _values = values;
-            _pos = offset;
-            _length = len;
-        }
-        public boolean hasNext() {
-            return (_pos < _length);
-        }
-        public Integer next() {
-            if (!hasNext()) throw new NoSuchElementException();
-            return _values[_pos++];
-        }
-        public void remove() {
-            throw new UnsupportedOperationException();
-        }
-    }
 
     //
     //  This code handles the skipped symbol table
