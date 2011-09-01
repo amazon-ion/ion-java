@@ -95,10 +95,11 @@ public final class IonImplUtils // TODO this class shouldn't be public
     /**
      * Replacement for Java6 {@link Arrays#copyOf(byte[], int)}.
      */
-    public static byte[] copyOf(byte[] bytes, int limit)
+    public static byte[] copyOf(byte[] original, int newLength)
     {
-        byte[] result = new byte[limit];
-        System.arraycopy(bytes, 0, result, 0, Math.min(limit, bytes.length));
+        byte[] result = new byte[newLength];
+        System.arraycopy(original, 0, result, 0,
+                         Math.min(newLength, original.length));
         return result;
     }
 
@@ -492,7 +493,7 @@ public final class IonImplUtils // TODO this class shouldn't be public
         }
     }
 
-    public static final Iterator<String> stringIterator(String[] values)
+    public static final Iterator<String> stringIterator(String... values)
     {
         if (values == null || values.length == 0)
         {
@@ -541,7 +542,7 @@ public final class IonImplUtils // TODO this class shouldn't be public
         }
     }
 
-    public static final Iterator<Integer> intIterator(int[] values)
+    public static final Iterator<Integer> intIterator(int... values)
     {
         if (values == null || values.length == 0)
         {
