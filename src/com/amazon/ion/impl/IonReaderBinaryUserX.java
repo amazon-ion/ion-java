@@ -90,6 +90,25 @@ class IonReaderBinaryUserX
         {
             return facetType.cast(this);
         }
+
+        if (facetType == ByteTransferReader.class)
+        {
+            // This is a rather sketchy use of Facets, since the availability
+            // of the facet depends upon the current state of this subject,
+            // and that can change over time.
+
+            // TODO ION-241 Our {@link #transferCurrentValue} doesn't handle
+            //  field names and annotations.
+
+            // Ensure there's a contiguous buffer we can copy.
+            if (_input instanceof UnifiedInputStreamX.FromByteArray
+                && getTypeAnnotationIds().length == 0
+                && ! isInStruct())
+            {
+                return facetType.cast(new ByteTransferReaderFacet());
+            }
+        }
+
         return super.asFacet(facetType);
     }
 
@@ -214,7 +233,6 @@ class IonReaderBinaryUserX
 
         seek((IonReaderBinaryPosition) span);
     }
-
 
     @Override
     public IonType next()
@@ -392,5 +410,34 @@ class IonReaderBinaryUserX
         SymbolTable symbols = _symbol_table_stack[_symbol_table_top];
         _symbol_table_stack[_symbol_table_top] = null;
         return symbols;
+    }
+
+
+    //========================================================================
+
+    private class ByteTransferReaderFacet implements ByteTransferReader
+    {
+        public void transferCurrentValue(IonWriterSystemBinary writer)
+            throws IOException
+        {
+            // Ensure there's a contiguous buffer we can copy.
+            // TODO Copy from a stream should also be possible.
+            if (! (_input instanceof UnifiedInputStreamX.FromByteArray))
+            {
+                throw new UnsupportedOperationException();
+            }
+
+            // TODO ION-241 wrong if current value has a field name or
+            //   annotations since the position is in the wrong place.
+            // TODO when implementing that, be careful to handle the case where
+            //   the writer already holds a pending field name or annotations!
+            //   Meaning: the user has set it and then called writeValue().
+
+            int inOffset = _position_start;
+            int inLen    = _position_len;
+
+            writer._writer.write(_input._bytes, inOffset, inLen);
+            writer.patch(inLen);
+        }
     }
 }

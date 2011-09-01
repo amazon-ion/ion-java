@@ -62,7 +62,14 @@ extends IonTestCase
 
     public void setCopySpeed(CopySpeed speed)
     {
-        IonWriterUserBinary.ourFastCopyEntabled = (speed == CopySpeed.fast);
+        IonWriterUserBinary.ourFastCopyEnabled = (speed == CopySpeed.fast);
+    }
+
+    @After
+    public void resetFastCopyFlag()
+    {
+        IonWriterUserBinary.ourFastCopyEnabled =
+            IonWriterUserBinary.OUR_FAST_COPY_DEFAULT;
     }
 
     //------------------------------------------------------------------------

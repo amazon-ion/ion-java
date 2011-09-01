@@ -85,12 +85,12 @@ public class PrivateDmsdkUtils
 
     public static boolean isFastCopyEnabled()
     {
-        return IonWriterUserBinary.ourFastCopyEntabled;
+        return IonWriterUserBinary.ourFastCopyEnabled;
     }
 
     public static void setFastCopyEnabled(boolean enable)
     {
-        IonWriterUserBinary.ourFastCopyEntabled = enable;
+        IonWriterUserBinary.ourFastCopyEnabled = enable;
     }
 
 

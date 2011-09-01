@@ -850,7 +850,7 @@ public abstract class IonWriterBaseImpl
      */
     public void writeValue(IonReader reader) throws IOException
     {
-        writeValueSlowly(reader);
+        writeValueSlowly(reader.getType(), reader);
     }
 
     /**
@@ -858,17 +858,17 @@ public abstract class IonWriterBaseImpl
      * {@link #writeValue(IonReader)} method since that will cause the
      * optimization test to happen repeatedly.
      */
-    protected final void writeValueSlowly(IonReader reader) throws IOException
+    protected final void writeValueSlowly(IonType type, IonReader reader)
+        throws IOException
     {
         write_value_field_name_helper(reader);
         write_value_annotations_helper(reader);
 
         if (reader.isNullValue()) {
-            // TODO hoist getType
-            this.writeNull(reader.getType());
+            this.writeNull(type);
         }
         else {
-            switch (reader.getType()) {
+            switch (type) {
             case NULL:
                 writeNull();
                 if (_debug_on) System.out.print("-");
@@ -940,9 +940,9 @@ public abstract class IonWriterBaseImpl
     {
         stepIn(type);
         reader.stepIn();
-        while (reader.next() != null)
+        while ((type = reader.next()) != null)
         {
-            writeValueSlowly(reader);
+            writeValueSlowly(type, reader);
         }
         reader.stepOut();
         stepOut();
