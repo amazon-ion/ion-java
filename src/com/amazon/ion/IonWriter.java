@@ -43,8 +43,9 @@ import java.util.Date;
  * Then write each child value in order.
  * Finally, call {@link #stepOut()} to complete the container.
  * <p>
- * Once all the top-level values have been written, the caller must
- * {@link #stepOut()} all the way and call {@link #close()} before accessing
+ * Once all the top-level values have been written (and stepped-out back to
+ * the starting level), the caller must {@link #close()} the writer
+ * (or at least {@link #finish()} it) before accessing
  * the data (for example, via {@link ByteArrayOutputStream#toByteArray()}).
  *
  * <h2>Exception Handling</h2>
@@ -81,10 +82,14 @@ public interface IonWriter
      * <p>
      * For some implementations this may have no effect even when some data is
      * buffered, because it's not always possible to fully write partial data.
-     * In particular, if this is writing binary Ion data, Ion's length-prefixed
+     * In particular, when writing binary Ion data, Ion's length-prefixed
      * encoding requires a complete top-level value to be written at once.
-     * Furthermore, if local symbol tables are being generated, nothing can be
-     * flushed until the the symbol context is reset.
+     * <p>
+     * Furthermore, when writing binary Ion data, <em>nothing</em> can be
+     * flushed until the writer knows that no more local symbols can be
+     * encountered. This can be accomplished via {@link #finish()} or by
+     * making the {@linkplain #getSymbolTable() local symbol table}
+     * {@linkplain SymbolTable#makeReadOnly() read-only}.
      *
      * @throws IOException if thrown by the underlying output target.
      *
@@ -107,6 +112,14 @@ public interface IonWriter
      * streams. If another top-level value is written, it must be preceded by
      * an Ion version marker in order to reset the stream context as if this
      * were a new stream.
+     * <p>
+     * This feature can be used to flush reliably before writing more values.
+     * Think about a long-running stream of binary values: without finishing,
+     * all the values would continue to buffer since the encoder keeps
+     * expecting more local symbols (which must be written into the local
+     * symbol table that precedes all top-level values). Such an application
+     * can finish occasionally to flush the data out, then continue writing
+     * more data using a fresh local symbol table.
      *
      * @throws IOException if thrown by the underlying output target.
      * @throws IllegalStateException when not between top-level values.
@@ -127,7 +140,7 @@ public interface IonWriter
      * <p>
      * In other words: unless you're recovering from a failure condition,
      * <b>don't close the writer until you've
-     * {@linkplain #stepOut() stepped-out} completely.</b>
+     * {@linkplain #stepOut() stepped-out} back to the starting level.</b>
      *
      * @throws IOException if thrown by the underlying output target.
      *
