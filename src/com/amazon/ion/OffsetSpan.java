@@ -9,7 +9,7 @@ package com.amazon.ion;
  * As with all spans, positions lie <em>between</em> values, and when the start
  * and finish positions are equal, the span is said to be <em>empty</em>.
  */
-public interface OctetSpan
+public interface OffsetSpan
 {
     /**
      * Returns this span's start position as an octet offset within the source

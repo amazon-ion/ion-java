@@ -52,7 +52,7 @@ import com.amazon.ion.streaming.MiscStreamingTest;
 import com.amazon.ion.streaming.NonHoistingReaderTest;
 import com.amazon.ion.streaming.NonSpanReaderTest;
 import com.amazon.ion.streaming.NonTextSpanTest;
-import com.amazon.ion.streaming.ReaderOctetSpanTest;
+import com.amazon.ion.streaming.ReaderOffsetSpanTest;
 import com.amazon.ion.streaming.ReaderSkippingTest;
 import com.amazon.ion.streaming.RoundTripStreamingTest;
 import com.amazon.ion.streaming.SpanHoistingTest;
@@ -150,7 +150,7 @@ import org.junit.runners.Suite;
     GoodIonStreamingTest.class,
     RoundTripStreamingTest.class,
     ReaderSkippingTest.class,
-    ReaderOctetSpanTest.class,
+    ReaderOffsetSpanTest.class,
     NonSpanReaderTest.class,
     CurrentSpanTest.class,
     NonTextSpanTest.class,

@@ -1,6 +1,6 @@
 // Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion.impl;
-import com.amazon.ion.OctetSpan;
+import com.amazon.ion.OffsetSpan;
 
 /**
  * Provides octet level positioning information for an {@link IonReaderPosition}.
@@ -9,7 +9,7 @@ import com.amazon.ion.OctetSpan;
  */
 @Deprecated
 public interface IonReaderOctetPosition
-    extends IonReaderPosition, OctetSpan
+    extends IonReaderPosition, OffsetSpan
 {
     /** Returns the octet position in the logical byte stream sourcing the position. */
     public long getOffset();

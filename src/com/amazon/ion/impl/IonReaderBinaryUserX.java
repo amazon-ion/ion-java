@@ -5,7 +5,7 @@ package com.amazon.ion.impl;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
-import com.amazon.ion.OctetSpan;
+import com.amazon.ion.OffsetSpan;
 import com.amazon.ion.Span;
 import com.amazon.ion.SpanReader;
 import com.amazon.ion.SymbolTable;
@@ -25,7 +25,7 @@ class IonReaderBinaryUserX
 
     private static class IonReaderBinaryPosition
         extends IonReaderPositionBase
-        implements IonReaderOctetPosition, OctetSpan
+        implements IonReaderOctetPosition, OffsetSpan
     {
         State       _state;
         int         _offset;

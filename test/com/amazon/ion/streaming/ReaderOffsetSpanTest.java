@@ -4,7 +4,7 @@ package com.amazon.ion.streaming;
 
 import com.amazon.ion.BinaryTest;
 import com.amazon.ion.IonType;
-import com.amazon.ion.OctetSpan;
+import com.amazon.ion.OffsetSpan;
 import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.SpanReader;
 import com.amazon.ion.impl.IonReaderOctetPosition;
@@ -19,10 +19,10 @@ import org.junit.Test;
 /**
  *
  */
-public class ReaderOctetSpanTest
+public class ReaderOffsetSpanTest
     extends SpanReaderTestCase
 {
-    public ReaderOctetSpanTest()
+    public ReaderOffsetSpanTest()
     {
         super(/* spanReaderRequired */ false);
     }
@@ -99,7 +99,7 @@ public class ReaderOctetSpanTest
 
     private void checkCurrentSpan(long start, long finish)
     {
-        OctetSpan span = sr.currentSpan().asFacet(OctetSpan.class);
+        OffsetSpan span = sr.currentSpan().asFacet(OffsetSpan.class);
         assertNotNull(span);
         assertEquals(start,  span.getStartOffset());
         assertEquals(finish, span.getFinishOffset());
