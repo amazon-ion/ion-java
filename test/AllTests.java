@@ -46,17 +46,11 @@ import com.amazon.ion.impl.SymbolTableTest;
 import com.amazon.ion.impl.TreeReaderTest;
 import com.amazon.ion.streaming.BadIonStreamingTest;
 import com.amazon.ion.streaming.BinaryStreamingTest;
-import com.amazon.ion.streaming.CurrentSpanTest;
 import com.amazon.ion.streaming.GoodIonStreamingTest;
 import com.amazon.ion.streaming.MiscStreamingTest;
-import com.amazon.ion.streaming.NonHoistingReaderTest;
-import com.amazon.ion.streaming.NonSpanReaderTest;
-import com.amazon.ion.streaming.NonTextSpanTest;
-import com.amazon.ion.streaming.ReaderOffsetSpanTest;
 import com.amazon.ion.streaming.ReaderSkippingTest;
 import com.amazon.ion.streaming.RoundTripStreamingTest;
-import com.amazon.ion.streaming.SpanHoistingTest;
-import com.amazon.ion.streaming.TextSpanTest;
+import com.amazon.ion.streaming.SpanTests;
 import com.amazon.ion.system.IonSystemBuilderTest;
 import com.amazon.ion.system.SimpleCatalogTest;
 import com.amazon.ion.util.EquivalenceTest;
@@ -134,12 +128,10 @@ import org.junit.runners.Suite;
     EquivsTest.class,
     RoundTripTest.class,
 
-    // Subclasses of SystemProcessingTestCase are collected to make it
-    // easier to run that subset.
+    // Some tests are collected to make it easier to run interesting subsets.
     SystemProcessingTests.class,
-
-    // Ditto for WriterTestCase
     IonWriterTests.class,
+    SpanTests.class,
 
     IonStreamUtilsTest.class,
     TreeReaderTest.class,
@@ -150,14 +142,6 @@ import org.junit.runners.Suite;
     GoodIonStreamingTest.class,
     RoundTripStreamingTest.class,
     ReaderSkippingTest.class,
-    ReaderOffsetSpanTest.class,
-    NonSpanReaderTest.class,
-    CurrentSpanTest.class,
-    NonTextSpanTest.class,
-    TextSpanTest.class,
-    NonHoistingReaderTest.class,
-    SpanHoistingTest.class,
-
 
     IonSystemTest.class,
     ValueFactorySequenceTest.class,
