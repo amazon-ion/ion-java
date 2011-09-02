@@ -3,11 +3,15 @@
 package com.amazon.ion;
 
 /**
- * Exposes the edges of a {@link Span} in the form of <em>one-based</em> line
- * and column numbers within the source text stream.
+ * Exposes the positions of a {@link Span} in the form of <em>one-based</em>
+ * line and column numbers within the source text stream.
  * <p>
  * As with all spans, positions lie <em>between</em> values, and when the start
  * and finish positions are equal, the span is said to be <em>empty</em>.
+ * <p>
+ * To get one of these from a {@link Span}, use
+ * {@link Faceted#asFacet(Class) asFacet}{@code (TextSpan.class)} or one of
+ * the helpers from {@link Facets}.
  */
 public interface TextSpan
 {
