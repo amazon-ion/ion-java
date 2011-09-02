@@ -16,7 +16,7 @@ import org.junit.runners.Suite;
     NonTextSpanTest.class,
     TextSpanTest.class,
     NonHoistingReaderTest.class,
-    SpanHoistingTest.class,
+    SpanHoistingTest.class
 })
 public class SpanTests
 {
