@@ -11,23 +11,30 @@ package com.amazon.ion;
  * generated it, provided that the two readers have the same source.
  * Violations of this constraint may not be detected reliably, so be careful
  * or you'll get unsatisfying results.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  */
-public interface SpanReader
+public interface SeekableReader
     extends SpanProvider
 {
     /**
-     * Resets this reader to produce the given span as if the values were at
+     * Seeks this reader to produce the given span as if its values were at
      * top-level.
-     * The caller cannot {@link #stepOut} from the span nor continue
-     * reading beyond it.
+     * The caller cannot {@link IonReader#stepOut stepOut} from the span nor
+     * continue reading beyond it.
      * <p>
      * After calling this method, this reader's current span will be empty and
      * positioned just before the first value of the given span; the caller
-     * must call {@link #next()} to begin reading values.
-     * The {@linkplain #getDepth() depth} will be zero.
+     * must call {@link IonReader#next() next()} to begin reading values.
+     * At the end of the span, the reader will behave as if it's at EOF
+     * regardless whether the source has more data beyond the span.
      * <p>
-     * Calls to {@link #getFieldName()} will return null even if the span's
-     * original parent was a struct.
+     * Hoisting makes the span's values appear to be at top-level even if they
+     * have containers in the source.
+     * The {@linkplain IonReader#getDepth() depth} will be zero, and
+     * calls to {@link IonReader#getFieldName() getFieldName()} will return
+     * null even if the span's original parent was a struct.
      *
      * @throws IonException if the given span is unbalanced.
      */
@@ -35,10 +42,10 @@ public interface SpanReader
 
 
     /**
-     * Resets this reader to produce the given subsequence as if the values
+     * Seeks this reader to produce the given subsequence as if the values
      * were the body of a container.
-     * The caller can {@link #stepOut} from the subsequence but cannot
-     * continue reading beyond it.
+     * The caller can {@link IonReader#stepOut stepOut} from the subsequence
+     * but cannot continue reading beyond it.
      * <p>
      * After calling this method, this reader's current span will be empty and
      * positioned just before the first value of the given span; the caller
@@ -54,7 +61,7 @@ public interface SpanReader
 
 
     /**
-     * Resets this reader to produce data from the left of the given span,
+     * Seeks this reader to produce data from the left of the given span,
      * continuing "up and out" from the current container to the end of the
      * source.
      * <p>

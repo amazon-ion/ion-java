@@ -16,14 +16,14 @@ import org.junit.Assert;
 import org.junit.Test;
 
 /**
- *
+ * @see NonSeekableReaderTest
  */
-public class SpanHoistingTest
-    extends SpanReaderTestCase
+public class SeekableReaderTest
+    extends ReaderFacetTestCase
 {
     @Inject("readerMaker")
     public static final ReaderMaker[] READER_MAKERS =
-        ReaderMaker.valuesExcluding(NON_HOISTING_READERS);
+        ReaderMaker.valuesExcluding(NON_SEEKABLE_READERS);
 
 
     private void checkSpans(IonDatagram dg, Span[] positions)

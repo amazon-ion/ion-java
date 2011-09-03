@@ -7,23 +7,20 @@ import com.amazon.ion.junit.Injected.Inject;
 import org.junit.Test;
 
 /**
- *
+ * @see SeekableReaderTest
  */
-public class NonHoistingReaderTest
-    extends SpanReaderTestCase
+public class NonSeekableReaderTest
+    extends ReaderFacetTestCase
 {
-    public NonHoistingReaderTest()
+    @Inject("readerMaker")
+    public static final ReaderMaker[] READER_MAKERS = NON_SEEKABLE_READERS;
+
+
+    public NonSeekableReaderTest()
     {
         mySpanProviderRequired = false;
         mySeekableReaderRequired = false;
     }
-
-
-    /**
-     * Test all readers that are NOT covered by {@link SpanHoistingTest}.
-     */
-    @Inject("readerMaker")
-    public static final ReaderMaker[] READER_MAKERS = NON_HOISTING_READERS;
 
 
     @Test

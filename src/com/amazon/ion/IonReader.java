@@ -33,6 +33,7 @@ import java.util.Iterator;
  * In general, method names are intended to parallel similar methods in the
  * {@link IonValue} hierarchy.  For example, to get the text of a symbol one
  * would use {@link #stringValue()}, mirroring {@link IonSymbol#stringValue()}.
+ *
  * <h2>Exception Handling</h2>
  * {@code IonReader} is a generic interface for traversion Ion data, and it's
  * not possible to fully specify the set of exceptions that could be thrown
@@ -41,6 +42,28 @@ import java.util.Iterator;
  * wants to handle (say) {@link IOException}s specially, then it needs to
  * extract that from the wrappers; the documentation of {@link IonException}
  * explains how to do that.
+ *
+ * <h2>Facets</h2>
+ * Readers are {@link Faceted} and implementations may provide additional
+ * functionality accessible via the {@link #asFacet(Class)} method.
+ *
+ * <h3>The {@link SpanProvider} Facet</h3>
+ * This facet is available on all readers <em>except</em> text readers created
+ * from an {@link java.io.InputStream}.
+ * (See <a href="https://jira2.amazon.com/browse/ION-231">JIRA issue ION-231</a>.)
+ * It provides access to the "{@linkplain SpanProvider#currentSpan() current
+ * span}" covering the reader's current value.
+ * There is <em>not</em> a current span at the start of the source, immediately
+ * after a call to {@link #stepIn()} or {@link #stepOut()}, or when the prior
+ * call to {@link #next()} returned null (meaning: end of container or end of
+ * stream). In such states, {@link SpanProvider#currentSpan()} will fail.
+ *
+ * <h3>The {@link SeekableReader} Facet</h3>
+ * This facet is available on all readers <em>except</em> those created from
+ * an {@link java.io.InputStream}.
+ * (See <a href="https://jira2.amazon.com/browse/ION-231">JIRA issue ION-231</a>.)
+ * It allows the user to reposition the reader to a {@link Span} over the
+ * same reader instance or another reader with the same source.
  */
 public interface IonReader
     extends Closeable, Faceted

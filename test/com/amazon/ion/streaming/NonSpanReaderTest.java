@@ -7,19 +7,20 @@ import com.amazon.ion.junit.Injected.Inject;
 import org.junit.Test;
 
 /**
- * @see CurrentSpanTest
+ * @see SpanReaderTest
  */
 public class NonSpanReaderTest
-    extends SpanReaderTestCase
+    extends ReaderFacetTestCase
 {
+    @Inject("readerMaker")
+    public static final ReaderMaker[] READER_MAKERS = NON_SPAN_READERS;
+
+
     public NonSpanReaderTest()
     {
         mySpanProviderRequired = false;
         mySeekableReaderRequired = false;
     }
-
-    @Inject("readerMaker")
-    public static final ReaderMaker[] READER_MAKERS = NON_SPAN_READERS;
 
 
     /**

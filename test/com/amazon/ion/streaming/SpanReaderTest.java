@@ -13,19 +13,18 @@ import org.junit.Test;
 /**
  * @see NonSpanReaderTest
  */
-public class CurrentSpanTest
-    extends SpanReaderTestCase
+public class SpanReaderTest
+    extends ReaderFacetTestCase
 {
-    public CurrentSpanTest()
-    {
-        mySeekableReaderRequired = false;
-    }
-
-
     @Inject("readerMaker")
     public static final ReaderMaker[] READER_MAKERS =
         ReaderMaker.valuesExcluding(NON_SPAN_READERS);
 
+
+    public SpanReaderTest()
+    {
+        mySeekableReaderRequired = false;
+    }
 
 
     @Test

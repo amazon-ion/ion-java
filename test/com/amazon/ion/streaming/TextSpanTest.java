@@ -12,10 +12,10 @@ import com.amazon.ion.junit.Injected.Inject;
 import org.junit.Test;
 
 /**
- *
+ * @see NonTextSpanTest
  */
 public class TextSpanTest
-    extends SpanReaderTestCase
+    extends ReaderFacetTestCase
 {
     @Inject("readerMaker")
     public static final ReaderMaker[] READER_MAKERS =

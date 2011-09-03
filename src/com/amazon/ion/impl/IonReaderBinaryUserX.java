@@ -8,7 +8,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.OffsetSpan;
 import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
-import com.amazon.ion.SpanReader;
+import com.amazon.ion.SeekableReader;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
 import com.amazon.ion.impl.UnifiedInputStreamX.FromByteArray;
@@ -19,7 +19,7 @@ import java.util.Iterator;
 
 class IonReaderBinaryUserX
     extends IonReaderBinarySystemX
-    implements IonReaderWriterPrivate, IonReaderWithPosition, SpanReader
+    implements IonReaderWriterPrivate, IonReaderWithPosition, SeekableReader
 {
     SymbolTable _symbols;
     IonCatalog  _catalog;
@@ -92,7 +92,7 @@ class IonReaderBinaryUserX
         }
 
         if ((facetType == IonReaderWithPosition.class) ||
-            (facetType == SpanReader.class))
+            (facetType == SeekableReader.class))
         {
             // TODO ION-231 support seeking over InputStream
             if (_input instanceof FromByteArray)

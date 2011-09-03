@@ -5,20 +5,20 @@ package com.amazon.ion.streaming;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.ReaderMaker;
+import com.amazon.ion.SeekableReader;
 import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
-import com.amazon.ion.SpanReader;
 import com.amazon.ion.TextSpan;
 import com.amazon.ion.junit.IonAssert;
 
 /**
  *
  */
-public abstract class SpanReaderTestCase
+public abstract class ReaderFacetTestCase
     extends IonTestCase
 {
     /**
-     * These are the readers that don't support the {@link SpanReader} facet.
+     * These readers don't support the {@link SpanProvider} facet.
      */
     public static final ReaderMaker[] NON_SPAN_READERS =
     {
@@ -41,9 +41,9 @@ public abstract class SpanReaderTestCase
     };
 
     /**
-     * These are the readers that don't support {@link SpanReader#hoist(Span)}.
+     * These readers don't support the {@link SeekableReader} facet.
      */
-    public static final ReaderMaker[] NON_HOISTING_READERS =
+    public static final ReaderMaker[] NON_SEEKABLE_READERS =
     {
         ReaderMaker.FROM_INPUT_STREAM_BINARY,    // TODO ION-231
         ReaderMaker.FROM_INPUT_STREAM_TEXT
@@ -61,7 +61,7 @@ public abstract class SpanReaderTestCase
     protected IonReader in;
     protected SpanProvider sp;
     protected boolean mySpanProviderRequired = true;
-    protected SpanReader sr;
+    protected SeekableReader sr;
     protected boolean mySeekableReaderRequired = true;
 
 
@@ -73,10 +73,10 @@ public abstract class SpanReaderTestCase
             assertNotNull("SpanProvider not available", sp);
         }
 
-        sr = in.asFacet(SpanReader.class);
+        sr = in.asFacet(SeekableReader.class);
         if (mySeekableReaderRequired)
         {
-            assertNotNull("SpanReader not available", sr);
+            assertNotNull("SeekableReader not available", sr);
         }
     }
 

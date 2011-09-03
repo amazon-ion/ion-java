@@ -2,7 +2,7 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.SpanReader;
+import com.amazon.ion.SeekableReader;
 
 
 
@@ -12,11 +12,11 @@ import com.amazon.ion.SpanReader;
  *  input stream.  This is only supported over input sources that
  *  support seek() or its equivalent or are fully buffered.
  *
- * @deprecated Use {@link SpanReader}.
+ * @deprecated Use {@link SeekableReader}.
  */
 @Deprecated
 public interface IonReaderWithPosition
-    extends SpanReader
+    extends SeekableReader
 {
     /**
      * returns an IonReaderPosition based on the current

@@ -6,7 +6,7 @@ import com.amazon.ion.BinaryTest;
 import com.amazon.ion.IonType;
 import com.amazon.ion.OffsetSpan;
 import com.amazon.ion.ReaderMaker;
-import com.amazon.ion.SpanReader;
+import com.amazon.ion.SeekableReader;
 import com.amazon.ion.impl.IonReaderOctetPosition;
 import com.amazon.ion.junit.Injected.Inject;
 import java.io.ByteArrayOutputStream;
@@ -20,13 +20,8 @@ import org.junit.Test;
  *
  */
 public class ReaderOffsetSpanTest
-    extends SpanReaderTestCase
+    extends ReaderFacetTestCase
 {
-    public ReaderOffsetSpanTest()
-    {
-        mySeekableReaderRequired = false;
-    }
-
     /**
      * Test only readers that provide stable octet offsets.
      */
@@ -39,6 +34,11 @@ public class ReaderOffsetSpanTest
                                     ReaderMaker.FROM_INPUT_STREAM_TEXT,
                                     ReaderMaker.FROM_DOM);
 
+
+    public ReaderOffsetSpanTest()
+    {
+        mySeekableReaderRequired = false;
+    }
 
 
     private InputStream repeatStream(final String text, final long times)
@@ -164,7 +164,7 @@ public class ReaderOffsetSpanTest
         in = system().newReader(
             repeatStream(text, repeat) // make sure we go past Integer.MAX_VALUE
         );
-        sp = in.asFacet(SpanReader.class);
+        sp = in.asFacet(SeekableReader.class);
 
         long iterLimit = repeat - 10;
         for (long i = 0; i < iterLimit; i++)

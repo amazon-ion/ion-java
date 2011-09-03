@@ -11,7 +11,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
-import com.amazon.ion.SpanReader;
+import com.amazon.ion.SeekableReader;
 import com.amazon.ion.SymbolTable;
 
 /**
@@ -33,7 +33,7 @@ class IonReaderTreeUserX
     public <T> T asFacet(Class<T> facetType)
     {
         if ((facetType == IonReaderWithPosition.class) ||
-            (facetType == SpanReader.class) ||
+            (facetType == SeekableReader.class) ||
             (facetType == SpanProvider.class))
         {
             return facetType.cast(this);

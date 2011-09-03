@@ -21,12 +21,15 @@ package com.amazon.ion;
  * <p>
  * Since different source types require different positioning techniques,
  * spans use {@linkplain Faceted facets} to expose the position implementation.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  *
  * <h2>Acknowledgements</h2>
  * This design and terminology is heavily based on Wilfred J. Hansen's work on
  * subsequence references.
  *
- * @see SpanReader
+ * @see SpanProvider
  *
  * @see <a href="http://portal.acm.org/citation.cfm?id=133234">Subsequence
  * References: First-Class Values for Substrings</a>
