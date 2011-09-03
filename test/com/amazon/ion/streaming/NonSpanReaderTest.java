@@ -14,7 +14,8 @@ public class NonSpanReaderTest
 {
     public NonSpanReaderTest()
     {
-        super(/* spanReaderRequired */ false);
+        mySpanProviderRequired = false;
+        mySeekableReaderRequired = false;
     }
 
     @Inject("readerMaker")
@@ -22,12 +23,12 @@ public class NonSpanReaderTest
 
 
     /**
-     * Ensure that we don't get the SpanReader facet where its not supported.
+     * Ensure that we don't get the SpanProvider facet where its not supported.
      */
     @Test
-    public void testNoSpanReaderFacet()
+    public void testNoSpanProviderFacet()
     {
         read("something");
-        assertSame("SpanReader facet not expected", null, sr);
+        assertNull("SpanProvider facet not expected", sp);
     }
 }

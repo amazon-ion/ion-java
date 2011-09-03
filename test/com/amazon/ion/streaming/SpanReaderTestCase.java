@@ -2,11 +2,11 @@
 
 package com.amazon.ion.streaming;
 
-import com.amazon.ion.Facets;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.Span;
+import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SpanReader;
 import com.amazon.ion.TextSpan;
 import com.amazon.ion.junit.IonAssert;
@@ -59,36 +59,37 @@ public abstract class SpanReaderTestCase
 
 
     protected IonReader in;
+    protected SpanProvider sp;
+    protected boolean mySpanProviderRequired = true;
     protected SpanReader sr;
-    protected final boolean mySpanReaderRequired;
+    protected boolean mySeekableReaderRequired = true;
 
-    public SpanReaderTestCase(boolean spanReaderRequired)
-    {
-        mySpanReaderRequired = spanReaderRequired;
-    }
 
-    protected void initSpanReader()
+    protected void initFacets()
     {
-        if (mySpanReaderRequired)
+        sp = in.asFacet(SpanProvider.class);
+        if (mySpanProviderRequired)
         {
-            sr = Facets.assumeFacet(SpanReader.class, in);
+            assertNotNull("SpanProvider not available", sp);
         }
-        else
+
+        sr = in.asFacet(SpanReader.class);
+        if (mySeekableReaderRequired)
         {
-            sr = in.asFacet(SpanReader.class);
+            assertNotNull("SpanReader not available", sr);
         }
     }
 
     protected final void read(byte[] ionData)
     {
         in = myReaderMaker.newReader(system(), ionData);
-        initSpanReader();
+        initFacets();
     }
 
     protected final void read(String ionText)
     {
         in = myReaderMaker.newReader(system(), ionText);
-        initSpanReader();
+        initFacets();
     }
 
 

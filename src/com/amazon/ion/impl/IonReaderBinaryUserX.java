@@ -7,6 +7,7 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.OffsetSpan;
 import com.amazon.ion.Span;
+import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SpanReader;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
@@ -85,10 +86,19 @@ class IonReaderBinaryUserX
     @Override
     public <T> T asFacet(Class<T> facetType)
     {
+        if (facetType == SpanProvider.class)
+        {
+            return facetType.cast(this);
+        }
+
         if ((facetType == IonReaderWithPosition.class) ||
             (facetType == SpanReader.class))
         {
-            return facetType.cast(this);
+            // TODO ION-231 support seeking over InputStream
+            if (_input instanceof FromByteArray)
+            {
+                return facetType.cast(this);
+            }
         }
 
         if (facetType == ByteTransferReader.class)

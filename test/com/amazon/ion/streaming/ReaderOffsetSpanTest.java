@@ -24,11 +24,11 @@ public class ReaderOffsetSpanTest
 {
     public ReaderOffsetSpanTest()
     {
-        super(/* spanReaderRequired */ false);
+        mySeekableReaderRequired = false;
     }
 
     /**
-     * None of these provide stable octet offsets.
+     * Test only readers that provide stable octet offsets.
      */
     @Inject("readerMaker")
     public static final ReaderMaker[] READER_MAKERS =
@@ -99,7 +99,7 @@ public class ReaderOffsetSpanTest
 
     private void checkCurrentSpan(long start, long finish)
     {
-        OffsetSpan span = sr.currentSpan().asFacet(OffsetSpan.class);
+        OffsetSpan span = sp.currentSpan().asFacet(OffsetSpan.class);
         assertNotNull(span);
         assertEquals(start,  span.getStartOffset());
         assertEquals(finish, span.getFinishOffset());
@@ -107,7 +107,7 @@ public class ReaderOffsetSpanTest
         // Transitional APIs
         long len = finish - start;
 
-        IonReaderOctetPosition pos = sr.currentSpan().asFacet(IonReaderOctetPosition.class);
+        IonReaderOctetPosition pos = sp.currentSpan().asFacet(IonReaderOctetPosition.class);
         assertNotNull(pos);
         assertEquals(start,  pos.getOffset());
         assertEquals(start,  pos.getStartOffset());
@@ -164,7 +164,7 @@ public class ReaderOffsetSpanTest
         in = system().newReader(
             repeatStream(text, repeat) // make sure we go past Integer.MAX_VALUE
         );
-        sr = in.asFacet(SpanReader.class);
+        sp = in.asFacet(SpanReader.class);
 
         long iterLimit = repeat - 10;
         for (long i = 0; i < iterLimit; i++)

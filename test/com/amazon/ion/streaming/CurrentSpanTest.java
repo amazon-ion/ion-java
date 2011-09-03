@@ -18,7 +18,7 @@ public class CurrentSpanTest
 {
     public CurrentSpanTest()
     {
-        super(/* spanReaderRequired */ true);
+        mySeekableReaderRequired = false;
     }
 
 
@@ -42,7 +42,7 @@ public class CurrentSpanTest
         for (int i = 0; i < dg.size(); i++)
         {
             assertEquals(dg.get(i).getType(), in.next());
-            positions[i] = sr.currentSpan();
+            positions[i] = sp.currentSpan();
         }
         expectEof();
 
@@ -59,7 +59,7 @@ public class CurrentSpanTest
                 TestUtils.consumeCurrentValue(in);
             }
 
-//            assertEquals(positions[i], sr.currentSpan());  //FIXME
+//            assertEquals(positions[i], sp.currentSpan());  //FIXME
         }
         expectTopEof();
     }
@@ -73,20 +73,20 @@ public class CurrentSpanTest
         in.next();
         in.stepIn();
             in.next();
-            Span fPos = sr.currentSpan();
+            Span fPos = sp.currentSpan();
             assertEquals("v", in.stringValue());
             in.next();
-            Span gPos = sr.currentSpan();
+            Span gPos = sp.currentSpan();
             in.stepIn();
                 in.next();
                 assertEquals("c", in.stringValue());
-                Span cPos = sr.currentSpan();
+                Span cPos = sp.currentSpan();
                 expectEof();
             in.stepOut();
             expectEof();
         in.stepOut();
         in.next();
-        Span sPos = sr.currentSpan();
+        Span sPos = sp.currentSpan();
         expectTopEof();
     }
 
@@ -99,7 +99,7 @@ public class CurrentSpanTest
     public void testCurrentSpanBeforeFirstTopLevel()
     {
         read("foo");
-        sr.currentSpan();
+        sp.currentSpan();
     }
 
 
@@ -108,7 +108,7 @@ public class CurrentSpanTest
         read(ionText);
         in.next();
         in.stepIn();
-        sr.currentSpan();
+        sp.currentSpan();
     }
 
     @Test(expected=IllegalStateException.class)
@@ -137,7 +137,7 @@ public class CurrentSpanTest
         in.stepIn();
         in.next();
         in.next();
-        sr.currentSpan();
+        sp.currentSpan();
     }
 
     @Test(expected=IllegalStateException.class)
@@ -165,6 +165,6 @@ public class CurrentSpanTest
         read("foo");
         in.next();
         assertEquals(null, in.next());
-        sr.currentSpan();
+        sp.currentSpan();
     }
 }

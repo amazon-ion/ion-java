@@ -16,7 +16,8 @@ public class NonTextSpanTest
 {
     public NonTextSpanTest()
     {
-        super(/* spanReaderRequired */ false);
+        mySpanProviderRequired = false;
+        mySeekableReaderRequired = false;
     }
 
     @Inject("readerMaker")
@@ -28,9 +29,9 @@ public class NonTextSpanTest
     {
         read("null");
         in.next();
-        if (sr != null)
+        if (sp != null)
         {
-            Span s = sr.currentSpan();
+            Span s = sp.currentSpan();
             TextSpan ts = s.asFacet(TextSpan.class);
             assertSame("TextSpan facet not expected", null, ts);
         }

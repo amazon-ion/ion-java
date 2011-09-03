@@ -3,7 +3,6 @@
 package com.amazon.ion.streaming;
 
 import com.amazon.ion.ReaderMaker;
-import com.amazon.ion.Span;
 import com.amazon.ion.junit.Injected.Inject;
 import org.junit.Test;
 
@@ -15,7 +14,8 @@ public class NonHoistingReaderTest
 {
     public NonHoistingReaderTest()
     {
-        super(/* spanReaderRequired */ false);
+        mySpanProviderRequired = false;
+        mySeekableReaderRequired = false;
     }
 
 
@@ -27,19 +27,9 @@ public class NonHoistingReaderTest
 
 
     @Test
-    public void testTrivialSpan()
+    public void seekableReaderFacetNotAvailable()
     {
         read("null");
-        in.next();
-        if (sr != null)
-        {
-            Span s = sr.currentSpan();
-            try {
-                sr.hoist(s);
-                fail("Expected exception");
-            }
-            catch (UnsupportedOperationException e) { }
-        }
+        assertNull("SeekableReader facet not expected", sr);
     }
-
 }

@@ -9,6 +9,7 @@ import static com.amazon.ion.impl.IonTokenConstsX.TOKEN_CLOSE_SQUARE;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonType;
+import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SpanReader;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
@@ -292,7 +293,8 @@ public abstract class IonReaderTextRawX
     public <T> T asFacet(Class<T> facetType)
     {
         if ((facetType == IonReaderWithPosition.class) ||
-            (facetType == SpanReader.class))
+            (facetType == SpanReader.class) ||
+            (facetType == SpanProvider.class))
         {
             if (_scanner.isBufferedInput())
             {

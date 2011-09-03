@@ -21,12 +21,6 @@ import org.junit.Test;
 public class SpanHoistingTest
     extends SpanReaderTestCase
 {
-    public SpanHoistingTest()
-    {
-        super(/* spanReaderRequired */ true);
-    }
-
-
     @Inject("readerMaker")
     public static final ReaderMaker[] READER_MAKERS =
         ReaderMaker.valuesExcluding(NON_HOISTING_READERS);

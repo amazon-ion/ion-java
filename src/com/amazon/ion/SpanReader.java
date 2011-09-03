@@ -13,39 +13,8 @@ package com.amazon.ion;
  * or you'll get unsatisfying results.
  */
 public interface SpanReader
+    extends SpanProvider
 {
-    /**
-     * Gets the current span of this reader, generally covering a single value
-     * on the source.
-     *
-     * @throws IllegalStateException if there is no current value. This occurs at the
-     * start of the source, immediately after a call to {@link #stepIn()} or
-     * {@link #stepOut()}, or when the prior call to {@link #next()} returned
-     * null (meaning: end of container or end of stream).
-     */
-    public Span currentSpan();
-
-
-    /**
-     * Gets a span covering all the children of the current span, which must
-     * be a container.
-     *
-     * @throws IonException if the current span covers anything other than a
-     * single container.
-     */
-//    public Span contentSpan();  // TODO later
-    // TODO move to Span interface?
-
-
-    /**
-     * Gets a span covering the container of the current span.
-     *
-     * @throws IonException if the current span is at top-level.
-     */
-//    public Span containerSpan();  // TODO later
-    // TODO move to Span interface?
-
-
     /**
      * Resets this reader to produce the given span as if the values were at
      * top-level.
