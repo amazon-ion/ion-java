@@ -2,6 +2,7 @@
 
 package com.amazon.ion.streaming;
 
+import com.amazon.ion.Facets;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.ReaderMaker;
@@ -93,6 +94,15 @@ public abstract class ReaderFacetTestCase
     }
 
 
+    protected void expectNoFacet(Class<?> facetType, Object subject)
+    {
+        Object facet = Facets.asFacet(facetType, subject);
+        if (facet != null)
+        {
+            // This idiom gives a helpful message.
+            assertEquals("Didn't expect facet " + facetType, null, facet);
+        }
+    }
 
     protected void expectNoCurrentValue()
     {

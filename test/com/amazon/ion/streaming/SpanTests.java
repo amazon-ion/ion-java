@@ -10,11 +10,12 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    ReaderOffsetSpanTest.class,
     NonSpanReaderTest.class,
     SpanReaderTest.class,
     NonTextSpanTest.class,
     TextSpanTest.class,
+    NonOffsetSpanReaderTest.class,
+    OffsetSpanReaderTest.class,
     NonSeekableReaderTest.class,
     SeekableReaderTest.class
 })

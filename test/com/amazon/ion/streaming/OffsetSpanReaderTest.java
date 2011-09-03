@@ -19,7 +19,7 @@ import org.junit.Test;
 /**
  *
  */
-public class ReaderOffsetSpanTest
+public class OffsetSpanReaderTest
     extends ReaderFacetTestCase
 {
     /**
@@ -27,15 +27,10 @@ public class ReaderOffsetSpanTest
      */
     @Inject("readerMaker")
     public static final ReaderMaker[] READER_MAKERS =
-        ReaderMaker.valuesExcluding(ReaderMaker.FROM_STRING,
-                                    ReaderMaker.FROM_BYTES_TEXT,
-                                    ReaderMaker.FROM_BYTES_OFFSET_TEXT,
-                                    ReaderMaker.FROM_BYTES_OFFSET_BINARY,
-                                    ReaderMaker.FROM_INPUT_STREAM_TEXT,
-                                    ReaderMaker.FROM_DOM);
+        ReaderMaker.valuesExcluding(NonOffsetSpanReaderTest.READER_MAKERS);
 
 
-    public ReaderOffsetSpanTest()
+    public OffsetSpanReaderTest()
     {
         mySeekableReaderRequired = false;
     }
@@ -99,6 +94,10 @@ public class ReaderOffsetSpanTest
 
     private void checkCurrentSpan(long start, long finish)
     {
+        // FIXME ION-242 the reader should make this adjustment!
+        start  += myReaderMaker.getOffset();
+        finish += myReaderMaker.getOffset();
+
         OffsetSpan span = sp.currentSpan().asFacet(OffsetSpan.class);
         assertNotNull(span);
         assertEquals(start,  span.getStartOffset());

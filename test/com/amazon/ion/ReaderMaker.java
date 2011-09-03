@@ -64,6 +64,9 @@ public enum ReaderMaker
     FROM_BYTES_OFFSET_BINARY(true)
     {
         @Override
+        public int getOffset() { return 37; }
+
+        @Override
         public IonReader newReader(IonSystem system, byte[] ionData)
         {
             ionData = ensureBinary(system, ionData);
@@ -79,6 +82,9 @@ public enum ReaderMaker
      */
     FROM_BYTES_OFFSET_TEXT(false)
     {
+        @Override
+        public int getOffset() { return 37; }
+
         @Override
         public IonReader newReader(IonSystem system, byte[] ionData)
         {
@@ -150,6 +156,11 @@ public enum ReaderMaker
     public boolean sourceIsBinary()
     {
         return mySourceIsBinary;
+    }
+
+    public int getOffset()
+    {
+        return 0;
     }
 
 
