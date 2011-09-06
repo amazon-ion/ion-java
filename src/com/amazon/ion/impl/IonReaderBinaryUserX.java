@@ -6,9 +6,9 @@ import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.OffsetSpan;
+import com.amazon.ion.SeekableReader;
 import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
-import com.amazon.ion.SeekableReader;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
 import com.amazon.ion.impl.UnifiedInputStreamX.FromByteArray;
@@ -21,6 +21,13 @@ class IonReaderBinaryUserX
     extends IonReaderBinarySystemX
     implements IonReaderWriterPrivate, IonReaderWithPosition, SeekableReader
 {
+    /**
+     * This is the physical start-of-stream offset when this reader was created.
+     * It must be subtracted from the logical offsets exposed by
+     * {@link OffsetSpan}s.
+     */
+    private final int _physical_start_offset;
+
     SymbolTable _symbols;
     IonCatalog  _catalog;
 
@@ -61,14 +68,17 @@ class IonReaderBinaryUserX
 
     public IonReaderBinaryUserX(IonSystem system, IonCatalog catalog, byte[] bytes, int offset, int length) {
         super(system, bytes, offset, length);
+        _physical_start_offset = offset;
         init_user(catalog);
     }
     public IonReaderBinaryUserX(IonSystem system, IonCatalog catalog, InputStream userBytes) {
         super(system, userBytes);
+        _physical_start_offset = 0;
         init_user(catalog);
     }
     public IonReaderBinaryUserX(IonSystem system, IonCatalog catalog, UnifiedInputStreamX userBytes) {
         super(system, userBytes);
+        _physical_start_offset = 0;
         init_user(catalog);
     }
 
@@ -138,11 +148,6 @@ class IonReaderBinaryUserX
      */
     public IonReaderBinaryPosition getCurrentPosition()
     {
-        // check to see that the reader is in a valid position
-        // to mark it
-        //     - not in the middle of a value
-        //        TODO what does that mean?
-
         IonReaderBinaryPosition pos = new IonReaderBinaryPosition();
 
         if (getType() == null)
@@ -151,7 +156,7 @@ class IonReaderBinaryUserX
             throw new IllegalStateException(message);
         }
 
-        if (_position_start == -1)
+        if (_position_start == -1)  // TODO remove? should be unreachable.
         {
             // special case of the position before the first call to next
             pos._offset = _input._pos;
@@ -160,8 +165,8 @@ class IonReaderBinaryUserX
         }
         else
         {
-            pos._offset = _position_start;
-            pos._limit = _position_len + _position_start;
+            pos._offset = _position_start - _physical_start_offset;
+            pos._limit = pos._offset + _position_len;
             pos._symbol_table = _symbols;
         }
 
@@ -195,8 +200,8 @@ class IonReaderBinaryUserX
 
         // manually reset the input specific type of input stream
         FromByteArray input = (FromByteArray)_input;
-        input._pos = pos._offset;
-        input._limit = pos._limit;
+        input._pos = pos._offset + _physical_start_offset;
+        input._limit = pos._limit + _physical_start_offset;
 
         // TODO: these (eof and save points) should be put into
         //       a re-init method on the input stream

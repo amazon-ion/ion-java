@@ -94,10 +94,6 @@ public class OffsetSpanReaderTest
 
     private void checkCurrentSpan(long start, long finish)
     {
-        // FIXME ION-242 the reader should make this adjustment!
-        start  += myReaderMaker.getOffset();
-        finish += myReaderMaker.getOffset();
-
         OffsetSpan span = sp.currentSpan().asFacet(OffsetSpan.class);
         assertNotNull(span);
         assertEquals(start,  span.getStartOffset());
