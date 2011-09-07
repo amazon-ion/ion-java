@@ -106,7 +106,10 @@ public class TestUtils
                 if (filter == null || filter.accept(dir, fileName))
                 {
                     File testFile = new File(dir, fileName);
-                    files.add(testFile);
+                    if (testFile.isFile())
+                    {
+                        files.add(testFile);
+                    }
                 }
             }
         }
