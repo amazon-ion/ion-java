@@ -36,8 +36,8 @@ class IonReaderBinaryUserX
         implements IonReaderOctetPosition, OffsetSpan
     {
         State       _state;
-        int         _offset;
-        int         _limit;
+        long        _offset;
+        long        _limit;
         IonType     _value_type;
         boolean     _value_is_null;
         boolean     _value_is_true;
@@ -198,10 +198,12 @@ class IonReaderBinaryUserX
             throw new UnsupportedOperationException("Binary seek not implemented for non-byte array backed sources");
         }
 
+        // TODO test that span is within the bounds of the input byte[]
+
         // manually reset the input specific type of input stream
         FromByteArray input = (FromByteArray)_input;
-        input._pos = pos._offset + _physical_start_offset;
-        input._limit = pos._limit + _physical_start_offset;
+        input._pos   = (int) (pos._offset + _physical_start_offset);
+        input._limit = (int) (pos._limit  + _physical_start_offset);
 
         // TODO: these (eof and save points) should be put into
         //       a re-init method on the input stream
@@ -443,8 +445,8 @@ class IonReaderBinaryUserX
             //   the writer already holds a pending field name or annotations!
             //   Meaning: the user has set it and then called writeValue().
 
-            int inOffset = _position_start;
-            int inLen    = _position_len;
+            int inOffset = (int) _position_start;
+            int inLen    = (int) _position_len;
 
             writer._writer.write(_input._bytes, inOffset, inLen);
             writer.patch(inLen);

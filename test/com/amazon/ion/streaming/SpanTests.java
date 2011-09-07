@@ -16,6 +16,7 @@ import org.junit.runners.Suite;
     TextSpanTest.class,
     NonOffsetSpanReaderTest.class,
     OffsetSpanReaderTest.class,
+    OffsetSpanBinaryReaderTest.class,
     NonSeekableReaderTest.class,
     SeekableReaderTest.class
 })

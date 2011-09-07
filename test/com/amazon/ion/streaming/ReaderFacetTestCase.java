@@ -5,12 +5,15 @@ package com.amazon.ion.streaming;
 import com.amazon.ion.Facets;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
+import com.amazon.ion.OffsetSpan;
 import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.SeekableReader;
 import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
 import com.amazon.ion.TextSpan;
+import com.amazon.ion.impl.IonReaderOctetPosition;
 import com.amazon.ion.junit.IonAssert;
+import org.junit.After;
 
 /**
  *
@@ -65,6 +68,15 @@ public abstract class ReaderFacetTestCase
     protected SeekableReader sr;
     protected boolean mySeekableReaderRequired = true;
 
+
+    @After @Override
+    public void tearDown() throws Exception
+    {
+        in = null;
+        sp = null;
+        sr = null;
+        super.tearDown();
+    }
 
     protected void initFacets()
     {
@@ -130,5 +142,23 @@ public abstract class ReaderFacetTestCase
         sr.hoist(s);
         expectTopLevel();
         expectNoCurrentValue();
+    }
+
+    protected void checkCurrentSpan(long start, long finish)
+    {
+        OffsetSpan span = sp.currentSpan().asFacet(OffsetSpan.class);
+        assertNotNull(span);
+        assertEquals("startOffset",  start,  span.getStartOffset());
+        assertEquals("finishOffset", finish, span.getFinishOffset());
+
+        // Transitional APIs
+        long len = finish - start;
+
+        IonReaderOctetPosition pos = sp.currentSpan().asFacet(IonReaderOctetPosition.class);
+        assertNotNull(pos);
+        assertEquals(start,  pos.getOffset());
+        assertEquals(start,  pos.getStartOffset());
+        assertEquals(len,    pos.getLength());
+        assertEquals(finish, pos.getFinishOffset());
     }
 }

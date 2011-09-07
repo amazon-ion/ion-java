@@ -66,8 +66,8 @@ abstract public class IonReaderBinaryRawX
     int                 _value_lob_remaining;
     boolean             _value_lob_is_ready;
 
-    int                 _position_start;    // FIXME:  used for repositionable reader
-    int                 _position_len;      // FIXME:  used for repositionable reader
+    long                _position_start;
+    long                _position_len;
 
 
     SavePoint           _annotations;
@@ -255,8 +255,8 @@ abstract public class IonReaderBinaryRawX
                         // The next call changes our positions to that of the
                         // wrapped value, but we need to remember the overall
                         // wrapper position.
-                        int wrapperStart = _position_start;
-                        int wrapperLen   = _position_len;
+                        long wrapperStart = _position_start;
+                        long wrapperLen   = _position_len;
 
                         _value_type = load_annotation_start_with_value_type();
 
@@ -411,9 +411,8 @@ abstract public class IonReaderBinaryRawX
     }
     private final int read_type_id() throws IOException
     {
-        // FIXME ION-216
-        int start_of_tid   = (int) _input.getPosition();       // FIXME: for repositionable reader
-        int start_of_value = start_of_tid + 1;                 // FIXME: for repositionable reader
+        long start_of_tid   = _input.getPosition();
+        long start_of_value = start_of_tid + 1;
 
         int td = read();
         if (td < 0) {
@@ -423,8 +422,7 @@ abstract public class IonReaderBinaryRawX
         int len = IonConstants.getLowNibble(td);
         if (len == IonConstants.lnIsVarLen) {
             len = readVarUInt();
-            // FIXME ION-216
-            start_of_value = (int) _input.getPosition();        // FIXME: for repositionable reader
+            start_of_value = _input.getPosition();
         }
         else if (tid == IonConstants.tidNull) {
             if (len != IonConstants.lnIsNull) {
@@ -459,13 +457,13 @@ abstract public class IonReaderBinaryRawX
                 // special case of an ordered struct, it gets the
                 // otherwise impossible to have length of 1
                 len = readVarUInt();
-                start_of_value = _input._pos;                      // FIXME: for repositionable reader
+                start_of_value = _input.getPosition();
             }
         }
         _value_tid = tid;
         _value_len = len;
-        _position_len = len + (start_of_value - start_of_tid);           // FIXME: for repositionable reader
-        _position_start = start_of_tid;                                  // FIXME: for repositionable reader
+        _position_len = len + (start_of_value - start_of_tid);
+        _position_start = start_of_tid;
         return tid;
     }
     private final IonType get_iontype_from_tid(int tid)
