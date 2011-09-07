@@ -576,23 +576,6 @@ public class TimestampTest
         catch (NullValueException e) { }
     }
 
-    @Test
-    public void testTimestampsFromSuite()
-        throws Exception
-    {
-        Iterable<IonValue> values = loadTestFile("good/timestamps.ion");
-        // File is a sequence of many timestamp values.
-
-        int count = 0;
-
-        for (IonValue value : values)
-        {
-            count++;
-            String v = value.toString();
-            assertTrue(value instanceof IonTimestamp || v.equals("just some crap that can't be"));
-        }
-    }
-
 
     @Test
     public void testTimestampClone()
