@@ -15,15 +15,7 @@ public class NonOffsetSpanReaderTest
     extends ReaderFacetTestCase
 {
     @Inject("readerMaker")
-    public static final ReaderMaker[] READER_MAKERS =
-    {
-         ReaderMaker.FROM_STRING,
-         ReaderMaker.FROM_BYTES_TEXT,
-         ReaderMaker.FROM_BYTES_OFFSET_TEXT,
-//         ReaderMaker.FROM_BYTES_OFFSET_BINARY,
-         ReaderMaker.FROM_INPUT_STREAM_TEXT,
-         ReaderMaker.FROM_DOM
-    };
+    public static final ReaderMaker[] READER_MAKERS = NON_OFFSET_SPAN_READERS;
 
 
     public NonOffsetSpanReaderTest()

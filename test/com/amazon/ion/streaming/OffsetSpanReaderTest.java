@@ -21,7 +21,7 @@ public class OffsetSpanReaderTest
      */
     @Inject("readerMaker")
     public static final ReaderMaker[] READER_MAKERS =
-        ReaderMaker.valuesExcluding(NonOffsetSpanReaderTest.READER_MAKERS);
+        ReaderMaker.valuesExcluding(NON_OFFSET_SPAN_READERS);
 
 
     public OffsetSpanReaderTest()

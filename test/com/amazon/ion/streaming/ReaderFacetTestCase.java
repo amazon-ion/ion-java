@@ -30,6 +30,18 @@ public abstract class ReaderFacetTestCase
     };
 
     /**
+     * These are the readers that don't support {@link OffsetSpan}s.
+     */
+    public static final ReaderMaker[] NON_OFFSET_SPAN_READERS =
+    {
+        ReaderMaker.FROM_STRING,               // TODO ION-244
+        ReaderMaker.FROM_BYTES_TEXT,           // TODO ION-244
+        ReaderMaker.FROM_BYTES_OFFSET_TEXT,    // TODO ION-244
+        ReaderMaker.FROM_INPUT_STREAM_TEXT,    // TODO ION-231
+        ReaderMaker.FROM_DOM
+    };
+
+    /**
      * These are the readers that don't support {@link TextSpan}s.
      */
     public static final ReaderMaker[] NON_TEXT_SPAN_READERS =
@@ -37,9 +49,9 @@ public abstract class ReaderFacetTestCase
         ReaderMaker.FROM_STRING,               // TODO ION-240
         ReaderMaker.FROM_BYTES_BINARY,
         ReaderMaker.FROM_BYTES_TEXT,           // TODO ION-240
-        ReaderMaker.FROM_BYTES_OFFSET_TEXT,    // TODO how does offset affect position?
+        ReaderMaker.FROM_BYTES_OFFSET_TEXT,    // TODO ION-240
         ReaderMaker.FROM_BYTES_OFFSET_BINARY,
-        ReaderMaker.FROM_INPUT_STREAM_TEXT,    // TODO ION-231
+        ReaderMaker.FROM_INPUT_STREAM_TEXT,    // TODO ION-240
         ReaderMaker.FROM_INPUT_STREAM_BINARY,
         ReaderMaker.FROM_DOM
     };
@@ -49,8 +61,8 @@ public abstract class ReaderFacetTestCase
      */
     public static final ReaderMaker[] NON_SEEKABLE_READERS =
     {
-        ReaderMaker.FROM_INPUT_STREAM_BINARY,    // TODO ION-231
-        ReaderMaker.FROM_INPUT_STREAM_TEXT
+        ReaderMaker.FROM_INPUT_STREAM_BINARY,    // TODO ION-243
+        ReaderMaker.FROM_INPUT_STREAM_TEXT       // TODO ION-243
     };
 
 
