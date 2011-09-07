@@ -33,6 +33,8 @@ import com.amazon.ion.StructTest;
 import com.amazon.ion.SurrogateEscapeTest;
 import com.amazon.ion.SymbolTest;
 import com.amazon.ion.SystemProcessingTests;
+import com.amazon.ion.TimestampBadTest;
+import com.amazon.ion.TimestampGoodTest;
 import com.amazon.ion.TimestampTest;
 import com.amazon.ion.ValueFactorySequenceTest;
 import com.amazon.ion.impl.ByteBufferTest;
@@ -97,6 +99,8 @@ import org.junit.runners.Suite;
     StructTest.class,
     SymbolTest.class,
     TimestampTest.class,
+    TimestampGoodTest.class,
+    TimestampBadTest.class,
 
     AnnotationEscapesTest.class,
     FieldNameEscapesTest.class,
