@@ -141,6 +141,7 @@ import org.junit.runners.Suite;
     TreeReaderTest.class,
     MiscStreamingTest.class,
     BinaryStreamingTest.class,
+    ReaderTest.class,
 
     BadIonStreamingTest.class,
     GoodIonStreamingTest.class,
