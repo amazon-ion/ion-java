@@ -4,6 +4,8 @@ package com.amazon.ion.streaming;
 
 import static com.amazon.ion.ReaderMaker.valuesExcluding;
 
+import com.amazon.ion.IonTextReader;
+
 import com.amazon.ion.Facets;
 import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.Span;
@@ -16,7 +18,7 @@ import org.junit.Test;
  */
 public class TextSpanTest
     extends ReaderFacetTestCase
-{
+    {
     @Inject("readerMaker")
     public static final ReaderMaker[] READER_MAKERS =
         valuesExcluding(NON_TEXT_SPAN_READERS);
@@ -25,7 +27,13 @@ public class TextSpanTest
     protected void expectNextStart(int startLine, int startColumn)
     {
         in.next();
-        Span s = sp.currentSpan();
+        if (in instanceof IonTextReader) {
+            IonTextReader text = (IonTextReader) in;
+            assertEquals("startLine",   startLine,   text.getLineNumber());
+            assertEquals("startColumn", startColumn, text.getLineOffset());
+        }
+
+        Span s = sr.currentSpan();
         TextSpan ts = Facets.assumeFacet(TextSpan.class, s);
         assertEquals("startLine",   startLine,   ts.getStartLine());
         assertEquals("startColumn", startColumn, ts.getStartColumn());

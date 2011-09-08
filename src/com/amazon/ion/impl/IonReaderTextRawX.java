@@ -270,6 +270,8 @@ public abstract class IonReaderTextRawX
     ValueVariant        _v = new ValueVariant();
 
     long                _value_start_offset;
+    long                _value_start_line;
+    long                _value_start_column;
     IonType             _nesting_parent;
 
     enum LOB_STATE { EMPTY, READ, FINISHED }
@@ -311,18 +313,34 @@ public abstract class IonReaderTextRawX
         _annotations = new String[DEFAULT_ANNOTATION_COUNT];
     }
 
-    protected final void init(UnifiedInputStreamX iis, IonType parent) {
+    protected final void init(UnifiedInputStreamX iis, IonType parent)
+    {
+        init(iis, parent, 1, 1);
+    }
+
+    protected final void init(UnifiedInputStreamX iis
+                             ,IonType parent
+                             ,long start_line
+                             ,long start_column
+    ) {
+
         assert(parent != null);
-        _scanner = new IonReaderTextRawTokensX(iis);
+        _scanner = new IonReaderTextRawTokensX(iis, start_line, start_column);
+        _value_start_line = start_line;
+        _value_start_column = start_column;
         _current_value_save_point = iis.savePointAllocate();
-       _lob_loaded = LOB_STATE.EMPTY;
-       int starting_state = get_state_at_container_start(parent);
+        _lob_loaded = LOB_STATE.EMPTY;
+        int starting_state = get_state_at_container_start(parent);
         set_state(starting_state);
         _eof = false;
         push_container_state(parent);
     }
 
-    protected final void re_init(UnifiedInputStreamX iis, IonType parent) {
+    protected final void re_init(UnifiedInputStreamX iis
+                                ,IonType parent
+                                ,long start_line
+                                ,long start_column
+    ) {
         _state = 0;
         _container_state_top = 0;
         _container_is_struct = false;
@@ -342,7 +360,7 @@ public abstract class IonReaderTextRawX
         _lob_bytes = null;
         _lob_actual_len = 0;
 
-        init(iis, parent);
+        init(iis, parent, start_line, start_column);
 
         _nesting_parent = parent;
         if (IonType.STRUCT.equals(_nesting_parent)) {
@@ -428,7 +446,9 @@ public abstract class IonReaderTextRawX
      * The first line is line 1.
      * @return input line number
      */
-    public long getLineNumber() { return _scanner.getLineNumber(); }
+    public long getLineNumber() {
+        return _value_start_line;
+    }
 
     /**
      * get the input position offset of the next character
@@ -439,7 +459,9 @@ public abstract class IonReaderTextRawX
      * a CharSequence or a java.util.Reader.
      * @return offset of input position in the current line
      */
-    public long getLineOffset() { return _scanner.getLineOffset(); }
+    public long getLineOffset() {
+        return _value_start_column;
+    }
 
     /**
      * this looks forward to see if there is an upcoming value
@@ -745,6 +767,9 @@ public abstract class IonReaderTextRawX
         // reset this offset since for the span the comma isn't part
         // of the span when it's hoisted
         _value_start_offset = _scanner.getStartingOffset();
+        _value_start_line   = _scanner.getLineNumber();
+        _value_start_column = _scanner.getLineOffset();
+
         t = _scanner.nextToken();
 
         for (;;) {

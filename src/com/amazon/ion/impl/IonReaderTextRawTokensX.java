@@ -69,8 +69,13 @@ public class IonReaderTextRawTokensX
      * @param iis wrapped input stream
      */
     public IonReaderTextRawTokensX(UnifiedInputStreamX iis) {
+        this(iis, 1, 1);
+    }
+
+    public IonReaderTextRawTokensX(UnifiedInputStreamX iis, long starting_line, long starting_column) {
         _stream = iis;
-        _line_count = 1;
+        _line_count = starting_line;
+        _line_starting_position = _stream.getPosition() - starting_column;
     }
 
     public void close()
@@ -81,7 +86,11 @@ public class IonReaderTextRawTokensX
 
     public int  getToken()      { return _token; }
     public long getLineNumber() { return _line_count; }
-    public long getLineOffset() { return _stream.getPosition() - _line_starting_position; }
+    public long getLineOffset() {
+        long stream_position = _stream.getPosition();
+        long offset = stream_position - _line_starting_position;
+        return offset;
+    }
 
     UnifiedInputStreamX getSourceStream() { return this._stream; }
 
@@ -243,7 +252,8 @@ public class IonReaderTextRawTokensX
         // of IonTokenConsts.ESCAPED_NEWLINE_SEQUENCE passed in) we will
         // return the char unchanged and line count
         _line_count++;
-        _line_starting_position = _stream.getPosition();
+        _line_starting_position = _stream.getPosition() - 1;  // since we want the first character of the line to be 1, not 0
+
         return c;
     }
 

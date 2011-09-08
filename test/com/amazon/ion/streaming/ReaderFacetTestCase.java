@@ -43,10 +43,10 @@ public abstract class ReaderFacetTestCase
      */
     public static final ReaderMaker[] NON_TEXT_SPAN_READERS =
     {
-        ReaderMaker.FROM_STRING,               // TODO ION-240
+//        ReaderMaker.FROM_STRING,               // TODO ION-240
         ReaderMaker.FROM_BYTES_BINARY,
-        ReaderMaker.FROM_BYTES_TEXT,           // TODO ION-240
-        ReaderMaker.FROM_BYTES_OFFSET_TEXT,    // TODO ION-240
+//        ReaderMaker.FROM_BYTES_TEXT,           // TODO ION-240
+//        ReaderMaker.FROM_BYTES_OFFSET_TEXT,    // TODO how does offset affect position?
         ReaderMaker.FROM_BYTES_OFFSET_BINARY,
         ReaderMaker.FROM_INPUT_STREAM_TEXT,    // TODO ION-240
         ReaderMaker.FROM_INPUT_STREAM_BINARY,

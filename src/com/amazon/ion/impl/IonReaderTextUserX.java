@@ -4,6 +4,8 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
+import com.amazon.ion.TextSpan;
+
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonSystem;
@@ -287,7 +289,7 @@ public class IonReaderTextUserX
 
     static class IonReaderTextPosition
         extends IonReaderPositionBase
-//        implements TextSpan   FIXME ION-240
+        implements TextSpan
     {
         private UnifiedDataPageX _data_page;
         private long             _start_char_offset;
@@ -317,8 +319,8 @@ public class IonReaderTextUserX
             // These are not correct, since in general the reader has already
             // scanned beyond the start of the value and is now somewhere in
             // the middle of it.
-            _start_line = reader.getLineNumber();
-            _start_column = reader.getLineOffset();
+            _start_line = reader._value_start_line;
+            _start_column = reader._value_start_column;
         }
 
         public long getStartLine()
@@ -331,7 +333,7 @@ public class IonReaderTextUserX
 
         public long getStartColumn()
         {
-            if (_start_column < 1) {
+            if (_start_column < 0) {
                 throw new IllegalStateException("not positioned on a reader");
             }
             return _start_column;
@@ -385,8 +387,6 @@ public class IonReaderTextUserX
         UnifiedInputStreamX current_stream = _scanner.getSourceStream();
         UnifiedDataPageX    curr_page      = text_span.getDataPage();
         int                 array_offset   = (int)text_span._start_char_offset;
-//int                 base_offset    = curr_page._base_offset;
-//int                 offset_delta   = array_offset - base_offset;
         int                 page_limit     = curr_page._page_limit;
         int                 array_length   = page_limit - array_offset;
 
@@ -421,7 +421,7 @@ public class IonReaderTextUserX
                                       );
         }
         IonType container = text_span.getContainerType();
-        re_init(iis, container);
+        re_init(iis, container, text_span._start_line, text_span._start_column);
     }
 
     public void seek(IonReaderPosition position)
