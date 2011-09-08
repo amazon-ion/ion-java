@@ -31,19 +31,6 @@ public class BinaryStreamingTest
 {
     static final boolean _debug_flag = false;
 
-    static boolean bytesEqual(byte[] v1, byte[] v2) {
-        if (v1 == null || v2 == null) {
-            return v1 == v2;
-        }
-        if (v1.length != v2.length) {
-            return false;
-        }
-        for (int ii=0; ii<v1.length; ii++) {
-            if (v1[ii] != v2[ii]) return false;
-        }
-        return true;
-    }
-
 
     //=========================================================================
     // Test cases
@@ -324,7 +311,7 @@ public class BinaryStreamingTest
                     if (value instanceof byte[]) {
                         byte[] b1 = (byte[])value;
                         byte[] b2 = r.newBytes();
-                        assertTrue( bytesEqual(b1, b2) );
+                        assertArrayEquals(b1, b2);
                     }
                     else {
                         throw new IllegalStateException("we only test byte arrays ( byte[] ) to an IonBlob");
@@ -334,7 +321,7 @@ public class BinaryStreamingTest
                     if (value instanceof byte[]) {
                         byte[] c1 = (byte[])value;
                         byte[] c2 = r.newBytes();
-                        assertTrue( bytesEqual(c1, c2) );
+                        assertArrayEquals(c1, c2);
                     }
                     else {
                         throw new IllegalStateException("we only test byte arrays ( byte[] ) to an IonClob");

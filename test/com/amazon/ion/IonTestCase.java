@@ -15,7 +15,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
@@ -447,13 +446,6 @@ public abstract class IonTestCase
         return dg.getBytes();
     }
 
-    /**
-     * @deprecated this is in JUnit now
-     */
-    @Deprecated
-    public static void assertArrayEquals(final Object[] expected, final Object[] actual) {
-        assertTrue(String.format("Expected array <%s> got <%s>", expected, actual), Arrays.equals(expected, actual));
-    }
 
     public void assertEscape(char expected, char escapedChar)
     {
