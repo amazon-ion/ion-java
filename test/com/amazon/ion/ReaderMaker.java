@@ -20,7 +20,7 @@ public enum ReaderMaker
     /**
      * Invokes {@link IonSystem#newReader(String)}.
      */
-    FROM_STRING(false)
+    FROM_STRING(true, false)
     {
         @Override
         public IonReader newReader(IonSystem system, String ionText)
@@ -33,7 +33,7 @@ public enum ReaderMaker
     /**
      * Invokes {@link IonSystem#newReader(byte[])} with Ion binary.
      */
-    FROM_BYTES_BINARY(true)
+    FROM_BYTES_BINARY(false, true)
     {
         @Override
         public IonReader newReader(IonSystem system, byte[] ionData)
@@ -47,7 +47,7 @@ public enum ReaderMaker
     /**
      * Invokes {@link IonSystem#newReader(byte[])} with Ion text.
      */
-    FROM_BYTES_TEXT(false)
+    FROM_BYTES_TEXT(true, false)
     {
         @Override
         public IonReader newReader(IonSystem system, byte[] ionData)
@@ -61,7 +61,7 @@ public enum ReaderMaker
     /**
      * Invokes {@link IonSystem#newReader(byte[],int,int)} with Ion binary.
      */
-    FROM_BYTES_OFFSET_BINARY(true)
+    FROM_BYTES_OFFSET_BINARY(false, true)
     {
         @Override
         public int getOffset() { return 37; }
@@ -80,7 +80,7 @@ public enum ReaderMaker
     /**
      * Invokes {@link IonSystem#newReader(byte[],int,int)} with Ion text.
      */
-    FROM_BYTES_OFFSET_TEXT(false)
+    FROM_BYTES_OFFSET_TEXT(true, false)
     {
         @Override
         public int getOffset() { return 37; }
@@ -99,7 +99,7 @@ public enum ReaderMaker
     /**
      * Invokes {@link IonSystem#newReader(InputStream)} with Ion binary.
      */
-    FROM_INPUT_STREAM_BINARY(true)
+    FROM_INPUT_STREAM_BINARY(false, true)
     {
         @Override
         public IonReader newReader(IonSystem system, byte[] ionData)
@@ -114,7 +114,7 @@ public enum ReaderMaker
     /**
      * Invokes {@link IonSystem#newReader(InputStream)} with Ion text.
      */
-    FROM_INPUT_STREAM_TEXT(false)
+    FROM_INPUT_STREAM_TEXT(true, false)
     {
         @Override
         public IonReader newReader(IonSystem system, byte[] ionData)
@@ -126,7 +126,7 @@ public enum ReaderMaker
     },
 
 
-    FROM_DOM(false)
+    FROM_DOM(false, false)
     {
         @Override
         public IonReader newReader(IonSystem system, String ionText)
@@ -146,11 +146,18 @@ public enum ReaderMaker
 
     //========================================================================
 
+    private final boolean mySourceIsText;
     private final boolean mySourceIsBinary;
 
-    private ReaderMaker(boolean sourceIsBinary)
+    private ReaderMaker(boolean sourceIsText, boolean sourceIsBinary)
     {
+        mySourceIsText   = sourceIsText;
         mySourceIsBinary = sourceIsBinary;
+    }
+
+    public boolean sourceIsText()
+    {
+        return mySourceIsText;
     }
 
     public boolean sourceIsBinary()
