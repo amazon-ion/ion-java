@@ -291,7 +291,11 @@ public interface IonWriter
      * This method also writes annotations and field names (if in a struct),
      * and performs a deep write, including the contents of
      * any containers encountered.
+     *
+     * @deprecated Since IonJava R13.
+     *  Use {@link IonValue#writeTo(IonWriter)} instead.
      */
+    @Deprecated // TODO ION-247 remove this
     public void writeValue(IonValue value) throws IOException;
 
     /**

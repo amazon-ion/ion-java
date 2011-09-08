@@ -9,10 +9,12 @@ import static com.amazon.ion.util.Equivalence.ionEquals;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
@@ -340,7 +342,7 @@ public abstract class IonValueImpl
     }
 
 
-    public IonSystemImpl getSystem()
+    public final IonSystemImpl getSystem()
     {
         return _system;
     }
@@ -1895,6 +1897,20 @@ public abstract class IonValueImpl
         assert cumulativePositionDelta2 == cumulativePositionDelta;
 
         return cumulativePositionDelta;
+    }
+
+
+    public final void writeTo(IonWriter writer)
+    {
+        IonReader valueReader = getSystem().newReader(this);
+        try
+        {
+            writer.writeValues(valueReader);
+        }
+        catch (IOException e)
+        {
+            throw new IonException(e);
+        }
     }
 
 

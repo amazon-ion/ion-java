@@ -10,9 +10,11 @@ import static com.amazon.ion.util.Equivalence.ionEquals;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
@@ -760,6 +762,19 @@ public abstract class IonValueLite
         _elementid(0);
     }
 
+
+    public final void writeTo(IonWriter writer)
+    {
+        IonReader valueReader = getSystem().newReader(this);
+        try
+        {
+            writer.writeValues(valueReader);
+        }
+        catch (IOException e)
+        {
+            throw new IonException(e);
+        }
+    }
 }
 
 // current size 32 bit: 5*4 + 2 + 1 +  8 = 31 bytes (32 allocated)

@@ -249,6 +249,16 @@ public interface IonValue
 
 
     /**
+     * Copies this value to the given {@link IonWriter}.
+     * <p>
+     * This method writes annotations and field names (if in a struct),
+     * and performs a deep write, including the contents of
+     * any containers encountered.
+     */
+    public void writeTo(IonWriter writer);
+
+
+    /**
      * Entry point for visitor pattern.  Implementations of this method by
      * concrete classes will simply call the appropriate <code>visit</code>
      * method on the <code>visitor</code>.  For example, instances of

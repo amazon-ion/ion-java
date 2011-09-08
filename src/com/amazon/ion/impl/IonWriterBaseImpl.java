@@ -751,10 +751,10 @@ public abstract class IonWriterBaseImpl
     //  the reader versions, when the reader is of the
     //  same format as the writer.
     //
+    @Deprecated
     public void writeValue(IonValue value) throws IOException
     {
-        IonReader valueReader = new IonReaderTreeSystem(value);
-        writeValues(valueReader);
+        value.writeTo(this);
     }
 
     public void writeValues(IonReader reader) throws IOException
