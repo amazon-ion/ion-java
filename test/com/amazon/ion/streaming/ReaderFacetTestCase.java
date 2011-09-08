@@ -3,8 +3,6 @@
 package com.amazon.ion.streaming;
 
 import com.amazon.ion.Facets;
-import com.amazon.ion.IonReader;
-import com.amazon.ion.IonTestCase;
 import com.amazon.ion.OffsetSpan;
 import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.SeekableReader;
@@ -12,14 +10,13 @@ import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
 import com.amazon.ion.TextSpan;
 import com.amazon.ion.impl.IonReaderOctetPosition;
-import com.amazon.ion.junit.IonAssert;
 import org.junit.After;
 
 /**
  *
  */
 public abstract class ReaderFacetTestCase
-    extends IonTestCase
+    extends ReaderTestCase
 {
     /**
      * These readers don't support the {@link SpanProvider} facet.
@@ -66,15 +63,6 @@ public abstract class ReaderFacetTestCase
     };
 
 
-    protected ReaderMaker myReaderMaker;
-
-    public void setReaderMaker(ReaderMaker maker)
-    {
-        myReaderMaker = maker;
-    }
-
-
-    protected IonReader in;
     protected SpanProvider sp;
     protected boolean mySpanProviderRequired = true;
     protected SeekableReader sr;
@@ -105,15 +93,17 @@ public abstract class ReaderFacetTestCase
         }
     }
 
+    @Override
     protected final void read(byte[] ionData)
     {
-        in = myReaderMaker.newReader(system(), ionData);
+        super.read(ionData);
         initFacets();
     }
 
+    @Override
     protected final void read(String ionText)
     {
-        in = myReaderMaker.newReader(system(), ionText);
+        super.read(ionText);
         initFacets();
     }
 
@@ -127,27 +117,6 @@ public abstract class ReaderFacetTestCase
             assertEquals("Didn't expect facet " + facetType, null, facet);
         }
     }
-
-    protected void expectNoCurrentValue()
-    {
-        IonAssert.assertNoCurrentValue(in);
-    }
-
-    protected void expectTopLevel()
-    {
-        IonAssert.assertTopLevel(in);
-    }
-
-    protected void expectEof()
-    {
-        IonAssert.assertEof(in);
-    }
-
-    protected void expectTopEof()
-    {
-        IonAssert.assertTopEof(in);
-    }
-
 
     protected void hoist(Span s)
     {
