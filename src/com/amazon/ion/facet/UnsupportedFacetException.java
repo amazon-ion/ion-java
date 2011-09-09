@@ -4,10 +4,12 @@ package com.amazon.ion.facet;
 
 
 /**
- * Indicates a failed request to find a required {@linkplain Facets facet} of
+ * Indicates a failed request to find a required facet of
  * some subject.
  *
  * @see Facets#assumeFacet(Class, Faceted)
+ *
+ * @since R13
  */
 public class UnsupportedFacetException
     extends UnsupportedOperationException
@@ -30,11 +32,21 @@ public class UnsupportedFacetException
                 + " is not supported by " + mySubject;
     }
 
+    /**
+     * Gets the facet type that's not supported by the subject instance.
+     *
+     * @return may be null.
+     */
     public Class<?> getFacetType()
     {
         return myFacetType;
     }
 
+    /**
+     * Gets the subject instance that didn't support the requested facet.
+     *
+     * @return may be null.
+     */
     public Object getSubject()
     {
         return mySubject;

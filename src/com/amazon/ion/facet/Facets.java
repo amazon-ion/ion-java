@@ -3,9 +3,11 @@
 package com.amazon.ion.facet;
 
 /**
- * Utility methods for working with {@link Faceted facets}.
+ * Utility methods for working with facets.
  *
  * @see Faceted
+ *
+ * @since R13
  */
 public class Facets
 {

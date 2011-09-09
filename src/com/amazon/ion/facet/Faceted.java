@@ -11,28 +11,20 @@ package com.amazon.ion.facet;
  * in each circumstance.
  *
  * <h2>Design Notes</h2>
- * <p>
- * In general, facet interfaces should not extend the subject type.
- * This makes use of the facet a bit less convenient, since the user must
- * retain references to both the facet and its subject.
- * However, such extension can lead to challenging implementation problems,
- * especially when the subject is a decorator, adaptor, or similar wrapper
- * around the actual provider of the facet.
- * <p>
+ *
  * Given a concrete {@link Faceted} class, it may be that some instances
  * support a particular facet while others do not, depending on the state of
  * the subject or the way it was constructed. In such cases
- * {@link #asFacet asFacet} should choose whether to return the facet based on
- * the subject's state.  Such classes should <em>not</em> extend the facet
+ * {@link #asFacet(Class) asFacet} should choose whether to return the facet
+ * based on the subject's state.
+ * Such classes should <em>not</em> extend the facet
  * interface (directly or indirectly), since that allows clients to bypass
- * {@link #asFacet(Class)} and simply downcast the subject to the facet,
+ * {@link #asFacet(Class) asFacet} and simply downcast the subject to the facet,
  * causing problems for instances that can't support the facet.
  *
- * <h2>Acknowledgements</h2>
- * This is an adaptation of the Extension Objects pattern as written by
- * Erich Gamma.
- *
  * @see Facets
+ *
+ * @since R13
  */
 public interface Faceted
 {
