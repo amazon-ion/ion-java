@@ -12,7 +12,6 @@ import com.amazon.ion.SeekableReader;
 import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.util.IonStreamUtils;
 
 /**
  * Temporary interface to some in-development features.
@@ -23,16 +22,26 @@ public class PrivateDmsdkUtils
     public static IonReader newBinaryReaderWithPosition(IonSystem system,
                                                         byte[] buffer)
     {
-        return newBinaryReaderWithPosition(system, system.getCatalog(),
-                                           buffer, 0, buffer.length);
+        IonReader r = system.newReader(buffer);
+        if (r.asFacet(SeekableReader.class) == null)
+        {
+            throw new UnsupportedOperationException("reader isn't seekable");
+
+        }
+        return r;
     }
 
     public static IonReader newBinaryReaderWithPosition(IonSystem system,
                                                         byte[] buffer,
                                                         int offset, int length)
     {
-        return newBinaryReaderWithPosition(system, system.getCatalog(),
-                                           buffer, offset, length);
+        IonReader r = system.newReader(buffer, offset, length);
+        if (r.asFacet(SeekableReader.class) == null)
+        {
+            throw new UnsupportedOperationException("reader isn't seekable");
+
+        }
+        return r;
     }
 
     public static IonReader newBinaryReaderWithPosition(IonSystem system,
@@ -40,13 +49,14 @@ public class PrivateDmsdkUtils
                                                         byte[] buffer,
                                                         int offset, int length)
     {
-        if (! IonStreamUtils.isIonBinary(buffer, offset, length))
-        {
-            throw new UnsupportedOperationException("buffer isn't Ion binary");
-        }
-
-        return new IonReaderBinaryUserX(system, catalog,
+        IonReader r = new IonReaderBinaryUserX(system, catalog,
                                                buffer, offset, length);
+        if (r.asFacet(SeekableReader.class) == null)
+        {
+            throw new UnsupportedOperationException("reader isn't seekable");
+
+        }
+        return r;
     }
 
 
@@ -97,6 +107,6 @@ public class PrivateDmsdkUtils
 
     public static void lockLocalSymbolTable(SymbolTable symtab)
     {
-        ((UnifiedSymbolTable)symtab).makeReadOnly();
+        symtab.makeReadOnly();
     }
 }
