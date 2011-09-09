@@ -2,7 +2,7 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.Facets.assumeFacet;
+import static com.amazon.ion.facet.Facets.assumeFacet;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;

@@ -2,6 +2,7 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.facet.Faceted;
 import java.io.Closeable;
 import java.io.IOException;
 import java.math.BigDecimal;

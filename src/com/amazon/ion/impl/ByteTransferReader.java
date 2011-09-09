@@ -2,8 +2,8 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.Faceted;
 import com.amazon.ion.IonReader;
+import com.amazon.ion.facet.Faceted;
 import java.io.IOException;
 
 /**

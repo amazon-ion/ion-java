@@ -2,13 +2,13 @@
 
 package com.amazon.ion.streaming;
 
-import com.amazon.ion.Facets;
 import com.amazon.ion.OffsetSpan;
 import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.SeekableReader;
 import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
 import com.amazon.ion.TextSpan;
+import com.amazon.ion.facet.Facets;
 import com.amazon.ion.impl.IonReaderOctetPosition;
 import org.junit.After;
 

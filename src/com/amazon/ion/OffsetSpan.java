@@ -2,6 +2,8 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.facet.Faceted;
+import com.amazon.ion.facet.Facets;
 import java.io.InputStream;
 
 /**

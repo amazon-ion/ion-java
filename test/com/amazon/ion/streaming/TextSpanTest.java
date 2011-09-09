@@ -5,11 +5,10 @@ package com.amazon.ion.streaming;
 import static com.amazon.ion.ReaderMaker.valuesExcluding;
 
 import com.amazon.ion.IonTextReader;
-
-import com.amazon.ion.Facets;
 import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.Span;
 import com.amazon.ion.TextSpan;
+import com.amazon.ion.facet.Facets;
 import com.amazon.ion.junit.Injected.Inject;
 import org.junit.Test;
 

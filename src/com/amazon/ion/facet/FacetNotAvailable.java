@@ -1,6 +1,8 @@
 // Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
 
-package com.amazon.ion;
+package com.amazon.ion.facet;
+
+import com.amazon.ion.IonException;
 
 /**
  * Indicates a failed request to find a required {@linkplain Facets facet} of

@@ -2,6 +2,8 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.facet.Faceted;
+
 /**
  * An immutable reference to a consecutive sequence of values (perhaps
  * including large hierarchies) within some base source of Ion data.

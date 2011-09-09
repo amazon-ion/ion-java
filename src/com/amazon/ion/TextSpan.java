@@ -2,6 +2,9 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.facet.Faceted;
+import com.amazon.ion.facet.Facets;
+
 /**
  * Exposes the positions of a {@link Span} in the form of <em>one-based</em>
  * line and column numbers within the source text stream.

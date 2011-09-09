@@ -1,11 +1,15 @@
 // Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
 
-package com.amazon.ion;
+package com.amazon.ion.facet;
 
-import static com.amazon.ion.Facets.asFacet;
-import static com.amazon.ion.Facets.assumeFacet;
+import static com.amazon.ion.facet.Facets.asFacet;
+import static com.amazon.ion.facet.Facets.assumeFacet;
 import static org.junit.Assert.assertSame;
 
+import com.amazon.ion.Span;
+
+import com.amazon.ion.facet.FacetNotAvailable;
+import com.amazon.ion.facet.Faceted;
 import org.junit.Test;
 
 /**

@@ -1,6 +1,6 @@
 // Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
 
-package com.amazon.ion;
+package com.amazon.ion.facet;
 
 /**
  * Utility methods for working with {@link Faceted facets}.
