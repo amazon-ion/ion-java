@@ -3,6 +3,7 @@
 package com.amazon.ion.streaming;
 
 import com.amazon.ion.ReaderMaker;
+import com.amazon.ion.SpanProvider;
 import com.amazon.ion.junit.Injected.Inject;
 import org.junit.Test;
 
@@ -30,6 +31,6 @@ public class NonSpanReaderTest
     public void testNoSpanProviderFacet()
     {
         read("something");
-        assertNull("SpanProvider facet not expected", sp);
+        expectNoFacet(SpanProvider.class, in);
     }
 }

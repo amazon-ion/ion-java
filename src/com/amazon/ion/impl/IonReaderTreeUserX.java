@@ -9,9 +9,9 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.SeekableReader;
 import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
-import com.amazon.ion.SeekableReader;
 import com.amazon.ion.SymbolTable;
 
 /**
@@ -29,17 +29,6 @@ class IonReaderTreeUserX
         _catalog = catalog;
     }
 
-    @Override
-    public <T> T asFacet(Class<T> facetType)
-    {
-        if ((facetType == IonReaderWithPosition.class) ||
-            (facetType == SeekableReader.class) ||
-            (facetType == SpanProvider.class))
-        {
-            return facetType.cast(this);
-        }
-        return super.asFacet(facetType);
-    }
 
     //========================================================================
 
@@ -181,16 +170,10 @@ class IonReaderTreeUserX
     @Deprecated
     public void seek(IonReaderPosition position)
     {
-        hoist(position);
+        hoistImpl(position);
     }
 
-
-    public Span currentSpan()
-    {
-        return getCurrentPosition();
-    }
-
-    public void hoist(Span span)
+    private void hoistImpl(Span span)
     {
         if (span instanceof TreeSpan) {
             TreeSpan treeSpan = (TreeSpan)span;
@@ -199,6 +182,42 @@ class IonReaderTreeUserX
         else {
             // TODO custom exception
             throw new IllegalArgumentException("Span not appropriate for this reader");
+        }
+    }
+
+
+    //========================================================================
+    // Facet support
+
+
+    @Override
+    public <T> T asFacet(Class<T> facetType)
+    {
+        if (facetType == IonReaderWithPosition.class)
+        {
+            return facetType.cast(this);
+        }
+
+        if ((facetType == SeekableReader.class) ||
+            (facetType == SpanProvider.class))
+        {
+            return facetType.cast(new SeekableReaderFacet());
+        }
+
+        return super.asFacet(facetType);
+    }
+
+
+    private class SeekableReaderFacet implements SeekableReader
+    {
+        public Span currentSpan()
+        {
+            return getCurrentPosition();
+        }
+
+        public void hoist(Span span)
+        {
+            hoistImpl(span);
         }
     }
 }

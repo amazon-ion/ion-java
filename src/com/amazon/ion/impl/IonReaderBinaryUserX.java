@@ -19,7 +19,7 @@ import java.util.Iterator;
 
 class IonReaderBinaryUserX
     extends IonReaderBinarySystemX
-    implements IonReaderWriterPrivate, IonReaderWithPosition, SeekableReader
+    implements IonReaderWriterPrivate, IonReaderWithPosition
 {
     /**
      * This is the physical start-of-stream offset when this reader was created.
@@ -91,49 +91,6 @@ class IonReaderBinaryUserX
 
 
     /**
-     *
-     */
-    @Override
-    public <T> T asFacet(Class<T> facetType)
-    {
-        if (facetType == SpanProvider.class)
-        {
-            return facetType.cast(this);
-        }
-
-        if ((facetType == IonReaderWithPosition.class) ||
-            (facetType == SeekableReader.class))
-        {
-            // TODO ION-231 support seeking over InputStream
-            if (_input instanceof FromByteArray)
-            {
-                return facetType.cast(this);
-            }
-        }
-
-        if (facetType == ByteTransferReader.class)
-        {
-            // This is a rather sketchy use of Facets, since the availability
-            // of the facet depends upon the current state of this subject,
-            // and that can change over time.
-
-            // TODO ION-241 Our {@link #transferCurrentValue} doesn't handle
-            //  field names and annotations.
-
-            // Ensure there's a contiguous buffer we can copy.
-            if (_input instanceof UnifiedInputStreamX.FromByteArray
-                && getTypeAnnotationIds().length == 0
-                && ! isInStruct())
-            {
-                return facetType.cast(new ByteTransferReaderFacet());
-            }
-        }
-
-        return super.asFacet(facetType);
-    }
-
-
-    /**
      * Determines the abstract position of the reader, such that one can
      * later {@link #seek} back to it.
      * <p>
@@ -176,12 +133,6 @@ class IonReaderBinaryUserX
         pos._value_is_true = _value_is_true;
 
         return pos;
-    }
-
-
-    public Span currentSpan()
-    {
-        return getCurrentPosition();
     }
 
 
@@ -241,15 +192,6 @@ class IonReaderBinaryUserX
 //        _is_in_struct = false;
     }
 
-    public void hoist(Span span)
-    {
-        if (! (span instanceof IonReaderBinaryPosition))
-        {
-            throw new IllegalArgumentException("Span isn't compatible with this reader.");
-        }
-
-        seek((IonReaderBinaryPosition) span);
-    }
 
     @Override
     public IonType next()
@@ -426,6 +368,77 @@ class IonReaderBinaryUserX
 
 
     //========================================================================
+    // Facet support
+
+
+    @Override
+    public <T> T asFacet(Class<T> facetType)
+    {
+        if (facetType == SpanProvider.class)
+        {
+            return facetType.cast(new SpanProviderFacet());
+        }
+
+        // TODO ION-231 support seeking over InputStream
+        if (_input instanceof FromByteArray)
+        {
+            if (facetType == IonReaderWithPosition.class)
+            {
+                return facetType.cast(this);
+            }
+
+            if (facetType == SeekableReader.class)
+            {
+                return facetType.cast(new SeekableReaderFacet());
+            }
+        }
+
+        if (facetType == ByteTransferReader.class)
+        {
+            // This is a rather sketchy use of Facets, since the availability
+            // of the facet depends upon the current state of this subject,
+            // and that can change over time.
+
+            // TODO ION-241 Our {@link #transferCurrentValue} doesn't handle
+            //  field names and annotations.
+
+            // Ensure there's a contiguous buffer we can copy.
+            if (_input instanceof UnifiedInputStreamX.FromByteArray
+                && getTypeAnnotationIds().length == 0
+                && ! isInStruct())
+            {
+                return facetType.cast(new ByteTransferReaderFacet());
+            }
+        }
+
+        return super.asFacet(facetType);
+    }
+
+
+    private class SpanProviderFacet implements SpanProvider
+    {
+        public Span currentSpan()
+        {
+            return getCurrentPosition();
+        }
+    }
+
+
+    private class SeekableReaderFacet
+        extends SpanProviderFacet
+        implements SeekableReader
+    {
+        public void hoist(Span span)
+        {
+            if (! (span instanceof IonReaderBinaryPosition))
+            {
+                throw new IllegalArgumentException("Span isn't compatible with this reader.");
+            }
+
+            seek((IonReaderBinaryPosition) span);
+        }
+    }
+
 
     private class ByteTransferReaderFacet implements ByteTransferReader
     {

@@ -3,6 +3,7 @@
 package com.amazon.ion.streaming;
 
 import com.amazon.ion.ReaderMaker;
+import com.amazon.ion.SeekableReader;
 import com.amazon.ion.junit.Injected.Inject;
 import org.junit.Test;
 
@@ -27,6 +28,6 @@ public class NonSeekableReaderTest
     public void seekableReaderFacetNotAvailable()
     {
         read("null");
-        assertNull("SeekableReader facet not expected", sr);
+        expectNoFacet(SeekableReader.class, in);
     }
 }

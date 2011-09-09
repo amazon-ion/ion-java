@@ -4,14 +4,15 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
-import com.amazon.ion.TextSpan;
-
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
+import com.amazon.ion.SeekableReader;
 import com.amazon.ion.Span;
+import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.TextSpan;
 import java.io.File;
 import java.io.InputStream;
 import java.io.Reader;
@@ -363,10 +364,6 @@ public class IonReaderTextUserX
         }
     }
 
-    public Span currentSpan()
-    {
-        return this.getCurrentPosition();
-    }
 
     public IonReaderPosition getCurrentPosition()
     {
@@ -377,7 +374,7 @@ public class IonReaderTextUserX
         return pos;
     }
 
-    public void hoist(Span span)
+    private void hoistImpl(Span span)
     {
         if (!(span instanceof IonReaderTextPosition)) {
             throw new IllegalArgumentException("position must match the reader");
@@ -426,8 +423,44 @@ public class IonReaderTextUserX
 
     public void seek(IonReaderPosition position)
     {
-        hoist(position);
-        return;
+        hoistImpl(position);
     }
 
+
+    //========================================================================
+
+
+    @Override
+    public <T> T asFacet(Class<T> facetType)
+    {
+        if (_scanner.isBufferedInput()) // TODO ION-231
+        {
+            if (facetType == IonReaderWithPosition.class)
+            {
+                return facetType.cast(this);
+            }
+
+            if ((facetType == SeekableReader.class) ||
+                (facetType == SpanProvider.class))
+            {
+                return facetType.cast(new SeekableReaderFacet());
+            }
+        }
+
+        return super.asFacet(facetType);
+    }
+
+
+    private class SeekableReaderFacet implements SeekableReader
+    {
+        public Span currentSpan()
+        {
+            return getCurrentPosition();
+        }
+
+        public void hoist(Span span)
+        {
+            hoistImpl(span);
+        }
+    }
 }

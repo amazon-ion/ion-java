@@ -3,6 +3,7 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.SeekableReader;
+import com.amazon.ion.SpanProvider;
 
 
 
@@ -16,7 +17,6 @@ import com.amazon.ion.SeekableReader;
  */
 @Deprecated
 public interface IonReaderWithPosition
-    extends SeekableReader
 {
     /**
      * returns an IonReaderPosition based on the current
@@ -30,7 +30,7 @@ public interface IonReaderWithPosition
      *
      * @return IonReaderPosition
      *
-     * @deprecated Use {@link #currentSpan()}.
+     * @deprecated Use {@link SpanProvider#currentSpan()}.
      */
     @Deprecated
     public IonReaderPosition getCurrentPosition();
@@ -43,7 +43,7 @@ public interface IonReaderWithPosition
      *
      * @param position retrieved from this reader
      *
-     * @deprecated Use {@link #hoist(com.amazon.ion.Span)}
+     * @deprecated Use {@link SeekableReader#hoist(com.amazon.ion.Span)}
      */
     @Deprecated
     public void seek(IonReaderPosition position);

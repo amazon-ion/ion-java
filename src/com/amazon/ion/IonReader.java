@@ -43,13 +43,13 @@ import java.util.Iterator;
  * extract that from the wrappers; the documentation of {@link IonException}
  * explains how to do that.
  *
- * <h2>Facets</h2>
+ * <h2>Reader Facets</h2>
  * Readers are {@link Faceted} and implementations may provide additional
  * functionality accessible via the {@link #asFacet(Class)} method.
  *
  * <h3>The {@link SpanProvider} Facet</h3>
  * This facet is available on all readers <em>except</em> text readers created
- * from an {@link java.io.InputStream}.
+ * from an {@link java.io.InputStream InputStream}.
  * (See <a href="https://jira2.amazon.com/browse/ION-231">JIRA issue ION-231</a>.)
  * It provides access to the "{@linkplain SpanProvider#currentSpan() current
  * span}" covering the reader's current value.
@@ -60,10 +60,25 @@ import java.util.Iterator;
  *
  * <h3>The {@link SeekableReader} Facet</h3>
  * This facet is available on all readers <em>except</em> those created from
- * an {@link java.io.InputStream}.
- * (See <a href="https://jira2.amazon.com/browse/ION-231">JIRA issue ION-231</a>.)
+ * an {@link java.io.InputStream InputStream}.
+ * (See <a href="https://jira2.amazon.com/browse/ION-243">JIRA issue ION-243</a>.)
  * It allows the user to reposition the reader to a {@link Span} over the
  * same reader instance or another reader with the same source.
+ *
+ * <h2>Span Facets</h2>
+ * Readers that support the {@link SpanProvider} facet vend {@link Span}s that
+ * are also faceted.
+ *
+ * <h3>The {@link OffsetSpan} Facet</h3>
+ * This facet is support by all readers of Ion binary data.
+ * It's not currently supported when reading text data.
+ * (See <a href="https://jira2.amazon.com/browse/ION-231">JIRA issue ION-231</a>
+ * and  <a href="https://jira2.amazon.com/browse/ION-244">JIRA issue ION-244</a>.)
+ *
+ * <h3>The {@link TextSpan} Facet</h3>
+ * This facet is supported by all text readers <em>except</em> those created
+ * from an {@link java.io.InputStream InputStream}.
+ * (See <a href="https://jira2.amazon.com/browse/ION-231">JIRA issue ION-231</a>.)
  */
 public interface IonReader
     extends Closeable, Faceted
