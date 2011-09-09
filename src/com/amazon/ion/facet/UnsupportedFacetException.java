@@ -2,7 +2,6 @@
 
 package com.amazon.ion.facet;
 
-import com.amazon.ion.IonException;
 
 /**
  * Indicates a failed request to find a required {@linkplain Facets facet} of
@@ -10,15 +9,15 @@ import com.amazon.ion.IonException;
  *
  * @see Facets#assumeFacet(Class, Faceted)
  */
-public class FacetNotAvailable
-    extends IonException
+public class UnsupportedFacetException
+    extends UnsupportedOperationException
 {
     private static final long serialVersionUID = 1L;
 
     private Class<?> myFacetType;
     private Object   mySubject;
 
-    public FacetNotAvailable(Class<?> facetType, Object subject)
+    public UnsupportedFacetException(Class<?> facetType, Object subject)
     {
         myFacetType = facetType;
         mySubject = subject;
@@ -27,7 +26,8 @@ public class FacetNotAvailable
     @Override
     public String getMessage()
     {
-        return "Facet " + myFacetType + " is not available from " + mySubject;
+        return "Facet " + myFacetType.getName()
+                + " is not supported by " + mySubject;
     }
 
     public Class<?> getFacetType()

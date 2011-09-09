@@ -7,9 +7,6 @@ import static com.amazon.ion.facet.Facets.assumeFacet;
 import static org.junit.Assert.assertSame;
 
 import com.amazon.ion.Span;
-
-import com.amazon.ion.facet.FacetNotAvailable;
-import com.amazon.ion.facet.Faceted;
 import org.junit.Test;
 
 /**
@@ -90,7 +87,7 @@ public class FacetsTest
     }
 
 
-    @Test(expected = FacetNotAvailable.class)
+    @Test(expected = UnsupportedFacetException.class)
     public void assumeFacetThrowsOnNullFacted()
     {
         Faceted subject = null;
@@ -98,7 +95,7 @@ public class FacetsTest
         Span n = assumeFacet(Span.class, subject);
     }
 
-    @Test(expected = FacetNotAvailable.class)
+    @Test(expected = UnsupportedFacetException.class)
     public void assumeFacetThrowsOnNullObject()
     {
         Object subject = null;
@@ -107,21 +104,21 @@ public class FacetsTest
     }
 
 
-    @Test(expected = FacetNotAvailable.class)
+    @Test(expected = UnsupportedFacetException.class)
     public void assumeFacetOfFacetedThrowsOnNoFacet()
     {
         Faceted subject = new Mid();
         assumeFacet(Span.class, subject);
     }
 
-    @Test(expected = FacetNotAvailable.class)
+    @Test(expected = UnsupportedFacetException.class)
     public void assumeFacetOfFacetedObjectThrowsOnNoFacet()
     {
         Object subject = new Mid();
         assumeFacet(Span.class, subject);
     }
 
-    @Test(expected = FacetNotAvailable.class)
+    @Test(expected = UnsupportedFacetException.class)
     public void assumeFacetOfUnfacetedObjectThrowsOnNoFacet()
     {
         Object subject = new Base();

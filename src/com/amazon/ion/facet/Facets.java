@@ -17,7 +17,7 @@ public class Facets
 
 
     /**
-     * Returns a facet of the given subject if available, returning null
+     * Returns a facet of the given subject if supported, returning null
      * otherwise.
      * <p>
      * This does not attempt to cast the subject to the requested type, since
@@ -25,7 +25,7 @@ public class Facets
      * conversion.
      *
      * @return the requested facet, or null if {@code subject} is null or if
-     *  the requested facet isn't available.
+     *  subject doesn't support the requested facet type.
      */
     public static <T> T asFacet(Class<T> facetType, Faceted subject)
     {
@@ -34,7 +34,7 @@ public class Facets
 
 
     /**
-     * Returns a facet of the given subject if available, returning null
+     * Returns a facet of the given subject if supported, returning null
      * otherwise.
      * <p>
      * If the subject implements {@link Faceted}, then this conversion is
@@ -42,7 +42,7 @@ public class Facets
      * cast of the subject is attempted.
      *
      * @return the requested facet, or null if {@code subject} is null or if
-     *  the requested facet isn't available.
+     *  subject doesn't support the requested facet type.
      */
     public static <T> T asFacet(Class<T> facetType, Object subject)
     {
@@ -61,7 +61,7 @@ public class Facets
 
 
     /**
-     * Returns a facet of the given subject if available, throwing an
+     * Returns a facet of the given subject if supported, throwing an
      * exception otherwise.
      * <p>
      * This does not attempt to cast the subject to the requested type, since
@@ -70,8 +70,8 @@ public class Facets
      *
      * @return not null.
      *
-     * @throws FacetNotAvailable if {@code subject} is null or if the
-     *  requested facet isn't available.
+     * @throws UnsupportedFacetException if {@code subject} is null or if the
+     *  subject doesn't support the requested facet type.
      */
     public static <T> T assumeFacet(Class<T> facetType, Faceted subject)
     {
@@ -81,14 +81,13 @@ public class Facets
             if (facet != null) return facet;
         }
 
-        throw new FacetNotAvailable(facetType, subject);
+        throw new UnsupportedFacetException(facetType, subject);
     }
 
 
     /**
-     * Returns a facet of the given subject if available, throwing an
+     * Returns a facet of the given subject if supported, throwing an
      * exception otherwise.
-     * <p>
      * <p>
      * If the subject implements {@link Faceted}, then this conversion is
      * delegated to {@link Faceted#asFacet(Class)}. Otherwise, a simple
@@ -96,8 +95,8 @@ public class Facets
      *
      * @return not null.
      *
-     * @throws FacetNotAvailable if {@code subject} is null or if the
-     *  requested facet isn't available.
+     * @throws UnsupportedFacetException if {@code subject} is null or if the
+     *  subject doesn't support the requested facet type.
      */
     public static <T> T assumeFacet(Class<T> facetType, Object subject)
     {
@@ -111,6 +110,6 @@ public class Facets
             return facetType.cast(subject);
         }
 
-        throw new FacetNotAvailable(facetType, subject);
+        throw new UnsupportedFacetException(facetType, subject);
     }
 }

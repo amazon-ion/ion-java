@@ -37,14 +37,15 @@ package com.amazon.ion.facet;
 public interface Faceted
 {
     /**
-     * Returns a facet of this subject if available.
+     * Returns a facet of this subject if supported.
      *
      * @param <T>       The requested facet type.
      * @param facetType The type token of the requested facet type.
      *
-     * @return  An instance of T representing the facet of this subject, or
-     *          null if the facet is not available.
+     * @return  An instance of T representing the facet of the subject, or
+     *          null if the facet is not supported by the subject.
      *
+     * @see Facets#asFacet(Class, Faceted)
      * @see Facets#assumeFacet(Class, Faceted)
      */
     public <T> T asFacet(Class<T> facetType);
