@@ -427,6 +427,21 @@ public abstract class IonWriterTestCase
     }
 
     @Test
+    public void testWriteValuesCopiesCurrentValue()
+        throws Exception
+    {
+        String data = "1 2 3";
+        IonReader ir = system().newReader(data);
+        ir.next();
+
+        iw = makeWriter();
+        iw.writeValues(ir);
+
+        IonDatagram dg = reload();
+        assertEquals(loader().load(data), dg);
+    }
+
+    @Test
     public void testWritingNulls()
         throws Exception
     {

@@ -308,7 +308,10 @@ public interface IonWriter
     public void writeValue(IonReader reader) throws IOException;
 
     /**
-     * Writes values from a reader until the end of the current container.
+     * Writes a reader's current value, and all following values until the end
+     * of the current container.  If there's no current value then this method
+     * calls {@link IonReader#next()} to get going.
+     *  <p>
      * This method iterates until {@link IonReader#next()} returns {@code null}
      * and does not {@linkplain IonReader#stepOut() step out} to the container
      * of the current cursor position.

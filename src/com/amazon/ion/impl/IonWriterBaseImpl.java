@@ -763,29 +763,21 @@ public abstract class IonWriterBaseImpl
             clear_system_value_stack();
         }
 
+        if (reader.getType() == null) reader.next();
+
         if (reader instanceof IonReaderWriterPrivate) {
             IonReaderWriterPrivate private_reader = (IonReaderWriterPrivate)reader;
-            for (;;) {
-                IonType type = reader.next();
-                if (type == null) {
-                    break;
-                }
+            while (reader.getType() != null) {
                 transfer_symbol_tables(private_reader);
                 writeValue(reader);
+                reader.next();
             }
         }
         else {
-            write_values_helper(reader);
-        }
-    }
-
-    public void write_values_helper(IonReader reader) throws IOException
-    {
-        IonType t;
-        for (;;) {
-            t = reader.next();
-            if (t == null) break;
-            writeValue(reader);
+            while (reader.getType() != null) {
+                writeValue(reader);
+                reader.next();
+            }
         }
     }
 
