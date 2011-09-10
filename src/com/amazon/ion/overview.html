@@ -7,12 +7,14 @@ Java<sup><font size="-4">TM</font></sup> 2 Platform Standard Edition 5.0
 and above.
 <p>
 This document describes all classes intended for public consumption, limited to
-the packages {@link com.amazon.ion}, {@link com.amazon.ion.system}, and
-{@link com.amazon.ion.util}.  The distribution includes other implementation
+the packages listed here.  The distribution includes other implementation
 packages not documented here (<em>e.g.</em> {@code com.amazon.ion.impl});
 your use of those packages is not supported, so do us both a favor and
 <b>don't use them!</b>
-
+<p>
+More generally:
+<b>Any behavior or features not present in this API documentation is
+unsupported, probably untested, and subject to change without notice.</b>
 
 <h1>Start at IonSystem</h1>
 
@@ -111,5 +113,26 @@ To construct an {@code IonLoader}, call
 You can reuse a loader many times, even from multiple threads.  The system
 factory also maintains a "default loader" so you don't have to pass one around,
 see {@link com.amazon.ion.IonSystem#getLoader()}.
+
+<h1>Getting Data Out</h1>
+
+There's also several mechanisms for generating Ion data:
+<ul>
+  <li>{@link com.amazon.ion.IonWriter IonWriter} is the low-level API for
+    generating Ion data in some form. It's agnostic to the output format; in
+    theory the actual output could be some other format entirely.
+  <li>{@link com.amazon.ion.util.Printer Printer} is the most flexible way to 
+    create Ion text data from an {@link com.amazon.ion.IonValue IonValue}.
+  <li>{@link com.amazon.ion.IonValue#toString() IonValue.toString()} will also
+    generate Ion text, but it's primarily intended for debugging purposes and
+    cannot be customized.  It's format is not guaranteed so don't assume that
+    it will always output the same thing!
+  <li>From an {@link com.amazon.ion.IonDatagram IonDatagram} you can call
+    {@link com.amazon.ion.IonDatagram#getBytes() getBytes()} to get Ion
+    binary data.
+</ul>
+
+You can create {@code IonWriter}s using methods on {@code IonSystem}.
+
 </body>
 </html>

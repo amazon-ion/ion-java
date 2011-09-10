@@ -276,7 +276,7 @@ public interface IonValue
      * Ensures that this value, and all contained data, is fully materialized
      * into {@link IonValue} instances from any underlying Ion binary buffer.
      *
-     * @deprecated with no direct replacement. This method has often been used
+     * @deprecated with no direct replacement. This method was once recommended
      * to make values (somewhat) thread-safe, in which case one should use
      * {@link #makeReadOnly()} instead.
      */
@@ -321,8 +321,12 @@ public interface IonValue
 
 
     /**
-     * Returns a canonical ASCII text representation of this value.
+     * Returns a <em>non-canonical</em> ASCII representation of this value.
      * All data will be on a single line, with minimal whitespace.
+     * There is no guarantee that multiple invocations of this method will
+     * return identical results, only that they will be equivalent per
+     * the Ion data model.
+     * <p>
      * For more configurable rendering, see {@link com.amazon.ion.util.Printer}.
      *
      * @return Ion text data equivalent to this value.
@@ -346,7 +350,8 @@ public interface IonValue
 
 
     /**
-     * Implementation consistent with {@link #equals(Object)}.
+     * Returns a hash code consistent with {@link #equals(Object)}.
+     * <p>
      * {@inheritDoc}
      */
     public int hashCode();
