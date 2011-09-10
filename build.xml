@@ -175,6 +175,7 @@
       <classpath>
        <path path="${bp:testrun.classpath}"/>
       </classpath>
+      <link href="http://download.oracle.com/javase/1.5.0/docs/api" />
       <!-- Don't break this line. Ant 1.7 is buggy. Ant 1.8 fixes it but HT3
            seems to block use of it. --> 
       <bottom><![CDATA[<center>Copyright &#169; 2007&ndash;${javadoc.year} Amazon.com. All Rights Reserved.</center>]]></bottom>
