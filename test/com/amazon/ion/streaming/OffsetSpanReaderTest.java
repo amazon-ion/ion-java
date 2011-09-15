@@ -30,23 +30,34 @@ public class OffsetSpanReaderTest
     }
 
 
+    public void checkCurrentSpan(int binaryStart, int binaryFinish, int textStart)
+    {
+        if (myReaderMaker.sourceIsBinary()) {
+            checkCurrentSpan(binaryStart, binaryFinish);
+        }
+        else {
+            checkCurrentSpan(textStart, -1);
+        }
+    }
+
+
     @Test
     public void testCurrentSpan()
     {
         read("'''hello''' 1 2 3 4 5 6 7 8 9 10 '''Kumo the fluffy dog! He is so fluffy and yet so happy!'''");
         assertSame(IonType.STRING, in.next());
-        checkCurrentSpan(4, 10);
+        checkCurrentSpan(4, 10, 0);
 
         for (int i = 1; i <= 10; i++) {
             assertSame(IonType.INT, in.next());
             assertEquals(i, in.intValue());
         }
 
-        checkCurrentSpan(28, 30);
+        checkCurrentSpan(28, 30, 30);
 
         // Capture for ION-217
         assertSame(IonType.STRING, in.next());
-        checkCurrentSpan(30, 86);
+        checkCurrentSpan(30, 86, 33);
     }
 
     // Capture for ION-219
@@ -55,16 +66,23 @@ public class OffsetSpanReaderTest
         final ByteArrayOutputStream buf = new ByteArrayOutputStream();
         final int count = 8000;
         for (int i = 0; i < count; i++) {
+            // $ion_1_0 1000
             buf.write(BinaryTest.hexToBytes("E0 01 00 EA"));
             buf.write(BinaryTest.hexToBytes("22 03 E8"));
         }
 
+        // Textification is wonky and inconsistent here, it looks like:
+        //  LITE:   $ion_1_0 $ion_1_0 1000 1000 1000 ...
+        //  BACKED: $ion_1_0 1000 $ion_1_0 1000 ...
+
         read(buf.toByteArray());
-        int offset = 4;
+        int binaryStart = 4;
+        int textStart = (getDomType() == DomType.LITE ? 18 : 9);
         for (int i = 0; i < count; i++) {
             assertSame(IonType.INT, in.next());
-            checkCurrentSpan(offset, offset+3);
-            offset += 7;
+            checkCurrentSpan(binaryStart, binaryStart+3, textStart);
+            binaryStart += 7;
+            textStart += (getDomType() == DomType.LITE ? 5 : 14);
         }
         assertNull(in.next());
     }

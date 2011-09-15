@@ -34,12 +34,20 @@ public interface TextSpan
     /**
      * Returns the line number of this span's finish position, counting from
      * one.
+     * In most cases, the finish position is implicit and this method returns
+     * {@code -1}.  That's since in general (notably for containers) the
+     * finish offset can't be determined without significant effort to parse
+     * to the end of the value.
      */
     public long getFinishLine();
 
     /**
      * Returns the column number of this span's finish position, counting from
      * one.
+     * In most cases, the finish position is implicit and this method returns
+     * {@code -1}.  That's since in general (notably for containers) the
+     * finish offset can't be determined without significant effort to parse
+     * to the end of the value.
      */
     public long getFinishColumn();
 }

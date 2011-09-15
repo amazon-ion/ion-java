@@ -30,7 +30,10 @@ public interface OffsetSpan
 
     /**
      * Returns this span's finish position as a zero-based offset within the
-     * source.
+     * source.  In some cases, the finish position is implicit and this method
+     * returns {@code -1}.  This includes most text sources, since in
+     * general (notably for containers) the finish offset can't be determined
+     * without significant effort to parse to the end of the value.
      */
     public long getFinishOffset();
 }

@@ -8,6 +8,7 @@ import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
+import com.amazon.ion.OffsetSpan;
 import com.amazon.ion.SeekableReader;
 import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
@@ -43,36 +44,50 @@ public class IonReaderTextUserX
     extends IonReaderTextSystemX
     implements IonReaderWriterPrivate, IonReaderWithPosition
 {
+    /**
+     * This is the physical start-of-stream offset when this reader was created.
+     * It must be subtracted from the logical offsets exposed by
+     * {@link OffsetSpan}s.
+     */
+    private final int _physical_start_offset;
+
     // IonSystem   _system; now in IonReaderTextSystemX where it could be null
     IonCatalog  _catalog;
     SymbolTable _symbols;
 
     protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, char[] chars, int offset, int length) {
         super(system, chars, offset, length);
+        _physical_start_offset = offset;
         initUserReader(system, catalog);
     }
     protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, CharSequence chars, int offset, int length) {
         super(system, chars, offset, length);
+        _physical_start_offset = offset;
         initUserReader(system, catalog);
     }
     protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, Reader userChars) {
         super(system, userChars);
+        _physical_start_offset = 0;
         initUserReader(system, catalog);
     }
     protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, byte[] bytes, int offset, int length) {
         super(system, bytes, offset, length);
+        _physical_start_offset = offset;
         initUserReader(system, catalog);
     }
     protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, InputStream userBytes) {
         super(system, userBytes);
+        _physical_start_offset = 0;
         initUserReader(system, catalog);
     }
     protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, File file) {
         super(system, file);
+        _physical_start_offset = 0;
         initUserReader(system, catalog);
     }
     protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, UnifiedInputStreamX uis) {
         super(system, uis);
+        _physical_start_offset = 0;
         initUserReader(system, catalog);
     }
     private void initUserReader(IonSystem system, IonCatalog catalog) {
@@ -288,16 +303,16 @@ public class IonReaderTextUserX
     }
 
 
-    static class IonReaderTextPosition
+    static final class IonReaderTextPosition
         extends IonReaderPositionBase
-        implements TextSpan
+        implements TextSpan, OffsetSpan
     {
-        private UnifiedDataPageX _data_page;
-        private long             _start_char_offset;
-        private IonType          _container_type;
+        private final UnifiedDataPageX _data_page;
+        private final IonType          _container_type;
 
-        private long             _start_line;
-        private long             _start_column;
+        private final long             _start_offset;
+        private final long             _start_line;
+        private final long             _start_column;
 
         IonReaderTextPosition(IonReaderTextUserX reader)
         {
@@ -313,14 +328,10 @@ public class IonReaderTextUserX
             //       page of buffered input Which is the case for the time
             //       being.  Later, when this is stream aware, this needs to change.
             _data_page = current_stream._buffer.getCurrentPage();
-            _start_char_offset = reader._value_start_offset;
             _container_type = reader.getContainerType();
 
-            // FIXME ION-240
-            // These are not correct, since in general the reader has already
-            // scanned beyond the start of the value and is now somewhere in
-            // the middle of it.
-            _start_line = reader._value_start_line;
+            _start_offset = reader._value_start_offset - reader._physical_start_offset;
+            _start_line   = reader._value_start_line;
             _start_column = reader._value_start_column;
         }
 
@@ -342,17 +353,22 @@ public class IonReaderTextUserX
 
         public long getFinishLine()
         {
-            throw new RuntimeException("E_NOT_IMPL - line and column position is not yet available");
+            return -1;
         }
 
         public long getFinishColumn()
         {
-            throw new RuntimeException("E_NOT_IMPL - line and column position is not yet available");
+            return -1;
         }
 
-        long getStartPosition()
+        public long getStartOffset()
         {
-            return _start_char_offset;
+            return _start_offset;
+        }
+
+        public long getFinishOffset()
+        {
+            return -1;
         }
 
         IonType getContainerType() {
@@ -383,13 +399,13 @@ public class IonReaderTextUserX
 
         UnifiedInputStreamX current_stream = _scanner.getSourceStream();
         UnifiedDataPageX    curr_page      = text_span.getDataPage();
-        int                 array_offset   = (int)text_span._start_char_offset;
+        int                 array_offset   = (int)text_span._start_offset + _physical_start_offset;
         int                 page_limit     = curr_page._page_limit;
         int                 array_length   = page_limit - array_offset;
 
         // we're going to cast this value down.  Since we only support
         // in memory single buffered chars here this is ok.
-        assert(text_span.getStartPosition() <= Integer.MAX_VALUE);
+        assert(text_span.getStartOffset() <= Integer.MAX_VALUE);
 
         // Now - create a new stream
         // TODO: this is a pretty expensive way to do this. UnifiedInputStreamX

@@ -5,8 +5,6 @@ package com.amazon.ion;
 import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.util.IonStreamUtils;
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -207,21 +205,8 @@ public enum ReaderMaker
     {
         if (! IonStreamUtils.isIonBinary(ionData)) return ionData;
 
-        IonReader reader = system.newReader(ionData);
-
-        ByteArrayOutputStream utf8Bytes = new ByteArrayOutputStream();
-        IonWriter writer = system.newTextWriter(utf8Bytes);
-
-        try
-        {
-            writer.writeValues(reader);
-            writer.close();
-        }
-        catch (IOException e)
-        {
-            throw new RuntimeException(e);
-        }
-
-        return utf8Bytes.toByteArray();
+        IonDatagram dg = system.getLoader().load(ionData);
+        String ionText = dg.toString();
+        return IonImplUtils.utf8(ionText);
     }
 }

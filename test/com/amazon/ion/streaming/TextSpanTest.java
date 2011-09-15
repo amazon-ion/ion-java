@@ -23,7 +23,7 @@ public class TextSpanTest
         valuesExcluding(NON_TEXT_SPAN_READERS);
 
 
-    protected void expectNextStart(int startLine, int startColumn)
+    protected void expectNextSpan(int startLine, int startColumn)
     {
         in.next();
         if (in instanceof IonTextReader) {
@@ -36,6 +36,8 @@ public class TextSpanTest
         TextSpan ts = Facets.assumeFacet(TextSpan.class, s);
         assertEquals("startLine",   startLine,   ts.getStartLine());
         assertEquals("startColumn", startColumn, ts.getStartColumn());
+        assertEquals("finishLine",   -1, ts.getFinishLine());
+        assertEquals("finishColumn", -1, ts.getFinishColumn());
     }
 
     @Test
@@ -43,8 +45,8 @@ public class TextSpanTest
     {
         read("1 true\n 'hallo'");  // TODO test all types
 
-        expectNextStart(1, 1);
-        expectNextStart(1, 3);
-        expectNextStart(2, 2);
+        expectNextSpan(1, 1);
+        expectNextSpan(1, 3);
+        expectNextSpan(2, 2);
     }
 }

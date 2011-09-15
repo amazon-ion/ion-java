@@ -28,8 +28,7 @@ import java.util.Iterator;
  * <b>WARNING:</b> This interface should not be implemented or extended by
  * code outside of this library.
  * We still have some work to do before this interface is stable.
- * See <a href="https://jira2.amazon.com/browse/ION-183">JIRA issue
- * ION-183</a>
+ * See <a href="https://jira2.amazon.com/browse/ION-183">issue ION-183</a>
  * <p>
  * In general, method names are intended to parallel similar methods in the
  * {@link IonValue} hierarchy.  For example, to get the text of a symbol one
@@ -51,7 +50,7 @@ import java.util.Iterator;
  * <h3>The {@link SpanProvider} Facet</h3>
  * This facet is available on all readers <em>except</em> text readers created
  * from an {@link java.io.InputStream InputStream}.
- * (See <a href="https://jira2.amazon.com/browse/ION-231">JIRA issue ION-231</a>.)
+ * (See <a href="https://jira2.amazon.com/browse/ION-231">issue ION-231</a>.)
  * It provides access to the "{@linkplain SpanProvider#currentSpan() current
  * span}" covering the reader's current value.
  * There is <em>not</em> a current span at the start of the source, immediately
@@ -62,7 +61,7 @@ import java.util.Iterator;
  * <h3>The {@link SeekableReader} Facet</h3>
  * This facet is available on all readers <em>except</em> those created from
  * an {@link java.io.InputStream InputStream}.
- * (See <a href="https://jira2.amazon.com/browse/ION-243">JIRA issue ION-243</a>.)
+ * (See <a href="https://jira2.amazon.com/browse/ION-243">issue ION-243</a>.)
  * It allows the user to reposition the reader to a {@link Span} over the
  * same reader instance or another reader with the same source.
  *
@@ -71,15 +70,14 @@ import java.util.Iterator;
  * are also faceted.
  *
  * <h3>The {@link OffsetSpan} Facet</h3>
- * This facet is support by all readers of Ion binary data.
- * It's not currently supported when reading text data.
- * (See <a href="https://jira2.amazon.com/browse/ION-231">JIRA issue ION-231</a>
- * and  <a href="https://jira2.amazon.com/browse/ION-244">JIRA issue ION-244</a>.)
+ * This facet is support by all readers of Ion binary and text data,
+ * <em>except</em> those created from an {@link java.io.InputStream InputStream}.
+ * (See <a href="https://jira2.amazon.com/browse/ION-231">issue ION-231</a>.)
  *
  * <h3>The {@link TextSpan} Facet</h3>
  * This facet is supported by all text readers <em>except</em> those created
  * from an {@link java.io.InputStream InputStream}.
- * (See <a href="https://jira2.amazon.com/browse/ION-231">JIRA issue ION-231</a>.)
+ * (See <a href="https://jira2.amazon.com/browse/ION-231">issue ION-231</a>.)
  */
 public interface IonReader
     extends Closeable, Faceted

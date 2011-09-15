@@ -2,6 +2,8 @@
 
 package com.amazon.ion.streaming;
 
+import static com.amazon.ion.facet.Facets.assumeFacet;
+
 import com.amazon.ion.OffsetSpan;
 import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.SeekableReader;
@@ -31,9 +33,6 @@ public abstract class ReaderFacetTestCase
      */
     public static final ReaderMaker[] NON_OFFSET_SPAN_READERS =
     {
-        ReaderMaker.FROM_STRING,               // TODO ION-244
-        ReaderMaker.FROM_BYTES_TEXT,           // TODO ION-244
-        ReaderMaker.FROM_BYTES_OFFSET_TEXT,    // TODO ION-244
         ReaderMaker.FROM_INPUT_STREAM_TEXT,    // TODO ION-231
         ReaderMaker.FROM_DOM
     };
@@ -131,19 +130,23 @@ public abstract class ReaderFacetTestCase
 
     protected void checkCurrentSpan(long start, long finish)
     {
-        OffsetSpan span = sp.currentSpan().asFacet(OffsetSpan.class);
-        assertNotNull(span);
-        assertEquals("startOffset",  start,  span.getStartOffset());
-        assertEquals("finishOffset", finish, span.getFinishOffset());
+        Span span = sp.currentSpan();
+
+        OffsetSpan offsets = assumeFacet(OffsetSpan.class, span);
+        assertEquals("startOffset",  start,  offsets.getStartOffset());
+        assertEquals("finishOffset", finish, offsets.getFinishOffset());
 
         // Transitional APIs
-        long len = finish - start;
+        if (myReaderMaker.sourceIsBinary())
+        {
+            long len = finish - start;
 
-        IonReaderOctetPosition pos = sp.currentSpan().asFacet(IonReaderOctetPosition.class);
-        assertNotNull(pos);
-        assertEquals(start,  pos.getOffset());
-        assertEquals(start,  pos.getStartOffset());
-        assertEquals(len,    pos.getLength());
-        assertEquals(finish, pos.getFinishOffset());
+            IonReaderOctetPosition pos =
+                assumeFacet(IonReaderOctetPosition.class, span);
+            assertEquals(start,  pos.getOffset());
+            assertEquals(start,  pos.getStartOffset());
+            assertEquals(len,    pos.getLength());
+            assertEquals(finish, pos.getFinishOffset());
+        }
     }
 }
