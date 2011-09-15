@@ -5,7 +5,6 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.IonCatalog;
-import com.amazon.ion.IonException;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.OffsetSpan;
@@ -316,9 +315,6 @@ public class IonReaderTextUserX
 
         IonReaderTextPosition(IonReaderTextUserX reader)
         {
-            if (reader._scanner.isBufferedInput() == false) {
-                throw new IonException("span capable text reader is currently supported only over buffered input");
-            }
             // TODO: convert _start_char_offset from a long and data page
             //       to be an abstract reference into the Unified* data source
 
@@ -449,31 +445,39 @@ public class IonReaderTextUserX
     @Override
     public <T> T asFacet(Class<T> facetType)
     {
-        if (_scanner.isBufferedInput()) // TODO ION-231
+        if (facetType == IonReaderWithPosition.class)
         {
-            if (facetType == IonReaderWithPosition.class)
-            {
-                return facetType.cast(this);
-            }
+            return facetType.cast(this);
+        }
 
-            if ((facetType == SeekableReader.class) ||
-                (facetType == SpanProvider.class))
-            {
-                return facetType.cast(new SeekableReaderFacet());
-            }
+        if (facetType == SpanProvider.class)
+        {
+            return facetType.cast(new SpanProviderFacet());
+        }
+
+        if (facetType == SeekableReader.class && _scanner.isBufferedInput())
+        {
+            return facetType.cast(new SeekableReaderFacet());
         }
 
         return super.asFacet(facetType);
     }
 
 
-    private class SeekableReaderFacet implements SeekableReader
+    private class SpanProviderFacet
+        implements SpanProvider
     {
         public Span currentSpan()
         {
             return getCurrentPosition();
         }
+    }
 
+
+    private final class SeekableReaderFacet
+        extends SpanProviderFacet
+        implements SeekableReader
+    {
         public void hoist(Span span)
         {
             hoistImpl(span);

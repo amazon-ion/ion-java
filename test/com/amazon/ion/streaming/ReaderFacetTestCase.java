@@ -25,7 +25,6 @@ public abstract class ReaderFacetTestCase
      */
     public static final ReaderMaker[] NON_SPAN_READERS =
     {
-        ReaderMaker.FROM_INPUT_STREAM_TEXT    // TODO ION-231
     };
 
     /**
@@ -33,7 +32,6 @@ public abstract class ReaderFacetTestCase
      */
     public static final ReaderMaker[] NON_OFFSET_SPAN_READERS =
     {
-        ReaderMaker.FROM_INPUT_STREAM_TEXT,    // TODO ION-231
         ReaderMaker.FROM_DOM
     };
 
@@ -44,7 +42,6 @@ public abstract class ReaderFacetTestCase
     {
         ReaderMaker.FROM_BYTES_BINARY,
         ReaderMaker.FROM_BYTES_OFFSET_BINARY,
-        ReaderMaker.FROM_INPUT_STREAM_TEXT,    // TODO ION-231
         ReaderMaker.FROM_INPUT_STREAM_BINARY,
         ReaderMaker.FROM_DOM
     };
@@ -109,8 +106,8 @@ public abstract class ReaderFacetTestCase
         Object facet = Facets.asFacet(facetType, subject);
         if (facet != null)
         {
-            // This idiom gives a helpful message.
-            assertEquals("Didn't expect facet " + facetType, null, facet);
+            fail("Didn't expect facet " + facetType.getSimpleName()
+                 + " on " + facet);
         }
 
         if (facetType.isInstance(subject))

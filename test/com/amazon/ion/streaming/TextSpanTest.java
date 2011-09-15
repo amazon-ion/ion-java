@@ -17,10 +17,16 @@ import org.junit.Test;
  */
 public class TextSpanTest
     extends ReaderFacetTestCase
-    {
+{
     @Inject("readerMaker")
     public static final ReaderMaker[] READER_MAKERS =
         valuesExcluding(NON_TEXT_SPAN_READERS);
+
+
+    public TextSpanTest()
+    {
+        mySeekableReaderRequired = false;
+    }
 
 
     protected void expectNextSpan(int startLine, int startColumn)
@@ -32,7 +38,7 @@ public class TextSpanTest
             assertEquals("startColumn", startColumn, text.getLineOffset());
         }
 
-        Span s = sr.currentSpan();
+        Span s = sp.currentSpan();
         TextSpan ts = Facets.assumeFacet(TextSpan.class, s);
         assertEquals("startLine",   startLine,   ts.getStartLine());
         assertEquals("startColumn", startColumn, ts.getStartColumn());

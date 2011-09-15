@@ -48,9 +48,7 @@ import java.util.Iterator;
  * functionality accessible via the {@link #asFacet(Class)} method.
  *
  * <h3>The {@link SpanProvider} Facet</h3>
- * This facet is available on all readers <em>except</em> text readers created
- * from an {@link java.io.InputStream InputStream}.
- * (See <a href="https://jira2.amazon.com/browse/ION-231">issue ION-231</a>.)
+ * This facet is available on all readers that directly consume an Ion source.
  * It provides access to the "{@linkplain SpanProvider#currentSpan() current
  * span}" covering the reader's current value.
  * There is <em>not</em> a current span at the start of the source, immediately
@@ -70,14 +68,10 @@ import java.util.Iterator;
  * are also faceted.
  *
  * <h3>The {@link OffsetSpan} Facet</h3>
- * This facet is support by all readers of Ion binary and text data,
- * <em>except</em> those created from an {@link java.io.InputStream InputStream}.
- * (See <a href="https://jira2.amazon.com/browse/ION-231">issue ION-231</a>.)
+ * This facet is support by all readers of Ion binary and text data.
  *
  * <h3>The {@link TextSpan} Facet</h3>
- * This facet is supported by all text readers <em>except</em> those created
- * from an {@link java.io.InputStream InputStream}.
- * (See <a href="https://jira2.amazon.com/browse/ION-231">issue ION-231</a>.)
+ * This facet is supported by all text readers.
  */
 public interface IonReader
     extends Closeable, Faceted

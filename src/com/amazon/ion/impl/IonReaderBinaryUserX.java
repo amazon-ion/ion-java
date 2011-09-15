@@ -379,7 +379,7 @@ class IonReaderBinaryUserX
             return facetType.cast(new SpanProviderFacet());
         }
 
-        // TODO ION-231 support seeking over InputStream
+        // TODO ION-243 support seeking over InputStream
         if (_input instanceof FromByteArray)
         {
             if (facetType == IonReaderWithPosition.class)
