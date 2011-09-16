@@ -4,7 +4,6 @@ package com.amazon.ion;
 
 import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0;
-import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbolTable.SYMBOLS;
@@ -469,7 +468,7 @@ public class DatagramTest
     @Test
     public void testNewDatagramWithImports()
     {
-        final int FRED_ID_OFFSET   = ION_1_0_MAX_ID;
+        final int FRED_ID_OFFSET   = systemMaxId();
         final int LOCAL_ID_OFFSET  = FRED_ID_OFFSET + FRED_MAX_IDS[1];
 
         SymbolTable fred1   = Symtabs.register("fred",   1, catalog());

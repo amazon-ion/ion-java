@@ -261,6 +261,11 @@ public abstract class IonTestCase
         return result;
     }
 
+    protected int systemMaxId()
+    {
+        return system().getSystemSymbolTable().getMaxId();
+    }
+
 
     // ========================================================================
     // Encoding helpers

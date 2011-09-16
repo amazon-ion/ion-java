@@ -4,7 +4,6 @@ package com.amazon.ion;
 
 import static com.amazon.ion.Symtabs.LocalSymbolTablePrefix;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0;
-import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
 import static com.amazon.ion.TestUtils.FERMATA;
 
 import com.amazon.ion.impl.IonImplUtils;
@@ -266,7 +265,7 @@ if (table1 == table2) {
         {
             assertNotSame(table1, table2);
         }
-        assertEquals(SystemSymbolTable.ION_1_0_MAX_ID, table2.getMaxId());
+        assertEquals(systemMaxId(), table2.getMaxId());
     }
 
     @Test
@@ -288,28 +287,28 @@ if (table1 == table2) {
         startIteration(text);
 
         nextValue();
-        checkSymbol("bar", ION_1_0_MAX_ID + 2);
+        checkSymbol("bar", systemMaxId() + 2);
 
         SymbolTable table1 = currentSymtab();
         checkLocalTable(table1);
 
         nextValue();
-        checkSymbol("foo", ION_1_0_MAX_ID + 1);
+        checkSymbol("foo", systemMaxId() + 1);
 
         // Symtab changes here...
 
         nextValue();
-        checkSymbol("bar", ION_1_0_MAX_ID + 1);
+        checkSymbol("bar", systemMaxId() + 1);
 
         SymbolTable table2 = currentSymtab();
         checkLocalTable(table2);
         assertNotSame(table1, table2);
-        assertTrue(ION_1_0_MAX_ID + 1 <= table2.getMaxId());
-        assertTrue(ION_1_0_MAX_ID + 2 >= table2.getMaxId());
+        assertTrue(systemMaxId() + 1 <= table2.getMaxId());
+        assertTrue(systemMaxId() + 2 >= table2.getMaxId());
 
         nextValue();
-        checkSymbol("foo", ION_1_0_MAX_ID + 2);
-        assertEquals(ION_1_0_MAX_ID + 2, table2.getMaxId());
+        checkSymbol("foo", systemMaxId() + 2);
+        assertEquals(systemMaxId() + 2, table2.getMaxId());
         assertSame(table2, currentSymtab());
     }
 
@@ -341,7 +340,7 @@ if (table1 == table2) {
         SymbolTable table2 = currentSymtab();
         checkLocalTable(table2);
         assertNotSame(table1, table2);
-        assertEquals(ION_1_0_MAX_ID, table2.getMaxId());
+        assertEquals(systemMaxId(), table2.getMaxId());
     }
 
 
@@ -376,11 +375,11 @@ if (table1 == table2) {
     {
         startTestCheckpoint("testLocalTableWithLesserImport");
 
-        final int fred1id = ION_1_0_MAX_ID + 1;
-        final int fred2id = ION_1_0_MAX_ID + 2;
-        final int fred3id = ION_1_0_MAX_ID + 3;
+        final int fred1id = systemMaxId() + 1;
+        final int fred2id = systemMaxId() + 2;
+        final int fred3id = systemMaxId() + 3;
 
-        final int local = ION_1_0_MAX_ID + Symtabs.FRED_MAX_IDS[2];
+        final int local = systemMaxId() + Symtabs.FRED_MAX_IDS[2];
         final int local1id = local + 1;
         final int local2id = local + 2;
         final int local3id = local + 3;
@@ -462,11 +461,11 @@ if (table1 == table2) {
     {
         startTestCheckpoint("testLocalTableWithGreaterImport");
 
-        final int fred1id_symtab = ION_1_0_MAX_ID + 1;  // expect 9 + 1 = 10
-        final int fred2id_symtab = ION_1_0_MAX_ID + 2;
-        final int fred3id_symtab = ION_1_0_MAX_ID + 3;
+        final int fred1id_symtab = systemMaxId() + 1;  // expect 9 + 1 = 10
+        final int fred2id_symtab = systemMaxId() + 2;
+        final int fred3id_symtab = systemMaxId() + 3;
 
-        final int local = ION_1_0_MAX_ID + Symtabs.FRED_MAX_IDS[2];
+        final int local = systemMaxId() + Symtabs.FRED_MAX_IDS[2];
         final int local1id = local + 1; // expect 9 + 4 + 1 = 14 id for local1
         final int local2id = local + 2; // 15: id for local2
         final int local3id = local + 3; // 16: id for fred_2, which has been removed from version 2 of the sym tab, so is now local
@@ -905,7 +904,7 @@ if (table1 == table2) {
         assertSame(st, currentSymtab());
 
         nextValue();
-        checkSymbol("local", ION_1_0_MAX_ID + 1);
+        checkSymbol("local", systemMaxId() + 1);
         SymbolTable local = currentSymtab();
         assertTrue(local.isLocalTable());
         assertSame(st, local.getSystemSymbolTable());
@@ -918,7 +917,7 @@ if (table1 == table2) {
     public void testDuplicateAnnotations()
     throws Exception
     {
-        int sid = ION_1_0_MAX_ID + 1;
+        int sid = systemMaxId() + 1;
 
         startIteration("ann::ann::null");
         nextValue();

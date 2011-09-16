@@ -4,7 +4,6 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbolTable.ION;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0;
-import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
 import static com.amazon.ion.SystemSymbolTable.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.UnifiedSymbolTable.ION_SHARED_SYMBOL_TABLE;
@@ -182,8 +181,8 @@ public class SymbolTableTest
         SymbolTable symbolTable = oneValue(text).getSymbolTable();
         checkLocalTable(symbolTable);
 
-        checkSymbol("foo", ION_1_0_MAX_ID + 1, symbolTable);
-        checkSymbol("bar", ION_1_0_MAX_ID + 2, symbolTable);
+        checkSymbol("foo", systemMaxId() + 1, symbolTable);
+        checkSymbol("bar", systemMaxId() + 2, symbolTable);
 
         assertEquals(-1, symbolTable.findSymbol("not there"));
         assertEquals("$33", symbolTable.findSymbol(33));
@@ -223,8 +222,8 @@ public class SymbolTableTest
     {
         registerImportedV1();
 
-        final int import1id = ION_1_0_MAX_ID + 1;
-        final int local1id = ION_1_0_MAX_ID + IMPORTED_1_MAX_ID + 1;
+        final int import1id = systemMaxId() + 1;
+        final int local1id = systemMaxId() + IMPORTED_1_MAX_ID + 1;
         final int local2id = local1id + 1;
 
         String importingText =
@@ -307,7 +306,7 @@ public class SymbolTableTest
     {
         registerImportedV1();
 
-        final int import1id = ION_1_0_MAX_ID + 1;
+        final int import1id = systemMaxId() + 1;
 
         String importingText =
             "$ion_1_0 "+
@@ -384,10 +383,10 @@ public class SymbolTableTest
         SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
         catalog.putTable(table);
 
-        final int import1id = ION_1_0_MAX_ID + 1;
-        final int import2id = ION_1_0_MAX_ID + 2;
+        final int import1id = systemMaxId() + 1;
+        final int import2id = systemMaxId() + 2;
 
-        final int local1id = ION_1_0_MAX_ID + maxId + 1;
+        final int local1id = systemMaxId() + maxId + 1;
         final int local2id = local1id + 1;
 
 
@@ -431,11 +430,11 @@ public class SymbolTableTest
     @Test
     public void testLocalTableWithLesserImport()
     {
-        final int import1id = ION_1_0_MAX_ID + 1;
-        final int import2id = ION_1_0_MAX_ID + 2;
-        final int fred3id   = ION_1_0_MAX_ID + 3;
+        final int import1id = systemMaxId() + 1;
+        final int import2id = systemMaxId() + 2;
+        final int fred3id   = systemMaxId() + 3;
 
-        final int local1id = ION_1_0_MAX_ID + IMPORTED_2_MAX_ID + 1;
+        final int local1id = systemMaxId() + IMPORTED_2_MAX_ID + 1;
         final int local2id = local1id + 1;
 
         registerImportedV1();
@@ -468,11 +467,11 @@ public class SymbolTableTest
     @Test
     public void testLocalTableWithGreaterImport()
     {
-        final int import1id = ION_1_0_MAX_ID + 1;
-        final int import2id = ION_1_0_MAX_ID + 2;
-        final int fred3id   = ION_1_0_MAX_ID + 3;
+        final int import1id = systemMaxId() + 1;
+        final int import2id = systemMaxId() + 2;
+        final int fred3id   = systemMaxId() + 3;
 
-        final int local1id = ION_1_0_MAX_ID + IMPORTED_2_MAX_ID + 1;
+        final int local1id = systemMaxId() + IMPORTED_2_MAX_ID + 1;
         final int local2id = local1id + 1;
         final int local3id = local2id + 1;
 
@@ -526,7 +525,7 @@ public class SymbolTableTest
         assertEquals(2, importedTables.length);
         assertSame(importedV1, importedTables[0]);
         assertSame(importedV2, importedTables[1]);
-        assertEquals(ION_1_0_MAX_ID + IMPORTED_1_MAX_ID + IMPORTED_2_MAX_ID,
+        assertEquals(systemMaxId() + IMPORTED_1_MAX_ID + IMPORTED_2_MAX_ID,
                      symbolTable.getMaxId());
 
         assertEquals(10, symbolTable.findSymbol("imported 1"));
@@ -594,8 +593,8 @@ public class SymbolTableTest
         IonValue v = oneValue(text);
         SymbolTable symbolTable = v.getSymbolTable();
         assertEquals(0, symbolTable.getImportedTables().length);
-        assertEquals(ION_1_0_MAX_ID + 1, symbolTable.findSymbol("local"));
-        assertEquals(ION_1_0_MAX_ID + 1, symbolTable.getMaxId());
+        assertEquals(systemMaxId() + 1, symbolTable.findSymbol("local"));
+        assertEquals(systemMaxId() + 1, symbolTable.getMaxId());
     }
 
 
@@ -631,7 +630,7 @@ public class SymbolTableTest
         SymbolTable[] importedTables = symbolTable.getImportedTables();
         assertEquals(1, importedTables.length);
         assertSame(importedV1, importedTables[0]);
-        assertEquals(ION_1_0_MAX_ID + IMPORTED_1_MAX_ID,
+        assertEquals(systemMaxId() + IMPORTED_1_MAX_ID,
                      symbolTable.getMaxId());
     }
 
@@ -654,7 +653,7 @@ public class SymbolTableTest
         IonValue v = oneValue(text);
         SymbolTable symbolTable = v.getSymbolTable();
         assertSame(importedV1, symbolTable.getImportedTables()[0]);
-        assertEquals(ION_1_0_MAX_ID + 1, symbolTable.findSymbol("local"));
+        assertEquals(systemMaxId() + 1, symbolTable.findSymbol("local"));
     }
 
     @Test
@@ -1130,7 +1129,7 @@ public class SymbolTableTest
             "y";
 
         IonValue v = oneValue(text);
-        checkSymbol("y", ION_1_0_MAX_ID + 2, v);
+        checkSymbol("y", systemMaxId() + 2, v);
         assertSame(table, v.getSymbolTable().getImportedTables()[0]);
     }
 
@@ -1170,7 +1169,7 @@ public class SymbolTableTest
         IonValue v = oneValue(text);
         table = v.getSymbolTable();
         assertTrue(table.isLocalTable());
-        assertEquals(ION_1_0_MAX_ID, table.getMaxId());
+        assertEquals(systemMaxId(), table.getMaxId());
     }
 
     @Test
@@ -1205,7 +1204,7 @@ public class SymbolTableTest
         IonValue v = oneValue(text);
         table = v.getSymbolTable();
         assertTrue(table.isLocalTable());
-        assertEquals(ION_1_0_MAX_ID + 1, table.getMaxId());
+        assertEquals(systemMaxId() + 1, table.getMaxId());
     }
 
 
