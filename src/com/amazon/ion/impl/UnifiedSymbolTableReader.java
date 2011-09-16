@@ -2,10 +2,21 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl.UnifiedSymbolTable.ION_SHARED_SYMBOL_TABLE;
-import static com.amazon.ion.impl.UnifiedSymbolTable.ION_SHARED_SYMBOL_TABLE_SID;
-import static com.amazon.ion.impl.UnifiedSymbolTable.ION_SYMBOL_TABLE;
-import static com.amazon.ion.impl.UnifiedSymbolTable.ION_SYMBOL_TABLE_SID;
+
+import static com.amazon.ion.SystemSymbols.IMPORTS;
+import static com.amazon.ion.SystemSymbols.IMPORTS_SID;
+import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE_SID;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
+import static com.amazon.ion.SystemSymbols.MAX_ID;
+import static com.amazon.ion.SystemSymbols.MAX_ID_SID;
+import static com.amazon.ion.SystemSymbols.NAME;
+import static com.amazon.ion.SystemSymbols.NAME_SID;
+import static com.amazon.ion.SystemSymbols.SYMBOLS;
+import static com.amazon.ion.SystemSymbols.SYMBOLS_SID;
+import static com.amazon.ion.SystemSymbols.VERSION;
+import static com.amazon.ion.SystemSymbols.VERSION_SID;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
@@ -1096,21 +1107,21 @@ public class UnifiedSymbolTableReader
 
         case S_NAME:
         case S_IMPORT_NAME:
-            return UnifiedSymbolTable.NAME_SID;
+            return NAME_SID;
 
         case S_VERSION:
         case S_IMPORT_VERSION:
-            return UnifiedSymbolTable.VERSION_SID;
+            return VERSION_SID;
 
         case S_MAX_ID:
         case S_IMPORT_MAX_ID:
-            return UnifiedSymbolTable.MAX_ID_SID;
+            return MAX_ID_SID;
 
         case S_IMPORT_LIST:
-            return UnifiedSymbolTable.IMPORTS_SID;
+            return IMPORTS_SID;
 
         case S_SYMBOL_LIST:
-            return UnifiedSymbolTable.SYMBOLS_SID;
+            return SYMBOLS_SID;
 
         default:
             throw new IonException("Internal error: UnifiedSymbolTableReader is in an unrecognized state: "+_current_state);
@@ -1138,21 +1149,21 @@ public class UnifiedSymbolTableReader
 
         case S_NAME:
         case S_IMPORT_NAME:
-            return UnifiedSymbolTable.NAME;
+            return NAME;
 
         case S_VERSION:
         case S_IMPORT_VERSION:
-            return UnifiedSymbolTable.VERSION;
+            return VERSION;
 
         case S_MAX_ID:
         case S_IMPORT_MAX_ID:
-            return UnifiedSymbolTable.MAX_ID;
+            return MAX_ID;
 
         case S_IMPORT_LIST:
-            return UnifiedSymbolTable.IMPORTS;
+            return IMPORTS;
 
         case S_SYMBOL_LIST:
-            return UnifiedSymbolTable.SYMBOLS;
+            return SYMBOLS;
 
         default:
             throw new IonException("Internal error: UnifiedSymbolTableReader is in an unrecognized state: "+_current_state);

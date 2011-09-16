@@ -3,6 +3,8 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.impl.IonConstants.BB_TOKEN_LEN;
 
 import com.amazon.ion.EmptySymbolException;
@@ -11,7 +13,6 @@ import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
 
@@ -205,14 +206,14 @@ public final class IonSymbolImpl
     }
     protected void setIsIonVersionMarker(boolean isIVM)
     {
-        assert SystemSymbolTable.ION_1_0.equals(this._get_value());
+        assert ION_1_0.equals(this._get_value());
 
         _is_IonVersionMarker = isIVM;
         _isSystemValue(true);
         _hasNativeValue(true);
         _isMaterialized(true);
 
-        mySid = SystemSymbolTable.ION_1_0_SID;
+        mySid = ION_1_0_SID;
     }
 
     @Override
@@ -326,8 +327,8 @@ public final class IonSymbolImpl
 
         int tdb = this.pos_getTypeDescriptorByte();
         if ((tdb & 0xff) == (IonConstants.BINARY_VERSION_MARKER_1_0[0] & 0xff)) {
-            mySid = SystemSymbolTable.ION_1_0_SID;
-            _set_value(SystemSymbolTable.ION_1_0);
+            mySid = ION_1_0_SID;
+            _set_value(ION_1_0);
             // we need to skip over the binary marker, we've read the first
             // byte and we checked the contents long before we got here so ...
             reader.skip(IonConstants.BINARY_VERSION_MARKER_SIZE - 1);

@@ -2,6 +2,8 @@
 
 package com.amazon.ion.impl.lite;
 
+import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
 import static com.amazon.ion.impl.IonWriterFactory.makeWriter;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
@@ -162,7 +164,7 @@ public final class IonSystemLite
     public SymbolTable getSystemSymbolTable(String ionVersionId)
         throws UnsupportedIonVersionException
     {
-        if (!UnifiedSymbolTable.ION_1_0.equals(ionVersionId)) {
+        if (!ION_1_0.equals(ionVersionId)) {
             throw new UnsupportedIonVersionException(ionVersionId);
         }
         return getSystemSymbolTable();
@@ -698,7 +700,7 @@ public final class IonSystemLite
 
     protected IonSymbolLite newSystemIdSymbol(String ionVersionMarker)
     {
-        if (!UnifiedSymbolTable.ION_1_0.equals(ionVersionMarker)) {
+        if (!ION_1_0.equals(ionVersionMarker)) {
             throw new IllegalArgumentException("name isn't an ion version marker");
         }
         IonSymbolLite ivm = new IonSymbolLite(this, false);
@@ -820,14 +822,14 @@ public final class IonSystemLite
             switch(t) {
             case SYMBOL:
                 String symbol = _reader.stringValue();
-                if (UnifiedSymbolTable.ION_1_0.equals(symbol)) {
+                if (ION_1_0.equals(symbol)) {
                     return true;
                 }
                 break;
             case STRUCT:
                 String [] annotations = _reader.getTypeAnnotations();
                 for (int ii=0; ii<annotations.length; ii++) {
-                    if (UnifiedSymbolTable.ION_SYMBOL_TABLE.equals(annotations[ii])) {
+                    if (ION_SYMBOL_TABLE.equals(annotations[ii])) {
                         return true;
                     }
                 }
@@ -1199,7 +1201,7 @@ public final class IonSystemLite
     public boolean valueIsSharedSymbolTable(IonValue value)
     {
         if (value instanceof IonStruct) {
-            if (value.hasTypeAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE)) {
+            if (value.hasTypeAnnotation(ION_SYMBOL_TABLE)) {
                 return true;
             }
         }

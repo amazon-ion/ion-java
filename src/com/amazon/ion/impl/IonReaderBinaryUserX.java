@@ -2,6 +2,9 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
+
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
@@ -229,7 +232,7 @@ class IonReaderBinaryUserX
             if (_value_tid == IonConstants.tidSymbol) {
                 load_cached_value(AS_TYPE.int_value);
                 int sid = _v.getInt();
-                if (sid == UnifiedSymbolTable.ION_1_0_SID) {
+                if (sid == ION_1_0_SID) {
                     _symbols = _system.getSystemSymbolTable();
                     push_symbol_table(_symbols);
                     _has_next_needed = true;
@@ -238,7 +241,7 @@ class IonReaderBinaryUserX
             else if (_value_tid == IonConstants.tidStruct) {
                 int count = load_annotations();
                 for(int ii=0; ii<count; ii++) {
-                    if (_annotation_ids[ii] == UnifiedSymbolTable.ION_SYMBOL_TABLE_SID) {
+                    if (_annotation_ids[ii] == ION_SYMBOL_TABLE_SID) {
 
                         //stepIn();
                         //an empty struct is actually ok, just not very interesting

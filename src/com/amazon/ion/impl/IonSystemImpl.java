@@ -2,8 +2,11 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.SystemSymbolTable.ION_SHARED_SYMBOL_TABLE;
-import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.ION;
+import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
+import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.IonImplUtils.UTF8_CHARSET;
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
 import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemReader;
@@ -106,7 +109,7 @@ public final class IonSystemImpl
     public UnifiedSymbolTable getSystemSymbolTable(String ionVersionId)
         throws UnsupportedIonVersionException
     {
-        if (!UnifiedSymbolTable.ION_1_0.equals(ionVersionId)) {
+        if (!ION_1_0.equals(ionVersionId)) {
             throw new UnsupportedIonVersionException(ionVersionId);
         }
         return getSystemSymbolTable();
@@ -796,7 +799,7 @@ public final class IonSystemImpl
         {
             IonSymbol symbol = (IonSymbol) value;
             int sid = symbol.getSymbolId();
-            if (sid == SystemSymbolTable.ION_1_0_SID)
+            if (sid == ION_1_0_SID)
             {
                 return true;
             }
@@ -810,15 +813,15 @@ public final class IonSystemImpl
 
     private final boolean textIsSystemId(String image)
     {
-        if (SystemSymbolTable.ION_1_0.equals(image))
+        if (ION_1_0.equals(image))
         {
             return true;
         }
-        if (!image.startsWith(SystemSymbolTable.ION)) {
+        if (!image.startsWith(ION)) {
             return false;
         }
         // now we see if the rest of the symbol is _DDD_DDD
-        int underscore1 = SystemSymbolTable.ION.length();
+        int underscore1 = ION.length();
         int underscore2 = image.indexOf('_', underscore1 + 1);
         if (underscore2 < 0)
         {

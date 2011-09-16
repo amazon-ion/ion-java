@@ -2,6 +2,9 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonReader;
@@ -81,7 +84,7 @@ class IonReaderTreeUserX
                             sid = _system.getSystemSymbolTable().findSymbol(name);
                         }
                     }
-                    if (sid == UnifiedSymbolTable.ION_1_0_SID) {
+                    if (sid == ION_1_0_SID) {
                         SymbolTable symbols = _system.getSystemSymbolTable();
                         set_symbol_table(symbols);
                         push_symbol_table(symbols);
@@ -90,7 +93,7 @@ class IonReaderTreeUserX
                     }
                 }
                 else if (IonType.STRUCT.equals(next_type)
-                      && _next.hasTypeAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE)
+                      && _next.hasTypeAnnotation(ION_SYMBOL_TABLE)
                 ) {
                     assert(_next instanceof IonStruct);
                     // read a local symbol table

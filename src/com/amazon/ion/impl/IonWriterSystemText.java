@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.impl.IonConstants.tidList;
 import static com.amazon.ion.impl.IonConstants.tidSexp;
 import static com.amazon.ion.impl.IonConstants.tidStruct;
@@ -581,7 +582,7 @@ public class IonWriterSystemText
     @Override
     public void writeIonVersionMarker() throws IOException
     {
-        writeSymbol(UnifiedSymbolTable.ION_1_0);
+        writeSymbol(ION_1_0);
     }
 
     public void writeBlob(byte[] value, int start, int len)

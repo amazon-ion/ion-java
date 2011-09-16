@@ -3,6 +3,8 @@
 package com.amazon.ion.impl;
 
 
+import static com.amazon.ion.SystemSymbols.ION_1_0;
+
 import com.amazon.ion.IonException;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
@@ -539,7 +541,6 @@ loop:   for (;;) {
         this._out.writer().writeVarUIntValue(sid, true);
     }
 
-    private static final int ION_1_0_LENGTH = UnifiedSymbolTable.ION_1_0.length();
 
     /**
      * Encodes symbols (does not include keywords like true/false/null*).
@@ -558,7 +559,7 @@ loop:   for (;;) {
         }
         boolean is_ivm_symbol = false;
         if (this._depth == 0) {
-            is_ivm_symbol = (len == ION_1_0_LENGTH) && UnifiedSymbolTable.ION_1_0.equals(s);
+            is_ivm_symbol = ION_1_0.equals(s);
             if (this._annotationList != null && this._annotationList.size() > 0) {
                 // if this $ion_1_0 is annotated, we have to write it as a
                 // normal symbol.

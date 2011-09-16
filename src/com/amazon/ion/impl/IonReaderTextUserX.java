@@ -2,6 +2,8 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.IonCatalog;
@@ -155,7 +157,7 @@ public class IonReaderTextUserX
                     if (_annotation_count > 0) {
                         for (int ii=0; ii<_annotation_count; ii++) {
                             String a = _annotations[ii];
-                            if (UnifiedSymbolTable.ION_SYMBOL_TABLE.equals(a)) {
+                            if (ION_SYMBOL_TABLE.equals(a)) {
                                 _symbols = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _catalog, this, true);
                                 push_symbol_table(_symbols);
                                 _has_next_called = false;
@@ -166,7 +168,7 @@ public class IonReaderTextUserX
                     break;
                 case SYMBOL:
                     String sym = stringValue();
-                    if (UnifiedSymbolTable.ION_1_0.equals(sym)) {
+                    if (ION_1_0.equals(sym)) {
                         symbol_table_reset();
                         push_symbol_table(_system.getSystemSymbolTable());
                         _has_next_called = false;

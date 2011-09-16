@@ -4,7 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
 import static com.amazon.ion.Symtabs.GINGER_MAX_IDS;
-import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.TestUtils.FERMATA;
 
 import com.amazon.ion.EmptySymbolException;

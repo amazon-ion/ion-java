@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.impl.IonConstants.tidDATAGRAM;
 import static com.amazon.ion.impl.IonConstants.tidList;
 import static com.amazon.ion.impl.IonConstants.tidSexp;
@@ -842,7 +843,7 @@ public class IonWriterSystemBinary
 
     public void writeSymbol(int symbolId) throws IOException
     {
-        if (symbolId == UnifiedSymbolTable.ION_1_0_SID && atDatagramLevel()) {
+        if (symbolId == ION_1_0_SID && atDatagramLevel()) {
             // the $ion_1_0 symbol at the datagram level is ALWAYS
             // an ion version marker
             writeIonVersionMarker();

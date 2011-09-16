@@ -3,7 +3,10 @@
 package com.amazon.ion;
 
 import static com.amazon.ion.Symtabs.LocalSymbolTablePrefix;
-import static com.amazon.ion.SystemSymbolTable.ION_1_0;
+import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
+import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE_SID;
 import static com.amazon.ion.TestUtils.FERMATA;
 
 import com.amazon.ion.impl.IonImplUtils;
@@ -555,7 +558,7 @@ if (table1 == table2) {
         startTestCheckpoint("testSharedTableNotAddedToCatalog");
 
         String text =
-            SystemSymbolTable.ION_1_0 + " " +
+            ION_1_0 + " " +
             SymbolTableTest.IMPORTED_1_SERIALIZED +
             " 'imported 1'";
         assertNull(system().getCatalog().getTable("imported"));
@@ -569,8 +572,8 @@ if (table1 == table2) {
             testSharedTableNotAddedToCatalog();
         }
         checkType(IonType.STRUCT);
-        checkAnnotation(SystemSymbolTable.ION_SHARED_SYMBOL_TABLE,
-                        SystemSymbolTable.ION_SHARED_SYMBOL_TABLE_SID);
+        checkAnnotation(ION_SHARED_SYMBOL_TABLE,
+                        ION_SHARED_SYMBOL_TABLE_SID);
 
         assertNull(system().getCatalog().getTable("imported"));
 
@@ -857,7 +860,7 @@ if (table1 == table2) {
         prepare(text);
         startSystemIteration();
         nextValue();
-        checkSymbol(ION_1_0, SystemSymbolTable.ION_1_0_SID);
+        checkSymbol(ION_1_0, ION_1_0_SID);
         SymbolTable st = currentSymtab();
 
         // system readers don't necessarily support symbol tables
@@ -894,7 +897,7 @@ if (table1 == table2) {
         startSystemIteration();
 
         nextValue();
-        checkSymbol(ION_1_0, SystemSymbolTable.ION_1_0_SID);
+        checkSymbol(ION_1_0, ION_1_0_SID);
         SymbolTable st = currentSymtab();
         assertTrue(st.isSystemTable());
         assertEquals(ION_1_0, st.getIonVersionId());

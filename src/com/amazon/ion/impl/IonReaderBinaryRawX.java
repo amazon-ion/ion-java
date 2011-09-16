@@ -1,6 +1,8 @@
 // Copyright (c) 2009-2010 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
+
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
@@ -305,7 +307,7 @@ abstract public class IonReaderBinaryRawX
         // the symbol $ion_1_0 ...
         _value_tid = IonConstants.tidSymbol;
         _value_len = 0; // so skip will go the right place - here
-        _v.setValue(UnifiedSymbolTable.ION_1_0_SID);
+        _v.setValue(ION_1_0_SID);
         _v.setAuthoritativeType(AS_TYPE.int_value);
         // _value_type = IonType.SYMBOL;  we do this in the caller so it's easier to see
         _value_is_null = false;

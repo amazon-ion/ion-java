@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.util.Equivalence.ionEquals;
@@ -18,7 +19,6 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.Reader;
 import com.amazon.ion.impl.IonBinary.Writer;
@@ -503,7 +503,7 @@ public abstract class IonValueImpl
             // the only case where this is valid is if this is
             // really an IonVersionMaker
             assert IonConstants.getLowNibble(typedesc) == 0;
-            value = system.newSystemIdSymbol(SystemSymbolTable.ION_1_0);
+            value = system.newSystemIdSymbol(ION_1_0);
             break;
 
         default:

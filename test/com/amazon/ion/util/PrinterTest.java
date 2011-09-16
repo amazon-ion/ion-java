@@ -3,8 +3,8 @@
 package com.amazon.ion.util;
 
 
-import static com.amazon.ion.SystemSymbolTable.ION_1_0;
-import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 
 import com.amazon.ion.BlobTest;
 import com.amazon.ion.ClobTest;

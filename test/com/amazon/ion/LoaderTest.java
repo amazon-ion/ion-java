@@ -2,6 +2,7 @@
 
 package com.amazon.ion;
 
+import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.impl.IonImplUtils.UTF8_CHARSET;
 import static com.amazon.ion.impl.IonImplUtils.utf8;
 
@@ -141,7 +142,7 @@ public class LoaderTest
     @Test
     public void testIgnoreHeaderSymbol()
     {
-        String text = SystemSymbolTable.ION_1_0 + " 123";
+        String text = ION_1_0 + " 123";
 
         IonInt value = (IonInt) loadOneValue(text);
         checkInt(123, value);

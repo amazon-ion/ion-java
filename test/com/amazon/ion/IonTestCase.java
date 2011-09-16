@@ -2,6 +2,7 @@
 
 package com.amazon.ion;
 
+import static com.amazon.ion.SystemSymbols.ION_1_0;
 import com.amazon.ion.impl.IonSystemImpl;
 import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.junit.Injected;
@@ -705,7 +706,7 @@ public abstract class IonTestCase
         assertTrue(symtab.isSystemTable());
         assertSame(symtab, symtab.getSystemSymbolTable());
         assertEquals(SystemSymbolTable.ION_1_0_MAX_ID, symtab.getMaxId());
-        assertEquals(SystemSymbolTable.ION_1_0, symtab.getIonVersionId());
+        assertEquals(ION_1_0, symtab.getIonVersionId());
     }
 
     public SymbolTable findImportedTable(SymbolTable localTable,

@@ -2,6 +2,8 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.util.IonTextUtils.printQuotedSymbol;
 
@@ -419,7 +421,7 @@ public final class IonTextReaderImpl
             // version symbol, and shared symbol tables too
             switch (_lookahead_type) {
             case SYMBOL:
-                if (UnifiedSymbolTable.ION_1_0.equals(this.stringValue())) {
+                if (ION_1_0.equals(this.stringValue())) {
                     _current_symtab = _system.getSystemSymbolTable(); // UnifiedSymbolTable.getSystemSymbolTableInstance();
                     skip_value = true; // FIXME get system tab from current
                 }
@@ -438,7 +440,7 @@ public final class IonTextReaderImpl
                 if (_annotation_count > 0) {
                     // TODO - this should be done with flags set while we're
                     // recognizing the annotations below (in the fullness of time)
-                    if (hasAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE)) {
+                    if (hasAnnotation(ION_SYMBOL_TABLE)) {
 
                         if (_is_returning_system_values) this.save_state();
 

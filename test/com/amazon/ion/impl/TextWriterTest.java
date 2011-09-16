@@ -2,6 +2,9 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import java.io.OutputStream;
@@ -36,11 +39,11 @@ public class TextWriterTest
         iw.writeSymbol("holla");
         String ionText = outputString();
 
-        if (! ionText.startsWith(UnifiedSymbolTable.ION_1_0)) {
+        if (! ionText.startsWith(ION_1_0)) {
             fail("TextWriter didn't write IVM: " + ionText);
         }
 
-        if (ionText.contains(UnifiedSymbolTable.ION_SYMBOL_TABLE)) {
+        if (ionText.contains(ION_SYMBOL_TABLE)) {
             fail("TextWriter shouldn't write symtab: " + ionText);
         }
     }

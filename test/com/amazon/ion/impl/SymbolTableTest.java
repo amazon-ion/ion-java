@@ -2,11 +2,12 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.SystemSymbolTable.ION;
-import static com.amazon.ion.SystemSymbolTable.ION_1_0;
-import static com.amazon.ion.SystemSymbolTable.ION_1_0_SID;
-import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
-import static com.amazon.ion.impl.UnifiedSymbolTable.ION_SHARED_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.ION;
+import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
+import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.SYMBOLS;
 
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
@@ -23,7 +24,6 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
-import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -761,7 +761,7 @@ public class SymbolTableTest
         IonStruct image = st.getIonRepresentation();
         st.addSymbol("bar");
         image = st.getIonRepresentation();
-        IonList symbols = (IonList) image.get(SystemSymbolTable.SYMBOLS);
+        IonList symbols = (IonList) image.get(SYMBOLS);
         assertEquals("[\"foo\",\"bar\"]", symbols.toString());
     }
 

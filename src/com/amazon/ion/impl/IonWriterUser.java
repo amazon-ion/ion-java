@@ -3,6 +3,10 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.IonType.DATAGRAM;
+import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.IonCatalog;
@@ -229,9 +233,7 @@ abstract class IonWriterUser
         // while the previous version did create a valid symbol table, it dropped
         // any extra annotations.  The local symbol table annotation will exist in the
         // annotation list, since it's presence is what got us here.
-        assert(_current_writer.has_annotation(
-                           UnifiedSymbolTable.ION_SYMBOL_TABLE,
-                           UnifiedSymbolTable.ION_SYMBOL_TABLE_SID)
+        assert(_current_writer.has_annotation(ION_SYMBOL_TABLE, ION_SYMBOL_TABLE_SID)
         );
         _symbol_table_value.setTypeAnnotations(getTypeAnnotations());
 
@@ -402,8 +404,7 @@ abstract class IonWriterUser
         // see if it looks like we're starting a local symbol table
         if (IonType.STRUCT.equals(containerType)
          && getDepth() == 0
-         && has_annotation(UnifiedSymbolTable.ION_SYMBOL_TABLE,
-                           UnifiedSymbolTable.ION_SYMBOL_TABLE_SID)
+         && has_annotation(ION_SYMBOL_TABLE, ION_SYMBOL_TABLE_SID)
          ) {
             // if so we'll divert all the data until it's finished
             open_local_symbol_table_copy();
@@ -524,8 +525,8 @@ abstract class IonWriterUser
         if (value == null) {
             writeNull(IonType.SYMBOL);
         }
-        else if (value.equals(UnifiedSymbolTable.ION_1_0)
-              && write_as_ivm(UnifiedSymbolTable.ION_1_0_SID)
+        else if (value.equals(ION_1_0)
+                 && write_as_ivm(ION_1_0_SID)
         ) {
             if (need_to_write_ivm()) {
                 writeIonVersionMarker();
@@ -546,10 +547,10 @@ abstract class IonWriterUser
         // if we're at the top level in a datagram
         boolean treat_as_ivm = false;
 
-        if (sid == UnifiedSymbolTable.ION_1_0_SID
-         && _root_is_datagram
-         && _current_writer.getDepth() == 0
-         ) {
+        if (sid == ION_1_0_SID
+            && _root_is_datagram
+            && _current_writer.getDepth() == 0 )
+        {
             treat_as_ivm = true;
         }
         return treat_as_ivm;

@@ -3,10 +3,10 @@
 package com.amazon.ion;
 
 import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
-import static com.amazon.ion.SystemSymbolTable.ION_1_0;
-import static com.amazon.ion.SystemSymbolTable.ION_1_0_SID;
-import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
-import static com.amazon.ion.SystemSymbolTable.SYMBOLS;
+import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.SYMBOLS;
 
 import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.impl.IonValueImpl;
@@ -139,7 +139,7 @@ public class DatagramTest
 
         IonDatagram dg = system.newDatagram();
 
-        IonSymbol sysId = system.newSymbol(SystemSymbolTable.ION_1_0);
+        IonSymbol sysId = system.newSymbol(ION_1_0);
         assertTrue(sysId.getSymbolTable() == null || sysId.getSymbolTable().isSystemTable());
 
         // $ion_1_0 at the front top-level is a systemId
@@ -549,7 +549,7 @@ public class DatagramTest
         dg = loader().load("{a:b}");
         String text = dg.toString();
         assertTrue("missing version marker",
-                   text.startsWith(SystemSymbolTable.ION_1_0 + ' '));
+                   text.startsWith(ION_1_0 + ' '));
         assertTrue("missing data",
                    text.endsWith(" {a:b}"));
 
@@ -557,7 +557,7 @@ public class DatagramTest
         dg.getBytes(new byte[dg.byteSize()]);
         text = dg.toString();
         assertTrue("missing version marker",
-                   text.startsWith(SystemSymbolTable.ION_1_0 + ' '));
+                   text.startsWith(ION_1_0 + ' '));
         assertTrue("missing data",
                    text.endsWith(" {a:b}"));
     }

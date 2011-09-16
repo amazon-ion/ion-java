@@ -2,7 +2,7 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl.UnifiedSymbolTable.ION_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.junit.IonAssert.assertIonIteratorEquals;
 
 import com.amazon.ion.IonDatagram;

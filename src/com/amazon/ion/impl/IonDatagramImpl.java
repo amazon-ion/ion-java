@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemReader;
 
@@ -16,7 +17,6 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonBinary.BufferManager;
@@ -1175,7 +1175,7 @@ public final class IonDatagramImpl
 
     private IonSymbolImpl injectInitialIVM()
     {
-        IonSymbolImpl ivm = _system.newSystemIdSymbol(UnifiedSymbolTable.ION_1_0);
+        IonSymbolImpl ivm = _system.newSystemIdSymbol(ION_1_0);
         SymbolTable symbols;
 
         symbols = _system.getSystemSymbolTable();
@@ -1201,7 +1201,7 @@ public final class IonDatagramImpl
     private IonSymbolImpl makeIonVersionMarker()
     {
         IonSymbolImpl ivm =
-            _system.newSystemIdSymbol(SystemSymbolTable.ION_1_0);
+            _system.newSystemIdSymbol(ION_1_0);
 
         // TODO why is this needed?
         ivm._buffer = this._buffer;
