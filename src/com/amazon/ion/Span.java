@@ -3,6 +3,7 @@
 package com.amazon.ion;
 
 import com.amazon.ion.facet.Faceted;
+import com.amazon.ion.util.Spans;
 
 /**
  * An immutable reference to a consecutive sequence of values (perhaps
@@ -32,6 +33,7 @@ import com.amazon.ion.facet.Faceted;
  * subsequence references.
  *
  * @see SpanProvider
+ * @see Spans
  *
  * @see <a href="http://portal.acm.org/citation.cfm?id=133234">Subsequence
  * References: First-Class Values for Substrings</a>

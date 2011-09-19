@@ -2,6 +2,7 @@
 
 package com.amazon.ion.streaming;
 
+import com.amazon.ion.util.SpansTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -10,6 +11,7 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
+    SpansTest.class,
     NonSpanReaderTest.class,
     SpanReaderTest.class,
     NonTextSpanTest.class,

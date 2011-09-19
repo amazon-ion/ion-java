@@ -3,6 +3,7 @@
 package com.amazon.ion.streaming;
 
 import static com.amazon.ion.ReaderMaker.valuesExcluding;
+import static com.amazon.ion.util.Spans.currentSpan;
 
 import com.amazon.ion.IonTextReader;
 import com.amazon.ion.ReaderMaker;
@@ -40,11 +41,12 @@ public class TextSpanTest
 
         Span s = sp.currentSpan();
         TextSpan ts = Facets.assumeFacet(TextSpan.class, s);
-        assertEquals("startLine",   startLine,   ts.getStartLine());
-        assertEquals("startColumn", startColumn, ts.getStartColumn());
-        assertEquals("finishLine",   -1, ts.getFinishLine());
-        assertEquals("finishColumn", -1, ts.getFinishColumn());
+        checkSpan(startLine, startColumn, ts);
+
+        ts = currentSpan(TextSpan.class, in);
+        checkSpan(startLine, startColumn, ts);
     }
+
 
     @Test
     public void testTrivialSpan()

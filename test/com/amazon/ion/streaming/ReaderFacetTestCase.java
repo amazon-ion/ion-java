@@ -3,6 +3,7 @@
 package com.amazon.ion.streaming;
 
 import static com.amazon.ion.facet.Facets.assumeFacet;
+import static com.amazon.ion.util.Spans.currentSpan;
 
 import com.amazon.ion.OffsetSpan;
 import com.amazon.ion.ReaderMaker;
@@ -125,13 +126,32 @@ public abstract class ReaderFacetTestCase
         expectNoCurrentValue();
     }
 
+
+    protected void checkSpan(int startLine, int startColumn, TextSpan ts)
+    {
+        assertEquals("startLine",   startLine,   ts.getStartLine());
+        assertEquals("startColumn", startColumn, ts.getStartColumn());
+        assertEquals("finishLine",   -1, ts.getFinishLine());
+        assertEquals("finishColumn", -1, ts.getFinishColumn());
+    }
+
+
+    private void checkSpan(long start, long finish, OffsetSpan offsets)
+    {
+        assertEquals("startOffset",  start,  offsets.getStartOffset());
+        assertEquals("finishOffset", finish, offsets.getFinishOffset());
+    }
+
+
     protected void checkCurrentSpan(long start, long finish)
     {
         Span span = sp.currentSpan();
 
         OffsetSpan offsets = assumeFacet(OffsetSpan.class, span);
-        assertEquals("startOffset",  start,  offsets.getStartOffset());
-        assertEquals("finishOffset", finish, offsets.getFinishOffset());
+        checkSpan(start, finish, offsets);
+
+        offsets = currentSpan(OffsetSpan.class, in);
+        checkSpan(start, finish, offsets);
 
         // Transitional APIs
         if (myReaderMaker.sourceIsBinary())
