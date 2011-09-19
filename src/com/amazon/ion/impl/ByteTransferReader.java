@@ -3,11 +3,10 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonReader;
-import com.amazon.ion.facet.Faceted;
 import java.io.IOException;
 
 /**
- * An {@link IonReader} {@linkplain Faceted facet} that can rapidly bulk-copy
+ * An {@link IonReader} {@linkplain com.amazon.ion.facet facet} that can rapidly bulk-copy
  * Ion binary data under certain circumstances.
  */
 interface ByteTransferReader

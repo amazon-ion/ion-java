@@ -22,7 +22,7 @@ import com.amazon.ion.facet.Faceted;
  * does not support unbalanced spans.
  * <p>
  * Since different source types require different positioning techniques,
- * spans use {@linkplain Faceted facets} to expose the position implementation.
+ * spans is {@link Faceted} to expose the position implementation.
  * <p>
  * <b>WARNING:</b> This interface should not be implemented or extended by
  * code outside of this library.
