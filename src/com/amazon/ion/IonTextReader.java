@@ -2,16 +2,29 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.util.Spans;
+
 /**
  * Extends {@link IonReader} with capabilites specialized to Ion text data
  * streams.
+ *
+ * @deprecated Since R13.
+ *
+ * @see SpanProvider
+ * @see TextSpan
+ * @see Spans#currentSpan(Class, Object)
  */
+@Deprecated
 public interface IonTextReader
     extends IonReader
 {
     /**
      * Gets the line number where the parser is currently located.
+     *
+     * @deprecated Since R13.
+     *  Use {@link TextSpan#getStartLine()} instead.
      */
+    @Deprecated
     public long getLineNumber();
 
     /**
@@ -20,6 +33,10 @@ public interface IonTextReader
      * end, or in the middle of an item.  The exact location is especially
      * vague if a parsing error has occurred (the location will be at or very
      * near the error but that could be anywhere near the value itself).
+     *
+     * @deprecated Since R13.
+     *  Use {@link TextSpan#getStartColumn()} instead.
      */
+    @Deprecated
     public long getLineOffset();
 }
