@@ -52,7 +52,7 @@ import java.util.GregorianCalendar;
  */
 
 public final class Timestamp
-    implements Comparable, Cloneable
+    implements Comparable<Timestamp>, Cloneable
 {
     public final static Integer UNKNOWN_OFFSET = null;
     public final static Integer UTC_OFFSET = new Integer(0);
@@ -1452,28 +1452,6 @@ public final class Timestamp
         return result;
     }
 
-    /**
-     * Performs a timeline comparison of the instant represented by two
-     * Timestamps.
-     * If the instant represented by this object precedes that of {@code t},
-     * then {@code -1} is returned.
-     * If {@code t} precedes this object then {@code 1} is returned.
-     * If the timestamps represent the same instance on the timeline, then
-     * {@code 0} is returned.
-     * Note that a {@code 0} result does not imply that the two values are
-     * {@link #equals}, as the timezones or precision of the two values may be
-     * different.
-     *
-     * @param t second timestamp to compare 'this' to
-     * @return a negative integer, zero, or a positive integer as this object
-     * is less than, equal to, or greater than the specified object.
-     *
-     * @throws ClassCastException if {@code t} is not a {@link Timestamp}.
-     * @throws NullPointerException if {@code t} is null.
-     */
-    public int compareTo(Object t) {
-        return this.compareTo((Timestamp)t);
-    }
 
     /**
      * Performs a timeline comparison of the instant represented by two
