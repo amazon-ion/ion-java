@@ -3,8 +3,10 @@
 package com.amazon.ion.system;
 
 import com.amazon.ion.IonCatalog;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.impl.IonSystemImpl;
 import com.amazon.ion.impl.lite.IonSystemLite;
 
@@ -69,6 +71,14 @@ import com.amazon.ion.impl.lite.IonSystemLite;
  *   <dt>catalog
  *   <dd>The {@link IonCatalog} used as a default when reading Ion data.
  *     If null, each system will be built with a new {@link SimpleCatalog}.
+ *
+ *   <dt>streamCopyOptimized
+ *   <dd>When true, this enables optimizations when copying data between two
+ *     Ion streams. For example, in some cases raw binary-encoded Ion can be
+ *     copied directly from the input to the output. This can have significant
+ *     performance benefits when the appropriate conditions are met.
+ *     <b>This feature is experimental! Please test thoroughly and report any
+ *     issues.</b>
  * </dl>
  */
 public class IonSystemBuilder
@@ -103,6 +113,7 @@ public class IonSystemBuilder
 
     IonCatalog myCatalog;
     boolean myBinaryBacked;
+    boolean myStreamCopyOptimized;
 
 
     /** You no touchy. */
@@ -122,6 +133,7 @@ public class IonSystemBuilder
     {
         this.myCatalog      = that.myCatalog;
         this.myBinaryBacked = that.myBinaryBacked;
+        this.myStreamCopyOptimized = that.myStreamCopyOptimized;
     }
 
     //=========================================================================
@@ -155,7 +167,7 @@ public class IonSystemBuilder
 
     /**
      * Gets the catalog to use when building an {@link IonSystem}.
-     * By default, this is null.
+     * By default, this property is null.
      *
      * @see #setCatalog(IonCatalog)
      * @see #withCatalog(IonCatalog)
@@ -221,15 +233,73 @@ public class IonSystemBuilder
      *
      * @throws UnsupportedOperationException if this is immutable.
      */
-    void setBinaryBacked(boolean bb)
+    void setBinaryBacked(boolean backed)
     {
         mutationFailure();
     }
 
-    final IonSystemBuilder withBinaryBacked(boolean bb)
+    final IonSystemBuilder withBinaryBacked(boolean backed)
     {
         IonSystemBuilder b = mutable();
-        b.setBinaryBacked(bb);
+        b.setBinaryBacked(backed);
+        return b;
+    }
+
+
+
+
+    /**
+     * Indicates whether built systems may attempt to optimize
+     * {@link IonWriter#writeValue(IonReader)} by copying raw source data.
+     * By default, this property is false.
+     *
+     * @see #setStreamCopyOptimized(boolean)
+     * @see #withStreamCopyOptimized(boolean)
+     *
+     * @since R13
+     */
+    public final boolean isStreamCopyOptimized()
+    {
+        return myStreamCopyOptimized;
+    }
+
+    /**
+     * Declares whether built systems may attempt to optimize
+     * {@link IonWriter#writeValue(IonReader)} by copying raw source data.
+     * By default, this property is false.
+     * <p>
+     * <b>This feature is experimental! Please test thoroughly and report any
+     * issues.</b>
+     *
+     * @throws UnsupportedOperationException if this is immutable.
+     *
+     * @see #isStreamCopyOptimized()
+     * @see #withStreamCopyOptimized(boolean)
+     *
+     * @since R13
+     */
+    public void setStreamCopyOptimized(boolean optimized)
+    {
+        mutationFailure();
+    }
+
+    /**
+     * Declares whether built systems may attempt to optimize
+     * {@link IonWriter#writeValue(IonReader)} by copying raw source data,
+     * returning a new mutable builder if this is immutable.
+     * <p>
+     * <b>This feature is experimental! Please test thoroughly and report any
+     * issues.</b>
+     *
+     * @see #isStreamCopyOptimized()
+     * @see #setStreamCopyOptimized(boolean)
+     *
+     * @since R13
+     */
+    public final IonSystemBuilder withStreamCopyOptimized(boolean optimized)
+    {
+        IonSystemBuilder b = mutable();
+        b.setStreamCopyOptimized(optimized);
         return b;
     }
 
@@ -249,11 +319,11 @@ public class IonSystemBuilder
         IonSystem sys;
         if (isBinaryBacked())
         {
-            sys = new IonSystemImpl(catalog);
+            sys = new IonSystemImpl(catalog, myStreamCopyOptimized);
         }
         else
         {
-            sys = new IonSystemLite(catalog);
+            sys = new IonSystemLite(catalog, myStreamCopyOptimized);
         }
         return sys;
     }
@@ -287,9 +357,15 @@ public class IonSystemBuilder
         }
 
         @Override
-        void setBinaryBacked(boolean bb)
+        void setBinaryBacked(boolean backed)
         {
-            myBinaryBacked = bb;
+            myBinaryBacked = backed;
+        }
+
+        @Override
+        public void setStreamCopyOptimized(boolean optimized)
+        {
+            myStreamCopyOptimized = optimized;
         }
     }
 }

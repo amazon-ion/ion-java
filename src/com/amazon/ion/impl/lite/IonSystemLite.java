@@ -73,21 +73,23 @@ public final class IonSystemLite
     private       IonCatalog         _catalog;
     private       ValueFactoryLite   _value_factory;
     private final IonLoader          _loader;
+    private final boolean myStreamCopyOptimized;
 
 
     /**
      * @param catalog must not be null.
      */
-    public IonSystemLite(IonCatalog catalog)
+    public IonSystemLite(IonCatalog catalog, boolean streamCopyOptimized)
     {
-        this(catalog, DEFAULT_CONTEXT_FREE_LIST_SIZE);
+        this(catalog, streamCopyOptimized, DEFAULT_CONTEXT_FREE_LIST_SIZE);
     }
 
     /**
      * @param catalog must not be null.
      * @param context_free_list_size
      */
-    private IonSystemLite(IonCatalog catalog, int context_free_list_size)
+    private IonSystemLite(IonCatalog catalog, boolean streamCopyOptimized,
+                          int context_free_list_size)
     {
         assert catalog != null;
 
@@ -95,6 +97,7 @@ public final class IonSystemLite
 
         _catalog = catalog;
         _loader = new IonLoaderLite(this, catalog);
+        myStreamCopyOptimized = streamCopyOptimized;
 
         // whacked but I'm not going to figure this out right now
         _value_factory = this;
@@ -202,7 +205,8 @@ public final class IonSystemLite
     public com.amazon.ion.IonBinaryWriter newBinaryWriter()
     {
         IonWriterBinaryCompatibility.User writer =
-            new IonWriterBinaryCompatibility.User(this, _catalog);
+            new IonWriterBinaryCompatibility.User(this, _catalog,
+                                                  myStreamCopyOptimized);
         return writer;
     }
 
@@ -212,7 +216,8 @@ public final class IonSystemLite
         UnifiedSymbolTable symbols =
             makeNewLocalSymbolTable(this, this.getSystemSymbolTable(), imports);
         IonWriterBinaryCompatibility.User writer =
-            new IonWriterBinaryCompatibility.User(this, _catalog);
+            new IonWriterBinaryCompatibility.User(this, _catalog,
+                                                  myStreamCopyOptimized);
         try {
             writer.setSymbolTable(symbols);
         }
@@ -226,7 +231,8 @@ public final class IonSystemLite
     public IonWriter newBinaryWriter(OutputStream out, SymbolTable... imports)
     {
         IonWriterUserBinary writer =
-            IonWriterFactory.makeWriter(this, getCatalog(), out, imports);
+            IonWriterFactory.newBinaryWriter(this, getCatalog(),
+                                             myStreamCopyOptimized, out, imports);
         return writer;
     }
 

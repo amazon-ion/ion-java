@@ -18,9 +18,12 @@ import java.io.OutputStream;
 public class IonWriterUserBinary
     extends IonWriterUser
 {
-    // TODO ION-209 finalize this stuff.
-    public static final boolean OUR_FAST_COPY_DEFAULT = true;
+    @Deprecated // TODO ION-252 Remove this
+    public static final boolean OUR_FAST_COPY_DEFAULT = false;
+    @Deprecated // TODO ION-252 Remove this
     public static volatile boolean ourFastCopyEnabled = OUR_FAST_COPY_DEFAULT;
+
+    public final boolean myStreamCopyOptimized;
 
 
     // If we wanted to we could keep an extra reference to the
@@ -31,9 +34,11 @@ public class IonWriterUserBinary
 
     protected IonWriterUserBinary(IonSystem system, IonCatalog catalog,
                                   IonWriterSystemBinary systemWriter,
-                                  boolean suppressIVM)
+                                  boolean suppressIVM,
+                                  boolean streamCopyOptimized)
     {
         super(system, systemWriter, catalog, suppressIVM);
+        myStreamCopyOptimized = streamCopyOptimized;
     }
 
 
@@ -82,20 +87,20 @@ public class IonWriterUserBinary
     }
 
     @Override
-    public void writeValue(IonReader reader) // TODO ION-209 finish fast-copy
+    public void writeValue(IonReader reader)
         throws IOException
     {
         // TODO check reader state, is it on a value?
 
         IonType type = reader.getType();
-        // TODO Don't bother optimizing trivial scalars (except symbol?)
+        // TODO ION-253 Don't bother optimizing trivial scalars (except symbol?)
 
         // See if we can copy bytes directly from the source. This test should
         // only happen at the outermost call, not recursively down the tree.
 
         ByteTransferReader transfer = reader.asFacet(ByteTransferReader.class);
 
-        if (ourFastCopyEnabled
+        if ((ourFastCopyEnabled || myStreamCopyOptimized)
             && transfer != null
             && _current_writer instanceof IonWriterSystemBinary
             && symtabExtends(getSymbolTable(), reader.getSymbolTable()))

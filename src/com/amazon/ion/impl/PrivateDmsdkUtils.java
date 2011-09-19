@@ -12,13 +12,21 @@ import com.amazon.ion.SeekableReader;
 import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.system.IonSystemBuilder;
 
 /**
  * Temporary interface to some in-development features.
  * Support ONLY for use via the DM-SDK 3 library.
+ *
+ * @deprecated Since R13.
  */
-public class PrivateDmsdkUtils
+@Deprecated
+public class PrivateDmsdkUtils  // TODO ION-252 Remove this
 {
+    /**
+     * @deprecated Since R13.
+     */
+    @Deprecated
     public static IonReader newBinaryReaderWithPosition(IonSystem system,
                                                         byte[] buffer)
     {
@@ -31,6 +39,10 @@ public class PrivateDmsdkUtils
         return r;
     }
 
+    /**
+     * @deprecated Since R13.
+     */
+    @Deprecated
     public static IonReader newBinaryReaderWithPosition(IonSystem system,
                                                         byte[] buffer,
                                                         int offset, int length)
@@ -44,6 +56,10 @@ public class PrivateDmsdkUtils
         return r;
     }
 
+    /**
+     * @deprecated Since R13.
+     */
+    @Deprecated
     public static IonReader newBinaryReaderWithPosition(IonSystem system,
                                                         IonCatalog catalog,
                                                         byte[] buffer,
@@ -69,7 +85,10 @@ public class PrivateDmsdkUtils
      *
      * @throws IonException if reader is null or doesn't have the
      * {@link SpanProvider} facet.
+     *
+     * @deprecated Since R13.
      */
+    @Deprecated
     public static Object currentValuePosition(IonReader reader)
     {
         return assumeFacet(SpanProvider.class, reader).currentSpan();
@@ -85,7 +104,10 @@ public class PrivateDmsdkUtils
      * {@link #newBinaryReaderWithPosition}.
      * @param valuePosition must have been created via
      * {@link #currentValuePosition(IonReader)}.
+     *
+     * @deprecated Since R13.
      */
+    @Deprecated
     public static void rereadValue(IonReader reader, Object valuePosition)
     {
         Span position = (Span) valuePosition;
@@ -93,18 +115,31 @@ public class PrivateDmsdkUtils
         reader.next();
     }
 
-
+    /**
+     * @deprecated Since R13.
+     *  Use {@link IonSystemBuilder#isStreamCopyOptimized()}.
+     */
+    @Deprecated
     public static boolean isFastCopyEnabled()
     {
         return IonWriterUserBinary.ourFastCopyEnabled;
     }
 
+    /**
+     * @deprecated Since R13.
+     *  Use {@link IonSystemBuilder#setStreamCopyOptimized(boolean)}.
+     */
+    @Deprecated
     public static void setFastCopyEnabled(boolean enable)
     {
         IonWriterUserBinary.ourFastCopyEnabled = enable;
     }
 
 
+    /**
+     * @deprecated Since R13. Use {@link SymbolTable#makeReadOnly()}.
+     */
+    @Deprecated
     public static void lockLocalSymbolTable(SymbolTable symtab)
     {
         symtab.makeReadOnly();

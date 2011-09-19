@@ -432,20 +432,20 @@ public final class IonImplUtils // TODO this class shouldn't be public
 
         if (superset.isLocalTable() && subset.isLocalTable())
         {
-            // TODO compare Ion version
+            // TODO ION-253 compare Ion version
 
             if (superset.getMaxId() < subset.getMaxId()) return false;
 
             // Stupid hack to prevent this from running away on big symtabs.
             if (20 < subset.getMaxId()) return false;
 
-            // TODO Optimize more by checking name, version, max ids of each import
+            // TODO ION-253 Optimize more by checking name, version, max ids of each import
             SymbolTable[] superImports = superset.getImportedTables();
             SymbolTable[] subImports = subset.getImportedTables();
 
             if (! Arrays.equals(superImports, subImports)) return false;
 
-            // TODO This is a ridiculous thing to do frequently.
+            // TODO ION-253 This is a ridiculous thing to do frequently.
             // What happen when we do this repeatedly (eg copying a stream)
             // and the symtabs are large?  That's O(n) effort each time!!
             // Can we memoize the result somehow?

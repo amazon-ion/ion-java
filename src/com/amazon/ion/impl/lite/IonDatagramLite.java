@@ -551,8 +551,10 @@ public class IonDatagramLite
     private IonBinaryWriter make_filled_binary_writer()
     throws IOException
     {
+        boolean streamCopyOptimized = false;
         IonWriterBinaryCompatibility.User writer =
-            new IonWriterBinaryCompatibility.User(_system, _catalog);
+            new IonWriterBinaryCompatibility.User(_system, _catalog,
+                                                  streamCopyOptimized);
         IonReader reader = IonReaderFactoryX.makeSystemReader(this);
         writer.writeValues(reader);
         writer.finish();
