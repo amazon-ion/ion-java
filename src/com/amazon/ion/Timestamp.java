@@ -4,10 +4,12 @@ package com.amazon.ion;
 
 import static com.amazon.ion.util.IonTextUtils.printCodePointAsString;
 
+import com.amazon.ion.impl.IonImplUtils;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 
 /**
  * An immutable representation of time.  Ion defines a simple representational
@@ -889,20 +891,41 @@ public final class Timestamp
      * Because <code>Date</code> instances are mutable, this method returns a
      * new instance from each call.
      *
-     * @return a new <code>Date</code> value, in UTC,
-     * or <code>null</code> if <code>this.isNullValue()</code>.
+     * @return a new <code>Date</code> value, in UTC.
      */
-    @SuppressWarnings("deprecation")
     public Date dateValue()
     {
-        //                                        month is 0 based for Date
-        long millis = Date.UTC(this._year - 1900, this._month - 1, this._day, this._hour, this._minute, this._second);
-        if (this._precision == Precision.FRACTION) {
-            int frac = this._fraction.movePointRight(3).intValue();
-            millis += frac;
-        }
+        long millis = getMillis();
         Date d = new Date(millis);
         return d;
+    }
+
+
+    /**
+     * Converts this timestamp into a {@link Calendar} with equivalent time
+     * (to milliseconds precision) and timezone.
+     *
+     * @return aa new {@link Calendar}.
+     */
+    public Calendar calendarValue()
+    {
+        Calendar cal = new GregorianCalendar(IonImplUtils.UTC);
+
+        long millis = getMillis();
+        Integer offset = _offset;
+        if (offset != null && offset != 0)
+        {
+            int offsetMillis = offset * 60 * 1000;
+            millis += offsetMillis;
+            cal.setTimeInMillis(millis);                // Resets the offset!
+            cal.set(Calendar.ZONE_OFFSET, offsetMillis);
+        }
+        else
+        {
+            cal.setTimeInMillis(millis);
+        }
+
+        return cal;
     }
 
 
@@ -919,6 +942,7 @@ public final class Timestamp
     @SuppressWarnings("deprecation")
     public long getMillis()
     {
+        //                                        month is 0 based for Date
         long millis = Date.UTC(this._year - 1900, this._month - 1, this._day, this._hour, this._minute, this._second);
         if (this._precision == Precision.FRACTION) {
             int frac = this._fraction.movePointRight(3).intValue();

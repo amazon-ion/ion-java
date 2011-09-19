@@ -30,6 +30,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
+import java.util.TimeZone;
 
 /**
  * For internal use only!
@@ -68,6 +69,14 @@ public final class IonImplUtils // TODO this class shouldn't be public
 
     public static final Charset UTF8_CHARSET =
         Charset.forName(UTF8_CHARSET_NAME);
+
+
+    /**
+     * The UTC {@link TimeZone}.
+     *
+     * TODO determine if this is well-defined.
+     */
+    public static final TimeZone UTC = TimeZone.getTimeZone("UTC");
 
 
 

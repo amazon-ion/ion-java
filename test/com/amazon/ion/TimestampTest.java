@@ -3,6 +3,7 @@ package com.amazon.ion;
 
 import static com.amazon.ion.Timestamp.UNKNOWN_OFFSET;
 import static com.amazon.ion.Timestamp.UTC_OFFSET;
+import static com.amazon.ion.impl.IonImplUtils.UTC;
 
 import com.amazon.ion.Timestamp.Precision;
 import java.math.BigDecimal;
@@ -24,13 +25,6 @@ import org.junit.Test;
 public class TimestampTest
     extends IonTestCase
 {
-    /**
-     * The UTC TimeZone.
-     *
-     * TODO determine if this is well-defined.
-     */
-    private static final TimeZone UTC = TimeZone.getTimeZone("UTC");
-
     /**
      * PST = -08:00 = -480
      */
@@ -101,6 +95,13 @@ public class TimestampTest
             int actualOffsetMillis = actualOffsetMinutes * 60 * 1000;
             assertEquals(expectedOffsetMillis, actualOffsetMillis);
         }
+
+        Timestamp ts = actual.timestampValue();
+        Calendar tsCal = ts.calendarValue();
+        assertEquals(0, expected.compareTo(tsCal));
+        assertEquals("millis", expected.getTimeInMillis(), tsCal.getTimeInMillis());
+        assertEquals("offset", expected.get(Calendar.ZONE_OFFSET),
+                     tsCal.get(Calendar.ZONE_OFFSET));
     }
 
 
