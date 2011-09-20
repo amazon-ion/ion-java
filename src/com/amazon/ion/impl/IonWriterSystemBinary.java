@@ -867,7 +867,6 @@ public class IonWriterSystemBinary
     public void writeClob(byte[] value, int start, int len) throws IOException
     {
         if (value == null) {
-            assert len == 0;
             writeNull(IonType.CLOB);
             return;
         }

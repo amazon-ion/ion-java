@@ -588,6 +588,12 @@ public class IonWriterSystemText
     public void writeBlob(byte[] value, int start, int len)
         throws IOException
     {
+        if (value == null)
+        {
+            writeNull(IonType.BLOB);
+            return;
+        }
+
         TextStream ts = new TextStream(new ByteArrayInputStream(value, start, len));
 
         startValue();
@@ -614,6 +620,12 @@ public class IonWriterSystemText
     public void writeClob(byte[] value, int start, int len)
         throws IOException
     {
+        if (value == null)
+        {
+            writeNull(IonType.CLOB);
+            return;
+        }
+
         startValue();
         _output.append("{{");
 

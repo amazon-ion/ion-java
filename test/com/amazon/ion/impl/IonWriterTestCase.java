@@ -339,6 +339,26 @@ public abstract class IonWriterTestCase
         assertEqualBytes(data, 20, 30, lob.getBytes());
     }
 
+
+    @Test
+    public void testWriteLobNull()
+        throws Exception
+    {
+        iw = makeWriter();
+        iw.writeBlob(null);
+        iw.writeBlob(null, 10, 12);
+        iw.writeClob(null);
+        iw.writeClob(null, 23, 1);
+
+        IonDatagram dg = reload();
+        for (int i = 0; i < 4; i++)
+        {
+            IonLob lob = (IonLob) dg.get(i);
+            assertTrue("dg[" + i +"] not null", lob.isNullValue());
+        }
+    }
+
+
     @Test
     public void testWritingDeepNestedList() throws Exception {
         // JIRA ION-60

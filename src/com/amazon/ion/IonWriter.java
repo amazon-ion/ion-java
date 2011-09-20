@@ -557,9 +557,11 @@ public interface IonWriter
     public void writeClob(byte[] value) throws IOException;
 
     /**
-     * writes a portion of the byte array out as an IonClob value.  This
+     * Writes a portion of the byte array out as an IonClob value.  This
      * copies the porition of the byte array that is written.
-     * @param value bytes to be written
+     *
+     * @param value bytes to be written.
+     * May be {@code null} to represent {@code null.clob}.
      * @param start offset of the first byte in value to write
      * @param len number of bytes to write from value
      */
@@ -575,9 +577,11 @@ public interface IonWriter
     public void writeBlob(byte[] value) throws IOException;
 
     /**
-     * writes a portion of the byte array out as an IonBlob value.  This
+     * Writes a portion of the byte array out as an IonBlob value.  This
      * copies the portion of the byte array that is written.
-     * @param value bytes to be written
+     *
+     * @param value bytes to be written.
+     * May be {@code null} to represent {@code null.blob}.
      * @param start offset of the first byte in value to write
      * @param len number of bytes to write from value
      */

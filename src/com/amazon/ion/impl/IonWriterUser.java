@@ -428,25 +428,40 @@ abstract class IonWriterUser
 
     public void writeBlob(byte[] value, int start, int len) throws IOException
     {
-        if (value == null || start < 0 || len < 0 || start+len > value.length) {
+        if (value == null)
+        {
+            writeNull(IonType.BLOB);
+            return;
+        }
+
+        if (start < 0 || len < 0 || start+len > value.length) {
             throw new IllegalArgumentException("the start and len must be contained in the byte array");
         }
         _current_writer.writeBlob(value, start, len);
         finish_value();
     }
+
     public void writeBool(boolean value) throws IOException
     {
         _current_writer.writeBool(value);
         finish_value();
     }
+
     public void writeClob(byte[] value, int start, int len) throws IOException
     {
-        if (value == null || start < 0 || len < 0 || start+len > value.length) {
+        if (value == null)
+        {
+            writeNull(IonType.CLOB);
+            return;
+        }
+
+        if (start < 0 || len < 0 || start+len > value.length) {
             throw new IllegalArgumentException("the start and len must be contained in the byte array");
         }
         _current_writer.writeClob(value, start, len);
         finish_value();
     }
+
     @Override
     public void writeDecimal(BigDecimal value) throws IOException
     {
