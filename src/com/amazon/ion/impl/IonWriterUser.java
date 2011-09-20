@@ -371,16 +371,19 @@ abstract class IonWriterUser
     {
         _current_writer.addTypeAnnotationId(annotationId);
     }
+
     @Override
-    public void setTypeAnnotationIds(int[] annotationIds)
+    public void setTypeAnnotationIds(int... annotationIds)
     {
         _current_writer.setTypeAnnotationIds(annotationIds);
     }
+
     @Override
-    public void setTypeAnnotations(String[] annotations)
+    public void setTypeAnnotations(String... annotations)
     {
         _current_writer.setTypeAnnotations(annotations);
     }
+
     @Override
     public String[] getTypeAnnotations()
     {

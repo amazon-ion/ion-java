@@ -200,7 +200,7 @@ public interface IonWriter
      * @param annotations string array with the annotations.
      * If null or empty, any pending annotations are cleared.
      */
-    public void setTypeAnnotations(String[] annotations);
+    public void setTypeAnnotations(String... annotations);
 
     /**
      * Sets the full list of pending annotations to the given symbol ids.
@@ -218,7 +218,7 @@ public interface IonWriter
      * @param annotationIds array with the annotation symbol ids.
      * If null or empty, any pending annotations are cleared.
      */
-    public void setTypeAnnotationIds(int[] annotationIds);
+    public void setTypeAnnotationIds(int... annotationIds);
 
     /**
      * Adds a given string to the list of pending annotations.

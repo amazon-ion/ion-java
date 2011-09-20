@@ -513,13 +513,13 @@ public abstract class IonWriterTestCase
         v = expected.add().newNull();
         v.setTypeAnnotations("b", "b");
 
-        iw.setTypeAnnotations(new String[]{"b", "b"});
+        iw.setTypeAnnotations("b", "b");
         iw.writeNull();
         v = expected.add().newNull();
         v.setTypeAnnotations("b", "b");
 
         iw.addTypeAnnotation("b");
-        iw.setTypeAnnotations(new String[]{"c", "d"});
+        iw.setTypeAnnotations("c", "d");
         iw.writeNull();
         v = expected.add().newNull();
         v.setTypeAnnotations("c", "d");
@@ -531,7 +531,13 @@ public abstract class IonWriterTestCase
         v.clearTypeAnnotations();
 
         iw.addTypeAnnotation("b");
-        iw.setTypeAnnotations(null);
+        iw.setTypeAnnotations((String[])null);
+        iw.writeNull();
+        v = expected.add().newNull();
+        v.clearTypeAnnotations();
+
+        iw.addTypeAnnotation("b");
+        iw.setTypeAnnotations();
         iw.writeNull();
         v = expected.add().newNull();
         v.clearTypeAnnotations();

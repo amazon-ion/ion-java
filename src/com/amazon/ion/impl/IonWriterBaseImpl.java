@@ -338,7 +338,7 @@ public abstract class IonWriterBaseImpl
     // the underlying add_symbol and find_symbol will throw if
     // there is not symbol table.
     //
-    public void setTypeAnnotations(String[] annotations)
+    public void setTypeAnnotations(String... annotations)
     {
         _annotations_type = IonType.STRING;
         if (annotations == null) {
@@ -361,7 +361,8 @@ public abstract class IonWriterBaseImpl
         }
         return true;
     }
-    public void setTypeAnnotationIds(int[] annotationIds)
+
+    public void setTypeAnnotationIds(int... annotationIds)
     {
         _annotations_type = IonType.INT;
         if (annotationIds == null) {
