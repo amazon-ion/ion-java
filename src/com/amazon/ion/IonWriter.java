@@ -292,6 +292,8 @@ public interface IonWriter
      * and performs a deep write, including the contents of
      * any containers encountered.
      *
+     * @param value may be null, in which case this method does nothing.
+     *
      * @deprecated Since IonJava R13.
      *  Use {@link IonValue#writeTo(IonWriter)} instead.
      */

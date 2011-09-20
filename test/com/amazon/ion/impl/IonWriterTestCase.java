@@ -692,4 +692,19 @@ public abstract class IonWriterTestCase
         IonStruct v = (IonStruct) dg.systemGet(1);
         Assert.assertArrayEquals(annotations, v.getTypeAnnotations());
     }
+
+    /**
+     * Discovered this old behavior during test builds, some user code relies
+     * on it.
+     */
+    @Test
+    public void testWriteValueNull()
+        throws Exception
+    {
+        iw = makeWriter();
+        iw.writeValue((IonValue)null);
+
+        IonDatagram dg = reload();
+        assertEquals(0, dg.size());
+    }
 }

@@ -754,7 +754,10 @@ public abstract class IonWriterBaseImpl
     @Deprecated
     public void writeValue(IonValue value) throws IOException
     {
-        value.writeTo(this);
+        if (value != null)
+        {
+            value.writeTo(this);
+        }
     }
 
     public void writeValues(IonReader reader) throws IOException
