@@ -870,4 +870,33 @@ public class TimestampTest
     {
         assertEquals(null, Timestamp.forDateZ(null));
     }
+
+
+    @Test
+    public void testForSqlTimestampZ()
+    {
+        long millis = System.currentTimeMillis();
+        java.sql.Timestamp now = new java.sql.Timestamp(millis);
+        assertEquals(millis % 1000 * 1000000, now.getNanos());
+
+        Timestamp ts = Timestamp.forSqlTimestampZ(now);
+        assertEquals(now.getTime(), ts.getMillis());
+        assertEquals(Timestamp.UTC_OFFSET, ts.getLocalOffset());
+
+        BigDecimal frac = ts.getFractionalSecond();
+        frac = frac.movePointRight(9); // Convert to nanos
+        assertEquals("nanos", now.getNanos(), frac.intValue());
+
+        now.setTime(0);
+        ts = Timestamp.forSqlTimestampZ(now);
+        assertEquals(0, ts.getMillis());
+        assertEquals(Timestamp.UTC_OFFSET, ts.getLocalOffset());
+        assertEquals(1970, ts.getYear());
+    }
+
+    @Test
+    public void testForSqlTimestampZNull()
+    {
+        assertEquals(null, Timestamp.forSqlTimestampZ(null));
+    }
 }

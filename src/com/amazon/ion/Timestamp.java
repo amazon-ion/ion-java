@@ -863,6 +863,28 @@ public final class Timestamp
 
 
     /**
+     * Converts a {@link java.sql.Timestamp} to an IonT Timestamp.
+     *
+     * @param sqlTimestamp the desired point in time, assumed to have
+     *  nanosecond precision.
+     *
+     * @return a timestamp representing the given point in time, localized to
+     * GMT; null if the given time is null.
+     */
+    public static Timestamp forSqlTimestampZ(java.sql.Timestamp sqlTimestamp)
+    {
+        if (sqlTimestamp == null) return null;
+
+        long millis = sqlTimestamp.getTime();
+        Timestamp ts = new Timestamp(millis, UTC_OFFSET);
+        int nanos = sqlTimestamp.getNanos();
+        BigDecimal frac = new BigDecimal(nanos).movePointLeft(9);
+        ts._fraction = frac;
+        return ts;
+    }
+
+
+    /**
      * this returns the current time using the JVM clock and an unknown timezone
      */
     static public Timestamp now()
@@ -1220,7 +1242,7 @@ public final class Timestamp
     /**
      * Gets the fractional sub-second of this timestamp, in GMT.
      * The result will be non-negative and less than one, since it denotes all
-     * significant digits <em>after</em> the timestam's decimal point.
+     * significant digits <em>after</em> the timestamp's decimal point.
      *
      * @return the fractional second in GMT;
      * null if the timestamp isn't that precise.
