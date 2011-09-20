@@ -117,7 +117,10 @@ public interface IonReader
      * There's no current value immediately after stepping in, so the next
      * thing you'll want to do is call {@link #next()} to move onto the first
      * child value (or learn that there's not one).
-     *
+     * <p>
+     * Stepping into a null container ({@code null.list}, {@code null.sexp},
+     * or {@code null.struct}) behaves as if the container were empty
+     * ({@code []}, {@code ()}, or <code>{}</code>).
      * <p>
      * At any time {@link #stepOut()} may be called to move the cursor back to
      * (just after) the parent value, even if there's more children remaining.

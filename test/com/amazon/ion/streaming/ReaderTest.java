@@ -4,6 +4,7 @@ package com.amazon.ion.streaming;
 
 import static com.amazon.ion.impl.IonImplUtils.intIterator;
 
+import com.amazon.ion.IonType;
 import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
@@ -21,6 +22,30 @@ public class ReaderTest
     public static final ReaderMaker[] READER_MAKERS = ReaderMaker.values();
 
 
+    @Test
+    public void testStepInOnNull() throws IOException
+    {
+        read("null.list null.sexp null.struct");
+
+        assertEquals(IonType.LIST, in.next());
+        assertTrue(in.isNullValue());
+        in.stepIn();
+        expectEof();
+        in.stepOut();
+
+        assertEquals(IonType.SEXP, in.next());
+        assertTrue(in.isNullValue());
+        in.stepIn();
+        expectEof();
+        in.stepOut();
+
+        assertEquals(IonType.STRUCT, in.next());
+        assertTrue(in.isNullValue());
+        in.stepIn();
+        expectEof();
+        in.stepOut();
+        expectEof();
+    }
 
     @Test // Traps ION-133
     public void testStepOut() throws IOException
