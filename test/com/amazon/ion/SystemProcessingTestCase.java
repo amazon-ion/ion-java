@@ -648,11 +648,11 @@ if (table1 == table2) {
         testString("\uffff", ionData);
 
         ionData = "\"\\" + "U0001d110\""; // Carefully avoid Java escape
-//        testString("\ud834\udd10", ionData); // FIXME JIRA ION-8
+        testString("\ud834\udd10", ionData);
 
         // The largest legal code point
         ionData = "\"\\" + "U0010ffff\""; // Carefully avoid Java escape
-//        testString("\udbff\udfff", ionData); // FIXME JIRA ION-8
+        testString("\udbff\udfff", ionData);
     }
 
 

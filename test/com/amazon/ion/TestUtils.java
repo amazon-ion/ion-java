@@ -3,12 +3,10 @@
 package com.amazon.ion;
 
 import static com.amazon.ion.impl.IonImplUtils.READER_HASNEXT_REMOVED;
-import static com.amazon.ion.impl.IonImplUtils.UTF8_CHARSET_NAME;
 
 import com.amazon.ion.impl.IonImplUtils;
 import java.io.File;
 import java.io.FilenameFilter;
-import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
@@ -306,16 +304,9 @@ public class TestUtils
 
     static
     {
-        try
+        if (! IonImplUtils.utf8(FERMATA_UTF8).equals(FERMATA))
         {
-            if (! new String(FERMATA_UTF8, UTF8_CHARSET_NAME).equals(FERMATA))
-            {
-                throw new AssertionError("Broken encoding");
-            }
-        }
-        catch (UnsupportedEncodingException e)
-        {
-            throw new RuntimeException(e);
+            throw new AssertionError("Broken encoding");
         }
     }
 }
