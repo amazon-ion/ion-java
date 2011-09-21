@@ -347,33 +347,6 @@ public interface IonWriter
 
 
     /**
-     * writes a signed 8 bit value, a Java byte, as an IonInt.
-     * @param value signed int to write
-     *
-     * @deprecated Use {@link #writeInt(long)}.
-     */
-    @Deprecated
-    public void writeInt(byte value) throws IOException;
-
-    /**
-     * writes a signed 16 bit value, a Java short, as an IonInt.
-     * @param value signed int to write
-     *
-     * @deprecated Use {@link #writeInt(long)}.
-     */
-    @Deprecated
-    public void writeInt(short value) throws IOException;
-
-    /**
-     * writes a signed 32 bit value, a Java int, as an IonInt.
-     * @param value signed int to write
-     *
-     * @deprecated Use {@link #writeInt(long)}.
-     */
-    @Deprecated
-    public void writeInt(int value) throws IOException;
-
-    /**
      * writes a signed 64 bit value, a Java long, as an IonInt.
      * @param value signed int to write
      */
@@ -386,19 +359,6 @@ public interface IonWriter
      */
     public void writeInt(BigInteger value) throws IOException;
 
-
-    /**
-     * writes a 32 bit binary floating point value, a Java float,
-     * as an IonFloat.  Currently IonFloat values are output as
-     * 64 bit IEEE 754 big endian values.  As a result writeFloat
-     * is simply a convenience method which casts the float
-     * up to a double on output.
-     * @param value float to write
-     *
-     * @deprecated Use {@link #writeFloat(double)}.
-     */
-    @Deprecated
-    public void writeFloat(float value) throws IOException;
 
     /**
      * writes a 64 bit binary floating point value, a Java double,
@@ -425,40 +385,6 @@ public interface IonWriter
      */
     public void writeDecimal(BigDecimal value) throws IOException;
 
-    /**
-     * writes a special value as decimal.  Currently IonDecimal only
-     * supports the special value of negative zero value.  The
-     * java.math.BigDecimal class does not support the value negative
-     * zero.  This method allows us to emit this value when it
-     * is necessary.
-     *
-     * @deprecated Use {@link #writeDecimal(BigDecimal)} instead.
-     */
-    @Deprecated
-    public void writeDecimal(IonNumber.Classification classification)
-        throws IOException;
-
-    /**
-     * writes a BigDecimal value as an IonDecimal.  Ion uses an
-     * arbitrarily long sign/value and an arbitrarily long signed
-     * exponent to write the value. This preserves
-     * all of the BigDecimal digits, the number of
-     * significant digits.  Since java.math.BigDecimal cannot represent
-     * negative zero this method allows the caller to specify that
-     * this value is a negative zero.  If isNegativeZero is true and
-     * the value is not numerically equal to zero this will
-     * throw an IllegalArgumentException.
-     * @param value BigDecimal to write
-     * @param classification the kind of special value to write.
-     * Currently only {@link IonNumber.Classification#NEGATIVE_ZERO}
-     * is supported.
-     *
-     * @deprecated Replaced by {@link #writeDecimal(BigDecimal)}.
-     */
-    @Deprecated
-    public void writeDecimal(BigDecimal value,
-                             IonNumber.Classification classification)
-        throws IOException;
 
     /**
      * Writes a timestamp value.
@@ -591,113 +517,4 @@ public interface IonWriter
      */
     public void writeBlob(byte[] value, int start, int len)
         throws IOException;
-
-
-
-    /**
-     * writes an IonList with a series of IonBool values. This
-     * starts a List, writes the values (without any annotations)
-     * and closes the list. For text and tree writers this is
-     * just a convenience, but for the binary writer it can be
-     * optimized internally.
-     * @param values boolean values to populate the list with
-     *
-     * @deprecated Moved to {@link IonStreamUtils}.
-     */
-    @Deprecated
-    public void writeBoolList(boolean[] values) throws IOException;
-
-    /**
-     * writes an IonList with a series of IonInt values. This
-     * starts a List, writes the values (without any annotations)
-     * and closes the list. For text and tree writers this is
-     * just a convenience, but for the binary writer it can be
-     * optimized internally.
-     * @param values signed byte values to populate the lists int's with
-     *
-     * @deprecated Moved to {@link IonStreamUtils}.
-     */
-    @Deprecated
-    public void writeIntList(byte[] values) throws IOException;
-
-    /**
-     * writes an IonList with a series of IonInt values. This
-     * starts a List, writes the values (without any annotations)
-     * and closes the list. For text and tree writers this is
-     * just a convenience, but for the binary writer it can be
-     * optimized internally.
-     * @param values signed short values to populate the lists int's with
-     *
-     * @deprecated Moved to {@link IonStreamUtils}.
-     */
-    @Deprecated
-    public void writeIntList(short[] values) throws IOException;
-
-    /**
-     * writes an IonList with a series of IonInt values. This
-     * starts a List, writes the values (without any annotations)
-     * and closes the list. For text and tree writers this is
-     * just a convenience, but for the binary writer it can be
-     * optimized internally.
-     * @param values signed int values to populate the lists int's with
-     *
-     * @deprecated Moved to {@link IonStreamUtils}.
-     */
-    @Deprecated
-    public void writeIntList(int[] values) throws IOException;
-
-    /**
-     * writes an IonList with a series of IonInt values. This
-     * starts a List, writes the values (without any annotations)
-     * and closes the list. For text and tree writers this is
-     * just a convenience, but for the binary writer it can be
-     * optimized internally.
-     * @param values signed long values to populate the lists int's with
-     *
-     * @deprecated Moved to {@link IonStreamUtils}.
-     */
-    @Deprecated
-    public void writeIntList(long[] values) throws IOException;
-
-    /**
-     * writes an IonList with a series of IonFloat values. This
-     * starts a List, writes the values (without any annotations)
-     * and closes the list. For text and tree writers this is
-     * just a convenience, but for the binary writer it can be
-     * optimized internally.  Note that since, currently, IonFloat
-     * is a 64 bit float this is a helper that simply casts
-     * the passed in floats to double before writing them.
-     * @param values 32 bit float values to populate the lists IonFloat's with
-     *
-     * @deprecated Moved to {@link IonStreamUtils}.
-     */
-    @Deprecated
-    public void writeFloatList(float[] values) throws IOException;
-
-    /**
-     * writes an IonList with a series of IonFloat values. This
-     * starts a List, writes the values (without any annotations)
-     * and closes the list. For text and tree writers this is
-     * just a convenience, but for the binary writer it can be
-     * optimized internally.
-     * @param values 64 bit float values to populate the lists IonFloat's with
-     *
-     * @deprecated Moved to {@link IonStreamUtils}.
-     */
-    @Deprecated
-    public void writeFloatList(double[] values) throws IOException;
-
-    /**
-     * writes an IonList with a series of IonString values. This
-     * starts a List, writes the values (without any annotations)
-     * and closes the list. For text and tree writers this is
-     * just a convenience, but for the binary writer it can be
-     * optimized internally.
-     * @param values Java String to populate the lists IonString's from
-     *
-     * @deprecated Moved to {@link IonStreamUtils}.
-     */
-    @Deprecated
-    public void writeStringList(String[] values) throws IOException;
-
 }

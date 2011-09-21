@@ -79,7 +79,7 @@ public final class IonSystemImpl
     private final UnifiedSymbolTable mySystemSymbols;
 
     /** Not null. */
-    private IonCatalog  myCatalog;
+    private final IonCatalog myCatalog;
     private final IonLoader myLoader;
     private final boolean myStreamCopyOptimized;
 
@@ -122,13 +122,6 @@ public final class IonSystemImpl
     public synchronized IonCatalog getCatalog()
     {
         return myCatalog;
-    }
-
-
-    public synchronized void setCatalog(IonCatalog catalog)
-    {
-        if (catalog == null) throw new NullPointerException();
-        myCatalog = catalog;
     }
 
 
@@ -959,16 +952,6 @@ public final class IonSystemImpl
     }
 
 
-    /**
-     * @deprecated Use {@link #newNullBlob()} instead
-     */
-    @Deprecated
-    public IonBlob newBlob()
-    {
-        return newNullBlob();
-    }
-
-
     public IonBlob newNullBlob()
     {
         return new IonBlobImpl(this);
@@ -986,16 +969,6 @@ public final class IonSystemImpl
         IonBlob result = new IonBlobImpl(this);
         result.setBytes(value, offset, length);
         return result;
-    }
-
-
-    /**
-     * @deprecated Use {@link #newNullBool()} instead
-     */
-    @Deprecated
-    public IonBool newBool()
-    {
-        return newNullBool();
     }
 
 
@@ -1019,16 +992,6 @@ public final class IonSystemImpl
     }
 
 
-    /**
-     * @deprecated Use {@link #newNullClob()} instead
-     */
-    @Deprecated
-    public IonClob newClob()
-    {
-        return newNullClob();
-    }
-
-
     public IonClob newNullClob()
     {
         return new IonClobImpl(this);
@@ -1046,16 +1009,6 @@ public final class IonSystemImpl
         IonClob result = new IonClobImpl(this);
         result.setBytes(value, offset, length);
         return result;
-    }
-
-
-    /**
-     * @deprecated Use {@link #newNullDecimal()} instead
-     */
-    @Deprecated
-    public IonDecimal newDecimal()
-    {
-        return newNullDecimal();
     }
 
 
@@ -1085,16 +1038,6 @@ public final class IonSystemImpl
     }
 
 
-    /**
-     * @deprecated Use {@link #newNullFloat()} instead
-     */
-    @Deprecated
-    public IonFloat newFloat()
-    {
-        return newNullFloat();
-    }
-
-
     public IonFloat newNullFloat()
     {
         return new IonFloatImpl(this);
@@ -1108,16 +1051,6 @@ public final class IonSystemImpl
     public IonFloat newFloat(double value)
     {
         return new IonFloatImpl(this, new Double(value));
-    }
-
-
-    /**
-     * @deprecated Use {@link #newNullInt()} instead
-     */
-    @Deprecated
-    public IonInt newInt()
-    {
-        return newNullInt();
     }
 
 
@@ -1145,16 +1078,6 @@ public final class IonSystemImpl
         IonIntImpl result = new IonIntImpl(this);
         result.setValue(content);
         return result;
-    }
-
-
-    /**
-     * @deprecated Use {@link #newNullList()} instead
-     */
-    @Deprecated
-    public IonList newList()
-    {
-        return newNullList();
     }
 
 
@@ -1229,16 +1152,6 @@ public final class IonSystemImpl
     }
 
 
-    /**
-     * @deprecated Use {@link #newNullSexp()} instead
-     */
-    @Deprecated
-    public IonSexp newSexp()
-    {
-        return newNullSexp();
-    }
-
-
     public IonSexp newNullSexp()
     {
         return new IonSexpImpl(this);
@@ -1282,16 +1195,6 @@ public final class IonSystemImpl
     }
 
 
-    /**
-     * @deprecated Use {@link #newNullString()} instead
-     */
-    @Deprecated
-    public IonString newString()
-    {
-        return newNullString();
-    }
-
-
     public IonString newNullString()
     {
         return new IonStringImpl(this);
@@ -1302,16 +1205,6 @@ public final class IonSystemImpl
         IonStringImpl result = new IonStringImpl(this);
         result.setValue(content);
         return result;
-    }
-
-
-    /**
-     * @deprecated Use {@link #newNullStruct()} instead
-     */
-    @Deprecated
-    public IonStruct newStruct()
-    {
-        return newNullStruct();
     }
 
 
@@ -1328,16 +1221,6 @@ public final class IonSystemImpl
     }
 
 
-    /**
-     * @deprecated Use {@link #newNullSymbol()} instead
-     */
-    @Deprecated
-    public IonSymbol newSymbol()
-    {
-        return newNullSymbol();
-    }
-
-
     public IonSymbol newNullSymbol()
     {
         return new IonSymbolImpl(this);
@@ -1346,15 +1229,6 @@ public final class IonSystemImpl
     public IonSymbol newSymbol(String name)
     {
         return new IonSymbolImpl(this, name);
-    }
-
-    /**
-     * @deprecated Use {@link #newNullTimestamp()} instead
-     */
-    @Deprecated
-    public IonTimestamp newTimestamp()
-    {
-        return newNullTimestamp();
     }
 
 

@@ -1,7 +1,6 @@
 // Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion;
 
-import com.amazon.ion.IonNumber.Classification;
 import java.math.BigDecimal;
 import org.junit.Test;
 
@@ -211,7 +210,6 @@ public class DecimalTest
     {
         assertEquals(-0f, actual.floatValue());
         assertEquals(-0d, actual.doubleValue());
-        assertEquals(Classification.NEGATIVE_ZERO, actual.getClassification());
 
         BigDecimal bd = actual.bigDecimalValue();
         Decimal dec = actual.decimalValue();

@@ -1342,7 +1342,7 @@ private static boolean hasUnresolvedSymbols(IonValueLite value) {
             int count = 0;
             while (curr.isLocalTable()) {
                 count++;
-                curr = curr.getIonRepresentation().getSymbolTable();
+                curr = ((UnifiedSymbolTable)curr).getIonRepresentation().getSymbolTable();
             }
             // we should terminate when the symbol tables symbol table is the system symbol table
             assert(curr != null);

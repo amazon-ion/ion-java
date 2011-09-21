@@ -10,23 +10,13 @@ import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewSharedSymbolTable;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
-import com.amazon.ion.IonBlob;
-import com.amazon.ion.IonBool;
 import com.amazon.ion.IonCatalog;
-import com.amazon.ion.IonClob;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
-import com.amazon.ion.IonDecimal;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonFloat;
-import com.amazon.ion.IonInt;
-import com.amazon.ion.IonList;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
-import com.amazon.ion.IonSexp;
-import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonTimestamp;
@@ -70,7 +60,7 @@ public final class IonSystemLite
     private final UnifiedSymbolTable _system_symbol_table = UnifiedSymbolTable.makeSystemSymbolTable(this, 1);
 
     /** Not null. */
-    private       IonCatalog         _catalog;
+    private final IonCatalog         _catalog;
     private       ValueFactoryLite   _value_factory;
     private final IonLoader          _loader;
     private final boolean myStreamCopyOptimized;
@@ -538,12 +528,6 @@ public final class IonSystemLite
         return writer;
     }
 
-    public void setCatalog(IonCatalog catalog)
-    {
-        if (catalog == null) throw new NullPointerException();
-        this._catalog = catalog;
-    }
-
     private IonValue singleValue(Iterator<IonValue> it)
     {
         IonValue value;
@@ -878,21 +862,6 @@ public final class IonSystemLite
         }
     }
 
-    public IonBlob newBlob()
-    {
-        return newNullBlob();
-    }
-
-    public IonBool newBool()
-    {
-        return newNullBool();
-    }
-
-    public IonClob newClob()
-    {
-        return newNullClob();
-    }
-
     public IonTimestamp newCurrentUtcTimestamp()
     {
         IonTimestampLite result = super.newNullTimestamp();
@@ -957,26 +926,6 @@ public final class IonSystemLite
         return dg;
     }
 
-    public IonDecimal newDecimal()
-    {
-        return newNullDecimal();
-    }
-
-    public IonFloat newFloat()
-    {
-        return newNullFloat();
-    }
-
-    public IonInt newInt()
-    {
-        return newNullInt();
-    }
-
-    public IonList newList()
-    {
-        return newNullList();
-    }
-
     public IonTextReader newReader(String ionText)
     {
         IonTextReader reader = IonReaderFactoryX.makeReader(this, ionText);
@@ -1034,34 +983,10 @@ public final class IonSystemLite
         return reader;
     }
 
-    public IonSexp newSexp()
-    {
-        return newNullSexp();
-    }
-
-    public IonString newString()
-    {
-        return newNullString();
-    }
-
-    public IonStruct newStruct()
-    {
-        return newNullStruct();
-    }
-
-    public IonSymbol newSymbol()
-    {
-        return newNullSymbol();
-    }
-
-    public IonTimestamp newTimestamp()
-    {
-        return newNullTimestamp();
-    }
 
     public IonTimestamp newUtcTimestamp(Date utcDate)
     {
-        IonTimestamp result = newTimestamp();
+        IonTimestamp result = newNullTimestamp();
         if (utcDate != null)
         {
             result.setMillisUtc(utcDate.getTime());
@@ -1071,7 +996,7 @@ public final class IonSystemLite
 
     public IonTimestamp newUtcTimestampFromMillis(long millis)
     {
-        IonTimestamp result = newTimestamp();
+        IonTimestamp result = newNullTimestamp();
         result.setMillisUtc(millis);
         return result;
     }
