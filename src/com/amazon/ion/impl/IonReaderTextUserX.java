@@ -2,17 +2,23 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
+import com.amazon.ion.OffsetSpan;
+import com.amazon.ion.SeekableReader;
+import com.amazon.ion.Span;
+import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.TextSpan;
 import java.io.File;
 import java.io.InputStream;
 import java.io.Reader;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 
 /**
  *    The text user reader add support for symbols and recognizes,
@@ -37,38 +43,52 @@ import java.util.NoSuchElementException;
  */
 public class IonReaderTextUserX
     extends IonReaderTextSystemX
-    implements IonReaderWriterPrivate
+    implements IonReaderWriterPrivate, IonReaderWithPosition
 {
+    /**
+     * This is the physical start-of-stream offset when this reader was created.
+     * It must be subtracted from the logical offsets exposed by
+     * {@link OffsetSpan}s.
+     */
+    private final int _physical_start_offset;
+
     // IonSystem   _system; now in IonReaderTextSystemX where it could be null
     IonCatalog  _catalog;
     SymbolTable _symbols;
 
     protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, char[] chars, int offset, int length) {
         super(system, chars, offset, length);
+        _physical_start_offset = offset;
         initUserReader(system, catalog);
     }
     protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, CharSequence chars, int offset, int length) {
         super(system, chars, offset, length);
+        _physical_start_offset = offset;
         initUserReader(system, catalog);
     }
     protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, Reader userChars) {
         super(system, userChars);
+        _physical_start_offset = 0;
         initUserReader(system, catalog);
     }
     protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, byte[] bytes, int offset, int length) {
         super(system, bytes, offset, length);
+        _physical_start_offset = offset;
         initUserReader(system, catalog);
     }
     protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, InputStream userBytes) {
         super(system, userBytes);
+        _physical_start_offset = 0;
         initUserReader(system, catalog);
     }
     protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, File file) {
         super(system, file);
+        _physical_start_offset = 0;
         initUserReader(system, catalog);
     }
     protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, UnifiedInputStreamX uis) {
         super(system, uis);
+        _physical_start_offset = 0;
         initUserReader(system, catalog);
     }
     private void initUserReader(IonSystem system, IonCatalog catalog) {
@@ -137,7 +157,7 @@ public class IonReaderTextUserX
                     if (_annotation_count > 0) {
                         for (int ii=0; ii<_annotation_count; ii++) {
                             String a = _annotations[ii];
-                            if (UnifiedSymbolTable.ION_SYMBOL_TABLE.equals(a)) {
+                            if (ION_SYMBOL_TABLE.equals(a)) {
                                 _symbols = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _catalog, this, true);
                                 push_symbol_table(_symbols);
                                 _has_next_called = false;
@@ -148,7 +168,7 @@ public class IonReaderTextUserX
                     break;
                 case SYMBOL:
                     String sym = stringValue();
-                    if (UnifiedSymbolTable.ION_1_0.equals(sym)) {
+                    if (ION_1_0.equals(sym)) {
                         symbol_table_reset();
                         push_symbol_table(_system.getSystemSymbolTable());
                         _has_next_called = false;
@@ -239,38 +259,9 @@ public class IonReaderTextUserX
     public Iterator<Integer> iterateTypeAnnotationIds()
     {
         int[] ids = getTypeAnnotationIds();
-        if (ids == null) return IntIterator.EMPTY_ITERATOR;
-        return new IntIterator(ids);
+        return IonImplUtils.intIterator(ids);
     }
 
-    public static final class IntIterator implements Iterator<Integer>
-    {
-        static IntIterator EMPTY_ITERATOR = new IntIterator(null);
-
-        int[] _values;
-        int   _length;
-        int   _pos;
-
-        public IntIterator(int[] values) {
-            _values = values;
-            _length = (values == null) ? 0 : values.length;
-        }
-        public IntIterator(int[] values, int offset, int len) {
-            _values = values;
-            _pos = offset;
-            _length = len;
-        }
-        public boolean hasNext() {
-            return (_pos < _length);
-        }
-        public Integer next() {
-            if (!hasNext()) throw new NoSuchElementException();
-            return _values[_pos++];
-        }
-        public void remove() {
-            throw new UnsupportedOperationException();
-        }
-    }
 
     //
     //  This code handles the skipped symbol table
@@ -310,5 +301,188 @@ public class IonReaderTextUserX
         SymbolTable symbols = _symbol_table_stack[_symbol_table_top];
         _symbol_table_stack[_symbol_table_top] = null;
         return symbols;
+    }
+
+
+    static final class IonReaderTextPosition
+        extends IonReaderPositionBase
+        implements TextSpan, OffsetSpan
+    {
+        private final UnifiedDataPageX _data_page;
+        private final IonType          _container_type;
+
+        private final long             _start_offset;
+        private final long             _start_line;
+        private final long             _start_column;
+
+        IonReaderTextPosition(IonReaderTextUserX reader)
+        {
+            // TODO: convert _start_char_offset from a long and data page
+            //       to be an abstract reference into the Unified* data source
+
+            UnifiedInputStreamX current_stream = reader._scanner.getSourceStream();
+            //
+            // TODO: this page isn't safe, except where we have only a single
+            //       page of buffered input Which is the case for the time
+            //       being.  Later, when this is stream aware, this needs to change.
+            _data_page = current_stream._buffer.getCurrentPage();
+            _container_type = reader.getContainerType();
+
+            _start_offset = reader._value_start_offset - reader._physical_start_offset;
+            _start_line   = reader._value_start_line;
+            _start_column = reader._value_start_column;
+        }
+
+        public long getStartLine()
+        {
+            if (_start_line < 1) {
+                throw new IllegalStateException("not positioned on a reader");
+            }
+            return _start_line;
+        }
+
+        public long getStartColumn()
+        {
+            if (_start_column < 0) {
+                throw new IllegalStateException("not positioned on a reader");
+            }
+            return _start_column;
+        }
+
+        public long getFinishLine()
+        {
+            return -1;
+        }
+
+        public long getFinishColumn()
+        {
+            return -1;
+        }
+
+        public long getStartOffset()
+        {
+            return _start_offset;
+        }
+
+        public long getFinishOffset()
+        {
+            return -1;
+        }
+
+        IonType getContainerType() {
+            return _container_type;
+        }
+
+        UnifiedDataPageX getDataPage() {
+            return _data_page;
+        }
+    }
+
+
+    public IonReaderPosition getCurrentPosition()
+    {
+        if (getType() == null) {
+            throw new IllegalStateException("must be on a value");
+        }
+        IonReaderTextPosition pos = new IonReaderTextPosition(this);
+        return pos;
+    }
+
+    private void hoistImpl(Span span)
+    {
+        if (!(span instanceof IonReaderTextPosition)) {
+            throw new IllegalArgumentException("position must match the reader");
+        }
+        IonReaderTextPosition text_span = (IonReaderTextPosition)span;
+
+        UnifiedInputStreamX current_stream = _scanner.getSourceStream();
+        UnifiedDataPageX    curr_page      = text_span.getDataPage();
+        int                 array_offset   = (int)text_span._start_offset + _physical_start_offset;
+        int                 page_limit     = curr_page._page_limit;
+        int                 array_length   = page_limit - array_offset;
+
+        // we're going to cast this value down.  Since we only support
+        // in memory single buffered chars here this is ok.
+        assert(text_span.getStartOffset() <= Integer.MAX_VALUE);
+
+        // Now - create a new stream
+        // TODO: this is a pretty expensive way to do this. UnifiedInputStreamX
+        //       needs to have a reset method added that can reset the position
+        //       and length of the input to be some subset of the original source.
+        //       This would avoid a lot of object creation (and wasted destruction.
+        //       But this is a time-to-market solution here.  The change can be
+        //       made as support for streams is added.
+        UnifiedInputStreamX iis;
+        if (current_stream._is_byte_data) {
+            byte[] bytes = current_stream.getByteArray();
+            assert(bytes != null);
+            iis = UnifiedInputStreamX.makeStream(
+                                            bytes
+                                          , array_offset
+                                          , array_length
+                                      );
+        }
+        else {
+            char[] chars = current_stream.getCharArray();
+            assert(chars != null);
+            iis = UnifiedInputStreamX.makeStream(
+                                            chars
+                                          , array_offset
+                                          , array_length
+                                      );
+        }
+        IonType container = text_span.getContainerType();
+        re_init(iis, container, text_span._start_line, text_span._start_column);
+    }
+
+    public void seek(IonReaderPosition position)
+    {
+        hoistImpl(position);
+    }
+
+
+    //========================================================================
+
+
+    @Override
+    public <T> T asFacet(Class<T> facetType)
+    {
+        if (facetType == IonReaderWithPosition.class)
+        {
+            return facetType.cast(this);
+        }
+
+        if (facetType == SpanProvider.class)
+        {
+            return facetType.cast(new SpanProviderFacet());
+        }
+
+        if (facetType == SeekableReader.class && _scanner.isBufferedInput())
+        {
+            return facetType.cast(new SeekableReaderFacet());
+        }
+
+        return super.asFacet(facetType);
+    }
+
+
+    private class SpanProviderFacet
+        implements SpanProvider
+    {
+        public Span currentSpan()
+        {
+            return getCurrentPosition();
+        }
+    }
+
+
+    private final class SeekableReaderFacet
+        extends SpanProviderFacet
+        implements SeekableReader
+    {
+        public void hoist(Span span)
+        {
+            hoistImpl(span);
+        }
     }
 }

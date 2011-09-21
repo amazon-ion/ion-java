@@ -3,6 +3,7 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
+import static com.amazon.ion.impl.IonImplUtils.EMPTY_BYTE_ARRAY;
 import static com.amazon.ion.impl.IonImplUtils.readFully;
 import static com.amazon.ion.impl.IonTimestampImpl.precisionIncludes;
 import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
@@ -2410,12 +2411,11 @@ done:       for (;;) {
             int returnlen = 0;
             int signum = value.signum();
 
-            if (signum < 0) {
-                throw new IllegalArgumentException("value must be greater than or equal to 0");
+            if (signum == 0) {
+                // Zero has no bytes of data at all!  Nothing to write.
             }
-            else if (signum == 0) {
-                this.write(positiveZeroBitArray, 0, positiveZeroBitArray.length);
-                returnlen += positiveZeroBitArray.length;
+            else if (signum < 0) {
+                throw new IllegalArgumentException("value must be greater than or equal to 0");
             }
             else if (value.compareTo(MAX_LONG_VALUE) == -1) {
                 long lvalue = value.longValue();
@@ -2952,8 +2952,10 @@ done:       for (;;) {
             return returnlen;
         }
 
-        private static byte[] negativeZeroBitArray = new byte[] { (byte)0x80 };
-        private static byte[] positiveZeroBitArray = new byte[0];
+        private static final byte[] negativeZeroBitArray = new byte[] { (byte)0x80 };
+
+        /** Zero-length byte array. */
+        private static final byte[] positiveZeroBitArray = EMPTY_BYTE_ARRAY;
 
         // also used by writeDate()
         public int writeDecimalContent(BigDecimal bd,

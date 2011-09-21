@@ -2,6 +2,8 @@
 
 package com.amazon.ion.impl.lite;
 
+import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
 import static com.amazon.ion.impl.IonWriterFactory.makeWriter;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
@@ -71,21 +73,23 @@ public final class IonSystemLite
     private       IonCatalog         _catalog;
     private       ValueFactoryLite   _value_factory;
     private final IonLoader          _loader;
+    private final boolean myStreamCopyOptimized;
 
 
     /**
      * @param catalog must not be null.
      */
-    public IonSystemLite(IonCatalog catalog)
+    public IonSystemLite(IonCatalog catalog, boolean streamCopyOptimized)
     {
-        this(catalog, DEFAULT_CONTEXT_FREE_LIST_SIZE);
+        this(catalog, streamCopyOptimized, DEFAULT_CONTEXT_FREE_LIST_SIZE);
     }
 
     /**
      * @param catalog must not be null.
      * @param context_free_list_size
      */
-    private IonSystemLite(IonCatalog catalog, int context_free_list_size)
+    private IonSystemLite(IonCatalog catalog, boolean streamCopyOptimized,
+                          int context_free_list_size)
     {
         assert catalog != null;
 
@@ -93,6 +97,7 @@ public final class IonSystemLite
 
         _catalog = catalog;
         _loader = new IonLoaderLite(this, catalog);
+        myStreamCopyOptimized = streamCopyOptimized;
 
         // whacked but I'm not going to figure this out right now
         _value_factory = this;
@@ -162,7 +167,7 @@ public final class IonSystemLite
     public SymbolTable getSystemSymbolTable(String ionVersionId)
         throws UnsupportedIonVersionException
     {
-        if (!UnifiedSymbolTable.ION_1_0.equals(ionVersionId)) {
+        if (!ION_1_0.equals(ionVersionId)) {
             throw new UnsupportedIonVersionException(ionVersionId);
         }
         return getSystemSymbolTable();
@@ -200,7 +205,8 @@ public final class IonSystemLite
     public com.amazon.ion.IonBinaryWriter newBinaryWriter()
     {
         IonWriterBinaryCompatibility.User writer =
-            new IonWriterBinaryCompatibility.User(this, _catalog);
+            new IonWriterBinaryCompatibility.User(this, _catalog,
+                                                  myStreamCopyOptimized);
         return writer;
     }
 
@@ -210,7 +216,8 @@ public final class IonSystemLite
         UnifiedSymbolTable symbols =
             makeNewLocalSymbolTable(this, this.getSystemSymbolTable(), imports);
         IonWriterBinaryCompatibility.User writer =
-            new IonWriterBinaryCompatibility.User(this, _catalog);
+            new IonWriterBinaryCompatibility.User(this, _catalog,
+                                                  myStreamCopyOptimized);
         try {
             writer.setSymbolTable(symbols);
         }
@@ -224,7 +231,8 @@ public final class IonSystemLite
     public IonWriter newBinaryWriter(OutputStream out, SymbolTable... imports)
     {
         IonWriterUserBinary writer =
-            IonWriterFactory.makeWriter(this, getCatalog(), out, imports);
+            IonWriterFactory.newBinaryWriter(this, getCatalog(),
+                                             myStreamCopyOptimized, out, imports);
         return writer;
     }
 
@@ -438,10 +446,8 @@ public final class IonSystemLite
             symbol_encountered = true;
         }
         String[] uta = reader.getTypeAnnotations();
-        if (uta != null && uta.length > 0) {
-            for (int ii=0; ii<uta.length; ii++) {
-                v.addTypeAnnotation(uta[ii]);
-            }
+        if (uta.length > 0) {
+            v.setTypeAnnotations(uta);
             symbol_encountered = true;
         }
         if (!reader.isNullValue()) {
@@ -700,7 +706,7 @@ public final class IonSystemLite
 
     protected IonSymbolLite newSystemIdSymbol(String ionVersionMarker)
     {
-        if (!UnifiedSymbolTable.ION_1_0.equals(ionVersionMarker)) {
+        if (!ION_1_0.equals(ionVersionMarker)) {
             throw new IllegalArgumentException("name isn't an ion version marker");
         }
         IonSymbolLite ivm = new IonSymbolLite(this, false);
@@ -822,14 +828,14 @@ public final class IonSystemLite
             switch(t) {
             case SYMBOL:
                 String symbol = _reader.stringValue();
-                if (UnifiedSymbolTable.ION_1_0.equals(symbol)) {
+                if (ION_1_0.equals(symbol)) {
                     return true;
                 }
                 break;
             case STRUCT:
                 String [] annotations = _reader.getTypeAnnotations();
                 for (int ii=0; ii<annotations.length; ii++) {
-                    if (UnifiedSymbolTable.ION_SYMBOL_TABLE.equals(annotations[ii])) {
+                    if (ION_SYMBOL_TABLE.equals(annotations[ii])) {
                         return true;
                     }
                 }
@@ -1201,7 +1207,7 @@ public final class IonSystemLite
     public boolean valueIsSharedSymbolTable(IonValue value)
     {
         if (value instanceof IonStruct) {
-            if (value.hasTypeAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE)) {
+            if (value.hasTypeAnnotation(ION_SYMBOL_TABLE)) {
                 return true;
             }
         }

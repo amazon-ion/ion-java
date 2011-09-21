@@ -3,6 +3,7 @@ package com.amazon.ion;
 
 import static com.amazon.ion.Timestamp.UNKNOWN_OFFSET;
 import static com.amazon.ion.Timestamp.UTC_OFFSET;
+import static com.amazon.ion.impl.IonImplUtils.UTC;
 
 import com.amazon.ion.Timestamp.Precision;
 import java.math.BigDecimal;
@@ -24,13 +25,6 @@ import org.junit.Test;
 public class TimestampTest
     extends IonTestCase
 {
-    /**
-     * The UTC TimeZone.
-     *
-     * TODO determine if this is well-defined.
-     */
-    private static final TimeZone UTC = TimeZone.getTimeZone("UTC");
-
     /**
      * PST = -08:00 = -480
      */
@@ -101,6 +95,13 @@ public class TimestampTest
             int actualOffsetMillis = actualOffsetMinutes * 60 * 1000;
             assertEquals(expectedOffsetMillis, actualOffsetMillis);
         }
+
+        Timestamp ts = actual.timestampValue();
+        Calendar tsCal = ts.calendarValue();
+        assertEquals(0, expected.compareTo(tsCal));
+        assertEquals("millis", expected.getTimeInMillis(), tsCal.getTimeInMillis());
+        assertEquals("offset", expected.get(Calendar.ZONE_OFFSET),
+                     tsCal.get(Calendar.ZONE_OFFSET));
     }
 
 
@@ -576,23 +577,6 @@ public class TimestampTest
         catch (NullValueException e) { }
     }
 
-    @Test
-    public void testTimestampsFromSuite()
-        throws Exception
-    {
-        Iterable<IonValue> values = loadTestFile("good/timestamps.ion");
-        // File is a sequence of many timestamp values.
-
-        int count = 0;
-
-        for (IonValue value : values)
-        {
-            count++;
-            String v = value.toString();
-            assertTrue(value instanceof IonTimestamp || v.equals("just some crap that can't be"));
-        }
-    }
-
 
     @Test
     public void testTimestampClone()
@@ -864,5 +848,55 @@ public class TimestampTest
         assertEquals(5, ts.getZHour());
         assertEquals(0, ts.getMinute());
         assertEquals(0, ts.getZMinute());
+    }
+
+    @Test
+    public void testForDateZ()
+    {
+        Date now = new Date();
+        Timestamp ts = Timestamp.forDateZ(now);
+        assertEquals(now.getTime(), ts.getMillis());
+        assertEquals(Timestamp.UTC_OFFSET, ts.getLocalOffset());
+
+        now.setTime(0);
+        ts = Timestamp.forDateZ(now);
+        assertEquals(0, ts.getMillis());
+        assertEquals(Timestamp.UTC_OFFSET, ts.getLocalOffset());
+        assertEquals(1970, ts.getYear());
+    }
+
+    @Test
+    public void testForDateZNull()
+    {
+        assertEquals(null, Timestamp.forDateZ(null));
+    }
+
+
+    @Test
+    public void testForSqlTimestampZ()
+    {
+        long millis = System.currentTimeMillis();
+        java.sql.Timestamp now = new java.sql.Timestamp(millis);
+        assertEquals(millis % 1000 * 1000000, now.getNanos());
+
+        Timestamp ts = Timestamp.forSqlTimestampZ(now);
+        assertEquals(now.getTime(), ts.getMillis());
+        assertEquals(Timestamp.UTC_OFFSET, ts.getLocalOffset());
+
+        BigDecimal frac = ts.getFractionalSecond();
+        frac = frac.movePointRight(9); // Convert to nanos
+        assertEquals("nanos", now.getNanos(), frac.intValue());
+
+        now.setTime(0);
+        ts = Timestamp.forSqlTimestampZ(now);
+        assertEquals(0, ts.getMillis());
+        assertEquals(Timestamp.UTC_OFFSET, ts.getLocalOffset());
+        assertEquals(1970, ts.getYear());
+    }
+
+    @Test
+    public void testForSqlTimestampZNull()
+    {
+        assertEquals(null, Timestamp.forSqlTimestampZ(null));
     }
 }

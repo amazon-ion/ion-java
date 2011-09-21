@@ -39,9 +39,9 @@ public interface ValueFactory
      * given array into the new instance.
      * May be {@code null} to create a {@code null.blob} value.
      * @param offset the offset within the array of the first byte to copy;
-     * must be non-negative an no larger than {@code bytes.length}.
+     * must be non-negative and no larger than {@code bytes.length}.
      * @param length the number of bytes to be copied from the given array;
-     * must be non-negative an no larger than {@code bytes.length - offset}.
+     * must be non-negative and no larger than {@code bytes.length - offset}.
      *
      * @throws IndexOutOfBoundsException
      * if the preconditions on the {@code offset} and {@code length} parameters

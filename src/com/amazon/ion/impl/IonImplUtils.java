@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
 
+import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
@@ -18,11 +19,18 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PushbackInputStream;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CharsetEncoder;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
+import java.util.TimeZone;
 
 /**
  * For internal use only!
@@ -56,6 +64,22 @@ public final class IonImplUtils // TODO this class shouldn't be public
     public static final int MAX_LOOKAHEAD_UTF16 = 11;
 
 
+    /** The string {@code "UTF-8"}. */
+    public static final String UTF8_CHARSET_NAME = "UTF-8";
+
+    public static final Charset UTF8_CHARSET =
+        Charset.forName(UTF8_CHARSET_NAME);
+
+
+    /**
+     * The UTC {@link TimeZone}.
+     *
+     * TODO determine if this is well-defined.
+     */
+    public static final TimeZone UTC = TimeZone.getTimeZone("UTC");
+
+
+
     public static final ListIterator<?> EMPTY_ITERATOR = new ListIterator() {
         public boolean hasNext()     { return false; }
         public boolean hasPrevious() { return false; }
@@ -71,6 +95,22 @@ public final class IonImplUtils // TODO this class shouldn't be public
         public void set(Object o) { throw new UnsupportedOperationException(); }
     };
 
+    @SuppressWarnings("unchecked")
+    public static final <T> ListIterator<T> emptyIterator()
+    {
+        return (ListIterator<T>) EMPTY_ITERATOR;
+    }
+
+    /**
+     * Replacement for Java6 {@link Arrays#copyOf(byte[], int)}.
+     */
+    public static byte[] copyOf(byte[] original, int newLength)
+    {
+        byte[] result = new byte[newLength];
+        System.arraycopy(original, 0, result, 0,
+                         Math.min(newLength, original.length));
+        return result;
+    }
 
     public static <T> void addAll(Collection<T> dest, Iterator<T> src)
     {
@@ -99,6 +139,136 @@ public final class IonImplUtils // TODO this class shouldn't be public
         }
     }
 
+
+    /**
+     * Throws {@link EmptySymbolException} if any of the strings are null or
+     * empty.
+     *
+     * @param strings must not be null array.
+     */
+    public static void ensureNonEmptySymbols(String[] strings)
+    {
+        for (String s : strings)
+        {
+            if (s == null || s.length() == 0)
+            {
+                throw new EmptySymbolException();
+            }
+        }
+    }
+
+
+    //========================================================================
+
+    /**
+     * Encodes a String into bytes of a given encoding.
+     * <p>
+     * This method is preferred to {@link Charset#encode(String)} and
+     * {@link String#getBytes(String)} (<em>etc.</em>)
+     * since those methods will replace or ignore bad input, and here we throw
+     * an exception.
+     *
+     * @param s the string to encode.
+     *
+     * @return the encoded string, not null.
+     *
+     * @throws IonException if there's a {@link CharacterCodingException}.
+     */
+    public static byte[] encode(String s, Charset charset)
+    {
+        CharsetEncoder encoder = charset.newEncoder();
+        try
+        {
+            ByteBuffer buffer = encoder.encode(CharBuffer.wrap(s));
+            byte[] bytes = buffer.array();
+
+            // Make another copy iff there's garbage after the limit.
+            int limit = buffer.limit();
+            if (limit < bytes.length)
+            {
+                bytes = copyOf(bytes, limit);
+            }
+
+            return bytes;
+        }
+        catch (CharacterCodingException e)
+        {
+            throw new IonException("Invalid string data", e);
+        }
+    }
+
+
+    /**
+     * Decodes a byte sequence into a string, given a {@link Charset}.
+     * <p>
+     * This method is preferred to {@link Charset#decode(ByteBuffer)} and
+     * {@link String#String(byte[], Charset)} (<em>etc.</em>)
+     * since those methods will replace or ignore bad input, and here we throw
+     * an exception.
+     *
+     * @param bytes the data to decode.
+     *
+     * @return the decoded string, not null.
+     *
+     * @throws IonException if there's a {@link CharacterCodingException}.
+     */
+    public static String decode(byte[] bytes, Charset charset)
+    {
+        CharsetDecoder decoder = charset.newDecoder();
+        try
+        {
+            CharBuffer buffer = decoder.decode(ByteBuffer.wrap(bytes));
+            return buffer.toString();
+        }
+        catch (CharacterCodingException e)
+        {
+            String message =
+                "Input is not valid " + charset.displayName() + " data";
+            throw new IonException(message, e);
+        }
+    }
+
+
+    /**
+     * Encodes a String into UTF-8 bytes.
+     * <p>
+     * This method is preferred to {@link Charset#encode(String)} and
+     * {@link String#getBytes(String)} (<em>etc.</em>)
+     * since those methods will replace or ignore bad input, and here we throw
+     * an exception.
+     *
+     * @param s the string to encode.
+     *
+     * @return the encoded UTF-8 bytes, not null.
+     *
+     * @throws IonException if there's a {@link CharacterCodingException}.
+     */
+    public static byte[] utf8(String s)
+    {
+        return encode(s, UTF8_CHARSET);
+    }
+
+    /**
+     * Decodes a UTF-8 byte sequence to a String.
+     * <p>
+     * This method is preferred to {@link Charset#decode(ByteBuffer)} and
+     * {@link String#String(byte[], Charset)} (<em>etc.</em>)
+     * since those methods will replace or ignore bad input, and here we throw
+     * an exception.
+     *
+     * @param bytes the data to decode.
+     *
+     * @return the decoded string, not null.
+     *
+     * @throws IonException if there's a {@link CharacterCodingException}.
+     */
+    public static String utf8(byte[] bytes)
+    {
+        return decode(bytes, UTF8_CHARSET);
+    }
+
+
+    //========================================================================
 
     /**
      * Calls {@link InputStream#read(byte[], int, int)} until the buffer is
@@ -181,6 +351,13 @@ public final class IonImplUtils // TODO this class shouldn't be public
         return buf;
     }
 
+    public static String utf8FileToString(File file)
+        throws IonException, IOException
+    {
+        byte[] utf8Bytes = IonImplUtils.loadFileBytes(file);
+        String s = utf8(utf8Bytes);
+        return s;
+    }
 
     public static byte[] loadStreamBytes(InputStream in)
         throws IOException
@@ -264,20 +441,20 @@ public final class IonImplUtils // TODO this class shouldn't be public
 
         if (superset.isLocalTable() && subset.isLocalTable())
         {
-            // TODO compare Ion version
+            // TODO ION-253 compare Ion version
 
             if (superset.getMaxId() < subset.getMaxId()) return false;
 
             // Stupid hack to prevent this from running away on big symtabs.
             if (20 < subset.getMaxId()) return false;
 
-            // TODO Optimize more by checking name, version, max ids of each import
+            // TODO ION-253 Optimize more by checking name, version, max ids of each import
             SymbolTable[] superImports = superset.getImportedTables();
             SymbolTable[] subImports = subset.getImportedTables();
 
             if (! Arrays.equals(superImports, subImports)) return false;
 
-            // TODO This is a ridiculous thing to do frequently.
+            // TODO ION-253 This is a ridiculous thing to do frequently.
             // What happen when we do this repeatedly (eg copying a stream)
             // and the symtabs are large?  That's O(n) effort each time!!
             // Can we memoize the result somehow?
@@ -299,16 +476,22 @@ public final class IonImplUtils // TODO this class shouldn't be public
     }
 
 
-    static final class StringIterator implements Iterator<String>
+    /**
+     * Private to route clients through the static methods, which can
+     * optimize the empty-list case.
+     */
+    private static final class StringIterator implements Iterator<String>
     {
-        String [] _values;
-        int       _pos;
+        private final String[] _values;
+        private int            _pos;
+        private final int      _len;
 
-        StringIterator(String[] values) {
+        StringIterator(String[] values, int len) {
             _values = values;
+            _len = len;
         }
         public boolean hasNext() {
-            return (_pos < _values.length);
+            return (_pos < _len);
         }
         public String next() {
             if (!hasNext()) throw new NoSuchElementException();
@@ -319,11 +502,33 @@ public final class IonImplUtils // TODO this class shouldn't be public
         }
     }
 
-    static final class IntIterator implements Iterator<Integer>
+    public static final Iterator<String> stringIterator(String... values)
     {
-        int []  _values;
-        int     _pos;
-        int     _len;
+        if (values == null || values.length == 0)
+        {
+            return IonImplUtils.<String>emptyIterator();
+        }
+        return new StringIterator(values, values.length);
+    }
+
+    public static final Iterator<String> stringIterator(String[] values, int len)
+    {
+        if (values == null || values.length == 0 || len == 0)
+        {
+            return IonImplUtils.<String>emptyIterator();
+        }
+        return new StringIterator(values, len);
+    }
+
+    /**
+     * Private to route clients through the static methods, which can
+     * optimize the empty-list case.
+     */
+    private static final class IntIterator implements Iterator<Integer>
+    {
+        private final int []  _values;
+        private int           _pos;
+        private final int     _len;
 
         IntIterator(int[] values) {
             this(values, 0, values.length);
@@ -344,5 +549,23 @@ public final class IonImplUtils // TODO this class shouldn't be public
         public void remove() {
             throw new UnsupportedOperationException();
         }
+    }
+
+    public static final Iterator<Integer> intIterator(int... values)
+    {
+        if (values == null || values.length == 0)
+        {
+            return IonImplUtils.<Integer>emptyIterator();
+        }
+        return new IntIterator(values);
+    }
+
+    public static final Iterator<Integer> intIterator(int[] values, int len)
+    {
+        if (values == null || values.length == 0 || len == 0)
+        {
+            return IonImplUtils.<Integer>emptyIterator();
+        }
+        return new IntIterator(values, 0, len);
     }
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -25,5 +25,22 @@ public enum IonType
     LIST,
     SEXP,
     STRUCT,
-    DATAGRAM
+    DATAGRAM;
+
+
+    /**
+     * Determines whether a type reperesents an Ion container.
+     * This includes {@link #DATAGRAM}.
+     *
+     * @param t may be null.
+     *
+     * @return true when {@code t} is {@link #LIST}, {@link #SEXP},
+     * {@link #STRUCT}, or {@link #DATAGRAM}.
+     *
+     * @since IonJava R13
+     */
+    public static boolean isContainer(IonType t)
+    {
+        return (t != null && (t.ordinal() >= LIST.ordinal()));
+    }
 }

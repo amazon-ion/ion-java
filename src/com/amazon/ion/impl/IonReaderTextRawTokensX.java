@@ -69,8 +69,13 @@ public class IonReaderTextRawTokensX
      * @param iis wrapped input stream
      */
     public IonReaderTextRawTokensX(UnifiedInputStreamX iis) {
+        this(iis, 1, 1);
+    }
+
+    public IonReaderTextRawTokensX(UnifiedInputStreamX iis, long starting_line, long starting_column) {
         _stream = iis;
-        _line_count = 1;
+        _line_count = starting_line;
+        _line_starting_position = _stream.getPosition() - starting_column;
     }
 
     public void close()
@@ -81,7 +86,19 @@ public class IonReaderTextRawTokensX
 
     public int  getToken()      { return _token; }
     public long getLineNumber() { return _line_count; }
-    public long getLineOffset() { return _stream.getPosition() - _line_starting_position; }
+    public long getLineOffset() {
+        long stream_position = _stream.getPosition();
+        long offset = stream_position - _line_starting_position;
+        return offset;
+    }
+
+    UnifiedInputStreamX getSourceStream() { return this._stream; }
+
+    public final boolean isBufferedInput()
+    {
+        boolean is_buffered = ! _stream._is_stream;
+        return is_buffered;
+    }
 
     protected String input_position() {
         String s = " at line "
@@ -235,7 +252,8 @@ public class IonReaderTextRawTokensX
         // of IonTokenConsts.ESCAPED_NEWLINE_SEQUENCE passed in) we will
         // return the char unchanged and line count
         _line_count++;
-        _line_starting_position = _stream.getPosition();
+        _line_starting_position = _stream.getPosition() - 1;  // since we want the first character of the line to be 1, not 0
+
         return c;
     }
 
@@ -509,6 +527,20 @@ public class IonReaderTextRawTokensX
         return c;
     }
 
+    public final long getStartingOffset() throws IOException
+    {
+        int c;
+        if (_unfinished_token) {
+            c = skip_to_end(null);
+        }
+        else {
+            c = skip_over_whitespace();
+        }
+        unread_char(c);
+        long pos = _stream.getPosition();
+        return pos;
+    }
+
     public final int nextToken() throws IOException
     {
         int t = -1;
@@ -586,20 +618,13 @@ public class IonReaderTextRawTokensX
             return next_token_finish(IonTokenConstsX.TOKEN_SYMBOL_OPERATOR, true);
         case '"':
             return next_token_finish(IonTokenConstsX.TOKEN_STRING_DOUBLE_QUOTE, true);
-        case 'i':
-            if (peek_inf_helper(c)) // this will consume the inf if it succeeds
-            {
-                return next_token_finish(IonTokenConstsX.TOKEN_FLOAT_INF, false);
-            }
-            unread_char(c);
-            return next_token_finish(IonTokenConstsX.TOKEN_SYMBOL_BASIC, true);
         case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
-        case 'g': case 'h': case 'j':           case 'k': case 'l':
+        case 'g': case 'h': case 'i': case 'j': case 'k': case 'l':
         case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
         case 's': case 't': case 'u': case 'v': case 'w': case 'x':
         case 'y': case 'z':
         case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
-        case 'G': case 'H': case 'J': case 'I': case 'K': case 'L':
+        case 'G': case 'H': case 'I': case 'J': case 'K': case 'L':
         case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R':
         case 'S': case 'T': case 'U': case 'V': case 'W': case 'X':
         case 'Y': case 'Z':

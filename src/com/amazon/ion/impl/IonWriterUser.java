@@ -3,6 +3,10 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.IonType.DATAGRAM;
+import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.IonCatalog;
@@ -31,6 +35,7 @@ import java.math.BigInteger;
 abstract class IonWriterUser
     extends IonWriterBaseImpl  // should be IonWriterSystem ?
 {
+    /** Not null. */
     protected final IonSystem _system;
 
     /** Used to make correct local symbol tables. May be null. */
@@ -228,14 +233,9 @@ abstract class IonWriterUser
         // while the previous version did create a valid symbol table, it dropped
         // any extra annotations.  The local symbol table annotation will exist in the
         // annotation list, since it's presence is what got us here.
-        assert(_current_writer.has_annotation(
-                           UnifiedSymbolTable.ION_SYMBOL_TABLE,
-                           UnifiedSymbolTable.ION_SYMBOL_TABLE_SID)
+        assert(_current_writer.has_annotation(ION_SYMBOL_TABLE, ION_SYMBOL_TABLE_SID)
         );
-        for (int ii=0; ii<_current_writer._annotation_count; ii++) {
-            String annotation = _current_writer._annotations[ii];
-            _symbol_table_value.addTypeAnnotation(annotation);
-        }
+        _symbol_table_value.setTypeAnnotations(getTypeAnnotations());
 
         _symbol_table_writer       = new IonWriterSystemTree(_system, _catalog, _symbol_table_value);
         _current_writer            = _symbol_table_writer;
@@ -371,16 +371,19 @@ abstract class IonWriterUser
     {
         _current_writer.addTypeAnnotationId(annotationId);
     }
+
     @Override
-    public void setTypeAnnotationIds(int[] annotationIds)
+    public void setTypeAnnotationIds(int... annotationIds)
     {
         _current_writer.setTypeAnnotationIds(annotationIds);
     }
+
     @Override
-    public void setTypeAnnotations(String[] annotations)
+    public void setTypeAnnotations(String... annotations)
     {
         _current_writer.setTypeAnnotations(annotations);
     }
+
     @Override
     public String[] getTypeAnnotations()
     {
@@ -404,8 +407,7 @@ abstract class IonWriterUser
         // see if it looks like we're starting a local symbol table
         if (IonType.STRUCT.equals(containerType)
          && getDepth() == 0
-         && has_annotation(UnifiedSymbolTable.ION_SYMBOL_TABLE,
-                           UnifiedSymbolTable.ION_SYMBOL_TABLE_SID)
+         && has_annotation(ION_SYMBOL_TABLE, ION_SYMBOL_TABLE_SID)
          ) {
             // if so we'll divert all the data until it's finished
             open_local_symbol_table_copy();
@@ -429,25 +431,40 @@ abstract class IonWriterUser
 
     public void writeBlob(byte[] value, int start, int len) throws IOException
     {
-        if (value == null || start < 0 || len < 0 || start+len > value.length) {
+        if (value == null)
+        {
+            writeNull(IonType.BLOB);
+            return;
+        }
+
+        if (start < 0 || len < 0 || start+len > value.length) {
             throw new IllegalArgumentException("the start and len must be contained in the byte array");
         }
         _current_writer.writeBlob(value, start, len);
         finish_value();
     }
+
     public void writeBool(boolean value) throws IOException
     {
         _current_writer.writeBool(value);
         finish_value();
     }
+
     public void writeClob(byte[] value, int start, int len) throws IOException
     {
-        if (value == null || start < 0 || len < 0 || start+len > value.length) {
+        if (value == null)
+        {
+            writeNull(IonType.CLOB);
+            return;
+        }
+
+        if (start < 0 || len < 0 || start+len > value.length) {
             throw new IllegalArgumentException("the start and len must be contained in the byte array");
         }
         _current_writer.writeClob(value, start, len);
         finish_value();
     }
+
     @Override
     public void writeDecimal(BigDecimal value) throws IOException
     {
@@ -526,8 +543,8 @@ abstract class IonWriterUser
         if (value == null) {
             writeNull(IonType.SYMBOL);
         }
-        else if (value.equals(UnifiedSymbolTable.ION_1_0)
-              && write_as_ivm(UnifiedSymbolTable.ION_1_0_SID)
+        else if (value.equals(ION_1_0)
+                 && write_as_ivm(ION_1_0_SID)
         ) {
             if (need_to_write_ivm()) {
                 writeIonVersionMarker();
@@ -548,10 +565,10 @@ abstract class IonWriterUser
         // if we're at the top level in a datagram
         boolean treat_as_ivm = false;
 
-        if (sid == UnifiedSymbolTable.ION_1_0_SID
-         && _root_is_datagram
-         && _current_writer.getDepth() == 0
-         ) {
+        if (sid == ION_1_0_SID
+            && _root_is_datagram
+            && _current_writer.getDepth() == 0 )
+        {
             treat_as_ivm = true;
         }
         return treat_as_ivm;

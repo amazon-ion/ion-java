@@ -1,4 +1,4 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -17,7 +17,6 @@ public class TextStreamIteratorSystemProcessingTest
     protected void prepare(String text)
         throws Exception
     {
-//        myBytes = text.getBytes("UTF-8");
         myBytes = convertUtf16UnitsToUtf8(text);
 
         myStream = new ByteArrayInputStream(myBytes);

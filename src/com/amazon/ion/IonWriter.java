@@ -43,8 +43,9 @@ import java.util.Date;
  * Then write each child value in order.
  * Finally, call {@link #stepOut()} to complete the container.
  * <p>
- * Once all the top-level values have been written, the caller must
- * {@link #stepOut()} all the way and call {@link #close()} before accessing
+ * Once all the top-level values have been written (and stepped-out back to
+ * the starting level), the caller must {@link #close()} the writer
+ * (or at least {@link #finish()} it) before accessing
  * the data (for example, via {@link ByteArrayOutputStream#toByteArray()}).
  *
  * <h2>Exception Handling</h2>
@@ -81,10 +82,14 @@ public interface IonWriter
      * <p>
      * For some implementations this may have no effect even when some data is
      * buffered, because it's not always possible to fully write partial data.
-     * In particular, if this is writing binary Ion data, Ion's length-prefixed
+     * In particular, when writing binary Ion data, Ion's length-prefixed
      * encoding requires a complete top-level value to be written at once.
-     * Furthermore, if local symbol tables are being generated, nothing can be
-     * flushed until the the symbol context is reset.
+     * <p>
+     * Furthermore, when writing binary Ion data, <em>nothing</em> can be
+     * flushed until the writer knows that no more local symbols can be
+     * encountered. This can be accomplished via {@link #finish()} or by
+     * making the {@linkplain #getSymbolTable() local symbol table}
+     * {@linkplain SymbolTable#makeReadOnly() read-only}.
      *
      * @throws IOException if thrown by the underlying output target.
      *
@@ -107,6 +112,14 @@ public interface IonWriter
      * streams. If another top-level value is written, it must be preceded by
      * an Ion version marker in order to reset the stream context as if this
      * were a new stream.
+     * <p>
+     * This feature can be used to flush reliably before writing more values.
+     * Think about a long-running stream of binary values: without finishing,
+     * all the values would continue to buffer since the encoder keeps
+     * expecting more local symbols (which must be written into the local
+     * symbol table that precedes all top-level values). Such an application
+     * can finish occasionally to flush the data out, then continue writing
+     * more data using a fresh local symbol table.
      *
      * @throws IOException if thrown by the underlying output target.
      * @throws IllegalStateException when not between top-level values.
@@ -127,7 +140,7 @@ public interface IonWriter
      * <p>
      * In other words: unless you're recovering from a failure condition,
      * <b>don't close the writer until you've
-     * {@linkplain #stepOut() stepped-out} completely.</b>
+     * {@linkplain #stepOut() stepped-out} back to the starting level.</b>
      *
      * @throws IOException if thrown by the underlying output target.
      *
@@ -141,8 +154,9 @@ public interface IonWriter
      * The id is expected to be already present in the current symbol table
      * (but this is not checked).
      * <p>
-     * The pending field name is cleared when the current value is written via
-     * one of the {@code write*()} or {@code open*()} methods.
+     * The pending field name is cleared when the current value is
+     * written via {@link #stepIn(IonType) stepIn()} or one of the
+     * {@code write*()} methods.
      * <p>
      * <b>This is an "expert method": correct use requires deep understanding
      * of the Ion binary format. You almost certainly don't want to use it.</b>
@@ -159,8 +173,9 @@ public interface IonWriter
      * If the string is not present in the current symbol table,
      * it will be added.
      * <p>
-     * The pending field name is cleared when the current value is written via
-     * one of the {@code write*()} or {@code open*()} methods.
+     * The pending field name is cleared when the current value is
+     * written via {@link #stepIn(IonType) stepIn()} or one of the
+     * {@code write*()} methods.
      *
      * @param name text of the field name
      *
@@ -179,12 +194,13 @@ public interface IonWriter
      * writer, so the caller does not need to preserve the array.
      * <p>
      * The list of pending annotations is cleared when the current value is
-     * written via one of the {@code write*()} or {@code open*()} methods.
+     * written via {@link #stepIn(IonType) stepIn()} or one of the
+     * {@code write*()} methods.
      *
      * @param annotations string array with the annotations.
      * If null or empty, any pending annotations are cleared.
      */
-    public void setTypeAnnotations(String[] annotations);
+    public void setTypeAnnotations(String... annotations);
 
     /**
      * Sets the full list of pending annotations to the given symbol ids.
@@ -193,7 +209,8 @@ public interface IonWriter
      * writer, so the caller does not need to preserve the array.
      * <p>
      * The list of pending annotations is cleared when the current value is
-     * written via one of the {@code write*()} or {@code open*()} methods.
+     * written via {@link #stepIn(IonType) stepIn()} or one of the
+     * {@code write*()} methods.
      * <p>
      * <b>This is an "expert method": correct use requires deep understanding
      * of the Ion binary format. You almost certainly don't want to use it.</b>
@@ -201,13 +218,14 @@ public interface IonWriter
      * @param annotationIds array with the annotation symbol ids.
      * If null or empty, any pending annotations are cleared.
      */
-    public void setTypeAnnotationIds(int[] annotationIds);
+    public void setTypeAnnotationIds(int... annotationIds);
 
     /**
      * Adds a given string to the list of pending annotations.
      * <p>
      * The list of pending annotations is cleared when the current value is
-     * written via one of the {@code write*()} or {@code open*()} methods.
+     * written via {@link #stepIn(IonType) stepIn()} or one of the
+     * {@code write*()} methods.
      *
      * @param annotation string annotation to append to the annotation list
      */
@@ -217,7 +235,8 @@ public interface IonWriter
      * Adds a given symbol id to the list of pending annotations.
      * <p>
      * The list of pending annotations is cleared when the current value is
-     * written via one of the {@code write*()} or {@code open*()} methods.
+     * written via {@link #stepIn(IonType) stepIn()} or one of the
+     * {@code write*()} methods.
      * <p>
      * <b>This is an "expert method": correct use requires deep understanding
      * of the Ion binary format. You almost certainly don't want to use it.</b>
@@ -272,7 +291,13 @@ public interface IonWriter
      * This method also writes annotations and field names (if in a struct),
      * and performs a deep write, including the contents of
      * any containers encountered.
+     *
+     * @param value may be null, in which case this method does nothing.
+     *
+     * @deprecated Since IonJava R13.
+     *  Use {@link IonValue#writeTo(IonWriter)} instead.
      */
+    @Deprecated // TODO ION-247 remove this
     public void writeValue(IonValue value) throws IOException;
 
     /**
@@ -285,7 +310,10 @@ public interface IonWriter
     public void writeValue(IonReader reader) throws IOException;
 
     /**
-     * Writes values from a reader until the end of the current container.
+     * Writes a reader's current value, and all following values until the end
+     * of the current container.  If there's no current value then this method
+     * calls {@link IonReader#next()} to get going.
+     *  <p>
      * This method iterates until {@link IonReader#next()} returns {@code null}
      * and does not {@linkplain IonReader#stepOut() step out} to the container
      * of the current cursor position.
@@ -446,7 +474,9 @@ public interface IonWriter
      * @param value java.util Date holding the UTC timestamp;
      * may be null to represent {@code null.timestamp}.
      *
-     * @deprecated Use {@link #writeTimestamp(Timestamp)}.
+     * @deprecated Since IonJava RC2, 2009-03-19.
+     *  Use {@link Timestamp#forDateZ(Date)} and
+     *  {@link #writeTimestamp(Timestamp)}.
      */
     @Deprecated
     public void writeTimestampUTC(Date value) throws IOException;
@@ -461,7 +491,8 @@ public interface IonWriter
      * may be null to represent {@code null.timestamp}.
      * @param localOffset minutes from UTC where the value was authored
      *
-     * @deprecated Use {@link #writeTimestamp(Timestamp)}.
+     * @deprecated Since IonJava RC2, 2009-03-19.
+     *  Use {@link #writeTimestamp(Timestamp)}.
      */
     @Deprecated
     public void writeTimestamp(Date value, Integer localOffset)
@@ -530,9 +561,11 @@ public interface IonWriter
     public void writeClob(byte[] value) throws IOException;
 
     /**
-     * writes a portion of the byte array out as an IonClob value.  This
+     * Writes a portion of the byte array out as an IonClob value.  This
      * copies the porition of the byte array that is written.
-     * @param value bytes to be written
+     *
+     * @param value bytes to be written.
+     * May be {@code null} to represent {@code null.clob}.
      * @param start offset of the first byte in value to write
      * @param len number of bytes to write from value
      */
@@ -548,9 +581,11 @@ public interface IonWriter
     public void writeBlob(byte[] value) throws IOException;
 
     /**
-     * writes a portion of the byte array out as an IonBlob value.  This
+     * Writes a portion of the byte array out as an IonBlob value.  This
      * copies the portion of the byte array that is written.
-     * @param value bytes to be written
+     *
+     * @param value bytes to be written.
+     * May be {@code null} to represent {@code null.blob}.
      * @param start offset of the first byte in value to write
      * @param len number of bytes to write from value
      */

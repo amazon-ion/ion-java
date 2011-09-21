@@ -1,8 +1,5 @@
 // Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
-
 package com.amazon.ion.impl;
-
-
 /**
  * Provides a simple implementation of {@link IonReaderPosition}
  * that delegates facet interpolation as a cast.

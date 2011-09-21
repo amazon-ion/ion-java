@@ -2,6 +2,10 @@
 
 package com.amazon.ion;
 
+import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.impl.IonImplUtils.UTF8_CHARSET;
+import static com.amazon.ion.impl.IonImplUtils.utf8;
+
 import com.amazon.ion.impl.UserValueIterator;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.ByteArrayInputStream;
@@ -14,8 +18,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
-import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Iterator;
 import org.junit.Test;
@@ -111,7 +113,7 @@ public class LoaderTest
         FileInputStream fileStream = new FileInputStream(text);
         try
         {
-            Reader reader = new InputStreamReader(fileStream, "UTF-8");
+            Reader reader = new InputStreamReader(fileStream, UTF8_CHARSET);
             Iterator<IonValue> i = system().iterate(reader);
             while (i.hasNext())
             {
@@ -140,7 +142,7 @@ public class LoaderTest
     @Test
     public void testIgnoreHeaderSymbol()
     {
-        String text = SystemSymbolTable.ION_1_0 + " 123";
+        String text = ION_1_0 + " 123";
 
         IonInt value = (IonInt) loadOneValue(text);
         checkInt(123, value);
@@ -250,7 +252,7 @@ public class LoaderTest
 
         IonValue onePrime = system().clone(one);
         assertNotSame(one, onePrime);
-        assertIonEquals(one, onePrime);
+        assertEquals(one, onePrime);
         assertNull("cloned value has container", onePrime.getContainer());
 
         IonList parent = system().newNullList();
@@ -325,7 +327,7 @@ public class LoaderTest
 //        dg = loader.loadText(reader, (LocalSymbolTable) null);
 //        checkReloading(dg);
 
-        byte[] bytes = s.getBytes("UTF-8");
+        byte[] bytes = utf8(s);
         dg = loader.load(bytes);
 //      checkReloading(dg);   // FIXME this is a big bug!
 
@@ -421,7 +423,7 @@ final static boolean _debug_long_test = false;
 if (!_debug_long_test) return;
 
 	    LongInputStream longStream = new LongInputStream("$ion_1_0 { this:is, a:struct } ");
-        Reader reader = new InputStreamReader(longStream, "UTF-8");
+        Reader reader = new InputStreamReader(longStream, UTF8_CHARSET);
         UserValueIterator r = (UserValueIterator)system().iterate(reader);
         r.setBufferToRecycle();
 
@@ -514,6 +516,7 @@ if (!_debug_long_test) return;
     		}
     	}
     }
+
     static class LongInputStream extends InputStream
     {
     	byte[] _pattern;
@@ -521,27 +524,21 @@ if (!_debug_long_test) return;
     	int    _limit;
 
     	LongInputStream(String pattern) {
-    		Charset cs = Charset.forName("UTF-8");
-    		ByteBuffer bb = cs.encode(pattern);			// nio bytebuffer
-    		this._limit = bb.limit();
-    		this._pattern = new byte[this._limit];
-    		for (int ii=0; ii<this._limit; ii++) {
-    			this._pattern[ii] = bb.get(ii);
-    		}
-    		this._pos = 0;
+    	    this._pattern = utf8(pattern);
+    	    this._limit = _pattern.length;
+    	    this._pos = 0;
     	}
 
     	@Override
     	public int read()
     	{
-    		if (this._pos >= this._limit) {
-    			this._pos = 0;
-    		}
-    		int c = this._pattern[this._pos];
-    		this._pos++;
-    		return c;
+    	    if (this._pos >= this._limit) {
+    	        this._pos = 0;
+    	    }
+    	    int c = this._pattern[this._pos];
+    	    this._pos++;
+    	    return c;
     	}
-
     }
 
     public static void main(String[] args)

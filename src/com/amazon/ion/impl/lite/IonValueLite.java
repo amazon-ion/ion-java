@@ -1,21 +1,25 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.util.Equivalence.ionEquals;
 
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueVisitor;
+import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.IonValuePrivate;
 import com.amazon.ion.impl.UnifiedSymbolTable;
 import com.amazon.ion.util.Printer;
@@ -34,9 +38,6 @@ import java.io.IOException;
 public abstract class IonValueLite
     implements IonValuePrivate
 {
-    protected static final String[] EMPTY_STRING_ARRAY = new String[0];
-    protected static final int[] EMPTY_INT_ARRAY = new int[0];
-
     /**
      * this hold all the various boolean flags we have
      * in a single int.  Use set_flag(), clear_flag(), is_true()
@@ -167,6 +168,11 @@ public abstract class IonValueLite
     private   int              _flags;
     protected IonContext       _context;
     private   String           _fieldName;
+
+    /**
+     * The annotation sequence. This array is overallocated and may have
+     * nulls at the end.
+     */
     private   String[]         _annotations;
 
     // current size 32 bit: 3*4 + 4 +  8 = 24 (32 bytes allocated)
@@ -536,6 +542,22 @@ public abstract class IonValueLite
         return getTypeAnnotationStrings();
     }
 
+    public void setTypeAnnotations(String... annotations)
+    {
+        checkForLock();
+
+        if (annotations == null || annotations.length == 0)
+        {
+            // Normalize all empty lists to the same instance.
+            _annotations = EMPTY_STRING_ARRAY;
+        }
+        else
+        {
+            IonImplUtils.ensureNonEmptySymbols(annotations);
+            _annotations = annotations.clone();
+        }
+    }
+
     public final boolean hasTypeAnnotation(String annotation)
     {
         if (annotation != null && annotation.length() > 0) {
@@ -740,6 +762,19 @@ public abstract class IonValueLite
         _elementid(0);
     }
 
+
+    public final void writeTo(IonWriter writer)
+    {
+        IonReader valueReader = getSystem().newReader(this);
+        try
+        {
+            writer.writeValues(valueReader);
+        }
+        catch (IOException e)
+        {
+            throw new IonException(e);
+        }
+    }
 }
 
 // current size 32 bit: 5*4 + 2 + 1 +  8 = 31 bytes (32 allocated)

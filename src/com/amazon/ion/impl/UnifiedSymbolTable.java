@@ -2,6 +2,20 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SystemSymbols.IMPORTS;
+import static com.amazon.ion.SystemSymbols.IMPORTS_SID;
+import static com.amazon.ion.SystemSymbols.ION;
+import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.MAX_ID;
+import static com.amazon.ion.SystemSymbols.MAX_ID_SID;
+import static com.amazon.ion.SystemSymbols.NAME;
+import static com.amazon.ion.SystemSymbols.NAME_SID;
+import static com.amazon.ion.SystemSymbols.SYMBOLS;
+import static com.amazon.ion.SystemSymbols.SYMBOLS_SID;
+import static com.amazon.ion.SystemSymbols.VERSION;
+import static com.amazon.ion.SystemSymbols.VERSION_SID;
 import static com.amazon.ion.impl.SymbolTableType.LOCAL;
 import static com.amazon.ion.impl.SymbolTableType.SHARED;
 import static com.amazon.ion.util.IonTextUtils.printQuotedSymbol;
@@ -19,7 +33,7 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbolTable;
-import com.amazon.ion.system.IonSystemBuilder;
+import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -50,74 +64,10 @@ import java.util.List;
 public final class UnifiedSymbolTable
     implements SymbolTable
 {
-
     public static final int UNKNOWN_SID = -1;
 
     public static final int DEFAULT_ION_VERSION = 1;
 
-    /**
-     * The system symbol <tt>'$ion'</tt>, as defined by Ion 1.0.
-     */
-    public static final String ION = "$ion";
-    public static final int    ION_SID = 1;
-
-    /**
-     * The system symbol <tt>'$ion_1_0'</tt>, as defined by Ion 1.0.
-     */
-    public static final String ION_1_0 = "$ion_1_0";
-    public static final int    ION_1_0_SID = 2;
-
-    /**
-     * The system symbol <tt>'$ion_symbol_table'</tt>, as defined by Ion 1.0.
-     */
-    public static final String ION_SYMBOL_TABLE = "$ion_symbol_table";
-    public static final int    ION_SYMBOL_TABLE_SID = 3;
-
-    /**
-     * The system symbol <tt>'name'</tt>, as defined by Ion 1.0.
-     */
-    public static final String NAME = "name";
-    public static final int    NAME_SID = 4;
-
-    /**
-     * The system symbol <tt>'version'</tt>, as defined by Ion 1.0.
-     */
-    public static final String VERSION = "version";
-    public static final int    VERSION_SID = 5;
-
-    /**
-     * The system symbol <tt>'imports'</tt>, as defined by Ion 1.0.
-     */
-    public static final String IMPORTS = "imports";
-    public static final int    IMPORTS_SID = 6;
-
-    /**
-     * The system symbol <tt>'symbols'</tt>, as defined by Ion 1.0.
-     */
-    public static final String SYMBOLS = "symbols";
-    public static final int    SYMBOLS_SID = 7;
-
-    /**
-     * The system symbol <tt>'max_id'</tt>, as defined by Ion 1.0.
-     */
-    public static final String MAX_ID = "max_id";
-    public static final int    MAX_ID_SID = 8;
-
-    /**
-     * The system symbol <tt>'$ion_embedded_value'</tt>, as defined by Ion 1.0.
-     */
-    @Deprecated
-    public static final String ION_EMBEDDED_VALUE = "$ion_embedded_value";
-    @Deprecated
-    public static final int    ION_EMBEDDED_VALUE_SID = 9;
-
-    /**
-     * The system symbol <tt>'$ion_shared_symbol_table'</tt>, as defined by Ion 1.0.
-     */
-    public static final String ION_SHARED_SYMBOL_TABLE = "$ion_shared_symbol_table";
-    public static final int    ION_SHARED_SYMBOL_TABLE_SID = 9;
-
-    public static final int    ION_SYSTEM_SYMBOL_TABLE_MAX_ID = 9;
 
     /**
      * The set of system symbols as defined by Ion 1.0.
@@ -125,15 +75,15 @@ public final class UnifiedSymbolTable
      */
     private static final String[] SYSTEM_SYMBOLS =
     {
-        UnifiedSymbolTable.ION,
-        UnifiedSymbolTable.ION_1_0,
-        UnifiedSymbolTable.ION_SYMBOL_TABLE,
-        UnifiedSymbolTable.NAME,
-        UnifiedSymbolTable.VERSION,
-        UnifiedSymbolTable.IMPORTS,
-        UnifiedSymbolTable.SYMBOLS,
-        UnifiedSymbolTable.MAX_ID,
-        UnifiedSymbolTable.ION_SHARED_SYMBOL_TABLE
+        SystemSymbols.ION,
+        SystemSymbols.ION_1_0,
+        SystemSymbols.ION_SYMBOL_TABLE,
+        SystemSymbols.NAME,
+        SystemSymbols.VERSION,
+        SystemSymbols.IMPORTS,
+        SystemSymbols.SYMBOLS,
+        SystemSymbols.MAX_ID,
+        SystemSymbols.ION_SHARED_SYMBOL_TABLE
     };
 
 
@@ -141,11 +91,20 @@ public final class UnifiedSymbolTable
     private int                       _version;           // version of the shared table
     private UnifiedSymbolTableImports _import_list;       // list of imported tables
 
-    private IonStruct                 _image;             // previous image of a symbol table
-    private IonSystem                 _image_system;      // Ion system of the previous image
-    private boolean                   _is_changed;        // set if anything changed, cleared at image set time
     private boolean                   _is_read_only;      // set to mark this symbol table as being (now) immutable
-    private boolean                   _maintain_image;    // set if we want to keep the image up to date as we add symbols
+
+    /**
+     * Memoized result of {@link #getIonRepresentation(IonSystem)}.
+     * Once this is created, we maintain it as symbols are added.
+     * This member can change even when {@link #_is_read_only}!
+     */
+    private IonStruct                 _image;
+
+    /**
+     * The system associated with the current {@link #_image}.
+     * This member can change even when {@link #_is_read_only}!
+     */
+    private IonSystem                 _image_system;
 
     /**
      * The local symbol names declared in this symtab; never null.
@@ -197,8 +156,8 @@ public final class UnifiedSymbolTable
 
         _image = null;
         _image_system = sys;
-        _is_changed = true;
     }
+
     private void init(SymbolTable systemSymbols) {
         _import_list = new UnifiedSymbolTableImports(systemSymbols);
         _first_local_sid = _import_list.getMaxId() + 1;
@@ -356,7 +315,7 @@ public final class UnifiedSymbolTable
         }
 
         UnifiedSymbolTable table = new UnifiedSymbolTable(sys);
-        table.loadSharedSymbolTableContents(SystemSymbolTable.ION, version, SYSTEM_SYMBOLS);
+        table.loadSharedSymbolTableContents(ION, version, SYSTEM_SYMBOLS);
         table.makeReadOnly();
         return table;
     }
@@ -645,7 +604,7 @@ public final class UnifiedSymbolTable
             // this is only true when there are no local
             // symbols defined
             // and there are no imports with any symbols
-            if (table.getMaxId() == ION_SYSTEM_SYMBOL_TABLE_MAX_ID) {
+            if (table.getMaxId() == table.getSystemSymbolTable().getMaxId()) {
                 return true;
             }
         }
@@ -687,7 +646,7 @@ public final class UnifiedSymbolTable
         // Not synchronized since these members never change after construction.
         // the is locked test is a short cut since most tables are local and
         // locked, therefore the bool gets us out of here in a hurry
-        return (_name != null && SystemSymbolTable.ION.equals(_name));
+        return (_name != null && ION.equals(_name));
     }
 
     /**
@@ -701,12 +660,6 @@ public final class UnifiedSymbolTable
         }
     }
 
-    /**
-     * public accessor to determine if this symbol table
-     * has been marked as immutable.
-     *
-     * @return boolean true if this table is locked, false if editing is allowed
-     */
     public boolean isReadOnly() {
         return _is_read_only;
     }
@@ -733,12 +686,12 @@ public final class UnifiedSymbolTable
     public static boolean valueIsLocalSymbolTable(IonValue v)
     {
         if (v instanceof IonStruct) {
-            if (v.hasTypeAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE)) {
+            if (v.hasTypeAnnotation(ION_SYMBOL_TABLE)) {
                 IonStruct s = (IonStruct)v;
-                if (s.containsKey(UnifiedSymbolTable.NAME)) {
+                if (s.containsKey(NAME)) {
                     return false;
                 }
-                if (s.containsKey(UnifiedSymbolTable.VERSION)) {
+                if (s.containsKey(VERSION)) {
                     return false;
                 }
                 return true;
@@ -794,8 +747,6 @@ public final class UnifiedSymbolTable
 
         _image = ionRep;
         _image_system = sys;
-        _is_changed = false;
-        _maintain_image = (_image != null);
     }
     private void clear_image()
     {
@@ -803,8 +754,6 @@ public final class UnifiedSymbolTable
 
         _image = null;
         _image_system = null; // TODO: or should we keep this around until the system-symboltable binding hack is cleaned up?
-        _is_changed = true;
-        _maintain_image = false;
     }
 
     @Deprecated
@@ -872,7 +821,7 @@ public final class UnifiedSymbolTable
         if (id != 1) {
             throw new IonException("unrecognized system version encountered: "+id);
         }
-        return SystemSymbolTable.ION_1_0;
+        return ION_1_0;
     }
 
 
@@ -1105,7 +1054,7 @@ public final class UnifiedSymbolTable
             _local_symbol_count = idx + 1;
         }
 
-        if (_maintain_image) {
+        if (_image != null) {
             assert _local_symbol_count > 0;
             recordLocalSymbolInIonRep(_image_system, _image, symbolName, sid);
         }
@@ -1192,98 +1141,60 @@ public final class UnifiedSymbolTable
         writer.writeValues(reader);
     }
 
-    // FIXME don't create a new system.
-    // this whole construct is a terrible hack
-    // it should be replace by a custom reader
-    // that "reads" the current state of a symbol table
-    private synchronized IonStruct safeGetIonRepresentation()
-    {
-        IonStruct rep;
-        try {
-            rep = getIonRepresentation();
-        }
-        catch (IonExceptionNoSystem e) {
-            IonSystem sys = IonSystemBuilder.standard().build();
-            rep = makeIonRepresentation(sys);
-            clear_image(); // don't keep this one around
-        }
-        return rep;
-    }
 
+    /**
+     * POSTCONDITION:  _image != null
+     *
+     * @return _image
+      */
     @Deprecated
     public synchronized IonStruct getIonRepresentation()
     {
-        if (_image != null && !_is_changed) return _image;
+        if (_image != null) return _image;
 
-        if (this._image_system == null) {
-            if (this._sys_holder == null) {
-                throw new IonExceptionNoSystem("can't create representation without a system");
-            }
-            verify_not_read_only();
-            _image_system = _sys_holder;
-        }
+        IonSystem sys = _image_system;
+        if (sys == null) sys = _sys_holder;
 
-        return getIonRepresentation(_image_system);
+        return getIonRepresentation(sys);
     }
 
+    /**
+     * POSTCONDITION: _image != null && _image_system==sys
+     *
+     * @param sys must not be null.
+     * @return _image
+     */
     public
     synchronized
     IonStruct getIonRepresentation(IonSystem sys)
     {
-        if (_is_changed == false && sys == _image_system) {
-            return _image;
-        }
-
         if (sys == null) {
             throw new IonExceptionNoSystem("can't create representation without a system");
         }
 
-        verify_not_read_only();
-
-        if (_image == null || sys != _image_system) {
+        if (_image == null || sys != _image_system)
+        {
+            // Start a new image from scratch
             _image = makeIonRepresentation(sys);
             _image_system = sys;
-            _maintain_image = true;
         }
-        else {
-            replaceSymbols(sys, _image);
-        }
-
-        _is_changed = false;
 
         return _image;
     }
 
-    // TODO: optimize this.  this is a quick and dirty version
-    //       to provide users the "correct" alternative.  Later
-    //       we should make a real synthetic read that does this
-    //       without requiring the underlying struct.
-    @Deprecated
-    public
-    IonReader getReader()
-    {
-        IonStruct rep = safeGetIonRepresentation();
-        IonReader reader = new IonReaderTreeSystem(rep);
-// cas FIXME:        IonReader reader = new USTReader(this);
-        return reader;
-    }
 
-    // TODO: optimize this.  this is a quick and dirty version
-    //       to provide users the "correct" alternative.  Later
-    //       we should make a real synthetic read that does this
-    //       without requiring the underlying struct.
     protected
     IonReader getReader(IonSystem sys)
     {
-        IonStruct rep = this.getIonRepresentation(sys);
-        IonReader reader = new IonReaderTreeSystem(rep);
-// cas FIXME:        IonReader reader = new USTReader(this);
+        IonReader reader = new UnifiedSymbolTableReader(this);
         return reader;
     }
 
 
     /**
      * NOT SYNCHRONIZED! Call only from a synch'd method.
+     *
+     * @return a new struct, not null.
      */
     private IonStruct makeIonRepresentation(IonSystem sys)
     {
@@ -1291,12 +1202,12 @@ public final class UnifiedSymbolTable
 
         if (this.isSharedTable()) {
             assert getVersion() > 0;
-            ionRep.addTypeAnnotation(UnifiedSymbolTable.ION_SHARED_SYMBOL_TABLE);
-            ionRep.add(UnifiedSymbolTable.NAME, sys.newString(this.getName()));
-            ionRep.add(UnifiedSymbolTable.VERSION, sys.newInt(this.getVersion()));
+            ionRep.addTypeAnnotation(ION_SHARED_SYMBOL_TABLE);
+            ionRep.add(NAME, sys.newString(this.getName()));
+            ionRep.add(VERSION, sys.newInt(this.getVersion()));
         }
         else {
-            ionRep.addTypeAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE);
+            ionRep.addTypeAnnotation(ION_SYMBOL_TABLE);
         }
 
         SymbolTable[] imports = this.getImportedTables();
@@ -1307,11 +1218,11 @@ public final class UnifiedSymbolTable
             for (int ii=0; ii<imports.length; ii++) {
                 SymbolTable imptable = imports[ii];
                 IonStruct imp = sys.newEmptyStruct();
-                imp.add(UnifiedSymbolTable.NAME, sys.newString(imptable.getName()));
-                imp.add(UnifiedSymbolTable.VERSION, sys.newInt(imptable.getVersion()));
+                imp.add(NAME, sys.newString(imptable.getName()));
+                imp.add(VERSION, sys.newInt(imptable.getVersion()));
                 int max_id = _import_list.getMaxIdForExportAdjusted(ii);
                 if (max_id > 0) {
-                    imp.add(UnifiedSymbolTable.MAX_ID, sys.newInt(max_id));
+                    imp.add(MAX_ID, sys.newInt(max_id));
                 }
                 imports_as_ion.add(imp);
             }
@@ -1334,12 +1245,6 @@ public final class UnifiedSymbolTable
         assert ionRep != null;
         assert sys == ionRep.getSystem();
 
-        // TODO Why can't we just append to the end of the existing ionRep?
-        IonList symbolsList = sys.newEmptyList();
-
-        ionRep.remove(UnifiedSymbolTable.SYMBOLS);  // to cover the "replace existing" case
-        ionRep.add(UnifiedSymbolTable.SYMBOLS, symbolsList);
-
         int sid = _first_local_sid;
         for (int offset = 0; offset < _local_symbol_count; offset++, sid++) {
             String symbolName = _symbols[offset];
@@ -1359,18 +1264,16 @@ public final class UnifiedSymbolTable
         assert ionRep != null;
         assert ionRep.getSystem() == sys;
 
-        verify_not_read_only();
-
         // TODO this is crazy inefficient and not as reliable as it looks
         // since it doesn't handle the case where's theres more than one list
-        IonValue syms = ionRep.get(UnifiedSymbolTable.SYMBOLS);
+        IonValue syms = ionRep.get(SYMBOLS);
         while (syms != null && syms.getType() != IonType.LIST) {
             ionRep.remove(syms);
-            syms = ionRep.get(UnifiedSymbolTable.SYMBOLS);
+            syms = ionRep.get(SYMBOLS);
         }
         if (syms == null) {
             syms = sys.newEmptyList();
-            ionRep.put(UnifiedSymbolTable.SYMBOLS, syms);
+            ionRep.put(SYMBOLS, syms);
         }
 
         int this_offset = convertSidToLocalOffset(sid);
@@ -1421,17 +1324,17 @@ public final class UnifiedSymbolTable
             }
 
             switch (fieldId) {
-            case UnifiedSymbolTable.VERSION_SID:
+            case VERSION_SID:
                 if (symtabType == SHARED && fieldType == IonType.INT) {
                     version = reader.intValue();
                 }
                 break;
-            case UnifiedSymbolTable.NAME_SID:
+            case NAME_SID:
                 if (symtabType == SHARED && fieldType == IonType.STRING) {
                     name = reader.stringValue();
                 }
                 break;
-            case UnifiedSymbolTable.SYMBOLS_SID:
+            case SYMBOLS_SID:
                 if (fieldType == IonType.LIST) {
                     // Other types treated as empty-list
                     symbols = new ArrayList<String>();
@@ -1454,7 +1357,7 @@ public final class UnifiedSymbolTable
                     reader.stepOut();
                 }
                 break;
-            case UnifiedSymbolTable.IMPORTS_SID:
+            case IMPORTS_SID:
                 if (symtabType == LOCAL && fieldType == IonType.LIST) {
                     readImportList(reader, catalog);
                 }
@@ -1552,7 +1455,7 @@ public final class UnifiedSymbolTable
      */
     private void readImportList(IonReader reader, IonCatalog catalog)
     {
-        assert (reader.getFieldId() == SystemSymbolTable.IMPORTS_SID || SystemSymbolTable.IMPORTS.equals(reader.getFieldName()));
+        assert (reader.getFieldId() == IMPORTS_SID || IMPORTS.equals(reader.getFieldName()));
         assert (reader.getType() == IonType.LIST);
 
         reader.stepIn();
@@ -1602,17 +1505,17 @@ public final class UnifiedSymbolTable
                 field_id = get_symbol_sid_helper(fieldName);
             }
             switch(field_id) {
-                case UnifiedSymbolTable.NAME_SID:
+                case NAME_SID:
                     if (t == IonType.STRING) {
                         name = ionRep.stringValue();
                     }
                     break;
-                case UnifiedSymbolTable.VERSION_SID:
+                case VERSION_SID:
                     if (t == IonType.INT) {
                         version = ionRep.intValue();
                     }
                     break;
-                case UnifiedSymbolTable.MAX_ID_SID:
+                case MAX_ID_SID:
                     if (t == IonType.INT) {
                         maxid = ionRep.intValue();
                     }

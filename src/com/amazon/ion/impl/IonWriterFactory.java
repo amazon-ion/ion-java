@@ -34,6 +34,7 @@ public class IonWriterFactory
     IonContainer        _container;
     boolean             _auto_flush;
     boolean             _assure_ivm = true;
+    boolean             _stream_copy_optimized;
 
     public synchronized void startWriter()
     {
@@ -80,8 +81,8 @@ public class IonWriterFactory
                                              _chars, _options);
             break;
         case SYSTEM_BINARY:
-            writer = new IonWriterSystemBinary(_system, 
-                                               _system.getSystemSymbolTable(), 
+            writer = new IonWriterSystemBinary(_system,
+                                               _system.getSystemSymbolTable(),
                                                _out, _auto_flush, !_assure_ivm);
             break;
         case SYSTEM_ION_VALUE:
@@ -89,11 +90,11 @@ public class IonWriterFactory
             break;
         case USER_TEXT:
             if (_out != null) {
-                writer = new IonWriterUserText(_system, _catalog, _out, 
+                writer = new IonWriterUserText(_system, _catalog, _out,
                                                _options);
             }
             else if (_chars != null) {
-                writer = new IonWriterUserText(_system, _catalog, _chars, 
+                writer = new IonWriterUserText(_system, _catalog, _chars,
                                                _options);
             }
             else {
@@ -102,17 +103,18 @@ public class IonWriterFactory
             }
             break;
         case USER_BINARY:
-            IonWriterSystemBinary binary_system = 
-                new IonWriterSystemBinary(_system, 
+            IonWriterSystemBinary binary_system =
+                new IonWriterSystemBinary(_system,
                                           _system.getSystemSymbolTable(), _out,
                                           _auto_flush, !_assure_ivm);
-            writer = new IonWriterUserBinary(_system, _catalog, binary_system, 
-                                             !_assure_ivm);
+            writer = new IonWriterUserBinary(_system, _catalog, binary_system,
+                                             !_assure_ivm,
+                                             _stream_copy_optimized);
             break;
         case USER_ION_VALUE:
-            IonWriterSystemTree tree_system = 
+            IonWriterSystemTree tree_system =
                 new IonWriterSystemTree(_system, _catalog, _container);
-            writer = 
+            writer =
                 new IonWriterUserTree(tree_system, _catalog, !_assure_ivm);
             break;
         default:
@@ -386,14 +388,17 @@ public class IonWriterFactory
     public static IonWriter makeWriter(IonSystem system, OutputStream output)
     {
         IonCatalog catalog = system.getCatalog();
-        IonWriter writer = makeWriter(system, catalog, output);
+        boolean streamCopyOptimized = false;
+        IonWriter writer =
+            newBinaryWriter(system, catalog, streamCopyOptimized, output);
         return writer;
     }
 
-    public static IonWriterUserBinary makeWriter(IonSystem system,
-                                                 IonCatalog catalog,
-                                                 OutputStream output,
-                                                 SymbolTable... imports)
+    public static IonWriterUserBinary newBinaryWriter(IonSystem system,
+                                                      IonCatalog catalog,
+                                                      boolean streamCopyOptimized,
+                                                      OutputStream output,
+                                                      SymbolTable... imports)
     {
         UnifiedSymbolTable symbols =
             makeNewLocalSymbolTable(system, system.getSystemSymbolTable(), imports);
@@ -409,7 +414,8 @@ public class IonWriterFactory
                                       /* suppressIVM */  false);
         IonWriterUserBinary writer =
             new IonWriterUserBinary(system, catalog, system_writer,
-                                    /* suppressIVM */ true);
+                                    /* suppressIVM */ true,
+                                    streamCopyOptimized);
         try {
             writer.setSymbolTable(symbols);
         }

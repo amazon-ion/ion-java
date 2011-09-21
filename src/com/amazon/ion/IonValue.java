@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -210,9 +210,21 @@ public interface IonValue
 
 
     /**
-     * Removes all the user type annotations attached to this value.
+     * Replaces all type annotations with the given ones.
      *
-     * @throws IonException if <code>annotations</code> is empty.
+     * @param annotations the new annotations.  If null or empty array, then
+     *  all annotations are removed.  Any duplicates are preserved.
+     *
+     * @throws EmptySymbolException if any of the annotations are null or
+     *  empty string.
+     *
+     * @since IonJava R13
+     */
+    public void setTypeAnnotations(String... annotations);
+
+
+    /**
+     * Removes all the user type annotations attached to this value.
      */
     public void clearTypeAnnotations();
 
@@ -227,11 +239,27 @@ public interface IonValue
 
     /**
      * Removes a user type annotation from the list of annotations
-     * attached to this value.  If the annotation does not exist
-     * the list does not change.
+     * attached to this value.
+     * If the annotation appears more than once, only the first occurrance is
+     * removed.
+     * If the annotation does not exist, the value does not change.
+     *
      * @param annotation as a string value.
+     *  If null or empty, the method has no effect.
      */
     public void removeTypeAnnotation(String annotation);
+
+
+    /**
+     * Copies this value to the given {@link IonWriter}.
+     * <p>
+     * This method writes annotations and field names (if in a struct),
+     * and performs a deep write, including the contents of
+     * any containers encountered.
+     *
+     * @since IonJava R13
+     */
+    public void writeTo(IonWriter writer);
 
 
     /**
@@ -252,7 +280,7 @@ public interface IonValue
      * Ensures that this value, and all contained data, is fully materialized
      * into {@link IonValue} instances from any underlying Ion binary buffer.
      *
-     * @deprecated with no direct replacement. This method has often been used
+     * @deprecated with no direct replacement. This method was once recommended
      * to make values (somewhat) thread-safe, in which case one should use
      * {@link #makeReadOnly()} instead.
      */
@@ -297,8 +325,12 @@ public interface IonValue
 
 
     /**
-     * Returns a canonical ASCII text representation of this value.
+     * Returns a <em>non-canonical</em> ASCII representation of this value.
      * All data will be on a single line, with minimal whitespace.
+     * There is no guarantee that multiple invocations of this method will
+     * return identical results, only that they will be equivalent per
+     * the Ion data model.
+     * <p>
      * For more configurable rendering, see {@link com.amazon.ion.util.Printer}.
      *
      * @return Ion text data equivalent to this value.
@@ -322,7 +354,8 @@ public interface IonValue
 
 
     /**
-     * Implementation consistent with {@link #equals(Object)}.
+     * Returns a hash code consistent with {@link #equals(Object)}.
+     * <p>
      * {@inheritDoc}
      */
     public int hashCode();

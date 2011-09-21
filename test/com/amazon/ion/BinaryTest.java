@@ -2,6 +2,8 @@
 
 package com.amazon.ion;
 
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
+
 import java.util.Arrays;
 import org.junit.Test;
 
@@ -131,7 +133,7 @@ public class BinaryTest extends IonTestCase
     {
         // was: $ion_1_0::{} 1e0
         // now: $ion_symbol_table::{} 1e0
-        String symbolTableAnnotation = Integer.toHexString((SystemSymbolTable.ION_SYMBOL_TABLE_SID + 0x80));
+        String symbolTableAnnotation = Integer.toHexString((ION_SYMBOL_TABLE_SID + 0x80));
         IonValue val = ion("E3 81 " + symbolTableAnnotation +" D0 48 3F F0 00 00 00 00 00 00");
 
         assertTrue(val instanceof IonFloat);

@@ -7,6 +7,11 @@
   <ht:import file="javadoc.xml"/>
 
   <target name="build.properties">
+    <tstamp>
+      <format property="build_time" 
+        pattern="yyyy-MM-dd'T'HH:mm:ss'Z'" timezone="GMT"/>
+    </tstamp>
+    
     <property name="dir.output"  location="${output.dir}/private"/>
     <property name="dir.src"     location="${basedir}/src"/>
     <property name="dir.doc"     location="${output.dir}/docs"/>
@@ -41,7 +46,7 @@
   <!-- ==================================================================== -->
 
 
-  <target name="build" depends="build.dirs">
+  <target name="build" depends="build.dirs, eclipse-build">
     <javac srcdir="${dir.src}" debug="on" 
            destdir="${dir.classes}"
            source="1.5" target="1.5">
@@ -56,15 +61,8 @@
         <include name="**/*.properties" />
       </fileset>
     </copy>
-    
-    <!-- Update build.properties with current Brazil info -->
-    <propertyfile file="${dir.classes}/com/amazon/ion/impl/build.properties">
-      <entry key="brazil_major_version" value="${bp:package-major-version}" />
-      <entry key="brazil_package_version" 
-             value="${bp:package-name-full-version}" />
-      <entry key="build_time" type="date" value="now" 
-             pattern="yyyy-MM-dd'T'HH:mm:ssZ" />
-    </propertyfile>
+
+    <copy-jar-info classes-dir="${dir.classes}"/>
   </target>
 
 
@@ -177,6 +175,7 @@
       <classpath>
        <path path="${bp:testrun.classpath}"/>
       </classpath>
+      <link href="http://download.oracle.com/javase/1.5.0/docs/api" />
       <!-- Don't break this line. Ant 1.7 is buggy. Ant 1.8 fixes it but HT3
            seems to block use of it. --> 
       <bottom><![CDATA[<center>Copyright &#169; 2007&ndash;${javadoc.year} Amazon.com. All Rights Reserved.</center>]]></bottom>
@@ -201,4 +200,33 @@
           description="Build everything.">
   </target>
 
+  
+  <macrodef name="copy-jar-info"
+      description="Update JarInfo utility with current Brazil info">
+    <attribute name="classes-dir" />
+    
+    <sequential>
+      <!--property name="jar_info_file" 
+        location="${classes-dir}/com/amazon/ion/util/JarInfo.properties" /-->
+      <copy file="${basedir}/build.properties" 
+            tofile="@{classes-dir}/com/amazon/ion/util/JarInfo.properties" />
+      <propertyfile file="@{classes-dir}/com/amazon/ion/util/JarInfo.properties">
+        <entry key="brazil_major_version" value="${bp:package-major-version}" />
+        <entry key="brazil_package_version" 
+               value="${bp:package-name-full-version}" />
+        <entry key="build_time" value="${build_time}" />
+      </propertyfile>
+    </sequential>
+  </macrodef>
+  
+  <target name="eclipse-build" depends="build.properties"
+          description="Called from Eclipse to perform custom build logic">
+    <mkdir dir="${basedir}/.eclipseout"/>
+    <propertyfile file="${basedir}/.eclipseout/system.properties">
+      <entry key="com.amazon.iontests.iontestdata.path" 
+             value="${dir.test.data}" />
+    </propertyfile>
+    <copy-jar-info classes-dir="${basedir}/.eclipseout"/>
+  </target>
+  
 </project>

@@ -31,19 +31,6 @@ public class BinaryStreamingTest
 {
     static final boolean _debug_flag = false;
 
-    static boolean bytesEqual(byte[] v1, byte[] v2) {
-        if (v1 == null || v2 == null) {
-            return v1 == v2;
-        }
-        if (v1.length != v2.length) {
-            return false;
-        }
-        for (int ii=0; ii<v1.length; ii++) {
-            if (v1[ii] != v2[ii]) return false;
-        }
-        return true;
-    }
-
 
     //=========================================================================
     // Test cases
@@ -324,7 +311,7 @@ public class BinaryStreamingTest
                     if (value instanceof byte[]) {
                         byte[] b1 = (byte[])value;
                         byte[] b2 = r.newBytes();
-                        assertTrue( bytesEqual(b1, b2) );
+                        assertArrayEquals(b1, b2);
                     }
                     else {
                         throw new IllegalStateException("we only test byte arrays ( byte[] ) to an IonBlob");
@@ -334,7 +321,7 @@ public class BinaryStreamingTest
                     if (value instanceof byte[]) {
                         byte[] c1 = (byte[])value;
                         byte[] c2 = r.newBytes();
-                        assertTrue( bytesEqual(c1, c2) );
+                        assertArrayEquals(c1, c2);
                     }
                     else {
                         throw new IllegalStateException("we only test byte arrays ( byte[] ) to an IonClob");
@@ -918,99 +905,4 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         if (! IonImplUtils.READER_HASNEXT_REMOVED) assertFalse(ir.hasNext());
         assertEquals(null, ir.next());
     }
-
-
-    @Test
-    public void testBinaryStepOut() throws IOException {
-        // Jira issue 133
-
-        IonReader       r  = system().newReader("{s:{a:1, b:2}, c:3}");
-        IonBinaryWriter wr = system().newBinaryWriter();
-
-        IonType t = r.next();
-        assertEquals(IonType.STRUCT, t);
-        wr.writeValue(r);
-
-        byte[] bytes = wr.getBytes();
-
-        IonReader br = system().newReader(bytes);
-
-        t = br.next();
-        assertEquals(IonType.STRUCT, t);
-
-        br.stepIn();
-        t = br.next();
-        assertEquals(IonType.STRUCT, t);
-
-        br.stepIn();
-        t = br.next();
-        assertEquals(IonType.INT, t);
-        assertEquals(1, br.intValue());
-
-        br.stepOut();  // this used to throw
-
-        t = r.next();
-        assertEquals(null, t);
-    }
-
-    @Test
-    public void testBinaryStepOut2() throws IOException {
-
-        IonSystem ionSystem = system();
-        IonValue value = ionSystem.singleValue("{a:{b:1,c:2},d:false}");
-
-        IonReader r = ionSystem.newReader(value);
-        r.next();
-        r.stepIn();
-        r.next();
-        assertEquals("a", r.getFieldName());
-        r.stepIn();
-        r.next();
-        assertEquals("b", r.getFieldName());
-        r.stepOut(); // skip c
-        r.next();
-        assertEquals("d", r.getFieldName());
-
-        IonBinaryWriter writer = ionSystem.newBinaryWriter();
-        writer.writeValue(value);
-        r = ionSystem.newReader(writer.getBytes());
-        r.next();
-        r.stepIn();
-        r.next();
-        assertEquals("a", r.getFieldName());
-        r.stepIn();
-        r.next();
-        assertEquals("b", r.getFieldName());
-        r.stepOut(); // skip c
-        r.next();
-        assertEquals("d", r.getFieldName());
-    }
-
-
-    @Test
-    public void testNewReaderOffset()
-    throws Exception
-    {
-        int startPadding = 5;
-        int endPadding = 7;
-
-        byte[] dg = encode("hello");
-
-        byte[] paddedBuffer = new byte[startPadding + dg.length + endPadding];
-        System.arraycopy(dg, 0, paddedBuffer, startPadding, dg.length);
-
-        IonReader r = system().newReader(paddedBuffer, startPadding, dg.length);
-        assertEquals(IonType.SYMBOL, r.next());
-        assertEquals("hello", r.stringValue());
-        assertEquals(null, r.next());
-
-
-        r = system().newSystemReader(paddedBuffer, startPadding, dg.length);
-        assertEquals(IonType.SYMBOL, r.next());
-        assertEquals(IonType.STRUCT, r.next());
-        assertEquals(IonType.SYMBOL, r.next());
-        assertEquals(null, r.next());
-    }
-
-
 }

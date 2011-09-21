@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -212,13 +210,8 @@ public class IonIteratorImpl
         SymbolTable symtab = _reader.getSymbolTable();
         ((IonValueImpl)v).setSymbolTable(symtab);
 
-        if (annotations != null) {
-            // FIXME should have IonValue.setTypeAnnotations(String[])
-            for (int i = 0; i < annotations.length; i++)
-            {
-                String annot = annotations[i];
-                v.addTypeAnnotation(annot);
-            }
+        if (annotations.length != 0) {
+            v.setTypeAnnotations(annotations);
         }
 
         return v;

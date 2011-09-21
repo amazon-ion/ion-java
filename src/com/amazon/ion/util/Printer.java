@@ -3,9 +3,10 @@
 package com.amazon.ion.util;
 
 import static com.amazon.ion.IonNumber.Classification.NEGATIVE_ZERO;
-import static com.amazon.ion.impl.UnifiedSymbolTable.ION_1_0_SID;
-import static com.amazon.ion.impl.UnifiedSymbolTable.ION_SYMBOL_TABLE;
-import static com.amazon.ion.impl.UnifiedSymbolTable.SYMBOLS;
+import static com.amazon.ion.SystemSymbols.IMPORTS;
+import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.SYMBOLS;
 
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonBool;
@@ -26,7 +27,6 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.impl.UnifiedSymbolTable;
 import com.amazon.ion.util.IonTextUtils.SymbolVariant;
 import java.io.IOException;
 import java.io.InputStream;
@@ -784,7 +784,7 @@ public class Printer
 
         static final private boolean symbol_table_struct_has_imports(IonValue child) {
             IonStruct struct = (IonStruct)child;
-            IonValue imports = struct.get(UnifiedSymbolTable.IMPORTS);
+            IonValue imports = struct.get(IMPORTS);
             if (imports instanceof IonList) {
                 return ((IonList)imports).size() != 0;
             }

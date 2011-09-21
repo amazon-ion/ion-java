@@ -121,8 +121,8 @@ public class ListTest
 
         IonList value = (IonList) oneValue("[9,4]");
         assertEquals(2, value.size());
-        assertIonEquals(nine, value.get(0));
-        assertIonEquals(four, value.get(1));
+        assertEquals(nine, value.get(0));
+        assertEquals(four, value.get(1));
 
         try
         {
@@ -133,9 +133,9 @@ public class ListTest
 
         Iterator<IonValue> i = value.iterator();
         assertTrue(i.hasNext());
-        assertIonEquals(nine, i.next());
+        assertEquals(nine, i.next());
         assertTrue(i.hasNext());
-        assertIonEquals(four, i.next());
+        assertEquals(four, i.next());
         assertFalse(i.hasNext());
     }
 
@@ -202,7 +202,7 @@ public class ListTest
         IonValue list2 = reload(list1);
 
         // FIXME ensure list1._isPositionLoaded && _isMaterialized
-        assertIonEquals(list1, list2);
+        assertEquals(list1, list2);
     }
 
     @Test
@@ -330,13 +330,13 @@ public class ListTest
 
         IonValue list2 = reload(list1);
 
-        assertIonEquals(list1, list2);
+        assertEquals(list1, list2);
 
         // Again, starting from [] instead of null.list
         list1 = system().newEmptyList();
         list1.add(system().newString("Hello"));
 
         list2 = reload(list1);
-        assertIonEquals(list1, list2);
+        assertEquals(list1, list2);
     }
 }

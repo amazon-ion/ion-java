@@ -36,6 +36,8 @@ public class JavaNumericsTest
     @Test
     public void testDoubleNegativeZeroResult()
     {
+        assertTrue(Double.compare(-0.0d, 0.0d) < 0);
+
         assertTrue(Double.compare(-1 * 0.0d, 0.0d) < 0);
         assertTrue(Double.compare(0.0d * -1, 0.0d) < 0);
 

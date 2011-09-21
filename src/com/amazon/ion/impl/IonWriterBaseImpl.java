@@ -2,6 +2,9 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.IonImplUtils.EMPTY_INT_ARRAY;
+import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
+
 import com.amazon.ion.Decimal;
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonException;
@@ -335,14 +338,14 @@ public abstract class IonWriterBaseImpl
     // the underlying add_symbol and find_symbol will throw if
     // there is not symbol table.
     //
-    public void setTypeAnnotations(String[] annotations)
+    public void setTypeAnnotations(String... annotations)
     {
         _annotations_type = IonType.STRING;
         if (annotations == null) {
             annotations = IonImplUtils.EMPTY_STRING_ARRAY;
         }
         else if (annotations.length > _annotation_count) {
-            growAnnotations(annotations.length);
+            ensureAnnotationCapacity(annotations.length);
         }
         System.arraycopy(annotations, 0, _annotations, 0, annotations.length);
         _annotation_count = annotations.length;
@@ -358,21 +361,22 @@ public abstract class IonWriterBaseImpl
         }
         return true;
     }
-    public void setTypeAnnotationIds(int[] annotationIds)
+
+    public void setTypeAnnotationIds(int... annotationIds)
     {
         _annotations_type = IonType.INT;
         if (annotationIds == null) {
             annotationIds = IonImplUtils.EMPTY_INT_ARRAY;
         }
         else if (annotationIds.length > _annotation_count) {
-            growAnnotations(annotationIds.length);
+            ensureAnnotationCapacity(annotationIds.length);
         }
         System.arraycopy(annotationIds, 0, _annotation_sids, 0, annotationIds.length);
         _annotation_count = annotationIds.length;
     }
     public void addTypeAnnotation(String annotation)
     {
-        growAnnotations(_annotation_count + 1);
+        ensureAnnotationCapacity(_annotation_count + 1);
         if (_annotations_type == IonType.INT) {
             int sid;
             try {
@@ -392,7 +396,7 @@ public abstract class IonWriterBaseImpl
     }
     public void addTypeAnnotationId(int annotationId)
     {
-        growAnnotations(_annotation_count + 1);
+        ensureAnnotationCapacity(_annotation_count + 1);
         if (_annotations_type == IonType.STRING) {
             SymbolTable symtab = getSymbolTable();
             String annotation = symtab.findSymbol(annotationId);
@@ -473,12 +477,14 @@ public abstract class IonWriterBaseImpl
 
         return user_copy;
     }
+
+
     /**
-     * Grow does not increase _annotation_count.
-     * And it keeps both the int and string arrays
-     * allocated and sized together.
+     * Ensures that our {@link #_annotations} and {@link #_annotation_sids}
+     * arrays have enough capacity to hold the given number of annotations.
+     * Does not increase {@link #_annotation_count}.
      */
-    private void growAnnotations(int length) {
+    private void ensureAnnotationCapacity(int length) {
         int oldlen = (_annotations == null) ? 0 : _annotations.length;
         if (length < oldlen) return;
 
@@ -539,7 +545,6 @@ public abstract class IonWriterBaseImpl
         return false;
     }
 
-    private static final String[] EMPTY_STRING_ARRAY = new String[0];
     private String[] get_type_annotations_as_strings()
     {
         if (_annotation_count < 1) {
@@ -555,7 +560,7 @@ public abstract class IonWriterBaseImpl
         }
         return _annotations;
     }
-    private static final int[] EMPTY_INT_ARRAY = new int[0];
+
     protected int[] get_type_annotations_as_ints()
     {
         if (_annotation_count < 1) {
@@ -651,6 +656,7 @@ public abstract class IonWriterBaseImpl
     {
         writeNull(IonType.NULL);
     }
+
     public void writeTimestamp(Date value, Integer localOffset)
         throws IOException
     {
@@ -662,19 +668,12 @@ public abstract class IonWriterBaseImpl
             time = new Timestamp(value.getTime(), localOffset);
             writeTimestamp(time);
         }
-        return;
     }
+
     public void writeTimestampUTC(Date value) throws IOException
     {
-        Timestamp time;
-        if (value == null) {
-            writeNull(IonType.TIMESTAMP);
-        }
-        else {
-            time = new Timestamp(value.getTime(), Timestamp.UTC_OFFSET);
-            writeTimestamp(time);
-        }
-        return;
+        Timestamp time = Timestamp.forDateZ(value);
+        writeTimestamp(time);
     }
 
     //
@@ -753,10 +752,13 @@ public abstract class IonWriterBaseImpl
     //  the reader versions, when the reader is of the
     //  same format as the writer.
     //
+    @Deprecated
     public void writeValue(IonValue value) throws IOException
     {
-        IonReader valueReader = new IonReaderTreeSystem(value);
-        writeValues(valueReader);
+        if (value != null)
+        {
+            value.writeTo(this);
+        }
     }
 
     public void writeValues(IonReader reader) throws IOException
@@ -765,29 +767,21 @@ public abstract class IonWriterBaseImpl
             clear_system_value_stack();
         }
 
+        if (reader.getType() == null) reader.next();
+
         if (reader instanceof IonReaderWriterPrivate) {
             IonReaderWriterPrivate private_reader = (IonReaderWriterPrivate)reader;
-            for (;;) {
-                IonType type = reader.next();
-                if (type == null) {
-                    break;
-                }
+            while (reader.getType() != null) {
                 transfer_symbol_tables(private_reader);
                 writeValue(reader);
+                reader.next();
             }
         }
         else {
-            write_values_helper(reader);
-        }
-    }
-
-    public void write_values_helper(IonReader reader) throws IOException
-    {
-        IonType t;
-        for (;;) {
-            t = reader.next();
-            if (t == null) break;
-            writeValue(reader);
+            while (reader.getType() != null) {
+                writeValue(reader);
+                reader.next();
+            }
         }
     }
 
@@ -822,8 +816,6 @@ public abstract class IonWriterBaseImpl
             setFieldName(field_name);
             if (_debug_on) System.out.print(":");
         }
-
-        return;
     }
 
     private final void write_value_annotations_helper(IonReader reader)
@@ -847,7 +839,6 @@ public abstract class IonWriterBaseImpl
         }
         setTypeAnnotations(a);
         if (_debug_on) System.out.print(";");
-        return;
     }
 
     /**
@@ -855,7 +846,7 @@ public abstract class IonWriterBaseImpl
      */
     public void writeValue(IonReader reader) throws IOException
     {
-        writeValueSlowly(reader);
+        writeValueSlowly(reader.getType(), reader);
     }
 
     /**
@@ -863,17 +854,17 @@ public abstract class IonWriterBaseImpl
      * {@link #writeValue(IonReader)} method since that will cause the
      * optimization test to happen repeatedly.
      */
-    protected final void writeValueSlowly(IonReader reader) throws IOException
+    protected final void writeValueSlowly(IonType type, IonReader reader)
+        throws IOException
     {
         write_value_field_name_helper(reader);
         write_value_annotations_helper(reader);
 
         if (reader.isNullValue()) {
-            // TODO hoist getType
-            this.writeNull(reader.getType());
+            this.writeNull(type);
         }
         else {
-            switch (reader.getType()) {
+            switch (type) {
             case NULL:
                 writeNull();
                 if (_debug_on) System.out.print("-");
@@ -945,9 +936,9 @@ public abstract class IonWriterBaseImpl
     {
         stepIn(type);
         reader.stepIn();
-        while (reader.next() != null)
+        while ((type = reader.next()) != null)
         {
-            writeValueSlowly(reader);
+            writeValueSlowly(type, reader);
         }
         reader.stepOut();
         stepOut();

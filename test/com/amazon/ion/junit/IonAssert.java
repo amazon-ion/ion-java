@@ -3,13 +3,15 @@
 package com.amazon.ion.junit;
 
 import static com.amazon.ion.util.IonTextUtils.printSymbol;
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertFalse;
-import static junit.framework.Assert.fail;
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import com.amazon.ion.IonLob;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
@@ -19,13 +21,110 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
-import junit.framework.Assert;
 
 /**
  *
  */
 public class IonAssert
 {
+
+    //========================================================================
+    // IonReader assertions
+
+    public static void assertTopLevel(IonReader in)
+    {
+        assertEquals("reader depth", 0, in.getDepth());
+        assertFalse("reader shouldn't be inStruct", in.isInStruct());
+        assertEquals("reader field name", null, in.getFieldName());
+        assertTrue("reader shouldn't have fieldId", in.getFieldId() < 1);
+
+        try {
+            in.stepOut();
+            fail("Expected exception stepping out");
+        }
+        catch (IllegalStateException e) {
+            // TODO compare to IonMessages.CANNOT_STEP_OUT
+            // Can't do that right now due to permissions
+        }
+    }
+
+
+    public static void assertNoCurrentValue(IonReader in)
+    {
+        assertEquals(null, in.getType());
+
+        assertEquals(null, in.getFieldName());
+        assertTrue(in.getFieldId() < 0);
+
+        // TODO ION-213 Text reader doesn't throw, but others do.
+        try {
+            String[] ann = in.getTypeAnnotations();
+            assertEquals(0, ann.length);
+//            fail("expected exception");
+        }
+        catch (IllegalStateException e) { }
+
+        try {
+            Iterator<String> ann = in.iterateTypeAnnotations();
+            assertEquals(false, ann.hasNext());
+//            fail("expected exception");
+        }
+        catch (IllegalStateException e) { }
+
+        try {
+            int[] ann = in.getTypeAnnotationIds();
+            assertEquals(0, ann.length);
+//            fail("expected exception");
+        }
+        catch (IllegalStateException e) { }
+
+        try {
+            Iterator<Integer> ann = in.iterateTypeAnnotationIds();
+            assertEquals(false, ann.hasNext());
+//            fail("expected exception");
+        }
+        catch (IllegalStateException e) { }
+    }
+
+
+    @SuppressWarnings("deprecation")
+    public static void assertEof(IonReader in)
+    {
+        assertFalse(in.hasNext());
+        assertFalse(in.hasNext());
+        assertEquals(null, in.next());
+        assertNoCurrentValue(in);
+        assertEquals(null, in.next());
+        assertFalse(in.hasNext());
+        assertEquals(null, in.next());
+    }
+
+
+    public static void assertTopEof(IonReader in)
+    {
+        assertTopLevel(in);
+        assertEof(in);
+        assertTopLevel(in);
+    }
+
+
+    //========================================================================
+    // DOM assertions
+
+    /**
+     * Verifies that the given value has exactly the given annotations, in the
+     * same order.
+     *
+     * @param actual must not be null.
+     * @param expectedAnns may be empty to expect no annotations.
+     */
+    public static void assertAnnotations(IonValue actual,
+                                         String... expectedAnns)
+    {
+        String[] actualAnns = actual.getTypeAnnotations();
+        assertArrayEquals("Ion annotations", expectedAnns, actualAnns);
+    }
+
 
     public static void assertEqualAnnotations(IonValue expected,
                                               IonValue actual)
@@ -212,9 +311,9 @@ public class IonAssert
             List<IonValue> actualList = actualFields.get(fieldName);
             if (actualList == null)
             {
-                Assert.fail("Missing field " + fieldPath
-                            + ", expected: " + expected
-                            + " actual: " + actual);
+                fail("Missing field " + fieldPath
+                     + ", expected: " + expected
+                     + " actual: " + actual);
             }
 
             assertFieldEquals(fieldPath,

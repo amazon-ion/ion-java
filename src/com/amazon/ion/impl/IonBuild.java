@@ -2,14 +2,12 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonReader;
-import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSystem;
+import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.system.IonSystemBuilder;
+import com.amazon.ion.util.JarInfo;
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.Properties;
 
 public class IonBuild
 {
@@ -102,46 +100,10 @@ public class IonBuild
         }
     }
 
-    private static Properties loadBuildProperties() throws IOException
-    {
-        Properties props = new Properties();
-
-        InputStream in = IonBuild.class.getResourceAsStream("build.properties");
-        try
-        {
-            props.load(in);
-        }
-        finally
-        {
-            in.close();
-        }
-
-        return props;
-    }
-
-
-    private static void copyProperty(IonStruct struct, Properties props,
-                                     String name)
-    {
-        String value = props.getProperty(name, "");
-        if (value.length() != 0)
-        {
-            struct.add(name).newString(value);
-        }
-    }
 
     private static void doPrintVersion() throws IOException
     {
-        Properties props = loadBuildProperties();
-
         IonSystem sys = IonSystemBuilder.standard().build();
-        IonStruct v = sys.newEmptyStruct();
-
-        if (printVersion) {
-            copyProperty(v, props, "release_label");
-            copyProperty(v, props, "brazil_package_version");
-            copyProperty(v, props, "build_time");
-        }
 
         IonWriterUserText.TextOptions options = new IonWriterUserText.TextOptions(
                  true  // boolean prettyPrint
@@ -150,9 +112,24 @@ public class IonBuild
                 ,false // boolean suppressIonVersionMarker
         );
 
+        JarInfo info = new JarInfo();
+
         IonWriter w = IonWriterFactory.makeWriter(sys, (Appendable)System.out, options);
-        IonReader r = sys.newReader(v);
-        w.writeValues(r);
+        w.stepIn(IonType.STRUCT);
+        {
+            w.setFieldName("release_label");
+            w.writeString(info.getReleaseLabel());
+
+            w.setFieldName("brazil_major_version");
+            w.writeString(info.getBrazilMajorVersion());
+
+            w.setFieldName("brazil_package_version");
+            w.writeString(info.getBrazilPackageVersion());
+
+            w.setFieldName("build_time");
+            w.writeTimestamp(info.getBuildTime());
+        }
+        w.stepOut();
         w.finish();
         System.out.println();
     }

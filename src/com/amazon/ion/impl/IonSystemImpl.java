@@ -2,12 +2,17 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.SystemSymbolTable.ION_SHARED_SYMBOL_TABLE;
-import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.ION;
+import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
+import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+import static com.amazon.ion.impl.IonImplUtils.UTF8_CHARSET;
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
 import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemReader;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewSharedSymbolTable;
+import static com.amazon.ion.impl.UnifiedSymbolTable.makeSystemSymbolTable;
 import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
@@ -53,7 +58,6 @@ import java.io.OutputStream;
 import java.io.PushbackInputStream;
 import java.io.Reader;
 import java.io.StringReader;
-import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -77,6 +81,7 @@ public final class IonSystemImpl
     /** Not null. */
     private IonCatalog  myCatalog;
     private final IonLoader myLoader;
+    private final boolean myStreamCopyOptimized;
 
     /**
      * If true, this system will create the newer, faster, second-generation
@@ -88,12 +93,13 @@ public final class IonSystemImpl
     /**
      * @param catalog must not be null.
      */
-    public IonSystemImpl(IonCatalog catalog)
+    public IonSystemImpl(IonCatalog catalog, boolean streamCopyOptimized)
     {
         assert catalog != null;
         myCatalog = catalog;
         myLoader = new LoaderImpl(this, myCatalog);
-        mySystemSymbols = UnifiedSymbolTable.makeSystemSymbolTable(this, SYSTEM_VERSION);
+        mySystemSymbols = makeSystemSymbolTable(this, SYSTEM_VERSION);
+        myStreamCopyOptimized = streamCopyOptimized;
     }
 
 
@@ -106,7 +112,7 @@ public final class IonSystemImpl
     public UnifiedSymbolTable getSystemSymbolTable(String ionVersionId)
         throws UnsupportedIonVersionException
     {
-        if (!UnifiedSymbolTable.ION_1_0.equals(ionVersionId)) {
+        if (!ION_1_0.equals(ionVersionId)) {
             throw new UnsupportedIonVersionException(ionVersionId);
         }
         return getSystemSymbolTable();
@@ -358,7 +364,7 @@ public final class IonSystemImpl
             }
             else
             {
-                Reader reader = new InputStreamReader(pushback, "UTF-8");
+                Reader reader = new InputStreamReader(pushback, UTF8_CHARSET);
                 // This incrementally transcodes the whole stream into
                 // a buffer. However, when system==false we wrap this with a
                 // UserReader below, and then flip a switch to recycle the
@@ -474,7 +480,7 @@ public final class IonSystemImpl
                 return new IonReaderBinaryUserX(this, myCatalog, pushback);
             }
 
-            Reader reader = new InputStreamReader(pushback, "UTF-8");
+            Reader reader = new InputStreamReader(pushback, UTF8_CHARSET);
             return new IonReaderTextUserX(this, null, reader); // FIXME wrong catalog?
         }
         catch (IOException e)
@@ -496,7 +502,7 @@ public final class IonSystemImpl
                 return new IonReaderBinarySystemX(this, pushback);
             }
 
-            Reader reader = new InputStreamReader(pushback, "UTF-8");
+            Reader reader = new InputStreamReader(pushback, UTF8_CHARSET);
             return new IonReaderTextSystemX(this, reader);
         }
         catch (IOException e)
@@ -612,7 +618,8 @@ public final class IonSystemImpl
     public com.amazon.ion.IonBinaryWriter newBinaryWriter()
     {
         IonWriterBinaryCompatibility.User writer =
-            new IonWriterBinaryCompatibility.User(this, myCatalog);
+            new IonWriterBinaryCompatibility.User(this, myCatalog,
+                                                  myStreamCopyOptimized);
         return writer;
     }
 
@@ -621,7 +628,8 @@ public final class IonSystemImpl
     {
         UnifiedSymbolTable lst = newLocalSymbolTable(imports);
         IonWriterBinaryCompatibility.User user_writer =
-            new IonWriterBinaryCompatibility.User(this, myCatalog);
+            new IonWriterBinaryCompatibility.User(this, myCatalog,
+                                                  myStreamCopyOptimized);
         try {
             user_writer.setSymbolTable(lst);
         }
@@ -634,7 +642,9 @@ public final class IonSystemImpl
     public IonWriter newBinaryWriter(OutputStream out, SymbolTable... imports)
     {
         IonWriterUserBinary writer =
-            IonWriterFactory.makeWriter(this, getCatalog(), out, imports);
+            IonWriterFactory.newBinaryWriter(this, getCatalog(),
+                                             myStreamCopyOptimized,
+                                             out, imports);
         return writer;
     }
 
@@ -718,13 +728,7 @@ public final class IonSystemImpl
     {
         if (catalog == null) catalog = getCatalog();
         ByteArrayInputStream stream = new ByteArrayInputStream(ionText);
-        Reader reader;
-        try {
-            reader = new InputStreamReader(stream, "UTF-8");
-        }
-        catch (UnsupportedEncodingException e) {
-            throw new IonException(e);
-        }
+        Reader reader = new InputStreamReader(stream, UTF8_CHARSET);
 
         // return new SystemReader(this, catalog, reader);
         SystemValueIterator sysreader = makeSystemReader(this, catalog, reader);
@@ -802,7 +806,7 @@ public final class IonSystemImpl
         {
             IonSymbol symbol = (IonSymbol) value;
             int sid = symbol.getSymbolId();
-            if (sid == SystemSymbolTable.ION_1_0_SID)
+            if (sid == ION_1_0_SID)
             {
                 return true;
             }
@@ -816,15 +820,15 @@ public final class IonSystemImpl
 
     private final boolean textIsSystemId(String image)
     {
-        if (SystemSymbolTable.ION_1_0.equals(image))
+        if (ION_1_0.equals(image))
         {
             return true;
         }
-        if (!image.startsWith(SystemSymbolTable.ION)) {
+        if (!image.startsWith(ION)) {
             return false;
         }
         // now we see if the rest of the symbol is _DDD_DDD
-        int underscore1 = SystemSymbolTable.ION.length();
+        int underscore1 = ION.length();
         int underscore2 = image.indexOf('_', underscore1 + 1);
         if (underscore2 < 0)
         {

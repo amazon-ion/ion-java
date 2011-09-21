@@ -3,10 +3,13 @@
 package com.amazon.ion;
 
 import static com.amazon.ion.Symtabs.LocalSymbolTablePrefix;
-import static com.amazon.ion.SystemSymbolTable.ION_1_0;
-import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
+import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
+import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE_SID;
 import static com.amazon.ion.TestUtils.FERMATA;
 
+import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.IonReaderTextRawTokensX;
 import com.amazon.ion.impl.IonUTF8;
 import com.amazon.ion.impl.SymbolTableTest;
@@ -84,6 +87,11 @@ public abstract class SystemProcessingTestCase
     protected abstract void checkAnnotation(String expected, int expectedSid)
         throws Exception;
 
+    /** Check that all the annotations exist in the given order. */
+    protected abstract void checkAnnotations(String[] expecteds,
+                                             int[] expectedSids)
+        throws Exception;
+
     protected abstract void checkType(IonType expected)
         throws Exception;
 
@@ -137,6 +145,9 @@ public abstract class SystemProcessingTestCase
 
     //=========================================================================
 
+    /**
+     * TODO how is this different from {@link IonImplUtils#utf8(String)}?
+     */
     public static byte[] convertUtf16UnitsToUtf8(String text)
     {
         byte[] data = new byte[4*text.length()];
@@ -257,7 +268,7 @@ if (table1 == table2) {
         {
             assertNotSame(table1, table2);
         }
-        assertEquals(SystemSymbolTable.ION_1_0_MAX_ID, table2.getMaxId());
+        assertEquals(systemMaxId(), table2.getMaxId());
     }
 
     @Test
@@ -279,28 +290,28 @@ if (table1 == table2) {
         startIteration(text);
 
         nextValue();
-        checkSymbol("bar", ION_1_0_MAX_ID + 2);
+        checkSymbol("bar", systemMaxId() + 2);
 
         SymbolTable table1 = currentSymtab();
         checkLocalTable(table1);
 
         nextValue();
-        checkSymbol("foo", ION_1_0_MAX_ID + 1);
+        checkSymbol("foo", systemMaxId() + 1);
 
         // Symtab changes here...
 
         nextValue();
-        checkSymbol("bar", ION_1_0_MAX_ID + 1);
+        checkSymbol("bar", systemMaxId() + 1);
 
         SymbolTable table2 = currentSymtab();
         checkLocalTable(table2);
         assertNotSame(table1, table2);
-        assertTrue(ION_1_0_MAX_ID + 1 <= table2.getMaxId());
-        assertTrue(ION_1_0_MAX_ID + 2 >= table2.getMaxId());
+        assertTrue(systemMaxId() + 1 <= table2.getMaxId());
+        assertTrue(systemMaxId() + 2 >= table2.getMaxId());
 
         nextValue();
-        checkSymbol("foo", ION_1_0_MAX_ID + 2);
-        assertEquals(ION_1_0_MAX_ID + 2, table2.getMaxId());
+        checkSymbol("foo", systemMaxId() + 2);
+        assertEquals(systemMaxId() + 2, table2.getMaxId());
         assertSame(table2, currentSymtab());
     }
 
@@ -332,7 +343,7 @@ if (table1 == table2) {
         SymbolTable table2 = currentSymtab();
         checkLocalTable(table2);
         assertNotSame(table1, table2);
-        assertEquals(ION_1_0_MAX_ID, table2.getMaxId());
+        assertEquals(systemMaxId(), table2.getMaxId());
     }
 
 
@@ -367,11 +378,11 @@ if (table1 == table2) {
     {
         startTestCheckpoint("testLocalTableWithLesserImport");
 
-        final int fred1id = ION_1_0_MAX_ID + 1;
-        final int fred2id = ION_1_0_MAX_ID + 2;
-        final int fred3id = ION_1_0_MAX_ID + 3;
+        final int fred1id = systemMaxId() + 1;
+        final int fred2id = systemMaxId() + 2;
+        final int fred3id = systemMaxId() + 3;
 
-        final int local = ION_1_0_MAX_ID + Symtabs.FRED_MAX_IDS[2];
+        final int local = systemMaxId() + Symtabs.FRED_MAX_IDS[2];
         final int local1id = local + 1;
         final int local2id = local + 2;
         final int local3id = local + 3;
@@ -453,11 +464,11 @@ if (table1 == table2) {
     {
         startTestCheckpoint("testLocalTableWithGreaterImport");
 
-        final int fred1id_symtab = ION_1_0_MAX_ID + 1;  // expect 9 + 1 = 10
-        final int fred2id_symtab = ION_1_0_MAX_ID + 2;
-        final int fred3id_symtab = ION_1_0_MAX_ID + 3;
+        final int fred1id_symtab = systemMaxId() + 1;  // expect 9 + 1 = 10
+        final int fred2id_symtab = systemMaxId() + 2;
+        final int fred3id_symtab = systemMaxId() + 3;
 
-        final int local = ION_1_0_MAX_ID + Symtabs.FRED_MAX_IDS[2];
+        final int local = systemMaxId() + Symtabs.FRED_MAX_IDS[2];
         final int local1id = local + 1; // expect 9 + 4 + 1 = 14 id for local1
         final int local2id = local + 2; // 15: id for local2
         final int local3id = local + 3; // 16: id for fred_2, which has been removed from version 2 of the sym tab, so is now local
@@ -547,7 +558,7 @@ if (table1 == table2) {
         startTestCheckpoint("testSharedTableNotAddedToCatalog");
 
         String text =
-            SystemSymbolTable.ION_1_0 + " " +
+            ION_1_0 + " " +
             SymbolTableTest.IMPORTED_1_SERIALIZED +
             " 'imported 1'";
         assertNull(system().getCatalog().getTable("imported"));
@@ -561,8 +572,8 @@ if (table1 == table2) {
             testSharedTableNotAddedToCatalog();
         }
         checkType(IonType.STRUCT);
-        checkAnnotation(SystemSymbolTable.ION_SHARED_SYMBOL_TABLE,
-                        SystemSymbolTable.ION_SHARED_SYMBOL_TABLE_SID);
+        checkAnnotation(ION_SHARED_SYMBOL_TABLE,
+                        ION_SHARED_SYMBOL_TABLE_SID);
 
         assertNull(system().getCatalog().getTable("imported"));
 
@@ -637,11 +648,11 @@ if (table1 == table2) {
         testString("\uffff", ionData);
 
         ionData = "\"\\" + "U0001d110\""; // Carefully avoid Java escape
-//        testString("\ud834\udd10", ionData); // FIXME JIRA ION-8
+        testString("\ud834\udd10", ionData);
 
         // The largest legal code point
         ionData = "\"\\" + "U0010ffff\""; // Carefully avoid Java escape
-//        testString("\udbff\udfff", ionData); // FIXME JIRA ION-8
+        testString("\udbff\udfff", ionData);
     }
 
 
@@ -849,7 +860,7 @@ if (table1 == table2) {
         prepare(text);
         startSystemIteration();
         nextValue();
-        checkSymbol(ION_1_0, SystemSymbolTable.ION_1_0_SID);
+        checkSymbol(ION_1_0, ION_1_0_SID);
         SymbolTable st = currentSymtab();
 
         // system readers don't necessarily support symbol tables
@@ -886,7 +897,7 @@ if (table1 == table2) {
         startSystemIteration();
 
         nextValue();
-        checkSymbol(ION_1_0, SystemSymbolTable.ION_1_0_SID);
+        checkSymbol(ION_1_0, ION_1_0_SID);
         SymbolTable st = currentSymtab();
         assertTrue(st.isSystemTable());
         assertEquals(ION_1_0, st.getIonVersionId());
@@ -896,11 +907,24 @@ if (table1 == table2) {
         assertSame(st, currentSymtab());
 
         nextValue();
-        checkSymbol("local", ION_1_0_MAX_ID + 1);
+        checkSymbol("local", systemMaxId() + 1);
         SymbolTable local = currentSymtab();
         assertTrue(local.isLocalTable());
         assertSame(st, local.getSystemSymbolTable());
 
         checkEof();
+    }
+
+
+    @Test // Trap for ION-173
+    public void testDuplicateAnnotations()
+    throws Exception
+    {
+        int sid = systemMaxId() + 1;
+
+        startIteration("ann::ann::null");
+        nextValue();
+        checkAnnotations(new String[]{ "ann", "ann" },
+                         new int[]{ sid, sid });
     }
 }

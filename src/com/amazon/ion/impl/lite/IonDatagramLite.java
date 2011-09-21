@@ -1,6 +1,8 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
+
+import static com.amazon.ion.SystemSymbols.ION_1_0;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonBinaryWriter;
@@ -549,8 +551,10 @@ public class IonDatagramLite
     private IonBinaryWriter make_filled_binary_writer()
     throws IOException
     {
+        boolean streamCopyOptimized = false;
         IonWriterBinaryCompatibility.User writer =
-            new IonWriterBinaryCompatibility.User(_system, _catalog);
+            new IonWriterBinaryCompatibility.User(_system, _catalog,
+                                                  streamCopyOptimized);
         IonReader reader = IonReaderFactoryX.makeSystemReader(this);
         writer.writeValues(reader);
         writer.finish();
@@ -754,7 +758,7 @@ private static boolean hasUnresolvedSymbols(IonValueLite value) {
     protected synchronized IonSymbolLite get_ivm()
     {
         if (_ivm == null) {
-            _ivm = (IonSymbolLite) getSystem().newSymbol(UnifiedSymbolTable.ION_1_0);
+            _ivm = (IonSymbolLite) getSystem().newSymbol(ION_1_0);
         }
         return _ivm;
     }
@@ -1274,7 +1278,7 @@ private static boolean hasUnresolvedSymbols(IonValueLite value) {
             if (value instanceof IonSymbol) {
                 IonSymbol sym = (IonSymbol)value;
                 if (!sym.isNullValue()) {
-                    if (sym.stringValue().equals(UnifiedSymbolTable.ION_1_0)) {
+                    if (sym.stringValue().equals(ION_1_0)) {
                         return true;
                     }
                 }

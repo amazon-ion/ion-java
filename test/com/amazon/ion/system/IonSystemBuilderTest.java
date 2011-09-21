@@ -5,11 +5,15 @@ package com.amazon.ion.system;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.impl.IonSystemImpl;
+import com.amazon.ion.impl.IonWriterUserBinary;
 import com.amazon.ion.impl.lite.IonSystemLite;
+import java.io.ByteArrayOutputStream;
 import org.junit.Test;
 
 /**
@@ -120,12 +124,25 @@ public class IonSystemBuilderTest
     }
 
     @Test
+    public void testStreamCopyOptimized()
+    {
+        IonSystemBuilder b = IonSystemBuilder.standard().copy();
+        b.setStreamCopyOptimized(true);
+        IonSystem ion = b.build();
+        assertSame(IonSystemLite.class, ion.getClass());
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonWriter w = ion.newBinaryWriter(out);
+        assertTrue(((IonWriterUserBinary)w).myStreamCopyOptimized);
+    }
+
+    @Test
     public void testFluidStyle()
     {
         IonCatalog catalog = new SimpleCatalog();
         IonSystem ion = IonSystemBuilder.standard()
                                         .withCatalog(catalog)
                                         .withBinaryBacked(true)
+                                        .withStreamCopyOptimized(true)
                                         .build();
         assertSame(catalog, ion.getCatalog());
         assertSame(IonSystemImpl.class, ion.getClass());
@@ -137,10 +154,12 @@ public class IonSystemBuilderTest
         IonCatalog catalog = new SimpleCatalog();
         IonSystemBuilder b1 = IonSystemBuilder.standard()
                                               .withCatalog(catalog)
-                                              .withBinaryBacked(true);
+                                              .withBinaryBacked(true)
+                                              .withStreamCopyOptimized(true);
         IonSystemBuilder b2 = b1.copy();
         assertNotSame(b1, b2);
         assertSame(b1.getCatalog(),     b2.getCatalog());
         assertSame(b1.isBinaryBacked(), b2.isBinaryBacked());
+        assertSame(b1.isStreamCopyOptimized(), b2.isStreamCopyOptimized());
     }
 }

@@ -3,11 +3,10 @@
 package com.amazon.ion;
 
 import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
-import static com.amazon.ion.SystemSymbolTable.ION_1_0;
-import static com.amazon.ion.SystemSymbolTable.ION_1_0_MAX_ID;
-import static com.amazon.ion.SystemSymbolTable.ION_1_0_SID;
-import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
-import static com.amazon.ion.SystemSymbolTable.SYMBOLS;
+import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.SYMBOLS;
 
 import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.impl.IonValueImpl;
@@ -140,7 +139,7 @@ public class DatagramTest
 
         IonDatagram dg = system.newDatagram();
 
-        IonSymbol sysId = system.newSymbol(SystemSymbolTable.ION_1_0);
+        IonSymbol sysId = system.newSymbol(ION_1_0);
         assertTrue(sysId.getSymbolTable() == null || sysId.getSymbolTable().isSystemTable());
 
         // $ion_1_0 at the front top-level is a systemId
@@ -257,23 +256,6 @@ public class DatagramTest
             i.setValue(ival);
             byte[] bytes = dg.getBytes();
             checkBinaryHeader(bytes);
-        }
-    }
-
-
-    // TODO move elsewhere
-    public void assertArrayEquals(byte[] expected, byte[] actual)
-    {
-        assertEquals("array length",
-                     expected.length,
-                     actual.length);
-
-        for (int i = 0; i < expected.length; i++)
-        {
-            if (expected[i] != actual[i])
-            {
-                fail("byte[] differs at index " + i);
-            }
         }
     }
 
@@ -486,7 +468,7 @@ public class DatagramTest
     @Test
     public void testNewDatagramWithImports()
     {
-        final int FRED_ID_OFFSET   = ION_1_0_MAX_ID;
+        final int FRED_ID_OFFSET   = systemMaxId();
         final int LOCAL_ID_OFFSET  = FRED_ID_OFFSET + FRED_MAX_IDS[1];
 
         SymbolTable fred1   = Symtabs.register("fred",   1, catalog());
@@ -567,7 +549,7 @@ public class DatagramTest
         dg = loader().load("{a:b}");
         String text = dg.toString();
         assertTrue("missing version marker",
-                   text.startsWith(SystemSymbolTable.ION_1_0 + ' '));
+                   text.startsWith(ION_1_0 + ' '));
         assertTrue("missing data",
                    text.endsWith(" {a:b}"));
 
@@ -575,7 +557,7 @@ public class DatagramTest
         dg.getBytes(new byte[dg.byteSize()]);
         text = dg.toString();
         assertTrue("missing version marker",
-                   text.startsWith(SystemSymbolTable.ION_1_0 + ' '));
+                   text.startsWith(ION_1_0 + ' '));
         assertTrue("missing data",
                    text.endsWith(" {a:b}"));
     }

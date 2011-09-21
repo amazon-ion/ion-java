@@ -89,9 +89,12 @@ public abstract class IonWriterBinaryCompatibility
         extends IonWriterUserBinary
         implements IonBinaryWriter
     {
-        public User(IonSystem system, IonCatalog catalog)
+        public User(IonSystem system, IonCatalog catalog,
+                    boolean streamCopyOptimized)
         {
-            super(system, catalog, new System(system, false /* autoflush */ ), false /* suppressIVM */);
+            super(system, catalog, new System(system, false /* autoflush */ ),
+                  false /* suppressIVM */,
+                  streamCopyOptimized);
 
             assert(getOutputStream() instanceof BufferedOutputStream);
         }

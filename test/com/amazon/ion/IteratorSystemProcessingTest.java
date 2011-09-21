@@ -1,12 +1,11 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import com.amazon.ion.impl.IonSystemPrivate;
 import java.util.Arrays;
 import java.util.Iterator;
+import org.junit.Assert;
 
 /**
  *
@@ -83,6 +82,24 @@ public class IteratorSystemProcessingTest
 
         int foundSid = myCurrentValue.getSymbolTable().findSymbol(expected);
         assertEquals("symbol id", expectedSid, foundSid);
+    }
+
+    @Override
+    protected void checkAnnotations(String[] expecteds,
+                                    int[] expectedSids)
+    {
+        String[] typeAnnotations = myCurrentValue.getTypeAnnotations();
+        Assert.assertArrayEquals(expecteds, typeAnnotations);
+
+        SymbolTable symtab = myCurrentValue.getSymbolTable();
+        for (int i = 0; i < expecteds.length; i++)
+        {
+            int foundSid = symtab.findSymbol(expecteds[i]);
+            if (foundSid != SymbolTable.UNKNOWN_SYMBOL_ID)
+            {
+                assertEquals("symbol id", expectedSids[i], foundSid);
+            }
+        }
     }
 
     @Override

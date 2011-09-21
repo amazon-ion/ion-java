@@ -10,16 +10,12 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
 import com.amazon.ion.impl.IonScalarConversionsX.ValueVariant;
 import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.Date;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 
 /**
  * Reader implementation that reads the token stream and validates
@@ -116,7 +112,8 @@ public abstract class IonReaderTextRawX
     static final int ACTION_FINISH_CONTAINER     = 12;
     static final int ACTION_FINISH_LOB           = 13;
     static final int ACTION_FINISH_DATAGRAM      = 14;
-    static final int ACTION_count                = 15;
+    static final int ACTION_EOF                  = 15;
+    static final int ACTION_count                = 16;
     @SuppressWarnings("unused")
     private final String get_action_name(int action) {
         switch(action) {
@@ -134,6 +131,7 @@ public abstract class IonReaderTextRawX
         case ACTION_FINISH_CONTAINER:   return "ACTION_FINISH_CONTAINER";
         case ACTION_FINISH_LOB:         return "ACTION_FINISH_LOB";
         case ACTION_FINISH_DATAGRAM:    return "ACTION_FINISH_DATAGRAM";
+        case ACTION_EOF:                return "ACTION_EOF";
         default:                        return "<unrecognized action: "+Integer.toString(action)+">";
         }
     }
@@ -216,6 +214,12 @@ public abstract class IonReaderTextRawX
          actions[STATE_IN_CLOB_TRIPLE_QUOTED_CONTENT][IonTokenConstsX.TOKEN_CLOSE_BRACE] = ACTION_FINISH_LOB;
          actions[STATE_IN_BLOB_CONTENT][IonTokenConstsX.TOKEN_CLOSE_BRACE]               = ACTION_FINISH_LOB;
 
+         // the eof action exists because finishing an unread value can place the scanner just before
+         // the input stream eof and set the current state to eof - in which case we just need to return eof
+         for (int ii=0; ii<IonTokenConstsX.TOKEN_MAX+1; ii++) {
+             actions[STATE_EOF][ii] =  ACTION_EOF;
+         }
+
          return actions;
     }
 
@@ -263,6 +267,11 @@ public abstract class IonReaderTextRawX
 
     ValueVariant        _v = new ValueVariant();
 
+    long                _value_start_offset;
+    long                _value_start_line;
+    long                _value_start_column;
+    IonType             _nesting_parent;
+
     enum LOB_STATE { EMPTY, READ, FINISHED }
     boolean             _lob_value_set;
     int                 _lob_token;
@@ -274,17 +283,78 @@ public abstract class IonReaderTextRawX
 
     protected IonReaderTextRawX() {
         super();
+        _nesting_parent = null;
     }
 
-    protected final void init(UnifiedInputStreamX iis) {
-        _scanner = new IonReaderTextRawTokensX(iis);
-        _current_value_save_point = iis.savePointAllocate();
+
+    /**
+     * @return This implementation always returns null.
+     */
+    public <T> T asFacet(Class<T> facetType)
+    {
+        return null;
+    }
+
+    //========================================================================
+
+    protected final void init_once() {
         _current_value_buffer = new StringBuilder();
         _annotations = new String[DEFAULT_ANNOTATION_COUNT];
+    }
+
+    protected final void init(UnifiedInputStreamX iis, IonType parent)
+    {
+        init(iis, parent, 1, 1);
+    }
+
+    protected final void init(UnifiedInputStreamX iis
+                             ,IonType parent
+                             ,long start_line
+                             ,long start_column
+    ) {
+
+        assert(parent != null);
+        _scanner = new IonReaderTextRawTokensX(iis, start_line, start_column);
+        _value_start_line = start_line;
+        _value_start_column = start_column;
+        _current_value_save_point = iis.savePointAllocate();
         _lob_loaded = LOB_STATE.EMPTY;
-        set_state(STATE_BEFORE_ANNOTATION_DATAGRAM);
+        int starting_state = get_state_at_container_start(parent);
+        set_state(starting_state);
         _eof = false;
-        push_container_state(IonType.DATAGRAM);
+        push_container_state(parent);
+    }
+
+    protected final void re_init(UnifiedInputStreamX iis
+                                ,IonType parent
+                                ,long start_line
+                                ,long start_column
+    ) {
+        _state = 0;
+        _container_state_top = 0;
+        _container_is_struct = false;
+        _container_prohibits_commas = false;
+        _has_next_called = false;
+        _value_type = null;
+        _value_keyword = 0;
+        _null_type = null;
+        _field_name = null;
+        _annotation_count = 0;
+        _current_value_save_point_loaded = false;
+        _current_value_buffer_loaded = false;
+        _value_start_offset = 0;
+        _lob_value_set = false;
+        _lob_token = 0;
+        _lob_value_position = 0;
+        _lob_bytes = null;
+        _lob_actual_len = 0;
+
+        init(iis, parent, start_line, start_column);
+
+        _nesting_parent = parent;
+        if (IonType.STRUCT.equals(_nesting_parent)) {
+            _container_is_struct = true;
+        }
     }
 
     public void close()
@@ -314,6 +384,7 @@ public abstract class IonReaderTextRawX
             _current_value_save_point_loaded = false;
         }
     }
+
     private final void current_value_is_null(IonType null_type)
     {
         clear_current_value_buffer();
@@ -321,6 +392,7 @@ public abstract class IonReaderTextRawX
         _v.setValueToNull(null_type);
         _v.setAuthoritativeType(IonScalarConversionsX.AS_TYPE.null_value);
     }
+
     private final void current_value_is_bool(boolean value)
     {
         clear_current_value_buffer();
@@ -336,9 +408,11 @@ public abstract class IonReaderTextRawX
         clear_fieldname();
         _field_name = fieldname;
     }
+
     private final void clear_fieldname() {
         _field_name = null;
     }
+
     private final void append_annotation(String name) {
         int oldlen = _annotations.length;
         if (_annotation_count >= oldlen) {
@@ -349,9 +423,11 @@ public abstract class IonReaderTextRawX
         }
         _annotations[_annotation_count++] = name;
     }
+
     private final void clear_annotation_list() {
         _annotation_count = 0;
     }
+
 
     /**
      * return the current position in the input stream.
@@ -359,7 +435,9 @@ public abstract class IonReaderTextRawX
      * The first line is line 1.
      * @return input line number
      */
-    public long getLineNumber() { return _scanner.getLineNumber(); }
+    public long getLineNumber() {
+        return _value_start_line;
+    }
 
     /**
      * get the input position offset of the next character
@@ -370,7 +448,9 @@ public abstract class IonReaderTextRawX
      * a CharSequence or a java.util.Reader.
      * @return offset of input position in the current line
      */
-    public long getLineOffset() { return _scanner.getLineOffset(); }
+    public long getLineOffset() {
+        return _value_start_column;
+    }
 
     /**
      * this looks forward to see if there is an upcoming value
@@ -386,7 +466,7 @@ public abstract class IonReaderTextRawX
         return has_next;
     }
     protected final boolean has_next_raw_value() {
-        if (!_has_next_called) {
+        if (!_has_next_called && !_eof) {
             try {
                 finish_value(null);
                 clear_value();
@@ -398,7 +478,6 @@ public abstract class IonReaderTextRawX
             _has_next_called = true;
         }
         return (_eof != true);
-
     }
 
     /**
@@ -473,6 +552,7 @@ public abstract class IonReaderTextRawX
         clear_annotation_list();
         clear_fieldname();
         _v.clear();
+        _value_start_offset = -1;
     }
 
     private final void set_container_flags(IonType t) {
@@ -498,7 +578,8 @@ public abstract class IonReaderTextRawX
         }
     }
 
-    private int get_state_after_value() {
+    private int get_state_after_value()
+    {
         int state_after_scalar;
         switch(getContainerType()) {
         case LIST:
@@ -517,23 +598,8 @@ public abstract class IonReaderTextRawX
                            + _scanner.input_position();
             throw new IonException(message);
         }
-        if (_v.isNull() && false) {  // FIXME: fix this !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            switch (_value_type) {
-            case LIST:
-                state_after_scalar = STATE_BEFORE_FIELD_NAME;
-                break;
-            case STRUCT:
-                state_after_scalar = STATE_BEFORE_ANNOTATION_SEXP;
-                break;
-            case SEXP:
-                state_after_scalar = STATE_BEFORE_ANNOTATION_SEXP;
-                break;
-            default:
-                String message = "invalid container type encountered during parsing "
-                               + getContainerType()
-                               + _scanner.input_position();
-                throw new IonException(message);
-            }
+        if (_nesting_parent != null) {
+            state_after_scalar = STATE_EOF;
         }
         return state_after_scalar;
     }
@@ -684,6 +750,15 @@ public abstract class IonReaderTextRawX
         //        before doing any more parsing
 
         // we'll need a token to get started here
+        // we'll also remember where we were when we started if the
+        // user later wants to get a span over this value.  In the
+        // case where we just before a comma, after the comma we'll
+        // reset this offset since for the span the comma isn't part
+        // of the span when it's hoisted
+        _value_start_offset = _scanner.getStartingOffset();
+        _value_start_line   = _scanner.getLineNumber();
+        _value_start_column = _scanner.getLineOffset();
+
         t = _scanner.nextToken();
 
         for (;;) {
@@ -695,16 +770,47 @@ public abstract class IonReaderTextRawX
             switch (action) {
             case ACTION_NOT_DEFINED:
                 {
-                    String message = "invalid syntax [state:"
-                                   + get_state_name()
-                                   + " on token:"
-                                   +IonTokenConstsX.getTokenName(t)
-                                   +"]";
-                    parse_error(message);
+                    boolean span_eof = false;
+
+                    if (_nesting_parent != null) {
+                        switch (_nesting_parent) {
+                            case LIST:
+                                if (t == IonTokenConstsX.TOKEN_CLOSE_SQUARE) {
+                                    span_eof = true;
+                                }
+                                break;
+                            case SEXP:
+                                if (t == IonTokenConstsX.TOKEN_CLOSE_PAREN){
+                                    span_eof = true;
+                                }
+                                break;
+                            case STRUCT:
+                                if (t == IonTokenConstsX.TOKEN_CLOSE_BRACE) {
+                                    span_eof = true;
+                                }
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                    if (span_eof != true) {
+                        String message = "invalid syntax [state:"
+                                       + get_state_name()
+                                       + " on token:"
+                                       +IonTokenConstsX.getTokenName(t)
+                                       +"]";
+                        parse_error(message);
+                    }
+                    set_state(STATE_EOF);
+                    _eof = true;
+                    return;
                 }
-                break;
+            case ACTION_EOF:
+                set_state(STATE_EOF);
+                _eof = true;
+                return;
             case ACTION_LOAD_FIELD_NAME:
-                if (!isInStruct()) {
+                if (!is_in_struct_internal()) {
                     throw new IllegalStateException("field names have to be in structs");
                 }
                 //finish_value(_current_value_save_point);
@@ -926,15 +1032,15 @@ public abstract class IonReaderTextRawX
                     parse_error("commas aren't used to separate values in "+getContainerType().toString());
                 }
                 int new_state = STATE_BEFORE_ANNOTATION_CONTAINED;
-                //if (_v._is_null) {
-                //    new_state = get_state_after_container(_value_type);
-                //}
-                //else
                 if (_container_is_struct) {
                     new_state = STATE_BEFORE_FIELD_NAME;
                 }
                 set_state(new_state);
                 _scanner.tokenIsFinished();
+                // when we eat a comma we need to reset the current
+                // value start used to define a span, since the comma
+                // isn't part of the span when it's hoisted
+                _value_start_offset = _scanner.getStartingOffset();
                 t = _scanner.nextToken();
                 break;
             case ACTION_FINISH_CONTAINER:
@@ -1078,11 +1184,6 @@ public abstract class IonReaderTextRawX
             int state_after_scalar = get_state_after_value();
             set_state(state_after_scalar);
         }
-//
-//  fix during IMS 3 integration - unnecessary (and in 1 circumstance harmful)
-//
-//        int state_after_scalar = get_state_after_value();
-//        set_state(state_after_scalar);
     }
 
     private final void push_container_state(IonType newContainer)
@@ -1118,9 +1219,34 @@ public abstract class IonReaderTextRawX
     {
         return _value_type;
     }
+    // externally we're if we're in a hoisted struct
+    // we're not really in a struct, we at the top level
     public boolean isInStruct()
     {
-        return IonType.STRUCT.equals(getContainerType());
+        boolean in_struct = false;
+        IonType container = getContainerType();
+        if (IonType.STRUCT.equals(container)) {
+            if (getDepth() > 0) {
+                in_struct = true;
+            }
+            else {
+                assert(IonType.STRUCT.equals(_nesting_parent) == true);
+            }
+        }
+        return in_struct;
+    }
+    // internally (really only in parse_to_next()) we care
+    // about being in a struct even if it's a hoisted container
+    // since the hoisted values will still have a field name we
+    // have to ignore
+    private boolean is_in_struct_internal()
+    {
+        boolean in_struct = false;
+        IonType container = getContainerType();
+        if (IonType.STRUCT.equals(container)) {
+            in_struct = true;
+        }
+        return in_struct;
     }
     public IonType getContainerType()
     {
@@ -1130,20 +1256,39 @@ public abstract class IonReaderTextRawX
     public int getDepth()
     {
         int depth = _container_state_top;
-        if (depth > 0 && IonType.DATAGRAM.equals(_container_state_stack[0])) {
-            depth--;
+        if (depth > 0) {
+int debugging_depth = depth;
+            IonType top_type = _container_state_stack[0];
+            if (_nesting_parent == null) {
+                if (IonType.DATAGRAM.equals(top_type)) {
+                    depth--;
+                }
+            }
+            else {
+                if (_nesting_parent.equals(top_type)) {
+                    depth--;
+                }
+            }
+if (depth == debugging_depth) {
+    System.err.println("so here's a case where we didn't subtract 1");
+}
         }
         return depth;
     }
     public String getFieldName()
     {
-        return _field_name;
+        String name = _field_name;
+        if (name != null) {
+            if (getDepth() == 0 && is_in_struct_internal()) {
+                name = null;
+            }
+        }
+        return name;
     }
+
     public Iterator<String> iterateTypeAnnotations()
     {
-        String[] ids = getTypeAnnotations();
-        if (ids == null) return StringIterator.EMPTY_ITERATOR;
-        return new StringIterator(ids);
+        return IonImplUtils.stringIterator(_annotations, _annotation_count);
     }
 
     public String[] getTypeAnnotations()
@@ -1188,6 +1333,9 @@ public abstract class IonReaderTextRawX
             _eof = true;
             _has_next_called = true;  // there are no contents in a null container
         }
+
+        _value_type = null;
+
         if (_debug) System.out.println("stepInto() new depth: "+getDepth());
     }
     public void stepOut()
@@ -1237,103 +1385,10 @@ public abstract class IonReaderTextRawX
     {
         return null;
     }
-    public int getSymbolId()
-    {
-        return SymbolTable.UNKNOWN_SYMBOL_ID;
-    }
-    public int getFieldId()
-    {
-        return -1;
-        // throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    public int[] getTypeAnnotationIds()
-    {
-        return null;
-//        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    public Iterator<Integer> iterateTypeAnnotationIds()
-    {
-        return null;
-//        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    //
-    // value getters - also inactive in this parser
-    //
-    public boolean isNullValue()
-    {
-        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    public boolean booleanValue()
-    {
-        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    public int intValue()
-    {
-        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    public long longValue()
-    {
-        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    public double doubleValue()
-    {
-        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    public BigDecimal bigDecimalValue()
-    {
-        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    public Timestamp timestampValue()
-    {
-        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    public Date dateValue()
-    {
-        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    public String stringValue()
-    {
-        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    public int byteSize()
-    {
-        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    public int getBytes(byte[] buffer, int offset, int len)
-    {
-        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-    public byte[] newBytes()
-    {
-        throw new UnsupportedOperationException("not supported - use UserReader");
-    }
 
     //
     // helper classes
     //
-    public static final class StringIterator implements Iterator<String>
-    {
-        static StringIterator EMPTY_ITERATOR = new StringIterator(null);
-
-        String [] _values;
-        int       _length;
-        int       _pos;
-
-        public StringIterator(String[] values) {
-            _values = values;
-            _length = (values == null) ? 0 : values.length;
-        }
-        public boolean hasNext() {
-            return (_pos < _length);
-        }
-        public String next() {
-            if (!hasNext()) throw new NoSuchElementException();
-            return _values[_pos++];
-        }
-        public void remove() {
-            throw new UnsupportedOperationException();
-        }
-    }
 
     public static class IonReaderTextParsingException extends IonException {
         private static final long serialVersionUID = 1L;

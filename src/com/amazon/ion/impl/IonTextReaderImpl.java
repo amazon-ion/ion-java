@@ -2,7 +2,8 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl.IonImplUtils.EMPTY_ITERATOR;
+import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.util.IonTextUtils.printQuotedSymbol;
 
@@ -281,6 +282,15 @@ public final class IonTextReaderImpl
         _state = IonTextReaderImpl.State_read_datagram;
     }
 
+
+    /**
+     * @return This implementation always returns null.
+     */
+    public <T> T asFacet(Class<T> facetType)
+    {
+        return null;
+    }
+
     public void close()
         throws IOException
     {
@@ -411,7 +421,7 @@ public final class IonTextReaderImpl
             // version symbol, and shared symbol tables too
             switch (_lookahead_type) {
             case SYMBOL:
-                if (UnifiedSymbolTable.ION_1_0.equals(this.stringValue())) {
+                if (ION_1_0.equals(this.stringValue())) {
                     _current_symtab = _system.getSystemSymbolTable(); // UnifiedSymbolTable.getSystemSymbolTableInstance();
                     skip_value = true; // FIXME get system tab from current
                 }
@@ -430,7 +440,7 @@ public final class IonTextReaderImpl
                 if (_annotation_count > 0) {
                     // TODO - this should be done with flags set while we're
                     // recognizing the annotations below (in the fullness of time)
-                    if (hasAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE)) {
+                    if (hasAnnotation(ION_SYMBOL_TABLE)) {
 
                         if (_is_returning_system_values) this.save_state();
 
@@ -588,7 +598,6 @@ public final class IonTextReaderImpl
         return _current_symtab;
     }
 
-    private static int[] _empty_int_array = new int[0];
     public int[] getTypeAnnotationIds()
     {
         if (!_value_ready || _current_symtab == null) {
@@ -602,12 +611,11 @@ public final class IonTextReaderImpl
             }
         }
         else {
-            ids = _empty_int_array;
+            ids = IonImplUtils.EMPTY_INT_ARRAY;
         }
         return ids;
     }
 
-    private static String[] _empty_string_array = new String[0];
     public String[] getTypeAnnotations()
     {
         if (!_value_ready) {
@@ -619,7 +627,7 @@ public final class IonTextReaderImpl
             System.arraycopy(_annotations, 0, annotations, 0, _annotation_count);
         }
         else {
-            annotations = _empty_string_array;
+            annotations = IonImplUtils.EMPTY_STRING_ARRAY;
         }
         return annotations;
     }
@@ -635,20 +643,15 @@ public final class IonTextReaderImpl
         return false;
     }
 
-    @SuppressWarnings("unchecked")
     public Iterator<Integer> iterateTypeAnnotationIds()
     {
         int[] ids = getTypeAnnotationIds();
-        if (ids == null) return (Iterator<Integer>) EMPTY_ITERATOR;
-        return new IonImplUtils.IntIterator(ids);
+        return IonImplUtils.intIterator(ids);
     }
 
-    @SuppressWarnings("unchecked")
     public Iterator<String> iterateTypeAnnotations()
     {
-        String[] ids = getTypeAnnotations();
-        if (ids == null) return (Iterator<String>) EMPTY_ITERATOR;
-        return new IonImplUtils.StringIterator(ids);
+        return IonImplUtils.stringIterator(_annotations, _annotation_count);
     }
 
     public int getFieldId()

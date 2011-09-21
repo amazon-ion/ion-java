@@ -32,11 +32,15 @@ import com.amazon.ion.StructTest;
 import com.amazon.ion.SurrogateEscapeTest;
 import com.amazon.ion.SymbolTest;
 import com.amazon.ion.SystemProcessingTests;
+import com.amazon.ion.TimestampBadTest;
+import com.amazon.ion.TimestampGoodTest;
 import com.amazon.ion.TimestampTest;
 import com.amazon.ion.ValueFactorySequenceTest;
+import com.amazon.ion.facet.FacetsTest;
 import com.amazon.ion.impl.ByteBufferTest;
 import com.amazon.ion.impl.CharacterReaderTest;
 import com.amazon.ion.impl.IonEqualsTest;
+import com.amazon.ion.impl.IonImplUtilsTest;
 import com.amazon.ion.impl.IonWriterTests;
 import com.amazon.ion.impl.IterationTest;
 import com.amazon.ion.impl.ReaderTest;
@@ -46,17 +50,19 @@ import com.amazon.ion.streaming.BadIonStreamingTest;
 import com.amazon.ion.streaming.BinaryStreamingTest;
 import com.amazon.ion.streaming.GoodIonStreamingTest;
 import com.amazon.ion.streaming.MiscStreamingTest;
-import com.amazon.ion.streaming.ReaderPositioningTest;
 import com.amazon.ion.streaming.ReaderSkippingTest;
 import com.amazon.ion.streaming.RoundTripStreamingTest;
+import com.amazon.ion.streaming.SpanTests;
 import com.amazon.ion.system.IonSystemBuilderTest;
 import com.amazon.ion.system.SimpleCatalogTest;
 import com.amazon.ion.util.EquivalenceTest;
 import com.amazon.ion.util.IonStreamUtilsTest;
+import com.amazon.ion.util.JarInfoTest;
 import com.amazon.ion.util.PrinterTest;
 import com.amazon.ion.util.TextTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
+
 
 /**
  * Runs all tests for the Ion project.
@@ -66,11 +72,13 @@ import org.junit.runners.Suite;
     // Low-level facilities.
     AssertionsEnabledTest.class,
     IonExceptionTest.class,
+    FacetsTest.class,
     ByteBufferTest.class,
     TextTest.class,
     CharacterReaderTest.class,
     JavaNumericsTest.class,
     ExtendedDecimalTest.class,
+    IonImplUtilsTest.class,
 
     // General framework tests
     SimpleCatalogTest.class,
@@ -91,6 +99,8 @@ import org.junit.runners.Suite;
     StructTest.class,
     SymbolTest.class,
     TimestampTest.class,
+    TimestampGoodTest.class,
+    TimestampBadTest.class,
 
     AnnotationEscapesTest.class,
     FieldNameEscapesTest.class,
@@ -101,6 +111,7 @@ import org.junit.runners.Suite;
     BinaryTest.class,
 
     // Utility tests
+    JarInfoTest.class,
     LoaderTest.class,
     IterationTest.class,
     ReaderTest.class,
@@ -121,23 +132,21 @@ import org.junit.runners.Suite;
     EquivsTest.class,
     RoundTripTest.class,
 
-    // Subclasses of SystemProcessingTestCase are collected to make it
-    // easier to run that subset.
+    // Some tests are collected to make it easier to run interesting subsets.
     SystemProcessingTests.class,
-
-    // Ditto for WriterTestCase
     IonWriterTests.class,
+    SpanTests.class,
 
     IonStreamUtilsTest.class,
     TreeReaderTest.class,
     MiscStreamingTest.class,
     BinaryStreamingTest.class,
+    ReaderTest.class,
 
     BadIonStreamingTest.class,
     GoodIonStreamingTest.class,
     RoundTripStreamingTest.class,
     ReaderSkippingTest.class,
-    ReaderPositioningTest.class,
 
     IonSystemTest.class,
     ValueFactorySequenceTest.class,

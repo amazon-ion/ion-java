@@ -174,10 +174,7 @@ class IonWriterSystemTree
         int annotation_count = this._annotation_count;
         if (annotation_count > 0) {
             String[] annotations = this.getTypeAnnotations();
-            for (int ii=0; ii<annotation_count; ii++) {
-                String annotation = annotations[ii];
-                value.addTypeAnnotation(annotation);
-            }
+            value.setTypeAnnotations(annotations);
             this.clearAnnotations();
         }
         // if they didn't give us a parent, we have to assume they

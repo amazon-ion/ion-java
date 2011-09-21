@@ -2,45 +2,77 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.facet.Facets.assumeFacet;
+
 import com.amazon.ion.IonCatalog;
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
+import com.amazon.ion.SeekableReader;
+import com.amazon.ion.Span;
+import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.util.IonStreamUtils;
+import com.amazon.ion.system.IonSystemBuilder;
 
 /**
  * Temporary interface to some in-development features.
  * Support ONLY for use via the DM-SDK 3 library.
+ *
+ * @deprecated Since R13.
  */
-public class PrivateDmsdkUtils
+@Deprecated
+public class PrivateDmsdkUtils  // TODO ION-252 Remove this
 {
+    /**
+     * @deprecated Since R13.
+     */
+    @Deprecated
     public static IonReader newBinaryReaderWithPosition(IonSystem system,
                                                         byte[] buffer)
     {
-        return newBinaryReaderWithPosition(system, system.getCatalog(),
-                                           buffer, 0, buffer.length);
+        IonReader r = system.newReader(buffer);
+        if (r.asFacet(SeekableReader.class) == null)
+        {
+            throw new UnsupportedOperationException("reader isn't seekable");
+
+        }
+        return r;
     }
 
+    /**
+     * @deprecated Since R13.
+     */
+    @Deprecated
     public static IonReader newBinaryReaderWithPosition(IonSystem system,
                                                         byte[] buffer,
                                                         int offset, int length)
     {
-        return newBinaryReaderWithPosition(system, system.getCatalog(),
-                                           buffer, offset, length);
+        IonReader r = system.newReader(buffer, offset, length);
+        if (r.asFacet(SeekableReader.class) == null)
+        {
+            throw new UnsupportedOperationException("reader isn't seekable");
+
+        }
+        return r;
     }
 
+    /**
+     * @deprecated Since R13.
+     */
+    @Deprecated
     public static IonReader newBinaryReaderWithPosition(IonSystem system,
                                                         IonCatalog catalog,
                                                         byte[] buffer,
                                                         int offset, int length)
     {
-        if (! IonStreamUtils.isIonBinary(buffer, offset, length))
-        {
-            throw new UnsupportedOperationException("buffer isn't Ion binary");
-        }
-
-        return new IonReaderBinaryUserX(system, catalog,
+        IonReader r = new IonReaderBinaryUserX(system, catalog,
                                                buffer, offset, length);
+        if (r.asFacet(SeekableReader.class) == null)
+        {
+            throw new UnsupportedOperationException("reader isn't seekable");
+
+        }
+        return r;
     }
 
 
@@ -50,10 +82,16 @@ public class PrivateDmsdkUtils
      * {@link #newBinaryReaderWithPosition}.
      *
      * @return an opaque position marker.
+     *
+     * @throws IonException if reader is null or doesn't have the
+     * {@link SpanProvider} facet.
+     *
+     * @deprecated Since R13.
      */
+    @Deprecated
     public static Object currentValuePosition(IonReader reader)
     {
-        return ((IonReaderWithPosition)reader).getCurrentPosition();
+        return assumeFacet(SpanProvider.class, reader).currentSpan();
     }
 
 
@@ -66,28 +104,44 @@ public class PrivateDmsdkUtils
      * {@link #newBinaryReaderWithPosition}.
      * @param valuePosition must have been created via
      * {@link #currentValuePosition(IonReader)}.
+     *
+     * @deprecated Since R13.
      */
+    @Deprecated
     public static void rereadValue(IonReader reader, Object valuePosition)
     {
-        IonReaderPosition position = (IonReaderPosition) valuePosition;
-        ((IonReaderWithPosition)reader).seek(position);
+        Span position = (Span) valuePosition;
+        assumeFacet(SeekableReader.class, reader).hoist(position);
         reader.next();
     }
 
-
+    /**
+     * @deprecated Since R13.
+     *  Use {@link IonSystemBuilder#isStreamCopyOptimized()}.
+     */
+    @Deprecated
     public static boolean isFastCopyEnabled()
     {
-        return IonWriterUserBinary.ourFastCopyEntabled;
+        return IonWriterUserBinary.ourFastCopyEnabled;
     }
 
+    /**
+     * @deprecated Since R13.
+     *  Use {@link IonSystemBuilder#setStreamCopyOptimized(boolean)}.
+     */
+    @Deprecated
     public static void setFastCopyEnabled(boolean enable)
     {
-        IonWriterUserBinary.ourFastCopyEntabled = enable;
+        IonWriterUserBinary.ourFastCopyEnabled = enable;
     }
 
 
+    /**
+     * @deprecated Since R13. Use {@link SymbolTable#makeReadOnly()}.
+     */
+    @Deprecated
     public static void lockLocalSymbolTable(SymbolTable symtab)
     {
-        ((UnifiedSymbolTable)symtab).makeReadOnly();
+        symtab.makeReadOnly();
     }
 }

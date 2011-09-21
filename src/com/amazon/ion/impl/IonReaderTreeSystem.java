@@ -2,7 +2,6 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl.IonImplUtils.EMPTY_ITERATOR;
 import static com.amazon.ion.impl.IonImplUtils.readFully;
 
 import com.amazon.ion.Decimal;
@@ -31,7 +30,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 
 /**
  *
@@ -55,6 +53,17 @@ class IonReaderTreeSystem
         init(value);
     }
 
+
+    /**
+     * @return This implementation always returns null.
+     */
+    public <T> T asFacet(Class<T> facetType)
+    {
+        return null;
+    }
+
+    //========================================================================
+
     void init(IonValue value) {
         if (value == null) {
             // do nothing
@@ -71,20 +80,20 @@ class IonReaderTreeSystem
         _curr = null;
         _eof = false;
         _top = 0;
-            if (value instanceof IonDatagram) {
-                // datagrams interacting with these readers must be
-                // IonContainerPrivate containers
-                assert(value instanceof IonContainerPrivate);
-                IonDatagram dg = (IonDatagram) value;
-                _parent = dg;
+        if (value instanceof IonDatagram) {
+            // datagrams interacting with these readers must be
+            // IonContainerPrivate containers
+            assert(value instanceof IonContainerPrivate);
+            IonDatagram dg = (IonDatagram) value;
+            _parent = dg;
             _next = null;
-                _iter = dg.systemIterator(); // we want a system reader not: new Children(dg);
-            }
-            else {
-            _parent = null;
-                _next = value;
-            }
+            _iter = dg.systemIterator(); // we want a system reader not: new Children(dg);
         }
+        else {
+            _parent = null;
+            _next = value;
+        }
+    }
 
     public void close()
     {
@@ -134,6 +143,7 @@ class IonReaderTreeSystem
     public IonType next()
     {
         if (this._next == null && !this.hasNext()) {
+            this._curr = null;
             return null;
         }
         this._curr = this._next;
@@ -229,19 +239,14 @@ class IonReaderTreeSystem
         if (_curr == null) {
             throw new IllegalStateException();
         }
-        String [] annotations = _curr.getTypeAnnotations();
-        if (annotations == null) {
-            annotations = _empty_string_array;
-        }
-        return annotations;
+        return _curr.getTypeAnnotations();
     }
 
-    private static int[] _empty_int_array = new int[0];
     public int[] getTypeAnnotationIds()
     {
         String [] annotations = getTypeAnnotations();
-        if (annotations == null || annotations.length < 1) {
-            return _empty_int_array;
+        if (annotations.length == 0) {
+            return IonImplUtils.EMPTY_INT_ARRAY;
         }
 
         int [] ids = new int[annotations.length];
@@ -254,23 +259,16 @@ class IonReaderTreeSystem
         return ids;
     }
 
-    private static String[] _empty_string_array = new String[0];
-    @SuppressWarnings("unchecked")
     public Iterator<Integer> iterateTypeAnnotationIds()
     {
         int [] ids = getTypeAnnotationIds();
-        if (ids == null || ids.length < 1) {
-            return (Iterator<Integer>) EMPTY_ITERATOR;
-        }
-        return new IdIterator(ids);
+        return IonImplUtils.intIterator(ids);
     }
 
-    @SuppressWarnings("unchecked")
     public Iterator<String> iterateTypeAnnotations()
     {
         String [] annotations = getTypeAnnotations();
-        if (annotations == null) return (Iterator<String>) EMPTY_ITERATOR;
-        return new StringIterator(annotations);
+        return IonImplUtils.stringIterator(annotations);
     }
 
 
@@ -292,12 +290,12 @@ class IonReaderTreeSystem
     public int getFieldId()
     {
         // FIXME IonValueImpl.getFieldId doesn't return -1 as specced here!
-        return (_curr == null) ? UnifiedSymbolTable.UNKNOWN_SID : _curr.getFieldId();
+        return (_curr == null || _top == 0) ? UnifiedSymbolTable.UNKNOWN_SID : _curr.getFieldId();
     }
 
     public String getFieldName()
     {
-        return (_curr == null) ? null : _curr.getFieldName();
+        return (_curr == null || _top == 0) ? null : _curr.getFieldName();
     }
 
 
@@ -476,46 +474,6 @@ class IonReaderTreeSystem
         return (_curr == null) ? null : _curr.toString();
     }
 
-    private static final class StringIterator implements Iterator<String>
-    {
-        String [] _values;
-        int       _pos;
-
-        StringIterator(String[] values) {
-            _values = values;
-        }
-        public boolean hasNext() {
-            return (_pos < _values.length);
-        }
-        public String next() {
-            if (!hasNext()) throw new NoSuchElementException();
-            return _values[_pos++];
-        }
-        public void remove() {
-            throw new UnsupportedOperationException();
-        }
-    }
-
-    private static final class IdIterator implements Iterator<Integer>
-    {
-        int []  _values;
-        int     _pos;
-
-        IdIterator(int[] values) {
-            _values = values;
-        }
-        public boolean hasNext() {
-            return (_pos < _values.length);
-        }
-        public Integer next() {
-            if (!hasNext()) throw new NoSuchElementException();
-            int value = _values[_pos++];
-            return value;
-        }
-        public void remove() {
-            throw new UnsupportedOperationException();
-        }
-    }
 
     private static final class Children implements Iterator<IonValue>
     {

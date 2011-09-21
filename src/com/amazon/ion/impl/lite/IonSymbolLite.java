@@ -1,15 +1,16 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.ValueVisitor;
 
 /**
@@ -202,13 +203,13 @@ public class IonSymbolLite
 
     protected void setIsIonVersionMarker(boolean isIVM)
     {
-        assert (SystemSymbolTable.ION_1_0.equals(this._get_value()) == isIVM);
+        assert (ION_1_0.equals(this._get_value()) == isIVM);
 
         //_is_IonVersionMarker = isIVM;
         _isIVM(isIVM);
         _isSystemValue(isIVM);
 
-        _sid = SystemSymbolTable.ION_1_0_SID;
+        _sid = ION_1_0_SID;
     }
 
     @Override

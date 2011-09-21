@@ -206,7 +206,7 @@ public class IonSystemTest
 
         IonDatagram dg2 = loader().load(bytes);
         IonSymbol s1 = (IonSymbol) dg2.get(0);
-        assertEquals(SystemSymbolTable.ION_1_0_MAX_ID + 1, s1.getSymbolId());
+        assertEquals(systemMaxId() + 1, s1.getSymbolId());
 
         SymbolTable symbolTable = s1.getSymbolTable();
         assertEquals("foobar", symbolTable.getImportedTables()[0].getName());

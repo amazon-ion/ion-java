@@ -28,6 +28,7 @@ import java.io.Reader;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
+import java.util.Iterator;
 
 /**
  * This reader calls the IonTextReaderRaw for low level events.
@@ -52,14 +53,16 @@ public class IonReaderTextSystemX
         _system = system;
         UnifiedInputStreamX iis;
         iis = UnifiedInputStreamX.makeStream(chars, offset, length);
-        init(iis);
+        init_once();
+        init(iis, IonType.DATAGRAM);
     }
     protected IonReaderTextSystemX(IonSystem system, CharSequence chars, int offset, int length) {
         super();
         _system = system;
         UnifiedInputStreamX iis;
         iis = UnifiedInputStreamX.makeStream(chars, offset, length);
-        init(iis);
+        init_once();
+        init(iis, IonType.DATAGRAM);
     }
     protected IonReaderTextSystemX(IonSystem system, Reader userChars) {
         super();
@@ -71,14 +74,16 @@ public class IonReaderTextSystemX
         catch (IOException e) {
             throw new IonException(e);
         }
-        init(iis);
+        init_once();
+        init(iis, IonType.DATAGRAM);
     }
     protected IonReaderTextSystemX(IonSystem system, byte[] bytes, int offset, int length) {
         super();
         _system = system;
         UnifiedInputStreamX iis;
         iis = UnifiedInputStreamX.makeStream(bytes, offset, length);
-        init(iis);
+        init_once();
+        init(iis, IonType.DATAGRAM);
     }
     protected IonReaderTextSystemX(IonSystem system, InputStream userBytes) {
         super();
@@ -90,7 +95,8 @@ public class IonReaderTextSystemX
         catch (IOException e) {
             throw new IonException(e);
         }
-        init(iis);
+        init_once();
+        init(iis, IonType.DATAGRAM);
     }
     protected IonReaderTextSystemX(IonSystem system, File file) {
         super();
@@ -103,12 +109,14 @@ public class IonReaderTextSystemX
         catch (IOException e) {
             throw new IonException(e);
         }
-        init(iis);
+        init_once();
+        init(iis, IonType.DATAGRAM);
     }
     protected IonReaderTextSystemX(IonSystem system, UnifiedInputStreamX iis) {
         super();
         _system = system;
-        init(iis);
+        init_once();
+        init(iis, IonType.DATAGRAM);
     }
 
     public IonSystem getSystem()
@@ -417,69 +425,98 @@ public class IonReaderTextSystemX
     //
     // public value routines
     //
-    @Override
+
+    public int getSymbolId()
+    {
+        // TODO ION-233 implement sids for system readers
+        return SymbolTable.UNKNOWN_SYMBOL_ID;
+    }
+
+    public int getFieldId()
+    {
+        // TODO ION-233 implement sids for system readers
+        return -1;
+        // throw new UnsupportedOperationException("not supported - use UserReader");
+    }
+
+    public int[] getTypeAnnotationIds()
+    {
+        // TODO ION-233 implement sids for system readers
+        return IonImplUtils.EMPTY_INT_ARRAY;
+//        throw new UnsupportedOperationException("not supported - use UserReader");
+    }
+
+    public Iterator<Integer> iterateTypeAnnotationIds()
+    {
+        // TODO ION-233 implement sids for system readers
+        return IonImplUtils.<Integer>emptyIterator();
+//        throw new UnsupportedOperationException("not supported - use UserReader");
+    }
+
+
     public boolean isNullValue()
     {
         return _v.isNull();
     }
-    @Override
+
     public boolean booleanValue()
     {
         load_or_cast_cached_value(AS_TYPE.boolean_value);
         return _v.getBoolean();
     }
-    @Override
+
     public double doubleValue()
     {
         load_or_cast_cached_value(AS_TYPE.double_value);
         return _v.getDouble();
     }
-    @Override
+
     public int intValue()
     {
         load_or_cast_cached_value(AS_TYPE.int_value);
         return _v.getInt();
     }
-    @Override
+
     public long longValue()
     {
         load_or_cast_cached_value(AS_TYPE.long_value);
         return _v.getLong();
     }
-    @Override
+
     public BigInteger bigIntegerValue()
     {
         load_or_cast_cached_value(AS_TYPE.bigInteger_value);
         if (_v.isNull()) return null;
         return _v.getBigInteger();
     }
-    @Override
+
     public BigDecimal bigDecimalValue()
     {
         load_or_cast_cached_value(AS_TYPE.decimal_value);
         if (_v.isNull()) return null;
         return _v.getBigDecimal();
     }
+
     public Decimal decimalValue()
     {
         load_or_cast_cached_value(AS_TYPE.decimal_value);
         return _v.getDecimal();
     }
-    @Override
+
     public Date dateValue()
     {
         load_or_cast_cached_value(AS_TYPE.date_value);
         if (_v.isNull()) return null;
         return _v.getDate();
     }
-    @Override
+
     public Timestamp timestampValue()
     {
         load_or_cast_cached_value(AS_TYPE.timestamp_value);
         if (_v.isNull()) return null;
         return _v.getTimestamp();
     }
-    @Override
+
     public String stringValue()
     {
         load_or_cast_cached_value(AS_TYPE.string_value);
@@ -490,7 +527,7 @@ public class IonReaderTextSystemX
     //
     // blob and clob support routines
     //
-    @Override
+
     public int byteSize()
     {
         long len;
@@ -558,7 +595,7 @@ public class IonReaderTextSystemX
         return _lob_actual_len;
     }
 
-    @Override
+
     public byte[] newBytes()
     {
         byte[] bytes;
@@ -575,7 +612,7 @@ public class IonReaderTextSystemX
 
         return bytes;
     }
-    @Override
+
     public int getBytes(byte[] buffer, int offset, int len)
     {
         int len_read;

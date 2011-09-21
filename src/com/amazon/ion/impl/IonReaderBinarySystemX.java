@@ -2,6 +2,9 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.IonImplUtils.EMPTY_INT_ARRAY;
+import static com.amazon.ion.impl.IonImplUtils.intIterator;
+
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonSystem;
@@ -64,22 +67,17 @@ class IonReaderBinarySystemX
 
     public Iterator<Integer> iterateTypeAnnotationIds()
     {
-        Iterator<Integer> it = new IonReaderTextUserX.IntIterator(_annotation_ids, 0, _annotation_count);
+        load_annotations();
+        Iterator<Integer> it = intIterator(_annotation_ids, _annotation_count);
         return it;
     }
-    private static int[] _empty_int_array = new int[0];
 
     public int[] getTypeAnnotationIds()
     {
-        try {
-            load_annotations();
-        }
-        catch (IOException e) {
-            error(e);
-        }
+        load_annotations();
         int[] anns;
         if (_annotation_count < 1) {
-            anns = _empty_int_array;
+            anns = EMPTY_INT_ARRAY;
         }
         else {
             anns = new int[_annotation_count];
@@ -252,6 +250,7 @@ class IonReaderBinarySystemX
     // public value routines
     //
 
+    @Override
     public boolean isNullValue()
     {
         return _value_is_null;
@@ -329,6 +328,7 @@ class IonReaderBinarySystemX
             return null;
         }
         if (IonType.SYMBOL.equals(_value_type)) {
+            // TODO ION-233 implement symbol text for system readers
             throw new UnsupportedOperationException("not supported - use UserReader");
         }
         prepare_value(AS_TYPE.string_value);
@@ -353,19 +353,22 @@ class IonReaderBinarySystemX
     //
     public String getFieldName()
     {
+        // TODO ION-233 implement symbol text for system readers
         return null;
 //        throw new UnsupportedOperationException("not supported - use UserReader");
     }
 
     public Iterator<String> iterateTypeAnnotations()
     {
-        return null;
+        // TODO ION-233 implement symbol text for system readers
+        return IonImplUtils.<String>emptyIterator();
 //        throw new UnsupportedOperationException("not supported - use UserReader");
     }
 
     public String[] getTypeAnnotations()
     {
-        return null;
+        // TODO ION-233 implement symbol text for system readers
+        return IonImplUtils.EMPTY_STRING_ARRAY;
 //        throw new UnsupportedOperationException("not supported - use UserReader");
     }
 

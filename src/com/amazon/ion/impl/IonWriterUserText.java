@@ -2,6 +2,8 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SystemSymbols.SYMBOLS;
+
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
@@ -158,7 +160,7 @@ public class IonWriterUserText
                 if (t == null) break;
                 // get the field name and skip over 'symbols'
                 String name = reader.getFieldName();
-                if (UnifiedSymbolTable.SYMBOLS.equals(name)) {
+                if (SYMBOLS.equals(name)) {
                     continue;
                 }
                 _system_writer.writeValue(reader);

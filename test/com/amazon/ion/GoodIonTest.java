@@ -46,9 +46,6 @@ public class GoodIonTest
         // Pass 1: Use Loader to read the data
         IonDatagram datagram = load(myTestFile);
 
-        // Pass 1a: Use Loader to read the data as a Java String where applicable
-        loadAsJavaString(myTestFile);
-
         // Pass 2: Use IonReader
         IonReader treeReader = system().newReader(datagram);
 
@@ -85,6 +82,21 @@ public class GoodIonTest
             IonReader binaryReader = system().newReader(encoded);
 
             ReaderCompare.compare(treeReader, binaryReader);
+        }
+    }
+
+
+    @Test
+    public void testLoadString()
+    throws Exception
+    {
+        if (! myFileIsBinary)
+        {
+            String ionText = IonImplUtils.utf8FileToString(myTestFile);
+            IonDatagram dg = loader().load(ionText);
+
+            // Flush out any encoding problems in the data.
+            forceMaterialization(dg);
         }
     }
 

@@ -2,6 +2,9 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonReader;
@@ -9,6 +12,9 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.SeekableReader;
+import com.amazon.ion.Span;
+import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SymbolTable;
 
 /**
@@ -16,7 +22,7 @@ import com.amazon.ion.SymbolTable;
  */
 class IonReaderTreeUserX
     extends IonReaderTreeSystem
-    implements IonReaderWriterPrivate
+    implements IonReaderWriterPrivate, IonReaderWithPosition
 {
     IonCatalog _catalog;
 
@@ -25,6 +31,10 @@ class IonReaderTreeUserX
         super(value);
         _catalog = catalog;
     }
+
+
+    //========================================================================
+
 
     @Override
     public boolean hasNext()
@@ -74,7 +84,7 @@ class IonReaderTreeUserX
                             sid = _system.getSystemSymbolTable().findSymbol(name);
                         }
                     }
-                    if (sid == UnifiedSymbolTable.ION_1_0_SID) {
+                    if (sid == ION_1_0_SID) {
                         SymbolTable symbols = _system.getSystemSymbolTable();
                         set_symbol_table(symbols);
                         push_symbol_table(symbols);
@@ -83,7 +93,7 @@ class IonReaderTreeUserX
                     }
                 }
                 else if (IonType.STRUCT.equals(next_type)
-                      && _next.hasTypeAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE)
+                      && _next.hasTypeAnnotation(ION_SYMBOL_TABLE)
                 ) {
                     assert(_next instanceof IonStruct);
                     // read a local symbol table
@@ -139,5 +149,78 @@ class IonReaderTreeUserX
         SymbolTable symbols = _symbol_table_stack[_symbol_table_top];
         _symbol_table_stack[_symbol_table_top] = null;
         return symbols;
+    }
+
+
+    private static class TreeSpan extends IonReaderPositionBase
+    {
+        IonValue _value;
+    }
+
+    @Deprecated
+    public IonReaderPosition getCurrentPosition()
+    {
+        if (this._curr == null) {
+            throw new IllegalStateException("Reader has no current value");
+        }
+
+        TreeSpan span = new TreeSpan();
+        span._value = this._curr;
+
+        return span;
+    }
+
+    @Deprecated
+    public void seek(IonReaderPosition position)
+    {
+        hoistImpl(position);
+    }
+
+    private void hoistImpl(Span span)
+    {
+        if (span instanceof TreeSpan) {
+            TreeSpan treeSpan = (TreeSpan)span;
+            this.re_init(treeSpan._value);
+        }
+        else {
+            // TODO custom exception
+            throw new IllegalArgumentException("Span not appropriate for this reader");
+        }
+    }
+
+
+    //========================================================================
+    // Facet support
+
+
+    @Override
+    public <T> T asFacet(Class<T> facetType)
+    {
+        if (facetType == IonReaderWithPosition.class)
+        {
+            return facetType.cast(this);
+        }
+
+        if ((facetType == SeekableReader.class) ||
+            (facetType == SpanProvider.class))
+        {
+            return facetType.cast(new SeekableReaderFacet());
+        }
+
+        return super.asFacet(facetType);
+    }
+
+
+    private class SeekableReaderFacet implements SeekableReader
+    {
+        public Span currentSpan()
+        {
+            return getCurrentPosition();
+        }
+
+        public void hoist(Span span)
+        {
+            hoistImpl(span);
+        }
     }
 }

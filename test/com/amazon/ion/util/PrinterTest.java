@@ -3,8 +3,8 @@
 package com.amazon.ion.util;
 
 
-import static com.amazon.ion.SystemSymbolTable.ION_1_0;
-import static com.amazon.ion.SystemSymbolTable.ION_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 
 import com.amazon.ion.BlobTest;
 import com.amazon.ion.ClobTest;
@@ -25,6 +25,7 @@ import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.impl.IonImplUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -107,6 +108,9 @@ public class PrinterTest
         checkRendering("(an::'+'::'\\0'::null)", s);
         myPrinter.setPrintStringAsJson(true);
         checkRendering("(an::'+'::'\\0'::null)", s);
+
+        value.setTypeAnnotations("boo", "boo");
+        checkRendering("boo::boo::null", value);
     }
 
 
@@ -601,16 +605,16 @@ public class PrinterTest
     public void testJsonEscapeNonBmp() throws Exception {
         // JIRA ION-33
         // JIRA ION-64
-        final byte[] literal = new StringBuilder()
+        final String literal = new StringBuilder()
             .append("'''")
             .append('\uDAF7')
             .append('\uDE56')
             .append("'''")
-            .toString()
-            .getBytes("UTF-8")
-            ;
+            .toString();
 
-        final IonDatagram dg = loader().load(literal);
+        final byte[] utf8Bytes = IonImplUtils.utf8(literal);
+
+        final IonDatagram dg = loader().load(utf8Bytes);
         final StringBuilder out = new StringBuilder();
         final Printer json = new Printer();
         json.setJsonMode();

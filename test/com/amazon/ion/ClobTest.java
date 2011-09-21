@@ -1,11 +1,13 @@
 // Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion;
 
+
+import static com.amazon.ion.impl.IonImplUtils.UTF8_CHARSET;
+
+import com.amazon.ion.impl.IonImplUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
-import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import org.junit.Test;
 
 
@@ -13,29 +15,18 @@ import org.junit.Test;
 public class ClobTest
     extends IonTestCase
 {
-    private static final Charset UTF8 = Charset.forName("UTF-8");
-
-
     public static final String SAMPLE_ASCII = "Wow!";
     public static final byte[] SAMPLE_ASCII_AS_UTF8 =
-        stringToBytes(SAMPLE_ASCII, UTF8);
+        IonImplUtils.utf8(SAMPLE_ASCII);
 
-
-    public static byte[] stringToBytes(String string, Charset charset)
-    {
-        ByteBuffer buffer = charset.encode(string);
-        byte[] bytes = new byte[buffer.limit()];
-        buffer.get(bytes);
-        return bytes;
-    }
 
     public void checkNullClob(IonClob value)
     {
         assertSame(IonType.CLOB, value.getType());
         assertTrue(value.isNullValue());
         assertNull(value.newInputStream());
-        assertNull(value.newReader(UTF8));
-        assertNull(value.stringValue(UTF8));
+        assertNull(value.newReader(UTF8_CHARSET));
+        assertNull(value.stringValue(UTF8_CHARSET));
 
         try
         {
@@ -72,7 +63,7 @@ public class ClobTest
 //        assertEquals(expectedBytes.length(), bytes.length);
 
         InputStream in = value.newInputStream();
-        Reader rd = value.newReader(UTF8);
+        Reader rd = value.newReader(UTF8_CHARSET);
 
         for (int i = 0; i < expectedString.length(); i++)
         {
@@ -92,7 +83,7 @@ public class ClobTest
         assertEquals("should be at EOF", -1, rd.read());
         assertEquals("should be at EOF", -1, rd.read());
 
-        String stringValue = value.stringValue(UTF8);
+        String stringValue = value.stringValue(UTF8_CHARSET);
         assertEquals(expectedString, stringValue);
     }
 

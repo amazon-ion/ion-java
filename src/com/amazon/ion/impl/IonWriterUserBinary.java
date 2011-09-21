@@ -2,9 +2,12 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.IonImplUtils.symtabExtends;
+
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
+import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -15,7 +18,12 @@ import java.io.OutputStream;
 public class IonWriterUserBinary
     extends IonWriterUser
 {
-    public static volatile boolean ourFastCopyEntabled = false;
+    @Deprecated // TODO ION-252 Remove this
+    public static final boolean OUR_FAST_COPY_DEFAULT = false;
+    @Deprecated // TODO ION-252 Remove this
+    public static volatile boolean ourFastCopyEnabled = OUR_FAST_COPY_DEFAULT;
+
+    public final boolean myStreamCopyOptimized;
 
 
     // If we wanted to we could keep an extra reference to the
@@ -26,9 +34,11 @@ public class IonWriterUserBinary
 
     protected IonWriterUserBinary(IonSystem system, IonCatalog catalog,
                                   IonWriterSystemBinary systemWriter,
-                                  boolean suppressIVM)
+                                  boolean suppressIVM,
+                                  boolean streamCopyOptimized)
     {
         super(system, systemWriter, catalog, suppressIVM);
+        myStreamCopyOptimized = streamCopyOptimized;
     }
 
 
@@ -77,51 +87,35 @@ public class IonWriterUserBinary
     }
 
     @Override
-    public void writeValue(IonReader reader) throws IOException
+    public void writeValue(IonReader reader)
+        throws IOException
     {
         // TODO check reader state, is it on a value?
-        // TODO Don't bother optimizing scalars (except symbol?)
-        // TODO should only do this at outermost entry to the API,
-        //  not recursively down the tree
 
-        // Using positioned subclass so we know there's a contiguous buffer
-        // we can copy.
-        if (ourFastCopyEntabled
-            && reader instanceof IonReaderBinaryUserX
+        IonType type = reader.getType();
+        // TODO ION-253 Don't bother optimizing trivial scalars (except symbol?)
+
+        // See if we can copy bytes directly from the source. This test should
+        // only happen at the outermost call, not recursively down the tree.
+
+        ByteTransferReader transfer = reader.asFacet(ByteTransferReader.class);
+
+        if ((ourFastCopyEnabled || myStreamCopyOptimized)
+            && transfer != null
             && _current_writer instanceof IonWriterSystemBinary
-            && reader.getTypeAnnotationIds().length == 0   // TODO enable this
-            && ! reader.isInStruct())                      // TODO enable this
+            && symtabExtends(getSymbolTable(), reader.getSymbolTable()))
         {
-            IonReaderBinaryUserX binaryReader = (IonReaderBinaryUserX) reader;
-            UnifiedInputStreamX binaryInput = binaryReader._input;
-            if (binaryInput instanceof UnifiedInputStreamX.FromByteArray)
-            {
-                SymbolTable inSymbols = binaryReader.getSymbolTable();
-                SymbolTable outSymbols = getSymbolTable();
-                if (IonImplUtils.symtabExtends(outSymbols, inSymbols))
-                {
-                    int inOffset = binaryReader._position_start;
-                    int inLen    = binaryReader._position_len;
+            IonWriterSystemBinary systemOut =
+                (IonWriterSystemBinary) _current_writer;
 
-                    // TODO what if there's a pending field name or annots
-                    // on this writer?
+            // TODO ION-241 Doesn't copy annotations or field names.
+            transfer.transferCurrentValue(systemOut);
 
-                    // TODO Use a reader facet to generalize this.
-                    IonWriterSystemBinary systemOut =
-                        (IonWriterSystemBinary) _current_writer;
-                    systemOut._writer.write(binaryInput._bytes, inOffset, inLen);
-
-                    // TODO what happens if the reader has fieldname or annot?
-
-                    systemOut.patch(inLen);
-
-                    return;
-                }
-            }
+            return;
         }
 
         // From here on, we won't call back into this method, so we won't
         // bother doing all those checks again.
-        writeValueSlowly(reader);
+        writeValueSlowly(type, reader);
     }
 }

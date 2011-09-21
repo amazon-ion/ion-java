@@ -2,6 +2,7 @@
 
 package com.amazon.ion;
 
+import static com.amazon.ion.SystemSymbols.ION_1_0;
 import com.amazon.ion.impl.IonSystemImpl;
 import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.junit.Injected;
@@ -10,24 +11,15 @@ import com.amazon.ion.junit.IonAssert;
 import com.amazon.ion.system.BuilderHack;
 import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.SimpleCatalog;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
-import java.nio.ByteBuffer;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CodingErrorAction;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
-import junit.framework.TestCase;
+import org.junit.Assert;
 import org.junit.runner.RunWith;
 
 /**
@@ -35,7 +27,7 @@ import org.junit.runner.RunWith;
  */
 @RunWith(Injected.class)
 public abstract class IonTestCase
-    extends TestCase
+    extends Assert
 {
     protected enum DomType { LITE, BACKED }
 
@@ -179,7 +171,6 @@ public abstract class IonTestCase
      * @param path is relative to the {@code testdata} directory.
      *
      * @throws FileNotFoundException
-     * @throws UnsupportedEncodingException
      * @throws IOException
      */
     public IonDatagram loadTestFile(String path)
@@ -201,48 +192,6 @@ public abstract class IonTestCase
         return dg;
     }
 
-    /**
-     * Returns the file decoded as UTF-8 as an IonDatagram loaded as a Java
-     * String, or <tt>null</tt> if the file is not UTF-8.
-     */
-    public IonDatagram loadAsJavaString(File ionFile)
-        throws IonException, IOException
-    {
-        // slurp file into a byte sink
-        final ByteArrayOutputStream sink = new ByteArrayOutputStream();
-        // BufferedInputStream isn't needed, we are reading in bulk.
-        final InputStream in = new FileInputStream(ionFile);
-        try {
-            final byte[] buf = new byte[131072];
-            int read = 0;
-            while ((read = in.read(buf)) != -1) {
-                sink.write(buf, 0, read);
-            }
-        } finally {
-            in.close();
-        }
-
-        String ionText = null;
-        try {
-            // we jump through these hoops because the default decoding is to put replacement characters
-            // which is NOT useful for this purpose
-            final CharsetDecoder decoder =
-                Charset.forName("UTF-8")
-                       .newDecoder()
-                       .onMalformedInput(CodingErrorAction.REPORT)
-                       .onUnmappableCharacter(CodingErrorAction.REPORT)
-                       ;
-            ionText = decoder.decode(ByteBuffer.wrap(sink.toByteArray())).toString();
-        } catch (CharacterCodingException e) {
-            return null;
-        }
-        final IonDatagram dg = loader().load(ionText);
-
-        // Flush out any encoding problems in the data.
-        forceMaterialization(dg);
-
-        return dg;
-    }
 
     @SuppressWarnings("deprecation")
     public void forceMaterialization(IonValue value)
@@ -311,6 +260,11 @@ public abstract class IonTestCase
 
         String result = QT + BS + escape + QT;
         return result;
+    }
+
+    protected int systemMaxId()
+    {
+        return system().getSystemSymbolTable().getMaxId();
     }
 
 
@@ -498,13 +452,6 @@ public abstract class IonTestCase
         return dg.getBytes();
     }
 
-    /**
-     * @deprecated this is in JUnit now
-     */
-    @Deprecated
-    public static void assertArrayEquals(final Object[] expected, final Object[] actual) {
-        assertTrue(String.format("Expected array <%s> got <%s>", expected, actual), Arrays.equals(expected, actual));
-    }
 
     public void assertEscape(char expected, char escapedChar)
     {
@@ -589,7 +536,7 @@ public abstract class IonTestCase
         else
         {
             assertEquals("decimal content",
-                         expected.doubleValue(), i.doubleValue());
+                         expected.doubleValue(), i.doubleValue(), 0d);
         }
     }
 
@@ -655,7 +602,7 @@ public abstract class IonTestCase
         else
         {
             assertEquals("decimal content",
-                         expected.doubleValue(), i.doubleValue());
+                         expected.doubleValue(), i.doubleValue(), 0d);
         }
     }
 
@@ -759,7 +706,7 @@ public abstract class IonTestCase
         assertTrue(symtab.isSystemTable());
         assertSame(symtab, symtab.getSystemSymbolTable());
         assertEquals(SystemSymbolTable.ION_1_0_MAX_ID, symtab.getMaxId());
-        assertEquals(SystemSymbolTable.ION_1_0, symtab.getIonVersionId());
+        assertEquals(ION_1_0, symtab.getIonVersionId());
     }
 
     public SymbolTable findImportedTable(SymbolTable localTable,
@@ -794,13 +741,9 @@ public abstract class IonTestCase
     }
 
 
-    /**
-     * @deprecated Use {@link IonAssert#assertIonEquals(IonValue, IonValue)}
-     */
-    @Deprecated
-    public static void assertIonEquals(IonValue expected, final IonValue found)
+    public static void assertEquals(IonValue expected, IonValue actual)
     {
-        IonAssert.assertIonEquals(expected, found);
+        IonAssert.assertIonEquals(expected, actual);
     }
 
 
@@ -827,7 +770,24 @@ public abstract class IonTestCase
 
     public void logSkippedTest()
     {
-        System.err.println("WARNING: skipped " + getClass().getName() + '.'
-                           + getName());
+        System.err.println("WARNING: skipped a test in " + getClass().getName());
+    }
+
+    /** Temporary bridge from JUnit 3 */
+    public void setUp() throws Exception { }
+
+    /** Temporary bridge from JUnit 3 */
+    public void tearDown() throws Exception { }
+
+    /** JUnit 4 disables this */
+    public static void assertEquals(double expected, double actual)
+    {
+        assertEquals(expected, actual, 0d);
+    }
+
+    /** JUnit 4 disables this */
+    public static void assertEquals(String message, double expected, double actual)
+    {
+        assertEquals(message, expected, actual, 0d);
     }
 }

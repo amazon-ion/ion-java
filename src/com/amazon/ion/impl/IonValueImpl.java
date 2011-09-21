@@ -1,21 +1,24 @@
-// Copyright (c) 2007-2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.util.Equivalence.ionEquals;
 
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.Reader;
 import com.amazon.ion.impl.IonBinary.Writer;
@@ -28,8 +31,6 @@ import java.io.IOException;
 public abstract class IonValueImpl
     implements IonValuePrivate
 {
-    private static final String[] EMPTY_ANNOTATIONS = new String[0];
-
     /**
      * We could multiplex this with member id, but it adds way more complexity
      * than it saves space.
@@ -341,7 +342,7 @@ public abstract class IonValueImpl
     }
 
 
-    public IonSystemImpl getSystem()
+    public final IonSystemImpl getSystem()
     {
         return _system;
     }
@@ -502,7 +503,7 @@ public abstract class IonValueImpl
             // the only case where this is valid is if this is
             // really an IonVersionMaker
             assert IonConstants.getLowNibble(typedesc) == 0;
-            value = system.newSystemIdSymbol(SystemSymbolTable.ION_1_0);
+            value = system.newSystemIdSymbol(ION_1_0);
             break;
 
         default:
@@ -919,7 +920,25 @@ public abstract class IonValueImpl
         // have a list) then there is no annotations
         makeReady();
 
-        return this._annotations == null ? EMPTY_ANNOTATIONS : this._annotations;
+        return this._annotations == null ? EMPTY_STRING_ARRAY : this._annotations;
+    }
+
+    public void setTypeAnnotations(String... annotations)
+    {
+        checkForLock();
+        makeReady();
+
+        if (annotations == null || annotations.length == 0)
+        {
+            // Normalize all empty lists to the same instance.
+            _annotations = EMPTY_STRING_ARRAY;
+        }
+        else
+        {
+            IonImplUtils.ensureNonEmptySymbols(annotations);
+            _annotations = annotations.clone();
+        }
+        setDirty();
     }
 
     public void clearTypeAnnotations()
@@ -948,16 +967,13 @@ public abstract class IonValueImpl
 
         String[] temp = (_annotations.length == 1) ? null : new String[_annotations.length - 1];
         for (int ii=0, jj=0; ii < _annotations.length; ii++) {
-            // FIXME ION-144 if the annotation exists more than once,
-            // the new array will have nulls at the end.
-            if (!_annotations[ii].equals(annotation)) {
+            if (ii != jj || !_annotations[ii].equals(annotation)) {
                 temp[jj++] = _annotations[ii];
             }
         }
         _annotations = temp;
-
-        return;
     }
+
     public void addTypeAnnotation(String annotation)
     {
         checkForLock();
@@ -1881,6 +1897,20 @@ public abstract class IonValueImpl
         assert cumulativePositionDelta2 == cumulativePositionDelta;
 
         return cumulativePositionDelta;
+    }
+
+
+    public final void writeTo(IonWriter writer)
+    {
+        IonReader valueReader = getSystem().newReader(this);
+        try
+        {
+            writer.writeValues(valueReader);
+        }
+        catch (IOException e)
+        {
+            throw new IonException(e);
+        }
     }
 
 
