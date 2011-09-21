@@ -10,6 +10,8 @@ package com.amazon.ion;
  * <p>
  * <b>WARNING:</b> This interface should not be implemented or extended by
  * code outside of this library.
+ *
+ * @since IonJava R13
  */
 public interface SpanProvider
 {

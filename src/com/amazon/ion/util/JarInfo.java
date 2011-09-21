@@ -10,8 +10,10 @@ import java.util.Properties;
 
 /**
  * Provides information about this release of the IonJava library.
+ *
+ * @since IonJava R13
  */
-public class JarInfo
+public final class JarInfo
 {
     private String ourReleaseLabel;
     private String ourMajorVersion;

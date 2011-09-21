@@ -19,6 +19,8 @@ import java.io.InputStream;
  * To get one of these from a {@link Span}, use
  * {@link Faceted#asFacet(Class) asFacet}{@code (OffsetSpan.class)} or one of
  * the helpers from {@link Facets}.
+ *
+ * @since IonJava R13
  */
 public interface OffsetSpan
 {

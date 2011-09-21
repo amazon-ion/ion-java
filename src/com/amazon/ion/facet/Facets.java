@@ -7,7 +7,7 @@ package com.amazon.ion.facet;
  *
  * @see Faceted
  *
- * @since R13
+ * @since IonJava R13
  */
 public class Facets
 {

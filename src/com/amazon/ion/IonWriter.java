@@ -474,7 +474,8 @@ public interface IonWriter
      * @param value java.util Date holding the UTC timestamp;
      * may be null to represent {@code null.timestamp}.
      *
-     * @deprecated Use {@link Timestamp#forDateZ(Date)} and
+     * @deprecated Since IonJava RC2, 2009-03-19.
+     *  Use {@link Timestamp#forDateZ(Date)} and
      *  {@link #writeTimestamp(Timestamp)}.
      */
     @Deprecated
@@ -490,7 +491,8 @@ public interface IonWriter
      * may be null to represent {@code null.timestamp}.
      * @param localOffset minutes from UTC where the value was authored
      *
-     * @deprecated Use {@link #writeTimestamp(Timestamp)}.
+     * @deprecated Since IonJava RC2, 2009-03-19.
+     *  Use {@link #writeTimestamp(Timestamp)}.
      */
     @Deprecated
     public void writeTimestamp(Date value, Integer localOffset)

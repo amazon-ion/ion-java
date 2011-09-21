@@ -217,6 +217,8 @@ public interface IonValue
      *
      * @throws EmptySymbolException if any of the annotations are null or
      *  empty string.
+     *
+     * @since IonJava R13
      */
     public void setTypeAnnotations(String... annotations);
 
@@ -254,6 +256,8 @@ public interface IonValue
      * This method writes annotations and field names (if in a struct),
      * and performs a deep write, including the contents of
      * any containers encountered.
+     *
+     * @since IonJava R13
      */
     public void writeTo(IonWriter writer);
 

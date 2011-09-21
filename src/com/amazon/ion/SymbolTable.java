@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -82,6 +82,8 @@ public interface SymbolTable
      *  be added.
      *
      * @see #makeReadOnly()
+     *
+     * @since IonJava R13
      */
     public boolean isReadOnly();
 
@@ -93,6 +95,8 @@ public interface SymbolTable
      * data, but will cause failures if new symbols are encountered.
      *
      * @see #isReadOnly()
+     *
+     * @since IonJava R13
      */
     public void makeReadOnly();
 

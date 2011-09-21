@@ -15,6 +15,8 @@ import com.amazon.ion.facet.Facets;
  * To get one of these from a {@link Span}, use
  * {@link Faceted#asFacet(Class) asFacet}{@code (TextSpan.class)} or one of
  * the helpers from {@link Facets}.
+ *
+ * @since IonJava R13
  */
 public interface TextSpan
 {

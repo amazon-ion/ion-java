@@ -853,6 +853,8 @@ public final class Timestamp
      *
      * @return a timestamp representing the given point in time, localized to
      * GMT; null if the given {@link Date} is null.
+     *
+     * @since IonJava R13
      */
     public static Timestamp forDateZ(Date date)
     {
@@ -870,6 +872,8 @@ public final class Timestamp
      *
      * @return a timestamp representing the given point in time, localized to
      * GMT; null if the given time is null.
+     *
+     * @since IonJava R13
      */
     public static Timestamp forSqlTimestampZ(java.sql.Timestamp sqlTimestamp)
     {
@@ -896,6 +900,8 @@ public final class Timestamp
 
     /**
      * Gets the current time as a GMT timestamp.
+     *
+     * @since IonJava R13
      */
     static public Timestamp nowZ()
     {
@@ -927,7 +933,9 @@ public final class Timestamp
      * Converts this timestamp into a {@link Calendar} with equivalent time
      * (to milliseconds precision) and timezone.
      *
-     * @return aa new {@link Calendar}.
+     * @return a new {@link Calendar}.
+     *
+     * @since IonJava R13
      */
     public Calendar calendarValue()
     {
