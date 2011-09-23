@@ -85,19 +85,6 @@ public class ValueFactorySequenceTest
 
     //========================================================================
 
-
-    @Test
-    @SuppressWarnings("deprecation")
-    public void testDeprecatedNewWithNoParams()
-    {
-        // This is horrible: newList() means something different when called
-        // on an IonSystem than on a ValueFactory!!
-        IonSequence inner = system().newList();
-        assertTrue(inner.isNullValue());
-        inner = system().newSexp();
-        assertTrue(inner.isNullValue());
-    }
-
     @Test
     public void testNewWithNoParams()
     {

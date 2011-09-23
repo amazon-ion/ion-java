@@ -175,12 +175,6 @@ public class IonSystemTest
         assertSame(catalog(), loader.getCatalog());
     }
 
-    @Deprecated
-    @Test(expected = NullPointerException.class)
-    public void testSetCatalogNull()
-    {
-        system().setCatalog(null);
-    }
 
     @Test
     public void testNewDatagramImporting()

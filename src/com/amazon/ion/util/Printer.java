@@ -2,12 +2,12 @@
 
 package com.amazon.ion.util;
 
-import static com.amazon.ion.IonNumber.Classification.NEGATIVE_ZERO;
 import static com.amazon.ion.SystemSymbols.IMPORTS;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.SYMBOLS;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonClob;
@@ -802,7 +802,7 @@ public class Printer
             }
             else
             {
-                BigDecimal decimal = value.bigDecimalValue();
+                Decimal decimal = value.decimalValue();
                 BigInteger unscaled = decimal.unscaledValue();
 
                 int signum = decimal.signum();
@@ -811,8 +811,7 @@ public class Printer
                     myOut.append('-');
                     unscaled = unscaled.negate();
                 }
-                else if (signum == 0
-                         && value.getClassification() == NEGATIVE_ZERO)
+                else if (signum == 0 && decimal.isNegativeZero())
                 {
                     // for the various forms of negative zero we have to
                     // write the sign ourselves, since neither BigInteger

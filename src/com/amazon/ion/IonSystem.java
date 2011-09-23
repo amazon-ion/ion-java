@@ -59,18 +59,6 @@ public interface IonSystem
 
 
     /**
-     * Sets the default catalog used by this system.
-     *
-     * @param catalog the new system catalog.
-     * @throws NullPointerException if <code>catalog</code> is null.
-     *
-     * @deprecated  Catalog should be immutable.
-     */
-    @Deprecated
-    public void setCatalog(IonCatalog catalog);
-
-
-    /**
      * Creates a new local symbol table based on specific imported tables.
      * If the first imported table is a system table, then the local table will
      * use it appropriately. Otherwise, the local table will use this system's
@@ -549,102 +537,6 @@ public interface IonSystem
      * @return a new value object, not null.
      */
     public IonValue newValue(IonReader reader);
-
-
-    /**
-     * Constructs a new <code>null.blob</code> instance.
-     * @deprecated Use {@link #newNullBlob()} instead.
-     */
-    @Deprecated
-    public IonBlob newBlob();
-
-
-    /**
-     * Constructs a new <code>null.bool</code> instance.
-     * @deprecated Use {@link #newNullBool()} instead
-     */
-    @Deprecated
-    public IonBool newBool();
-
-
-    /**
-     * Constructs a new <code>null.clob</code> instance.
-     * @deprecated Use {@link #newNullClob()} instead
-     */
-    @Deprecated
-    public IonClob newClob();
-
-
-    /**
-     * Constructs a new <code>null.decimal</code> instance.
-     * @deprecated Use {@link #newNullDecimal()} instead
-     */
-    @Deprecated
-    public IonDecimal newDecimal();
-
-
-    /**
-     * Constructs a new <code>null.float</code> instance.
-     * @deprecated Use {@link #newNullFloat()} instead
-     */
-    @Deprecated
-    public IonFloat newFloat();
-
-
-    /**
-     * Constructs a new <code>null.int</code> instance.
-     * @deprecated Use {@link #newNullInt()} instead
-     */
-    @Deprecated
-    public IonInt newInt();
-
-
-    /**
-     * Constructs a new <code>null.list</code> instance.
-     * @deprecated Use {@link #newNullList()} instead
-     */
-    @Deprecated
-    public IonList newList();
-
-
-    /**
-     * Constructs a new <code>null.sexp</code> instance.
-     * @deprecated Use {@link #newNullSexp()} instead
-     */
-    @Deprecated
-    public IonSexp newSexp();
-
-
-    /**
-     * Constructs a new <code>null.string</code> instance.
-     * @deprecated Use {@link #newNullString()} instead
-     */
-    @Deprecated
-    public IonString newString();
-
-
-    /**
-     * Constructs a new <code>null.struct</code> instance.
-     * @deprecated Use {@link #newNullStruct()} instead
-     */
-    @Deprecated
-    public IonStruct newStruct();
-
-
-    /**
-     * Constructs a new <code>null.symbol</code> instance.
-     * @deprecated Use {@link #newNullSymbol()} instead
-     */
-    @Deprecated
-    public IonSymbol newSymbol();
-
-
-    /**
-     * Constructs a new <code>null.timestamp</code> instance.
-     * @deprecated Use {@link #newNullTimestamp()} instead
-     */
-    @Deprecated
-    public IonTimestamp newTimestamp();
 
 
     /**

@@ -28,11 +28,9 @@ public class SimpleCatalogTest
     @Test
     public void testGetMissingVersion()
     {
-        SimpleCatalog cat = new SimpleCatalog();
+        SimpleCatalog cat = myCatalog = new SimpleCatalog();
         assertNull(cat.getTable("T"));
         assertNull(cat.getTable("T", 3));
-
-        system().setCatalog(cat);
 
 
         String t1Text =
