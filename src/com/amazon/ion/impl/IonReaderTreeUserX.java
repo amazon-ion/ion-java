@@ -180,7 +180,7 @@ class IonReaderTreeUserX
     {
         if (span instanceof TreeSpan) {
             TreeSpan treeSpan = (TreeSpan)span;
-            this.re_init(treeSpan._value);
+            this.re_init(treeSpan._value, /* hoisted */ true);
         }
         else {
             // TODO custom exception
