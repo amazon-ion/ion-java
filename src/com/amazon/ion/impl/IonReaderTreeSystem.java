@@ -45,12 +45,20 @@ class IonReaderTreeSystem
     protected IonValue            _curr;
     protected boolean             _eof;
 
-    protected Object[]           _stack = new Object[10];
+    /** Holds pairs: IonValue parent, Iterator<IonValue> cursor */
+    private   Object[]           _stack = new Object[10];
     protected int                _top;
+    private   boolean            _hoisted;
 
     public IonReaderTreeSystem(IonValue value)
     {
-        init(value);
+        if (value == null) {
+            // do nothing
+        }
+        else {
+            _system = value.getSystem();
+            re_init(value, /* hoisted */ false);
+        }
     }
 
 
@@ -64,22 +72,13 @@ class IonReaderTreeSystem
 
     //========================================================================
 
-    void init(IonValue value) {
-        if (value == null) {
-            // do nothing
-        }
-        else {
-            _system = value.getSystem();
-            re_init(value);
-        }
-    }
-
-    void re_init(IonValue value)
+    void re_init(IonValue value, boolean hoisted)
     {
         _symbols = null;
         _curr = null;
         _eof = false;
         _top = 0;
+        _hoisted = hoisted;
         if (value instanceof IonDatagram) {
             // datagrams interacting with these readers must be
             // IonContainerPrivate containers
@@ -90,7 +89,7 @@ class IonReaderTreeSystem
             _iter = dg.systemIterator(); // we want a system reader not: new Children(dg);
         }
         else {
-            _parent = null;
+            _parent = (hoisted ? null : value.getContainer());
             _next = value;
         }
     }
@@ -106,7 +105,7 @@ class IonReaderTreeSystem
         return;
     }
 
-    void push() {
+    private void push() {
         int oldlen = _stack.length;
         if (_top + 1 >= oldlen) { // we're going to do a "+2" on top so we need extra space
             int newlen = oldlen * 2;
@@ -119,7 +118,7 @@ class IonReaderTreeSystem
     }
 
     @SuppressWarnings("unchecked")
-    void pop() {
+    private void pop() {
         assert _top >= 2;
 
         _top--;
@@ -167,7 +166,7 @@ class IonReaderTreeSystem
         return this._next.getType();
     }
 
-    public void stepIn()
+    public final void stepIn()
     {
         if (!(this._curr instanceof IonContainer)) {
             throw new IllegalStateException("current value must be a container");
@@ -178,7 +177,7 @@ class IonReaderTreeSystem
         _curr = null;
     }
 
-    public void stepOut()
+    public final void stepOut()
     {
         if (this._top < 1) {
             throw new IllegalStateException(IonMessages.CANNOT_STEP_OUT);
@@ -187,7 +186,7 @@ class IonReaderTreeSystem
         _curr = null;
     }
 
-    public int getDepth() {
+    public final int getDepth() {
         return _top/2;
     }
 
@@ -290,12 +289,12 @@ class IonReaderTreeSystem
     public int getFieldId()
     {
         // FIXME IonValueImpl.getFieldId doesn't return -1 as specced here!
-        return (_curr == null || _top == 0) ? UnifiedSymbolTable.UNKNOWN_SID : _curr.getFieldId();
+        return (_curr == null || (_hoisted && _top == 0)) ? UnifiedSymbolTable.UNKNOWN_SID : _curr.getFieldId();
     }
 
     public String getFieldName()
     {
-        return (_curr == null || _top == 0) ? null : _curr.getFieldName();
+        return (_curr == null || (_hoisted && _top == 0)) ? null : _curr.getFieldName();
     }
 
 

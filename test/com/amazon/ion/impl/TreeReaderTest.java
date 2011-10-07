@@ -73,11 +73,16 @@ public class TreeReaderTest
     }
 
     @Test
-    public void testHoistedReader()
+    public void testReadingStructFields()
     {
         IonStruct s = struct("{f:null}");
         IonReader r = system().newReader(s.get("f"));
+
+        assertTopLevel(r, /* inStruct */ true);
+        assertEquals("reader field name", null, r.getFieldName());
+
         assertSame(IonType.NULL, r.next());
-        assertTopLevel(r);
+        assertTopLevel(r, /* inStruct */ true);
+        assertEquals("reader field name", "f", r.getFieldName());
     }
 }

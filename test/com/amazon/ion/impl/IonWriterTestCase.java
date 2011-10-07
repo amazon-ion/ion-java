@@ -410,7 +410,7 @@ public abstract class IonWriterTestCase
     public void testWriteValueCopiesFieldName()
         throws Exception
     {
-        String data = "{a:{b:10}}";
+        IonStruct data = struct("{a:{b:10}}");
         IonReader ir = system().newReader(data);
         ir.next();
         ir.stepIn();
@@ -421,8 +421,17 @@ public abstract class IonWriterTestCase
         iw.stepIn(IonType.STRUCT);
         iw.writeValue(ir);
         iw.stepOut();
+        assertEquals(data, reloadSingleValue());
 
-        assertEquals(data, reloadSingleValue().toString());
+        IonValue a = data.get("a");
+        ir = system().newReader(a);
+        ir.next();
+
+        iw = makeWriter();
+        iw.stepIn(IonType.STRUCT);
+        iw.writeValue(ir);
+        iw.stepOut();
+        assertEquals(data, reloadSingleValue());
     }
 
     @Test

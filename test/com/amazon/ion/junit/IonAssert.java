@@ -33,10 +33,18 @@ public class IonAssert
 
     public static void assertTopLevel(IonReader in)
     {
+        assertTopLevel(in, false);
+    }
+
+    public static void assertTopLevel(IonReader in, boolean inStruct)
+    {
         assertEquals("reader depth", 0, in.getDepth());
-        assertFalse("reader shouldn't be inStruct", in.isInStruct());
-        assertEquals("reader field name", null, in.getFieldName());
-        assertTrue("reader shouldn't have fieldId", in.getFieldId() < 1);
+        assertEquals("reader inStruct", inStruct, in.isInStruct());
+
+        if (! inStruct) {
+            assertEquals("reader field name", null, in.getFieldName());
+            assertTrue("reader shouldn't have fieldId", in.getFieldId() < 1);
+        }
 
         try {
             in.stepOut();
