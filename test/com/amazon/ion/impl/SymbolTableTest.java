@@ -824,7 +824,7 @@ public class SymbolTableTest
 
       // Try a bit of round-trip action
       StringBuilder buf = new StringBuilder();
-      IonWriterUserText.TextOptions options = new IonWriterUserText.TextOptions(
+      $PrivateTextOptions options = new $PrivateTextOptions(
              false // prettyPrint,
            , true // printAscii,
            , false // filterOutSymbolTables,

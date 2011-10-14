@@ -26,6 +26,7 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.UnsupportedIonVersionException;
+import com.amazon.ion.impl.$PrivateTextOptions;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonReaderFactoryX;
 import com.amazon.ion.impl.IonReaderWriterPrivate;
@@ -35,7 +36,6 @@ import com.amazon.ion.impl.IonWriterBaseImpl;
 import com.amazon.ion.impl.IonWriterBinaryCompatibility;
 import com.amazon.ion.impl.IonWriterFactory;
 import com.amazon.ion.impl.IonWriterUserBinary;
-import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import com.amazon.ion.impl.SystemValueIterator;
 import com.amazon.ion.impl.UnifiedSymbolTable;
 import java.io.Closeable;
@@ -228,19 +228,19 @@ public final class IonSystemLite
 
     public IonWriter newTextWriter(Appendable out)
     {
-        TextOptions options = new TextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
+        $PrivateTextOptions options = new $PrivateTextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
         IonWriter userWriter = newTextWriter(out, options);
         return userWriter;
     }
 
     public IonWriter newTextWriter(Appendable out, boolean pretty)
     {
-        TextOptions options = new TextOptions(pretty /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
+        $PrivateTextOptions options = new $PrivateTextOptions(pretty /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
         IonWriter userWriter = newTextWriter(out, options);
         return userWriter;
     }
 
-    public IonWriterBaseImpl newTextWriter(Appendable out, TextOptions options)
+    public IonWriterBaseImpl newTextWriter(Appendable out, $PrivateTextOptions options)
     {
         IonWriterBaseImpl userWriter = makeWriter(this, out, options);
         return userWriter;
@@ -249,12 +249,12 @@ public final class IonSystemLite
     public IonWriter newTextWriter(Appendable out, SymbolTable... imports)
         throws IOException
     {
-        TextOptions options = new TextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
+        $PrivateTextOptions options = new $PrivateTextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
         IonWriter writer = newTextWriter(out, options, imports);
         return writer;
     }
 
-    public IonWriter newTextWriter(Appendable out, TextOptions options, SymbolTable... imports)
+    public IonWriter newTextWriter(Appendable out, $PrivateTextOptions options, SymbolTable... imports)
         throws IOException
     {
         UnifiedSymbolTable lst = newLocalSymbolTable(imports);
@@ -265,12 +265,12 @@ public final class IonSystemLite
 
     public IonWriter newTextWriter(OutputStream out)
     {
-        TextOptions options = new TextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
+        $PrivateTextOptions options = new $PrivateTextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
         IonWriter userWriter = newTextWriter(out, options);
         return userWriter;
     }
 
-    public IonWriterBaseImpl newTextWriter(OutputStream out, TextOptions options)
+    public IonWriterBaseImpl newTextWriter(OutputStream out, $PrivateTextOptions options)
     {
         IonWriterBaseImpl userWriter = makeWriter(this, out, options);
         return userWriter;
@@ -279,12 +279,12 @@ public final class IonSystemLite
     public IonWriter newTextWriter(OutputStream out, SymbolTable... imports)
         throws IOException
     {
-        TextOptions options = new TextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
+        $PrivateTextOptions options = new $PrivateTextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
         IonWriter writer = newTextWriter(out, options, imports);
         return writer;
     }
 
-    public IonWriter newTextWriter(OutputStream out, TextOptions options, SymbolTable... imports)
+    public IonWriter newTextWriter(OutputStream out, $PrivateTextOptions options, SymbolTable... imports)
         throws IOException
     {
         UnifiedSymbolTable lst = newLocalSymbolTable(imports);
@@ -1078,7 +1078,7 @@ public final class IonSystemLite
     public IonWriter newTextWriter(OutputStream out, boolean pretty)
     {
         // prettyPrint, boolean printAscii, boolean filterOutSymbolTables
-        TextOptions options = new TextOptions(pretty, true, true);
+        $PrivateTextOptions options = new $PrivateTextOptions(pretty, true, true);
         IonWriter writer = IonWriterFactory.makeWriter(this, out, options);
         return writer;
     }

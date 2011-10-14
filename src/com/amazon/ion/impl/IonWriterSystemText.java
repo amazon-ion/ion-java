@@ -15,7 +15,6 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.Base64Encoder.TextStream;
 import com.amazon.ion.impl.IonBinary.BufferManager;
-import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import com.amazon.ion.util.IonTextUtils;
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
@@ -35,7 +34,7 @@ public class IonWriterSystemText
     /** Not null. */
     final private Appendable _output;
     /** Not null. */
-    final private TextOptions _options;
+    final private $PrivateTextOptions _options;
 
     BufferManager _manager;
 
@@ -56,7 +55,7 @@ public class IonWriterSystemText
      */
     protected IonWriterSystemText(IonSystem system,
                                   SymbolTable defaultSystemSymtab,
-                                  OutputStream out, TextOptions options)
+                                  OutputStream out, $PrivateTextOptions options)
     {
         super(system, defaultSystemSymtab);
 
@@ -78,7 +77,7 @@ public class IonWriterSystemText
      */
     protected IonWriterSystemText(IonSystem system,
                                   SymbolTable defaultSystemSymtab,
-                                  Appendable out, TextOptions options)
+                                  Appendable out, $PrivateTextOptions options)
     {
         super(system, defaultSystemSymtab);
 
@@ -99,7 +98,7 @@ public class IonWriterSystemText
         return _output;
     }
 
-    TextOptions getOptions()
+    $PrivateTextOptions getOptions()
     {
         return _options;
     }

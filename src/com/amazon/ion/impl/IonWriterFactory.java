@@ -10,7 +10,6 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import java.io.IOException;
 import java.io.OutputStream;
 
@@ -30,7 +29,7 @@ public class IonWriterFactory
     IonCatalog          _catalog;
     OutputStream        _out;
     Appendable          _chars;
-    TextOptions         _options;
+    $PrivateTextOptions _options;
     IonContainer        _container;
     boolean             _auto_flush;
     boolean             _assure_ivm = true;
@@ -191,7 +190,7 @@ public class IonWriterFactory
         _chars = chars;
     }
 
-    public synchronized void set(TextOptions options)
+    public synchronized void set($PrivateTextOptions options)
     {
         force_in_progress();
         _options = options;
@@ -328,7 +327,7 @@ public class IonWriterFactory
         // text writer must have options set
         if (_options == null && _type.isText()) {
             boolean filter_symbol_tables = _type.isUser();
-            _options = new TextOptions(false, true, filter_symbol_tables);
+            _options = new $PrivateTextOptions(false, true, filter_symbol_tables);
         }
 
         // if we have imports then we should cons up a local symbol table
@@ -425,24 +424,24 @@ public class IonWriterFactory
 
         return writer;
     }
-    public static IonWriterBaseImpl makeWriter(IonSystem system, Appendable output, TextOptions options)
+    public static IonWriterBaseImpl makeWriter(IonSystem system, Appendable output, $PrivateTextOptions options)
     {
         IonCatalog catalog = system.getCatalog();
         IonWriterBaseImpl writer = makeWriter(system, catalog, output, options);
         return writer;
     }
-    public static IonWriterBaseImpl makeWriter(IonSystem system, IonCatalog catalog, Appendable output, TextOptions options)
+    public static IonWriterBaseImpl makeWriter(IonSystem system, IonCatalog catalog, Appendable output, $PrivateTextOptions options)
     {
         IonWriterBaseImpl writer = new IonWriterUserText(system, catalog, output, options);
         return writer;
     }
-    public static IonWriterBaseImpl makeWriter(IonSystem system, OutputStream output, TextOptions options)
+    public static IonWriterBaseImpl makeWriter(IonSystem system, OutputStream output, $PrivateTextOptions options)
     {
         IonCatalog catalog = system.getCatalog();
         IonWriterBaseImpl writer = makeWriter(system, catalog, output, options);
         return writer;
     }
-    public static IonWriterBaseImpl makeWriter(IonSystem system, IonCatalog catalog, OutputStream output, TextOptions options)
+    public static IonWriterBaseImpl makeWriter(IonSystem system, IonCatalog catalog, OutputStream output, $PrivateTextOptions options)
     {
         IonWriterBaseImpl writer = new IonWriterUserText(system, catalog, output, options);
         return writer;
@@ -464,12 +463,12 @@ public class IonWriterFactory
                                                      );
         return writer;
     }
-    public static IonWriter makeSystemWriter(IonSystem system, Appendable output, TextOptions options)
+    public static IonWriter makeSystemWriter(IonSystem system, Appendable output, $PrivateTextOptions options)
     {
         IonWriter writer = new IonWriterSystemText(system, system.getSystemSymbolTable(), output, options);
         return writer;
     }
-    public static IonWriter makeSystemWriter(IonSystem system, OutputStream output, TextOptions options)
+    public static IonWriter makeSystemWriter(IonSystem system, OutputStream output, $PrivateTextOptions options)
     {
         IonWriter writer = new IonWriterSystemText(system, system.getSystemSymbolTable(), output, options);
         return writer;

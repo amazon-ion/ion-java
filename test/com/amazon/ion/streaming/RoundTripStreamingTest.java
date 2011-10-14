@@ -13,9 +13,9 @@ import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.TestUtils;
+import com.amazon.ion.impl.$PrivateTextOptions;
 import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.IonWriterUserBinary;
-import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
 import com.amazon.ion.util.Equivalence;
@@ -127,7 +127,7 @@ extends IonTestCase
     {
         IonReader in = makeIterator(buffer);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        TextOptions options = new TextOptions(prettyPrint // boolean prettyPrint
+        $PrivateTextOptions options = new $PrivateTextOptions(prettyPrint // boolean prettyPrint
                                               ,false // boolean printAscii
                                               ,false // boolean filterOutSymbolTables
                                               ,true  // boolean suppressIonVersionMarker

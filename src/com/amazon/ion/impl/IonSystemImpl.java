@@ -48,7 +48,6 @@ import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.UnsupportedIonVersionException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
-import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import com.amazon.ion.util.Printer;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -530,19 +529,19 @@ public final class IonSystemImpl
 
     public IonWriter newTextWriter(Appendable out)
     {
-        TextOptions options = new TextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
+        $PrivateTextOptions options = new $PrivateTextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
         IonWriter userWriter = newTextWriter(out, options);
         return userWriter;
     }
 
     public IonWriter newTextWriter(Appendable out, boolean pretty)
     {
-        TextOptions options = new TextOptions(pretty /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
+        $PrivateTextOptions options = new $PrivateTextOptions(pretty /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
         IonWriter userWriter = newTextWriter(out, options);
         return userWriter;
     }
 
-    public IonWriter newTextWriter(Appendable out, TextOptions options)
+    public IonWriter newTextWriter(Appendable out, $PrivateTextOptions options)
     {
         IonWriter userWriter = IonWriterFactory.makeWriter(this, out, options);
         return userWriter;
@@ -551,12 +550,12 @@ public final class IonSystemImpl
     public IonWriter newTextWriter(Appendable out, SymbolTable... imports)
         throws IOException
     {
-        TextOptions options = new TextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
+        $PrivateTextOptions options = new $PrivateTextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
         IonWriter writer = newTextWriter(out, options, imports);
         return writer;
     }
 
-    public IonWriter newTextWriter(Appendable out, TextOptions options, SymbolTable... imports)
+    public IonWriter newTextWriter(Appendable out, $PrivateTextOptions options, SymbolTable... imports)
         throws IOException
     {
         UnifiedSymbolTable lst = newLocalSymbolTable(imports);
@@ -567,12 +566,12 @@ public final class IonSystemImpl
 
     public IonWriter newTextWriter(OutputStream out)
     {
-        TextOptions options = new TextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
+        $PrivateTextOptions options = new $PrivateTextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
         IonWriter userWriter = newTextWriter(out, options);
         return userWriter;
     }
 
-    public IonWriter newTextWriter(OutputStream out, TextOptions options)
+    public IonWriter newTextWriter(OutputStream out, $PrivateTextOptions options)
     {
         IonWriter userWriter = new IonWriterUserText(this, myCatalog, out, options);
         return userWriter;
@@ -581,12 +580,12 @@ public final class IonSystemImpl
     public IonWriter newTextWriter(OutputStream out, SymbolTable... imports)
         throws IOException
     {
-        TextOptions options = new TextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
+        $PrivateTextOptions options = new $PrivateTextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
         IonWriter writer = newTextWriter(out, options, imports);
         return writer;
     }
 
-    public IonWriter newTextWriter(OutputStream out, TextOptions options, SymbolTable... imports)
+    public IonWriter newTextWriter(OutputStream out, $PrivateTextOptions options, SymbolTable... imports)
         throws IOException
     {
         UnifiedSymbolTable lst = newLocalSymbolTable(imports);
@@ -602,7 +601,7 @@ public final class IonSystemImpl
     public IonWriter newTextWriter(OutputStream out, boolean pretty)
     {
         // return new IonTextWriter(out, pretty);
-        TextOptions options = new TextOptions(pretty, true /* printAscii */, true /* filterOutSymbolTables */);
+        $PrivateTextOptions options = new $PrivateTextOptions(pretty, true /* printAscii */, true /* filterOutSymbolTables */);
         IonWriter userWriter = newTextWriter(out, options);
         return userWriter;
     }

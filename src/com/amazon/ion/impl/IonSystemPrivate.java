@@ -11,7 +11,6 @@ import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -55,21 +54,21 @@ public interface IonSystemPrivate
 
     public IonWriter newTextWriter(Appendable out, boolean pretty);
 
-    public IonWriter newTextWriter(Appendable out, TextOptions options);
+    public IonWriter newTextWriter(Appendable out, $PrivateTextOptions options);
 
     public IonWriter newTextWriter(Appendable out, SymbolTable... imports) throws IOException;
 
-    public IonWriter newTextWriter(Appendable out, TextOptions options, SymbolTable... imports) throws IOException;
+    public IonWriter newTextWriter(Appendable out, $PrivateTextOptions options, SymbolTable... imports) throws IOException;
 
     public IonWriter newTextWriter(OutputStream out);
 
     public IonWriter newTextWriter(OutputStream out, boolean pretty);
 
-    public IonWriter newTextWriter(OutputStream out, TextOptions options);
+    public IonWriter newTextWriter(OutputStream out, $PrivateTextOptions options);
 
     public IonWriter newTextWriter(OutputStream out, SymbolTable... imports) throws IOException;
 
-    public IonWriter newTextWriter(OutputStream out, TextOptions options, SymbolTable... imports) throws IOException;
+    public IonWriter newTextWriter(OutputStream out, $PrivateTextOptions options, SymbolTable... imports) throws IOException;
 
     public IonWriter newTreeWriter(IonContainer container);
 

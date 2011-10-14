@@ -11,7 +11,6 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.Reader;
-import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import com.amazon.ion.system.IonSystemBuilder;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -414,7 +413,7 @@ public final class IonImplUtils // TODO this class shouldn't be public
     public static String valueToString(IonReader reader)
     {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        TextOptions options = new TextOptions(false, true, false); // pretty print, ascii only, filter symbol tables
+        $PrivateTextOptions options = new $PrivateTextOptions(false, true, false); // pretty print, ascii only, filter symbol tables
 
         // This is vaguely inappropriate.
         IonSystem system = IonSystemBuilder.standard().build();
