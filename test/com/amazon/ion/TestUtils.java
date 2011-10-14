@@ -12,6 +12,7 @@ import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  *
@@ -35,6 +36,14 @@ public class TestUtils
         public boolean accept(File dir, String name)
         {
             return name.endsWith(".ion");
+        }
+    };
+
+    public static final FilenameFilter ION_ONLY_FILTER = new FilenameFilter()
+    {
+        public boolean accept(File dir, String name)
+        {
+            return name.endsWith(".ion") || name.endsWith(".10n");
         }
     };
 
@@ -79,6 +88,37 @@ public class TestUtils
                       );
 
 
+    private static void testdataFiles(FilenameFilter filter,
+                                      File dir,
+                                      List<File> results)
+    {
+        String[] fileNames = dir.list();
+        if (fileNames == null)
+        {
+            String message = "Not a directory: " + dir.getAbsolutePath();
+            throw new IllegalArgumentException(message);
+        }
+
+        // Sort the fileNames so they are listed in order.
+        // This is not a functional requirement but it helps humans scanning
+        // the output looking for a specific file.
+        Arrays.sort(fileNames);
+
+        for (String fileName : fileNames)
+        {
+            File testFile = new File(dir, fileName);
+            if (testFile.isDirectory())
+            {
+                // Recurse down the directory hierarchy
+                testdataFiles(filter, testFile, results);
+            }
+            else if (filter == null || filter.accept(dir, fileName))
+            {
+                results.add(testFile);
+            }
+        }
+    }
+
     public static File[] testdataFiles(FilenameFilter filter,
                                        String... testdataDirs)
     {
@@ -87,29 +127,15 @@ public class TestUtils
         for (String testdataDir : testdataDirs)
         {
             File dir = IonTestCase.getTestdataFile(testdataDir);
-
-            String[] fileNames = dir.list();
-            if (fileNames == null)
+            if (! dir.isDirectory())
             {
                 String message =
                     "testdataDir is not a directory: "
-                    + dir.getAbsolutePath();
+                        + dir.getAbsolutePath();
                 throw new IllegalArgumentException(message);
             }
 
-            // Sort the fileNames so they are listed in order.
-            Arrays.sort(fileNames);
-            for (String fileName : fileNames)
-            {
-                if (filter == null || filter.accept(dir, fileName))
-                {
-                    File testFile = new File(dir, fileName);
-                    if (testFile.isFile())
-                    {
-                        files.add(testFile);
-                    }
-                }
-            }
+            testdataFiles(filter, dir, files);
         }
 
         return files.toArray(new File[files.size()]);
