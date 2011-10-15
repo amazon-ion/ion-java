@@ -28,7 +28,7 @@ import java.nio.CharBuffer;
 /**
  *
  */
-public class IonWriterSystemText
+class IonWriterSystemText
     extends IonWriterBaseImpl
 {
     /** Not null. */
@@ -230,9 +230,15 @@ public class IonWriterSystemText
 
         return typeid;
     }
+
+    /**
+     * @return a tid
+     * @throws ArrayIndexOutOfBoundsException if _top < 1
+     */
     int topType() {
         return _stack_parent_type[_top - 1];
     }
+
     boolean topInStruct() {
         if (_top == 0) return false;
         return _stack_in_struct[_top - 1];
@@ -241,6 +247,14 @@ public class IonWriterSystemText
         if (_top == 0) return false;
         return _stack_pending_comma[_top - 1];
     }
+
+    private boolean containerIsListOrStruct()
+    {
+        if (_top == 0) return false;
+        int topType = topType();
+        return (topType == tidList || topType == tidStruct);
+    }
+
     void printLeadingWhiteSpace() throws IOException {
         for (int ii=0; ii<_top; ii++) {
             _output.append(' ');
@@ -539,7 +553,18 @@ public class IonWriterSystemText
         throws IOException
     {
         startValue();
-        IonTextUtils.printString(_output, value);
+        if (value != null
+            && containerIsListOrStruct()
+            && _options._long_string_threshold < value.length())
+        {
+            // TODO This can lead to mixed newlines in the output.
+            // It assumes NL line separators, but _options could use CR+NL
+            IonTextUtils.printLongString(_output, value);
+        }
+        else
+        {
+            IonTextUtils.printString(_output, value);
+        }
         closeValue();
     }
 
@@ -631,14 +656,26 @@ public class IonWriterSystemText
         if (_options.isPrettyPrintOn()) {
             _output.append(" ");
         }
-        _output.append('"');
+
+        boolean longString = (_options._long_string_threshold < value.length);
+
+        if (longString) {
+            _output.append("'''");
+        } else {
+            _output.append('"');
+        }
 
         boolean just_ascii = _options.isAsciiOutputOn();
         int end = start + len;
         for (int ii=start; ii<end; ii++) {
             char c = (char)(value[ii] & 0xff);
             if (c < 32 ) {
-                _output.append(lowEscapeSequence(c));
+                if (c == '\n' && longString) {
+                    // TODO account for NL versus CR+NL streams
+                    _output.append(c);
+                } else {
+                    _output.append(lowEscapeSequence(c));
+                }
             }
             else if (c > 127) {
                 if (just_ascii) {
@@ -665,7 +702,13 @@ public class IonWriterSystemText
                 _output.append(c);
             }
         }
-        _output.append('"');
+
+        if (longString) {
+            _output.append("'''");
+        } else {
+            _output.append('"');
+        }
+
         if (_options.isPrettyPrintOn()) {
             _output.append(" ");
         }

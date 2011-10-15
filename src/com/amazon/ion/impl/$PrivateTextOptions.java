@@ -13,6 +13,10 @@ public class $PrivateTextOptions
     final boolean       _filter_symbol_tables;
     final boolean       _suppress_ion_version_marker;
 
+    /** Strings and clobs longer than this length will be rendered as
+     * long-strings, but will only line-break on extant '\n' code points.
+     */
+    public int _long_string_threshold = Integer.MAX_VALUE;
 
     public $PrivateTextOptions(boolean prettyPrint, boolean printAscii)
     {
