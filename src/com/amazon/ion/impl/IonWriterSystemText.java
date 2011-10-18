@@ -685,6 +685,8 @@ class IonWriterSystemText
                     _output.append(Integer.toHexString(c));
                 }
                 else {
+                    // FIXME ION-256 this is wrong!  Clob data is never UTF-8
+                    // But is always ASCII-safe.
                     // non-ascii (utf8) uses a 2 byte utf8 sequence (it's always 2 bytes)
                     _output.append((char)(IonUTF8.getByte1Of2(c) & 0xff));
                     _output.append((char)(IonUTF8.getByte2Of2(c) & 0xff));
