@@ -25,8 +25,11 @@ import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.impl.$PrivateTextOptions;
+import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.util.IonTextUtils.SymbolVariant;
 import java.io.IOException;
 import java.io.InputStream;
@@ -398,7 +401,41 @@ public class Printer
             options = myOptions.clone();
         }
 
-        _print(value, makeVisitor(options, out));
+        if (true)
+        {
+            _print(value, makeVisitor(options, out));
+        }
+        else
+        {
+            // TODO ION-10
+            // Bridge to the configurable test writer. This is here for
+            // testing purposes. It *almost* works except for some wonkyness
+            // at the IVM/symtab level where the two paths behave differently.
+
+            boolean dg = value instanceof IonDatagram;
+
+            IonSystemPrivate s = ((IonSystemPrivate)value.getSystem());
+            $PrivateTextOptions o =
+                new $PrivateTextOptions(/*prettyPrint*/ false,
+                                        /*printAscii*/ true,
+                                        /*filterOutSymbolTables*/ options.skipSystemValues,
+                                        /*suppressIonVersionMarker*/ !dg);
+            o._blob_as_string      = options.blobAsString;
+            o._clob_as_string      = options.clobAsString;
+            o._decimal_as_float    = options.decimalAsFloat;
+            // TODO datagram as list
+            o._sexp_as_list        = options.sexpAsList;
+            o._skip_annotations    = options.skipAnnotations;
+            o._string_as_json      = options.stringAsJson;
+            o._symbol_as_string    = options.symbolAsString;
+            o._timestamp_as_millis = options.timestampAsMillis;
+            o._timestamp_as_string = options.timestampAsString;
+            o._untyped_nulls       = options.untypedNulls;
+
+            IonWriter writer = s.newTextWriter(out, o);
+            value.writeTo(writer);
+            writer.finish();
+        }
     }
 
     /**
@@ -592,6 +629,9 @@ public class Printer
         }
 
 
+        /**
+         * @param text may be null
+         */
         public void writeString(String text) throws IOException
         {
             if (myOptions.stringAsJson)

@@ -16,6 +16,7 @@ import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.Base64Encoder.TextStream;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.util.IonTextUtils;
+import com.amazon.ion.util.IonTextUtils.SymbolVariant;
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.Flushable;
@@ -255,6 +256,13 @@ class IonWriterSystemText
         return (topType == tidList || topType == tidStruct);
     }
 
+    private boolean containerIsSexp()
+    {
+        if (_top == 0) return false;
+        int topType = topType();
+        return (topType == tidSexp);
+    }
+
     void printLeadingWhiteSpace() throws IOException {
         for (int ii=0; ii<_top; ii++) {
             _output.append(' ');
@@ -268,6 +276,50 @@ class IonWriterSystemText
        }
        _output.append(closeChar);
     }
+
+
+    private void writeSymbolToken(String value) throws IOException
+    {
+        if (_options._symbol_as_string)
+        {
+            if (_options._string_as_json)
+            {
+                IonTextUtils.printJsonString(_output, value);
+            }
+            else
+            {
+                IonTextUtils.printString(_output, value);
+            }
+        }
+        else
+        {
+            SymbolVariant variant = IonTextUtils.symbolVariant(value);
+            switch (variant)
+            {
+                case IDENTIFIER:
+                {
+                    _output.append(value);
+                    break;
+                }
+                case OPERATOR:
+                {
+                    if (containerIsSexp())
+                    {
+                        _output.append(value);
+                        break;
+                    }
+                    // else fall through...
+                }
+                case QUOTED:
+                {
+                    IonTextUtils.printQuotedSymbol(_output, value);
+                    break;
+                }
+            }
+        }
+    }
+
+
     void startValue() throws IOException
     {
         if (_options.isPrettyPrintOn()) {
@@ -287,7 +339,7 @@ class IonWriterSystemText
             if (name == null) {
                 throw new IllegalStateException(ERROR_MISSING_FIELD_NAME);
             }
-            IonTextUtils.printSymbol(_output, name);
+            writeSymbolToken(name);
             _output.append(':');
             super.clearFieldName();
         }
@@ -295,11 +347,13 @@ class IonWriterSystemText
         // write annotations
         int annotation_count = super._annotation_count;
         if (annotation_count > 0) {
-            String[] annotations = getTypeAnnotations();
-            for (int ii=0; ii<annotation_count; ii++) {
-                String name = annotations[ii];
-                IonTextUtils.printSymbol(_output, name);
-                _output.append("::");
+            if (! _options._skip_annotations) {
+                String[] annotations = getTypeAnnotations();
+                for (int ii=0; ii<annotation_count; ii++) {
+                    String name = annotations[ii];
+                    IonTextUtils.printSymbol(_output, name);
+                    _output.append("::");
+                }
             }
             super.clearAnnotations();
         }
@@ -317,8 +371,15 @@ class IonWriterSystemText
         char opener;
         switch (containerType)
         {
+            case SEXP:
+            {
+                if (!_options._sexp_as_list)
+                {
+                    tid = tidSexp; _in_struct = false; opener = '('; break;
+                }
+                // else fall through and act just like list
+            }
             case LIST:   tid = tidList;   _in_struct = false; opener = '['; break;
-            case SEXP:   tid = tidSexp;   _in_struct = false; opener = '('; break;
             case STRUCT: tid = tidStruct; _in_struct = true;  opener = '{'; break;
             default:
                 throw new IllegalArgumentException();
@@ -364,24 +425,31 @@ class IonWriterSystemText
     {
         startValue();
 
-        String nullimage = null;
+        String nullimage;
 
-        switch (type) {
-        case NULL:      nullimage = "null";           break;
-        case BOOL:      nullimage = "null.bool";      break;
-        case INT:       nullimage = "null.int";       break;
-        case FLOAT:     nullimage = "null.float";     break;
-        case DECIMAL:   nullimage = "null.decimal";   break;
-        case TIMESTAMP: nullimage = "null.timestamp"; break;
-        case SYMBOL:    nullimage = "null.symbol";    break;
-        case STRING:    nullimage = "null.string";    break;
-        case BLOB:      nullimage = "null.blob";      break;
-        case CLOB:      nullimage = "null.clob";      break;
-        case SEXP:      nullimage = "null.sexp";      break;
-        case LIST:      nullimage = "null.list";      break;
-        case STRUCT:    nullimage = "null.struct";    break;
+        if (_options._untyped_nulls)
+        {
+            nullimage = "null";
+        }
+        else
+        {
+            switch (type) {
+                case NULL:      nullimage = "null";           break;
+                case BOOL:      nullimage = "null.bool";      break;
+                case INT:       nullimage = "null.int";       break;
+                case FLOAT:     nullimage = "null.float";     break;
+                case DECIMAL:   nullimage = "null.decimal";   break;
+                case TIMESTAMP: nullimage = "null.timestamp"; break;
+                case SYMBOL:    nullimage = "null.symbol";    break;
+                case STRING:    nullimage = "null.string";    break;
+                case BLOB:      nullimage = "null.blob";      break;
+                case CLOB:      nullimage = "null.clob";      break;
+                case SEXP:      nullimage = "null.sexp";      break;
+                case LIST:      nullimage = "null.list";      break;
+                case STRUCT:    nullimage = "null.struct";    break;
 
-        default: throw new IllegalStateException("unexpected type " + type);
+                default: throw new IllegalStateException("unexpected type " + type);
+            }
         }
 
         _output.append(nullimage);
@@ -398,14 +466,14 @@ class IonWriterSystemText
         throws IOException
     {
         startValue();
-        _output.append(value+"");
+        _output.append(Integer.toString(value));
         closeValue();
     }
     public void writeInt(long value)
         throws IOException
     {
         startValue();
-        _output.append(value+"");
+        _output.append(Long.toString(value));
         closeValue();
     }
     public void writeInt(BigInteger value) throws IOException
@@ -491,7 +559,13 @@ class IonWriterSystemText
             final int scale = decimal.scale();
             final int exponent = -scale;
 
-            if (exponent == 0)
+            if (_options._decimal_as_float)
+            {
+                _output.append(unscaledText);
+                _output.append('e');
+                _output.append(Integer.toString(exponent));
+            }
+            else if (exponent == 0)
             {
                 _output.append(unscaledText);
                 _output.append('.');
@@ -544,7 +618,24 @@ class IonWriterSystemText
         }
         else {
             startValue();
-            value.print(_output);
+
+            if (_options._timestamp_as_millis)
+            {
+                long millis = value.getMillis();
+                _output.append(Long.toString(millis));
+            }
+            else if (_options._timestamp_as_string)
+            {
+                // Timestamp is ASCII-safe so this is easy
+                _output.append('"');
+                value.print(_output);
+                _output.append('"');
+            }
+            else
+            {
+                value.print(_output);
+            }
+
             closeValue();
         }
     }
@@ -560,6 +651,10 @@ class IonWriterSystemText
             // TODO This can lead to mixed newlines in the output.
             // It assumes NL line separators, but _options could use CR+NL
             IonTextUtils.printLongString(_output, value);
+        }
+        else if (_options._string_as_json)
+        {
+            IonTextUtils.printJsonString(_output, value);
         }
         else
         {
@@ -599,7 +694,7 @@ class IonWriterSystemText
         throws IOException
     {
         startValue();
-        IonTextUtils.printSymbol(_output, value);
+        writeSymbolToken(value);
         closeValue();
     }
 
@@ -620,24 +715,40 @@ class IonWriterSystemText
 
         TextStream ts = new TextStream(new ByteArrayInputStream(value, start, len));
 
-        startValue();
-        _output.append("{{");
         // base64 encoding is 6 bits per char so
         // it evens out at 3 bytes in 4 characters
         char[] buf = new char[_options.isPrettyPrintOn() ? 80 : 400];
         CharBuffer cb = CharBuffer.wrap(buf);
-        if (_options.isPrettyPrintOn()) {
-            _output.append(" ");
+
+        startValue();
+
+        if (_options._blob_as_string) {
+            _output.append('"');
         }
+        else {
+            _output.append("{{");
+            if (_options.isPrettyPrintOn()) {
+                _output.append(' ');
+            }
+        }
+
         for (;;) {
+            // TODO is it better to fill up the CharBuffer before outputting?
             int clen = ts.read(buf, 0, buf.length);
             if (clen < 1) break;
             _output.append(cb, 0, clen);
         }
-        if (_options.isPrettyPrintOn()) {
-            _output.append(" ");
+
+
+        if (_options._blob_as_string) {
+            _output.append('"');
         }
-        _output.append("}}");
+        else {
+            if (_options.isPrettyPrintOn()) {
+                _output.append(' ');
+            }
+            _output.append("}}");
+        }
         closeValue();
     }
 
@@ -651,11 +762,17 @@ class IonWriterSystemText
         }
 
         startValue();
-        _output.append("{{");
 
-        if (_options.isPrettyPrintOn()) {
-            _output.append(" ");
+        if (! _options._clob_as_string) {
+            _output.append("{{");
+
+            if (_options.isPrettyPrintOn()) {
+                _output.append(" ");
+            }
         }
+
+        final boolean json =
+            _options._clob_as_string && _options._string_as_json;
 
         boolean longString = (_options._long_string_threshold < value.length);
 
@@ -670,7 +787,10 @@ class IonWriterSystemText
         for (int ii=start; ii<end; ii++) {
             char c = (char)(value[ii] & 0xff);
             if (c < 32 ) {
-                if (c == '\n' && longString) {
+                if (json) {
+                    IonTextUtils.printJsonCodePoint(_output, c);
+                }
+                else if (c == '\n' && longString) {
                     // TODO account for NL versus CR+NL streams
                     _output.append(c);
                 } else {
@@ -678,7 +798,11 @@ class IonWriterSystemText
                 }
             }
             else if (c > 127) {
-                if (just_ascii) {
+                if (json) {
+                    // This is always ASCII
+                    IonTextUtils.printJsonCodePoint(_output, c);
+                }
+                else if (just_ascii) {
                     // ascii uses backslash-X hex encoding
                     _output.append("\\x");
                     assert (c > 0x7f && c <= 0xff); // this should always be 2 hex chars
@@ -711,10 +835,13 @@ class IonWriterSystemText
             _output.append('"');
         }
 
-        if (_options.isPrettyPrintOn()) {
-            _output.append(" ");
+        if (! _options._clob_as_string) {
+            if (_options.isPrettyPrintOn()) {
+                _output.append(" ");
+            }
+            _output.append("}}");
         }
-        _output.append("}}");
+
         closeValue();
     }
 

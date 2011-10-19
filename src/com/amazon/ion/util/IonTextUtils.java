@@ -283,13 +283,13 @@ public class IonTextUtils
      *
      * @throws NullPointerException
      *         if <code>symbol</code> is <code>null</code>.
-     * @throws IllegalArgumentException if <code>symbol</code> is empty.
+     * @throws EmptySymbolException if <code>symbol</code> is empty.
      */
     public static SymbolVariant symbolVariant(CharSequence symbol)
     {
         int length = symbol.length();
         if (length == 0) {
-            throw new IllegalArgumentException("symbol must be non-empty");
+            throw new EmptySymbolException();
         }
 
         // If the symbol's text matches an Ion keyword, we must quote it.
@@ -362,8 +362,7 @@ public class IonTextUtils
     }
 
     /**
-     * Prints a single character (Unicode code point) in JSON string format,
-     * escaping as necessary.
+     * Prints a single Unicode code point for use in an ASCII-safe JSON string.
      *
      * @param out the stream to receive the data.
      * @param codePoint a Unicode code point.
@@ -376,6 +375,9 @@ public class IonTextUtils
     }
 
 
+    /**
+     * Prints a single code point, ASCII safe.
+     */
     private static void printCodePoint(Appendable out, int c, EscapeMode mode)
         throws IOException
     {
