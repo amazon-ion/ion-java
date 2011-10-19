@@ -354,17 +354,11 @@ public final class IonSystemLite
         return st;
     }
 
-    public IonValue newValue(IonReader reader)
-    {
-        IonValue value = load_value(reader);
-        return value;
-    }
-
-    private IonValueLite load_value(IonReader reader)
+    public IonValueLite newValue(IonReader reader)
     {
         IonValueLite value = load_value_helper(reader);
         if (value == null) {
-            return null;
+            throw new IonException("No value available");
         }
         if (value._isSymbolPresent()) {
             value.populateSymbolValues(null);
@@ -374,7 +368,7 @@ public final class IonSystemLite
 
     private IonValueLite load_value_helper(IonReader reader)
     {
-        boolean symbol_encountered = false;
+        boolean symbol_is_present = false;
 
         IonType t = reader.getType();
         if (t == null) {
@@ -407,7 +401,7 @@ public final class IonSystemLite
                 break;
             case SYMBOL:
                 v = newSymbol(reader.stringValue());
-                symbol_encountered = true;
+                symbol_is_present = true;
                 break;
             case STRING:
                 v = newString(reader.stringValue());
@@ -433,12 +427,12 @@ public final class IonSystemLite
         if (reader.isInStruct()) {
             String fieldName = reader.getFieldName();
             v.setFieldName(fieldName);
-            symbol_encountered = true;
+            symbol_is_present = true;
         }
         String[] uta = reader.getTypeAnnotations();
         if (uta.length > 0) {
             v.setTypeAnnotations(uta);
-            symbol_encountered = true;
+            symbol_is_present = true;
         }
         if (!reader.isNullValue()) {
             switch (t) {
@@ -458,22 +452,26 @@ public final class IonSystemLite
                 // we have to load the children after we grabbed the
                 // fieldname and annotations off of the parent container
                 if (load_children((IonContainerLite)v, reader)) {
-                    symbol_encountered = true;
+                    symbol_is_present = true;
                 }
                 break;
             default:
                 throw new IonException("unexpected type encountered reading value: "+t.toString());
             }
         }
-        if (symbol_encountered) {
+        if (symbol_is_present) {
             v._isSymbolPresent(true);
         }
         return v;
     }
 
+    /**
+     * @return true iff any child contains a symbol
+     * (including field names and annotations)
+     */
     private boolean load_children(IonContainerLite container, IonReader reader)
     {
-        boolean contains_symbol = false;
+        boolean symbol_is_present = false;
 
         reader.stepIn();
         for (;;) {
@@ -486,12 +484,12 @@ public final class IonSystemLite
             container.add(child);
 
             if (child._isSymbolPresent()) {
-                contains_symbol = true;
+                symbol_is_present = true;
             }
         }
         reader.stepOut();
 
-        return contains_symbol;
+        return symbol_is_present;
     }
 
     IonValueLite newValue(IonType valueType)
@@ -743,7 +741,8 @@ public final class IonSystemLite
             }
 
             // make an ion value from our reader
-            IonValueLite value = _system.load_value(_reader);
+            // We called _reader.next() inside hasNext() above
+            IonValueLite value = _system.newValue(_reader);
 
             // we've used up the value now, force a _reader._next() the next time through
             _next = null;

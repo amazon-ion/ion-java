@@ -160,6 +160,10 @@ public class IonSystemTest
         s.add("field1", v2);
     }
 
+
+    //========================================================================
+    // newLoader(...)
+
     @Test
     public void testNewLoaderDefaultCatalog()
     {
@@ -175,6 +179,9 @@ public class IonSystemTest
         assertSame(catalog(), loader.getCatalog());
     }
 
+
+    //========================================================================
+    // newDatagram(...)
 
     @Test
     public void testNewDatagramImporting()
@@ -208,5 +215,17 @@ public class IonSystemTest
         Iterator<String> declared = symbolTable.iterateDeclaredSymbolNames();
         assertEquals("local symbol", "l1", declared.next());
         assertFalse(declared.hasNext());
+    }
+
+
+    //========================================================================
+    // newValue(IonReader)
+
+    @Test(expected = IonException.class)
+    public void testNewValueFailsWhenNoCurrentValue()
+    {
+        IonReader r = system().newReader("hi");
+        // we don't call next()!
+        system().newValue(r);
     }
 }
