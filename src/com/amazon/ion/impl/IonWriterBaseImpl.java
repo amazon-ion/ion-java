@@ -152,20 +152,18 @@ public abstract class IonWriterBaseImpl
      * This implmentation simply validates that the argument is not a
      * shared symbol table, and assigns it to {@link #_symbol_table}.
      *
-     * @param symbols base symbol table for encoding.
-     *   May be null
+     * @param symbols base symbol table for encoding. Must not be null.
      * @throws IllegalArgumentException if symbols is null or a shared symbol table
      */
     public void setSymbolTable(SymbolTable symbols)
         throws IOException
     {
-        if (isNonSystemSharedTable(symbols)) {
+        if (symbols == null || isNonSystemSharedTable(symbols)) {
             throw new IllegalArgumentException("symbol table must be local or system to be set, or reset");
         }
         if (getDepth() > 0) {
             throw new IllegalStateException("the symbol table cannot be set, or reset, while a container is open");
         }
-        // TODO what does null mean?
         _symbol_table = symbols;
     }
 

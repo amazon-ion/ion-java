@@ -276,6 +276,9 @@ abstract class IonWriterUser
         return;
     }
 
+    /**
+     * @param new_symbols Must not be null.
+     */
     abstract void set_symbol_table_helper(SymbolTable prev_symbols,
                                           SymbolTable new_symbols)
         throws IOException;

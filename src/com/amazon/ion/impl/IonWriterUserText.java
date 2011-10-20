@@ -66,8 +66,6 @@ public class IonWriterUserText
                                         SymbolTable new_symbols)
         throws IOException
     {
-        // FIXME missing null check on new_symbols
-
         // for the text user writer if the symbol table
         // isn't changing we don't care
         if (prev_symbols == new_symbols) {

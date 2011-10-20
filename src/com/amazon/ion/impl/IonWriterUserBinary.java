@@ -53,8 +53,6 @@ public class IonWriterUserBinary
                                         SymbolTable new_symbols)
         throws IOException
     {
-        // FIXME missing null check on new_symbols
-
         // for a binary writer we always write out symbol tables
         // writeUserSymbolTable(new_symbols);
         if (new_symbols.isSystemTable()) {
