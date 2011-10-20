@@ -573,23 +573,6 @@ if (table1 == table2) {
         checkSymbol("imported 1");
     }
 
-    @Test
-    public void testObsoleteSharedTableFormat()
-        throws Exception
-    {
-        startTestCheckpoint("testObsoleteSharedTableFormat");
-
-        String text =
-            "$ion_symbol_table::{ name:'''test''', symbols:['''x'''] }" +
-            "346";
-
-        startIteration(text);
-        nextValue();
-        checkInt(346);
-
-        assertNull(system().getCatalog().getTable("test"));
-    }
-
 
     /**
      * Parse Ion string data and ensure it matches expected text.
