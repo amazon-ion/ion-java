@@ -116,29 +116,6 @@ class IonWriterSystemText
 
 
     @Override
-    protected void finishSystemContext() throws IOException
-    {
-        setSymbolTable(_default_system_symbol_table);
-    }
-
-    @Override
-    UnifiedSymbolTable inject_local_symbol_table() throws IOException
-    {
-        // no catalog since it doesn't matter as this is a
-        // pure local table, with no imports
-        UnifiedSymbolTable symbols
-            = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _symbol_table);
-        return symbols;
-    }
-
-
-    //@Override
-    //public void setSymbolTable(SymbolTable symbols)
-    // it is unnecessary to override setSymbolTable
-    // for the system text writer since it doesn't
-    // need any work beyond the base method
-
-    @Override
     public int getDepth()
     {
         return _top;

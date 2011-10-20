@@ -5,6 +5,7 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_INT_ARRAY;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
+import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonException;
@@ -95,9 +96,13 @@ public abstract class IonWriterBaseImpl
      * Called by finish after flushing all the known data, to prepare for the
      * case where the user sends some more.
      * <p>
-     * FIXME this should never write anything and should never throw!
+     * This implementation just sets the {@link #_symbol_table} to the
+     * {@link #_default_system_symbol_table}.
      */
-    protected abstract void finishSystemContext() throws IOException;
+    void finishSystemContext()
+    {
+        _symbol_table = _default_system_symbol_table;
+    }
 
     public final void finish() throws IOException
     {
@@ -174,16 +179,19 @@ public abstract class IonWriterBaseImpl
         return _symbol_table;
     }
 
-    abstract UnifiedSymbolTable inject_local_symbol_table() throws IOException;
-/*    {
+    /**
+     * Builds a new local symbol table from the current contextual symtab
+     * (a system symtab).
+     * @return not null.
+     */
+    UnifiedSymbolTable inject_local_symbol_table() throws IOException
+    {
+        assert _symbol_table.isSystemTable();
         // no catalog since it doesn't matter as this is a
         // pure local table, with no imports
-        UnifiedSymbolTable symbols
-            = UnifiedSymbolTable.makeNewLocalSymbolTable(_symbol_table);
-        setSymbolTable(symbols);
-        return symbols;
+        return makeNewLocalSymbolTable(_system, _symbol_table);
     }
-*/
+
     protected int add_symbol(String name) throws IOException
     {
         if (_symbol_table == null) {

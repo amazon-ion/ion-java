@@ -200,12 +200,11 @@ abstract class IonWriterUser
     }
 
     @Override
-    protected void finishSystemContext() throws IOException
+    final void finishSystemContext()
     {
         _previous_value_was_ivm = false;
         _system_writer.finishSystemContext();
-        // TODO why not our _default_system_symbol_table ?
-        _symbol_table = _system_writer.getSymbolTable();
+        super.finishSystemContext();
     }
 
 
@@ -301,7 +300,7 @@ abstract class IonWriterUser
     public final void setSymbolTable(SymbolTable symbols)
         throws IOException
     {
-        SymbolTable prev = _symbol_table;
+        SymbolTable prev = _symbol_table; // TODO this isn't always up-to-date!
 
         // checks validity and set the member variable
         super.setSymbolTable(symbols);

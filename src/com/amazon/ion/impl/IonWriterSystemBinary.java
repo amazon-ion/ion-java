@@ -8,7 +8,6 @@ import static com.amazon.ion.impl.IonConstants.tidList;
 import static com.amazon.ion.impl.IonConstants.tidSexp;
 import static com.amazon.ion.impl.IonConstants.tidStruct;
 import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
-import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonException;
@@ -149,12 +148,10 @@ public class IonWriterSystemBinary
     }
 
     @Override
-    protected void finishSystemContext()
+    final void finishSystemContext()
     {
         _assure_ivm = true;
-        if (_symbol_table != null && !_symbol_table.isSystemTable()) {
-            _symbol_table = null;
-        }
+        super.finishSystemContext();
     }
 
     protected final OutputStream getOutputStream()
@@ -380,10 +377,7 @@ public class IonWriterSystemBinary
     @Override
     final UnifiedSymbolTable inject_local_symbol_table() throws IOException
     {
-        // no catalog since it doesn't matter as this is a
-        // pure local table, with no imports
-        UnifiedSymbolTable symbols
-            = makeNewLocalSymbolTable(_system, _default_system_symbol_table);
+        UnifiedSymbolTable symbols = super.inject_local_symbol_table();
         set_symbol_table_prepend_new_local_table(symbols);
         return symbols;
     }

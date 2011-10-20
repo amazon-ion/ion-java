@@ -69,15 +69,11 @@ class IonWriterSystemTree
         return _system;
     }
 
-    @Override
-    protected void finishSystemContext() throws IOException
-    {
-        setSymbolTable(_default_system_symbol_table);
-    }
 
     //
     // informational methods
     //
+    @Override
     public int getDepth()
     {
         return _parent_stack_top;
@@ -121,16 +117,6 @@ class IonWriterSystemTree
         }
     }
 
-    @Override
-    UnifiedSymbolTable inject_local_symbol_table() throws IOException
-    {
-        // no catalog since it doesn't matter as this is a
-        // pure local table, with no imports
-        // we let the system writer handle this work
-        UnifiedSymbolTable symbols
-            = makeNewLocalSymbolTable(_system, _system.getSystemSymbolTable());
-        return symbols;
-    }
 
     void pushParent(IonContainer newParent) {
         if (_current_parent == null) {
@@ -167,7 +153,7 @@ class IonWriterSystemTree
         return prior;
     }
 
-    void append(IonValue value)
+    private void append(IonValue value)
     {
         clearBinaryImage(); // if we append anything the binary image is invalidated
 
@@ -184,6 +170,7 @@ class IonWriterSystemTree
         }
         if (_symbol_table != null) {
             ((IonValuePrivate)_current_parent).setSymbolTable(_symbol_table);
+            // TODO why clear this out? Different invariant than other writers!
             _symbol_table = null;
         }
         if (_in_struct) {
