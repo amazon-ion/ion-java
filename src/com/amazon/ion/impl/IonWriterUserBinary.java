@@ -53,19 +53,21 @@ public class IonWriterUserBinary
                                         SymbolTable new_symbols)
         throws IOException
     {
+        // FIXME missing null check on new_symbols
+
         // for a binary writer we always write out symbol tables
         // writeUserSymbolTable(new_symbols);
         if (new_symbols.isSystemTable()) {
             // TODO: this will suppress multiple attempts to write
             //       a system symbol table - do we want that?  (usually
             //       we do, but always?)
-            if (_after_ion_version_marker) {
+            if (_previous_value_was_ivm) {
                 return;
             }
             // writing to the system writer keeps us from
             // recursing on the writeIonVersionMarker call
             _system_writer.writeIonVersionMarker();
-            _after_ion_version_marker = true;
+            _previous_value_was_ivm = true;
         }
         else {
             assert(new_symbols.isLocalTable());

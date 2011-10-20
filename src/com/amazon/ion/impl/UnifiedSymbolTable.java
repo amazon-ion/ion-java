@@ -588,12 +588,10 @@ public final class UnifiedSymbolTable
         return (table != null && table.isLocalTable());
     }
 
-    public static final boolean isAssignableTable(SymbolTable table)
+    /** Indicates whether a table is system, local, or null. */
+    public static final boolean isNonSystemSharedTable(SymbolTable table)
     {
-        if (table == null)         return true;
-        if (table.isSystemTable()) return true;
-        if (table.isLocalTable())  return true;
-        return false;
+        return (table != null && table.isSharedTable() && ! table.isSystemTable());
     }
 
     public static boolean isTrivialTable(SymbolTable table)

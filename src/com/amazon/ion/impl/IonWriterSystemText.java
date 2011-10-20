@@ -116,7 +116,7 @@ class IonWriterSystemText
 
 
     @Override
-    protected void resetSystemContext() throws IOException
+    protected void finishSystemContext() throws IOException
     {
         setSymbolTable(_default_system_symbol_table);
     }

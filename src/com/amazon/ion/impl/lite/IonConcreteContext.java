@@ -2,10 +2,13 @@
 
 package com.amazon.ion.impl.lite;
 
+import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
+
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.UnifiedSymbolTable;
+
 
 /**
  *
@@ -177,7 +180,7 @@ public class IonConcreteContext
         // value.  That is the owning context is null, a datagram
         // of a system intance.
 
-        if (UnifiedSymbolTable.isAssignableTable(symbols) == false) {
+        if (isNonSystemSharedTable(symbols)) {
             throw new IllegalArgumentException("you can only set a symbol table to a system or local table");
         }
         _symbols = symbols;

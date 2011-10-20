@@ -3,6 +3,7 @@
 package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonBinaryWriter;
@@ -148,7 +149,7 @@ public class IonDatagramLite
     @Override
     public void setSymbolTableOfChild(SymbolTable symbols, IonValueLite child)
     {
-        if (UnifiedSymbolTable.isAssignableTable(symbols) == false) {
+        if (isNonSystemSharedTable(symbols)) {
             throw new IllegalArgumentException("you can only set a symbol table to a system or local table");
         }
         //if (symbols.isSystemTable()) {
@@ -166,7 +167,7 @@ public class IonDatagramLite
     @Override
     public void setSymbolTable(SymbolTable symbols)
     {
-        if (UnifiedSymbolTable.isAssignableTable(symbols) == false) {
+        if (isNonSystemSharedTable(symbols)) {
             throw new IllegalArgumentException("you can only set a symbol table to a system or local table");
         }
         _pending_symbol_table = symbols;

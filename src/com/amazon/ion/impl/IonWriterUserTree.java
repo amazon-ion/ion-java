@@ -25,14 +25,18 @@ class IonWriterUserTree
      *   Must not be null.
      * @param catalog may be null.
      */
-    protected IonWriterUserTree(IonWriterSystemTree systemWriter, IonCatalog catalog, boolean suppressIVM)
+    protected IonWriterUserTree(IonWriterSystemTree systemWriter,
+                                IonCatalog catalog,
+                                boolean suppressIVM)
     {
-        super(systemWriter.getSystem(), catalog, systemWriter, systemWriter.get_root());
+        super(systemWriter.getSystem(), catalog, systemWriter,
+              systemWriter.get_root());
     }
 
 
     @Override
-    public void set_symbol_table_helper(SymbolTable prev_symbols, SymbolTable new_symbols)
+    public void set_symbol_table_helper(SymbolTable prev_symbols,
+                                        SymbolTable new_symbols)
         throws IOException
     {
         // we do nothing here, the symbol tables will get picked up as

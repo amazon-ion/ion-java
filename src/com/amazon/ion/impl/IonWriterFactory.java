@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.IonCatalog;
@@ -158,7 +159,7 @@ public class IonWriterFactory
 
     public synchronized void set(SymbolTable symbolTable)
     {
-        if (UnifiedSymbolTable.isAssignableTable(symbolTable) == false) {
+        if (isNonSystemSharedTable(symbolTable)) {
             throw new IonException("symbol table must be null, or a local, or a system symbol table");
         }
         force_in_progress();
@@ -410,10 +411,10 @@ public class IonWriterFactory
                                       initialSystemSymtab,
                                       output,
                                       /* autoFlush */    false,
-                                      /* suppressIVM */  false);
+                                      /* suppressIVM */  false); // TODO ???
         IonWriterUserBinary writer =
             new IonWriterUserBinary(system, catalog, system_writer,
-                                    /* suppressIVM */ true,
+                                    /* suppressIVM */ true,      // TODO ??? diff above
                                     streamCopyOptimized);
         try {
             writer.setSymbolTable(symbols);

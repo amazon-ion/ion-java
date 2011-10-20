@@ -7,6 +7,7 @@ import static com.amazon.ion.impl.IonConstants.tidDATAGRAM;
 import static com.amazon.ion.impl.IonConstants.tidList;
 import static com.amazon.ion.impl.IonConstants.tidSexp;
 import static com.amazon.ion.impl.IonConstants.tidStruct;
+import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.IonBinaryWriter;
@@ -148,7 +149,7 @@ public class IonWriterSystemBinary
     }
 
     @Override
-    protected void resetSystemContext()
+    protected void finishSystemContext()
     {
         _assure_ivm = true;
         if (_symbol_table != null && !_symbol_table.isSystemTable()) {
@@ -284,7 +285,7 @@ public class IonWriterSystemBinary
     // care of all the symbol table writing on their own.
     public void xxx_setSymbolTable(SymbolTable symbols) throws IOException
     {
-        if (UnifiedSymbolTable.isAssignableTable(symbols) == false) {
+        if (isNonSystemSharedTable(symbols)) {
             throw new IllegalArgumentException("symbol table can only be set to a local or system symbol table");
         }
         if (symbols == _symbol_table) {

@@ -70,9 +70,9 @@ class IonWriterSystemTree
     }
 
     @Override
-    protected void resetSystemContext() throws IOException
+    protected void finishSystemContext() throws IOException
     {
-        setSymbolTable(_system.getSystemSymbolTable());
+        setSymbolTable(_default_system_symbol_table);
     }
 
     //
@@ -222,16 +222,13 @@ class IonWriterSystemTree
     {
         IonValue prior = popParent();
 
-        if (_current_parent instanceof IonDatagram && prior instanceof IonStruct)
+        if (_current_parent instanceof IonDatagram
+            && UnifiedSymbolTable.valueIsLocalSymbolTable(prior))
         {
-            if (UnifiedSymbolTable.valueIsLocalSymbolTable(prior))
-            {
-                SymbolTable symbol_table;
-                symbol_table =
-                    makeNewLocalSymbolTable(_system, _catalog, (IonStruct) prior);
-                setSymbolTable(symbol_table);
-                clearBinaryImage(); // changing the symbol table is likely to invalidate the image - so to be safe we do
-            }
+            SymbolTable symbol_table =
+                makeNewLocalSymbolTable(_system, _catalog, (IonStruct) prior);
+            setSymbolTable(symbol_table);
+            clearBinaryImage(); // changing the symbol table is likely to invalidate the image - so to be safe we do
         }
     }
 

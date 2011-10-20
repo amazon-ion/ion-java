@@ -41,7 +41,11 @@ abstract class IonWriterUser
     /** Used to make correct local symbol tables. May be null. */
     private   final IonCatalog _catalog;
 
-    protected       boolean   _after_ion_version_marker;
+    /**
+     * Indicates whether the (immediately) previous value was an IVM.
+     * This is cleared by {@link #finish_value()}.
+     */
+    protected       boolean   _previous_value_was_ivm;
     protected final boolean   _root_is_datagram;
 
     /**
@@ -106,6 +110,7 @@ abstract class IonWriterUser
         assert ! (systemWriter instanceof IonWriterUserTree);
 
         if (suppressIVM == false) {
+            // TODO When do/don't we have a symtab?
             if (_current_writer.getSymbolTable() == null) {
                 try {
                     setSymbolTable(_system.getSystemSymbolTable());
@@ -134,7 +139,7 @@ abstract class IonWriterUser
              /* rootIsDatagram */ DATAGRAM.equals(container.getType()));
 
         // Datagrams have an implicit initial IVM
-        _after_ion_version_marker = true;
+        _previous_value_was_ivm = true;
     }
 
     //========================================================================
@@ -195,10 +200,11 @@ abstract class IonWriterUser
     }
 
     @Override
-    protected void resetSystemContext() throws IOException
+    protected void finishSystemContext() throws IOException
     {
-        _after_ion_version_marker = false;
-        _system_writer.resetSystemContext();
+        _previous_value_was_ivm = false;
+        _system_writer.finishSystemContext();
+        // TODO why not our _default_system_symbol_table ?
         _symbol_table = _system_writer.getSymbolTable();
     }
 
@@ -270,7 +276,9 @@ abstract class IonWriterUser
         return;
     }
 
-    abstract void set_symbol_table_helper(SymbolTable prev_symbols, SymbolTable new_symbols) throws IOException;
+    abstract void set_symbol_table_helper(SymbolTable prev_symbols,
+                                          SymbolTable new_symbols)
+        throws IOException;
 
     @Override
     public final void setSymbolTable(SymbolTable symbols)
@@ -304,7 +312,7 @@ abstract class IonWriterUser
         // if our symbol table changed we need to write it out
         // to the system writer ... IF, and only if, this is binary writer
         if (symbols.isSystemTable()) {
-            if (!_after_ion_version_marker) {
+            if (!_previous_value_was_ivm) {
                 // writing to the system writer keeps us from
                 // recursing on the writeIonVersionMarker call
                 _system_writer.writeIonVersionMarker();
@@ -395,13 +403,16 @@ abstract class IonWriterUser
         return _current_writer.getTypeAnnotationIds();
     }
 
+    /**
+     * To be called at the end of every value.
+     * Sets {@link #_previous_value_was_ivm} to false, althought that may
+     * be overwritten by the caller.
+     */
     private final void finish_value()
     {
-        // note that as we finish most values we aren't after
-        // an IVM - except when it's an IVM.  In that case the
-        // caller (writeIVM) sets this back to true.
-        _after_ion_version_marker = false;  // this will gets set back to true when we really write an IVM
+        _previous_value_was_ivm = false;
     }
+
     public void stepIn(IonType containerType) throws IOException
     {
         // see if it looks like we're starting a local symbol table
@@ -527,7 +538,7 @@ abstract class IonWriterUser
     public void writeSymbol(int symbolId) throws IOException
     {
         if (write_as_ivm(symbolId)) {
-            if (need_to_write_ivm()) {
+            if (! previousValueWasIvm()) {
                 writeIonVersionMarker();
             }
             // since writeIVM calls finish and when
@@ -546,7 +557,7 @@ abstract class IonWriterUser
         else if (value.equals(ION_1_0)
                  && write_as_ivm(ION_1_0_SID)
         ) {
-            if (need_to_write_ivm()) {
+            if (! previousValueWasIvm()) {
                 writeIonVersionMarker();
             }
             // since writeIVM calls finish and when
@@ -573,26 +584,28 @@ abstract class IonWriterUser
         }
         return treat_as_ivm;
     }
-    private final boolean need_to_write_ivm()
+
+    private final boolean previousValueWasIvm()
     {
         // we skip this IVM symbol if it is a redundant IVM
         // either at the beginning (which is common if this
         // is a binary writer) or at any other time.
-        boolean write_it;
-        write_it = (_after_ion_version_marker == false);
-        return write_it;
+        return _previous_value_was_ivm;
     }
 
     @Override
     public void writeIonVersionMarker() throws IOException
     {
         if (getDepth() != 0 || _root_is_datagram == false) {
-            throw new IllegalStateException("IonVersionMarkers are only value at the top level of a datagram");
+            String message =
+                "Ion Version Markers are only valid at the top level of a " +
+                "data stream";
+            throw new IllegalStateException(message);
         }
         assert(_current_writer == _system_writer);
 
         _current_writer.writeIonVersionMarker();
-        _after_ion_version_marker = true;
+        _previous_value_was_ivm = true;
 
         setSymbolTable(_system.getSystemSymbolTable());
 
@@ -603,8 +616,10 @@ abstract class IonWriterUser
         // finish to tell it whether we were finishing a
         // IVM or not, but since this is the only time
         // it's the case it's easier to just patch it here
-        _after_ion_version_marker = true;
+        _previous_value_was_ivm = true;
     }
+
+
     public void writeTimestamp(Timestamp value) throws IOException
     {
         if (value == null) {

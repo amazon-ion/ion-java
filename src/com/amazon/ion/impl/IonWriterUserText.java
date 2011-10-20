@@ -26,34 +26,48 @@ public class IonWriterUserText
         {
             super(prettyPrint, printAscii);
         }
-        public TextOptions(boolean prettyPrint, boolean printAscii, boolean filterOutSymbolTables)
+        public TextOptions(boolean prettyPrint, boolean printAscii,
+                           boolean filterOutSymbolTables)
         {
             super(prettyPrint, printAscii, filterOutSymbolTables);
         }
-        public TextOptions(boolean prettyPrint, boolean printAscii, boolean filterOutSymbolTables, boolean suppressIonVersionMarker)
+        public TextOptions(boolean prettyPrint, boolean printAscii,
+                           boolean filterOutSymbolTables,
+                           boolean suppressIonVersionMarker)
         {
-            super(prettyPrint, printAscii, filterOutSymbolTables, suppressIonVersionMarker);
+            super(prettyPrint, printAscii, filterOutSymbolTables,
+                  suppressIonVersionMarker);
         }
     }
 
     final private boolean _filter_symbol_tables;
 
-    protected IonWriterUserText(IonSystem sys, IonCatalog catalog, OutputStream out, $PrivateTextOptions options) {
-        super(sys, new IonWriterSystemText(sys, sys.getSystemSymbolTable(), out, options),
+    protected IonWriterUserText(IonSystem sys, IonCatalog catalog,
+                                OutputStream out, $PrivateTextOptions options)
+    {
+        super(sys, new IonWriterSystemText(sys, sys.getSystemSymbolTable(),
+                                           out, options),
               catalog, options.issuppressIonVersionMarkerOn());
         _filter_symbol_tables = options.isFilterSymbolTablesOn();
     }
-    protected IonWriterUserText(IonSystem sys, IonCatalog catalog, Appendable out, $PrivateTextOptions options) {
-        super(sys, new IonWriterSystemText(sys, sys.getSystemSymbolTable(), out, options),
+
+    protected IonWriterUserText(IonSystem sys, IonCatalog catalog,
+                                Appendable out, $PrivateTextOptions options)
+    {
+        super(sys, new IonWriterSystemText(sys, sys.getSystemSymbolTable(),
+                                           out, options),
               catalog, options.issuppressIonVersionMarkerOn());
         _filter_symbol_tables = options.isFilterSymbolTablesOn();
     }
 
 
     @Override
-    public void set_symbol_table_helper(SymbolTable prev_symbols, SymbolTable new_symbols)
+    public void set_symbol_table_helper(SymbolTable prev_symbols,
+                                        SymbolTable new_symbols)
         throws IOException
     {
+        // FIXME missing null check on new_symbols
+
         // for the text user writer if the symbol table
         // isn't changing we don't care
         if (prev_symbols == new_symbols) {
@@ -62,38 +76,62 @@ public class IonWriterUserText
 
         // cases are system symbol table - after an IVM (or not)
         // local symbol table, with or without imports
-        boolean requires_this_local_table = false;
+        boolean newSymtabIsLocalWithImports = false;
         if (new_symbols.isLocalTable()) {
+
+            // TODO this always ignores local symtabs w/o imports
+
             SymbolTable[] imports = new_symbols.getImportedTables();
             if (imports != null && imports.length > 0) {
-                requires_this_local_table = true;
+                newSymtabIsLocalWithImports = true;
             }
         }
 
-        boolean needs_ivm = !_after_ion_version_marker;
-        if (_filter_symbol_tables) {
-            if (!requires_this_local_table) {
-                needs_ivm = false;
-            }
+        // TODO This looks wrong.  We don't require an IVM just because we're
+        // changing symtabs.
+        boolean needs_ivm = !_previous_value_was_ivm;
+        if (_filter_symbol_tables && !newSymtabIsLocalWithImports) {
+            // new_symbols is system, or local w/no imports
+            needs_ivm = false;
         }
+
+        // system table
+        //   if _filter_symbol_tables, do nothing
+        //       TODO seems wrong in general, esp beyond Ion 1.0
+        //   if _previous_value_was_ivm, do nothing
+        //   else write IVM
+
+        // local table no imports
+        //   if _filter_symbol_tables, do nothing
+        //   if _previous_value_was_ivm, do nothing
+        //   else write IVM
+        //      TODO seems wrong. Why write anything?
+
+        // local table w/ imports
+        //   if _previous_value_was_ivm, write symtab (skipping symbols)
+        //   else write IVM, then write symtab (skipping symbols)
+        //      TODO Wrong. Could break open content in the symtab.
+
 
         assert(_system_writer == _current_writer);
         if (needs_ivm) {
             // system writer call won't recurse back on us
             _system_writer.writeIonVersionMarker();
-            _after_ion_version_marker = true;
+            _previous_value_was_ivm = true;
             // and no other state needs updating as we're
             // about to write and set the local table next anyway
         }
 
-        if (requires_this_local_table) {
+        if (newSymtabIsLocalWithImports) {
             // TODO: remove cast below with update IonReader over symbol table
-            IonReader reader = ((UnifiedSymbolTable)new_symbols).getReader(this._system);
+            IonReader reader =
+                ((UnifiedSymbolTable)new_symbols).getReader(this._system);
             // move onto and write the struct header
             IonType t = reader.next();
             assert(IonType.STRUCT.equals(t));
             String[] a = reader.getTypeAnnotations();
-            assert(a != null && a.length >= 1); // you (should) always have the $ion_symbol_table annotation
+            // you (should) always have the $ion_symbol_table annotation
+            assert(a != null && a.length >= 1);
 
             // now we'll start a local symbol table struct
             // in the underlying system writer

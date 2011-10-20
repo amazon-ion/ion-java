@@ -6,6 +6,7 @@ import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
 import static com.amazon.ion.impl.IonWriterFactory.makeWriter;
+import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewSharedSymbolTable;
 import static com.amazon.ion.util.IonTextUtils.printString;
@@ -621,7 +622,7 @@ public final class IonSystemLite
     public void setSymbolTableOfChild(SymbolTable symbols, IonValueLite child)
     {
         assert(child != null);
-        if (UnifiedSymbolTable.isAssignableTable(symbols) == false) {
+        if (isNonSystemSharedTable(symbols)) {
             throw new IllegalArgumentException("shared symbol tables cannot be set as a current symbol table");
         }
         if (child.getAssignedSymbolTable() == symbols) {

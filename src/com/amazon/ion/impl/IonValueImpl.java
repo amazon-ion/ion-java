@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.util.Equivalence.ionEquals;
 
@@ -847,7 +848,7 @@ public abstract class IonValueImpl
      * @param symtab must be local, system, or null.
      */
     public void setSymbolTable(SymbolTable symtab) {
-        if (UnifiedSymbolTable.isAssignableTable(symtab) == false) {
+        if (isNonSystemSharedTable(symtab)) {
             throw new IllegalArgumentException("symbol table must be local or system");
         }
 

@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_INT_ARRAY;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonException;
@@ -96,7 +97,7 @@ public abstract class IonWriterBaseImpl
      * <p>
      * FIXME this should never write anything and should never throw!
      */
-    protected abstract void resetSystemContext() throws IOException;
+    protected abstract void finishSystemContext() throws IOException;
 
     public final void finish() throws IOException
     {
@@ -108,7 +109,7 @@ public abstract class IonWriterBaseImpl
 
         writeAllBufferedData();
         flush();
-        resetSystemContext();
+        finishSystemContext();
     }
 
 
@@ -135,8 +136,8 @@ public abstract class IonWriterBaseImpl
 
     /**
      * Sets the symbol table to use for encoding to be the passed
-     * in symbol table.  The can only be done outside an Ion value,
-     * that is at the datagram level.  As symbols are written
+     * in symbol table.  The can only be done between top-level values.
+     * As symbols are written
      * this symbol table is used to resolve them.  If the symbols
      * are undefined this symbol table is updated to include them
      * as local symbols.  The updated symbol table will be
@@ -147,23 +148,29 @@ public abstract class IonWriterBaseImpl
      * not in the system symbol table are written a local
      * symbol table will be created and written before the
      * current top level value.
+     * <p>
+     * This implmentation simply validates that the argument is not a
+     * shared symbol table, and assigns it to {@link #_symbol_table}.
      *
-     * @param symbols base symbol table for encoding
+     * @param symbols base symbol table for encoding.
+     *   May be null
      * @throws IllegalArgumentException if symbols is null or a shared symbol table
      */
     public void setSymbolTable(SymbolTable symbols)
         throws IOException
     {
-        if (UnifiedSymbolTable.isAssignableTable(symbols) == false) {
+        if (isNonSystemSharedTable(symbols)) {
             throw new IllegalArgumentException("symbol table must be local or system to be set, or reset");
         }
         if (getDepth() > 0) {
             throw new IllegalStateException("the symbol table cannot be set, or reset, while a container is open");
         }
+        // TODO what does null mean?
         _symbol_table = symbols;
     }
 
     // note that system writer will overload this and return a null.
+    // TODO why?
     public SymbolTable getSymbolTable()
     {
         return _symbol_table;
