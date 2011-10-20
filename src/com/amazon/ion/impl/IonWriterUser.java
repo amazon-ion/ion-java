@@ -208,6 +208,20 @@ abstract class IonWriterUser
         _symbol_table = _system_writer.getSymbolTable();
     }
 
+
+    //========================================================================
+
+
+    @Override
+    final UnifiedSymbolTable inject_local_symbol_table() throws IOException
+    {
+        // no catalog since it doesn't matter as this is a
+        // pure local table, with no imports
+        // we let the system writer handle this work
+        UnifiedSymbolTable symbols = _system_writer.inject_local_symbol_table();
+        return symbols;
+    }
+
     /**
      * creates a tree representation of a local symbol table as the
      * writer notices it is being written  this copy will be used to
@@ -338,6 +352,8 @@ abstract class IonWriterUser
         SymbolTable symbols = _system_writer.getSymbolTable();
         return symbols;
     }
+
+    //========================================================================
 
     @Override
     public void setFieldName(String name)

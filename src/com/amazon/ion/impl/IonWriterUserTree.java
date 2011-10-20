@@ -57,16 +57,4 @@ class IonWriterUserTree
             ((IonValuePrivate)root).setSymbolTable(new_symbols);
         }
     }
-
-    @Override
-    UnifiedSymbolTable inject_local_symbol_table() throws IOException
-    {
-        // no catalog since it doesn't matter as this is a
-        // pure local table, with no imports
-        // we let the system writer handle this work
-        assert(_system_writer instanceof IonWriterSystemBinary);
-        UnifiedSymbolTable symbols
-            = ((IonWriterSystemTree)_system_writer).inject_local_symbol_table();
-        return symbols;
-    }
 }
