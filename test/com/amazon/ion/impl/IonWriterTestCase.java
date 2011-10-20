@@ -49,7 +49,11 @@ public abstract class IonWriterTestCase
     public void closeWriter()
     throws IOException
     {
-        if (iw != null) iw.close();
+        if (iw != null)
+        {
+            iw.close();
+            iw = null;
+        }
     }
 
     //=========================================================================
@@ -359,11 +363,12 @@ public abstract class IonWriterTestCase
     }
 
 
-    @Test
+    @Test @SuppressWarnings("deprecation")
     public void testWritingDeepNestedList() throws Exception {
         // JIRA ION-60
         IonDatagram dg = loader().load("[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]");
         iw = makeWriter();
+        dg.writeTo(iw);
         iw.writeValue(dg);
     }
 
@@ -681,13 +686,7 @@ public abstract class IonWriterTestCase
         iw.close();
         checkClosed();
 
-        if (false) // Per ION-181, close() doesn't stepOut()
-        {
-            IonDatagram dg = reload();
-            assertEquals("datagram size", 1, dg.size());
-            IonStruct s = (IonStruct) dg.get(0);
-            assertTrue("struct not empty", s.isEmpty());
-        }
+        // Per ION-181, close() doesn't stepOut()
     }
 
     @Test @Ignore // TODO ION-236
@@ -712,7 +711,7 @@ public abstract class IonWriterTestCase
      * Discovered this old behavior during test builds, some user code relies
      * on it.
      */
-    @Test
+    @Test @SuppressWarnings("deprecation")
     public void testWriteValueNull()
         throws Exception
     {
