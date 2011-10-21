@@ -26,11 +26,17 @@ import java.math.BigInteger;
  * provides default implementations for the list forms
  * of the write methods as often the list form is not
  * susceptible to optimization.
- *
- * This also detects system values as they are written
- * at the datagram level and injects
- *
- *
+ * <p>
+ * This writer has a ({@link #_system_writer}) to which the actual data is
+ * written, but data flows through the {@link #_current_writer} most of the
+ * time.
+ * <p>
+ * The critical responsibility here is the recognition of IVMs and local symbol
+ * tables. When the user starts writing a local symtab, the stream is diverted
+ * away from the {@link #_system_writer} into a temporary tree writer that
+ * collects the symtab data into an {@link IonStruct} instance.  When that
+ * struct is stepped-out, the diversion is stopped and the new
+ * {@link SymbolTable} is installed.
  */
 abstract class IonWriterUser
     extends IonWriterBaseImpl  // should be IonWriterSystem ?
@@ -54,12 +60,6 @@ abstract class IonWriterUser
      */
     protected final IonWriterBaseImpl _system_writer;
 
-    // values to manage the diversion of the users input
-    // to a local symbol table
-    private boolean           _symbol_table_being_copied;
-    private IonStruct         _symbol_table_value;
-    private IonWriterBaseImpl _symbol_table_writer;
-
     /**
      * This will be either our {@link #_system_writer} or a symbol table writer
      * depending on whether we're diverting the user values to a
@@ -67,6 +67,14 @@ abstract class IonWriterUser
      * Not null.
      */
     protected IonWriterBaseImpl _current_writer;
+
+    /**
+     * While the stream is diverted to collect local symtab data, it is
+     * being written to this instance.
+     * This is null IFF {@link #_current_writer} == {@link #_system_writer}.
+     */
+    private IonStruct _symbol_table_value;
+
 
 
     /**
@@ -136,7 +144,7 @@ abstract class IonWriterUser
                             IonValue container)
     {
         this(system, catalog, systemWriter,
-             /* rootIsDatagram */ DATAGRAM.equals(container.getType()));
+             /* rootIsDatagram */ container.getType() == DATAGRAM);
 
         // Datagrams have an implicit initial IVM
         _previous_value_was_ivm = true;
@@ -153,8 +161,10 @@ abstract class IonWriterUser
     @Override
     public int getDepth()
     {
+        // TODO this is wrong when the stream is diverted.
         return _current_writer.getDepth();
     }
+
     public boolean isInStruct()
     {
         return _current_writer.isInStruct();
@@ -163,6 +173,7 @@ abstract class IonWriterUser
 
     public void flush() throws IOException
     {
+        // TODO this doesn't behave correctly when the stream is diverted.
         _current_writer.flush();
     }
 
@@ -191,7 +202,7 @@ abstract class IonWriterUser
     @Override
     protected void writeAllBufferedData() throws IOException
     {
-        if (_symbol_table_being_copied) {
+        if (symbol_table_being_collected()) {
             throw new IllegalStateException("you can't finish a user writer while a local symbol table value is being written");
         }
         assert(_current_writer == _system_writer);
@@ -221,21 +232,21 @@ abstract class IonWriterUser
         return symbols;
     }
 
+    private boolean symbol_table_being_collected()
+    {
+//        assert _symbol_table_being_copied == (_current_writer != _system_writer);
+        return (_current_writer != _system_writer);
+    }
+
     /**
-     * creates a tree representation of a local symbol table as the
-     * writer notices it is being written  this copy will be used to
-     * handle symbol table resolution in following values.
-     *
-     * this, in essence, creates a fork in the data stream with one
-     * copy going to the original output stream and the other to a
-     * writer that will build up the ion value copy of the table
-     * that can be used to construct the symbol table once it is
-     * complete.
-     *
+     * Diverts the data stream to a temporary tree writer which collects
+     * local symtab data into an IonStruct from which we'll later construct a
+     * {@link SymbolTable} instance.
+     * <p>
      * Once the value image of the symbol table is complete (which
      * happens when the caller steps out of the containing struct)
-     * the fork gets cut off and the symbol table gets constructed.
-     *
+     * the diverted stream is abandonded and the symbol table gets constructed.
+     * <p>
      * If there was a makeSymbolTable(Reader) this copy might be,
      * at least partially, avoided.
      *
@@ -243,8 +254,7 @@ abstract class IonWriterUser
      */
     private void open_local_symbol_table_copy()
     {
-        assert(!_symbol_table_being_copied);
-        assert(_system != null);
+        assert(! symbol_table_being_collected());
 
         _symbol_table_value = _system.newEmptyStruct();
 
@@ -256,38 +266,28 @@ abstract class IonWriterUser
         );
         _symbol_table_value.setTypeAnnotations(getTypeAnnotations());
 
-        _symbol_table_writer = new IonWriterSystemTree(_system, _catalog,
-                                                       _symbol_table_value);
-        _current_writer            = _symbol_table_writer;
-        _symbol_table_being_copied = true;
+        _current_writer = new IonWriterSystemTree(_system, _catalog,
+                                                  _symbol_table_value);
     }
 
     /**
-     * this closes the forked writer since the symbol table
-     * is complete (i.e. the struct is closed, on stepOut).
-     *
-     * @throws IOException forwarded from the
+     * Closes the diverted writer since the local symbol table
+     * is complete (i.e. the struct is closed, on {@link #stepOut()}).
      */
     private void close_local_symbol_table_copy() throws IOException
     {
-        assert(_symbol_table_being_copied);
-        assert(_system != null && _system instanceof IonSystemPrivate);
+        assert(symbol_table_being_collected());
 
         // convert the struct we just wrote with the TreeWriter to a
         // local symbol table
         UnifiedSymbolTable symtab =
             makeNewLocalSymbolTable(_system, _catalog, _symbol_table_value);
 
-        _symbol_table_being_copied = false;
-        _symbol_table_value        = null;
-        _symbol_table_writer       = null;
-
-        _current_writer            = _system_writer;
+        _symbol_table_value = null;
+        _current_writer     = _system_writer;
 
         // now make this symbol table the current symbol table
         this.setSymbolTable(symtab);
-
-        return;
     }
 
     /**
@@ -452,7 +452,8 @@ abstract class IonWriterUser
 
     public void stepOut() throws IOException
     {
-        if (_symbol_table_being_copied && _current_writer.getDepth() == 0) {
+        if (symbol_table_being_collected() && _current_writer.getDepth() == 0)
+        {
             close_local_symbol_table_copy();
         }
         else {
