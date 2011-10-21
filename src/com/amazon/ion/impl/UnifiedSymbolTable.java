@@ -1057,13 +1057,10 @@ public final class UnifiedSymbolTable
 
     public SymbolTable getSystemSymbolTable()
     {
+        if (isSystemTable()) return this;
+
         // Not synchronized since this member never changes after construction.
-        SymbolTable system_table = _import_list.getSystemSymbolTable();
-        if (system_table == null && _sys_holder != null) {
-            system_table = _sys_holder.getSystemSymbolTable();
-        }
-        assert (system_table != null && system_table.isSystemTable());
-        return system_table;
+        return _import_list.getSystemSymbolTable();
     }
 
     // TODO add to interface to let caller avoid getImports which makes a copy

@@ -265,9 +265,7 @@ public class SymbolTableTest
         final SymbolTable table = system().newSharedSymbolTable(
             system().newReader(synthesizeSharedSymbolTableIon("foobar", 1, "hello"))
         );
-        assertEquals("foobar", table.getName());
-        assertEquals(1, table.getVersion());
-        assertEquals(1, table.getMaxId());
+        checkSharedTable("foobar", 1, new String[]{ "hello" }, table);
     }
 
     /**
@@ -1016,6 +1014,7 @@ public class SymbolTableTest
     {
         assertTrue(actual.isSharedTable());
         assertFalse(actual.isSystemTable());
+        assertEquals(null, actual.getSystemSymbolTable());
 
         assertTrue("shared symtab should be read-only", actual.isReadOnly());
 
