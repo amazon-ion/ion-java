@@ -19,7 +19,6 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import java.io.IOException;
@@ -32,7 +31,7 @@ import java.math.BigInteger;
  * the output of the this writer is one or more IonValues,
  * typically an IonDatagram with contents.
  */
-class IonWriterSystemTree
+final class IonWriterSystemTree
     extends IonWriterBaseImpl
 {
     private final IonSystem _system;
@@ -49,9 +48,6 @@ class IonWriterSystemTree
     private int                 _parent_stack_top = 0;
     private IonContainer[]      _parent_stack = new IonContainer[10];
 
-    private boolean             _has_binary_image;
-    private IonWriter           _binary_image;
-    private byte[]              _byte_image;
 
     /**
      * @param sys must not be null.
@@ -68,13 +64,6 @@ class IonWriterSystemTree
         _current_parent = rootContainer;
         _in_struct = (_current_parent instanceof IonStruct);
     }
-
-    // not public
-    IonSystem getSystem()
-    {
-        return _system;
-    }
-
 
     //
     // informational methods
@@ -114,14 +103,6 @@ class IonWriterSystemTree
         }
         return container;
     }
-    void clearBinaryImage()
-    {
-        if (_has_binary_image) {
-            _binary_image = null;
-            _byte_image = null;
-            _has_binary_image = false;
-        }
-    }
 
     /**
      * @param newParent must not be null.
@@ -153,8 +134,6 @@ class IonWriterSystemTree
 
     private void append(IonValue value)
     {
-        clearBinaryImage(); // if we append anything the binary image is invalidated
-
         int annotation_count = this._annotation_count;
         if (annotation_count > 0) {
             String[] annotations = this.getTypeAnnotations();
@@ -211,7 +190,6 @@ class IonWriterSystemTree
             SymbolTable symbol_table =
                 makeNewLocalSymbolTable(_system, _catalog, (IonStruct) prior);
             setSymbolTable(symbol_table);
-            clearBinaryImage(); // changing the symbol table is likely to invalidate the image - so to be safe we do
         }
     }
 
@@ -282,6 +260,7 @@ class IonWriterSystemTree
         append(v);
     }
 
+    @Override
     public void writeIonVersionMarker() throws IOException
     {
         SymbolTable system_symbols = _system.getSystemSymbolTable();

@@ -122,7 +122,7 @@ public class IonWriterFactory
             IonWriterSystemTree tree_system =
                 new IonWriterSystemTree(_system, _catalog, c);
             writer =
-                new IonWriterUserTree(tree_system, _catalog, !_assure_ivm);
+                new IonWriterUserTree(_system, _catalog, tree_system, !_assure_ivm);
             break;
         }
         default:
@@ -390,7 +390,8 @@ public class IonWriterFactory
         IonSystem sys = container.getSystem();
         IonWriterSystemTree system_writer =
             new IonWriterSystemTree(sys, catalog, container);
-        IonWriter writer = new IonWriterUserTree(system_writer, catalog, true);
+        IonWriter writer =
+            new IonWriterUserTree(sys, catalog, system_writer, true);
         return writer;
     }
 

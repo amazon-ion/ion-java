@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
+import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import java.io.IOException;
@@ -25,12 +26,12 @@ class IonWriterUserTree
      *   Must not be null.
      * @param catalog may be null.
      */
-    protected IonWriterUserTree(IonWriterSystemTree systemWriter,
+    protected IonWriterUserTree(IonSystem system,
                                 IonCatalog catalog,
+                                IonWriterSystemTree systemWriter,
                                 boolean suppressIVM)
     {
-        super(systemWriter.getSystem(), catalog, systemWriter,
-              systemWriter.get_root());
+        super(system, catalog, systemWriter, systemWriter.get_root());
     }
 
 
