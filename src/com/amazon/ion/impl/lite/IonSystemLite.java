@@ -1083,12 +1083,18 @@ public final class IonSystemLite
         return writer;
     }
 
+    /**
+     * @param container must not be null.
+     */
     public IonWriter newTreeSystemWriter(IonContainer container)
     {
         IonWriter writer = IonWriterFactory.makeSystemWriter(container);
         return writer;
     }
 
+    /**
+     * @param container must not be null.
+     */
     public IonWriter newTreeWriter(IonContainer container)
     {
         IonWriter writer = IonWriterFactory.makeWriter(container);

@@ -86,8 +86,12 @@ public class IonWriterFactory
                                                _out, _auto_flush, !_assure_ivm);
             break;
         case SYSTEM_ION_VALUE:
-            writer = new IonWriterSystemTree(_system, _catalog, _container);
+        {
+            IonContainer c =
+                (_container != null ? _container : _system.newDatagram());
+            writer = new IonWriterSystemTree(_system, _catalog, c);
             break;
+        }
         case USER_TEXT:
             if (_out != null) {
                 writer = new IonWriterUserText(_system, _catalog, _out,
@@ -112,11 +116,15 @@ public class IonWriterFactory
                                              _stream_copy_optimized);
             break;
         case USER_ION_VALUE:
+        {
+            IonContainer c =
+                (_container != null ? _container : _system.newDatagram());
             IonWriterSystemTree tree_system =
-                new IonWriterSystemTree(_system, _catalog, _container);
+                new IonWriterSystemTree(_system, _catalog, c);
             writer =
                 new IonWriterUserTree(tree_system, _catalog, !_assure_ivm);
             break;
+        }
         default:
             throw new IonException("unexpected writer type encountered "+_type.toString());
         }
@@ -363,28 +371,29 @@ public class IonWriterFactory
     /**
      * static short cut methods to construct IonWriters
      * quickly.
+     * @param container must not be null.
      */
-    public static IonWriter makeWriter(IonContainer value)
+    public static IonWriter makeWriter(IonContainer container)
     {
-        IonSystem sys = value.getSystem();
+        IonSystem sys = container.getSystem();
         IonCatalog cat = sys.getCatalog();
-        IonWriter writer = makeWriter(value, cat);
+        IonWriter writer = makeWriter(cat, container);
         return writer;
     }
-    public static IonWriter makeWriter(IonContainer value, IonCatalog catalog)
+
+    /**
+     * @param container must not be null.
+     */
+    public static IonWriter makeWriter(IonCatalog catalog,
+                                       IonContainer container)
     {
-        IonSystem sys = value.getSystem();
-        IonWriterSystemTree system_writer = new IonWriterSystemTree(sys, catalog, value);
+        IonSystem sys = container.getSystem();
+        IonWriterSystemTree system_writer =
+            new IonWriterSystemTree(sys, catalog, container);
         IonWriter writer = new IonWriterUserTree(system_writer, catalog, true);
         return writer;
     }
-    public static IonWriter makeWriter(IonCatalog catalog, IonContainer value)
-    {
-        IonSystem sys = value.getSystem();
-        IonWriterSystemTree system_writer = new IonWriterSystemTree(sys, catalog, value);
-        IonWriter writer = new IonWriterUserTree(system_writer, catalog, true);
-        return writer;
-    }
+
     public static IonWriter makeWriter(IonSystem system, OutputStream output)
     {
         IonCatalog catalog = system.getCatalog();
@@ -448,13 +457,17 @@ public class IonWriterFactory
         return writer;
     }
 
-    public static IonWriter makeSystemWriter(IonContainer value)
+    /**
+     * @param container must not be null.
+     */
+    public static IonWriter makeSystemWriter(IonContainer container)
     {
-        IonSystem sys = value.getSystem();
+        IonSystem sys = container.getSystem();
         IonCatalog cat = sys.getCatalog();
-        IonWriter writer = new IonWriterSystemTree(sys, cat, value);
+        IonWriter writer = new IonWriterSystemTree(sys, cat, container);
         return writer;
     }
+
     public static IonWriter makeSystemWriter(IonSystem system, OutputStream output)
     {
         IonWriter writer = new IonWriterSystemBinary(system,

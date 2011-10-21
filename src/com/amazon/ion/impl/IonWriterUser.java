@@ -256,7 +256,8 @@ abstract class IonWriterUser
         );
         _symbol_table_value.setTypeAnnotations(getTypeAnnotations());
 
-        _symbol_table_writer       = new IonWriterSystemTree(_system, _catalog, _symbol_table_value);
+        _symbol_table_writer = new IonWriterSystemTree(_system, _catalog,
+                                                       _symbol_table_value);
         _current_writer            = _symbol_table_writer;
         _symbol_table_being_copied = true;
     }

@@ -641,11 +641,18 @@ public final class IonSystemImpl
     }
 
 
+    /**
+     * @param container must not be null.
+     */
     public IonWriter newTreeWriter(IonContainer container)
     {
         IonWriter writer = IonWriterFactory.makeWriter(container);
         return writer;
     }
+
+    /**
+     * @param container must not be null.
+     */
     public IonWriter newTreeSystemWriter(IonContainer container)
     {
         IonWriter system_writer = IonWriterFactory.makeSystemWriter(container);

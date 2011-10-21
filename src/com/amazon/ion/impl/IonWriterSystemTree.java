@@ -40,6 +40,11 @@ class IonWriterSystemTree
     /** Used to construct new local symtabs. May be null */
     private final IonCatalog    _catalog;
     private boolean             _in_struct;
+
+    /**
+     * The container into which we are currently appending values.
+     * Never null.
+     */
     private IonContainer        _current_parent;
     private int                 _parent_stack_top = 0;
     private IonContainer[]      _parent_stack = new IonContainer[10];
@@ -49,14 +54,15 @@ class IonWriterSystemTree
     private byte[]              _byte_image;
 
     /**
-     * @param sys
+     * @param sys must not be null.
      * @param catalog may be null.
-     * @param rootContainer
+     * @param rootContainer must not be null.
      */
     protected IonWriterSystemTree(IonSystem sys, IonCatalog catalog,
                                   IonContainer rootContainer)
     {
         super(sys, sys.getSystemSymbolTable());
+        if (rootContainer == null) throw new NullPointerException();
         _system = sys;
         _catalog = catalog;
         _current_parent = rootContainer;
@@ -117,15 +123,11 @@ class IonWriterSystemTree
         }
     }
 
-
-    void pushParent(IonContainer newParent) {
-        if (_current_parent == null) {
-            // TODO document this behavior
-            if (_parent_stack_top != 0) {
-                throw new IllegalStateException();
-            }
-            _current_parent = _system.newDatagram(newParent);
-        }
+    /**
+     * @param newParent must not be null.
+     */
+    private void pushParent(IonContainer newParent)
+    {
         int oldlen = _parent_stack.length;
         if (_parent_stack_top >= oldlen) {
             int newlen = oldlen * 2;
@@ -138,10 +140,8 @@ class IonWriterSystemTree
         _in_struct = (_current_parent instanceof IonStruct);
     }
 
-    IonValue popParent()
+    private void popParent()
     {
-        IonValue prior = _current_parent;
-
         if (_parent_stack_top < 1) {
             throw new IllegalStateException(IonMessages.CANNOT_STEP_OUT);
         }
@@ -149,8 +149,6 @@ class IonWriterSystemTree
         _parent_stack_top--;
         _current_parent = _parent_stack[_parent_stack_top];
         _in_struct = (_current_parent instanceof IonStruct);
-
-        return prior;
     }
 
     private void append(IonValue value)
@@ -163,11 +161,7 @@ class IonWriterSystemTree
             value.setTypeAnnotations(annotations);
             this.clearAnnotations();
         }
-        // if they didn't give us a parent, we have to assume they
-        // want a datagram :)
-        if (_current_parent == null) {
-            _current_parent = _system.newDatagram();
-        }
+
         if (_symbol_table != null) {
             ((IonValuePrivate)_current_parent).setSymbolTable(_symbol_table);
             // TODO why clear this out? Different invariant than other writers!
@@ -207,11 +201,13 @@ class IonWriterSystemTree
 
     public void stepOut() throws IOException
     {
-        IonValue prior = popParent();
+        IonValue prior = _current_parent;
+        popParent();
 
         if (_current_parent instanceof IonDatagram
             && UnifiedSymbolTable.valueIsLocalSymbolTable(prior))
         {
+            // We just finish writing a symbol table!
             SymbolTable symbol_table =
                 makeNewLocalSymbolTable(_system, _catalog, (IonStruct) prior);
             setSymbolTable(symbol_table);
@@ -222,50 +218,7 @@ class IonWriterSystemTree
     public void writeNull(IonType type)
         throws IOException
     {
-        IonValue v = null;
-        switch (type) {
-            case NULL:
-                v = _system.newNull();
-                break;
-            case BOOL:
-                v = _system.newNullBool();
-                break;
-            case INT:
-                v = _system.newNullInt();
-                break;
-            case FLOAT:
-                v = _system.newNullFloat();
-                break;
-            case DECIMAL:
-                v = _system.newNullDecimal();
-                break;
-            case TIMESTAMP:
-                v = _system.newNullTimestamp();
-                break;
-            case STRING:
-                v = _system.newNullString();
-                break;
-            case SYMBOL:
-                v = _system.newNullSymbol();
-                break;
-            case BLOB:
-                v = _system.newNullBlob();
-                break;
-            case CLOB:
-                v = _system.newNullClob();
-                break;
-            case STRUCT:
-                v = _system.newNullStruct();
-                break;
-            case LIST:
-                v = _system.newNullList();
-                break;
-            case SEXP:
-                v = _system.newNullSexp();
-                break;
-            default:
-                throw new IllegalArgumentException();
-        }
+        IonValue v = _system.newNull(type);
         append(v);
     }
 
