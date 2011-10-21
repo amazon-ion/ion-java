@@ -449,6 +449,7 @@ abstract class IonWriterUser
         }
         finish_value();
     }
+
     public void stepOut() throws IOException
     {
         if (_symbol_table_being_copied && _current_writer.getDepth() == 0) {
@@ -461,15 +462,6 @@ abstract class IonWriterUser
 
     public void writeBlob(byte[] value, int start, int len) throws IOException
     {
-        if (value == null)
-        {
-            writeNull(IonType.BLOB);
-            return;
-        }
-
-        if (start < 0 || len < 0 || start+len > value.length) {
-            throw new IllegalArgumentException("the start and len must be contained in the byte array");
-        }
         _current_writer.writeBlob(value, start, len);
         finish_value();
     }
@@ -482,15 +474,6 @@ abstract class IonWriterUser
 
     public void writeClob(byte[] value, int start, int len) throws IOException
     {
-        if (value == null)
-        {
-            writeNull(IonType.CLOB);
-            return;
-        }
-
-        if (start < 0 || len < 0 || start+len > value.length) {
-            throw new IllegalArgumentException("the start and len must be contained in the byte array");
-        }
         _current_writer.writeClob(value, start, len);
         finish_value();
     }
@@ -498,24 +481,22 @@ abstract class IonWriterUser
     @Override
     public void writeDecimal(BigDecimal value) throws IOException
     {
-        if (value == null) {
-            writeNull(IonType.DECIMAL);
-        }
-        else {
-            _current_writer.writeDecimal(value);
-        }
+        _current_writer.writeDecimal(value);
         finish_value();
     }
+
     public void writeFloat(double value) throws IOException
     {
         _current_writer.writeFloat(value);
         finish_value();
     }
+
     public void writeInt(int value) throws IOException
     {
         _current_writer.writeInt((long)value);
         finish_value();
     }
+
     public void writeInt(long value) throws IOException
     {
         _current_writer.writeInt(value);
@@ -525,35 +506,22 @@ abstract class IonWriterUser
 
     public void writeInt(BigInteger value) throws IOException
     {
-        if (value == null) {
-            writeNull(IonType.INT);
-        }
-        else {
-            _current_writer.writeInt(value);
-        }
+        _current_writer.writeInt(value);
         finish_value();
     }
 
     public void writeNull(IonType type) throws IOException
     {
-        if (type == null) {
-            writeNull(IonType.NULL);
-        }
-        else {
-            _current_writer.writeNull(type);
-        }
+        _current_writer.writeNull(type);
         finish_value();
     }
+
     public void writeString(String value) throws IOException
     {
-        if (value == null) {
-            writeNull(IonType.STRING);
-        }
-        else {
-            _current_writer.writeString(value);
-        }
+        _current_writer.writeString(value);
         finish_value();
     }
+
     public void writeSymbol(int symbolId) throws IOException
     {
         if (write_as_ivm(symbolId)) {
@@ -568,39 +536,35 @@ abstract class IonWriterUser
         _current_writer.writeSymbol(symbolId);
         finish_value();
     }
+
     public void writeSymbol(String value) throws IOException
     {
-        if (value == null) {
-            writeNull(IonType.SYMBOL);
-        }
-        else if (value.equals(ION_1_0)
-                 && write_as_ivm(ION_1_0_SID)
-        ) {
+        if (ION_1_0.equals(value) && write_as_ivm(ION_1_0_SID))
+        {
+            // TODO this swallows duplicate IVMs.  May not always be desired.
             if (! previousValueWasIvm()) {
                 writeIonVersionMarker();
+                // calls finish_value() for us
             }
-            // since writeIVM calls finish and when
-            // we don't write the IVM we don't want
-            // to call finish, we're done here.
-            return;
         }
         else {
             _current_writer.writeSymbol(value);
+            finish_value();
         }
-        finish_value();
     }
+
     private final boolean write_as_ivm(int sid)
     {
         // we only treat the $ion_1_0 symbol as an IVM
         // if we're at the top level in a datagram
-        boolean treat_as_ivm = false;
 
-        if (sid == ION_1_0_SID
-            && _root_is_datagram
-            && _current_writer.getDepth() == 0 )
-        {
-            treat_as_ivm = true;
-        }
+        // TODO do we need to check whether _current_writer == _system_writer?
+        // That's done in writeIonVersionMarker()
+
+        boolean treat_as_ivm =
+            (sid == ION_1_0_SID
+             && _root_is_datagram
+             && _current_writer.getDepth() == 0);
         return treat_as_ivm;
     }
 
@@ -641,13 +605,7 @@ abstract class IonWriterUser
 
     public void writeTimestamp(Timestamp value) throws IOException
     {
-        if (value == null) {
-            writeNull(IonType.TIMESTAMP);
-        }
-        else {
-            _current_writer.writeTimestamp(value);
-
-        }
+        _current_writer.writeTimestamp(value);
         finish_value();
     }
 
@@ -665,89 +623,56 @@ abstract class IonWriterUser
     @Override
     public void writeBoolList(boolean[] values) throws IOException
     {
-        if (values == null) {
-            writeNull(IonType.LIST);
-        }
-        else {
-            _current_writer.writeBoolList(values);
-        }
+        _current_writer.writeBoolList(values);
         finish_value();
     }
+
     @Override
     public void writeIntList(byte[] values) throws IOException
     {
-        if (values == null) {
-            writeNull(IonType.LIST);
-        }
-        else {
-            _current_writer.writeIntList(values);
-        }
+        _current_writer.writeIntList(values);
         finish_value();
     }
+
     @Override
     public void writeIntList(short[] values) throws IOException
     {
-        if (values == null) {
-            writeNull(IonType.LIST);
-        }
-        else {
-            _current_writer.writeIntList(values);
-        }
+        _current_writer.writeIntList(values);
         finish_value();
     }
+
     @Override
     public void writeIntList(int[] values) throws IOException
     {
-        if (values == null) {
-            writeNull(IonType.LIST);
-        }
-        else {
-            _current_writer.writeIntList(values);
-        }
+        _current_writer.writeIntList(values);
         finish_value();
     }
+
     @Override
     public void writeIntList(long[] values) throws IOException
     {
-        if (values == null) {
-            writeNull(IonType.LIST);
-        }
-        else {
-            _current_writer.writeIntList(values);
-        }
+        _current_writer.writeIntList(values);
         finish_value();
     }
+
     @Override
     public void writeFloatList(float[] values) throws IOException
     {
-        if (values == null) {
-            writeNull(IonType.LIST);
-        }
-        else {
-            _current_writer.writeFloatList(values);
-        }
+        _current_writer.writeFloatList(values);
         finish_value();
     }
+
     @Override
     public void writeFloatList(double[] values) throws IOException
     {
-        if (values == null) {
-            writeNull(IonType.LIST);
-        }
-        else {
-            _current_writer.writeFloatList(values);
-        }
+        _current_writer.writeFloatList(values);
         finish_value();
     }
+
     @Override
     public void writeStringList(String[] values) throws IOException
     {
-        if (values == null) {
-            writeNull(IonType.LIST);
-        }
-        else {
-            _current_writer.writeStringList(values);
-        }
+        _current_writer.writeStringList(values);
         finish_value();
     }
 }

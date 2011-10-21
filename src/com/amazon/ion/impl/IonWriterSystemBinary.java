@@ -701,8 +701,14 @@ public class IonWriterSystemBinary
         }
         patch(1 + len);
     }
+
     public void writeInt(BigInteger value) throws IOException
     {
+        if (value == null) {
+            writeNull(IonType.INT);
+            return;
+        }
+
         boolean     is_negative = (value.signum() < 0);
         BigInteger  positive = value;
 
@@ -790,6 +796,7 @@ public class IonWriterSystemBinary
             writeNull(IonType.TIMESTAMP);
             return;
         }
+
         Timestamp di = value;
 
         int patch_len = 1;
@@ -855,6 +862,11 @@ public class IonWriterSystemBinary
 
     public void writeSymbol(String value) throws IOException
     {
+        if (value == null) {
+            writeNull(IonType.SYMBOL);
+            return;
+        }
+
         int sid = add_symbol(value);
         writeSymbol(sid);
     }
@@ -865,6 +877,11 @@ public class IonWriterSystemBinary
             writeNull(IonType.CLOB);
             return;
         }
+
+        if (start < 0 || len < 0 || start+len > value.length) {
+            throw new IllegalArgumentException("the start and len must be contained in the byte array");
+        }
+
         int patch_len = 1;
         int ln = len;
         if (len >= IonConstants.lnIsVarLen) {
@@ -889,6 +906,11 @@ public class IonWriterSystemBinary
             writeNull(IonType.BLOB);
             return;
         }
+
+        if (start < 0 || len < 0 || start+len > value.length) {
+            throw new IllegalArgumentException("the start and len must be contained in the byte array");
+        }
+
         int patch_len = 1;
         int ln = len;
         if (len >= IonConstants.lnIsVarLen) {

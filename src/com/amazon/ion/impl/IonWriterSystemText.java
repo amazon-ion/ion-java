@@ -255,6 +255,9 @@ class IonWriterSystemText
     }
 
 
+    /**
+     * @param value must not be null.
+     */
     private void writeSymbolToken(String value) throws IOException
     {
         if (_options._symbol_as_string)
@@ -446,6 +449,7 @@ class IonWriterSystemText
         _output.append(Integer.toString(value));
         closeValue();
     }
+
     public void writeInt(long value)
         throws IOException
     {
@@ -453,17 +457,19 @@ class IonWriterSystemText
         _output.append(Long.toString(value));
         closeValue();
     }
+
     public void writeInt(BigInteger value) throws IOException
     {
         if (value == null) {
             writeNull(IonType.INT);
+            return;
         }
-        else {
-            startValue();
-            _output.append(value.toString());
-            closeValue();
-        }
+
+        startValue();
+        _output.append(value.toString());
+        closeValue();
     }
+
     public void writeFloat(double value)
         throws IOException
     {
@@ -509,112 +515,112 @@ class IonWriterSystemText
     {
         if (value == null) {
             writeNull(IonType.DECIMAL);
+            return;
         }
-        else {
-            startValue();
-            BigDecimal decimal = value;
-            BigInteger unscaled = decimal.unscaledValue();
 
-            int signum = decimal.signum();
-            if (signum < 0)
+        startValue();
+        BigDecimal decimal = value;
+        BigInteger unscaled = decimal.unscaledValue();
+
+        int signum = decimal.signum();
+        if (signum < 0)
+        {
+            _output.append('-');
+            unscaled = unscaled.negate();
+        }
+        else if (decimal instanceof Decimal
+             && ((Decimal)decimal).isNegativeZero())
+        {
+            // for the various forms of negative zero we have to
+            // write the sign ourselves, since neither BigInteger
+            // nor BigDecimal recognize negative zero, but Ion does.
+            _output.append('-');
+        }
+
+        final String unscaledText = unscaled.toString();
+        final int significantDigits = unscaledText.length();
+
+        final int scale = decimal.scale();
+        final int exponent = -scale;
+
+        if (_options._decimal_as_float)
+        {
+            _output.append(unscaledText);
+            _output.append('e');
+            _output.append(Integer.toString(exponent));
+        }
+        else if (exponent == 0)
+        {
+            _output.append(unscaledText);
+            _output.append('.');
+        }
+        else if (0 < scale)
+        {
+            int wholeDigits;
+            int remainingScale;
+            if (significantDigits > scale)
             {
-                _output.append('-');
-                unscaled = unscaled.negate();
+                wholeDigits = significantDigits - scale;
+                remainingScale = 0;
             }
-            else if (decimal instanceof Decimal
-                 && ((Decimal)decimal).isNegativeZero())
+            else
             {
-                // for the various forms of negative zero we have to
-                // write the sign ourselves, since neither BigInteger
-                // nor BigDecimal recognize negative zero, but Ion does.
-                _output.append('-');
+                wholeDigits = 1;
+                remainingScale = scale - significantDigits + 1;
             }
 
-            final String unscaledText = unscaled.toString();
-            final int significantDigits = unscaledText.length();
-
-            final int scale = decimal.scale();
-            final int exponent = -scale;
-
-            if (_options._decimal_as_float)
+            _output.append(unscaledText, 0, wholeDigits);
+            if (wholeDigits < significantDigits)
             {
-                _output.append(unscaledText);
-                _output.append('e');
-                _output.append(Integer.toString(exponent));
-            }
-            else if (exponent == 0)
-            {
-                _output.append(unscaledText);
                 _output.append('.');
+                _output.append(unscaledText, wholeDigits,
+                             significantDigits);
             }
-            else if (0 < scale)
-            {
-                int wholeDigits;
-                int remainingScale;
-                if (significantDigits > scale)
-                {
-                    wholeDigits = significantDigits - scale;
-                    remainingScale = 0;
-                }
-                else
-                {
-                    wholeDigits = 1;
-                    remainingScale = scale - significantDigits + 1;
-                }
 
-                _output.append(unscaledText, 0, wholeDigits);
-                if (wholeDigits < significantDigits)
-                {
-                    _output.append('.');
-                    _output.append(unscaledText, wholeDigits,
-                                 significantDigits);
-                }
-
-                if (remainingScale != 0)
-                {
-                    _output.append("d-");
-                    _output.append(Integer.toString(remainingScale));
-                }
-            }
-            else // (exponent > 0)
+            if (remainingScale != 0)
             {
-                // We cannot move the decimal point to the right, adding
-                // rightmost zeros, because that would alter the precision.
-                _output.append(unscaledText);
-                _output.append('d');
-                _output.append(Integer.toString(exponent));
+                _output.append("d-");
+                _output.append(Integer.toString(remainingScale));
             }
-            closeValue();
         }
+        else // (exponent > 0)
+        {
+            // We cannot move the decimal point to the right, adding
+            // rightmost zeros, because that would alter the precision.
+            _output.append(unscaledText);
+            _output.append('d');
+            _output.append(Integer.toString(exponent));
+        }
+        closeValue();
     }
 
     public void writeTimestamp(Timestamp value) throws IOException
     {
         if (value == null) {
             writeNull(IonType.TIMESTAMP);
+            return;
         }
-        else {
-            startValue();
 
-            if (_options._timestamp_as_millis)
-            {
-                long millis = value.getMillis();
-                _output.append(Long.toString(millis));
-            }
-            else if (_options._timestamp_as_string)
-            {
-                // Timestamp is ASCII-safe so this is easy
-                _output.append('"');
-                value.print(_output);
-                _output.append('"');
-            }
-            else
-            {
-                value.print(_output);
-            }
+        startValue();
 
-            closeValue();
+        if (_options._timestamp_as_millis)
+        {
+            long millis = value.getMillis();
+            _output.append(Long.toString(millis));
         }
+        else if (_options._timestamp_as_string)
+        {
+            // Timestamp is ASCII-safe so this is easy
+            _output.append('"');
+            value.print(_output);
+            _output.append('"');
+        }
+        else
+        {
+            value.print(_output);
+        }
+
+        closeValue();
     }
 
     public void writeString(String value)
@@ -670,6 +676,12 @@ class IonWriterSystemText
     public void writeSymbol(String value)
         throws IOException
     {
+        if (value == null)
+        {
+            writeNull(IonType.SYMBOL);
+            return;
+        }
+
         startValue();
         writeSymbolToken(value);
         closeValue();

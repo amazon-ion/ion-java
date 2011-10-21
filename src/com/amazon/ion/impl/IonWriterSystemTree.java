@@ -246,10 +246,7 @@ final class IonWriterSystemTree
 
     public void writeTimestamp(Timestamp value) throws IOException
     {
-        IonTimestamp v = _system.newNullTimestamp();
-        if (value != null) {
-            v.setValue(value);
-        }
+        IonTimestamp v =  _system.newTimestamp(value);
         append(v);
     }
 
