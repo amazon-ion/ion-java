@@ -158,29 +158,24 @@ public final class UnifiedSymbolTable
         _image_system = sys;
     }
 
-    private void init(SymbolTable systemSymbols) {
-        _import_list = new UnifiedSymbolTableImports(systemSymbols);
-        _first_local_sid = _import_list.getMaxId() + 1;
-    }
-
     /**
      * Constructs an empty local symbol table.
      *
-     * @param systemSymbols must be a system symbol table or null.
+     * @param systemSymbols must be a system symbol table, not null.
      */
     private UnifiedSymbolTable(IonSystem sys, SymbolTable systemSymbols)
     {
         this(sys);
-        init(systemSymbols);
 
-        if (systemSymbols != null) {
-            if (!systemSymbols.isSystemTable()) {
-                throw new IllegalArgumentException();
-            }
-            if (! (systemSymbols instanceof UnifiedSymbolTable)) {
-                throw new IllegalArgumentException();
-            }
+        if (!systemSymbols.isSystemTable()) {
+            throw new IllegalArgumentException();
         }
+        if (! (systemSymbols instanceof UnifiedSymbolTable)) {
+            throw new IllegalArgumentException();
+        }
+
+        _import_list = new UnifiedSymbolTableImports((UnifiedSymbolTable) systemSymbols);
+        _first_local_sid = _import_list.getMaxId() + 1;
     }
 
     /*
@@ -501,6 +496,7 @@ public final class UnifiedSymbolTable
     }
 
     /**
+     * @param systemSymbolTable must not be null.
      * @param catalog may be null.
      */
     static public UnifiedSymbolTable
@@ -546,6 +542,7 @@ public final class UnifiedSymbolTable
 
 
     /**
+     * @param systemSymbolTable must not be null.
      * @param catalog may be null.
      */
     static public UnifiedSymbolTable

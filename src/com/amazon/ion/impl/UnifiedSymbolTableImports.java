@@ -1,13 +1,11 @@
-// Copyright (c) 2009-2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
-
-import java.util.Iterator;
-
 import com.amazon.ion.SymbolTable;
 import java.util.Arrays;
+import java.util.Iterator;
 
 /**
  * This class managed the referenced system symbol table and
@@ -27,14 +25,17 @@ public class UnifiedSymbolTableImports
     private int[]                _import_base_sid;
     private int[]                _imports_max_id;
 
-    static final UnifiedSymbolTableImports emptyImportList = new UnifiedSymbolTableImports(null);
+    static final UnifiedSymbolTableImports emptyImportList =
+        new UnifiedSymbolTableImports();
 
-    UnifiedSymbolTableImports(SymbolTable systemSymbols) {
+    private UnifiedSymbolTableImports()
+    {
+        makeReadOnly();
+    }
+
+    UnifiedSymbolTableImports(UnifiedSymbolTable systemSymbols) {
         if (systemSymbols != null) {
-            if (!(systemSymbols instanceof UnifiedSymbolTable)) {
-                throw new UnsupportedOperationException("all symbol tables must be instances of UnifiedSymbolTable, currently");
-            }
-            add_import_helper((UnifiedSymbolTable)systemSymbols, -1);
+            add_import_helper(systemSymbols, -1);
         }
     }
 
@@ -59,7 +60,7 @@ public class UnifiedSymbolTableImports
             return;
         }
         for (int ii=0; ii<_import_count; ii++) {
-            UnifiedSymbolTable table = _imports[ii];
+            SymbolTable table = _imports[ii];
             if (table.isReadOnly() == false) {
                 throw new IonException("imported symbol tables must be immutable to mark the importer as immutable");
             }
