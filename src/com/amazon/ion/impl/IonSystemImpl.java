@@ -12,7 +12,7 @@ import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
 import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemReader;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewSharedSymbolTable;
-import static com.amazon.ion.impl.UnifiedSymbolTable.makeSystemSymbolTable;
+import static com.amazon.ion.impl.UnifiedSymbolTable.newSystemSymbolTable;
 import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
@@ -97,7 +97,7 @@ public final class IonSystemImpl
         assert catalog != null;
         myCatalog = catalog;
         myLoader = new LoaderImpl(this, myCatalog);
-        mySystemSymbols = makeSystemSymbolTable(this, SYSTEM_VERSION);
+        mySystemSymbols = newSystemSymbolTable(SYSTEM_VERSION);
         myStreamCopyOptimized = streamCopyOptimized;
     }
 
@@ -128,24 +128,23 @@ public final class IonSystemImpl
     {
         UnifiedSymbolTable st =
             makeNewLocalSymbolTable(this, mySystemSymbols, imports);
-        st.setSystem(this);
         return st;
     }
 
 
     public UnifiedSymbolTable newSharedSymbolTable(IonStruct ionRep)
     {
-        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewSharedSymbolTable(ionRep);
+        UnifiedSymbolTable st = makeNewSharedSymbolTable(ionRep);
         return st;
     }
     public UnifiedSymbolTable newSharedSymbolTable(IonReader reader)
     {
-        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewSharedSymbolTable(this, reader, false);
+        UnifiedSymbolTable st = makeNewSharedSymbolTable(reader, false);
         return st;
     }
     public UnifiedSymbolTable newSharedSymbolTable(IonReader reader, boolean isOnStruct)
     {
-        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewSharedSymbolTable(this, reader, isOnStruct);
+        UnifiedSymbolTable st = makeNewSharedSymbolTable(reader, isOnStruct);
         return st;
     }
     public UnifiedSymbolTable newSharedSymbolTable(String name,
@@ -179,7 +178,7 @@ public final class IonSystemImpl
         addAllNonNull(syms, newSymbols);
 
         UnifiedSymbolTable st =
-            makeNewSharedSymbolTable(this, name, version, prior, syms.iterator());
+            makeNewSharedSymbolTable(name, version, prior, syms.iterator());
 
         return st;
     }

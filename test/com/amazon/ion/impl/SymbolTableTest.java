@@ -183,7 +183,6 @@ public class SymbolTableTest
 
 
     @Test
-    @SuppressWarnings("deprecation")
     public void testParsedLocalTableMakeReadOnly()
         throws Exception
     {
@@ -204,9 +203,6 @@ public class SymbolTableTest
             fail("expected exception");
         }
         catch (IonException e) { }  // TODO should be ReadOnlyValueException
-
-        ((UnifiedSymbolTable)symbolTable).getIonRepresentation();
-        symbolTable.writeTo(system().newTextWriter(new StringBuilder()));
     }
 
 
@@ -749,9 +745,9 @@ public class SymbolTableTest
     {
         SymbolTable st = system().newLocalSymbolTable();
         st.addSymbol("foo");
-        IonStruct image = ((UnifiedSymbolTable)st).getIonRepresentation();
+        IonStruct image = ((UnifiedSymbolTable)st).getIonRepresentation(system());
         st.addSymbol("bar");
-        image = ((UnifiedSymbolTable)st).getIonRepresentation();
+        image = ((UnifiedSymbolTable)st).getIonRepresentation(system());
         IonList symbols = (IonList) image.get(SYMBOLS);
         assertEquals("[\"foo\",\"bar\"]", symbols.toString());
     }

@@ -9,6 +9,7 @@ import static com.amazon.ion.impl.IonWriterFactory.makeWriter;
 import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewSharedSymbolTable;
+import static com.amazon.ion.impl.UnifiedSymbolTable.newSystemSymbolTable;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
 import com.amazon.ion.IonCatalog;
@@ -58,7 +59,8 @@ public final class IonSystemLite
 {
     private static int DEFAULT_CONTEXT_FREE_LIST_SIZE = 120;
 
-    private final UnifiedSymbolTable _system_symbol_table = UnifiedSymbolTable.makeSystemSymbolTable(this, 1);
+    private final UnifiedSymbolTable _system_symbol_table =
+        newSystemSymbolTable(1);
 
     /** Not null. */
     private final IonCatalog         _catalog;
@@ -303,19 +305,19 @@ public final class IonSystemLite
 
     public UnifiedSymbolTable newSharedSymbolTable(IonStruct ionRep)
     {
-        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewSharedSymbolTable(ionRep);
+        UnifiedSymbolTable st = makeNewSharedSymbolTable(ionRep);
         return st;
     }
 
     public UnifiedSymbolTable newSharedSymbolTable(IonReader reader)
     {
-        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewSharedSymbolTable(this, reader, false);
+        UnifiedSymbolTable st = makeNewSharedSymbolTable(reader, false);
         return st;
     }
 
     public UnifiedSymbolTable newSharedSymbolTable(IonReader reader, boolean isOnStruct)
     {
-        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewSharedSymbolTable(this, reader, isOnStruct);
+        UnifiedSymbolTable st = makeNewSharedSymbolTable(reader, isOnStruct);
         return st;
     }
 
@@ -350,7 +352,7 @@ public final class IonSystemLite
         addAllNonNull(syms, newSymbols);
 
         UnifiedSymbolTable st =
-            makeNewSharedSymbolTable(this, name, version, prior, syms.iterator());
+            makeNewSharedSymbolTable(name, version, prior, syms.iterator());
 
         return st;
     }

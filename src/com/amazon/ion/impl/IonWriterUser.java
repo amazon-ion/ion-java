@@ -281,7 +281,7 @@ abstract class IonWriterUser
         // convert the struct we just wrote with the TreeWriter to a
         // local symbol table
         UnifiedSymbolTable symtab =
-            makeNewLocalSymbolTable(_system, _catalog, _symbol_table_value);
+            makeNewLocalSymbolTable(_catalog, _symbol_table_value);
 
         _symbol_table_value = null;
         _current_writer     = _system_writer;

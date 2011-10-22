@@ -669,12 +669,6 @@ public class IonDatagramLite
 
     public ListIterator<IonValue> systemIterator()
     {
-
-/* test code  FIXME: remove this
-if (this.isReadOnly() && hasUnresolvedSymbols(this)) {
-    System.err.println("datagram lite has unresolved symbols at get systemIterator time !!");
-}
-*/
         // read only values have already had their
         // symbols updated, and should not be modified
         if (isReadOnly() == false) {
@@ -685,42 +679,6 @@ if (this.isReadOnly() && hasUnresolvedSymbols(this)) {
         return iterator;
     }
 
-/* more test code: FIXME: remove this
-private static boolean hasUnresolvedSymbols(IonValueLite value) {
-    if (value instanceof IonContainerLite ) {
-        IonContainerLite container = (IonContainerLite)value;
-        for (int ii=0; ii<container.get_child_count(); ii++) {
-            IonValueLite child = container.get_child_lite(ii);
-            if (hasUnresolvedSymbols(child)) {
-                return true;
-            }
-        }
-    }
-    else {
-        SymbolTable st = value.getAssignedSymbolTable();
-        String fieldname = value.getFieldName();
-        if (fieldname != null) {
-            int sid = st.findSymbol(fieldname);
-            if (sid < 1) {
-                return true;
-            }
-        }
-        if (value instanceof IonSymbolLite) {
-
-        }
-    }
-    String[] annotations = value.getTypeAnnotationStrings();
-    if (annotations != null && annotations.length > 0) {
-        SymbolTable st = value.getAssignedSymbolTable();
-        for (int ii=0; ii<annotations.length; ii++) {
-            if (st.findSymbol(annotations[ii]) < 1) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-*/
 
     // TODO: optimize this, if there's a real use case
     //       deprecate this is there isn't (which I suspect is actually the case)
@@ -822,7 +780,12 @@ private static boolean hasUnresolvedSymbols(IonValueLite value) {
             __temp_pos = new SystemIteratorPosition(this); // we flip back and forth between two positions to avoid allocating these on every value (or more)
             __pos = new SystemIteratorPosition(this);
             __pos.load_initial_position();
-      }
+        }
+
+        private IonSystem getSystem()
+        {
+            return IonDatagramLite.this.getSystem();
+        }
 
         protected IonValueLite set_position(SystemIteratorPosition newPos)
         {
@@ -835,7 +798,7 @@ private static boolean hasUnresolvedSymbols(IonValueLite value) {
             return __current;
         }
 
-        protected void force_position_sync()
+        private void force_position_sync()
         {
             int user_index = __pos.__user_index;
             if (user_index < 0 || user_index >= _child_count) {
@@ -1329,7 +1292,8 @@ private static boolean hasUnresolvedSymbols(IonValueLite value) {
                 for (int ii=0; ii<new_index; ii--) {
                     curr = __iterator.get_datagram_child(ii).getSymbolTable();
                     if (curr != prev) {
-                        adjustment += count_system_values(prev, curr);
+                        IonSystem sys = __iterator.getSystem();
+                        adjustment += count_system_values(sys, prev, curr);
                     }
                     prev = curr;
                 }
@@ -1338,12 +1302,14 @@ private static boolean hasUnresolvedSymbols(IonValueLite value) {
             }
         }
 
-        static int count_system_values(SymbolTable prev, SymbolTable curr)
+        private static int count_system_values(IonSystem sys,
+                                               SymbolTable prev,
+                                               SymbolTable curr)
         {
             int count = 0;
             while (curr.isLocalTable()) {
                 count++;
-                curr = ((UnifiedSymbolTable)curr).getIonRepresentation().getSymbolTable();
+                curr = ((UnifiedSymbolTable)curr).getIonRepresentation(sys).getSymbolTable();
             }
             // we should terminate when the symbol tables symbol table is the system symbol table
             assert(curr != null);
