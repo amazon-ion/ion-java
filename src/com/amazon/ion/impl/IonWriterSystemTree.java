@@ -57,7 +57,7 @@ final class IonWriterSystemTree
     protected IonWriterSystemTree(IonSystem sys, IonCatalog catalog,
                                   IonContainer rootContainer)
     {
-        super(sys, sys.getSystemSymbolTable());
+        super(sys.getSystemSymbolTable());
         if (rootContainer == null) throw new NullPointerException();
         _system = sys;
         _catalog = catalog;
@@ -192,6 +192,16 @@ final class IonWriterSystemTree
             setSymbolTable(symbol_table);
         }
     }
+
+
+    @Override
+    final UnifiedSymbolTable inject_local_symbol_table() throws IOException
+    {
+        return makeNewLocalSymbolTable(_system, _symbol_table);
+    }
+
+    //========================================================================
+
 
     public void writeNull(IonType type)
         throws IOException

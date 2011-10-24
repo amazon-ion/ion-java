@@ -419,7 +419,7 @@ public final class IonImplUtils // TODO this class shouldn't be public
         IonSystem system = IonSystemBuilder.standard().build();
         SymbolTable systemSymtab = system.getSystemSymbolTable();
         IonWriterSystemText writer =
-            new IonWriterSystemText(system, systemSymtab, out, options);
+            new IonWriterSystemText(systemSymtab, out, options);
         // IonWriter writer = IonWriterUserText new IonTextWriter(out);
 
         try

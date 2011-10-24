@@ -89,7 +89,7 @@ abstract class IonWriterUser
                           IonWriterBaseImpl systemWriter,
                           boolean rootIsDatagram)
     {
-        super(system, system.getSystemSymbolTable());
+        super(system.getSystemSymbolTable());
         _system = system;
         _catalog = catalog;
 

@@ -45,7 +45,7 @@ public class IonWriterUserText
     protected IonWriterUserText(IonSystem sys, IonCatalog catalog,
                                 OutputStream out, $PrivateTextOptions options)
     {
-        super(sys, new IonWriterSystemText(sys, sys.getSystemSymbolTable(),
+        super(sys, new IonWriterSystemText(sys.getSystemSymbolTable(),
                                            out, options),
               catalog, options.issuppressIonVersionMarkerOn());
         _filter_symbol_tables = options.isFilterSymbolTablesOn();
@@ -54,7 +54,7 @@ public class IonWriterUserText
     protected IonWriterUserText(IonSystem sys, IonCatalog catalog,
                                 Appendable out, $PrivateTextOptions options)
     {
-        super(sys, new IonWriterSystemText(sys, sys.getSystemSymbolTable(),
+        super(sys, new IonWriterSystemText(sys.getSystemSymbolTable(),
                                            out, options),
               catalog, options.issuppressIonVersionMarkerOn());
         _filter_symbol_tables = options.isFilterSymbolTablesOn();

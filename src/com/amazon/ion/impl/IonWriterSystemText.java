@@ -9,7 +9,6 @@ import static com.amazon.ion.impl.IonConstants.tidStruct;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
@@ -54,11 +53,10 @@ class IonWriterSystemText
     /**
      * @throws NullPointerException if any parameter is null.
      */
-    protected IonWriterSystemText(IonSystem system,
-                                  SymbolTable defaultSystemSymtab,
+    protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
                                   OutputStream out, $PrivateTextOptions options)
     {
-        super(system, defaultSystemSymtab);
+        super(defaultSystemSymtab);
 
         out.getClass(); // Efficient null check
         options.getClass(); // Efficient null check
@@ -76,11 +74,10 @@ class IonWriterSystemText
     /**
      * @throws NullPointerException if any parameter is null.
      */
-    protected IonWriterSystemText(IonSystem system,
-                                  SymbolTable defaultSystemSymtab,
+    protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
                                   Appendable out, $PrivateTextOptions options)
     {
-        super(system, defaultSystemSymtab);
+        super(defaultSystemSymtab);
 
         out.getClass(); // Efficient null check
         options.getClass(); // Efficient null check
@@ -392,6 +389,10 @@ class IonWriterSystemText
         _in_struct = topInStruct();
 
     }
+
+
+    //========================================================================
+
 
     @Override
     public void writeNull()

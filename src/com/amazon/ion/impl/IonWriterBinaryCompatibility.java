@@ -6,6 +6,7 @@ import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonSystem;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.BlockedBuffer.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -32,10 +33,9 @@ public abstract class IonWriterBinaryCompatibility
         extends IonWriterSystemBinary
         implements IonBinaryWriter
     {
-
-        public System(IonSystem sys, boolean autoFlush)
+        public System(SymbolTable systemSymbolTable, boolean autoFlush)
         {
-            super(sys, sys.getSystemSymbolTable(), make_output_stream(), autoFlush, false /* suppressIVM */);
+            super(systemSymbolTable, make_output_stream(), autoFlush, false /* suppressIVM */);
             assert(getOutputStream() instanceof BlockedBuffer.BufferedOutputStream);
         }
 
@@ -92,7 +92,8 @@ public abstract class IonWriterBinaryCompatibility
         public User(IonSystem system, IonCatalog catalog,
                     boolean streamCopyOptimized)
         {
-            super(system, catalog, new System(system, false /* autoflush */ ),
+            super(system, catalog,
+                  new System(system.getSystemSymbolTable(), false /* autoflush */ ),
                   false /* suppressIVM */,
                   streamCopyOptimized);
 

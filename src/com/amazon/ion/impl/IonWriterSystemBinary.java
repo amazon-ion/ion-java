@@ -11,7 +11,6 @@ import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
@@ -100,13 +99,12 @@ public class IonWriterSystemBinary
      *
      * @throws NullPointerException if any parameter is null.
      */
-    public IonWriterSystemBinary(IonSystem system,
-                                 SymbolTable defaultSystemSymtab,
+    public IonWriterSystemBinary(SymbolTable defaultSystemSymtab,
                                  OutputStream out,
                                  boolean autoFlush,
                                  boolean suppressIVM)
     {
-        super(system, defaultSystemSymtab);
+        super(defaultSystemSymtab);
 
         out.getClass(); // Efficient null check
         _user_output_stream = out;
@@ -1396,7 +1394,7 @@ public class IonWriterSystemBinary
     {
         CountingStream cs = new CountingStream(userstream);
         IonWriterSystemBinary writer =
-            new IonWriterSystemBinary(_system, _default_system_symbol_table,
+            new IonWriterSystemBinary(_default_system_symbol_table,
                                       cs, false /* autoflush */ , true
                                       /* suppress ivm */);
         symtab.writeTo(writer);
