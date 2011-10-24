@@ -42,7 +42,7 @@ abstract class IonWriterUser
     extends IonWriterBaseImpl  // should be IonWriterSystem ?
 {
     /** Not null. */
-    protected final IonSystem _system;
+    private final IonSystem _system;
 
     /** Used to make correct local symbol tables. May be null. */
     private   final IonCatalog _catalog;
@@ -221,6 +221,10 @@ abstract class IonWriterUser
 
     //========================================================================
 
+    SymbolTable activeSystemSymbolTable()
+    {
+        return _system.getSystemSymbolTable();
+    }
 
     @Override
     final UnifiedSymbolTable inject_local_symbol_table() throws IOException
@@ -266,7 +270,8 @@ abstract class IonWriterUser
         );
         _symbol_table_value.setTypeAnnotations(getTypeAnnotations());
 
-        _current_writer = new IonWriterSystemTree(_system, _catalog,
+        _current_writer = new IonWriterSystemTree(activeSystemSymbolTable(),
+                                                  _catalog,
                                                   _symbol_table_value);
     }
 
@@ -281,7 +286,7 @@ abstract class IonWriterUser
         // convert the struct we just wrote with the TreeWriter to a
         // local symbol table
         UnifiedSymbolTable symtab =
-            makeNewLocalSymbolTable(_system.getSystemSymbolTable(),
+            makeNewLocalSymbolTable(activeSystemSymbolTable(),
                                     _catalog, _symbol_table_value);
 
         _symbol_table_value = null;
@@ -592,7 +597,8 @@ abstract class IonWriterUser
         _current_writer.writeIonVersionMarker();
         _previous_value_was_ivm = true;
 
-        setSymbolTable(_system.getSystemSymbolTable());
+        // TODO must ensure this is the right symtab for the IVM above
+        setSymbolTable(activeSystemSymbolTable());
 
         finish_value();
         // we reset this after our call to finish since

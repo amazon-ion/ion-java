@@ -15,12 +15,12 @@ import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.ValueFactory;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -34,7 +34,7 @@ import java.math.BigInteger;
 final class IonWriterSystemTree
     extends IonWriterBaseImpl
 {
-    private final IonSystem _system;
+    private final ValueFactory _system;
 
     /** Used to construct new local symtabs. May be null */
     private final IonCatalog    _catalog;
@@ -50,16 +50,17 @@ final class IonWriterSystemTree
 
 
     /**
-     * @param sys must not be null.
+     * @param defaultSystemSymbolTable must not be null.
      * @param catalog may be null.
      * @param rootContainer must not be null.
      */
-    protected IonWriterSystemTree(IonSystem sys, IonCatalog catalog,
+    protected IonWriterSystemTree(SymbolTable defaultSystemSymbolTable,
+                                  IonCatalog catalog,
                                   IonContainer rootContainer)
     {
-        super(sys.getSystemSymbolTable());
+        super(defaultSystemSymbolTable);
         if (rootContainer == null) throw new NullPointerException();
-        _system = sys;
+        _system = rootContainer.getSystem();
         _catalog = catalog;
         _current_parent = rootContainer;
         _in_struct = (_current_parent instanceof IonStruct);
@@ -188,7 +189,7 @@ final class IonWriterSystemTree
         {
             // We just finish writing a symbol table!
             SymbolTable symbol_table =
-                makeNewLocalSymbolTable(_system.getSystemSymbolTable(),
+                makeNewLocalSymbolTable(_default_system_symbol_table,
                                         _catalog, (IonStruct) prior);
             setSymbolTable(symbol_table);
         }
@@ -271,7 +272,7 @@ final class IonWriterSystemTree
     @Override
     public void writeIonVersionMarker() throws IOException
     {
-        SymbolTable system_symbols = _system.getSystemSymbolTable();
+        SymbolTable system_symbols = _default_system_symbol_table;
         writeSymbol(system_symbols.getIonVersionId());
         setSymbolTable(system_symbols);
     }

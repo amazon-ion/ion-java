@@ -380,7 +380,7 @@ public class IonWriterSystemBinary
         return symbols;
     }
 
-    protected final void patchInSymbolTable(SymbolTable symbols) throws IOException
+    final void patchInSymbolTable(SymbolTable symbols) throws IOException
     {
         if (_assure_ivm) { //  && !_any_values_written) {
             // we have to check for this here since we
@@ -1393,6 +1393,7 @@ public class IonWriterSystemBinary
                                      SymbolTable symtab) throws IOException
     {
         CountingStream cs = new CountingStream(userstream);
+        // TODO this is assuming the symtab needed here, broken for open content.
         IonWriterSystemBinary writer =
             new IonWriterSystemBinary(_default_system_symbol_table,
                                       cs, false /* autoflush */ , true

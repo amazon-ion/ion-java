@@ -88,7 +88,7 @@ public class IonWriterFactory
         {
             IonContainer c =
                 (_container != null ? _container : _system.newDatagram());
-            writer = new IonWriterSystemTree(_system, _catalog, c);
+            writer = new IonWriterSystemTree(systemSymbolTable, _catalog, c);
             break;
         }
         case USER_TEXT:
@@ -118,7 +118,7 @@ public class IonWriterFactory
             IonContainer c =
                 (_container != null ? _container : _system.newDatagram());
             IonWriterSystemTree tree_system =
-                new IonWriterSystemTree(_system, _catalog, c);
+                new IonWriterSystemTree(systemSymbolTable, _catalog, c);
             writer =
                 new IonWriterUserTree(_system, _catalog, tree_system, !_assure_ivm);
             break;
@@ -387,7 +387,8 @@ public class IonWriterFactory
     {
         IonSystem sys = container.getSystem();
         IonWriterSystemTree system_writer =
-            new IonWriterSystemTree(sys, catalog, container);
+            new IonWriterSystemTree(sys.getSystemSymbolTable(), catalog,
+                                    container);
         IonWriter writer =
             new IonWriterUserTree(sys, catalog, system_writer, true);
         return writer;
@@ -462,7 +463,8 @@ public class IonWriterFactory
     {
         IonSystem sys = container.getSystem();
         IonCatalog cat = sys.getCatalog();
-        IonWriter writer = new IonWriterSystemTree(sys, cat, container);
+        IonWriter writer = new IonWriterSystemTree(sys.getSystemSymbolTable(),
+                                                   cat, container);
         return writer;
     }
 
