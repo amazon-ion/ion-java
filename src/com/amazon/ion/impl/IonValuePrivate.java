@@ -47,6 +47,10 @@ public interface IonValuePrivate
      * assigned to this value.  Values that are contained
      * will return null as they don't actually own
      * their own symbol table.
+     * <p>
+     * FIXME: I believe that last sentence is incorrect.
+     * Values contained by a lite datagram, at least, have assigned symtabs.
+     *
      * @return SymbolTable if this value is the real
      *         owner, otherwise null
      */

@@ -142,7 +142,7 @@ public abstract class IonContainerLite
                 throw new IllegalStateException("you can't open an updatable iterator on a read only value");
             }
             if (index < 0 || index > _child_count) {
-                throw new IndexOutOfBoundsException(""+index);
+                throw new IndexOutOfBoundsException(Integer.toString(index));
             }
             __pos = index;
             __readOnly = readOnly;
@@ -721,7 +721,7 @@ public abstract class IonContainerLite
     public IonValueLite get_child_lite(int idx)
     {
         if (idx < 0 || idx >= _child_count) {
-            throw new IndexOutOfBoundsException(""+idx);
+            throw new IndexOutOfBoundsException(Integer.toString(idx));
         }
         return _children[idx];
     }
@@ -736,7 +736,7 @@ public abstract class IonContainerLite
     public IonValueLite set_child_lite(int idx, IonValueLite child)
     {
         if (idx < 0 || idx >= _child_count) {
-            throw new IndexOutOfBoundsException(""+idx);
+            throw new IndexOutOfBoundsException(Integer.toString(idx));
         }
         if (child == null) {
             throw new NullPointerException();

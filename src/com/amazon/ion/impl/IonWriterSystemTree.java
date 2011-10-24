@@ -34,7 +34,7 @@ import java.math.BigInteger;
 final class IonWriterSystemTree
     extends IonWriterBaseImpl
 {
-    private final ValueFactory _system;
+    private final ValueFactory _factory;
 
     /** Used to construct new local symtabs. May be null */
     private final IonCatalog    _catalog;
@@ -60,7 +60,7 @@ final class IonWriterSystemTree
     {
         super(defaultSystemSymbolTable);
         if (rootContainer == null) throw new NullPointerException();
-        _system = rootContainer.getSystem();
+        _factory = rootContainer.getSystem();
         _catalog = catalog;
         _current_parent = rootContainer;
         _in_struct = (_current_parent instanceof IonStruct);
@@ -168,9 +168,9 @@ final class IonWriterSystemTree
         IonContainer v;
         switch (containerType)
         {
-            case LIST:   v = _system.newEmptyList();   break;
-            case SEXP:   v = _system.newEmptySexp();   break;
-            case STRUCT: v = _system.newEmptyStruct(); break;
+            case LIST:   v = _factory.newEmptyList();   break;
+            case SEXP:   v = _factory.newEmptySexp();   break;
+            case STRUCT: v = _factory.newEmptyStruct(); break;
             default:
                 throw new IllegalArgumentException();
         }
@@ -199,7 +199,7 @@ final class IonWriterSystemTree
     @Override
     final UnifiedSymbolTable inject_local_symbol_table() throws IOException
     {
-        return makeNewLocalSymbolTable(_system, _symbol_table);
+        return makeNewLocalSymbolTable(_factory, _symbol_table);
     }
 
     //========================================================================
@@ -208,42 +208,42 @@ final class IonWriterSystemTree
     public void writeNull(IonType type)
         throws IOException
     {
-        IonValue v = _system.newNull(type);
+        IonValue v = _factory.newNull(type);
         append(v);
     }
 
     public void writeBool(boolean value)
         throws IOException
     {
-        IonValue v = _system.newBool(value);
+        IonValue v = _factory.newBool(value);
         append(v);
     }
 
     public void writeInt(int value)
         throws IOException
     {
-        IonValue v = _system.newInt(value);
+        IonValue v = _factory.newInt(value);
         append(v);
     }
 
     public void writeInt(long value)
         throws IOException
     {
-        IonValue v = _system.newInt(value);
+        IonValue v = _factory.newInt(value);
         append(v);
     }
 
     public void writeInt(BigInteger value)
         throws IOException
     {
-        IonValue v = _system.newInt(value);
+        IonValue v = _factory.newInt(value);
         append(v);
     }
 
     public void writeFloat(double value)
         throws IOException
     {
-        IonFloat v = _system.newNullFloat();
+        IonFloat v = _factory.newNullFloat();
         v.setValue(value);
         append(v);
     }
@@ -251,21 +251,21 @@ final class IonWriterSystemTree
     @Override
     public void writeDecimal(BigDecimal value) throws IOException
     {
-        IonDecimal v = _system.newNullDecimal();
+        IonDecimal v = _factory.newNullDecimal();
         v.setValue(value);
         append(v);
     }
 
     public void writeTimestamp(Timestamp value) throws IOException
     {
-        IonTimestamp v =  _system.newTimestamp(value);
+        IonTimestamp v =  _factory.newTimestamp(value);
         append(v);
     }
 
     public void writeString(String value)
         throws IOException
     {
-        IonString v = _system.newString(value);
+        IonString v = _factory.newString(value);
         append(v);
     }
 
@@ -293,21 +293,21 @@ final class IonWriterSystemTree
     public void writeSymbol(String value)
         throws IOException
     {
-        IonSymbol v = _system.newSymbol(value);
+        IonSymbol v = _factory.newSymbol(value);
         append(v);
     }
 
     public void writeClob(byte[] value, int start, int len)
         throws IOException
     {
-        IonClob v = _system.newClob(value, start, len);
+        IonClob v = _factory.newClob(value, start, len);
         append(v);
      }
 
     public void writeBlob(byte[] value, int start, int len)
         throws IOException
     {
-        IonBlob v = _system.newBlob(value, start, len);
+        IonBlob v = _factory.newBlob(value, start, len);
         append(v);
     }
 
