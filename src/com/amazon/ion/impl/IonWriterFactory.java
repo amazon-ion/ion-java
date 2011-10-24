@@ -74,13 +74,14 @@ public class IonWriterFactory
         IonWriterBaseImpl writer;
 
         // check to make
+        SymbolTable systemSymbolTable = _system.getSystemSymbolTable();
         switch (_type) {
         case SYSTEM_TEXT:
-            writer = new IonWriterSystemText(_system.getSystemSymbolTable(),
+            writer = new IonWriterSystemText(systemSymbolTable,
                                              _chars, _options);
             break;
         case SYSTEM_BINARY:
-            writer = new IonWriterSystemBinary(_system.getSystemSymbolTable(),
+            writer = new IonWriterSystemBinary(systemSymbolTable,
                                                _out, _auto_flush, !_assure_ivm);
             break;
         case SYSTEM_ION_VALUE:
@@ -106,7 +107,7 @@ public class IonWriterFactory
             break;
         case USER_BINARY:
             IonWriterSystemBinary binary_system =
-                new IonWriterSystemBinary(_system.getSystemSymbolTable(), _out,
+                new IonWriterSystemBinary(systemSymbolTable, _out,
                                           _auto_flush, !_assure_ivm);
             writer = new IonWriterUserBinary(_system, _catalog, binary_system,
                                              !_assure_ivm,

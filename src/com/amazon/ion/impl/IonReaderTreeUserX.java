@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
@@ -98,7 +99,11 @@ class IonReaderTreeUserX
                     assert(_next instanceof IonStruct);
                     // read a local symbol table
                     IonReader reader = new IonReaderTreeUserX(_next, _catalog);
-                    SymbolTable symtab = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, reader, false);
+                    SymbolTable symtab =
+                        makeNewLocalSymbolTable(_system,
+                                                _system.getSystemSymbolTable(),
+                                                _system.getCatalog(),
+                                                reader, false);
                     set_symbol_table(symtab);
                     push_symbol_table(symtab);
                     _next = null;

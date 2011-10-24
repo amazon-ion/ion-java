@@ -251,6 +251,7 @@ class IonReaderBinaryUserX
                         UnifiedSymbolTable symtab =
                                 UnifiedSymbolTable.makeNewLocalSymbolTable(
                                     _system
+                                  , _system.getSystemSymbolTable()
                                   , _catalog
                                   , this
                                   , false // false failed do list encountered, but removed call to stepIn above // true failed for testBenchmark singleValue

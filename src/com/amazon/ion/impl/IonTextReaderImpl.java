@@ -592,7 +592,9 @@ public final class IonTextReaderImpl
     public SymbolTable getSymbolTable()
     {
         if (_current_symtab == null) {
-            _current_symtab = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, 1);
+            SymbolTable systemSymbolTable = _system.getSystemSymbolTable();
+            _current_symtab = makeNewLocalSymbolTable(_system,
+                                                      systemSymbolTable);
         }
         assert _current_symtab.isLocalTable() || _current_symtab.isSystemTable();
         return _current_symtab;

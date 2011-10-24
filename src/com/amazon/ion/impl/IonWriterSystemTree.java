@@ -188,7 +188,8 @@ final class IonWriterSystemTree
         {
             // We just finish writing a symbol table!
             SymbolTable symbol_table =
-                makeNewLocalSymbolTable(_catalog, (IonStruct) prior);
+                makeNewLocalSymbolTable(_system.getSystemSymbolTable(),
+                                        _catalog, (IonStruct) prior);
             setSymbolTable(symbol_table);
         }
     }

@@ -123,7 +123,7 @@ public class IonWriterUserText
         if (newSymtabIsLocalWithImports) {
             // TODO: remove cast below with update IonReader over symbol table
             IonReader reader =
-                ((UnifiedSymbolTable)new_symbols).getReader(this._system);
+                ((UnifiedSymbolTable)new_symbols).getReader();
             // move onto and write the struct header
             IonType t = reader.next();
             assert(IonType.STRUCT.equals(t));

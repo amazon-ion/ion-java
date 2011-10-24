@@ -158,7 +158,11 @@ public class IonReaderTextUserX
                         for (int ii=0; ii<_annotation_count; ii++) {
                             String a = _annotations[ii];
                             if (ION_SYMBOL_TABLE.equals(a)) {
-                                _symbols = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _catalog, this, true);
+                                _symbols = makeNewLocalSymbolTable(_system,
+                                                                   _system.getSystemSymbolTable(),
+                                                                   _catalog,
+                                                                   this,
+                                                                   true);
                                 push_symbol_table(_symbols);
                                 _has_next_called = false;
                                 break;
