@@ -171,23 +171,6 @@ public abstract class IonWriterBaseImpl
         return makeNewLocalSymbolTable(null /*system*/, _symbol_table);
     }
 
-    protected int add_symbol(String name) throws IOException
-    {
-        if (_symbol_table == null) {
-            _symbol_table = _default_system_symbol_table;
-        }
-
-        int sid = _symbol_table.findSymbol(name);
-        if (sid > 0) return sid;
-
-        if (_symbol_table.isSystemTable()) {
-            _symbol_table = inject_local_symbol_table();
-        }
-        assert _symbol_table.isLocalTable();
-
-        sid = _symbol_table.addSymbol(name);
-        return sid;
-    }
 
     String find_symbol(int sid)
     {
@@ -202,16 +185,7 @@ public abstract class IonWriterBaseImpl
 
 
     //========================================================================
-    // Writing field names
-
-    //
-    // field name support.  This handles converting
-    // string to int (or the reverse) using the current
-    // symbol table, if that is needed.  These routines
-    // are not generally overridden except to return
-    // an UnsupportedOperationException when they are
-    // not supported by a system writer.
-    //
+    // Field names
 
 
     /**
@@ -624,7 +598,7 @@ public abstract class IonWriterBaseImpl
         }
         _symbol_table_stack[_symbol_table_top++] = symbols;
     }
-    public SymbolTable pop_passed_symbol_table()
+    public final SymbolTable pop_passed_symbol_table()
     {
         if (_symbol_table_top <= 0) {
             return null;

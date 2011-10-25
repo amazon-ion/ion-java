@@ -47,6 +47,24 @@ abstract class IonWriterSystem
     // Context management
 
 
+    final int add_symbol(String name) throws IOException
+    {
+        if (_symbol_table == null) {
+            _symbol_table = _default_system_symbol_table;
+        }
+
+        int sid = _symbol_table.findSymbol(name);
+        if (sid > 0) return sid;
+
+        if (_symbol_table.isSystemTable()) {
+            _symbol_table = inject_local_symbol_table();
+        }
+        assert _symbol_table.isLocalTable();
+
+        sid = _symbol_table.addSymbol(name);
+        return sid;
+    }
+
 
     //========================================================================
     // Field names
