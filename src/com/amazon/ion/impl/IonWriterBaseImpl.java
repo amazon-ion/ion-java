@@ -377,7 +377,7 @@ public abstract class IonWriterBaseImpl
      */
     public void writeValue(IonReader reader) throws IOException
     {
-        writeValueSlowly(reader.getType(), reader);
+        writeValueRecursively(reader.getType(), reader);
     }
 
     /**
@@ -385,7 +385,7 @@ public abstract class IonWriterBaseImpl
      * {@link #writeValue(IonReader)} method since that will cause the
      * optimization test to happen repeatedly.
      */
-    protected final void writeValueSlowly(IonType type, IonReader reader)
+    final void writeValueRecursively(IonType type, IonReader reader)
         throws IOException
     {
         write_value_field_name_helper(reader);
@@ -443,17 +443,17 @@ public abstract class IonWriterBaseImpl
                 break;
             case STRUCT:
                 if (_debug_on) System.out.print("{");
-                writeContainerSlowly(IonType.STRUCT, reader);
+                writeContainerRecursively(IonType.STRUCT, reader);
                 if (_debug_on) System.out.print("}");
                 break;
             case LIST:
                 if (_debug_on) System.out.print("[");
-                writeContainerSlowly(IonType.LIST, reader);
+                writeContainerRecursively(IonType.LIST, reader);
                 if (_debug_on) System.out.print("]");
                 break;
             case SEXP:
                 if (_debug_on) System.out.print("(");
-                writeContainerSlowly(IonType.SEXP, reader);
+                writeContainerRecursively(IonType.SEXP, reader);
                 if (_debug_on) System.out.print(")");
                 break;
             default:
@@ -462,14 +462,14 @@ public abstract class IonWriterBaseImpl
         }
     }
 
-    protected final void writeContainerSlowly(IonType type, IonReader reader)
+    private void writeContainerRecursively(IonType type, IonReader reader)
         throws IOException
     {
         stepIn(type);
         reader.stepIn();
         while ((type = reader.next()) != null)
         {
-            writeValueSlowly(type, reader);
+            writeValueRecursively(type, reader);
         }
         reader.stepOut();
         stepOut();
