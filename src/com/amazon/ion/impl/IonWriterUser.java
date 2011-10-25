@@ -45,20 +45,20 @@ abstract class IonWriterUser
     private final IonSystem _system;
 
     /** Used to make correct local symbol tables. May be null. */
-    private   final IonCatalog _catalog;
+    private final IonCatalog _catalog;
 
     /**
      * Indicates whether the (immediately) previous value was an IVM.
      * This is cleared by {@link #finish_value()}.
      */
-    protected       boolean   _previous_value_was_ivm;
-    protected final boolean   _root_is_datagram;
+          boolean _previous_value_was_ivm;
+    final boolean _root_is_datagram;
 
     /**
      * The underlying system writer that writing the raw format (text, binary,
      * or ion values).  Not null.
      */
-    protected final IonWriterSystem _system_writer;
+    final IonWriterSystem _system_writer;
 
     /**
      * This will be either our {@link #_system_writer} or a symbol table writer
@@ -66,7 +66,7 @@ abstract class IonWriterUser
      * local symbol table ... or not.
      * Not null.
      */
-    protected IonWriterBaseImpl _current_writer;
+    IonWriterSystem _current_writer;
 
     /**
      * While the stream is diverted to collect local symtab data, it is
@@ -106,10 +106,10 @@ abstract class IonWriterUser
      * @param systemWriter must not be null.
      * @param catalog may be null.
      */
-    protected IonWriterUser(IonSystem system,
-                            IonWriterSystem systemWriter,
-                            IonCatalog catalog,
-                            boolean suppressIVM)
+    IonWriterUser(IonSystem system,
+                  IonWriterSystem systemWriter,
+                  IonCatalog catalog,
+                  boolean suppressIVM)
     {
         this(system, catalog, systemWriter, /* rootIsDatagram */ true);
 
@@ -137,10 +137,10 @@ abstract class IonWriterUser
      * @param systemWriter must not be null.
      * @param container must not be null.
      */
-    protected IonWriterUser(IonSystem system,
-                            IonCatalog catalog,
-                            IonWriterSystemTree systemWriter,
-                            IonValue container)
+    IonWriterUser(IonSystem system,
+                  IonCatalog catalog,
+                  IonWriterSystemTree systemWriter,
+                  IonValue container)
     {
         this(system, catalog, systemWriter,
              /* rootIsDatagram */ container.getType() == DATAGRAM);
