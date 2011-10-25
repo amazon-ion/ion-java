@@ -58,7 +58,7 @@ abstract class IonWriterUser
      * The underlying system writer that writing the raw format (text, binary,
      * or ion values).  Not null.
      */
-    protected final IonWriterBaseImpl _system_writer;
+    protected final IonWriterSystem _system_writer;
 
     /**
      * This will be either our {@link #_system_writer} or a symbol table writer
@@ -86,7 +86,7 @@ abstract class IonWriterUser
      */
     private IonWriterUser(IonSystem system,
                           IonCatalog catalog,
-                          IonWriterBaseImpl systemWriter,
+                          IonWriterSystem systemWriter,
                           boolean rootIsDatagram)
     {
         super(system.getSystemSymbolTable());
@@ -106,7 +106,8 @@ abstract class IonWriterUser
      * @param systemWriter must not be null.
      * @param catalog may be null.
      */
-    protected IonWriterUser(IonSystem system, IonWriterBaseImpl systemWriter,
+    protected IonWriterUser(IonSystem system,
+                            IonWriterSystem systemWriter,
                             IonCatalog catalog,
                             boolean suppressIVM)
     {
@@ -114,8 +115,6 @@ abstract class IonWriterUser
 
         // TODO Why is root_is_datagram always true?  Can we not construct a
         // text writer that injects into an existing data stream?
-
-        assert ! (systemWriter instanceof IonWriterUserTree);
 
         if (suppressIVM == false) {
             // TODO When do/don't we have a symtab?
