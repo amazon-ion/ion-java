@@ -7,6 +7,7 @@ import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
+import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.IonCatalog;
@@ -89,7 +90,6 @@ abstract class IonWriterUser
                           IonWriterSystem systemWriter,
                           boolean rootIsDatagram)
     {
-        super(system.getSystemSymbolTable());
         _system = system;
         _catalog = catalog;
 
@@ -214,7 +214,6 @@ abstract class IonWriterUser
     {
         _previous_value_was_ivm = false;
         _system_writer.finishSystemContext();
-        super.finishSystemContext();
     }
 
 
@@ -225,19 +224,9 @@ abstract class IonWriterUser
         return _system.getSystemSymbolTable();
     }
 
-    @Override
-    final UnifiedSymbolTable inject_local_symbol_table() throws IOException
-    {
-        // no catalog since it doesn't matter as this is a
-        // pure local table, with no imports
-        // we let the system writer handle this work
-        UnifiedSymbolTable symbols = _system_writer.inject_local_symbol_table();
-        return symbols;
-    }
 
     private boolean symbol_table_being_collected()
     {
-//        assert _symbol_table_being_copied == (_current_writer != _system_writer);
         return (_current_writer != _system_writer);
     }
 
@@ -302,14 +291,19 @@ abstract class IonWriterUser
                                           SymbolTable new_symbols)
         throws IOException;
 
+
     @Override
     public final void setSymbolTable(SymbolTable symbols)
         throws IOException
     {
-        SymbolTable prev = _symbol_table; // TODO this isn't always up-to-date!
+        if (symbols == null || isNonSystemSharedTable(symbols)) {
+            throw new IllegalArgumentException("symbol table must be local or system to be set, or reset");
+        }
+        if (getDepth() > 0) {
+            throw new IllegalStateException("the symbol table cannot be set, or reset, while a container is open");
+        }
 
-        // checks validity and set the member variable
-        super.setSymbolTable(symbols);
+        SymbolTable prev = _system_writer.getSymbolTable();
 
         // the subclass should do what they want to on
         // this transition often nothing, sometimes we
@@ -351,13 +345,19 @@ abstract class IonWriterUser
         }
     }
 
-    @Override
-    public SymbolTable getSymbolTable()
+
+    public final SymbolTable getSymbolTable()
     {
         SymbolTable symbols = _system_writer.getSymbolTable();
         return symbols;
     }
 
+
+    @Override
+    final String find_symbol(int sid)
+    {
+        return _system_writer.find_symbol(sid);
+    }
 
     //========================================================================
     // Field names

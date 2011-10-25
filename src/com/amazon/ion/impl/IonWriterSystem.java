@@ -4,6 +4,8 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_INT_ARRAY;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
+import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonException;
@@ -18,6 +20,20 @@ import java.io.IOException;
 abstract class IonWriterSystem
     extends IonWriterBaseImpl
 {
+    /**
+     * The system symtab used when resetting the stream.
+     * Must not be null.
+     */
+    final SymbolTable _default_system_symbol_table;
+
+    /**
+     * Must be either local or system table.  It can be null
+     * if the concrete writer is a system writer.  This
+     * value may only be changed when the writer is at the top
+     * (i.e. the datagram level).
+     */
+    SymbolTable _symbol_table;
+
     /** really ion type is only used for int, string or null (unknown) */
     private IonType     _field_name_type;
     private String      _field_name;
@@ -35,17 +51,66 @@ abstract class IonWriterSystem
     //========================================================================
 
     /**
-     * @param defaultSystemSymbolTable
+     * @param defaultSystemSymbolTable must not be null.
      */
     IonWriterSystem(SymbolTable defaultSystemSymbolTable)
     {
-        super(defaultSystemSymbolTable);
+        defaultSystemSymbolTable.getClass(); // Efficient null check
+        _default_system_symbol_table = defaultSystemSymbolTable;
     }
 
 
     //========================================================================
     // Context management
 
+    public SymbolTable getSymbolTable()
+    {
+        return _symbol_table;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This implementation simply validates that the argument is not a
+     * shared symbol table, and assigns it to {@link #_symbol_table}.
+     */
+    @Override
+    public final void setSymbolTable(SymbolTable symbols)
+        throws IOException
+    {
+        if (symbols == null || isNonSystemSharedTable(symbols)) {
+            throw new IllegalArgumentException("symbol table must be local or system to be set, or reset");
+        }
+        if (getDepth() > 0) {
+            throw new IllegalStateException("the symbol table cannot be set, or reset, while a container is open");
+        }
+        _symbol_table = symbols;
+    }
+
+    /**
+     * Builds a new local symbol table from the current contextual symtab
+     * (a system symtab).
+     * @return not null.
+     */
+    UnifiedSymbolTable inject_local_symbol_table() throws IOException
+    {
+        assert _symbol_table.isSystemTable();
+        // no catalog since it doesn't matter as this is a
+        // pure local table, with no imports
+        return makeNewLocalSymbolTable(null /*system*/, _symbol_table);
+    }
+
+    @Override
+    final String find_symbol(int sid)
+    {
+        SymbolTable symbol_table = _symbol_table;
+        if (symbol_table == null) {
+            symbol_table = _default_system_symbol_table;
+        }
+        String name = symbol_table.findSymbol(sid);
+        assert(name != null && name.length() > 0);
+        return name;
+    }
 
     final int add_symbol(String name) throws IOException
     {
@@ -65,6 +130,18 @@ abstract class IonWriterSystem
         return sid;
     }
 
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This implementation just sets the {@link #_symbol_table} to the
+     * {@link #_default_system_symbol_table}.
+     */
+    @Override
+    void finishSystemContext()
+    {
+        _symbol_table = _default_system_symbol_table;
+    }
 
     //========================================================================
     // Field names

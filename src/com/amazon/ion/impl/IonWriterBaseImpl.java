@@ -3,8 +3,6 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
-import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
-import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
@@ -31,33 +29,12 @@ public abstract class IonWriterBaseImpl
 
     private static final boolean _debug_on = false;
 
-    /**
-     * The system symtab used when resetting the stream.
-     * Must not be null.
-     */
-    protected final SymbolTable _default_system_symbol_table;
-
-    /**
-     * Must be either local or system table.  It can be null
-     * if the concrete writer is a system writer.  This
-     * value may only be changed when the writer is at the top
-     * (i.e. the datagram level).
-     */
-    protected SymbolTable _symbol_table;
 
 
-
-    /**
-     *
-     * @param defaultSystemSymbolTable must not be null.
-     *
-     * @throws NullPointerException if the parameter is null.
-     */
-    protected IonWriterBaseImpl(SymbolTable defaultSystemSymbolTable)
+    IonWriterBaseImpl()
     {
-        defaultSystemSymbolTable.getClass(); // Efficient null check
-        _default_system_symbol_table = defaultSystemSymbolTable;
     }
+
 
     /**
      * Returns the current depth of containers the writer is at.  This is
@@ -76,14 +53,9 @@ public abstract class IonWriterBaseImpl
     /**
      * Called by finish after flushing all the known data, to prepare for the
      * case where the user sends some more.
-     * <p>
-     * This implementation just sets the {@link #_symbol_table} to the
-     * {@link #_default_system_symbol_table}.
      */
-    void finishSystemContext()
-    {
-        _symbol_table = _default_system_symbol_table;
-    }
+    abstract void finishSystemContext();
+
 
     public final void finish() throws IOException
     {
@@ -99,12 +71,9 @@ public abstract class IonWriterBaseImpl
     }
 
 
-    //
-    // symbol table support methods.  These handle the
-    // symbol table state and are not generally overridden
-    // except to return an UnsupportedOperationException
-    // when they are not supported by a system writer.
-    //
+    //========================================================================
+    // Context management
+
 
     /**
      * Write an Ion version marker symbol to the output.  This
@@ -134,54 +103,15 @@ public abstract class IonWriterBaseImpl
      * not in the system symbol table are written a local
      * symbol table will be created and written before the
      * current top level value.
-     * <p>
-     * This implmentation simply validates that the argument is not a
-     * shared symbol table, and assigns it to {@link #_symbol_table}.
      *
      * @param symbols base symbol table for encoding. Must not be null.
      * @throws IllegalArgumentException if symbols is null or a shared symbol table
      */
-    public void setSymbolTable(SymbolTable symbols)
-        throws IOException
-    {
-        if (symbols == null || isNonSystemSharedTable(symbols)) {
-            throw new IllegalArgumentException("symbol table must be local or system to be set, or reset");
-        }
-        if (getDepth() > 0) {
-            throw new IllegalStateException("the symbol table cannot be set, or reset, while a container is open");
-        }
-        _symbol_table = symbols;
-    }
-
-    public SymbolTable getSymbolTable()
-    {
-        return _symbol_table;
-    }
-
-    /**
-     * Builds a new local symbol table from the current contextual symtab
-     * (a system symtab).
-     * @return not null.
-     */
-    UnifiedSymbolTable inject_local_symbol_table() throws IOException
-    {
-        assert _symbol_table.isSystemTable();
-        // no catalog since it doesn't matter as this is a
-        // pure local table, with no imports
-        return makeNewLocalSymbolTable(null /*system*/, _symbol_table);
-    }
+    public abstract void setSymbolTable(SymbolTable symbols)
+        throws IOException;
 
 
-    String find_symbol(int sid)
-    {
-        SymbolTable symbol_table = _symbol_table;
-        if (symbol_table == null) {
-            symbol_table = _default_system_symbol_table;
-        }
-        String name = symbol_table.findSymbol(sid);
-        assert(name != null && name.length() > 0);
-        return name;
-    }
+    abstract String find_symbol(int sid);
 
 
     //========================================================================
