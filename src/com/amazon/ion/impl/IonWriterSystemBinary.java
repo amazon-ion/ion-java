@@ -119,14 +119,11 @@ public class IonWriterSystemBinary
     }
 
     /**
-     * this is for internal use only.  It is called by {@link #finish()} to
-     * reset the member variables.  The only reason it's not private
-     * is so that the child class IonBinaryWriterUser can
-     * handle its work then let this class finish up.
+     * Empty our buffers, assuming it is safe to do so.
+     * This is called by {@link #flush()} and {@link #finish()}.
      */
-    @Override
-    protected final void writeAllBufferedData()
-    throws IOException
+    private void writeAllBufferedData()
+        throws IOException
     {
         writeBytes(_user_output_stream);
 
@@ -147,10 +144,15 @@ public class IonWriterSystemBinary
     }
 
     @Override
-    final void finishSystemContext()
+    public void finish() throws IOException
     {
+        if (getDepth() != 0) {
+            throw new IllegalStateException(ERROR_FINISH_NOT_AT_TOP_LEVEL);
+        }
+
+        writeAllBufferedData();
+        super.finish();
         _assure_ivm = true;
-        super.finishSystemContext();
     }
 
     protected final OutputStream getOutputStream()

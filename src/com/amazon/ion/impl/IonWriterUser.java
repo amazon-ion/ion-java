@@ -173,6 +173,7 @@ abstract class IonWriterUser
     public void flush() throws IOException
     {
         // TODO this doesn't behave correctly when the stream is diverted.
+        // The diverted symtab stream will think its at top-level when its not.
         _current_writer.flush();
     }
 
@@ -198,24 +199,17 @@ abstract class IonWriterUser
         }
     }
 
-    @Override
-    protected void writeAllBufferedData() throws IOException
+
+    public final void finish() throws IOException
     {
         if (symbol_table_being_collected()) {
-            throw new IllegalStateException("you can't finish a user writer while a local symbol table value is being written");
+            throw new IllegalStateException(ERROR_FINISH_NOT_AT_TOP_LEVEL);
         }
-        assert(_current_writer == _system_writer);
 
-        _system_writer.writeAllBufferedData();
-    }
+        _system_writer.finish();
 
-    @Override
-    final void finishSystemContext()
-    {
         _previous_value_was_ivm = false;
-        _system_writer.finishSystemContext();
     }
-
 
     //========================================================================
 

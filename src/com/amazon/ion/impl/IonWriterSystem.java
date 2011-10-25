@@ -131,17 +131,17 @@ abstract class IonWriterSystem
     }
 
 
-    /**
-     * {@inheritDoc}
-     * <p>
-     * This implementation just sets the {@link #_symbol_table} to the
-     * {@link #_default_system_symbol_table}.
-     */
-    @Override
-    void finishSystemContext()
+    public void finish() throws IOException
     {
+        if (getDepth() != 0) {
+            throw new IllegalStateException(ERROR_FINISH_NOT_AT_TOP_LEVEL);
+        }
+
+        flush();
+
         _symbol_table = _default_system_symbol_table;
     }
+
 
     //========================================================================
     // Field names

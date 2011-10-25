@@ -27,6 +27,9 @@ public abstract class IonWriterBaseImpl
     protected static final String ERROR_MISSING_FIELD_NAME =
         "IonWriter.setFieldName() must be called before writing a value into a struct.";
 
+    static final String ERROR_FINISH_NOT_AT_TOP_LEVEL =
+        "IonWriter.finish() can only be called at top-level.";
+
     private static final boolean _debug_on = false;
 
 
@@ -42,33 +45,6 @@ public abstract class IonWriterBaseImpl
      * @return int depth of container nesting
      */
     protected abstract int getDepth();
-
-    /**
-     * Must only be called at top-level!
-     */
-    protected void writeAllBufferedData() throws IOException
-    {
-    }
-
-    /**
-     * Called by finish after flushing all the known data, to prepare for the
-     * case where the user sends some more.
-     */
-    abstract void finishSystemContext();
-
-
-    public final void finish() throws IOException
-    {
-        if (getDepth() != 0) {
-            String message =
-                "IonWriter.finish() can only be called at top-level.";
-            throw new IllegalStateException(message);
-        }
-
-        writeAllBufferedData();
-        flush();
-        finishSystemContext();
-    }
 
 
     //========================================================================
