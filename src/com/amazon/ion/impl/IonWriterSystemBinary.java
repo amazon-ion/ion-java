@@ -25,7 +25,7 @@ import java.math.BigInteger;
  *
  */
 public class IonWriterSystemBinary
-    extends IonWriterBaseImpl
+    extends IonWriterSystem
 {
     // private static final boolean _verbose_debug = false;
 
@@ -130,8 +130,9 @@ public class IonWriterSystemBinary
     {
         writeBytes(_user_output_stream);
 
-        _annotation_count = 0;
-        _field_name_type = null;
+        clearFieldName();
+        clearAnnotations();
+
         _in_struct = false;
         _patch_count = 0;
         _patch_symbol_table_count = 0;
@@ -475,7 +476,7 @@ public class IonWriterSystemBinary
 
         // write annotations
         int annotations_len = 0;
-        int sid_count = super._annotation_count;
+        int sid_count = annotationCount();
         if (sid_count > 0) {
             int[] sids = super.get_type_annotations_as_ints();
 
@@ -563,7 +564,7 @@ public class IonWriterSystemBinary
     {
         if (! _closed)
         {
-            if (atDatagramLevel() && _annotation_count == 0)
+            if (atDatagramLevel() && ! hasAnnotations())
             {
                 SymbolTable symtab = getSymbolTable();
 
@@ -632,14 +633,6 @@ public class IonWriterSystemBinary
         _user_depth--;
     }
 
-    @Override
-    public final void setFieldId(int id)
-    {
-        if (!_in_struct) {
-            throw new IllegalStateException();
-        }
-        super.setFieldId(id);
-    }
 
     public void writeNull(IonType type) throws IOException
     {

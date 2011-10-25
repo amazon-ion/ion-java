@@ -121,7 +121,7 @@ abstract class IonWriterUser
             // TODO When do/don't we have a symtab?
             if (_current_writer.getSymbolTable() == null) {
                 try {
-                    setSymbolTable(_system.getSystemSymbolTable());
+                    setSymbolTable(activeSystemSymbolTable());
                 }
                 catch (IOException e) {
                     throw new IonException(e);
@@ -153,7 +153,7 @@ abstract class IonWriterUser
     //========================================================================
 
     @Override
-    protected boolean has_annotation(String name, int id)
+    boolean has_annotation(String name, int id)
     {
         return _current_writer.has_annotation(name, id);
     }
@@ -359,71 +359,60 @@ abstract class IonWriterUser
         return symbols;
     }
 
-    //========================================================================
 
-    @Override
+    //========================================================================
+    // Field names
+
+
     public void setFieldName(String name)
     {
         _current_writer.setFieldName(name);
     }
-    @Override
+
     public void setFieldId(int id)
     {
         _current_writer.setFieldId(id);
     }
+
     @Override
-    public String getFieldName()
-    {
-        String fieldname = _current_writer.getFieldName();
-        return fieldname;
-    }
-    @Override
-    public int getFieldId()
-    {
-        int sid = _current_writer.getFieldId();
-        return sid;
-    }
-    @Override
-    public boolean isFieldNameSet() {
+    boolean isFieldNameSet() {
         boolean is_set = _current_writer.isFieldNameSet();
         return is_set;
     }
-    @Override
-    protected void clearFieldName() {
-        _current_writer.clearFieldName();
-    }
 
 
-    @Override
+    //========================================================================
+    // Annotations
+
+
     public void addTypeAnnotation(String annotation)
     {
         _current_writer.addTypeAnnotation(annotation);
     }
-    @Override
+
     public void addTypeAnnotationId(int annotationId)
     {
         _current_writer.addTypeAnnotationId(annotationId);
     }
 
-    @Override
     public void setTypeAnnotationIds(int... annotationIds)
     {
         _current_writer.setTypeAnnotationIds(annotationIds);
     }
 
-    @Override
     public void setTypeAnnotations(String... annotations)
     {
         _current_writer.setTypeAnnotations(annotations);
     }
 
     @Override
-    public String[] getTypeAnnotations()
+    String[] getTypeAnnotations()
     {
         return _current_writer.getTypeAnnotations();
     }
+
     @Override
-    public int[] getTypeAnnotationIds()
+    int[] getTypeAnnotationIds()
     {
         return _current_writer.getTypeAnnotationIds();
     }

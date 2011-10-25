@@ -29,7 +29,7 @@ import java.nio.CharBuffer;
  *
  */
 class IonWriterSystemText
-    extends IonWriterBaseImpl
+    extends IonWriterSystem
 {
     /** Not null. */
     final private Appendable _output;
@@ -322,12 +322,10 @@ class IonWriterSystemText
         }
 
         // write annotations
-        int annotation_count = super._annotation_count;
-        if (annotation_count > 0) {
+        if (hasAnnotations()) {
             if (! _options._skip_annotations) {
                 String[] annotations = getTypeAnnotations();
-                for (int ii=0; ii<annotation_count; ii++) {
-                    String name = annotations[ii];
+                for (String name : annotations) {
                     IonTextUtils.printSymbol(_output, name);
                     _output.append("::");
                 }

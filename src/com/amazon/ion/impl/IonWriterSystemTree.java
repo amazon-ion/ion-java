@@ -32,7 +32,7 @@ import java.math.BigInteger;
  * typically an IonDatagram with contents.
  */
 final class IonWriterSystemTree
-    extends IonWriterBaseImpl
+    extends IonWriterSystem
 {
     private final ValueFactory _factory;
 
@@ -135,8 +135,7 @@ final class IonWriterSystemTree
 
     private void append(IonValue value)
     {
-        int annotation_count = this._annotation_count;
-        if (annotation_count > 0) {
+        if (hasAnnotations()) {
             String[] annotations = this.getTypeAnnotations();
             value.setTypeAnnotations(annotations);
             this.clearAnnotations();
