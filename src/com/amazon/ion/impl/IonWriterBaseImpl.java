@@ -22,7 +22,6 @@ import java.util.Date;
  */
 public abstract class IonWriterBaseImpl
     implements IonWriter, IonReaderWriterPrivate
-
 {
     protected static final String ERROR_MISSING_FIELD_NAME =
         "IonWriter.setFieldName() must be called before writing a value into a struct.";
@@ -301,8 +300,10 @@ public abstract class IonWriterBaseImpl
         if (reader.getType() == null) reader.next();
 
         if (reader instanceof IonReaderWriterPrivate) {
-            IonReaderWriterPrivate private_reader = (IonReaderWriterPrivate)reader;
+            IonReaderWriterPrivate private_reader =
+                (IonReaderWriterPrivate)reader;
             while (reader.getType() != null) {
+                // FIXME This could change symtab when we are not at top level.
                 transfer_symbol_tables(private_reader);
                 writeValue(reader);
                 reader.next();
@@ -316,16 +317,18 @@ public abstract class IonWriterBaseImpl
         }
     }
 
-    private final void transfer_symbol_tables(IonReaderWriterPrivate private_reader) throws IOException
+    private final void transfer_symbol_tables(IonReaderWriterPrivate reader)
+        throws IOException
     {
-        SymbolTable reader_symbols = null;
-        reader_symbols = private_reader.pop_passed_symbol_table();
+        SymbolTable reader_symbols = reader.pop_passed_symbol_table();
         if (reader_symbols != null) {
             clear_system_value_stack();
             setSymbolTable(reader_symbols);
             while (reader_symbols != null) {
+                // TODO these symtabs are never popped!
+                // Why bother pushing them?
                 push_symbol_table(reader_symbols);
-                reader_symbols = private_reader.pop_passed_symbol_table();
+                reader_symbols = reader.pop_passed_symbol_table();
             }
         }
     }

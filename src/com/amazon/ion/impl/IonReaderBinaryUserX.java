@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
+import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
@@ -242,21 +243,13 @@ class IonReaderBinaryUserX
                 int count = load_annotations();
                 for(int ii=0; ii<count; ii++) {
                     if (_annotation_ids[ii] == ION_SYMBOL_TABLE_SID) {
-
-                        //stepIn();
-                        //an empty struct is actually ok, just not very interesting
-                        //if (!hasNext()) {
-                        //    this.error_at("local symbol table with an empty struct encountered");
-                        //}
-                        UnifiedSymbolTable symtab =
-                                UnifiedSymbolTable.makeNewLocalSymbolTable(
-                                    _system
-                                  , _system.getSystemSymbolTable()
-                                  , _catalog
-                                  , this
-                                  , false // false failed do list encountered, but removed call to stepIn above // true failed for testBenchmark singleValue
-                        );
-                        _symbols = symtab;
+                        _symbols =
+                            makeNewLocalSymbolTable(_system,
+                                                    // TODO should be current symtab:
+                                                    _system.getSystemSymbolTable(),
+                                                    _catalog,
+                                                    this,
+                                                    false);
                         push_symbol_table(_symbols);
                         _has_next_needed = true;
                         break;
