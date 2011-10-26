@@ -1103,7 +1103,7 @@ public class UnifiedSymbolTableReader
         case S_SYMBOL_LIST_CLOSE:
         case S_STRUCT_CLOSE:
         case S_EOF:
-            return UnifiedSymbolTable.UNKNOWN_SID;
+            return SymbolTable.UNKNOWN_SYMBOL_ID;
 
         case S_NAME:
         case S_IMPORT_NAME:

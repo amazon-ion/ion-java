@@ -65,11 +65,6 @@ import java.util.List;
 public final class UnifiedSymbolTable
     implements SymbolTable
 {
-    public static final int UNKNOWN_SID = -1;
-
-    public static final int DEFAULT_ION_VERSION = 1;
-
-
     /**
      * The set of system symbols as defined by Ion 1.0.
      * We keep this private to (help) prevent it from being modified.
@@ -117,7 +112,7 @@ public final class UnifiedSymbolTable
     private String[] _symbols;
 
     /** The initial length of {@link #_symbols}. */
-    private static final int DEFAULT_SYMBOL_LENGTH = 10;
+    private static final int DEFAULT_CAPACITY = 10;
 
     /**
      * This is the number of symbols defined in this symbol table
@@ -146,16 +141,11 @@ public final class UnifiedSymbolTable
 
     private UnifiedSymbolTable(ValueFactory imageFactory)
     {
-        _name = null;
-        _version = 0;
+        _image_factory = imageFactory;
         _first_local_sid = 1;
         _symbols = IonImplUtils.EMPTY_STRING_ARRAY;
-        _local_symbol_count = 0;
         _id_map = new HashMap<String, Integer>(10);
         _import_list = UnifiedSymbolTableImports.emptyImportList;
-
-        _image = null;
-        _image_factory = imageFactory;
     }
 
     /**
@@ -251,7 +241,7 @@ public final class UnifiedSymbolTable
         while (symbols.hasNext()) {
             String symName = symbols.next();
             // FIXME what about empty?  ION-189
-            if (findSymbol(symName) == UnifiedSymbolTable.UNKNOWN_SID) {
+            if (findSymbol(symName) == UNKNOWN_SYMBOL_ID) {
                 putSymbol(symName, sid);
                 sid++;
             }
@@ -855,7 +845,7 @@ public final class UnifiedSymbolTable
     int addSymbol(String name)
     {
         int sid = this.findSymbol(name);
-        if (sid == UNKNOWN_SID) {
+        if (sid == UNKNOWN_SYMBOL_ID) {
             if (_name != null) {
                 throw new UnsupportedOperationException("can't change shared symbol table");
             }
@@ -913,10 +903,10 @@ public final class UnifiedSymbolTable
         }
 
         int sid = this.findSymbol(name);
-        if (sid != UNKNOWN_SID && sid != id) {
+        if (sid != UNKNOWN_SYMBOL_ID && sid != id) {
             throw new IllegalArgumentException("it's not valid to change a symbols id");
         }
-        else if (sid == UNKNOWN_SID) {
+        else if (sid == UNKNOWN_SYMBOL_ID) {
             putSymbol(name, id);
         }
 
@@ -944,8 +934,8 @@ public final class UnifiedSymbolTable
             int oldlen = _local_symbol_count;
             if (oldlen >= _symbols.length) {
                 int newlen = oldlen * 2;
-                if (newlen < DEFAULT_SYMBOL_LENGTH) {
-                    newlen = DEFAULT_SYMBOL_LENGTH;
+                if (newlen < DEFAULT_CAPACITY) {
+                    newlen = DEFAULT_CAPACITY;
                 }
                 while (newlen < idx) {
                     newlen *= 2;
@@ -1289,7 +1279,7 @@ public final class UnifiedSymbolTable
                     // Allocate a sid even when the symbols's text is malformed
                     // FIXME ION-189 this needs to retain the text in case
                     // there's a reference to the corresponding sid.
-                    if (symbolText != null && findSymbol(symbolText) != UNKNOWN_SID) {
+                    if (symbolText != null && findSymbol(symbolText) != UNKNOWN_SYMBOL_ID) {
                         symbolText = null;
                     }
                     putSymbol(symbolText, sid);
@@ -1332,7 +1322,7 @@ public final class UnifiedSymbolTable
                 break;
             }
         }
-        return UNKNOWN_SID;
+        return UNKNOWN_SYMBOL_ID;
     }
 
 

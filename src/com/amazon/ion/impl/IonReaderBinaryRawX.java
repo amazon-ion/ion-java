@@ -3,6 +3,8 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 
+import com.amazon.ion.SymbolTable;
+
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
@@ -109,7 +111,7 @@ abstract public class IonReaderBinaryRawX
     final void re_init_raw() {
         _local_remaining = NO_LIMIT;
         _parent_tid = IonConstants.tidDATAGRAM;
-        _value_field_id = UnifiedSymbolTable.UNKNOWN_SID;
+        _value_field_id = SymbolTable.UNKNOWN_SYMBOL_ID;
         _state = State.S_BEFORE_TID; // this is where we always start
         _has_next_needed = true;
 
@@ -226,11 +228,11 @@ abstract public class IonReaderBinaryRawX
         while (_value_tid == -1 && !_eof) {
             switch (_state) {
             case S_BEFORE_FIELD:
-                assert _value_field_id == UnifiedSymbolTable.UNKNOWN_SID;
+                assert _value_field_id == SymbolTable.UNKNOWN_SYMBOL_ID;
                 _value_field_id = read_field_id();
                 if (_value_field_id == UnifiedInputStreamX.EOF) {
                     // FIXME why is EOF ever okay in the middle of a struct?
-                    assert UnifiedInputStreamX.EOF == UnifiedSymbolTable.UNKNOWN_SID;
+                    assert UnifiedInputStreamX.EOF == SymbolTable.UNKNOWN_SYMBOL_ID;
                     _eof = true;
                     break;
                 }
@@ -313,7 +315,7 @@ abstract public class IonReaderBinaryRawX
         _value_is_null = false;
         _value_lob_is_ready = false;
         _annotations.clear();
-        _value_field_id = UnifiedSymbolTable.UNKNOWN_SID;
+        _value_field_id = SymbolTable.UNKNOWN_SYMBOL_ID;
         _state = State.S_AFTER_VALUE;
     }
     private final IonType load_annotation_start_with_value_type() throws IOException
@@ -400,7 +402,7 @@ abstract public class IonReaderBinaryRawX
         _annotations.clear();
         _v.clear();
         _annotation_count = 0;
-        _value_field_id = UnifiedSymbolTable.UNKNOWN_SID;
+        _value_field_id = SymbolTable.UNKNOWN_SYMBOL_ID;
     }
 
     /**

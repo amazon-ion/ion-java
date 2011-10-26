@@ -466,7 +466,7 @@ public abstract class IonValueLite
     {
         SymbolTable symbols = getSymbolTable();
         if (symbols == null) {
-            return UnifiedSymbolTable.UNKNOWN_SID;
+            return SymbolTable.UNKNOWN_SYMBOL_ID;
         }
         int sid = symbols.findSymbol(name);
         return sid;
@@ -485,7 +485,7 @@ public abstract class IonValueLite
     public int addSymbol(String name)
     {
         int sid = resolveSymbol(name);
-        if (sid != UnifiedSymbolTable.UNKNOWN_SID) {
+        if (sid != SymbolTable.UNKNOWN_SYMBOL_ID) {
             return sid;
         }
         checkForLock();

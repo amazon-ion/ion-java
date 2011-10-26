@@ -547,7 +547,7 @@ public abstract class IonValueImpl
         if (this._fieldSid == 0 && this._fieldName != null)
         {
             this._fieldSid = this.resolveSymbol(this._fieldName);
-            if (this._fieldSid == UnifiedSymbolTable.UNKNOWN_SID) {
+            if (this._fieldSid == SymbolTable.UNKNOWN_SYMBOL_ID) {
                 this._fieldSid = this.addSymbol(this._fieldName);
             }
         }
@@ -565,11 +565,11 @@ public abstract class IonValueImpl
         if (this._fieldSid == 0 && this._fieldName != null)
         {
             this._fieldSid = this.resolveSymbol(this._fieldName);
-            if (this._fieldSid == UnifiedSymbolTable.UNKNOWN_SID) {
+            if (this._fieldSid == SymbolTable.UNKNOWN_SYMBOL_ID) {
                 checkForLock();
                 symtab = this.addSymbol(this._fieldName, symtab);
                 this._fieldSid = symtab.findSymbol(this._fieldName);
-                assert( this._fieldSid != UnifiedSymbolTable.UNKNOWN_SID);
+                assert( this._fieldSid != SymbolTable.UNKNOWN_SYMBOL_ID);
             }
         }
         return symtab;
@@ -775,7 +775,7 @@ public abstract class IonValueImpl
     {
         SymbolTable symbols = getSymbolTable();
         if (symbols == null) {
-            return UnifiedSymbolTable.UNKNOWN_SID;
+            return SymbolTable.UNKNOWN_SYMBOL_ID;
         }
         int sid = symbols.findSymbol(name);
         return sid;
@@ -812,7 +812,7 @@ public abstract class IonValueImpl
     public int addSymbol(String name)
     {
         int sid = resolveSymbol(name);
-        if (sid != UnifiedSymbolTable.UNKNOWN_SID) {
+        if (sid != SymbolTable.UNKNOWN_SYMBOL_ID) {
             return sid;
         }
         checkForLock();
@@ -831,7 +831,7 @@ public abstract class IonValueImpl
      */
     protected SymbolTable addSymbol(String name, SymbolTable symbols)
     {
-        assert resolveSymbol(name) == UnifiedSymbolTable.UNKNOWN_SID;
+        assert resolveSymbol(name) == SymbolTable.UNKNOWN_SYMBOL_ID;
         assert symbols == this.getSymbolTable();
 
         if (UnifiedSymbolTable.isLocalTable(symbols) == false) {

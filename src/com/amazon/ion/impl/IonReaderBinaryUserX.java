@@ -266,7 +266,7 @@ class IonReaderBinaryUserX
     public String getFieldName()
     {
         String name;
-        if (_value_field_id == UnifiedSymbolTable.UNKNOWN_SID) {
+        if (_value_field_id == SymbolTable.UNKNOWN_SYMBOL_ID) {
             name = null;
         }
         else {
