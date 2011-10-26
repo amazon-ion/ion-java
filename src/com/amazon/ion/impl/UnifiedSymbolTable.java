@@ -85,7 +85,9 @@ public final class UnifiedSymbolTable
 
     private String                    _name;              // name of shared (or system) table, null if local, "$ion" if system
     private int                       _version;           // version of the shared table
-    private UnifiedSymbolTableImports _import_list;       // list of imported tables
+
+    /** Our imports, never null. */
+    private final UnifiedSymbolTableImports _import_list;
 
     private boolean                   _is_read_only;      // set to mark this symbol table as being (now) immutable
 
@@ -138,14 +140,24 @@ public final class UnifiedSymbolTable
      * internally.
      *
      */
-
-    private UnifiedSymbolTable(ValueFactory imageFactory)
+    private UnifiedSymbolTable(ValueFactory imageFactory,
+                               UnifiedSymbolTableImports imports)
     {
         _image_factory = imageFactory;
+        _import_list = imports;
+        _id_map = new HashMap<String, Integer>(10);
         _first_local_sid = 1;
         _symbols = IonImplUtils.EMPTY_STRING_ARRAY;
-        _id_map = new HashMap<String, Integer>(10);
-        _import_list = UnifiedSymbolTableImports.emptyImportList;
+    }
+
+    /**
+     * Constructs a shared symtab with no imports.
+     * Caller must also invoke {@link #share(String, int)}.
+     * @param imageFactory
+     */
+    private UnifiedSymbolTable(ValueFactory imageFactory)
+    {
+        this(imageFactory, UnifiedSymbolTableImports.emptyImportList);
     }
 
     /**
@@ -168,7 +180,8 @@ public final class UnifiedSymbolTable
     private UnifiedSymbolTable(ValueFactory imageFactory,
                                SymbolTable systemSymbolTable)
     {
-        this(imageFactory);
+        this(imageFactory,
+             new UnifiedSymbolTableImports((UnifiedSymbolTable) systemSymbolTable));
 
         if (!systemSymbolTable.isSystemTable()) {
             throw new IllegalArgumentException();
@@ -177,7 +190,6 @@ public final class UnifiedSymbolTable
             throw new IllegalArgumentException();
         }
 
-        _import_list = new UnifiedSymbolTableImports((UnifiedSymbolTable) systemSymbolTable);
         _first_local_sid = _import_list.getMaxId() + 1;
     }
 
@@ -497,7 +509,7 @@ public final class UnifiedSymbolTable
 
         _name = name;
         _version = version;
-        assert this._import_list == null || this._import_list.getMaxId() == 0;
+        assert _import_list.getMaxId() == 0;
     }
 
 
@@ -584,9 +596,7 @@ public final class UnifiedSymbolTable
         if (isReadOnly()) {
             return;
         }
-        if (_import_list != null) {
-            _import_list.makeReadOnly();
-        }
+        _import_list.makeReadOnly();
         _is_read_only = true;
     }
 
