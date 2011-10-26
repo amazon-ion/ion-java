@@ -375,8 +375,7 @@ public class SymbolTableTest
         checkLocalTable(st);
 
         SymbolTable dummy = findImportedTable(st, "T");
-        assertEquals(1, dummy.getVersion());
-        assertEquals(maxId, dummy.getMaxId());
+        checkSharedTable("T", 1, new String[maxId], dummy);
         assertEquals(-1, dummy.findSymbol("S1"));
         assertEquals(-1, dummy.findSymbol("S2"));
 

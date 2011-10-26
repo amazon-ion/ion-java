@@ -43,6 +43,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -83,13 +84,16 @@ public final class UnifiedSymbolTable
     };
 
 
-    private String                    _name;              // name of shared (or system) table, null if local, "$ion" if system
-    private int                       _version;           // version of the shared table
+    /** The name of shared (or system) table, null if local, "$ion" if system. */
+    private String _name;
+
+    /** The version of the shared table. */
+    private int _version;
 
     /** Our imports, never null. */
     private final UnifiedSymbolTableImports _import_list;
 
-    private boolean                   _is_read_only;      // set to mark this symbol table as being (now) immutable
+    private boolean                   _is_read_only;
 
     /**
      * Memoized result of {@link #getIonRepresentation(ValueFactory)};
@@ -129,24 +133,22 @@ public final class UnifiedSymbolTable
      * @see #convertSidToLocalOffset
      * @see #convertLocalOffsetToSid
      */
-    private int _first_local_sid;
+    private int _first_local_sid = 1;
 
     /** Map from symbol name to SID of local symbols only. */
-    private final HashMap<String, Integer> _id_map;
+    private final Map<String, Integer> _id_map;
 
 
-    /*
-     * SymbolTable constructors that are mostly intended to be used
-     * internally.
-     *
-     */
+    //========================================================================
+
+
     private UnifiedSymbolTable(ValueFactory imageFactory,
-                               UnifiedSymbolTableImports imports)
+                               UnifiedSymbolTableImports imports,
+                               Map<String, Integer> idMap)
     {
         _image_factory = imageFactory;
         _import_list = imports;
-        _id_map = new HashMap<String, Integer>(10);
-        _first_local_sid = 1;
+        _id_map = idMap;
         _symbols = IonImplUtils.EMPTY_STRING_ARRAY;
     }
 
@@ -157,16 +159,19 @@ public final class UnifiedSymbolTable
      */
     private UnifiedSymbolTable(ValueFactory imageFactory)
     {
-        this(imageFactory, UnifiedSymbolTableImports.emptyImportList);
+        this(imageFactory, UnifiedSymbolTableImports.emptyImportList,
+             new HashMap<String, Integer>(DEFAULT_CAPACITY));
     }
 
     /**
-     * Constructs an empty "dummy" symtab, used when we can't find an import.
-     * It just has a bunch of null symbols.
+     * Constructs an empty "dummy" shared symtab, used when we can't find an
+     * imported table in the catalog. It just has a bunch of null symbols.
      */
     private UnifiedSymbolTable(String name, int version, int maxId)
     {
-        this(null);  // TODO this is inefficient.
+        this(null, UnifiedSymbolTableImports.emptyImportList,
+             Collections.EMPTY_MAP);
+
         _local_symbol_count = maxId;
         share(name, version);
     }
@@ -181,7 +186,8 @@ public final class UnifiedSymbolTable
                                SymbolTable systemSymbolTable)
     {
         this(imageFactory,
-             new UnifiedSymbolTableImports((UnifiedSymbolTable) systemSymbolTable));
+             new UnifiedSymbolTableImports((UnifiedSymbolTable) systemSymbolTable),
+             new HashMap<String, Integer>(DEFAULT_CAPACITY));
 
         if (!systemSymbolTable.isSystemTable()) {
             throw new IllegalArgumentException();
@@ -192,6 +198,9 @@ public final class UnifiedSymbolTable
 
         _first_local_sid = _import_list.getMaxId() + 1;
     }
+
+
+    //========================================================================
 
     /*
      * load helpers that fill in the contents of the symbol table
@@ -228,8 +237,9 @@ public final class UnifiedSymbolTable
         assert version == (priorSymtab == null
                             ? 1
                             : priorSymtab.getVersion() + 1);
+        assert _first_local_sid == 1;
 
-        int sid = convertLocalOffsetToSid(0);
+        int sid = 1;
 
         if (priorSymtab != null)
         {
@@ -326,7 +336,6 @@ public final class UnifiedSymbolTable
 
         UnifiedSymbolTable table = new UnifiedSymbolTable(null);
         table.loadSharedSymbolTableContents(ION, version, SYSTEM_SYMBOLS);
-        table.makeReadOnly();
         return table;
     }
 
@@ -341,6 +350,8 @@ public final class UnifiedSymbolTable
      * any duplicate or null symbol texts are skipped.
      * Therefore, <b>THIS METHOD IS NOT SUITABLE WHEN READING SERIALIZED
      * SHARED SYMBOL TABLES</b> since that scenario must preserve all sids.
+     *
+     * @param priorSymtab may be null.
      */
     static public UnifiedSymbolTable
     makeNewSharedSymbolTable(String name, int version,
@@ -355,31 +366,18 @@ public final class UnifiedSymbolTable
         }
         UnifiedSymbolTable table = new UnifiedSymbolTable(null);
         table.loadSharedSymbolTableContents(name, version, priorSymtab, symbols);
-        table.makeReadOnly();
-        return table;
-    }
-    static public UnifiedSymbolTable makeNewSharedSymbolTable(IonStruct ionRep)
-    {
-        IonReader reader = new IonReaderTreeSystem(ionRep);
-
-        UnifiedSymbolTable table = makeNewSharedSymbolTable_helper(reader, false);
-        table.makeReadOnly();  // public APIs force shared tables to read only
-
         return table;
     }
 
     static public UnifiedSymbolTable
-    makeNewSharedSymbolTable(IonReader reader, boolean alreadyInStruct)
+    makeNewSharedSymbolTable(IonStruct ionRep)
     {
-        UnifiedSymbolTable table =
-            makeNewSharedSymbolTable_helper(reader, alreadyInStruct);
-        table.makeReadOnly();  // public APIs force shared tables to read only
-        return table;
+        IonReader reader = new IonReaderTreeSystem(ionRep);
+        return makeNewSharedSymbolTable(reader, false);
     }
 
-
-    static private UnifiedSymbolTable
-    makeNewSharedSymbolTable_helper(IonReader reader, boolean alreadyInStruct)
+    static public UnifiedSymbolTable
+    makeNewSharedSymbolTable(IonReader reader, boolean alreadyInStruct)
     {
         UnifiedSymbolTable table = new UnifiedSymbolTable(null);
         table.loadSharedSymbolTableContents(reader, alreadyInStruct);
@@ -491,7 +489,7 @@ public final class UnifiedSymbolTable
     /**
      * This method is not synchronized because it's only called during
      * construction.
-     *
+     * Also calls {@link #makeReadOnly()}.
      */
     private void share(String name, int version)
     {
@@ -510,6 +508,7 @@ public final class UnifiedSymbolTable
         _name = name;
         _version = version;
         assert _import_list.getMaxId() == 0;
+        makeReadOnly();
     }
 
 

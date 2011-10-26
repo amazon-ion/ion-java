@@ -85,6 +85,8 @@ public class UnifiedSymbolTableImports
 
     private final void add_import_helper(UnifiedSymbolTable symtab, int maxId)
     {
+        assert symtab.isReadOnly();
+
         verify_not_read_only();
 
         // (_import_count+1) so we have room for the base_sid sentinel
