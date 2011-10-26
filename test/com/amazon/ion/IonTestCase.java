@@ -3,6 +3,7 @@
 package com.amazon.ion;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
+
 import com.amazon.ion.impl.IonSystemImpl;
 import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.junit.Injected;
@@ -306,7 +307,9 @@ public abstract class IonTestCase
 
 
     /**
-     * Materializes a shared symtab.  No catalog registration is performed.
+     * Materializes a shared symtab using
+     * {@link IonSystem#newSharedSymbolTable(IonReader)}.
+     * No catalog registration is performed.
      */
     public SymbolTable loadSharedSymtab(String serializedSymbolTable)
     {
@@ -422,6 +425,19 @@ public abstract class IonTestCase
         return (IonStruct) oneValue(text);
     }
 
+
+    public void putParsedValue(IonStruct struct,
+                               String fieldName,
+                               String singleValue)
+    {
+        IonValue v = null;
+        if (singleValue != null)
+        {
+            IonSystem system = struct.getSystem();
+            v = system.singleValue(singleValue);
+        }
+        struct.put(fieldName, v);
+    }
 
 
     /**

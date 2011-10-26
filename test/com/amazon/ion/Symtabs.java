@@ -130,4 +130,29 @@ public class Symtabs
         assertEquals(s1.getImportedMaxId(), s2.getImportedMaxId());
         assertEquals(s1.getMaxId(), s2.getMaxId());
     }
+
+    /**
+     * Constructs the DOM for a shared symtab.
+     *
+     * @param syms If null, so symbols list will be added.
+     */
+    public static IonStruct sharedSymtabStruct(ValueFactory factory,
+                                               String name, int version,
+                                               String... syms)
+    {
+        IonStruct s = factory.newEmptyStruct();
+        s.setTypeAnnotations(SystemSymbols.ION_SHARED_SYMBOL_TABLE);
+        s.add(SystemSymbols.NAME).newString(name);
+        s.add(SystemSymbols.VERSION).newInt(version);
+        if (syms != null)
+        {
+            IonList l = s.add(SystemSymbols.SYMBOLS).newEmptyList();
+            for (String sym : syms)
+            {
+                l.add().newString(sym);
+            }
+        }
+        return s;
+    }
+
 }

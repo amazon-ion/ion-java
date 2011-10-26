@@ -8,13 +8,13 @@ import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.SYMBOLS;
+import static com.amazon.ion.impl.IonImplUtils.stringIterator;
 
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonMutableCatalog;
-import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
@@ -30,13 +30,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.List;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
 /**
- *
+ * @see SharedSymbolTableTest
  */
 public class SymbolTableTest
     extends IonTestCase
@@ -55,7 +54,6 @@ public class SymbolTableTest
         "  name:'''imported''', version:1," +
         "  symbols:['''imported 1''', '''imported 2''']" +
         "}";
-
 
 
     public SymbolTable registerImportedV1()
@@ -240,29 +238,6 @@ public class SymbolTableTest
         checkSymbol("imported 1", import1id, value);
     }
 
-    public IonStruct synthesizeSharedSymbolTableIon(final String name,
-                                                    final int version,
-                                                    final String... symbols) {
-        final IonStruct tableStruct = system().newEmptyStruct();
-        tableStruct.addTypeAnnotation("$ion_shared_symbol_table");
-        tableStruct.put("name").newString(name);
-        tableStruct.put("version").newInt(version);
-
-        final IonList symbolList = tableStruct.put("symbols").newEmptyList();
-        for (final String symbol : symbols) {
-            symbolList.add().newString(symbol);
-        }
-        return tableStruct;
-    }
-
-    @Test
-    public void testDomSharedSymbolTable() {
-        // JIRA ION-72
-        final SymbolTable table = system().newSharedSymbolTable(
-            system().newReader(synthesizeSharedSymbolTableIon("foobar", 1, "hello"))
-        );
-        checkSharedTable("foobar", 1, new String[]{ "hello" }, table);
-    }
 
     /**
      * Attempts to override system symbols are ignored.
@@ -790,50 +765,7 @@ public class SymbolTableTest
     // Shared symtab creation
 
     @Test
-    public void testSystemNewSharedSymtab()
-        throws Exception
-    {
-        for (String symtab : Symtabs.FRED_SERIALIZED)
-        {
-            if (symtab != null) testSystemNewSharedSymtab(symtab);
-        }
-        for (String symtab : Symtabs.GINGER_SERIALIZED)
-        {
-            if (symtab != null) testSystemNewSharedSymtab(symtab);
-        }
-    }
-
-    public void testSystemNewSharedSymtab(String serializedSymbolTable)
-        throws IOException
-    {
-      IonReader reader = system().newReader(serializedSymbolTable);
-      SymbolTable stFromReader = system().newSharedSymbolTable(reader);
-      assertTrue(stFromReader.isSharedTable());
-
-      IonStruct struct = (IonStruct) oneValue(serializedSymbolTable);
-      SymbolTable stFromValue = system().newSharedSymbolTable(struct);
-      assertTrue(stFromValue.isSharedTable());
-
-      Symtabs.assertEqualSymtabs(stFromReader, stFromValue);
-
-      // Try a bit of round-trip action
-      StringBuilder buf = new StringBuilder();
-      $PrivateTextOptions options = new $PrivateTextOptions(
-             false // prettyPrint,
-           , true // printAscii,
-           , false // filterOutSymbolTables,
-           , true // suppressIonVersionMarker
-      );
-      IonWriter out = system().newTextWriter(buf, options);
-      stFromReader.writeTo(out);
-      reader = system().newReader(buf.toString());
-      SymbolTable reloaded = system().newSharedSymbolTable(reader);
-
-      Symtabs.assertEqualSymtabs(stFromReader, reloaded);
-    }
-
-    @Test
-    public void testBasicSharedSymtabCreation()
+    public void testBasicSharedSymtabExtension()
     {
         String[] syms = { "a", null, "b" };
         SymbolTable st =
@@ -875,50 +807,6 @@ public class SymbolTableTest
     }
 
 
-    /**
-     * We need to retain duplicate symbols in a shared symtab, because there
-     * may be data encoded non-canonically that uses the higher sid.  If we
-     * remove those duplicates then we can't decode such data.
-     */
-    @Test
-    public void testReadingSharedSymtabWithDuplicates()
-    {
-        String symtab =
-            SharedSymbolTablePrefix +
-            "{" +
-            "  name:'''ST''', version:1," +
-            "  symbols:['''a''', '''b''', '''a''', '''c''']" +
-            "}";
-
-        SymbolTable st =
-            system().newSharedSymbolTable(system().newReader(symtab));
-        checkSharedTable("ST", 1, new String[]{"a", "b", "a", "c"}, st);
-
-        assertEquals(1, st.findSymbol("a"));  // lowest sid wins
-    }
-
-    /**
-     * We need to normalize invalid values in a shared symtab, because there
-     * may be data encoded non-canonically that uses the higher sid.  If we
-     * remove those values then we can't decode such data.
-     */
-    @Test
-    public void testReadingSharedSymtabWithBadValues()
-    {
-        String symtab =
-            SharedSymbolTablePrefix +
-            "{" +
-            "  name:'''ST''', version:1," +
-            "  symbols:['''a''', null, \"\", '''c''', 12]" +
-            "}";
-
-        SymbolTable st =
-            system().newSharedSymbolTable(system().newReader(symtab));
-        checkSharedTable("ST", 1, new String[]{"a", null, null, "c", null}, st);
-
-        assertEquals(4, st.findSymbol("c"));
-    }
-
     @Test
     public void testEmptySharedSymtabCreation()
     {
@@ -958,44 +846,59 @@ public class SymbolTableTest
                          st);
     }
 
-    @Test
-    public void testBadSharedSymtabCreation()
+
+    private SymbolTable extendSymtab(String name, int version, String... syms)
     {
-        String[] syms = { "a" };
-        List<String> symList = Arrays.asList(syms);
+        return system().newSharedSymbolTable(name, version,
+                                             stringIterator(syms));
+    }
 
+
+    @Test(expected = IonException.class)
+    public void testNewSharedSymtabMissingPriorVersion()
+    {
+        extendSymtab("ST", 2, "a");
+    }
+
+    @Test
+    public void testNewSharedSymtabNullName()
+    {
         try
         {
-            // Prior version doesn't exist
-            system().newSharedSymbolTable("ST", 2, symList.iterator());
-            fail("expected exception");
-        }
-        catch (IonException e) { }
-
-        try
-        {
-            system().newSharedSymbolTable(null, 1, symList.iterator());
-            fail("expected exception");
-        }
-        catch (IllegalArgumentException e) { }
-
-        try
-        {
-            system().newSharedSymbolTable("", 1, symList.iterator());
+            extendSymtab(null, 1, "a");
             fail("expected exception");
         }
         catch (IllegalArgumentException e) { }
+    }
 
+    @Test
+    public void testNewSharedSymtabEmptyName()
+    {
         try
         {
-            system().newSharedSymbolTable("ST", 0, symList.iterator());
+            extendSymtab("", 1, "a");
             fail("expected exception");
         }
         catch (IllegalArgumentException e) { }
+    }
 
+    @Test
+    public void testNewSharedSymtabZeroVersion()
+    {
         try
         {
-            system().newSharedSymbolTable("ST", -1, symList.iterator());
+            extendSymtab("ST", 0, "a");
+            fail("expected exception");
+        }
+        catch (IllegalArgumentException e) { }
+    }
+
+    @Test
+    public void testNewSharedSymtabNegativeVersion()
+    {
+        try
+        {
+            extendSymtab("ST", -1, "a");
             fail("expected exception");
         }
         catch (IllegalArgumentException e) { }
@@ -1004,9 +907,9 @@ public class SymbolTableTest
     // TODO test import that has null sid
     // TODO test insertion of empty symbol
 
-    public void checkSharedTable(String name, int version,
-                                 String[] expectedSymbols,
-                                 SymbolTable actual)
+    public static void checkSharedTable(String name, int version,
+                                        String[] expectedSymbols,
+                                        SymbolTable actual)
     {
         assertTrue(actual.isSharedTable());
         assertFalse(actual.isSystemTable());
@@ -1031,170 +934,7 @@ public class SymbolTableTest
 
 
     //-------------------------------------------------------------------------
-    // Testing name field
-
-    @Test
-    public void testMalformedSymtabName()
-    {
-        testMalformedSymtabName(null);     // missing field
-        testMalformedSymtabName(" \"\" "); // empty string
-        testMalformedSymtabName("null.string");
-        testMalformedSymtabName("null");
-        testMalformedSymtabName("a_symbol");
-        testMalformedSymtabName("159");
-    }
-
-    public void testMalformedSymtabName(String nameText)
-    {
-        String text =
-            SharedSymbolTablePrefix +
-            "{" +
-            "  version:1," +
-            "  symbols:[\"x\"]," +
-            fieldText("name", nameText) +
-            "}";
-        try
-        {
-            loadSharedSymtab(text);
-            fail("Expected exception");
-        }
-        catch (IonException e) {
-            assertTrue(e.getMessage().contains("'name'"));
-        }
-    }
-
-
-    //-------------------------------------------------------------------------
-    // Testing version field
-
-    @Test
-    public void testSharedTableMissingVersion()
-    {
-        String text =
-            SharedSymbolTablePrefix +
-            "{" +
-            "  name:\"test\"," +
-            "  symbols:[ \"x\" ]\n" +
-            "}";
-        SymbolTable symbolTable = loadSharedSymtab(text);
-
-        // Version defaults to 1
-        assertEquals(1, symbolTable.getVersion());
-    }
-
-    @Test
-    public void testMalformedVersionField()
-    {
-        testMalformedVersionField("-1");
-        testMalformedVersionField("0");
-
-        testMalformedVersionField("null.int");
-        testMalformedVersionField("null");
-        testMalformedVersionField("a_symbol");
-        testMalformedVersionField("2.0");
-    }
-
-    public void testMalformedVersionField(String versionValue)
-    {
-        String text =
-            SharedSymbolTablePrefix +
-            "{" +
-            "  name:\"test\"," +
-            "  version:" + versionValue + "," +
-            "  symbols:[\"x\", \"y\"]\n" +
-            "}";
-
-        SymbolTable table = registerSharedSymtab(text);
-        assertEquals("test", table.getName());
-        assertEquals(1, table.getVersion());
-        assertEquals(2, table.getMaxId());
-
-        text =
-            LocalSymbolTablePrefix +
-            "{ imports:[{ name:\"test\"," +
-            "             version:" + versionValue + "}]" +
-            "}\n" +
-            "y";
-
-        IonValue v = oneValue(text);
-        checkSymbol("y", systemMaxId() + 2, v);
-        assertSame(table, v.getSymbolTable().getImportedTables()[0]);
-    }
-
-
-    //-------------------------------------------------------------------------
     // Testing symbols field
-
-    @Test
-    public void testMalformedSymbolsField()
-    {
-        testMalformedSymbolsField("[]");
-        testMalformedSymbolsField("null.list");
-        testMalformedSymbolsField("{}");
-        testMalformedSymbolsField("null.struct");
-        testMalformedSymbolsField("null");
-        testMalformedSymbolsField("a_symbol");
-        testMalformedSymbolsField("100");
-    }
-
-    public void testMalformedSymbolsField(String symbolValue)
-    {
-        String text =
-            SharedSymbolTablePrefix +
-            "{" +
-            "  symbols:" + symbolValue + "," +   // Keep symbols first
-            "  name:\"test\", version:5," +
-            "}";
-        SymbolTable table = registerSharedSymtab(text);
-        assertEquals("test", table.getName());
-        assertEquals(5, table.getVersion());
-        assertEquals(0, table.getMaxId());
-
-        text =
-            LocalSymbolTablePrefix +
-            "{symbols:" + symbolValue + "} " +
-            "null";
-        IonValue v = oneValue(text);
-        table = v.getSymbolTable();
-        assertTrue(table.isLocalTable());
-        assertEquals(systemMaxId(), table.getMaxId());
-    }
-
-    @Test
-    public void testMalformedSymbolDeclarations()
-    {
-        testMalformedSymbolDeclaration(" \"\" ");      // empty string
-        testMalformedSymbolDeclaration("null.string");
-        testMalformedSymbolDeclaration("null");
-        testMalformedSymbolDeclaration("a_symbol");
-        testMalformedSymbolDeclaration("100");
-        testMalformedSymbolDeclaration("['''whee''']");
-    }
-
-    public void testMalformedSymbolDeclaration(String symbolValue)
-    {
-        String text =
-            SharedSymbolTablePrefix +
-            "{" +
-            "  name:\"test\", version:1," +
-            "  symbols:[" + symbolValue + "]" +
-            "}";
-        SymbolTable table = registerSharedSymtab(text);
-        assertEquals(1, table.getMaxId());
-        assertEquals(null, table.findKnownSymbol(1));
-        assertEquals("$1", table.findSymbol(1));
-
-
-        text =
-            LocalSymbolTablePrefix +
-            "{symbols:[" + symbolValue + "]} " +
-            "null";
-        IonValue v = oneValue(text);
-        table = v.getSymbolTable();
-        assertTrue(table.isLocalTable());
-        assertEquals(systemMaxId() + 1, table.getMaxId());
-    }
-
 
     @Test
     public void testSystemIdOnNonStruct()
@@ -1320,9 +1060,7 @@ public class SymbolTableTest
             "  symbols:[ \"one\", 2, \"three\", null, \"\" ]" +
             "}";
 
-        SymbolTable v3 =
-            system().newSharedSymbolTable(system().newReader(serializedSymtab));
-        catalog().putTable(v3);
+        registerSharedSymtab(serializedSymtab);
 
         Iterator<String> newSymbols =
             Arrays.asList("four", null, "five").iterator();

@@ -76,6 +76,21 @@ public interface IonSystem
     public SymbolTable newLocalSymbolTable(SymbolTable... imports);
 
 
+    //-------------------------------------------------------------------------
+    // Shared symtab factory methods
+
+
+    /*              ===========================
+     *              =                         =
+     *              =    I M P O R T A N T    =
+     *              =                         =
+     *              ===========================
+     *
+     * Any new factory methods MUST be added to the SharedSymtabMaker
+     * enumeration to ensure complete test coverage!
+     */
+
+
     /**
      * Creates a new shared symbol table containing a given set of symbols.
      * The table will contain symbols in the following order:
@@ -139,49 +154,8 @@ public interface IonSystem
      */
     public SymbolTable newSharedSymbolTable(IonReader reader, boolean alreadyOnStruct);
 
-    /**
-     * Creates a new empty datagram.
-     *
-     * @return a new datagram with no user values.
-     */
-    public IonDatagram newDatagram();
 
-
-    /**
-     * Creates a new datagram containing one value.  If the given value is
-     * contained elsewhere, it is cloned before insertion.
-     *
-     * @param initialChild becomes the first and only (user) value in the
-     * datagram.  The child's {@link IonValue#getSystem() system}
-     * must be <em>this</em> system.
-     * If {@code null}, then the returned datagram will have no
-     * user values.
-     *
-     * @return a new datagram.
-     *
-     * @throws IllegalArgumentException
-     *   if {@code initialChild} is an {@link IonDatagram}.
-     */
-    public IonDatagram newDatagram(IonValue initialChild);
-
-
-    /**
-     * Creates a new datagram, bootstrapped with imported symbol tables.
-     * Generally an application will use this to aquire a datagram, then adds
-     * values to it, then calls {@link IonDatagram#getBytes(byte[])}
-     * (or similar) to extract binary data.
-     *
-     * @param imports the set of shared symbol tables to import.
-     * The first (and only the first) may be a system table.
-     *
-     * @return a new datagram with no user values.
-     *
-     * @throws IllegalArgumentException if any import is a local table,
-     * or if any but the first is a system table.
-     *
-     * @see #newLocalSymbolTable(SymbolTable...)
-     */
-    public IonDatagram newDatagram(SymbolTable... imports);
+    //-------------------------------------------------------------------------
 
     /**
      * Constructs a new loader instance using the
@@ -333,6 +307,17 @@ public interface IonSystem
 
     //-------------------------------------------------------------------------
     // IonReader creation
+
+    /*              ===========================
+     *              =                         =
+     *              =    I M P O R T A N T    =
+     *              =                         =
+     *              ===========================
+     *
+     * Any new factory methods MUST be added to the ReaderMaker
+     * enumeration to ensure complete test coverage!
+     */
+
 
     /*
      * Applications should generally us {@link #newReader(InputStream)}
@@ -527,6 +512,51 @@ public interface IonSystem
 
     //-------------------------------------------------------------------------
     // DOM creation
+
+
+    /**
+     * Creates a new empty datagram.
+     *
+     * @return a new datagram with no user values.
+     */
+    public IonDatagram newDatagram();
+
+
+    /**
+     * Creates a new datagram containing one value.  If the given value is
+     * contained elsewhere, it is cloned before insertion.
+     *
+     * @param initialChild becomes the first and only (user) value in the
+     * datagram.  The child's {@link IonValue#getSystem() system}
+     * must be <em>this</em> system.
+     * If {@code null}, then the returned datagram will have no
+     * user values.
+     *
+     * @return a new datagram.
+     *
+     * @throws IllegalArgumentException
+     *   if {@code initialChild} is an {@link IonDatagram}.
+     */
+    public IonDatagram newDatagram(IonValue initialChild);
+
+
+    /**
+     * Creates a new datagram, bootstrapped with imported symbol tables.
+     * Generally an application will use this to aquire a datagram, then adds
+     * values to it, then calls {@link IonDatagram#getBytes(byte[])}
+     * (or similar) to extract binary data.
+     *
+     * @param imports the set of shared symbol tables to import.
+     * The first (and only the first) may be a system table.
+     *
+     * @return a new datagram with no user values.
+     *
+     * @throws IllegalArgumentException if any import is a local table,
+     * or if any but the first is a system table.
+     *
+     * @see #newLocalSymbolTable(SymbolTable...)
+     */
+    public IonDatagram newDatagram(SymbolTable... imports);
 
 
     /**
