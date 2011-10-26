@@ -141,11 +141,6 @@ final class IonWriterSystemTree
             this.clearAnnotations();
         }
 
-        if (_symbol_table != null) {
-            ((IonValuePrivate)_current_parent).setSymbolTable(_symbol_table);
-            // TODO why clear this out? Different invariant than other writers!
-            _symbol_table = null;
-        }
         if (_in_struct) {
             String name = this.getFieldName();
             ((IonStruct)_current_parent).add(name, value);
@@ -154,12 +149,6 @@ final class IonWriterSystemTree
         else {
             ((IonSequence)_current_parent).add(value);
         }
-    }
-
-    protected void appendSymbolTableValue(IonStruct symbol_table_struct)
-    {
-        assert(symbol_table_struct != null);
-        append(symbol_table_struct);
     }
 
     public void stepIn(IonType containerType) throws IOException
