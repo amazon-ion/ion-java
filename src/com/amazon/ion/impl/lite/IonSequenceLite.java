@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -16,7 +16,7 @@ import java.util.List;
 /**
  *
  */
-public abstract class IonSequenceLite
+abstract class IonSequenceLite
     extends IonContainerLite
     implements IonSequence
 {
@@ -25,9 +25,9 @@ public abstract class IonSequenceLite
      */
     protected static final IonValueLite[] EMPTY_VALUE_ARRAY = new IonValueLite[0];
 
-    protected IonSequenceLite(IonSystemLite system, boolean isNull)
+    IonSequenceLite(IonContext context, boolean isNull)
     {
-        super(system, isNull);
+        super(context, isNull);
     }
 
     /**
@@ -42,12 +42,12 @@ public abstract class IonSequenceLite
      * @throws IllegalArgumentException
      * @throws NullPointerException
      */
-    protected IonSequenceLite(IonSystemLite system,
-                              Collection<? extends IonValue> elements)
+    IonSequenceLite(IonContext context,
+                    Collection<? extends IonValue> elements)
         throws ContainedValueException, NullPointerException,
             IllegalArgumentException
     {
-        this(system, (elements == null));
+        this(context, (elements == null));
         assert _children == null;
 
         if (elements != null)

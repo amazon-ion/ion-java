@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -14,16 +14,16 @@ import java.util.Collection;
 /**
  *
  */
-public class IonSexpLite
+class IonSexpLite
     extends IonSequenceLite
     implements IonSexp
 {
     private static final int HASH_SIGNATURE =
         IonType.SEXP.toString().hashCode();
 
-    public IonSexpLite(IonSystemLite system, boolean isNull)
+    IonSexpLite(IonContext context, boolean isNull)
     {
-        super(system, isNull);
+        super(context, isNull);
     }
 
     /**
@@ -36,11 +36,11 @@ public class IonSexpLite
      * @throws ContainedValueException if any value in <code>elements</code>
      * has <code>{@link IonValue#getContainer()} != null</code>.
      */
-    public IonSexpLite(IonSystemLite system,
-                       Collection<? extends IonValue> elements)
+    IonSexpLite(IonContext context,
+                Collection<? extends IonValue> elements)
         throws ContainedValueException
     {
-        super(system, elements);
+        super(context, elements);
     }
 
 

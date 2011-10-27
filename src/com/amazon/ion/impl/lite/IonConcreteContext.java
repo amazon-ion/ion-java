@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -13,7 +13,7 @@ import com.amazon.ion.impl.UnifiedSymbolTable;
 /**
  *
  */
-public class IonConcreteContext
+class IonConcreteContext
     implements IonContext
 {
     // Do we need this?  We should be able to follow
@@ -28,25 +28,33 @@ public class IonConcreteContext
     // location in the binary buffer.
     private       IonContext    _owning_context;
 
-    // This will be a local symbol table.  It is not valid
-    // for this to be a shared symbol table since shared
-    // symbol tables are only shared.  It will not be a
-    // system symbol table as the system object will be
-    // able to resolve its symbol table to the system
-    // symbol table and following the parent/owning_context
-    // chain will lead to a system object.
+    /**
+     * This will be a local symbol table.  It is not valid
+     * for this to be a shared symbol table since shared
+     * symbol tables are only shared.  It will not be a
+     * system symbol table as the system object will be
+     * able to resolve its symbol table to the system
+     * symbol table and following the parent/owning_context
+     * chain will lead to a system object.
+     * <p>
+     * TODO ION-258 we cannot assume that the IonSystem knows the proper IVM
+     * in this context
+     */
     private       SymbolTable   _symbols;
 
-    protected IonConcreteContext(IonSystemLite system) {
+    IonConcreteContext(IonSystemLite system) {
         _system = system;
     }
 
-    protected static void attachWithConcreteContext(IonContext parent, IonValueLite child, SymbolTable symbolTable)
+    static void attachWithConcreteContext(IonContext parent,
+                                          IonValueLite child,
+                                          SymbolTable symbolTable)
     {
         IonConcreteContext concrete_context;
 
         if (child._context  instanceof IonConcreteContext) {
             concrete_context = (IonConcreteContext)child._context;
+            // TODO Why not change the child's context to be the parent?
         }
         else {
             concrete_context = new IonConcreteContext(parent.getSystemLite());
@@ -57,7 +65,8 @@ public class IonConcreteContext
         concrete_context._symbols = symbolTable;
     }
 
-    protected static void attachWithoutConcreteContext(IonContext parent, IonValueLite child)
+    static void attachWithoutConcreteContext(IonContext parent,
+                                             IonValueLite child)
     {
         assert(test_symbol_table_compatibility(parent, child));
         if (child._context instanceof IonConcreteContext) {
@@ -66,7 +75,8 @@ public class IonConcreteContext
         child._context = parent;
     }
 
-    private static boolean test_symbol_table_compatibility(IonContext parent, IonValueLite child)
+    private static boolean test_symbol_table_compatibility(IonContext parent,
+                                                           IonValueLite child)
     {
         SymbolTable parent_symbols = parent.getSymbolTable();
         SymbolTable child_symbols = child.getAssignedSymbolTable();
