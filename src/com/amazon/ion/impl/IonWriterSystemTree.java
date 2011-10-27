@@ -187,7 +187,7 @@ final class IonWriterSystemTree
     @Override
     final UnifiedSymbolTable inject_local_symbol_table() throws IOException
     {
-        return makeNewLocalSymbolTable(_factory, _symbol_table);
+        return makeNewLocalSymbolTable(_factory, getSymbolTable());
     }
 
     //========================================================================
@@ -268,10 +268,9 @@ final class IonWriterSystemTree
     public void writeSymbol(int symbolId)
         throws IOException
     {
+        // FIXME this is totally broken, write a unit test!
         String name = null;
-        if (_symbol_table != null) {
-            _symbol_table.findKnownSymbol(symbolId);
-        }
+        getSymbolTable().findKnownSymbol(symbolId);
         if (name == null) {
             throw new IllegalArgumentException("undefined symbol id");
         }

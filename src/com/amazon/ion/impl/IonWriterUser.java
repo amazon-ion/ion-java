@@ -80,6 +80,9 @@ abstract class IonWriterUser
 
     /**
      * Constructor for text and binary writers.
+     * <p>
+     * POSTCONDITION: {@link IonWriterUser#_system_writer} ==
+     * {@link #_current_writer} == systemWriter
      *
      * @param system must not be null.
      * @param catalog may be null.
@@ -117,14 +120,12 @@ abstract class IonWriterUser
         // text writer that injects into an existing data stream?
 
         if (suppressIVM == false) {
-            // TODO When do/don't we have a symtab?
-            if (_current_writer.getSymbolTable() == null) {
-                try {
-                    setSymbolTable(activeSystemSymbolTable());
-                }
-                catch (IOException e) {
-                    throw new IonException(e);
-                }
+            try {
+                SymbolTable initialSymtab = _system_writer.getSymbolTable();
+                set_symbol_table_helper(null, initialSymtab);
+            }
+            catch (IOException e) {
+                throw new IonException(e);
             }
         }
     }

@@ -666,10 +666,10 @@ class IonWriterSystemText
     public void writeSymbol(int symbolId)
         throws IOException
     {
-        if (_symbol_table == null) {
-            throw new IllegalStateException("a symbol table is required if you use symbol ids");
-        }
-        writeSymbol(_symbol_table.findSymbol(symbolId));
+        SymbolTable symtab = getSymbolTable();
+        String symbol = symtab.findSymbol(symbolId);
+        // FIXME this mangles symbols that aren't found
+        writeSymbol(symbol);
     }
 
     public void writeSymbol(String value)

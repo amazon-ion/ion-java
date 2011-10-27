@@ -27,12 +27,10 @@ abstract class IonWriterSystem
     final SymbolTable _default_system_symbol_table;
 
     /**
-     * Must be either local or system table.  It can be null
-     * if the concrete writer is a system writer.  This
-     * value may only be changed when the writer is at the top
-     * (i.e. the datagram level).
+     * Must be either local or system table, and never null.
+     * May only be changed between top-level values.
      */
-    SymbolTable _symbol_table;
+    private SymbolTable _symbol_table;
 
     /** really ion type is only used for int, string or null (unknown) */
     private IonType     _field_name_type;
@@ -57,13 +55,14 @@ abstract class IonWriterSystem
     {
         defaultSystemSymbolTable.getClass(); // Efficient null check
         _default_system_symbol_table = defaultSystemSymbolTable;
+        _symbol_table = defaultSystemSymbolTable;
     }
 
 
     //========================================================================
     // Context management
 
-    public SymbolTable getSymbolTable()
+    public final SymbolTable getSymbolTable()
     {
         return _symbol_table;
     }
@@ -103,21 +102,13 @@ abstract class IonWriterSystem
     @Override
     final String find_symbol(int sid)
     {
-        SymbolTable symbol_table = _symbol_table;
-        if (symbol_table == null) {
-            symbol_table = _default_system_symbol_table;
-        }
-        String name = symbol_table.findSymbol(sid);
+        String name = _symbol_table.findSymbol(sid);
         assert(name != null && name.length() > 0);
         return name;
     }
 
     final int add_symbol(String name) throws IOException
     {
-        if (_symbol_table == null) {
-            _symbol_table = _default_system_symbol_table;
-        }
-
         int sid = _symbol_table.findSymbol(name);
         if (sid > 0) return sid;
 
@@ -139,6 +130,7 @@ abstract class IonWriterSystem
 
         flush();
 
+        // TODO this should always be $ion_1_0
         _symbol_table = _default_system_symbol_table;
     }
 
@@ -363,9 +355,7 @@ abstract class IonWriterSystem
     @Override
     final boolean has_annotation(String name, int id)
     {
-        if (this._symbol_table != null) {
-            assert(this._symbol_table.findKnownSymbol(id).equals(name));
-        }
+        assert(this._symbol_table.findKnownSymbol(id).equals(name));
         if (_annotation_count < 1) {
             return false;
         }
