@@ -55,6 +55,7 @@ public abstract class IonContainerLite
 
         if (_isNullValue())
         {
+            // TODO shouldn't this already be the case?
             _children = null;
             _child_count = 0;
             // TO DO: really?  Yes, for back compat.
@@ -423,7 +424,7 @@ public abstract class IonContainerLite
 
     public SymbolTable getContextSymbolTable()
     {
-        return null;
+        return null; // TODO huh?!?
     }
 
     public void setParentThroughContext(IonValueLite child, IonContext context)
@@ -575,7 +576,7 @@ public abstract class IonContainerLite
      * @throws NullPointerException
      * @throws ContainedValueException
      */
-    protected void copyFrom(IonContainerLite source)
+    final void copyFrom(IonContainerLite source)
         throws ContainedValueException, NullPointerException,
             IllegalArgumentException, IOException
     {
@@ -602,28 +603,22 @@ public abstract class IonContainerLite
             assert(source._isNullValue() == false);
             _isNullValue(false);
 
-            // and we'll need a contents array to hold at least 0
-            // children
-            int current_size = (source._children == null) ? 0 : source._children.length;
-            if (current_size < source._children.length) {
-                int next_size = this.nextSize(current_size, false);
-                this._children = new IonValueLite[next_size];
-            }
-
             // we should have an empty content list at this point
-            assert this.get_child_count() == 0;
+            assert _children == null && get_child_count() == 0;
 
-            // if this is not buffer backed, we just have to
-            // do a deep copy
             final boolean cloningFields = (this instanceof IonStruct);
 
-            IonValueLite[] sourceContents = source._children;
-            int size = source.get_child_count();
+            final IonValueLite[] sourceContents = source._children;
+            final int size = source.get_child_count();
+
+            // Preallocate so add() doesn't reallocate repeatedly
+            _children = new IonValueLite[size];
 
             for (int i = 0; i < size; i++)
             {
                 IonValueLite child = sourceContents[i];
-                IonValueLite copy = (IonValueLite)child.clone();  // TODO: remove when we upgrade the Java compiler
+                // TODO: remove when we upgrade the Java compiler (???)
+                IonValueLite copy = (IonValueLite)child.clone();
                 if (cloningFields) {
                     String name = child.getFieldName();
                     copy.setFieldName(name);
@@ -632,6 +627,7 @@ public abstract class IonContainerLite
                 // no need to patch the element id's since
                 // this is adding to the end
             }
+            assert get_child_count() == size;
         }
     }
 
@@ -705,27 +701,33 @@ public abstract class IonContainerLite
 
         return next_size;
     }
-    // this is overridden in IonStructImpl to add the hashmap
-    // of field names when the struct becomes modestly large
-    protected void transitionToLargeSize(int size)
+
+    /**
+     * this is overridden in IonStructImpl to add the hashmap
+     * of field names when the struct becomes modestly large
+     */
+    void transitionToLargeSize(int size)
     {
         return;
     }
 
-    public int get_child_count() {
+    public final int get_child_count() {
         return _child_count;
     }
-    public IonValue get_child(int idx) {
+
+    public final IonValue get_child(int idx) {
         return get_child_lite(idx);
     }
-    public IonValueLite get_child_lite(int idx)
+
+    final IonValueLite get_child_lite(int idx)
     {
         if (idx < 0 || idx >= _child_count) {
             throw new IndexOutOfBoundsException(Integer.toString(idx));
         }
         return _children[idx];
     }
-    public IonValue set_child(int idx, IonValue child)
+
+    public final IonValue set_child(int idx, IonValue child)
     {
         if (child == null) {
             throw new NullPointerException();
@@ -733,7 +735,8 @@ public abstract class IonContainerLite
         assert(child instanceof IonValueLite);
         return set_child_lite(idx, (IonValueLite)child);
     }
-    public IonValueLite set_child_lite(int idx, IonValueLite child)
+
+    final IonValueLite set_child_lite(int idx, IonValueLite child)
     {
         if (idx < 0 || idx >= _child_count) {
             throw new IndexOutOfBoundsException(Integer.toString(idx));
