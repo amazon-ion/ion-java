@@ -7,7 +7,6 @@ import static com.amazon.ion.impl.IonConstants.tidDATAGRAM;
 import static com.amazon.ion.impl.IonConstants.tidList;
 import static com.amazon.ion.impl.IonConstants.tidSexp;
 import static com.amazon.ion.impl.IonConstants.tidStruct;
-import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonException;
@@ -276,60 +275,6 @@ public class IonWriterSystemBinary
 //        }
     }
 
-    // @ Override
-    // wrong impl - writeruser calls symbol table helper with writes
-    //              the symbol tables
-    // when used alone, as a system writer, the caller needs to take
-    // care of all the symbol table writing on their own.
-    public void xxx_setSymbolTable(SymbolTable symbols) throws IOException
-    {
-        if (isNonSystemSharedTable(symbols)) {
-            throw new IllegalArgumentException("symbol table can only be set to a local or system symbol table");
-        }
-        if (symbols == _symbol_table) {
-            return;
-        }
-        if (atDatagramLevel()) {
-            if (symbols.isLocalTable()) {
-                // we don't patch in system symbol tables
-                patchInSymbolTable(symbols);
-            }
-        }
-        else {
-            if (symbols.isLocalTable() && _symbol_table.isSystemTable()) {
-                set_symbol_table_prepend_new_local_table(symbols);
-            }
-            else {
-                throw new IllegalStateException("symbol table can only be set to a local symbol table except at a top level, and then only once");
-            }
-        }
-        _symbol_table = symbols;
-    }
-
-    protected void xxx_set_symbol_table_and_patch(SymbolTable symbols) throws IOException
-    {
-        if (!(symbols.isSystemTable() || symbols.isLocalTable())) {
-            throw new IllegalArgumentException("symbol table can only be set to a local or system symbol table");
-        }
-        if (!atDatagramLevel()) {
-            throw new IllegalStateException("symbol table can only be set to a local symbol table except at a top level, and then only once");
-        }
-
-        if (symbols == _symbol_table) {
-            return;
-        }
-
-        if (symbols.isSystemTable()) {
-            // do nothing
-        }
-        else if (symbols.isLocalTable()) {
-            patchInSymbolTable(symbols);
-        }
-        else {
-            assert("we already checked this, so there's no reason to be here!".length() < 1);
-        }
-        _symbol_table = symbols;
-    }
 
     private final void set_symbol_table_prepend_new_local_table(SymbolTable symbols) throws IOException
     {
