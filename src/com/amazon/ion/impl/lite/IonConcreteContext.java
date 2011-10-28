@@ -147,7 +147,7 @@ final class IonConcreteContext
         return local;
     }
 
-    public IonContainerLite getParentThroughContext()
+    public IonContainerLite getContextContainer()
     {
         // A concrete context only exists on a top level value.
         // Its parent should be a system or a datagram.
@@ -187,8 +187,8 @@ final class IonConcreteContext
     /**
      * @param container must not be null
      */
-    public void setParentThroughContext(IonValueLite child,
-                                        IonContainerLite container)
+    public void setContextContainer(IonContainerLite container,
+                                    IonValueLite child)
     {
         assert child._context == this;
         assert _owning_context instanceof IonSystemLite;

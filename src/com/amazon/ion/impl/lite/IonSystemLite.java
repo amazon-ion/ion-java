@@ -585,10 +585,24 @@ public final class IonSystemLite
     }
 
 
-    public IonContainerLite getParentThroughContext()
+    /**
+     * Always returns null, since values in this context are top-level and
+     * stand-alone.
+     */
+    public IonContainerLite getContextContainer()
     {
         return null;
     }
+
+    public void setContextContainer(IonContainerLite container,
+                                    IonValueLite child)
+    {
+        assert child._context == this;
+
+        // The new container becomes the context, we replace ourself.
+        child.setContext(container);
+    }
+
 
     public SymbolTable getSymbolTable()
     {
@@ -608,15 +622,6 @@ public final class IonSystemLite
     public IonSystemLite getSystem()
     {
         return this;
-    }
-
-    public void setParentThroughContext(IonValueLite child,
-                                        IonContainerLite container)
-    {
-        assert child._context == this;
-
-        // The new container becomes the context, we replace ourself.
-        child.setContext(container);
     }
 
     public void setSymbolTableOfChild(SymbolTable symbols, IonValueLite child)

@@ -31,16 +31,23 @@ import com.amazon.ion.SymbolTable;
 public interface IonContext
 {
     /**
-     * Return the IonValue that is the parent
-     * of the value associated with this context.  This name
-     * is a bit misleading in that the method is called
-     * from the contained value (the child) and
-     * in the case of most IonContainers (like IonStruct)
-     * the method simply returns this.
+     * Return the container of values associated with this context.
+     * If this context is an {@link IonContainerLite} it returns itself.
      *
-     * @return IonContainer that is the parent of the value
+     * @return the container of the value;
+     *  null for stand-alone top level values.
      */
-    abstract IonContainerLite getParentThroughContext();
+    abstract IonContainerLite getContextContainer();
+
+    /**
+     * Sets the container for the given child value, which must have this
+     * instance as its context.
+     *
+     * @param container the parent of the value this context is bound to
+     */
+    abstract void setContextContainer(IonContainerLite container,
+                                      IonValueLite child);
+
 
     /**
      * Get the IonSystem concrete object that created
@@ -113,14 +120,4 @@ public interface IonContext
      * as read only.
      */
     abstract void clearLocalSymbolTable();
-
-    /**
-     * Sets the container for the given child value, which must have this
-     * instance as its context.
-     *
-     * @param container the parent of the value this context is bound to
-     */
-    abstract void setParentThroughContext(IonValueLite child,
-                                          IonContainerLite container);
-
 }

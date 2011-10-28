@@ -412,10 +412,21 @@ public abstract class IonContainerLite
      * we are contained in.
      *
      */
-    public final IonContainerLite getParentThroughContext()
+
+    public final IonContainerLite getContextContainer()
     {
         return this;
     }
+
+    /**
+     * Always throws, since our children already have a container.
+     */
+    public final void setContextContainer(IonContainerLite context,
+                                          IonValueLite child)
+    {
+        throw new UnsupportedOperationException();
+    }
+
 
     public SymbolTable getLocalSymbolTable(IonValueLite child)
     {
@@ -427,11 +438,6 @@ public abstract class IonContainerLite
         return null;
     }
 
-    public final void setParentThroughContext(IonValueLite child,
-                                              IonContainerLite context)
-    {
-        throw new UnsupportedOperationException();
-    }
 
     public void setSymbolTableOfChild(SymbolTable symbols, IonValueLite child)
     {
@@ -759,7 +765,7 @@ public abstract class IonContainerLite
         if (child instanceof IonDatagram) {
             throw new IllegalArgumentException();
         }
-        if (child._context.getParentThroughContext() != null)
+        if (child._context.getContextContainer() != null)
         {
             throw new ContainedValueException();
         }
@@ -787,7 +793,7 @@ public abstract class IonContainerLite
         assert child._context instanceof IonConcreteContext
             || child._context instanceof IonSystemLite;
 
-        child._context.setParentThroughContext(child, this);
+        child._context.setContextContainer(this, child);
 
         child._elementid(idx);
         return idx;

@@ -309,7 +309,7 @@ public abstract class IonValueLite
 
     public IonContainerLite getContainer()
     {
-        return _context.getParentThroughContext();
+        return _context.getContextContainer();
     }
 
     public IonValueLite topLevelValue()
@@ -318,11 +318,11 @@ public abstract class IonValueLite
 
         IonValueLite value = this;
         for (;;) {
-            IonContainerLite parent = value._context.getParentThroughContext();
-            if (parent == null || parent instanceof IonDatagram) {
+            IonContainerLite c = value._context.getContextContainer();
+            if (c == null || c instanceof IonDatagram) {
                 break;
             }
-            value = parent;
+            value = c;
         }
         return value;
     }
@@ -650,7 +650,7 @@ public abstract class IonValueLite
         checkForLock();
 
         boolean removed = false;
-        IonContainer parent = _context.getParentThroughContext();
+        IonContainer parent = _context.getContextContainer();
         if (parent != null) {
             removed = parent.remove(this);
         }
