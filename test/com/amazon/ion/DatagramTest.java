@@ -10,6 +10,7 @@ import static com.amazon.ion.SystemSymbols.SYMBOLS;
 
 import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.impl.IonValueImpl;
+import com.amazon.ion.impl.IonValuePrivate;
 import java.io.ByteArrayOutputStream;
 import java.util.Collection;
 import java.util.Iterator;
@@ -645,5 +646,12 @@ public class DatagramTest
     {
         IonDatagram dg = system().newDatagram();
         dg.topLevelValue();
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testGetAssignedSymbolTable()
+    {
+        IonDatagram dg = system().newDatagram();
+        ((IonValuePrivate)dg).getAssignedSymbolTable();
     }
 }

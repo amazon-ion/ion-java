@@ -559,6 +559,13 @@ public final class IonDatagramImpl
 
 
     @Override
+    public final SymbolTable getAssignedSymbolTable()
+    {
+        throw new UnsupportedOperationException();
+    }
+
+
+    @Override
     public void makeNull()
     {
         throw new UnsupportedOperationException("Cannot make a null datagram");

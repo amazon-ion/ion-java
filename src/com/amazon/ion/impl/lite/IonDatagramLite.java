@@ -137,7 +137,7 @@ public class IonDatagramLite
     @Override
     public SymbolTable getAssignedSymbolTable()
     {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
 

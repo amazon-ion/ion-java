@@ -729,7 +729,7 @@ public abstract class IonValueImpl
         return this._symboltable;
     }
 
-    public final SymbolTable getAssignedSymbolTable()
+    public SymbolTable getAssignedSymbolTable()
     {
         return this._symboltable;
     }

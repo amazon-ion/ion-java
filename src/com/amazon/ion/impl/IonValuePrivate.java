@@ -1,7 +1,8 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 
@@ -34,18 +35,12 @@ public interface IonValuePrivate
     public void        setSymbolTable(SymbolTable symbols);
 
     /**
-     * this returns the symbol table that is actually
-     * assigned to this value.  Values that are contained
-     * will return null as they don't actually own
-     * their own symbol table.
-     * <p>
-     * FIXME: I believe that last sentence is incorrect.
-     * Values contained by a lite datagram, at least, have assigned symtabs.
+     * Returns the symbol table that is directly associated with this value,
+     * without doing any recursive lookup.
+     * Values that are not top-level will return null as they don't actually
+     * own their own symbol table.
      *
-     * DG Lite returns null.  DG lazy returns its own.  TODO what is that?
-     *
-     * @return SymbolTable if this value is the real
-     *         owner, otherwise null
+     * @throws UnsupportedOperationException if this is an {@link IonDatagram}.
      */
     public SymbolTable getAssignedSymbolTable();
 

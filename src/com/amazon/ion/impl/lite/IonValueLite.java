@@ -445,8 +445,7 @@ public abstract class IonValueLite
     {
         assert ! (this instanceof IonDatagram);
 
-        IonValueLite top = topLevelValue();
-        SymbolTable symbols = top._context.getContextSymbolTable();
+        SymbolTable symbols = _context.getContextSymbolTable();
         return symbols;
     }
 
