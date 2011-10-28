@@ -87,7 +87,7 @@ implements IonTimestamp
     @Override
     public IonTimestampLite clone()
     {
-        IonTimestampLite clone = new IonTimestampLite(this._context.getSystemLite(), false);
+        IonTimestampLite clone = new IonTimestampLite(this._context.getSystem(), false);
 
         clone.copyValueContentFrom(this);
         clone._timestamp_value = this._timestamp_value;

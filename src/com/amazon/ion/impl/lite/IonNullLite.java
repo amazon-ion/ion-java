@@ -41,7 +41,7 @@ public class IonNullLite
     @Override
     public IonNullLite clone()
     {
-        IonNullLite clone = new IonNullLite(_context.getSystemLite());
+        IonNullLite clone = new IonNullLite(_context.getSystem());
 
         clone.copyValueContentFrom(this);
 

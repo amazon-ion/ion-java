@@ -52,7 +52,7 @@ class IonSexpLite
     @Override
     public IonSexpLite clone()
     {
-        IonSexpLite clone = new IonSexpLite(_context.getSystemLite(), false);
+        IonSexpLite clone = new IonSexpLite(_context.getSystem(), false);
 
         try {
             clone.copyFrom(this);

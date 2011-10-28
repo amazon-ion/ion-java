@@ -57,7 +57,7 @@ implements IonDecimal
     @Override
     public IonDecimalLite clone()
     {
-        IonDecimalLite clone = new IonDecimalLite(this._context.getSystemLite(), false);
+        IonDecimalLite clone = new IonDecimalLite(this._context.getSystem(), false);
 
         clone.copyValueContentFrom(this);
         clone.setValue(this._decimal_value);

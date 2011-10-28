@@ -47,9 +47,9 @@ public interface IonContext
      * the IonValue that is associated with this context.
      * Generally this delegates to the parent.
      *
-     * @return IonSystem
+     * @return not null
      */
-    abstract IonSystemLite getSystemLite();
+    abstract IonSystemLite getSystem();
 
     /**
      * Get the SymbolTable for values in this context.

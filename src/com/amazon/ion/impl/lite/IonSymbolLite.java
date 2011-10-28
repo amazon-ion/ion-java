@@ -48,7 +48,7 @@ public class IonSymbolLite
     @Override
     public IonSymbolLite clone()
     {
-        IonSymbolLite clone = new IonSymbolLite(this._context.getSystemLite(), false);
+        IonSymbolLite clone = new IonSymbolLite(this._context.getSystem(), false);
 
         clone.copyFrom(this);
         clone._sid = UNKNOWN_SYMBOL_ID;

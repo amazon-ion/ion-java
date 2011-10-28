@@ -58,7 +58,7 @@ class IonListLite
     @Override
     public IonListLite clone()
     {
-        IonListLite clone = new IonListLite(this._context.getSystemLite(), false);
+        IonListLite clone = new IonListLite(this._context.getSystem(), false);
 
         try {
             clone.copyFrom(this);

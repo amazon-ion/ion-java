@@ -607,11 +607,7 @@ public final class IonSystemLite
         return null;
     }
 
-    public IonSystem getSystem()
-    {
-        return this;
-    }
-    public IonSystemLite getSystemLite()
+    public IonSystemLite getSystem()
     {
         return this;
     }

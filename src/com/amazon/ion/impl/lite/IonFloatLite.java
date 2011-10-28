@@ -41,7 +41,7 @@ public class IonFloatLite
     @Override
     public IonFloatLite clone()
     {
-        IonFloatLite clone = new IonFloatLite(this._context.getSystemLite(), false);
+        IonFloatLite clone = new IonFloatLite(this._context.getSystem(), false);
 
         clone.copyValueContentFrom(this);
         clone.setValue(this._float_value);

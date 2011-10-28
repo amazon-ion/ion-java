@@ -48,7 +48,7 @@ public class IonStructLite
     @Override
     public IonStruct clone()
     {
-       IonStructLite clone = new IonStructLite(_context.getSystemLite(), false);
+       IonStructLite clone = new IonStructLite(_context.getSystem(), false);
 
        try {
           // copy from won't update the map, now call transition to large
@@ -424,7 +424,7 @@ public class IonStructLite
 
     public ValueFactory add(final String fieldName)
     {
-        return new CurriedValueFactoryLite(_context.getSystemLite())
+        return new CurriedValueFactoryLite(_context.getSystem())
         {
             @Override
             void handle(IonValue newValue)
@@ -458,7 +458,7 @@ public class IonStructLite
 
     public ValueFactory put(final String fieldName)
     {
-        return new CurriedValueFactoryLite(_context.getSystemLite())
+        return new CurriedValueFactoryLite(_context.getSystem())
         {
             @Override
             void handle(IonValue newValue)

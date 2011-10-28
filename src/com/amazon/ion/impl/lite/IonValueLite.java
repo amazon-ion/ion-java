@@ -278,7 +278,7 @@ public abstract class IonValueLite
             // copy that too, so we attach our copy to its
             // system owner through a fresh concrete context
             IonConcreteContext.attachWithConcreteContext(
-                                   this.getSystemLite()
+                                   this.getSystem()
                                  , this
                                  , original.getAssignedSymbolTable()
             );
@@ -438,7 +438,7 @@ public abstract class IonValueLite
         }
         else {
             // TODO ION-258 bad assumption about system symtab context
-            symbols = _context.getSystemLite().getSystemSymbolTable();
+            symbols = _context.getSystem().getSystemSymbolTable();
         }
         return symbols;
     }
@@ -499,13 +499,9 @@ public abstract class IonValueLite
         return sid;
     }
 
-    public IonSystem getSystem()
+    public IonSystemLite getSystem()
     {
-        return _context.getSystemLite();
-    }
-    public IonSystemLite getSystemLite()
-    {
-        return _context.getSystemLite();
+        return _context.getSystem();
     }
 
     public IonType getType()
@@ -763,7 +759,7 @@ public abstract class IonValueLite
         // in the values all the symbol value should be
         // represented by their string values so this should
         // not be an issue.
-        _context = this.getSystemLite();  // XXX not null?
+        _context = this.getSystem();
 
         _fieldName = null;
         _elementid(0);

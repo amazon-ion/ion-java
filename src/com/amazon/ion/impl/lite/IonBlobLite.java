@@ -37,7 +37,7 @@ public class IonBlobLite
     @Override
     public IonBlobLite clone()
     {
-        IonBlobLite clone = new IonBlobLite(this._context.getSystemLite(), false);
+        IonBlobLite clone = new IonBlobLite(this._context.getSystem(), false);
 
         clone.copyFrom(this);
 

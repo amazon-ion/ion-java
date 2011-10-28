@@ -35,7 +35,7 @@ public class IonStringLite
     @Override
     public IonStringLite clone()
     {
-        IonStringLite clone = new IonStringLite(this._context.getSystemLite(), false);
+        IonStringLite clone = new IonStringLite(this._context.getSystem(), false);
 
         clone.copyFrom(this);
 

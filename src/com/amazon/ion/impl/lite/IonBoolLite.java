@@ -48,7 +48,7 @@ public class IonBoolLite
     @Override
     public IonBoolLite clone()
     {
-        IonBoolLite clone = new IonBoolLite(this._context.getSystemLite(), this.isNullValue());
+        IonBoolLite clone = new IonBoolLite(this._context.getSystem(), this.isNullValue());
 
         // this copies the flags member which will
         // copy the is null and is bool true state

@@ -49,7 +49,7 @@ public class IonIntLite
     @Override
     public IonIntLite clone()
     {
-        IonIntLite clone = new IonIntLite(this._context.getSystemLite(), false);
+        IonIntLite clone = new IonIntLite(this._context.getSystem(), false);
 
         clone.copyValueContentFrom(this);
         if (this._big_int_value != null)

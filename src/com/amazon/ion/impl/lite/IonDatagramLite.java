@@ -8,7 +8,6 @@ import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonCatalog;
-import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
@@ -139,12 +138,6 @@ public class IonDatagramLite
     public SymbolTable getAssignedSymbolTable()
     {
         return null;
-    }
-
-    @Override
-    public IonSystemLite getSystemLite()
-    {
-        return _system;
     }
 
     @Override
@@ -502,7 +495,7 @@ public class IonDatagramLite
     // public void deepMaterialize()
 
     @Override
-    public IonContainer getContainer()
+    public IonContainerLite getContainer()
     {
         return null;
     }
@@ -521,7 +514,7 @@ public class IonDatagramLite
     // public SymbolTable getSymbolTable()
 
     @Override
-    public IonSystem getSystem()
+    public IonSystemLite getSystem()
     {
         return this._system;
     }

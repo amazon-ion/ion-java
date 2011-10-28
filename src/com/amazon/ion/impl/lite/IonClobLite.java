@@ -39,7 +39,7 @@ public class IonClobLite
     @Override
     public IonClobLite clone()
     {
-        IonClobLite clone = new IonClobLite(this._context.getSystemLite(), false);
+        IonClobLite clone = new IonClobLite(this._context.getSystem(), false);
 
         clone.copyFrom(this);
 

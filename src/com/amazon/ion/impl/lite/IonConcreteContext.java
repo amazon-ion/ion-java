@@ -66,7 +66,7 @@ class IonConcreteContext
             // TODO Why not change the child's context to be the parent?
         }
         else {
-            concrete_context = new IonConcreteContext(parent.getSystemLite());
+            concrete_context = new IonConcreteContext(parent.getSystem());
         }
 
         concrete_context._owning_context = parent;
@@ -130,7 +130,7 @@ class IonConcreteContext
         //    local = _owning_context.getLocalSymbolTable(child);
         //}
         else {
-            IonSystem system = getSystemLite();
+            IonSystem system = getSystem();
             local = system.newLocalSymbolTable();
             _symbols = local;
         }
@@ -168,7 +168,7 @@ class IonConcreteContext
         return _symbols;
     }
 
-    public IonSystemLite getSystemLite()
+    public IonSystemLite getSystem()
     {
         assert(_system != null);
         return _system;
