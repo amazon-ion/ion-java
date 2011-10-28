@@ -427,11 +427,10 @@ public abstract class IonContainerLite
         return null;
     }
 
-    public void setParentThroughContext(IonValueLite child, IonContext context)
+    public final void setParentThroughContext(IonValueLite child,
+                                              IonContainerLite context)
     {
-        assert(context == this);
-        checkForLock();
-        child.setContext(this);
+        throw new UnsupportedOperationException();
     }
 
     public void setSymbolTableOfChild(SymbolTable symbols, IonValueLite child)
@@ -785,10 +784,15 @@ public abstract class IonContainerLite
         _child_count++;
         _children[idx] = child;
 
+        assert child._context instanceof IonConcreteContext
+            || child._context instanceof IonSystemLite;
+
         child._context.setParentThroughContext(child, this);
+
         child._elementid(idx);
         return idx;
     }
+
     public void remove_child(int idx)
     {
         assert(idx >=0);

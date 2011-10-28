@@ -140,12 +140,6 @@ public class IonDatagramLite
         return null;
     }
 
-    @Override
-    public void setParentThroughContext(IonValueLite child, IonContext context)
-    {
-        assert(context == this);
-        child.setContext(this);
-    }
 
     @Override
     public void setSymbolTableOfChild(SymbolTable symbols, IonValueLite child)

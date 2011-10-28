@@ -88,20 +88,13 @@ final class IonConcreteContext
     }
 
 
-    /**
-     * @param parent must not be null.
-     * @param child must not be null.
-     */
-    static void attachWithoutConcreteContext(IonContext parent,
-                                             IonValueLite child)
+    void rewrap(IonContext owner, IonValueLite child)
     {
-        assert(test_symbol_table_compatibility(parent, child));
-        if (child._context instanceof IonConcreteContext) {
-            // TODO this assumes there's never >1 value with the same context
-            ((IonConcreteContext)child._context).clear();
-        }
-        child._context = parent;
+        assert owner instanceof IonDatagramLite || owner == _system;
+        _owning_context = owner;
+        child._context = this;
     }
+
 
     private static boolean test_symbol_table_compatibility(IonContext parent,
                                                            IonValueLite child)
@@ -192,27 +185,36 @@ final class IonConcreteContext
     }
 
     /**
-     * @param newParent must not be null
+     * @param container must not be null
      */
-    public void setParentThroughContext(IonValueLite child, IonContext newParent)
+    public void setParentThroughContext(IonValueLite child,
+                                        IonContainerLite container)
     {
-        // Not true when we're being recycled.
-//        assert _owning_context != null;
+        assert child._context == this;
+        assert _owning_context instanceof IonSystemLite;
 
         // HACK: we need to refactor this to make it simpler and take
         //       away the need to check the parent type
 
         // but for now ...
-        if (newParent instanceof IonDatagram
-         || newParent instanceof IonSystem
-         || newParent instanceof IonConcreteContext
-        ) {
-            _owning_context = newParent;
-            child._context = this;
+        if (container instanceof IonDatagram)
+        {
+            // Leave this context between the TLV and the datagram, using the
+            // same symbol table we already have.
+
+            _owning_context = container;
         }
         else {
-            // struct, list, sexp, templist
-            attachWithoutConcreteContext(newParent, child);
+            // Some other container (struct, list, sexp, templist) is taking
+            // over, this context is no longer needed.
+
+            assert(test_symbol_table_compatibility(container, child));
+
+            // FIXME this should be recycling this context
+            // TODO this assumes there's never >1 value with the same context
+            ((IonConcreteContext)child._context).clear();
+
+            child.setContext(container);
         }
     }
 

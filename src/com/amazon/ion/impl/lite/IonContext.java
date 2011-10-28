@@ -115,11 +115,12 @@ public interface IonContext
     abstract void clearLocalSymbolTable();
 
     /**
-     * Sets the parent container for this values context object.  Generally
-     * used when a local symbol table is being created for a top level
-     * value and so an intermediate context is needed to find the value.
-     * @param newParent the parent of the value this context is bound to
+     * Sets the container for the given child value, which must have this
+     * instance as its context.
+     *
+     * @param container the parent of the value this context is bound to
      */
-    abstract void setParentThroughContext(IonValueLite child, IonContext newParent);
+    abstract void setParentThroughContext(IonValueLite child,
+                                          IonContainerLite container);
 
 }

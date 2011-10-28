@@ -610,9 +610,13 @@ public final class IonSystemLite
         return this;
     }
 
-    public void setParentThroughContext(IonValueLite child, IonContext context)
+    public void setParentThroughContext(IonValueLite child,
+                                        IonContainerLite container)
     {
-        child.setContext(context);
+        assert child._context == this;
+
+        // The new container becomes the context, we replace ourself.
+        child.setContext(container);
     }
 
     public void setSymbolTableOfChild(SymbolTable symbols, IonValueLite child)
@@ -670,8 +674,7 @@ public final class IonSystemLite
             context = IonConcreteContext.wrap(this, owner, child);
         }
         else {
-            context.setParentThroughContext(child, owner);
-
+            context.rewrap(owner, child);
         }
         return context;
     }
