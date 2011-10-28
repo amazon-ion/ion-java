@@ -75,7 +75,7 @@ public class IonDatagramLite
     private       IonSymbolLite      _ivm;
 
     IonDatagramLite(IonSystemLite system, IonCatalog catalog) {
-        super(null, false);
+        super(/* context */ system, false);
         _system = system;
         _catalog = catalog;
         // these should be no-op's but just to be sure:
@@ -94,7 +94,14 @@ public class IonDatagramLite
     //////////////////////////////////////////////////////////////////////////////
 
     @Override
-    public SymbolTable getLocalSymbolTable(IonValueLite child)
+    public IonValueLite topLevelValue()
+    {
+        throw new UnsupportedOperationException();
+    }
+
+
+    @Override
+    public final SymbolTable getLocalSymbolTable(IonValueLite child)
     {
         // otherwise the concrete context would have returned
         // it's already present local symbol table, there's
@@ -109,6 +116,7 @@ public class IonDatagramLite
         }
 
         // if not we make one here on this value
+        // TODO ION-158 must use correct system symtab
         symbols = _system.newLocalSymbolTable();
         IonConcreteContext context = _system.allocateConcreteContext();
         context.setParentThroughContext(child, this);
@@ -372,13 +380,24 @@ public class IonDatagramLite
         return symbols;
     }
 
-    protected SymbolTable getChildsSymbolTable(IonValueLite child)
+    /**
+     * Search backwards through previous children until we find one that
+     * is linked to a symbol table.
+     * <p>
+     * TODO I think it would be better if every child had an assigned symtab.
+     * Then we'd never have to search backwards.
+     * The downside might be additional work when symtabs change.
+     *
+     * @param child must not be null
+     * @return not null; defaults to the default system symtab.
+     */
+    final SymbolTable getChildsSymbolTable(IonValueLite child)
     {
         SymbolTable symbols = null;
         int idx = child._elementid();
 
         // the caller is supposed to check this and not waste our time
-        assert(child != null && child.getAssignedSymbolTable() == null);
+        assert child.getAssignedSymbolTable() == null;
 
         while (idx > 0 && symbols == null) {
             idx--;
@@ -387,6 +406,7 @@ public class IonDatagramLite
         }
 
         if (symbols == null) {
+            // TODO ION-258 bad assumption about system symtab
             symbols = _system.getSystemSymbolTable();
         }
 

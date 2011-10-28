@@ -185,6 +185,19 @@ public interface IonValue
 
 
     /**
+     * Finds the top level value above this value.
+     * If this value has no container, or if it's immediate container is a
+     * datagram, then this value is returned.
+     *
+     * @return the top level value above this value, never null, and never an
+     * {@link IonDatagram}.
+     *
+     * @throws UnsupportedOperationException if this is an {@link IonDatagram}.
+     */
+    public IonValue topLevelValue();
+
+
+    /**
      * Gets the user type annotations attached to this value
      * as strings.  This will return an empty array if there are no annotations.
      * @deprecated Use {@link #getTypeAnnotations()} instead.

@@ -17,15 +17,6 @@ public interface IonValuePrivate
      */
     public int         getElementId();
 
-    /**
-     * Returns the top level value.  If this values
-     * parent is a datagram or a system value it
-     * is the root.  Otherwise it is the root
-     * of this values container.
-     *
-     * @return top level owner of this value, this is never null
-     */
-    public IonValuePrivate getRoot();
 
     /**
      * make this symbol table current for this value.
@@ -50,6 +41,8 @@ public interface IonValuePrivate
      * <p>
      * FIXME: I believe that last sentence is incorrect.
      * Values contained by a lite datagram, at least, have assigned symtabs.
+     *
+     * DG Lite returns null.  DG lazy returns its own.  TODO what is that?
      *
      * @return SymbolTable if this value is the real
      *         owner, otherwise null

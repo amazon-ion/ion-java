@@ -262,9 +262,9 @@ public final class IonDatagramImpl
     }
 
     @Override
-    public IonValuePrivate getRoot()
+    public IonValueImpl topLevelValue()
     {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override

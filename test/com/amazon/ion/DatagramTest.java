@@ -625,4 +625,25 @@ public class DatagramTest
         l = (IonList) l.get(0);
         assertEquals(1, ((IonInt)l.get(0)).intValue());
     }
+
+    @Test
+    public void testGetTopLevelValue()
+    {
+        IonDatagram dg = system().newDatagram();
+        IonValue tlv = dg.add().newInt(12);
+        assertSame(tlv, tlv.topLevelValue());
+
+        IonList list = dg.add().newEmptyList();
+        IonBool bool = list.add().newBool(true);
+
+        assertSame(list, list.topLevelValue());
+        assertSame(list, bool.topLevelValue());
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testGetTopLevelValueOfDatagram()
+    {
+        IonDatagram dg = system().newDatagram();
+        dg.topLevelValue();
+    }
 }

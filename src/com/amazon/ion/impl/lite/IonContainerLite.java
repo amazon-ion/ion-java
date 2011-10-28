@@ -412,7 +412,7 @@ public abstract class IonContainerLite
      * we are contained in.
      *
      */
-    public IonContainerLite getParentThroughContext()
+    public final IonContainerLite getParentThroughContext()
     {
         return this;
     }
@@ -422,9 +422,9 @@ public abstract class IonContainerLite
         return _context.getLocalSymbolTable(this);
     }
 
-    public SymbolTable getContextSymbolTable()
+    public final SymbolTable getContextSymbolTable()
     {
-        return null; // TODO huh?!?
+        return null;
     }
 
     public void setParentThroughContext(IonValueLite child, IonContext context)
@@ -475,9 +475,9 @@ public abstract class IonContainerLite
 
     public void clearLocalSymbolTable()
     {
-        if (_context != null) {
+//        if (_context != null) {
             _context.clearLocalSymbolTable();
-        }
+//        }
     }
 
     /**

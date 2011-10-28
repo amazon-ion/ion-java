@@ -581,18 +581,19 @@ public abstract class IonValueImpl
         return getFieldId();
     }
 
-    public IonValuePrivate getRoot()
+    public IonValueImpl topLevelValue()
     {
-        IonValueImpl parent;
-        IonValueImpl value = this;
+        assert ! (this instanceof IonDatagram);
+
+        IonValue value = this;
         for (;;) {
-            parent = (IonValueImpl)value.getContainer();
-            if (parent == null) {
+            IonValue parent = value.getContainer();
+            if (parent == null || parent instanceof IonDatagram) {
                 break;
             }
             value = parent;
         }
-        return value;
+        return (IonValueImpl) value;
     }
 
     public final IonContainer getContainer()
@@ -717,18 +718,18 @@ public abstract class IonValueImpl
         return prev;
     }
 
-    // Not really: overridden for struct, which really needs to have a
-    // symbol table.  Everyone needs to have a symbol table since they
-    // may have fieldnames or annotations (or this may be a symbol value)
+
     public SymbolTable getSymbolTable()
     {
+        assert ! (this instanceof IonDatagram);
+
         if (this._symboltable != null)  return this._symboltable;
         if (this._container != null)    return this._container.getSymbolTable();
 
         return this._symboltable;
     }
 
-    public SymbolTable getAssignedSymbolTable()
+    public final SymbolTable getAssignedSymbolTable()
     {
         return this._symboltable;
     }

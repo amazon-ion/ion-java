@@ -556,9 +556,10 @@ public final class IonSystemLite
         return singleValue(it);
     }
 
-    /**
+    /*
      * IonContext methods
      */
+
     public SymbolTable getLocalSymbolTable(IonValueLite child)
     {
         // if this request makes it up to the system
@@ -617,7 +618,6 @@ public final class IonSystemLite
 
     public void setParentThroughContext(IonValueLite child, IonContext context)
     {
-        assert(child != null);
         child.setContext(context);
     }
 

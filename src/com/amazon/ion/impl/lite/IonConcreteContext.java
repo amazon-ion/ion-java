@@ -16,17 +16,26 @@ import com.amazon.ion.impl.UnifiedSymbolTable;
 class IonConcreteContext
     implements IonContext
 {
-    // Do we need this?  We should be able to follow
-    // the _owning_context up until we get to a system.
-    // And getSystem should not be called very often.
+    /**
+     * Do we need this?  We should be able to follow
+     * the _owning_context up until we get to a system.
+     * And getSystem should not be called very often.
+     */
     private final IonSystemLite _system;
 
-    // currently the _owning_context will be the system for a
-    // loose value or a datagram when the top level value has
-    // a local symbol table.  This could change is other
-    // state starts being tracked in the context such as the
-    // location in the binary buffer.
-    private       IonContext    _owning_context;
+    /**
+     * Currently the _owning_context will be the system for a
+     * loose value or a datagram when the top level value has
+     * a local symbol table.  This could change is other
+     * state starts being tracked in the context such as the
+     * location in the binary buffer.
+     * <p>
+     * TODO is this ever null?
+     * <p>
+     * TODO what if this is an interior context?
+     * Does the point to the IonContainer?
+     */
+    private IonContext _owning_context;
 
     /**
      * This will be a local symbol table.  It is not valid
@@ -40,7 +49,7 @@ class IonConcreteContext
      * TODO ION-258 we cannot assume that the IonSystem knows the proper IVM
      * in this context
      */
-    private       SymbolTable   _symbols;
+    private SymbolTable _symbols;
 
     IonConcreteContext(IonSystemLite system) {
         _system = system;
@@ -65,6 +74,10 @@ class IonConcreteContext
         concrete_context._symbols = symbolTable;
     }
 
+    /**
+     * @param parent must not be null.
+     * @param child must not be null.
+     */
     static void attachWithoutConcreteContext(IonContext parent,
                                              IonValueLite child)
     {
@@ -107,6 +120,8 @@ class IonConcreteContext
     public SymbolTable getLocalSymbolTable(IonValueLite child)
     {
         SymbolTable local;
+
+        assert _owning_context != null;
 
         if (_symbols != null && _symbols.isLocalTable()) {
             local = _symbols;
@@ -159,6 +174,9 @@ class IonConcreteContext
         return _system;
     }
 
+    /**
+     * @param newParent must not be null
+     */
     public void setParentThroughContext(IonValueLite child, IonContext newParent)
     {
         // HACK: we need to refactor this to make it simpler and take
@@ -195,7 +213,7 @@ class IonConcreteContext
         }
         _symbols = symbols;
         if (child._context != this) {
-            assert(child._context == null || child._context == this._owning_context);
+            assert(child._context != null && child._context == this._owning_context);
             child._context = this;
         }
     }

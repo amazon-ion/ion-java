@@ -52,8 +52,7 @@ public interface IonContext
     abstract IonSystemLite getSystemLite();
 
     /**
-     * Get the SymbolTable the associated IonValue
-     * needs to resolve symbols.
+     * Get the SymbolTable for values in this context.
      * Generally this delegates to the parent.
      *
      * @return SymbolTable
@@ -61,11 +60,11 @@ public interface IonContext
     abstract SymbolTable getSymbolTable();
 
     /**
-     * Returns the symbol table that is directly assigned
-     * to this context.  For the concrete context
-     * this is the symbol table reference it has.  For
-     * containers acting as a context this is null.
-     * @return SymbolTable directly assigned symbol table
+     * Returns the symbol table that is directly assigned to this context.
+     * For {@link IonConcreteContext} it is the symbol table member.
+     * For {@link IonContainerLite} and {@link IonSystemLite} it is null.
+     *
+     * @return the directly assigned symbol table, with no recursive lookup.
      */
     abstract SymbolTable getContextSymbolTable();
 

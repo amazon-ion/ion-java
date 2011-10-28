@@ -166,6 +166,8 @@ public abstract class IonValueLite
      *
      */
     private   int              _flags;
+
+    /** Not null. */
     protected IonContext       _context;
     private   String           _fieldName;
 
@@ -185,6 +187,7 @@ public abstract class IonValueLite
      */
     protected IonValueLite(IonContext context, boolean isNull)
     {
+        assert context != null;
         _context = context;
         if (isNull) {
             set_flag(IS_NULL_VALUE);
@@ -265,6 +268,8 @@ public abstract class IonValueLite
      */
     protected final void copyValueContentFrom(IonValueLite original)
     {
+         assert _context instanceof IonSystemLite; // Baby I was born this way
+
         // values we copy
         this._flags        = original._flags;
         this._annotations  = original.getTypeAnnotationStrings();
@@ -277,10 +282,6 @@ public abstract class IonValueLite
                                  , this
                                  , original.getAssignedSymbolTable()
             );
-        }
-        else {
-            // otherwise we attach the copy to its system directly
-            this._context = this.getSystemLite();
         }
 
         // and now values we don't copy
@@ -308,18 +309,24 @@ public abstract class IonValueLite
         return;
     }
 
-    public IonContainer getContainer()
+    public IonContainerLite getContainer()
     {
         return _context.getParentThroughContext();
     }
 
-    public IonValuePrivate getRoot()
+    public IonValueLite topLevelValue()
     {
-        IonValuePrivate parent = _context.getParentThroughContext();
-        if (parent == null || parent instanceof IonDatagram) {
-            return this;
+        assert ! (this instanceof IonDatagram);
+
+        IonValueLite value = this;
+        for (;;) {
+            IonContainerLite parent = value._context.getParentThroughContext();
+            if (parent == null || parent instanceof IonDatagram) {
+                break;
+            }
+            value = parent;
         }
-        return parent.getRoot();
+        return value;
     }
 
 
@@ -415,21 +422,22 @@ public abstract class IonValueLite
 
     public SymbolTable getSymbolTable()
     {
-        SymbolTable symbols;
-        IonValueLite root = (IonValueLite)getRoot(); // this saves us two trips up the chain
+        assert ! (this instanceof IonDatagram);
 
-        if (root != null) {
-            symbols = root.getAssignedSymbolTable();
-            if (symbols != null) {
-                return symbols;
-            }
+        IonValueLite top = topLevelValue();
+        SymbolTable symbols = top._context.getContextSymbolTable();
+        if (symbols != null) {
+            return symbols;
         }
 
-        IonContainer container = root.getContainer();
-        if (container instanceof IonDatagramLite) {
-            symbols = ((IonDatagramLite)container).getChildsSymbolTable(root);
+        IonContainer container = top.getContainer();
+        if (container != null) {
+            // A symtab wasn't found above since the datagram doesn't force
+            // all children to have symtabs directly assigned.
+            symbols = ((IonDatagramLite)container).getChildsSymbolTable(top);
         }
         else {
+            // TODO ION-258 bad assumption about system symtab context
             symbols = _context.getSystemLite().getSystemSymbolTable();
         }
         return symbols;
@@ -437,14 +445,10 @@ public abstract class IonValueLite
 
     public SymbolTable getAssignedSymbolTable()
     {
-        IonValuePrivate root = this.getRoot();
+        assert ! (this instanceof IonDatagram);
 
-        if (root == null) {
-            return null;
-        }
-        assert(root instanceof IonValueLite);
-
-        SymbolTable symbols = ((IonValueLite)root)._context.getContextSymbolTable();
+        IonValueLite top = topLevelValue();
+        SymbolTable symbols = top._context.getContextSymbolTable();
         return symbols;
     }
 
@@ -708,17 +712,20 @@ public abstract class IonValueLite
      * IonValue.  This may occur when the value is into
      * or out of a container.  It may occur when the
      * symbol table state of a container changes.
-     * @param context
+     *
+     * @param context must not be null.
      */
     protected void setContext(IonContext context)
     {
+        assert context != null;
         checkForLock();
         _context = context;
     }
+
     /**
      * used to query the current context.
      *
-     * @return IonContext currently associated with this value
+     * @return this value's context. Not null.
      */
     protected IonContext getContext()
     {
@@ -756,7 +763,7 @@ public abstract class IonValueLite
         // in the values all the symbol value should be
         // represented by their string values so this should
         // not be an issue.
-        _context = this.getSystemLite();
+        _context = this.getSystemLite();  // XXX not null?
 
         _fieldName = null;
         _elementid(0);
