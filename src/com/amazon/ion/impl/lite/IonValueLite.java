@@ -277,11 +277,9 @@ public abstract class IonValueLite
             // if the original value had context, we need to
             // copy that too, so we attach our copy to its
             // system owner through a fresh concrete context
-            IonConcreteContext.attachWithConcreteContext(
-                                   this.getSystem()
-                                 , this
-                                 , original.getAssignedSymbolTable()
-            );
+            IonConcreteContext.wrap(getSystem(),
+                                    original.getAssignedSymbolTable(),
+                                    this);
         }
 
         // and now values we don't copy

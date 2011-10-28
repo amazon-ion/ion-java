@@ -13,7 +13,7 @@ import com.amazon.ion.impl.UnifiedSymbolTable;
 /**
  *
  */
-class IonConcreteContext
+final class IonConcreteContext
     implements IonContext
 {
     /**
@@ -30,7 +30,9 @@ class IonConcreteContext
      * state starts being tracked in the context such as the
      * location in the binary buffer.
      * <p>
-     * TODO is this ever null?
+     * This is never null when this context is in use.
+     * However it IS null when {@link #clear()}ed for recycling by
+     * {@link IonSystemLite#releaseConcreteContext(IonConcreteContext)}.
      * <p>
      * TODO what if this is an interior context?
      * Does the point to the IonContainer?
@@ -51,28 +53,40 @@ class IonConcreteContext
      */
     private SymbolTable _symbols;
 
-    IonConcreteContext(IonSystemLite system) {
-        _system = system;
-    }
-
-    static void attachWithConcreteContext(IonContext parent,
-                                          IonValueLite child,
-                                          SymbolTable symbolTable)
+    private IonConcreteContext(IonSystemLite system,
+                               IonContext owner)
     {
-        IonConcreteContext concrete_context;
-
-        if (child._context  instanceof IonConcreteContext) {
-            concrete_context = (IonConcreteContext)child._context;
-            // TODO Why not change the child's context to be the parent?
-        }
-        else {
-            concrete_context = new IonConcreteContext(parent.getSystem());
-        }
-
-        concrete_context._owning_context = parent;
-        child._context = concrete_context;
-        concrete_context._symbols = symbolTable;
+        _system = system;
+        _owning_context = owner;
     }
+
+    static IonConcreteContext wrap(IonSystemLite system,
+                                   IonContext owner,
+                                   IonValueLite child)
+    {
+        IonConcreteContext concrete = new IonConcreteContext(system, owner);
+
+        child._context = concrete;
+
+        return concrete;
+    }
+
+    static IonConcreteContext wrap(IonSystemLite system,
+                                   SymbolTable symbols,
+                                   IonValueLite child)
+    {
+        if (isNonSystemSharedTable(symbols)) {
+            throw new IllegalArgumentException("you can only set a symbol table to a system or local table");
+        }
+
+        IonConcreteContext concrete = new IonConcreteContext(system, system);
+        concrete._symbols = symbols;
+
+        child._context = concrete;
+
+        return concrete;
+    }
+
 
     /**
      * @param parent must not be null.
@@ -83,6 +97,7 @@ class IonConcreteContext
     {
         assert(test_symbol_table_compatibility(parent, child));
         if (child._context instanceof IonConcreteContext) {
+            // TODO this assumes there's never >1 value with the same context
             ((IonConcreteContext)child._context).clear();
         }
         child._context = parent;
@@ -141,19 +156,21 @@ class IonConcreteContext
 
     public IonContainerLite getParentThroughContext()
     {
+        // A concrete context only exists on a top level value.
+        // Its parent should be a system or a datagram.
+
         if (_owning_context instanceof IonDatagramLite) {
             return (IonDatagramLite)_owning_context;
         }
-        // a concrete context only exists on a top level
-        // value to its parent should be system, datagram
-        // or null
-        assert(_owning_context == null || _owning_context instanceof IonSystem);
 
+        assert(_owning_context instanceof IonSystem);
         return null;
     }
 
     public SymbolTable getSymbolTable()
     {
+        assert _owning_context != null;
+
         if (_symbols != null) {
             return _symbols;
         }
@@ -179,6 +196,9 @@ class IonConcreteContext
      */
     public void setParentThroughContext(IonValueLite child, IonContext newParent)
     {
+        // Not true when we're being recycled.
+//        assert _owning_context != null;
+
         // HACK: we need to refactor this to make it simpler and take
         //       away the need to check the parent type
 
@@ -198,8 +218,7 @@ class IonConcreteContext
 
     public void setSymbolTableOfChild(SymbolTable symbols, IonValueLite child)
     {
-        assert (_owning_context == null
-             || _owning_context instanceof IonSystem
+        assert (_owning_context instanceof IonSystem
              || _owning_context instanceof IonDatagram
         );
 
@@ -213,7 +232,7 @@ class IonConcreteContext
         }
         _symbols = symbols;
         if (child._context != this) {
-            assert(child._context != null && child._context == this._owning_context);
+            assert(child._context != null && child._context == _owning_context);
             child._context = this;
         }
     }

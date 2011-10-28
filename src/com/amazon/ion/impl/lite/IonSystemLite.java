@@ -569,9 +569,7 @@ public final class IonSystemLite
         SymbolTable local = this.newLocalSymbolTable();
         IonContext context = child.getContext();
         if (context == this) {
-            context = new IonConcreteContext(this);
-            context.setParentThroughContext(child, this);
-            context.setSymbolTableOfChild(local, child);
+            context = IonConcreteContext.wrap(this, local, child);
         }
         child.setContext(context);
         return local;
@@ -628,8 +626,7 @@ public final class IonSystemLite
         }
         IonContext context = child.getContext();
         if (context == this) {
-            context = allocateConcreteContext();
-            context.setParentThroughContext(child, this);
+            context = allocateConcreteContext(this, child);
         }
         else {
             assert(context instanceof IonConcreteContext);
@@ -655,7 +652,9 @@ public final class IonSystemLite
             _free_contexts = temp;
         }
     }
-    protected final IonConcreteContext allocateConcreteContext()
+
+    protected final IonConcreteContext allocateConcreteContext(IonContext owner,
+                                                               IonValueLite child)
     {
         IonConcreteContext context = null;
         if (_free_count > 0) {
@@ -668,7 +667,11 @@ public final class IonSystemLite
             }
         }
         if (context == null) {
-            context = new IonConcreteContext(this);
+            context = IonConcreteContext.wrap(this, owner, child);
+        }
+        else {
+            context.setParentThroughContext(child, owner);
+
         }
         return context;
     }

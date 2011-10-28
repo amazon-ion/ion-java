@@ -117,8 +117,8 @@ public class IonDatagramLite
         // if not we make one here on this value
         // TODO ION-158 must use correct system symtab
         symbols = _system.newLocalSymbolTable();
-        IonConcreteContext context = _system.allocateConcreteContext();
-        context.setParentThroughContext(child, this);
+        IonConcreteContext context =
+            _system.allocateConcreteContext(this, child);
         context.setSymbolTableOfChild(symbols, child);
         return symbols;
     }
@@ -159,8 +159,7 @@ public class IonDatagramLite
         //}
         assert(symbols.isLocalTable() || symbols.isSystemTable());
         if (!(child._context instanceof IonConcreteContext)) {
-            IonContext context = new IonConcreteContext(_system);
-            context.setParentThroughContext(child, this);
+            IonConcreteContext.wrap(_system, this, child);
         }
         child._context.setSymbolTableOfChild(symbols, child);
     }
