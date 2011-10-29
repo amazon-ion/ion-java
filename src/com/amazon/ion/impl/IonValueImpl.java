@@ -700,24 +700,6 @@ public abstract class IonValueImpl
         this._isDirty(false);
     }
 
-    protected IonValueImpl get_symbol_table_root()
-    {
-        IonValueImpl prev = null;
-        IonValueImpl curr = this;
-
-        while (curr != null) {
-            prev = curr;
-            curr = curr._container;
-            if (curr == null || (curr instanceof IonDatagram)) {
-                break;
-            }
-        }
-        if (prev == null) {
-            return this;
-        }
-        return prev;
-    }
-
 
     public SymbolTable getSymbolTable()
     {
@@ -745,7 +727,7 @@ public abstract class IonValueImpl
      */
     public SymbolTable getUpdatableSymbolTable()
     {
-        IonValueImpl parent = get_symbol_table_root();
+        IonValueImpl parent = topLevelValue();
         SymbolTable symbols = parent.getSymbolTable();
 
         if (UnifiedSymbolTable.isLocalTable(symbols)) {
@@ -853,7 +835,7 @@ public abstract class IonValueImpl
             throw new IllegalArgumentException("symbol table must be local or system");
         }
 
-        IonValueImpl parent = get_symbol_table_root();
+        IonValueImpl parent = topLevelValue();
         SymbolTable  currentSymtab = parent.getSymbolTable();
         if (currentSymtab != symtab) {
             checkForLock();

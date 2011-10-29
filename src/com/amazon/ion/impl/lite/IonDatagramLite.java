@@ -123,15 +123,11 @@ public class IonDatagramLite
         return symbols;
     }
 
-    // from IonContainerLite(returns this) IonContainerLite getParentThroughContext();
 
     @Override
     public SymbolTable getSymbolTable()
     {
-        if (_pending_symbol_table != null) {
-            return _pending_symbol_table;
-        }
-        return _system.getSystemSymbolTable();
+        throw new UnsupportedOperationException();
     }
 
     @Override

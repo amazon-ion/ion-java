@@ -232,7 +232,7 @@ public final class IonSystemImpl
         UnifiedSymbolTable lst = newLocalSymbolTable(imports);
 
         IonDatagramImpl datagram = newDatagram();
-        datagram.setSymbolTable(lst); // This is the "pending" symtab
+        datagram.setSymbolTable(lst);
         return datagram;
     }
 

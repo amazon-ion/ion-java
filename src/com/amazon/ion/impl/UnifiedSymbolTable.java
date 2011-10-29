@@ -523,6 +523,9 @@ public final class UnifiedSymbolTable
         return (table != null && table.isSharedTable() && ! table.isSystemTable());
     }
 
+    /**
+     * Is the table null, system, or local without imported symbols?
+     */
     public static boolean isTrivialTable(SymbolTable table)
     {
         if (table == null)         return true;

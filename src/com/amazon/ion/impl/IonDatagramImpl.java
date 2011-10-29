@@ -553,8 +553,7 @@ public final class IonDatagramImpl
     @Override
     public SymbolTable getSymbolTable()
     {
-        // FIXME this is incompatible with the documentation in IonDatagram
-        return null;
+        throw new UnsupportedOperationException();
     }
 
 
@@ -1117,6 +1116,12 @@ public final class IonDatagramImpl
         toArray(array);
         clear();
         return array;
+    }
+
+    @Override
+    public void setSymbolTable(SymbolTable symtab)
+    {
+        _symboltable = symtab;
     }
 
     @Override
