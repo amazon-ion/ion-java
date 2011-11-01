@@ -268,9 +268,7 @@ final class IonWriterSystemTree
     public void writeSymbol(int symbolId)
         throws IOException
     {
-        // FIXME this is totally broken, write a unit test!
-        String name = null;
-        getSymbolTable().findKnownSymbol(symbolId);
+        String name = getSymbolTable().findKnownSymbol(symbolId);
         if (name == null) {
             throw new IllegalArgumentException("undefined symbol id");
         }

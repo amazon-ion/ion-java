@@ -24,6 +24,7 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
+import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.TestUtils;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -720,5 +721,17 @@ public abstract class IonWriterTestCase
 
         IonDatagram dg = reload();
         assertEquals(0, dg.size());
+    }
+
+    @Test
+    public void testWriteSymbolWithInt()
+        throws Exception
+    {
+        iw = makeWriter();
+        iw.writeSymbol(SystemSymbols.NAME_SID);
+
+        IonDatagram dg = reload();
+        IonSymbol s = (IonSymbol) dg.get(0);
+        assertEquals(SystemSymbols.NAME, s.stringValue());
     }
 }
