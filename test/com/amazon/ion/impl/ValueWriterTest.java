@@ -10,7 +10,6 @@ import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -50,14 +49,43 @@ public class ValueWriterTest
         // Nothing to do.
     }
 
+    //=========================================================================
 
-
-    @Override @Test @Ignore  // TODO
-    public void testWritingBadSurrogates() throws Exception
+    @Override
+    public void testBadString(String text)
+        throws Exception
     {
-        super.testWritingBadSurrogates();
+        // Tree writer accepts bad text, but it's caught at output time.
+        iw = makeWriter();
+        iw.writeString(text);
+        iw.finish();
+
+        try
+        {
+            myDatagram.toString();
+            fail("expected exception");
+        }
+        catch (IllegalArgumentException e) { }
     }
 
+    @Override
+    public void testBadSymbol(String text)
+        throws Exception
+    {
+        // Tree writer accepts bad text, but it's caught at output time.
+        iw = makeWriter();
+        iw.writeSymbol(text);
+        iw.finish();
+
+        try
+        {
+            myDatagram.toString();
+            fail("expected exception");
+        }
+        catch (IllegalArgumentException e) { }
+    }
+
+    // TODO more thorough testing that you can't output from DOM w/ bad text
 
 
     @Test
