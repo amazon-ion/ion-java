@@ -40,7 +40,7 @@ public abstract class IonWriterBaseImpl
 
     /**
      * Returns the current depth of containers the writer is at.  This is
-     * 0 if the writer is at the datagram level.
+     * 0 if the writer is at top-level.
      * @return int depth of container nesting
      */
     protected abstract int getDepth();
@@ -299,11 +299,11 @@ public abstract class IonWriterBaseImpl
 
         if (reader.getType() == null) reader.next();
 
-        if (reader instanceof IonReaderWriterPrivate) {
+        if (getDepth() == 0 && reader instanceof IonReaderWriterPrivate) {
+            // Optimize symbol table copying
             IonReaderWriterPrivate private_reader =
                 (IonReaderWriterPrivate)reader;
             while (reader.getType() != null) {
-                // FIXME This could change symtab when we are not at top level.
                 transfer_symbol_tables(private_reader);
                 writeValue(reader);
                 reader.next();

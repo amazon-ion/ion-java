@@ -12,6 +12,7 @@ import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonList;
 import com.amazon.ion.IonLob;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonString;
@@ -733,5 +734,36 @@ public abstract class IonWriterTestCase
         IonDatagram dg = reload();
         IonSymbol s = (IonSymbol) dg.get(0);
         assertEquals(SystemSymbols.NAME, s.stringValue());
+    }
+
+    @Test
+    public void testWriteValuesWithSymtab()
+        throws Exception
+    {
+        SymbolTable fredSymtab =
+            Symtabs.register(Symtabs.FRED_NAME, 1, catalog());
+        SymbolTable gingerSymtab =
+            Symtabs.register(Symtabs.GINGER_NAME, 1, catalog());
+        String gingerSym = gingerSymtab.findSymbol(1);
+
+        // First setup some data to be copied.
+        IonDatagram dg = system().newDatagram(gingerSymtab);
+        dg.add().newSymbol(gingerSym);
+        IonReader r = system().newReader(dg.getBytes());
+
+        // Now copy that data into a non-top-level context
+        iw = makeWriter(fredSymtab);
+        iw.stepIn(IonType.LIST);
+        iw.writeValues(r);
+        iw.stepOut();
+
+        IonDatagram result = reload();
+        IonList l = (IonList) result.get(0);
+        assertEquals(1, l.size());
+        IonSymbol s = (IonSymbol) l.get(0);
+        assertEquals(gingerSym, s.stringValue());
+        // Should've assigned a new SID
+        assertEquals(systemMaxId() + Symtabs.FRED_MAX_IDS[1] + 1,
+                     s.getSymbolId());
     }
 }
