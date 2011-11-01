@@ -26,21 +26,22 @@ public class Symtabs
 
     public static final SimpleCatalog CATALOG = new SimpleCatalog();
 
+    public static final String FRED_NAME = "fred";
 
-    public final static String[] FRED_SERIALIZED = {
+    public static final String[] FRED_SERIALIZED = {
         null,
 
         // version: 1
         SharedSymbolTablePrefix +
         "{" +
-        "  name:'''fred''', version:1," +
+        "  name:'''" + FRED_NAME + "''', version:1," +
         "  symbols:['''fred_1''', '''fred_2''']" +
         "}",
 
         // version: 2
         SharedSymbolTablePrefix +
         "{" +
-        "  name:'''fred''', version:2," +
+        "  name:'''" + FRED_NAME + "''', version:2," +
         "  symbols:[" +
         "    '''fred_1'''," +
         "    '''fred_2'''," +
@@ -52,7 +53,7 @@ public class Symtabs
         // version: 3
         SharedSymbolTablePrefix +
         "{" +
-        "  name:'''fred''', version:3," +
+        "  name:'''" + FRED_NAME + "''', version:3," +
         "  symbols:[" +
         "    '''fred_1'''," +
         "    null, /* Removed fred_2 */" +
@@ -63,20 +64,22 @@ public class Symtabs
         "}"
     };
 
-    public final static String[] GINGER_SERIALIZED = {
+    public static final String GINGER_NAME = "ginger";
+
+    public static final String[] GINGER_SERIALIZED = {
         null,
 
         // version: 1
         SharedSymbolTablePrefix +
         "{" +
-        "  name:'''ginger''', version:1," +
+        "  name:'''" + GINGER_NAME + "''', version:1," +
         "  symbols:['''g1''', '''g2''']" +
         "}",
     };
 
 
-    public final static int[] FRED_MAX_IDS;
-    public final static int[] GINGER_MAX_IDS;
+    public static final int[] FRED_MAX_IDS;
+    public static final int[] GINGER_MAX_IDS;
 
 
     static
