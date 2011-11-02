@@ -6,9 +6,9 @@ import static com.amazon.ion.impl.IonImplUtils.symtabExtends;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonReader;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.ValueFactory;
 import java.io.IOException;
 import java.io.OutputStream;
 
@@ -32,12 +32,15 @@ public class IonWriterUserBinary
     // methods.  However those are sufficiently expensive that
     // the cost of the cast should be lost in the noise.
 
-    protected IonWriterUserBinary(IonSystem system, IonCatalog catalog,
+    protected IonWriterUserBinary(IonCatalog catalog,
+                                  ValueFactory symtabValueFactory,
                                   IonWriterSystemBinary systemWriter,
                                   boolean suppressIVM,
                                   boolean streamCopyOptimized)
     {
-        super(system, systemWriter, catalog, suppressIVM);
+        super(catalog, symtabValueFactory, systemWriter,
+              true /* rootIsDatagram */,
+              suppressIVM);
         myStreamCopyOptimized = streamCopyOptimized;
     }
 

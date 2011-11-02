@@ -2,7 +2,6 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.IonType.DATAGRAM;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
@@ -13,11 +12,10 @@ import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
-import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.ValueFactory;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -42,8 +40,8 @@ import java.math.BigInteger;
 abstract class IonWriterUser
     extends IonWriterBaseImpl  // should be IonWriterSystem ?
 {
-    /** Not null. */
-    private final IonSystem _system;
+    /** Factory for constructing the DOM of local symtabs. Not null. */
+    private final ValueFactory _symtab_value_factory;
 
     /** Used to make correct local symbol tables. May be null. */
     private final IonCatalog _catalog;
@@ -79,21 +77,21 @@ abstract class IonWriterUser
 
 
     /**
-     * Constructor for text and binary writers.
+     * Base constructor.
      * <p>
      * POSTCONDITION: {@link IonWriterUser#_system_writer} ==
      * {@link #_current_writer} == systemWriter
      *
-     * @param system must not be null.
      * @param catalog may be null.
+     * @param symtabValueFactory must not be null.
      * @param systemWriter must not be null.
      */
-    private IonWriterUser(IonSystem system,
-                          IonCatalog catalog,
-                          IonWriterSystem systemWriter,
-                          boolean rootIsDatagram)
+    IonWriterUser(IonCatalog catalog,
+                  ValueFactory symtabValueFactory,
+                  IonWriterSystem systemWriter,
+                  boolean rootIsDatagram)
     {
-        _system = system;
+        _symtab_value_factory = symtabValueFactory;
         _catalog = catalog;
 
         assert systemWriter != null;
@@ -105,19 +103,17 @@ abstract class IonWriterUser
     /**
      * Constructor for text and binary writers.
      *
-     * @param system must not be null.
-     * @param systemWriter must not be null.
      * @param catalog may be null.
+     * @param symtabValueFactory must not be null.
+     * @param systemWriter must not be null.
      */
-    IonWriterUser(IonSystem system,
+    IonWriterUser(IonCatalog catalog,
+                  ValueFactory symtabValueFactory,
                   IonWriterSystem systemWriter,
-                  IonCatalog catalog,
+                  boolean rootIsDatagram,
                   boolean suppressIVM)
     {
-        this(system, catalog, systemWriter, /* rootIsDatagram */ true);
-
-        // TODO Why is root_is_datagram always true?  Can we not construct a
-        // text writer that injects into an existing data stream?
+        this(catalog, symtabValueFactory, systemWriter, rootIsDatagram);
 
         if (suppressIVM == false) {
             try {
@@ -128,26 +124,6 @@ abstract class IonWriterUser
                 throw new IonException(e);
             }
         }
-    }
-
-    /**
-     * Constructor for Tree writer.
-     *
-     * @param system must not be null.
-     * @param catalog may be null.
-     * @param systemWriter must not be null.
-     * @param container must not be null.
-     */
-    IonWriterUser(IonSystem system,
-                  IonCatalog catalog,
-                  IonWriterSystemTree systemWriter,
-                  IonValue container)
-    {
-        this(system, catalog, systemWriter,
-             /* rootIsDatagram */ container.getType() == DATAGRAM);
-
-        // Datagrams have an implicit initial IVM
-        _previous_value_was_ivm = true;
     }
 
     //========================================================================
@@ -216,7 +192,7 @@ abstract class IonWriterUser
 
     SymbolTable activeSystemSymbolTable()
     {
-        return _system.getSystemSymbolTable();
+        return getSymbolTable().getSystemSymbolTable();
     }
 
 
@@ -243,7 +219,7 @@ abstract class IonWriterUser
     {
         assert(! symbol_table_being_collected());
 
-        _symbol_table_value = _system.newEmptyStruct();
+        _symbol_table_value = _symtab_value_factory.newEmptyStruct();
 
         // WAS: _symbol_table_value.addTypeAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE);
         // while the previous version did create a valid symbol table, it dropped
@@ -424,10 +400,11 @@ abstract class IonWriterUser
     public void stepIn(IonType containerType) throws IOException
     {
         // see if it looks like we're starting a local symbol table
-        if (IonType.STRUCT.equals(containerType)
-         && getDepth() == 0
-         && has_annotation(ION_SYMBOL_TABLE, ION_SYMBOL_TABLE_SID)
-         ) {
+        if (containerType == IonType.STRUCT
+            && _system_writer.getDepth() == 0
+            && has_annotation(ION_SYMBOL_TABLE, ION_SYMBOL_TABLE_SID))
+        {
+            // TODO this can be re-entered if we have a nested symtab (!!)
             // if so we'll divert all the data until it's finished
             open_local_symbol_table_copy();
         }

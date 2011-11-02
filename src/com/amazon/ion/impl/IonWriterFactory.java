@@ -34,7 +34,7 @@ public class IonWriterFactory
     $PrivateTextOptions _options;
     IonContainer        _container;
     boolean             _auto_flush;
-    boolean             _assure_ivm = true;
+    private boolean     _suppress_ivm;
     boolean             _stream_copy_optimized;
 
     public synchronized void startWriter()
@@ -83,7 +83,7 @@ public class IonWriterFactory
             break;
         case SYSTEM_BINARY:
             writer = new IonWriterSystemBinary(systemSymbolTable,
-                                               _out, _auto_flush, !_assure_ivm);
+                                               _out, _auto_flush, _suppress_ivm);
             break;
         case SYSTEM_ION_VALUE:
         {
@@ -108,9 +108,9 @@ public class IonWriterFactory
         case USER_BINARY:
             IonWriterSystemBinary binary_system =
                 new IonWriterSystemBinary(systemSymbolTable, _out,
-                                          _auto_flush, !_assure_ivm);
-            writer = new IonWriterUserBinary(_system, _catalog, binary_system,
-                                             !_assure_ivm,
+                                          _auto_flush, _suppress_ivm);
+            writer = new IonWriterUserBinary(_catalog, _system, binary_system,
+                                             _suppress_ivm,
                                              _stream_copy_optimized);
             break;
         case USER_ION_VALUE:
@@ -120,8 +120,7 @@ public class IonWriterFactory
             IonWriterSystemTree tree_system =
                 new IonWriterSystemTree(systemSymbolTable, _catalog, c);
             writer =
-                new IonWriterUserTree(_system, _catalog, tree_system,
-                                      !_assure_ivm);
+                new IonWriterUserTree(_catalog, tree_system);
             break;
         }
         default:
@@ -215,7 +214,7 @@ public class IonWriterFactory
                 _auto_flush = true;
                 break;
             case SUPRESS_ION_VERSION_MARKER:
-                _assure_ivm = false;
+                _suppress_ivm = true;
                 break;
             default:
                 throw new IllegalArgumentException("flag value not recognised: "+flag);
@@ -391,7 +390,7 @@ public class IonWriterFactory
             new IonWriterSystemTree(sys.getSystemSymbolTable(), catalog,
                                     container);
         IonWriter writer =
-            new IonWriterUserTree(sys, catalog, system_writer, true);
+            new IonWriterUserTree(catalog, system_writer);
         return writer;
     }
 
@@ -422,7 +421,7 @@ public class IonWriterFactory
                                       /* autoFlush */    false,
                                       /* suppressIVM */  false); // TODO ???
         IonWriterUserBinary writer =
-            new IonWriterUserBinary(system, catalog, system_writer,
+            new IonWriterUserBinary(catalog, system, system_writer,
                                     /* suppressIVM */ true,      // TODO ??? diff above
                                     streamCopyOptimized);
         setSymbolTableIfLocal(writer, initialSymtab);

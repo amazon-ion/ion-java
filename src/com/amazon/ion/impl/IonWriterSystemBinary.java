@@ -1337,8 +1337,9 @@ public class IonWriterSystemBinary
         // TODO this is assuming the symtab needed here, broken for open content.
         IonWriterSystemBinary writer =
             new IonWriterSystemBinary(_default_system_symbol_table,
-                                      cs, false /* autoflush */ , true
-                                      /* suppress ivm */);
+                                      cs,
+                                      false /* autoflush */ ,
+                                      true  /* suppress ivm */);
         symtab.writeTo(writer);
         writer.finish();
         int symtab_len = cs.getBytesWritten();

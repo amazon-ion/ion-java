@@ -4,7 +4,7 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
-import com.amazon.ion.IonSystem;
+import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import java.io.IOException;
@@ -21,17 +21,21 @@ class IonWriterUserTree
      * really this constructor is here to verify that the
      * user writer is constructed with the right type of
      * system writer - a tree writer.
-     *
+     * @param catalog may be null.
      * @param systemWriter a System Tree writer to back this.
      *   Must not be null.
-     * @param catalog may be null.
      */
-    protected IonWriterUserTree(IonSystem system,
-                                IonCatalog catalog,
-                                IonWriterSystemTree systemWriter,
-                                boolean suppressIVM)
+    protected IonWriterUserTree(IonCatalog catalog,
+                                IonWriterSystemTree systemWriter)
     {
-        super(system, catalog, systemWriter, systemWriter.get_root());
+        super(catalog,
+              systemWriter.get_root().getSystem(),
+              systemWriter,
+              systemWriter.get_root().getType() == IonType.DATAGRAM);
+
+        // Datagrams have an implicit initial IVM
+        _previous_value_was_ivm = true;
+        // TODO what if container isn't a datagram?
     }
 
 

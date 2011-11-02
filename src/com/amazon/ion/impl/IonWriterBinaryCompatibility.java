@@ -92,8 +92,9 @@ public abstract class IonWriterBinaryCompatibility
         public User(IonSystem system, IonCatalog catalog,
                     boolean streamCopyOptimized)
         {
-            super(system, catalog,
-                  new System(system.getSystemSymbolTable(), false /* autoflush */ ),
+            super(catalog, system,
+                  new System(system.getSystemSymbolTable(),
+                             false /* autoflush */ ),
                   false /* suppressIVM */,
                   streamCopyOptimized);
 
