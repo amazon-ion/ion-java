@@ -626,9 +626,10 @@ public abstract class IonTestCase
 
     public void checkNullNull(IonValue actual)
     {
-        assertSame(IonType.NULL, actual.getType());
-        IonNull n = (IonNull) actual;
-        assertNotNull(n);
+        if (actual.getType() != IonType.NULL)
+        {
+            fail("Expected null.null, found " + actual);
+        }
     }
 
 
