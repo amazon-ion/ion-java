@@ -9,6 +9,7 @@ import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.IonImplUtils.UTF8_CHARSET;
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
+import static com.amazon.ion.impl.IonWriterFactory.makeWriter;
 import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemReader;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewSharedSymbolTable;
@@ -137,16 +138,20 @@ public final class IonSystemImpl
         UnifiedSymbolTable st = makeNewSharedSymbolTable(ionRep);
         return st;
     }
+
     public UnifiedSymbolTable newSharedSymbolTable(IonReader reader)
     {
         UnifiedSymbolTable st = makeNewSharedSymbolTable(reader, false);
         return st;
     }
-    public UnifiedSymbolTable newSharedSymbolTable(IonReader reader, boolean isOnStruct)
+
+    public UnifiedSymbolTable newSharedSymbolTable(IonReader reader,
+                                                   boolean isOnStruct)
     {
         UnifiedSymbolTable st = makeNewSharedSymbolTable(reader, isOnStruct);
         return st;
     }
+
     public UnifiedSymbolTable newSharedSymbolTable(String name,
                                                    int version,
                                                    Iterator<String> newSymbols,
@@ -191,7 +196,7 @@ public final class IonSystemImpl
             try
             {
                 IonDatagramImpl dg =
-                    new IonDatagramImpl(this, this.getCatalog(), (IonReader) null);
+                    new IonDatagramImpl(this, getCatalog(), (IonReader) null);
                 return dg;
             }
             catch (IOException e)
@@ -201,7 +206,7 @@ public final class IonSystemImpl
             }
         }
 
-        return new IonDatagramImpl(this, this.getCatalog());
+        return new IonDatagramImpl(this, getCatalog());
     }
 
     public IonDatagram newDatagram(IonValue initialChild)
@@ -316,7 +321,8 @@ public final class IonSystemImpl
 
     public Iterator<IonValue> iterate(byte[] ionData)
     {
-        SystemValueIterator systemReader = newLegacySystemReader(getCatalog(), ionData);
+        SystemValueIterator systemReader =
+            newLegacySystemReader(getCatalog(), ionData);
         UserValueIterator userReader = new UserValueIterator(systemReader);
         // Don't use buffer-clearing!
         return userReader;
@@ -528,67 +534,88 @@ public final class IonSystemImpl
 
     public IonWriter newTextWriter(Appendable out)
     {
-        $PrivateTextOptions options = new $PrivateTextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
+        $PrivateTextOptions options =
+            new $PrivateTextOptions(false /* prettyPrint */,
+                                    true /* printAscii */,
+                                    true /* filterOutSymbolTables */);
         IonWriter userWriter = newTextWriter(out, options);
         return userWriter;
     }
 
     public IonWriter newTextWriter(Appendable out, boolean pretty)
     {
-        $PrivateTextOptions options = new $PrivateTextOptions(pretty /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
+        $PrivateTextOptions options =
+            new $PrivateTextOptions(pretty /* prettyPrint */,
+                                    true /* printAscii */,
+                                    true /* filterOutSymbolTables */);
         IonWriter userWriter = newTextWriter(out, options);
         return userWriter;
     }
 
     public IonWriter newTextWriter(Appendable out, $PrivateTextOptions options)
     {
-        IonWriter userWriter = IonWriterFactory.makeWriter(this, out, options);
+        IonWriter userWriter = makeWriter(this, out, options);
         return userWriter;
     }
 
     public IonWriter newTextWriter(Appendable out, SymbolTable... imports)
         throws IOException
     {
-        $PrivateTextOptions options = new $PrivateTextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
+        $PrivateTextOptions options =
+            new $PrivateTextOptions(false /* prettyPrint */,
+                                    true /* printAscii */,
+                                    true /* filterOutSymbolTables */);
         IonWriter writer = newTextWriter(out, options, imports);
         return writer;
     }
 
-    public IonWriter newTextWriter(Appendable out, $PrivateTextOptions options, SymbolTable... imports)
+    public IonWriter newTextWriter(Appendable out,
+                                   $PrivateTextOptions options,
+                                   SymbolTable... imports)
         throws IOException
     {
         UnifiedSymbolTable lst = newLocalSymbolTable(imports);
-        IonWriterBaseImpl writer = IonWriterFactory.makeWriter(this, out, options);
+        IonWriterBaseImpl writer = makeWriter(this, out, options);
         writer.setSymbolTable(lst);
         return writer;
     }
 
     public IonWriter newTextWriter(OutputStream out)
     {
-        $PrivateTextOptions options = new $PrivateTextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
+        $PrivateTextOptions options =
+            new $PrivateTextOptions(false /* prettyPrint */,
+                                    true /* printAscii */,
+                                    true /* filterOutSymbolTables */);
         IonWriter userWriter = newTextWriter(out, options);
         return userWriter;
     }
 
-    public IonWriter newTextWriter(OutputStream out, $PrivateTextOptions options)
+    public IonWriter newTextWriter(OutputStream out,
+                                   $PrivateTextOptions options)
     {
-        IonWriter userWriter = new IonWriterUserText(this, myCatalog, out, options);
+        IonWriter userWriter =
+            new IonWriterUserText(this, myCatalog, out, options);
         return userWriter;
     }
 
     public IonWriter newTextWriter(OutputStream out, SymbolTable... imports)
         throws IOException
     {
-        $PrivateTextOptions options = new $PrivateTextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
+        $PrivateTextOptions options =
+            new $PrivateTextOptions(false /* prettyPrint */,
+                                    true /* printAscii */,
+                                    true /* filterOutSymbolTables */);
         IonWriter writer = newTextWriter(out, options, imports);
         return writer;
     }
 
-    public IonWriter newTextWriter(OutputStream out, $PrivateTextOptions options, SymbolTable... imports)
+    public IonWriter newTextWriter(OutputStream out,
+                                   $PrivateTextOptions options,
+                                   SymbolTable... imports)
         throws IOException
     {
         UnifiedSymbolTable lst = newLocalSymbolTable(imports);
-        IonWriterBaseImpl writer = IonWriterFactory.makeWriter(this, out, options);
+        IonWriterBaseImpl writer = makeWriter(this, out, options);
         writer.setSymbolTable(lst);
         return writer;
     }
@@ -600,7 +627,10 @@ public final class IonSystemImpl
     public IonWriter newTextWriter(OutputStream out, boolean pretty)
     {
         // return new IonTextWriter(out, pretty);
-        $PrivateTextOptions options = new $PrivateTextOptions(pretty, true /* printAscii */, true /* filterOutSymbolTables */);
+        $PrivateTextOptions options =
+            new $PrivateTextOptions(pretty,
+                                    true /* printAscii */,
+                                    true /* filterOutSymbolTables */);
         IonWriter userWriter = newTextWriter(out, options);
         return userWriter;
     }
@@ -674,7 +704,8 @@ public final class IonSystemImpl
      *
      * @throws NullPointerException if <code>ionData</code> is null.
      */
-    public SystemValueIterator newLegacySystemReader(IonCatalog catalog, byte[] ionData)
+    public SystemValueIterator newLegacySystemReader(IonCatalog catalog,
+                                                     byte[] ionData)
     {
         if (catalog == null) catalog = getCatalog();
         boolean isBinary = isIonBinary(ionData);
@@ -701,7 +732,8 @@ public final class IonSystemImpl
      *
      * @throws NullPointerException if <code>ionBinary</code> is null.
      */
-    private SystemValueIterator newBinarySystemReader(IonCatalog catalog, byte[] ionBinary)
+    private SystemValueIterator newBinarySystemReader(IonCatalog catalog,
+                                                      byte[] ionBinary)
     {
         if (catalog == null) catalog = getCatalog();
         BlockedBuffer bb = new BlockedBuffer(ionBinary);
@@ -722,7 +754,8 @@ public final class IonSystemImpl
      *
      * @throws NullPointerException if <code>ionText</code> is null.
      */
-    private SystemValueIterator newTextSystemReader(IonCatalog catalog, byte[] ionText)
+    private SystemValueIterator newTextSystemReader(IonCatalog catalog,
+                                                    byte[] ionText)
     {
         if (catalog == null) catalog = getCatalog();
         ByteArrayInputStream stream = new ByteArrayInputStream(ionText);
@@ -734,7 +767,8 @@ public final class IonSystemImpl
     }
 
 
-    public SystemValueIterator newBinarySystemReader(IonCatalog catalog, InputStream ionBinary)
+    public SystemValueIterator newBinarySystemReader(IonCatalog catalog,
+                                                     InputStream ionBinary)
         throws IOException
     {
         if (catalog == null) catalog = getCatalog();
@@ -744,7 +778,8 @@ public final class IonSystemImpl
         return reader;
     }
 
-    public SystemValueIterator newPagedBinarySystemReader(IonCatalog catalog, InputStream ionBinary)
+    public SystemValueIterator newPagedBinarySystemReader(IonCatalog catalog,
+                                                          InputStream ionBinary)
         throws IOException
     {
         if (catalog == null) catalog = getCatalog();
@@ -844,7 +879,8 @@ public final class IonSystemImpl
     }
 
 
-    private boolean isUnderscoreAndDigits(String image, int firstChar, int lastChar)
+    private boolean isUnderscoreAndDigits(String image, int firstChar,
+                                          int lastChar)
     {
         // you have to have enough characters for the underscore and
         // at least 1 digit

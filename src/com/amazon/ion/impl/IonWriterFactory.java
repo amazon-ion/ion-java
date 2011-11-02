@@ -101,8 +101,7 @@ public class IonWriterFactory
                                                _options);
             }
             else {
-                assert("this should never be allowed by the previous checks".length() < 0);
-                writer = null;
+                throw new IllegalStateException();
             }
             break;
         case USER_BINARY:
@@ -120,7 +119,8 @@ public class IonWriterFactory
             IonWriterSystemTree tree_system =
                 new IonWriterSystemTree(systemSymbolTable, _catalog, c);
             writer =
-                new IonWriterUserTree(_system, _catalog, tree_system, !_assure_ivm);
+                new IonWriterUserTree(_system, _catalog, tree_system,
+                                      !_assure_ivm);
             break;
         }
         default:
@@ -438,26 +438,45 @@ public class IonWriterFactory
 
         return writer;
     }
-    public static IonWriterBaseImpl makeWriter(IonSystem system, Appendable output, $PrivateTextOptions options)
+
+    public static IonWriterBaseImpl makeWriter(IonSystem system,
+                                               Appendable output,
+                                               $PrivateTextOptions options)
     {
         IonCatalog catalog = system.getCatalog();
-        IonWriterBaseImpl writer = makeWriter(system, catalog, output, options);
+        IonWriterBaseImpl writer =
+            makeWriter(system, catalog, output, options);
         return writer;
     }
-    public static IonWriterBaseImpl makeWriter(IonSystem system, IonCatalog catalog, Appendable output, $PrivateTextOptions options)
+
+    public static IonWriterBaseImpl makeWriter(IonSystem system,
+                                               IonCatalog catalog,
+                                               Appendable output,
+                                               $PrivateTextOptions options)
     {
-        IonWriterBaseImpl writer = new IonWriterUserText(system, catalog, output, options);
+        IonWriterBaseImpl writer =
+            new IonWriterUserText(system, catalog, output, options);
         return writer;
     }
-    public static IonWriterBaseImpl makeWriter(IonSystem system, OutputStream output, $PrivateTextOptions options)
+
+    public static IonWriterBaseImpl makeWriter(IonSystem system,
+                                               OutputStream output,
+                                               $PrivateTextOptions options)
     {
         IonCatalog catalog = system.getCatalog();
-        IonWriterBaseImpl writer = makeWriter(system, catalog, output, options);
+        IonWriterBaseImpl writer =
+            makeWriter(system, catalog, output, options);
         return writer;
     }
-    public static IonWriterBaseImpl makeWriter(IonSystem system, IonCatalog catalog, OutputStream output, $PrivateTextOptions options)
+
+    public static IonWriterBaseImpl makeWriter(IonSystem system,
+                                               IonCatalog catalog,
+                                               OutputStream output,
+                                               $PrivateTextOptions options,
+                                               SymbolTable... imports)
     {
-        IonWriterBaseImpl writer = new IonWriterUserText(system, catalog, output, options);
+        IonWriterBaseImpl writer =
+            new IonWriterUserText(system, catalog, output, options);
         return writer;
     }
 
