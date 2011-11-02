@@ -323,6 +323,35 @@ public final class UnifiedSymbolTable
      *
      */
 
+    /**
+     * Helper method for APIs that take {@code SymbolTable...} parameters;
+     * returns a minimal symtab, either system or local depending an the
+     * given values. If the imports are empty, the default system symtab is
+     * returned.
+     *
+     * @param imports can be null or empty.
+     *
+     * @return not null.
+     */
+    public static SymbolTable initialSymbolTable(IonSystem system,
+                                                 SymbolTable... imports)
+    {
+        if (imports == null || imports.length == 0)
+        {
+            return system.getSystemSymbolTable();
+        }
+
+        if (imports.length == 1 && imports[0].isSystemTable())
+        {
+            return imports[0];
+        }
+
+        return makeNewLocalSymbolTable(system,
+                                       system.getSystemSymbolTable(),
+                                       imports);
+    }
+
+
     //
     //  system symbol table constructor
     //      we get a version just to remind users there will
@@ -1507,6 +1536,7 @@ public final class UnifiedSymbolTable
     {
         return _import_list.getImportIterator();
     }
+
 
     final class SymbolIterator implements Iterator
     {

@@ -6,6 +6,7 @@ import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
 import static com.amazon.ion.impl.IonWriterFactory.makeWriter;
+import static com.amazon.ion.impl.UnifiedSymbolTable.initialSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewSharedSymbolTable;
@@ -206,8 +207,7 @@ public final class IonSystemLite
     @Deprecated
     public com.amazon.ion.IonBinaryWriter newBinaryWriter(SymbolTable... imports)
     {
-        UnifiedSymbolTable symbols =
-            makeNewLocalSymbolTable(this, this.getSystemSymbolTable(), imports);
+        SymbolTable symbols = initialSymbolTable(this, imports);
         IonWriterBinaryCompatibility.User writer =
             new IonWriterBinaryCompatibility.User(this, _catalog,
                                                   myStreamCopyOptimized);
@@ -243,7 +243,8 @@ public final class IonSystemLite
         return userWriter;
     }
 
-    public IonWriterBaseImpl newTextWriter(Appendable out, $PrivateTextOptions options)
+    public IonWriterBaseImpl newTextWriter(Appendable out,
+                                           $PrivateTextOptions options)
     {
         IonWriterBaseImpl userWriter = makeWriter(this, out, options);
         return userWriter;
@@ -252,12 +253,17 @@ public final class IonSystemLite
     public IonWriter newTextWriter(Appendable out, SymbolTable... imports)
         throws IOException
     {
-        $PrivateTextOptions options = new $PrivateTextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
+        $PrivateTextOptions options =
+            new $PrivateTextOptions(false /* prettyPrint */,
+                                    true /* printAscii */,
+                                    true /* filterOutSymbolTables */);
         IonWriter writer = newTextWriter(out, options, imports);
         return writer;
     }
 
-    public IonWriter newTextWriter(Appendable out, $PrivateTextOptions options, SymbolTable... imports)
+    public IonWriter newTextWriter(Appendable out,
+                                   $PrivateTextOptions options,
+                                   SymbolTable... imports)
         throws IOException
     {
         UnifiedSymbolTable lst = newLocalSymbolTable(imports);
@@ -268,12 +274,16 @@ public final class IonSystemLite
 
     public IonWriter newTextWriter(OutputStream out)
     {
-        $PrivateTextOptions options = new $PrivateTextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
+        $PrivateTextOptions options =
+            new $PrivateTextOptions(false /* prettyPrint */,
+                                    true /* printAscii */,
+                                    true /* filterOutSymbolTables */);
         IonWriter userWriter = newTextWriter(out, options);
         return userWriter;
     }
 
-    public IonWriterBaseImpl newTextWriter(OutputStream out, $PrivateTextOptions options)
+    public IonWriterBaseImpl newTextWriter(OutputStream out,
+                                           $PrivateTextOptions options)
     {
         IonWriterBaseImpl userWriter = makeWriter(this, out, options);
         return userWriter;
@@ -282,12 +292,17 @@ public final class IonSystemLite
     public IonWriter newTextWriter(OutputStream out, SymbolTable... imports)
         throws IOException
     {
-        $PrivateTextOptions options = new $PrivateTextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
+        $PrivateTextOptions options =
+            new $PrivateTextOptions(false /* prettyPrint */,
+                                    true /* printAscii */,
+                                    true /* filterOutSymbolTables */);
         IonWriter writer = newTextWriter(out, options, imports);
         return writer;
     }
 
-    public IonWriter newTextWriter(OutputStream out, $PrivateTextOptions options, SymbolTable... imports)
+    public IonWriter newTextWriter(OutputStream out,
+                                   $PrivateTextOptions options,
+                                   SymbolTable... imports)
         throws IOException
     {
         UnifiedSymbolTable lst = newLocalSymbolTable(imports);
@@ -315,7 +330,8 @@ public final class IonSystemLite
         return st;
     }
 
-    public UnifiedSymbolTable newSharedSymbolTable(IonReader reader, boolean isOnStruct)
+    public UnifiedSymbolTable newSharedSymbolTable(IonReader reader,
+                                                   boolean isOnStruct)
     {
         UnifiedSymbolTable st = makeNewSharedSymbolTable(reader, isOnStruct);
         return st;
@@ -928,8 +944,7 @@ public final class IonSystemLite
 
     public IonDatagram newDatagram(IonCatalog catalog, SymbolTable... imports)
     {
-        UnifiedSymbolTable symbols =
-            makeNewLocalSymbolTable(this, this.getSystemSymbolTable(), imports);
+        SymbolTable symbols = initialSymbolTable(this, imports);
         IonDatagramLite dg = newDatagram(catalog);
         dg.setSymbolTable(symbols);
         return dg;

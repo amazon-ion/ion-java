@@ -2,8 +2,8 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.UnifiedSymbolTable.initialSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
-import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonContainer;
@@ -403,17 +403,17 @@ public class IonWriterFactory
         return writer;
     }
 
+
     public static IonWriterUserBinary newBinaryWriter(IonSystem system,
                                                       IonCatalog catalog,
                                                       boolean streamCopyOptimized,
                                                       OutputStream output,
                                                       SymbolTable... imports)
     {
-        UnifiedSymbolTable symbols =
-            makeNewLocalSymbolTable(system, system.getSystemSymbolTable(), imports);
+        SymbolTable initialSymtab = initialSymbolTable(system, imports);
 
         // The imports may override the system's default.
-        SymbolTable initialSystemSymtab = symbols.getSystemSymbolTable();
+        SymbolTable initialSystemSymtab = initialSymtab.getSystemSymbolTable();
 
         IonWriterSystemBinary system_writer =
             new IonWriterSystemBinary(initialSystemSymtab,
@@ -424,11 +424,12 @@ public class IonWriterFactory
             new IonWriterUserBinary(system, catalog, system_writer,
                                     /* suppressIVM */ true,      // TODO ??? diff above
                                     streamCopyOptimized);
-        // TODO streamline
-        if (UnifiedSymbolTable.isLocalAndNonTrivial(symbols))
+
+        if (initialSymtab.isLocalTable())
         {
+            // We must have had some "real" imports
             try {
-                writer.setSymbolTable(symbols);
+                writer.setSymbolTable(initialSymtab);
             }
             catch (IOException e) {
                 throw new IonException(e);
