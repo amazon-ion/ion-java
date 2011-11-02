@@ -424,11 +424,15 @@ public class IonWriterFactory
             new IonWriterUserBinary(system, catalog, system_writer,
                                     /* suppressIVM */ true,      // TODO ??? diff above
                                     streamCopyOptimized);
-        try {
-            writer.setSymbolTable(symbols);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
+        // TODO streamline
+        if (UnifiedSymbolTable.isLocalAndNonTrivial(symbols))
+        {
+            try {
+                writer.setSymbolTable(symbols);
+            }
+            catch (IOException e) {
+                throw new IonException(e);
+            }
         }
 
         return writer;

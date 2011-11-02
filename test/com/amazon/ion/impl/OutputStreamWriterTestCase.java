@@ -2,7 +2,7 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonValue;
+import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
@@ -10,7 +10,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Iterator;
 import org.junit.Test;
 
 /**
@@ -114,6 +113,7 @@ public abstract class OutputStreamWriterTestCase
         throws Exception
     {
         iw = makeWriter();
+        iw.writeSymbol("force a local symtab"); // TODO ION-165
         SymbolTable symtab = iw.getSymbolTable();
         symtab.addSymbol("fred_1");
         symtab.addSymbol("fred_2");
@@ -126,21 +126,27 @@ public abstract class OutputStreamWriterTestCase
     {
         SymbolTable fred1 = Symtabs.register("fred",   1, catalog());
         iw = makeWriter(fred1);
+        iw.writeSymbol("force a local symtab"); // TODO ION-165
         testFlushing();
     }
 
     private void testFlushing()
         throws IOException
     {
+        IonDatagram expected = system().newDatagram();
+        expected.add().newSymbol("force a local symtab");
+
         PrivateDmsdkUtils.lockLocalSymbolTable(iw.getSymbolTable());
 
         iw.writeSymbol("fred_1");
+        expected.add().newSymbol("fred_1");
+
         iw.flush();
         myOutputStreamWrapper.assertWasFlushed();
         myOutputStreamWrapper.flushed = false;
 
         byte[] bytes = myOutputStream.toByteArray();
-        checkSymbol("fred_1", system().singleValue(bytes));
+        assertEquals(expected, loader().load(bytes));
 
         // Try flushing when there's just a pending annotation.
         iw.addTypeAnnotation("fred_1");
@@ -149,21 +155,16 @@ public abstract class OutputStreamWriterTestCase
         myOutputStreamWrapper.flushed = false;
 
         bytes = myOutputStream.toByteArray();
-        checkSymbol("fred_1", system().singleValue(bytes));
+        assertEquals(expected, loader().load(bytes));
 
         iw.writeSymbol("fred_2");
+        expected.add().newSymbol("fred_2").addTypeAnnotation("fred_1");
+
         iw.flush();
         myOutputStreamWrapper.assertWasFlushed();
         myOutputStreamWrapper.flushed = false;
 
         bytes = myOutputStream.toByteArray();
-        Iterator<IonValue> values = system().iterate(bytes);
-        checkSymbol("fred_1", values.next());
-
-        IonValue v = values.next();
-        checkSymbol("fred_2", v);
-        checkAnnotation("fred_1", v);
-
-        assertFalse(values.hasNext());
+        assertEquals(expected, loader().load(bytes));
     }
 }
