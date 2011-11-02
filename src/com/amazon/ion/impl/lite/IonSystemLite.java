@@ -5,6 +5,7 @@ package com.amazon.ion.impl.lite;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
+import static com.amazon.ion.impl.IonWriterFactory.DEFAULT_OPTIONS;
 import static com.amazon.ion.impl.IonWriterFactory.makeWriter;
 import static com.amazon.ion.impl.UnifiedSymbolTable.initialSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
@@ -231,14 +232,15 @@ public final class IonSystemLite
 
     public IonWriter newTextWriter(Appendable out)
     {
-        $PrivateTextOptions options = new $PrivateTextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
-        IonWriter userWriter = newTextWriter(out, options);
-        return userWriter;
+        return makeWriter(this, _catalog, out, DEFAULT_OPTIONS);
     }
 
     public IonWriter newTextWriter(Appendable out, boolean pretty)
     {
-        $PrivateTextOptions options = new $PrivateTextOptions(pretty /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
+        $PrivateTextOptions options =
+            new $PrivateTextOptions(pretty /* prettyPrint */,
+                                    true /* printAscii */,
+                                    true /* filterOutSymbolTables */);
         IonWriter userWriter = newTextWriter(out, options);
         return userWriter;
     }
@@ -253,12 +255,7 @@ public final class IonSystemLite
     public IonWriter newTextWriter(Appendable out, SymbolTable... imports)
         throws IOException
     {
-        $PrivateTextOptions options =
-            new $PrivateTextOptions(false /* prettyPrint */,
-                                    true /* printAscii */,
-                                    true /* filterOutSymbolTables */);
-        IonWriter writer = newTextWriter(out, options, imports);
-        return writer;
+        return makeWriter(this, _catalog, out, DEFAULT_OPTIONS, imports);
     }
 
     public IonWriter newTextWriter(Appendable out,
@@ -266,38 +263,24 @@ public final class IonSystemLite
                                    SymbolTable... imports)
         throws IOException
     {
-        UnifiedSymbolTable lst = newLocalSymbolTable(imports);
-        IonWriterBaseImpl writer = newTextWriter(out, options);
-        writer.setSymbolTable(lst);
-        return writer;
+        return makeWriter(this, _catalog, out, options, imports);
     }
 
     public IonWriter newTextWriter(OutputStream out)
     {
-        $PrivateTextOptions options =
-            new $PrivateTextOptions(false /* prettyPrint */,
-                                    true /* printAscii */,
-                                    true /* filterOutSymbolTables */);
-        IonWriter userWriter = newTextWriter(out, options);
-        return userWriter;
+        return makeWriter(this, _catalog, out, DEFAULT_OPTIONS);
     }
 
     public IonWriterBaseImpl newTextWriter(OutputStream out,
                                            $PrivateTextOptions options)
     {
-        IonWriterBaseImpl userWriter = makeWriter(this, out, options);
-        return userWriter;
+        return makeWriter(this, out, options);
     }
 
     public IonWriter newTextWriter(OutputStream out, SymbolTable... imports)
         throws IOException
     {
-        $PrivateTextOptions options =
-            new $PrivateTextOptions(false /* prettyPrint */,
-                                    true /* printAscii */,
-                                    true /* filterOutSymbolTables */);
-        IonWriter writer = newTextWriter(out, options, imports);
-        return writer;
+        return makeWriter(this, _catalog, out, DEFAULT_OPTIONS, imports);
     }
 
     public IonWriter newTextWriter(OutputStream out,
@@ -305,10 +288,7 @@ public final class IonSystemLite
                                    SymbolTable... imports)
         throws IOException
     {
-        UnifiedSymbolTable lst = newLocalSymbolTable(imports);
-        IonWriterBaseImpl writer = newTextWriter(out, options);
-        writer.setSymbolTable(lst);
-        return writer;
+        return makeWriter(this, _catalog, out, options, imports);
     }
 
     public UnifiedSymbolTable newLocalSymbolTable(SymbolTable... imports)

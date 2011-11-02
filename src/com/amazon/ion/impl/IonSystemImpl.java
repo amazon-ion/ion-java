@@ -9,6 +9,7 @@ import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.IonImplUtils.UTF8_CHARSET;
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
+import static com.amazon.ion.impl.IonWriterFactory.DEFAULT_OPTIONS;
 import static com.amazon.ion.impl.IonWriterFactory.makeWriter;
 import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemReader;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
@@ -534,12 +535,7 @@ public final class IonSystemImpl
 
     public IonWriter newTextWriter(Appendable out)
     {
-        $PrivateTextOptions options =
-            new $PrivateTextOptions(false /* prettyPrint */,
-                                    true /* printAscii */,
-                                    true /* filterOutSymbolTables */);
-        IonWriter userWriter = newTextWriter(out, options);
-        return userWriter;
+        return makeWriter(this, myCatalog, out, DEFAULT_OPTIONS);
     }
 
     public IonWriter newTextWriter(Appendable out, boolean pretty)
@@ -548,76 +544,47 @@ public final class IonSystemImpl
             new $PrivateTextOptions(pretty /* prettyPrint */,
                                     true /* printAscii */,
                                     true /* filterOutSymbolTables */);
-        IonWriter userWriter = newTextWriter(out, options);
-        return userWriter;
+        return makeWriter(this, myCatalog, out, options);
     }
 
     public IonWriter newTextWriter(Appendable out, $PrivateTextOptions options)
     {
-        IonWriter userWriter = makeWriter(this, out, options);
-        return userWriter;
+        return makeWriter(this, myCatalog, out, options);
     }
 
     public IonWriter newTextWriter(Appendable out, SymbolTable... imports)
-        throws IOException
     {
-        $PrivateTextOptions options =
-            new $PrivateTextOptions(false /* prettyPrint */,
-                                    true /* printAscii */,
-                                    true /* filterOutSymbolTables */);
-        IonWriter writer = newTextWriter(out, options, imports);
-        return writer;
+        return makeWriter(this, myCatalog, out, DEFAULT_OPTIONS, imports);
     }
 
     public IonWriter newTextWriter(Appendable out,
                                    $PrivateTextOptions options,
                                    SymbolTable... imports)
-        throws IOException
     {
-        UnifiedSymbolTable lst = newLocalSymbolTable(imports);
-        IonWriterBaseImpl writer = makeWriter(this, out, options);
-        writer.setSymbolTable(lst);
-        return writer;
+        return makeWriter(this, myCatalog, out, options, imports);
     }
 
     public IonWriter newTextWriter(OutputStream out)
     {
-        $PrivateTextOptions options =
-            new $PrivateTextOptions(false /* prettyPrint */,
-                                    true /* printAscii */,
-                                    true /* filterOutSymbolTables */);
-        IonWriter userWriter = newTextWriter(out, options);
-        return userWriter;
+        return makeWriter(this, myCatalog, out, DEFAULT_OPTIONS);
     }
 
     public IonWriter newTextWriter(OutputStream out,
                                    $PrivateTextOptions options)
     {
-        IonWriter userWriter =
-            new IonWriterUserText(this, myCatalog, out, options);
-        return userWriter;
+        return makeWriter(this, myCatalog, out, options);
     }
 
     public IonWriter newTextWriter(OutputStream out, SymbolTable... imports)
-        throws IOException
     {
-        $PrivateTextOptions options =
-            new $PrivateTextOptions(false /* prettyPrint */,
-                                    true /* printAscii */,
-                                    true /* filterOutSymbolTables */);
-        IonWriter writer = newTextWriter(out, options, imports);
-        return writer;
+        return makeWriter(this, myCatalog, out, DEFAULT_OPTIONS, imports);
     }
 
     public IonWriter newTextWriter(OutputStream out,
                                    $PrivateTextOptions options,
                                    SymbolTable... imports)
-        throws IOException
     {
-        UnifiedSymbolTable lst = newLocalSymbolTable(imports);
-        IonWriterBaseImpl writer = makeWriter(this, out, options);
-        writer.setSymbolTable(lst);
-        return writer;
+        return makeWriter(this, myCatalog, out, options, imports);
     }
 
 

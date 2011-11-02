@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.UnifiedSymbolTable.initialSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
+import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonContainer;
@@ -424,59 +425,85 @@ public class IonWriterFactory
             new IonWriterUserBinary(system, catalog, system_writer,
                                     /* suppressIVM */ true,      // TODO ??? diff above
                                     streamCopyOptimized);
-
-        if (initialSymtab.isLocalTable())
-        {
-            // We must have had some "real" imports
-            try {
-                writer.setSymbolTable(initialSymtab);
-            }
-            catch (IOException e) {
-                throw new IonException(e);
-            }
-        }
-
+        setSymbolTableIfLocal(writer, initialSymtab);
         return writer;
     }
 
+    public static final $PrivateTextOptions DEFAULT_OPTIONS = null;
+
+    /**
+     * Doesn't write a local symtab.
+     */
     public static IonWriterBaseImpl makeWriter(IonSystem system,
                                                Appendable output,
                                                $PrivateTextOptions options)
     {
-        IonCatalog catalog = system.getCatalog();
-        IonWriterBaseImpl writer =
-            makeWriter(system, catalog, output, options);
-        return writer;
+        return makeWriter(system, null, output, options);
     }
 
+    /**
+     * Doesn't write a local symtab.
+     */
     public static IonWriterBaseImpl makeWriter(IonSystem system,
                                                IonCatalog catalog,
                                                Appendable output,
-                                               $PrivateTextOptions options)
+                                               $PrivateTextOptions options,
+                                               SymbolTable... imports)
     {
+        if (catalog == null) catalog = system.getCatalog();
+
+        if (options == null)
+        {
+            options = new $PrivateTextOptions(false /* prettyPrint */,
+                                              true /* printAscii */,
+                                              true /* filterOutSymbolTables */);
+        }
+
+        // TODO should only create Local table if required.
+        SymbolTable lst = //initialSymbolTable(system, imports);
+            makeNewLocalSymbolTable(system, system.getSystemSymbolTable(), imports);
         IonWriterBaseImpl writer =
             new IonWriterUserText(system, catalog, output, options);
+        // TODO should only do this if its local
+        setSymbolTable(writer, lst);
         return writer;
     }
 
+    /**
+     * Doesn't write a local symtab.
+     */
     public static IonWriterBaseImpl makeWriter(IonSystem system,
                                                OutputStream output,
                                                $PrivateTextOptions options)
     {
-        IonCatalog catalog = system.getCatalog();
-        IonWriterBaseImpl writer =
-            makeWriter(system, catalog, output, options);
-        return writer;
+        return makeWriter(system, null, output, options);
     }
 
+    /**
+     * Writes a local symtab only if there's a real import.
+     */
     public static IonWriterBaseImpl makeWriter(IonSystem system,
                                                IonCatalog catalog,
                                                OutputStream output,
                                                $PrivateTextOptions options,
                                                SymbolTable... imports)
     {
+        if (catalog == null) catalog = system.getCatalog();
+
+        if (options == null)
+        {
+            options = new $PrivateTextOptions(false /* prettyPrint */,
+                                              true /* printAscii */,
+                                              true /* filterOutSymbolTables */);
+        }
+
+        // TODO should only create Local table if required.
+        SymbolTable lst = //initialSymbolTable(system, imports);
+            makeNewLocalSymbolTable(system, system.getSystemSymbolTable(), imports);
         IonWriterBaseImpl writer =
             new IonWriterUserText(system, catalog, output, options);
+        // TODO should only do this if its local
+        setSymbolTable(writer, lst);
         return writer;
     }
 
@@ -519,5 +546,26 @@ public class IonWriterFactory
         IonWriter writer =
             new IonWriterSystemText(initialSystemSymtab, output, options);
         return writer;
+    }
+
+    private static void setSymbolTable(IonWriterBaseImpl writer,
+                                       SymbolTable symtab)
+    {
+        try {
+            writer.setSymbolTable(symtab);
+        }
+        catch (IOException e) {
+            throw new IonException(e);
+        }
+    }
+
+    private static void setSymbolTableIfLocal(IonWriterBaseImpl writer,
+                                              SymbolTable symtab)
+    {
+        if (symtab.isLocalTable())
+        {
+            // We must have had some "real" imports
+            setSymbolTable(writer, symtab);
+        }
     }
 }
