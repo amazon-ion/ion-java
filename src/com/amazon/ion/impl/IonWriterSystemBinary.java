@@ -42,7 +42,8 @@ public class IonWriterSystemBinary
      */
     private final boolean _auto_flush;
 
-    boolean           _assure_ivm;        // forces IVM in the event the caller forgets to write an IVM or IVM symbol
+    /** Forces IVM in the event the caller forgets to write an IVM. */
+    boolean           _assure_ivm;
 //    boolean           _any_values_written;
 
     boolean           _in_struct;

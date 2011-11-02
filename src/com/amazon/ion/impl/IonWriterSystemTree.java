@@ -19,6 +19,7 @@ import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.ValueFactory;
 import java.io.IOException;
@@ -38,6 +39,13 @@ final class IonWriterSystemTree
 
     /** Used to construct new local symtabs. May be null */
     private final IonCatalog    _catalog;
+
+    /**
+     * Set by {@link #finish()} to force writing of $ion_1_0 before any further
+     * data.
+     */
+    private boolean _finished_and_requiring_version_marker;
+
     private boolean             _in_struct;
 
     /**
@@ -135,6 +143,19 @@ final class IonWriterSystemTree
 
     private void append(IonValue value)
     {
+        if (_finished_and_requiring_version_marker)
+        {
+            assert getDepth() == 0;
+
+            // TODO if caller is writing an IVM this will output an extra one.
+
+            // Clear the flag first, since writeSymbol will call back here.
+            _finished_and_requiring_version_marker = false;
+
+            // This MUST always be $ion_1_0
+            writeSymbol(SystemSymbols.ION_1_0_SID);
+        }
+
         if (hasAnnotations()) {
             String[] annotations = this.getTypeAnnotations();
             value.setTypeAnnotations(annotations);
@@ -266,7 +287,6 @@ final class IonWriterSystemTree
     }
 
     public void writeSymbol(int symbolId)
-        throws IOException
     {
         String name = getSymbolTable().findKnownSymbol(symbolId);
         if (name == null) {
@@ -276,7 +296,6 @@ final class IonWriterSystemTree
     }
 
     public void writeSymbol(String value)
-        throws IOException
     {
         IonSymbol v = _factory.newSymbol(value);
         append(v);
@@ -299,6 +318,14 @@ final class IonWriterSystemTree
     public void flush()
     {
         // flush is not meaningful for a tree writer
+    }
+
+    @Override
+    public void finish()
+        throws IOException
+    {
+        super.finish();
+        _finished_and_requiring_version_marker = true;
     }
 
     public void close()

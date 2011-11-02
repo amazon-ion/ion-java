@@ -27,10 +27,12 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.TestUtils;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Arrays;
+import java.util.Iterator;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -621,7 +623,7 @@ public abstract class IonWriterTestCase
         assertEquals(4, dg.systemSize());
     }
 
-    @Test @Ignore
+    @Test
     public void testFinishDoesReset()
     throws Exception
     {
@@ -629,12 +631,26 @@ public abstract class IonWriterTestCase
         iw = makeWriter(fred1);
         iw.writeSymbol("hey");
         iw.finish();
-        iw.writeSymbol("now");
+        iw.writeNull();
         iw.close();
 
-        // Should have: IMV SYMTAB hey IMV SYMTAB? now
-        IonDatagram dg = reload();
-        assertTrue("not enough system values", 5 <= dg.systemSize());
+        // Should have: IMV SYMTAB hey IMV null
+
+        // TODO ION-165 Hack to work around the lazy DOM munging system values
+        IonSystemPrivate lazySystem = new IonSystemImpl(catalog(), false);
+
+        byte[] data = outputByteArray();
+        Iterator<IonValue> it =
+            lazySystem.systemIterate(new ByteArrayInputStream(data));
+        IonSymbol ivm = (IonSymbol) it.next();
+        checkSymbol(SystemSymbols.ION_1_0, ivm);
+
+        IonStruct symtab = (IonStruct) it.next();
+        checkAnnotation(SystemSymbols.ION_SYMBOL_TABLE, symtab);
+        checkSymbol("hey", it.next());
+        checkSymbol(SystemSymbols.ION_1_0, it.next());
+        checkNullNull(it.next());
+        assertFalse("expected EOF", it.hasNext());
     }
 
     @Test(expected = IllegalStateException.class)

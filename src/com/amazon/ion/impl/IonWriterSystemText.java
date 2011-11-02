@@ -11,6 +11,7 @@ import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.Base64Encoder.TextStream;
 import com.amazon.ion.impl.IonBinary.BufferManager;
@@ -42,6 +43,13 @@ class IonWriterSystemText
     private boolean _closed;
     boolean     _in_struct;
     boolean     _pending_separator;
+
+    /**
+     * Set by {@link #finish()} to force writing of $ion_1_0 before any further
+     * data.
+     */
+    private boolean _finished_and_requiring_version_marker;
+
     int         _separator_character;
 
     int         _top;
@@ -299,6 +307,19 @@ class IonWriterSystemText
 
     void startValue() throws IOException
     {
+        if (_finished_and_requiring_version_marker)
+        {
+            assert getDepth() == 0;
+
+            // TODO if caller is writing an IVM this will output an extra one.
+
+            // Clear the flag first, since writeSymbol will call back here.
+            _finished_and_requiring_version_marker = false;
+
+            // This MUST always be $ion_1_0
+            writeSymbol(SystemSymbols.ION_1_0_SID);
+        }
+
         if (_options.isPrettyPrintOn()) {
             if (_pending_separator && _separator_character != '\n') {
                 _output.append((char)_separator_character);
@@ -847,6 +868,13 @@ class IonWriterSystemText
                 ((Flushable)_output).flush();
             }
         }
+    }
+
+    @Override
+    public void finish() throws IOException
+    {
+        super.finish();
+        _finished_and_requiring_version_marker = true;
     }
 
     public void close() throws IOException
