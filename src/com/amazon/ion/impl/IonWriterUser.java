@@ -509,7 +509,7 @@ abstract class IonWriterUser
         if (ION_1_0.equals(value) && write_as_ivm(ION_1_0_SID))
         {
             // TODO this swallows duplicate IVMs.  May not always be desired.
-            if (! previousValueWasIvm()) {
+            if (!MODIFIED_IVM_HANDLING && ! previousValueWasIvm()) { // XXX
                 writeIonVersionMarker();
                 // calls finish_value() for us
             }
@@ -554,8 +554,10 @@ abstract class IonWriterUser
         }
         assert(_current_writer == _system_writer);
 
-        _current_writer.writeIonVersionMarker();
-        _previous_value_was_ivm = true;
+        if (!MODIFIED_IVM_HANDLING) {
+            _current_writer.writeIonVersionMarker();
+            _previous_value_was_ivm = true;
+        }
 
         // TODO must ensure this is the right symtab for the IVM above
         setSymbolTable(activeSystemSymbolTable());

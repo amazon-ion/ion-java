@@ -44,6 +44,8 @@ class IonWriterUserTree
                                         SymbolTable new_symbols)
         throws IOException
     {
+        // TODO assert _root_is_datagram
+
         // we do nothing here, the symbol tables will get picked up as
         // tree writer picks up symbol tables on the values as they
         // are appended to the parent value
@@ -60,6 +62,16 @@ class IonWriterUserTree
             assert(root instanceof IonValuePrivate);
             assert(root instanceof IonDatagram);
             ((IonValuePrivate)root).setSymbolTable(new_symbols);
+
+            // TODO Other user writers do this, but currently the tree writer
+            // uses a different hack to get this to happen.
+            if (MODIFIED_IVM_HANDLING && new_symbols.isSystemTable())
+            {
+                // FIXME this doesn't work in Lite DOM
+                // It adds the IVM as a user value.
+                _system_writer.writeIonVersionMarker();
+                _previous_value_was_ivm = true;
+            }
         }
     }
 }

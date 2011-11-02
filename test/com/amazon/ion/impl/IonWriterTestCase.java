@@ -782,4 +782,20 @@ public abstract class IonWriterTestCase
         assertEquals(systemMaxId() + Symtabs.FRED_MAX_IDS[1] + 1,
                      s.getSymbolId());
     }
+
+    @Test
+    public void testLocalSymtabResetting()
+        throws Exception
+    {
+        iw = makeWriter();
+        iw.writeSymbol("foo");
+        iw.writeSymbol(SystemSymbols.ION_1_0);
+        iw.writeInt(1);
+
+        IonDatagram dg = reload();
+        assertEquals(2, dg.size());
+        assertNotSame("symbol table instance",
+                      dg.get(0).getSymbolTable(),
+                      dg.get(1).getSymbolTable());
+    }
 }

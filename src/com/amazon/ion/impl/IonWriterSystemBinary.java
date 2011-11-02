@@ -727,6 +727,8 @@ public class IonWriterSystemBinary
         _writer.write(IonConstants.BINARY_VERSION_MARKER_1_0);
 //        _any_values_written = true;
         _assure_ivm = false;  // we've done our job, we can turn this off now
+
+        // TODO now our symbol table is out of date
     }
 
     public void writeTimestamp(Timestamp value) throws IOException

@@ -62,7 +62,7 @@ public class IonWriterUserBinary
             // TODO: this will suppress multiple attempts to write
             //       a system symbol table - do we want that?  (usually
             //       we do, but always?)
-            if (_previous_value_was_ivm) {
+            if (!MODIFIED_IVM_HANDLING && _previous_value_was_ivm) { // XXX
                 return;
             }
             // writing to the system writer keeps us from
