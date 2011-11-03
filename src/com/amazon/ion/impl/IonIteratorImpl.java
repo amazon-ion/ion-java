@@ -11,6 +11,7 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.ValueFactory;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -18,7 +19,7 @@ import java.util.NoSuchElementException;
 public class IonIteratorImpl
     implements Iterator<IonValue>
 {
-    private final IonSystemImpl _system;
+    private final ValueFactory _valueFactory;
 
     private IonReader    _reader;
     private SymbolTable  _current_symbols;
@@ -32,21 +33,16 @@ public class IonIteratorImpl
     /**
      * @throws NullPointerException if any parameter is null.
      */
-    public IonIteratorImpl(IonSystemImpl system,
+    public IonIteratorImpl(ValueFactory valueFactory,
                            IonReader input)
     {
-        if (system == null || input == null)
+        if (valueFactory == null || input == null)
         {
             throw new NullPointerException();
         }
 
-        _system = system;
+        _valueFactory = valueFactory;
         _reader = input;
-    }
-
-
-    public IonSystemImpl getSystem() {
-        return _system;
     }
 
 
@@ -114,7 +110,7 @@ public class IonIteratorImpl
 
         if (_reader.isNullValue())
         {
-            v = _system.newNull(type);
+            v = _valueFactory.newNull(type);
         }
         else
         {
@@ -123,45 +119,45 @@ public class IonIteratorImpl
                     // Handled above
                     throw new IllegalStateException();
                 case BOOL:
-                    v = _system.newBool(_reader.booleanValue());
+                    v = _valueFactory.newBool(_reader.booleanValue());
                     break;
                 case INT:
                     // FIXME should use bigInteger
-                    v = _system.newInt(_reader.longValue());
+                    v = _valueFactory.newInt(_reader.longValue());
                     break;
                 case FLOAT:
-                    v = _system.newFloat(_reader.doubleValue());
+                    v = _valueFactory.newFloat(_reader.doubleValue());
                     break;
                 case DECIMAL:
-                    v = _system.newDecimal(_reader.decimalValue());
+                    v = _valueFactory.newDecimal(_reader.decimalValue());
                     break;
                 case TIMESTAMP:
-                    v = _system.newTimestamp(_reader.timestampValue());
+                    v = _valueFactory.newTimestamp(_reader.timestampValue());
                     break;
                 case STRING:
-                    v = _system.newString(_reader.stringValue());
+                    v = _valueFactory.newString(_reader.stringValue());
                     break;
                 case SYMBOL:
                     // FIXME handle case where only SID is known
-                    v = _system.newSymbol(_reader.stringValue());
+                    v = _valueFactory.newSymbol(_reader.stringValue());
                     break;
                 case BLOB:
                 {
-                    IonLob lob = _system.newNullBlob();
+                    IonLob lob = _valueFactory.newNullBlob();
                     lob.setBytes(reader.newBytes());
                     v = lob;
                     break;
                 }
                 case CLOB:
                 {
-                    IonLob lob = _system.newNullClob();
+                    IonLob lob = _valueFactory.newNullClob();
                     lob.setBytes(reader.newBytes());
                     v = lob;
                     break;
                 }
                 case STRUCT:
                 {
-                    IonStruct struct = _system.newEmptyStruct();
+                    IonStruct struct = _valueFactory.newEmptyStruct();
                     _reader.stepIn();
                     while (_reader.hasNext())
                     {
@@ -176,7 +172,7 @@ public class IonIteratorImpl
                 }
                 case LIST:
                 {
-                    IonSequence seq = _system.newEmptyList();
+                    IonSequence seq = _valueFactory.newEmptyList();
                     _reader.stepIn();
                     while (_reader.hasNext())
                     {
@@ -190,7 +186,7 @@ public class IonIteratorImpl
                 }
                 case SEXP:
                 {
-                    IonSequence seq = _system.newEmptySexp();
+                    IonSequence seq = _valueFactory.newEmptySexp();
                     _reader.stepIn();
                     while (_reader.hasNext())
                     {
