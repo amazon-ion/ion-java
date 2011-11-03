@@ -119,4 +119,26 @@ public class ValueWriterTest
         assertEquals(systemMaxId() + Symtabs.FRED_MAX_IDS[1] + 1,
                      s.getSymbolId());
     }
+
+
+
+    @Override @Test
+    public void testWriteIVMImplicitly()
+        throws Exception
+    {
+        super.testWriteIVMImplicitly();
+
+        // TODO ION-261
+        // assertEquals(2, myDatagram.size());
+    }
+
+
+    @Override @Test
+    public void testWriteIVMExplicitly()
+        throws Exception
+    {
+        super.testWriteIVMExplicitly();
+        // TODO ION-261
+        //assertEquals(2, myDatagram.size());
+    }
 }

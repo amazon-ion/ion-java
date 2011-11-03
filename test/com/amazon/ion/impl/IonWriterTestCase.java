@@ -784,7 +784,7 @@ public abstract class IonWriterTestCase
     }
 
     @Test
-    public void testLocalSymtabResetting()
+    public void testWriteIVMImplicitly()
         throws Exception
     {
         iw = makeWriter();
@@ -797,5 +797,18 @@ public abstract class IonWriterTestCase
         assertNotSame("symbol table instance",
                       dg.get(0).getSymbolTable(),
                       dg.get(1).getSymbolTable());
+    }
+
+    @Test
+    public void testWriteIVMExplicitly()
+        throws Exception
+    {
+        iw = makeWriter();
+        iw.writeSymbol("foo");
+        ((IonWriterBaseImpl)iw).writeIonVersionMarker();
+        iw.writeInt(1);
+
+        IonDatagram dg = reload();
+        assertEquals(2, dg.size());
     }
 }

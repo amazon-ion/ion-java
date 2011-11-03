@@ -654,4 +654,14 @@ public class DatagramTest
         IonDatagram dg = system().newDatagram();
         ((IonValuePrivate)dg).getAssignedSymbolTable();
     }
+
+    @Test
+    public void testAddingIVM()
+    {
+        IonDatagram dg = system().newDatagram();
+        IonSymbol ivm = system().newSymbol(SystemSymbols.ION_1_0);
+        dg.add(ivm);
+        // TODO ION-261
+        // assertEquals(0, dg.size());
+    }
 }
