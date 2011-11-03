@@ -125,27 +125,15 @@ public abstract class IonValueImpl
 
     private final boolean is_true(int flag_bit)
     {
-        // FIXME: removed, dead code for debugging
-        if (flag_bit == IS_BOOL_TRUE) {
-            flag_bit = IS_BOOL_TRUE;
-        }
         return ((_flags & flag_bit) != 0);
     }
     private final void set_flag(int flag_bit)
     {
-        // FIXME: removed, dead code for debugging
-        if (flag_bit == IS_BOOL_TRUE) {
-            flag_bit = IS_BOOL_TRUE;
-        }
         assert(flag_bit != 0);
         _flags |= flag_bit;
     }
     private final void clear_flag(int flag_bit)
     {
-        // FIXME: removed, dead code for debugging
-        if (flag_bit == IS_BOOL_TRUE) {
-            flag_bit = IS_BOOL_TRUE;
-        }
         assert(flag_bit != 0);
         _flags &= ~flag_bit;
     }
