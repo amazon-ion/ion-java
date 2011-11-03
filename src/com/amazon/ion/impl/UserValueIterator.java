@@ -1,7 +1,7 @@
 // Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemReader;
+import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemIterator;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonValue;
@@ -43,10 +43,10 @@ public class UserValueIterator
                              SymbolTable initialSymbolTable,
                              Reader input)
     {
-        this(makeSystemReader(system,
-                              system.getCatalog(),
-                              initialSymbolTable,
-                              input));
+        this(makeSystemIterator(system,
+                                system.getCatalog(),
+                                initialSymbolTable,
+                                input));
     }
 
     public UserValueIterator(SystemValueIterator systemReader)

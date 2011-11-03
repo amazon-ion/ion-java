@@ -2,7 +2,6 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
@@ -76,13 +75,6 @@ public interface IonSystemPrivate
 
     public IonWriter newTreeSystemWriter(IonContainer container);
 
-    public SystemValueIterator newLegacySystemReader(IonCatalog catalog, byte[] ionData);
-
-    public SystemValueIterator newBinarySystemReader(IonCatalog catalog, InputStream ionBinary)
-        throws IOException;
-
-    public SystemValueIterator newPagedBinarySystemReader(IonCatalog catalog, InputStream ionBinary)
-        throws IOException;
 
     public boolean valueIsSharedSymbolTable(IonValue value);
 

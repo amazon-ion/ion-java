@@ -11,7 +11,7 @@ import static com.amazon.ion.impl.IonImplUtils.UTF8_CHARSET;
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
 import static com.amazon.ion.impl.IonWriterFactory.DEFAULT_OPTIONS;
 import static com.amazon.ion.impl.IonWriterFactory.makeWriter;
-import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemReader;
+import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemIterator;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewSharedSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.newSystemSymbolTable;
@@ -271,10 +271,10 @@ public final class IonSystemImpl
     protected SystemValueIterator systemIterate(Reader reader)
     {
         SystemValueIterator sysreader =
-            makeSystemReader(this,
-                             getCatalog(),
-                             newLocalSymbolTable(),  // FIXME: should be null
-                             reader);
+            makeSystemIterator(this,
+                               getCatalog(),
+                               newLocalSymbolTable(),  // FIXME: should be null
+                               reader);
         return sysreader;
     }
 
@@ -294,7 +294,7 @@ public final class IonSystemImpl
 //            return new IonIteratorImpl(this, reader);
         }
 
-        SystemValueIterator reader = makeSystemReader(this, ionText);
+        SystemValueIterator reader = makeSystemIterator(this, ionText);
         return reader;
     }
 
@@ -302,7 +302,7 @@ public final class IonSystemImpl
     public Iterator<IonValue> iterate(byte[] ionData)
     {
         SystemValueIterator systemReader =
-            newLegacySystemReader(getCatalog(), ionData);
+            newLegacySystemIterator(getCatalog(), ionData);
         UserValueIterator userReader = new UserValueIterator(systemReader);
         // Don't use buffer-clearing!
         return userReader;
@@ -337,7 +337,7 @@ public final class IonSystemImpl
             binaryData = IonImplUtils.streamIsIonBinary(pushback);
             if (binaryData)
             {
-                systemReader = newPagedBinarySystemReader(getCatalog(), pushback);
+                systemReader = newPagedBinarySystemIterator(getCatalog(), pushback);
             }
             else
             {
@@ -621,7 +621,7 @@ public final class IonSystemImpl
 
 
     /**
-     * Creates a new reader, wrapping an array of text or binary data.
+     * Creates a new iterator, wrapping an array of text or binary data.
      *
      * @param catalog The catalog to use.
      * @param ionData may be (UTF-8) text or binary.
@@ -630,18 +630,18 @@ public final class IonSystemImpl
      *
      * @throws NullPointerException if <code>ionData</code> is null.
      */
-    public SystemValueIterator newLegacySystemReader(IonCatalog catalog,
-                                                     byte[] ionData)
+    SystemValueIterator newLegacySystemIterator(IonCatalog catalog,
+                                                byte[] ionData)
     {
         if (catalog == null) catalog = getCatalog();
         boolean isBinary = isIonBinary(ionData);
 
         SystemValueIterator sysReader;
         if (isBinary) {
-            sysReader = newBinarySystemReader(catalog, ionData);
+            sysReader = newBinarySystemIterator(catalog, ionData);
         }
         else {
-            sysReader = newTextSystemReader(catalog, ionData);
+            sysReader = newTextSystemIterator(catalog, ionData);
         }
 
         return sysReader;
@@ -658,14 +658,14 @@ public final class IonSystemImpl
      *
      * @throws NullPointerException if <code>ionBinary</code> is null.
      */
-    private SystemValueIterator newBinarySystemReader(IonCatalog catalog,
-                                                      byte[] ionBinary)
+    private SystemValueIterator newBinarySystemIterator(IonCatalog catalog,
+                                                        byte[] ionBinary)
     {
         if (catalog == null) catalog = getCatalog();
         BlockedBuffer bb = new BlockedBuffer(ionBinary);
         BufferManager buffer = new BufferManager(bb);
         //return new SystemReader(this, catalog, buffer);
-        SystemValueIterator reader = makeSystemReader(this, catalog, buffer);
+        SystemValueIterator reader = makeSystemIterator(this, catalog, buffer);
         return reader;
     }
 
@@ -680,36 +680,34 @@ public final class IonSystemImpl
      *
      * @throws NullPointerException if <code>ionText</code> is null.
      */
-    private SystemValueIterator newTextSystemReader(IonCatalog catalog,
-                                                    byte[] ionText)
+    private SystemValueIterator newTextSystemIterator(IonCatalog catalog,
+                                                      byte[] ionText)
     {
         if (catalog == null) catalog = getCatalog();
         ByteArrayInputStream stream = new ByteArrayInputStream(ionText);
         Reader reader = new InputStreamReader(stream, UTF8_CHARSET);
-
-        // return new SystemReader(this, catalog, reader);
-        SystemValueIterator sysreader = makeSystemReader(this, catalog, reader);
-        return sysreader;
+        return makeSystemIterator(this, catalog, reader);
     }
 
 
-    public SystemValueIterator newBinarySystemReader(IonCatalog catalog,
-                                                     InputStream ionBinary)
+    SystemValueIterator newBinarySystemIterator(IonCatalog catalog,
+                                                InputStream ionBinary)
         throws IOException
     {
         if (catalog == null) catalog = getCatalog();
         BufferManager buffer = new BufferManager(ionBinary);
         //return new SystemReader(this, catalog, buffer);
-        SystemValueIterator reader = makeSystemReader(this, catalog, buffer);
+        SystemValueIterator reader = makeSystemIterator(this, catalog, buffer);
         return reader;
     }
 
-    public SystemValueIterator newPagedBinarySystemReader(IonCatalog catalog,
-                                                          InputStream ionBinary)
+    private SystemValueIterator
+    newPagedBinarySystemIterator(IonCatalog catalog, InputStream ionBinary)
         throws IOException
     {
         if (catalog == null) catalog = getCatalog();
-        SystemValueIterator reader = makeSystemReader(this, catalog, ionBinary);
+        SystemValueIterator reader =
+            makeSystemIterator(this, catalog, ionBinary);
         return reader;
     }
 

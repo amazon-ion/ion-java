@@ -1012,37 +1012,6 @@ public final class IonSystemLite
      *
      */
 
-    public SystemValueIterator newBinarySystemReader(IonCatalog catalog,
-                                                     InputStream ionBinary)
-        throws IOException
-    {
-        if (catalog == null) catalog = getCatalog();
-        // TODO: do something with the catalog - update readers
-        IonReader reader = IonReaderFactoryX.makeReader(ionBinary);
-        SystemValueIterator sysreader = new ReaderIterator(this, reader);
-        return sysreader;
-    }
-
-    public SystemValueIterator newLegacySystemReader(IonCatalog catalog,
-                                                     byte[] ionData)
-    {
-        if (catalog == null) catalog = getCatalog();
-        // TODO: do something with the catalog - update readers
-        IonReader reader = IonReaderFactoryX.makeReader(ionData);
-        SystemValueIterator sysreader = new ReaderIterator(this, reader);
-        return sysreader;
-    }
-
-    public SystemValueIterator newPagedBinarySystemReader(IonCatalog catalog,
-                                                          InputStream ionBinary)
-        throws IOException
-    {
-        if (catalog == null) catalog = getCatalog();
-        IonReader reader = IonReaderFactoryX.makeReader(ionBinary);
-        ReaderIterator iterator = new ReaderIterator(this, reader);
-        return iterator;
-    }
-
     public IonTextReader newSystemReader(String ionText)
     {
         IonTextReader reader = IonReaderFactoryX.makeSystemReader(ionText);

@@ -66,9 +66,10 @@ public final class IonDatagramImpl
      * @throws NullPointerException if any parameter is null.
      * @throws IonException if there's a syntax error in the Ion content.
      */
-    public IonDatagramImpl(IonSystemImpl system, IonCatalog catalog, byte[] ionData)
+    public IonDatagramImpl(IonSystemImpl system, IonCatalog catalog,
+                           byte[] ionData)
     {
-        this(system, system.newLegacySystemReader(catalog, ionData));
+        this(system, system.newLegacySystemIterator(catalog, ionData));
     }
 
 
@@ -76,10 +77,7 @@ public final class IonDatagramImpl
     public IonDatagramImpl clone()
     {
         byte[] data = this.getBytes();
-
-        IonDatagramImpl clone = new IonDatagramImpl(this._system, _catalog, data);
-
-        return clone;
+        return new IonDatagramImpl(this._system, _catalog, data);
     }
 
     /**

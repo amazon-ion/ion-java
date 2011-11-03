@@ -170,7 +170,7 @@ public class LoaderImpl
                 }
 
                 SystemValueIterator systemReader =
-                    mySystem.newBinarySystemReader(myCatalog, pushback);
+                    mySystem.newBinarySystemIterator(myCatalog, pushback);
                 return new IonDatagramImpl(mySystem, systemReader);
             }
 

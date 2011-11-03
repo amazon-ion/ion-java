@@ -22,7 +22,7 @@ import java.util.NoSuchElementException;
  * WARNING: Unless {@link #resetBuffer()} is called, this class will
  * incrementally accumulate data in its internal buffer!
  */
-public class SystemValueIteratorImpl
+class SystemValueIteratorImpl
     implements SystemValueIterator
 {
     private final IonSystemImpl _system;
@@ -43,43 +43,50 @@ public class SystemValueIteratorImpl
     private IonValueImpl _curr;
     private IonValueImpl _next;
 
-    public static SystemValueIterator makeSystemReader(IonSystemImpl system, String s)
+    static SystemValueIterator makeSystemIterator(IonSystemImpl system,
+                                                  String s)
     {
         SystemValueIterator reader = new SystemValueIteratorImpl(system, s);
         return reader;
     }
 
-    public static SystemValueIterator makeSystemReader(IonSystemImpl system,
-                                         IonCatalog catalog, Reader input)
+    static SystemValueIterator makeSystemIterator(IonSystemImpl system,
+                                                  IonCatalog catalog,
+                                                  Reader input)
     {
-        SystemValueIterator reader = new SystemValueIteratorImpl(system, catalog, input);
+        SystemValueIterator reader =
+            new SystemValueIteratorImpl(system, catalog, input);
         return reader;
     }
 
     /**
      * TODO Must correct ION-160 before exposing this or using from public API.
      */
-    public static SystemValueIterator makeSystemReader(IonSystemImpl system,
-                                         IonCatalog catalog,
-                                         SymbolTable initialSymboltable,
-                                         Reader input)
+    static SystemValueIterator makeSystemIterator(IonSystemImpl system,
+                                                  IonCatalog catalog,
+                                                  SymbolTable initialSymtab,
+                                                  Reader input)
     {
-        SystemValueIterator reader = new SystemValueIteratorImpl(system, catalog, initialSymboltable, input);
+        SystemValueIterator reader =
+            new SystemValueIteratorImpl(system, catalog, initialSymtab, input);
         return reader;
     }
 
-    public static SystemValueIterator makeSystemReader(IonSystemImpl system,
-                                         IonCatalog catalog,
-                                         BufferManager buffer)
+    static SystemValueIterator makeSystemIterator(IonSystemImpl system,
+                                                  IonCatalog catalog,
+                                                  BufferManager buffer)
     {
-        SystemValueIterator reader = new SystemValueIteratorImpl(system, catalog, buffer);
+        SystemValueIterator reader =
+            new SystemValueIteratorImpl(system, catalog, buffer);
         return reader;
     }
 
-    public static SystemValueIterator makeSystemReader(IonSystemImpl system,
-                                         IonCatalog catalog, InputStream stream)
+    static SystemValueIterator makeSystemIterator(IonSystemImpl system,
+                                                  IonCatalog catalog,
+                                                  InputStream stream)
     {
-        SystemValueIterator reader = new SystemValueIteratorImpl(system, catalog, stream);
+        SystemValueIterator reader =
+            new SystemValueIteratorImpl(system, catalog, stream);
         return reader;
     }
 
@@ -195,8 +202,8 @@ public class SystemValueIteratorImpl
      * @throws NullPointerException if any parameter is null.
      */
     private SystemValueIteratorImpl(IonSystemImpl system,
-                        IonCatalog catalog,
-                        InputStream stream)
+                                    IonCatalog catalog,
+                                    InputStream stream)
     {
         if (catalog == null)  // Others are dereferenced below.
         {
@@ -239,7 +246,11 @@ public class SystemValueIteratorImpl
      * it has then the data isn't interesting any longer)
      */
     private static final int READ_AHEAD_LENGTH = 4096;
-    private static final int READ_AHEAD_MAX_PEEK_REQUIRED = IonBinary._ib_VAR_INT64_LEN_MAX + 1; // type desc byte + 64 bits 7 at a time
+
+    /** type desc byte + 64 bits 7 at a time */
+    private static final int READ_AHEAD_MAX_PEEK_REQUIRED =
+        IonBinary._ib_VAR_INT64_LEN_MAX + 1;
+
     private void loadBuffer(int bytes_requested) throws IOException
     {
         // we should only be loading the buffer if we're
@@ -282,7 +293,7 @@ public class SystemValueIteratorImpl
         // we'll try to read data in in reasonable sized chunks
         // (like a blocks worth)
         writer.setPosition(buffer_length);
-        int room_in_block = writer._curr.bytesAvailableToWrite(0); // .blockCapacity() - buffer_length;
+        int room_in_block = writer._curr.bytesAvailableToWrite(0);
         if (bytes_to_load < room_in_block) {
             bytes_to_load = room_in_block;
             // FIXME but now we may load too few bytes
@@ -455,7 +466,7 @@ public class SystemValueIteratorImpl
                         _just_wrote_ivm = true;
                     }
                     else {
-                        _parser.parse( this // was: getLocalSymbolTable() // _currentSymbolTable
+                        _parser.parse( this
                                       ,_buffer_offset
                                       ,_just_wrote_ivm
                                       ,0
@@ -469,7 +480,8 @@ public class SystemValueIteratorImpl
                 }
             }
 
-            // now that we've got a value in the buffer (well we have one if we're not at eof)
+            // now that we've got a value in the buffer
+            // (well we have one if we're not at eof)
             if (!_at_eof) {
                 // there is some sort a value, we'll get it and check it out
                 // until we find something we like
