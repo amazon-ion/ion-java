@@ -4,7 +4,6 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
-import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemReader;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonCatalog;
@@ -22,7 +21,6 @@ import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.Reader;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -56,27 +54,7 @@ public final class IonDatagramImpl
      */
     private ArrayList<IonValue> _userContents;
 
-    private static BufferManager make_empty_buffer()
-    {
-        BufferManager buffer = new BufferManager();
-
-        try {
-            // TODO is this necessary? Should wait to see what the user does.
-            buffer.writer().write(IonConstants.BINARY_VERSION_MARKER_1_0);
-        }
-        catch (IOException e) {
-             throw new IonException(e);
-        }
-        return buffer;
-    }
-
-
     //=========================================================================
-
-    public IonDatagramImpl(IonSystemImpl system, IonCatalog catalog) {
-        this(system, catalog, make_empty_buffer());
-    }
-
 
     /**
      * Creates a datagram wrapping bytes containing Ion text or binary data.
@@ -91,31 +69,6 @@ public final class IonDatagramImpl
     public IonDatagramImpl(IonSystemImpl system, IonCatalog catalog, byte[] ionData)
     {
         this(system, system.newLegacySystemReader(catalog, ionData));
-    }
-
-
-    /**
-     * Materializes the top-level values in the buffer.
-     *
-     * @param buffer is filled with Ion data.
-     *
-     * @throws NullPointerException if any parameter is null.
-     */
-    public IonDatagramImpl(IonSystemImpl system, IonCatalog catalog, BufferManager buffer)
-    {
-        this(system, makeSystemReader(system, catalog, buffer));
-    }
-
-
-    /**
-     * Loads the whole stream into memory.
-     */
-    public IonDatagramImpl(IonSystemImpl system, IonCatalog catalog, Reader ionText)
-    {
-        this(system
-            ,catalog
-            ,(SymbolTable)null
-            ,ionText);
     }
 
 
@@ -158,23 +111,6 @@ public final class IonDatagramImpl
         throw new UnsupportedOperationException("this work is done in clone()");
     }
 
-    /**
-     * Loads the whole stream into memory.
-     *
-     * @param initialSymbolTable must be local, not shared.
-     *
-     * @throws NullPointerException if any parameter is null.
-     */
-    public IonDatagramImpl(IonSystemImpl system,
-                           IonCatalog catalog,
-                           SymbolTable initialSymbolTable,
-                           Reader ionText)
-    {
-        this(system,
-             makeSystemReader(system,
-                              catalog,
-                              initialSymbolTable, ionText));
-    }
 
     /**
      * Workhorse constructor this loads the whole stream into memory and

@@ -58,7 +58,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PushbackInputStream;
 import java.io.Reader;
-import java.io.StringReader;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -83,12 +82,6 @@ public final class IonSystemImpl
     private final IonCatalog myCatalog;
     private final IonLoader myLoader;
     private final boolean myStreamCopyOptimized;
-
-    /**
-     * If true, this system will create the newer, faster, second-generation
-     * streaming readers. Be prepared for bugs!
-     */
-    public boolean useNewReaders_UNSUPPORTED_MAGIC = true;
 
 
     /**
@@ -192,22 +185,17 @@ public final class IonSystemImpl
 
     public IonDatagramImpl newDatagram()
     {
-        if (LoaderImpl.USE_NEW_READERS)
+        try
         {
-            try
-            {
-                IonDatagramImpl dg =
-                    new IonDatagramImpl(this, getCatalog(), (IonReader) null);
-                return dg;
-            }
-            catch (IOException e)
-            {
-                // Shouldn't happen actually
-                throw new IonException(e);
-            }
+            IonDatagramImpl dg =
+                new IonDatagramImpl(this, getCatalog(), (IonReader) null);
+            return dg;
         }
-
-        return new IonDatagramImpl(this, getCatalog());
+        catch (IOException e)
+        {
+            // Shouldn't happen actually
+            throw new IonException(e);
+        }
     }
 
     public IonDatagram newDatagram(IonValue initialChild)
@@ -282,27 +270,18 @@ public final class IonSystemImpl
      */
     protected SystemValueIterator systemIterate(Reader reader)
     {
-        SystemValueIterator sysreader = makeSystemReader(this,
-                                                         getCatalog(),
-                                                         newLocalSymbolTable(),  // FIXME: should be null
-                                                         reader);
+        SystemValueIterator sysreader =
+            makeSystemReader(this,
+                             getCatalog(),
+                             newLocalSymbolTable(),  // FIXME: should be null
+                             reader);
         return sysreader;
     }
 
     public Iterator<IonValue> iterate(String ionText)
     {
-        if (LoaderImpl.USE_NEW_READERS)
-        {
-            IonReader reader = newReader(ionText);
-            return new IonIteratorImpl(this, reader);
-        }
-
-        UserValueIterator userReader =
-            new UserValueIterator(this,
-                                  this.newLocalSymbolTable(),
-                                  new StringReader(ionText));
-        userReader.setBufferToRecycle();
-        return userReader;
+        IonReader reader = newReader(ionText);
+        return new IonIteratorImpl(this, reader);
     }
 
     public Iterator<IonValue> systemIterate(String ionText)
@@ -390,43 +369,23 @@ public final class IonSystemImpl
     // IonReader creation
 
 
+    @SuppressWarnings("deprecation")
     public IonTextReader newReader(String ionText)
     {
-        if (useNewReaders_UNSUPPORTED_MAGIC)
-        {
-            return new IonReaderTextUserX(this, null, ionText, 0, ionText.length());
-        }
-
-        return new IonTextReaderImpl(this, ionText, getCatalog());
+        return new IonReaderTextUserX(this, null, ionText, 0, ionText.length());
     }
 
+    @SuppressWarnings("deprecation")
     public IonTextReader newSystemReader(String ionText)
     {
-        if (useNewReaders_UNSUPPORTED_MAGIC)
-        {
-            return new IonReaderTextSystemX(this, ionText, 0, ionText.length());
-        }
-        return new IonTextReaderImpl(this, ionText, getCatalog(), true);
+        return new IonReaderTextSystemX(this, ionText, 0, ionText.length());
     }
 
 
+    @SuppressWarnings("deprecation")
     public IonTextReader newSystemReader(Reader ionText)
     {
-        if (useNewReaders_UNSUPPORTED_MAGIC)
-        {
-            return new IonReaderTextSystemX(this, ionText);
-        }
-
-        try
-        {
-            // FIXME we shouldn't have to load the whole stream into a String.
-            String str = IonImplUtils.loadReader(ionText);
-            return new IonTextReaderImpl(this, str, getCatalog(), true);
-        }
-        catch (IOException e)
-        {
-            throw new IonException(e);
-        }
+        return new IonReaderTextSystemX(this, ionText);
     }
 
 

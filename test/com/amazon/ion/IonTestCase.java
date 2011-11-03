@@ -4,7 +4,6 @@ package com.amazon.ion;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 
-import com.amazon.ion.impl.IonSystemImpl;
 import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.junit.Injected;
 import com.amazon.ion.junit.Injected.Inject;
@@ -220,13 +219,6 @@ public abstract class IonTestCase
         IonSystemBuilder b = IonSystemBuilder.standard().withCatalog(catalog);
         BuilderHack.setBinaryBacked(b, getDomType() == DomType.BACKED);
         IonSystem system = b.build();
-
-        if (system instanceof IonSystemImpl)
-        {
-            // TODO we really should phase this out...
-            ((IonSystemImpl) system).useNewReaders_UNSUPPORTED_MAGIC =
-                (getStreamingMode() == StreamingMode.NEW_STREAMING);
-        }
         return (IonSystemPrivate) system;
     }
 
