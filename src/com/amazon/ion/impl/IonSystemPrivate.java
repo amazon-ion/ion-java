@@ -30,11 +30,13 @@ public interface IonSystemPrivate
 
     /**
      * TODO Must correct ION-160 before exposing this or using from public API.
+     * TODO Must correct ION-262 before exposing this or using from public API.
      */
     public Iterator<IonValue> systemIterate(String ionText);
 
     /**
      * TODO Must correct ION-160 before exposing this or using from public API.
+     * TODO Must correct ION-262 before exposing this or using from public API.
      */
     public Iterator<IonValue> systemIterate(InputStream ionData);
 
