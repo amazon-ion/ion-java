@@ -329,6 +329,7 @@ public final class UnifiedSymbolTable
      * given values. If the imports are empty, the default system symtab is
      * returned.
      *
+     * @param system must not be null.
      * @param imports can be null or empty.
      *
      * @return not null.
@@ -546,7 +547,7 @@ public final class UnifiedSymbolTable
         return (table != null && table.isLocalTable());
     }
 
-    /** Indicates whether a table is system, local, or null. */
+    /** Indicates whether a table is shared but not a system table. */
     public static final boolean isNonSystemSharedTable(SymbolTable table)
     {
         return (table != null && table.isSharedTable() && ! table.isSystemTable());

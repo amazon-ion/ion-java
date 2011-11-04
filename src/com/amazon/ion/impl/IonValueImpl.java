@@ -715,8 +715,8 @@ public abstract class IonValueImpl
      */
     public SymbolTable getUpdatableSymbolTable()
     {
-        IonValueImpl parent = topLevelValue();
-        SymbolTable symbols = parent.getSymbolTable();
+        IonValueImpl topLevel = topLevelValue();
+        SymbolTable symbols = topLevel.getSymbolTable();
 
         if (UnifiedSymbolTable.isLocalTable(symbols)) {
             return symbols;
@@ -727,7 +727,7 @@ public abstract class IonValueImpl
         }
 
         symbols = makeNewLocalSymbolTable(_system, symbols);
-        parent.setSymbolTable(symbols);
+        topLevel.setSymbolTable(symbols);
 
         return symbols;
     }
@@ -814,10 +814,7 @@ public abstract class IonValueImpl
         return symbols;
     }
 
-    /**
-     *
-     * @param symtab must be local, system, or null.
-     */
+
     public void setSymbolTable(SymbolTable symtab) {
         if (isNonSystemSharedTable(symtab)) {
             throw new IllegalArgumentException("symbol table must be local or system");
