@@ -926,7 +926,7 @@ public final class IonSystemLite
     {
         SymbolTable symbols = initialSymbolTable(this, imports);
         IonDatagramLite dg = newDatagram(catalog);
-        dg.setSymbolTable(symbols);
+        dg.appendTrailingSymbolTable(symbols);
         return dg;
     }
 

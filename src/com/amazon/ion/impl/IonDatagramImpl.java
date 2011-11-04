@@ -32,7 +32,7 @@ import java.util.ListIterator;
  */
 public final class IonDatagramImpl
     extends IonSequenceImpl
-    implements IonDatagram
+    implements IonDatagram, _Private_IonDatagram
 {
     static private final int DATAGRAM_TYPEDESC  =
         IonConstants.makeTypeDescriptor(IonConstants.tidSexp,
@@ -277,8 +277,10 @@ public final class IonDatagramImpl
         }
     }
 
-    SymbolTable getCurrentSymbolTable(int systemPos)
+    private SymbolTable getCurrentSymbolTable(int systemPos)
     {
+        assert _symboltable == null; // Due to only call site.
+
         SymbolTable symtab = this._symboltable;
 
         if (UnifiedSymbolTable.isLocalAndNonTrivial(symtab)) {
@@ -1055,6 +1057,13 @@ public final class IonDatagramImpl
     @Override
     public void setSymbolTable(SymbolTable symtab)
     {
+        throw new UnsupportedOperationException();
+    }
+
+    public void appendTrailingSymbolTable(SymbolTable symtab)
+    {
+        assert symtab.isLocalTable() || symtab.isSystemTable();
+
         _symboltable = symtab;
     }
 

@@ -20,19 +20,21 @@ public interface IonValuePrivate
 
 
     /**
-     * make this symbol table current for this value.
+     * Makes this symbol table current for this value.
      * This may directly apply to this IonValue if this
      * value is either loose or a top level datagram
      * member.  Or it may be delegated to the IonContainer
      * this value is a contained in.
-     *
+     * <p>
      * Assigning null forces any symbol values to be
      * resolved to strings and any associated symbol
      * table will be removed.
+     * <p>
+     * @param symbols must be local or system table. May be null.
      *
-     * @param symbols
+     * @throws UnsupportedOperationException if this is a datagram.
      */
-    public void        setSymbolTable(SymbolTable symbols);
+    public void setSymbolTable(SymbolTable symbols);
 
     /**
      * Returns the symbol table that is directly associated with this value,

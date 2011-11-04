@@ -226,7 +226,7 @@ public final class IonSystemImpl
         UnifiedSymbolTable lst = newLocalSymbolTable(imports);
 
         IonDatagramImpl datagram = newDatagram();
-        datagram.setSymbolTable(lst);
+        datagram.appendTrailingSymbolTable(lst);
         return datagram;
     }
 

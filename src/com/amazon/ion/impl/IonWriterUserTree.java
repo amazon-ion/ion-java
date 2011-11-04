@@ -3,7 +3,6 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonCatalog;
-import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
@@ -59,9 +58,8 @@ class IonWriterUserTree
         if (_root_is_datagram) {
             assert(_system_writer instanceof IonWriterSystemTree);
             IonValue root = ((IonWriterSystemTree)_system_writer).get_root();
-            assert(root instanceof IonValuePrivate);
-            assert(root instanceof IonDatagram);
-            ((IonValuePrivate)root).setSymbolTable(new_symbols);
+            assert root instanceof _Private_IonDatagram;
+            ((_Private_IonDatagram)root).appendTrailingSymbolTable(new_symbols);
 
             // TODO Other user writers do this, but currently the tree writer
             // uses a different hack to get this to happen.

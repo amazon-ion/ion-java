@@ -21,6 +21,7 @@ import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonReaderFactoryX;
 import com.amazon.ion.impl.IonWriterBinaryCompatibility;
 import com.amazon.ion.impl.UnifiedSymbolTable;
+import com.amazon.ion.impl._Private_IonDatagram;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Array;
@@ -65,10 +66,10 @@ import java.util.NoSuchElementException;
 
 public class IonDatagramLite
     extends IonSequenceLite
-    implements IonDatagram, IonContext
+    implements IonDatagram, IonContext, _Private_IonDatagram
 {
     private final IonSystemLite      _system;
-    private       IonCatalog         _catalog;
+    private final IonCatalog         _catalog;
     private       SymbolTable        _pending_symbol_table;
     private       int                _pending_symbol_table_idx;
     private       IonSymbolLite      _ivm;
@@ -157,10 +158,14 @@ public class IonDatagramLite
     @Override
     public void setSymbolTable(SymbolTable symbols)
     {
-        if (isNonSystemSharedTable(symbols)) {
-            throw new IllegalArgumentException("you can only set a symbol table to a system or local table");
-        }
-        _pending_symbol_table = symbols;
+        throw new UnsupportedOperationException();
+    }
+
+    public void appendTrailingSymbolTable(SymbolTable symtab)
+    {
+        assert symtab.isLocalTable() || symtab.isSystemTable();
+
+        _pending_symbol_table = symtab;
         _pending_symbol_table_idx = get_child_count();
     }
 
@@ -208,6 +213,7 @@ public class IonDatagramLite
         if (!(element instanceof IonValueLite)) {
             throw new IllegalArgumentException("IonValue implementation can't be mixed");
         }
+        // TODO where do we validate that element isn't a datagram?
 
         IonValueLite concrete = (IonValueLite)element;
 
