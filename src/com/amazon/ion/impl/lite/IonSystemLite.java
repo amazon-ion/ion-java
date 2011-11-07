@@ -631,7 +631,7 @@ public final class IonSystemLite
         }
         IonContext context = child.getContext();
         if (context == this) {
-            context = allocateConcreteContext(this, child);
+            context = allocateConcreteContext(null, child);
         }
         else {
             assert(context instanceof IonConcreteContext);
@@ -658,8 +658,8 @@ public final class IonSystemLite
         }
     }
 
-    protected final IonConcreteContext allocateConcreteContext(IonContext owner,
-                                                               IonValueLite child)
+    protected final IonConcreteContext
+    allocateConcreteContext(IonDatagramLite datagram, IonValueLite child)
     {
         IonConcreteContext context = null;
         if (_free_count > 0) {
@@ -672,10 +672,10 @@ public final class IonSystemLite
             }
         }
         if (context == null) {
-            context = IonConcreteContext.wrap(this, owner, child);
+            context = IonConcreteContext.wrap(this, datagram, child);
         }
         else {
-            context.rewrap(owner, child);
+            context.rewrap(datagram, child);
         }
         return context;
     }

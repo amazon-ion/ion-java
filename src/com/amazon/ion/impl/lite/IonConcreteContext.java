@@ -4,7 +4,6 @@ package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 
-import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.UnifiedSymbolTable;
@@ -17,27 +16,15 @@ final class IonConcreteContext
     implements IonContext
 {
     /**
-     * Do we need this?  We should be able to follow
-     * the _owning_context up until we get to a system.
-     * And getSystem should not be called very often.
+     * References the system used to construct values in this context.
+     * Not null.
      */
     private final IonSystemLite _system;
 
     /**
-     * Currently the _owning_context will be the system for a
-     * loose value or a datagram when the top level value has
-     * a local symbol table.  This could change is other
-     * state starts being tracked in the context such as the
-     * location in the binary buffer.
-     * <p>
-     * This is never null when this context is in use.
-     * However it IS null when {@link #clear()}ed for recycling by
-     * {@link IonSystemLite#releaseConcreteContext(IonConcreteContext)}.
-     * <p>
-     * TODO what if this is an interior context?
-     * Does the point to the IonContainer?
+     * References the containing datagram, if it exists.
      */
-    private IonContext _owning_context;
+    private IonDatagramLite _datagram;
 
     /**
      * This will be a local symbol table.  It is not valid
@@ -53,18 +40,18 @@ final class IonConcreteContext
      */
     private SymbolTable _symbols;
 
-    private IonConcreteContext(IonSystemLite system,
-                               IonContext owner)
+    private IonConcreteContext(IonSystemLite system, IonDatagramLite datagram)
     {
+        assert system != null;
         _system = system;
-        _owning_context = owner;
+        _datagram = datagram;
     }
 
     static IonConcreteContext wrap(IonSystemLite system,
-                                   IonContext owner,
+                                   IonDatagramLite datagram,
                                    IonValueLite child)
     {
-        IonConcreteContext concrete = new IonConcreteContext(system, owner);
+        IonConcreteContext concrete = new IonConcreteContext(system, datagram);
 
         child._context = concrete;
 
@@ -79,7 +66,7 @@ final class IonConcreteContext
             throw new IllegalArgumentException("you can only set a symbol table to a system or local table");
         }
 
-        IonConcreteContext concrete = new IonConcreteContext(system, system);
+        IonConcreteContext concrete = new IonConcreteContext(system, null);
         concrete._symbols = symbols;
 
         child._context = concrete;
@@ -88,10 +75,9 @@ final class IonConcreteContext
     }
 
 
-    void rewrap(IonContext owner, IonValueLite child)
+    void rewrap(IonDatagramLite datagram, IonValueLite child)
     {
-        assert owner instanceof IonDatagramLite || owner == _system;
-        _owning_context = owner;
+        _datagram = datagram;
         child._context = this;
     }
 
@@ -116,7 +102,7 @@ final class IonConcreteContext
 
     protected void clear()
     {
-        _owning_context = null;
+        _datagram = null;
         _symbols = null;
     }
 
@@ -129,14 +115,9 @@ final class IonConcreteContext
     {
         SymbolTable local;
 
-        assert _owning_context != null;
-
         if (_symbols != null && _symbols.isLocalTable()) {
             local = _symbols;
         }
-        //else if (_owning_context != null) {
-        //    local = _owning_context.getLocalSymbolTable(child);
-        //}
         else {
             IonSystem system = getSystem();
             local = system.newLocalSymbolTable();
@@ -147,28 +128,15 @@ final class IonConcreteContext
         return local;
     }
 
-    public IonContainerLite getContextContainer()
+    public IonDatagramLite getContextContainer()
     {
-        // A concrete context only exists on a top level value.
-        // Its parent should be a system or a datagram.
-
-        if (_owning_context instanceof IonDatagramLite) {
-            return (IonDatagramLite)_owning_context;
-        }
-
-        assert(_owning_context instanceof IonSystem);
-        return null;
+        return _datagram;
     }
 
     public SymbolTable getSymbolTable()
     {
-        assert _owning_context != null;
-
         if (_symbols != null) {
             return _symbols;
-        }
-        if (_owning_context != null) {
-            return _owning_context.getSymbolTable();
         }
         return _system.getSystemSymbolTable();
     }
@@ -180,7 +148,6 @@ final class IonConcreteContext
 
     public IonSystemLite getSystem()
     {
-        assert(_system != null);
         return _system;
     }
 
@@ -191,18 +158,18 @@ final class IonConcreteContext
                                     IonValueLite child)
     {
         assert child._context == this;
-        assert _owning_context instanceof IonSystemLite;
+        assert _datagram == null;
 
         // HACK: we need to refactor this to make it simpler and take
         //       away the need to check the parent type
 
         // but for now ...
-        if (container instanceof IonDatagram)
+        if (container instanceof IonDatagramLite)
         {
             // Leave this context between the TLV and the datagram, using the
             // same symbol table we already have.
 
-            _owning_context = container;
+            _datagram = (IonDatagramLite) container;
         }
         else {
             // Some other container (struct, list, sexp, templist) is taking
@@ -212,7 +179,7 @@ final class IonConcreteContext
 
             // FIXME this should be recycling this context
             // TODO this assumes there's never >1 value with the same context
-            ((IonConcreteContext)child._context).clear();
+            clear();
 
             child.setContext(container);
         }
@@ -220,9 +187,7 @@ final class IonConcreteContext
 
     public void setSymbolTableOfChild(SymbolTable symbols, IonValueLite child)
     {
-        assert (_owning_context instanceof IonSystem
-             || _owning_context instanceof IonDatagram
-        );
+        assert child._context == this;
 
         // the only valid cases where you can set a concrete
         // contexts symbol table is when this is a top level
@@ -233,9 +198,5 @@ final class IonConcreteContext
             throw new IllegalArgumentException("you can only set a symbol table to a system or local table");
         }
         _symbols = symbols;
-        if (child._context != this) {
-            assert(child._context != null && child._context == _owning_context);
-            child._context = this;
-        }
     }
 }
