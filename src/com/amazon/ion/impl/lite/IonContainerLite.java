@@ -441,11 +441,7 @@ public abstract class IonContainerLite
 
     public void setSymbolTableOfChild(SymbolTable symbols, IonValueLite child)
     {
-        checkForLock();
-        // we inherit our symbol table from out container
-        // ultimately the datagram will create a context
-        // or a concrete context will store the symbol table
-        _context.setSymbolTableOfChild(symbols, this);
+        throw new UnsupportedOperationException();
     }
 
     @Override

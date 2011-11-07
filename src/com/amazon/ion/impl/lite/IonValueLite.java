@@ -694,9 +694,6 @@ public abstract class IonValueLite
 
     public void setSymbolTable(SymbolTable symbols)
     {
-        if (_context == null) {
-            throw new IllegalStateException("a symbol table cannot be set on a value unless it has a context");
-        }
         _context.setSymbolTableOfChild(symbols, this);
     }
 

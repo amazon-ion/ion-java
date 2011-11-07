@@ -617,20 +617,15 @@ public final class IonSystemLite
 
     public void setSymbolTableOfChild(SymbolTable symbols, IonValueLite child)
     {
-        assert(child != null);
+        assert child._context == this;
+        assert ! (child instanceof IonDatagram);
+
         if (isNonSystemSharedTable(symbols)) {
             throw new IllegalArgumentException("shared symbol tables cannot be set as a current symbol table");
         }
-        if (child.getAssignedSymbolTable() == symbols) {
-            return;
-        }
-        IonContext context = child.getContext();
-        if (context == this) {
-            context = allocateConcreteContext(null, child);
-        }
-        else {
-            assert(context instanceof TopLevelContext);
-        }
+
+        // Need a TLC to hold the symtab for the child.
+        TopLevelContext context = allocateConcreteContext(null, child);
         context.setSymbolTableOfChild(symbols, child);
     }
 

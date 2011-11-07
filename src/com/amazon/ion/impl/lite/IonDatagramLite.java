@@ -140,18 +140,14 @@ public class IonDatagramLite
     @Override
     public void setSymbolTableOfChild(SymbolTable symbols, IonValueLite child)
     {
+        assert child._context == this;
+
         if (isNonSystemSharedTable(symbols)) {
             throw new IllegalArgumentException("you can only set a symbol table to a system or local table");
         }
-        //if (symbols.isSystemTable()) {
-        //    assert(symbols.getSystem() == getSystemLite());
-        //    return;
-        //}
-        assert(symbols.isLocalTable() || symbols.isSystemTable());
-        if (!(child._context instanceof TopLevelContext)) {
-            TopLevelContext.wrap(_system, this, child);
-        }
-        child._context.setSymbolTableOfChild(symbols, child);
+
+        TopLevelContext context = _system.allocateConcreteContext(this, child);
+        context.setSymbolTableOfChild(symbols, child);
     }
 
     @Override
@@ -223,7 +219,8 @@ public class IonDatagramLite
         SymbolTable symbols = concrete.getAssignedSymbolTable();
         if (symbols == null && this._pending_symbol_table != null && this._pending_symbol_table_idx == concrete._elementid())
         {
-            concrete.setSymbolTable(_pending_symbol_table);
+            assert concrete._context == this;
+            setSymbolTableOfChild(_pending_symbol_table, concrete);
         }
 
         // the pending symbol table is only good for 1 use
