@@ -790,7 +790,7 @@ public abstract class IonContainerLite
         _child_count++;
         _children[idx] = child;
 
-        assert child._context instanceof IonConcreteContext
+        assert child._context instanceof TopLevelContext
             || child._context instanceof IonSystemLite;
 
         child._context.setContextContainer(this, child);

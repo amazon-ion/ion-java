@@ -2,18 +2,23 @@
 
 package com.amazon.ion.impl.lite;
 
+import com.amazon.ion.IonContainer;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 
 /**
- *  This interface is implemented by the various
- *  Ion containers and by a concrete IonConcreteContext.
- *  This is used to abstract the parent, system and
- *  symbol table definitions that are shared by all
- *  IonValues.
+ * Provides the parent, system and symbol table definitions that are shared
+ * by one or more hierarchies of IonValues.
  * <p>
- *  Generally top level values have a Concrete context
- *  and containers implement these interfaces.  Concrete
+ * The type of context used by a value depends on its position.
+ * <ul>
+ *   <li>Top-level values have either a {@link TopLevelContext} or an
+ *   {@link IonSystemLite} for a context.
+ *   <li>Non-top-level values have their {@link IonContainer} for a context.
+ *   <li>Datagrams have their {@link IonSystemLite} for a context.
+ * </ul>
+ * <p>
+ *  Concrete
  *  contexts simply return the correct values (and
  *  own them).  Containers return themselves as the
  *  parent and delegate to their parent for the
@@ -68,7 +73,7 @@ public interface IonContext
 
     /**
      * Returns the symbol table that is directly assigned to this context.
-     * For {@link IonConcreteContext} it is the symbol table member.
+     * For {@link TopLevelContext} it is the symbol table member.
      * For {@link IonContainerLite} and {@link IonSystemLite} it is null.
      *
      * @return the directly assigned symbol table, with no recursive lookup.

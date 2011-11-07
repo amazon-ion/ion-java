@@ -12,7 +12,7 @@ import com.amazon.ion.impl.UnifiedSymbolTable;
 /**
  *
  */
-final class IonConcreteContext
+final class TopLevelContext
     implements IonContext
 {
     /**
@@ -40,25 +40,25 @@ final class IonConcreteContext
      */
     private SymbolTable _symbols;
 
-    private IonConcreteContext(IonSystemLite system, IonDatagramLite datagram)
+    private TopLevelContext(IonSystemLite system, IonDatagramLite datagram)
     {
         assert system != null;
         _system = system;
         _datagram = datagram;
     }
 
-    static IonConcreteContext wrap(IonSystemLite system,
+    static TopLevelContext wrap(IonSystemLite system,
                                    IonDatagramLite datagram,
                                    IonValueLite child)
     {
-        IonConcreteContext concrete = new IonConcreteContext(system, datagram);
+        TopLevelContext concrete = new TopLevelContext(system, datagram);
 
         child._context = concrete;
 
         return concrete;
     }
 
-    static IonConcreteContext wrap(IonSystemLite system,
+    static TopLevelContext wrap(IonSystemLite system,
                                    SymbolTable symbols,
                                    IonValueLite child)
     {
@@ -66,12 +66,12 @@ final class IonConcreteContext
             throw new IllegalArgumentException("you can only set a symbol table to a system or local table");
         }
 
-        IonConcreteContext concrete = new IonConcreteContext(system, null);
-        concrete._symbols = symbols;
+        TopLevelContext context = new TopLevelContext(system, null);
+        context._symbols = symbols;
 
-        child._context = concrete;
+        child._context = context;
 
-        return concrete;
+        return context;
     }
 
 

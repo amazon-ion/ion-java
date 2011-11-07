@@ -273,13 +273,13 @@ public abstract class IonValueLite
         // values we copy
         this._flags        = original._flags;
         this._annotations  = original.getTypeAnnotationStrings();
-        if (original._context instanceof IonConcreteContext) {
+        if (original._context instanceof TopLevelContext) {
             // if the original value had context, we need to
             // copy that too, so we attach our copy to its
             // system owner through a fresh concrete context
-            IonConcreteContext.wrap(getSystem(),
-                                    original.getAssignedSymbolTable(),
-                                    this);
+            TopLevelContext.wrap(getSystem(),
+                                 original.getAssignedSymbolTable(),
+                                 this);
         }
 
         // and now values we don't copy

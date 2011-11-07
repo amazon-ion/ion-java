@@ -565,7 +565,7 @@ public final class IonSystemLite
         SymbolTable local = this.newLocalSymbolTable();
         IonContext context = child.getContext();
         if (context == this) {
-            context = IonConcreteContext.wrap(this, local, child);
+            context = TopLevelContext.wrap(this, local, child);
         }
         child.setContext(context);
         return local;
@@ -634,20 +634,21 @@ public final class IonSystemLite
             context = allocateConcreteContext(null, child);
         }
         else {
-            assert(context instanceof IonConcreteContext);
+            assert(context instanceof TopLevelContext);
         }
         context.setSymbolTableOfChild(symbols, child);
     }
 
-    private static final IonConcreteContext[] EMPTY_CONTEXT_ARRAY = new IonConcreteContext[0];
-    private int                  _free_count;
-    private IonConcreteContext[] _free_contexts;
+    private static final TopLevelContext[] EMPTY_CONTEXT_ARRAY = new TopLevelContext[0];
+    private int               _free_count;
+    private TopLevelContext[] _free_contexts;
+
     protected final void set_context_free_list_max(int size) {
         if (size < 1) {
             _free_contexts = EMPTY_CONTEXT_ARRAY;
         }
         else if (_free_contexts == null || size != _free_contexts.length) {
-            IonConcreteContext[] temp = new IonConcreteContext[size];
+            TopLevelContext[] temp = new TopLevelContext[size];
             if (_free_count > 0) {
                 if (_free_count > size) {
                     _free_count = size;
@@ -658,10 +659,10 @@ public final class IonSystemLite
         }
     }
 
-    protected final IonConcreteContext
+    protected final TopLevelContext
     allocateConcreteContext(IonDatagramLite datagram, IonValueLite child)
     {
-        IonConcreteContext context = null;
+        TopLevelContext context = null;
         if (_free_count > 0) {
             synchronized (this._free_contexts) {
                 if (_free_count > 0) {
@@ -672,14 +673,15 @@ public final class IonSystemLite
             }
         }
         if (context == null) {
-            context = IonConcreteContext.wrap(this, datagram, child);
+            context = TopLevelContext.wrap(this, datagram, child);
         }
         else {
             context.rewrap(datagram, child);
         }
         return context;
     }
-    protected final void releaseConcreteContext(IonConcreteContext context)
+
+    protected final void releaseConcreteContext(TopLevelContext context)
     {
         if (_free_contexts.length > 0) {
             synchronized (this._free_contexts) {
