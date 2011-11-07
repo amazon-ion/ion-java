@@ -48,19 +48,17 @@ final class TopLevelContext
     }
 
     static TopLevelContext wrap(IonSystemLite system,
-                                   IonDatagramLite datagram,
-                                   IonValueLite child)
+                                IonDatagramLite datagram,
+                                IonValueLite child)
     {
-        TopLevelContext concrete = new TopLevelContext(system, datagram);
-
-        child._context = concrete;
-
-        return concrete;
+        TopLevelContext context = new TopLevelContext(system, datagram);
+        child._context = context;
+        return context;
     }
 
     static TopLevelContext wrap(IonSystemLite system,
-                                   SymbolTable symbols,
-                                   IonValueLite child)
+                                SymbolTable symbols,
+                                IonValueLite child)
     {
         if (isNonSystemSharedTable(symbols)) {
             throw new IllegalArgumentException("you can only set a symbol table to a system or local table");
@@ -82,7 +80,7 @@ final class TopLevelContext
     }
 
 
-    private static boolean test_symbol_table_compatibility(IonContext parent,
+    private static boolean test_symbol_table_compatibility(IonContainerLite parent,
                                                            IonValueLite child)
     {
         SymbolTable parent_symbols = parent.getSymbolTable();
@@ -131,14 +129,6 @@ final class TopLevelContext
     public IonDatagramLite getContextContainer()
     {
         return _datagram;
-    }
-
-    public SymbolTable getSymbolTable()
-    {
-        if (_symbols != null) {
-            return _symbols;
-        }
-        return _system.getSystemSymbolTable();
     }
 
     public SymbolTable getContextSymbolTable()

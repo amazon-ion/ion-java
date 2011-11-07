@@ -63,13 +63,6 @@ public interface IonContext
      */
     abstract IonSystemLite getSystem();
 
-    /**
-     * Get the SymbolTable for values in this context.
-     * Generally this delegates to the parent.
-     *
-     * @return SymbolTable
-     */
-    abstract SymbolTable getSymbolTable();
 
     /**
      * Returns the symbol table that is directly assigned to this context.

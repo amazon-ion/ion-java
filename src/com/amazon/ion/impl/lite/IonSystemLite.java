@@ -600,11 +600,6 @@ public final class IonSystemLite
     }
 
 
-    public SymbolTable getSymbolTable()
-    {
-        return getSystemSymbolTable();
-    }
-
     public SymbolTable getAssignedSymbolTable()
     {
         return null;
