@@ -594,6 +594,7 @@ public final class IonSystemLite
                                     IonValueLite child)
     {
         assert child._context == this;
+        assert container.getSystem() == this : "system mismatch";
 
         // The new container becomes the context, we replace ourself.
         child.setContext(container);

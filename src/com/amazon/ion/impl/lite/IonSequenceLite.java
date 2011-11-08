@@ -155,7 +155,7 @@ abstract class IonSequenceLite
     }
 
     @Override
-    // Increasing visibility
+    // Increasing visibility to satisfy IonSequence
     public void add(int index, IonValue element)
         throws ContainedValueException, NullPointerException
     {

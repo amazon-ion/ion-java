@@ -716,7 +716,7 @@ public abstract class IonContainerLite
         return _child_count;
     }
 
-    public final IonValue get_child(int idx) {
+    public final IonValueLite get_child(int idx) {
         return get_child_lite(idx);
     }
 
@@ -747,13 +747,18 @@ public abstract class IonContainerLite
         }
         IonValueLite prev = _children[idx];
         _children[idx] = child;
+
+        // FIXME this doesn't update the child's context or index
+        // which is done by add_child() above
         return prev;
     }
+
     public int add_child(int idx, IonValue child)
     {
         return add_child(idx, (IonValueLite)child);
     }
-    public int add_child(int idx, IonValueLite child)
+
+    private int add_child(int idx, IonValueLite child)
     {
         if (child == null) {
             throw new NullValueException();

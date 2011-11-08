@@ -185,7 +185,7 @@ public abstract class IonValueLite
      * simply sets the context and may or may not set the null
      * bit in the flags member.
      */
-    protected IonValueLite(IonContext context, boolean isNull)
+    IonValueLite(IonContext context, boolean isNull)
     {
         assert context != null;
         _context = context;
@@ -266,7 +266,7 @@ public abstract class IonValueLite
      *
      * @param original value
      */
-    protected final void copyValueContentFrom(IonValueLite original)
+    final void copyValueContentFrom(IonValueLite original)
     {
          assert _context instanceof IonSystemLite; // Baby I was born this way
 
@@ -387,7 +387,7 @@ public abstract class IonValueLite
         return;
     }
 
-    protected final SymbolTable resolve_symbol(SymbolTable symbols, String name)
+    final SymbolTable resolve_symbol(SymbolTable symbols, String name)
     {
         assert(name != null && symbols != null);
 
@@ -402,7 +402,7 @@ public abstract class IonValueLite
         return symbols;
     }
 
-    protected final void setFieldName(String name)
+    final void setFieldName(String name)
     {
         assert(this.getContainer() == null);
         _fieldName = name;
@@ -630,7 +630,7 @@ public abstract class IonValueLite
      * @throws ReadOnlyValueException
      *   if this value {@link #isReadOnly()}.
      */
-    protected final void checkForLock()
+    final void checkForLock()
         throws ReadOnlyValueException
     {
         if (_isLocked()) {
@@ -705,7 +705,7 @@ public abstract class IonValueLite
      *
      * @param context must not be null.
      */
-    protected void setContext(IonContext context)
+    final void setContext(IonContext context)
     {
         assert context != null;
         checkForLock();
@@ -717,7 +717,7 @@ public abstract class IonValueLite
      *
      * @return this value's context. Not null.
      */
-    protected IonContext getContext()
+    IonContext getContext()
     {
         return _context;
     }
@@ -727,7 +727,7 @@ public abstract class IonValueLite
      * methods that have that precondition.
      * @throws NullValueException if <code>this.isNullValue()</code>
      */
-    protected final void validateThisNotNull()
+    final void validateThisNotNull()
         throws NullValueException
     {
         if (_isNullValue())
@@ -740,7 +740,7 @@ public abstract class IonValueLite
      * Removes this value from its container, ensuring that all data stays
      * available.  Dirties this value and it's original container.
      */
-    protected final void detachFromContainer() // throws IOException
+    final void detachFromContainer() // throws IOException
     {
         checkForLock();
 

@@ -777,7 +777,7 @@ abstract public class IonContainerImpl
             _hasNativeValue(true);
         }
 
-        add_child(index, element);
+        add_child(index, concrete);
         //_contents.add(index, element);
         concrete._elementid = index;
         updateElementIds(index + 1); // start at the next element, this one is fine

@@ -48,7 +48,11 @@ public interface IonContext
      * Sets the container for the given child value, which must have this
      * instance as its context.
      *
-     * @param container the parent of the value this context is bound to
+     * @param container the new container for the child; not null.
+     * @param child must not be null.
+     *
+     * @throws UnsupportedOperationException
+     *  if this is a container or a datagram.
      */
     abstract void setContextContainer(IonContainerLite container,
                                       IonValueLite child);
