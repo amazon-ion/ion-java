@@ -111,7 +111,7 @@ public class DatagramTest
 
 
     @Test
-    public void testAutomaticSystemId()
+    public void testAutomaticIVM()
         throws Exception
     {
         IonSystemPrivate system = system();
@@ -132,7 +132,7 @@ public class DatagramTest
     }
 
     @Test
-    public void testManualSystemId()
+    public void testManualIVM()
         throws Exception
     {
         IonSystemPrivate system = system();
@@ -147,6 +147,9 @@ public class DatagramTest
         dg.add(sysId);
 
         assertSame(systemSymtab_1_0, sysId.getSymbolTable());
+
+        // TODO ION-261
+//        assertEquals(0, dg.size());
 
         // TODO adding $ion_1_1 should fail: unsupported version
     }
@@ -655,13 +658,15 @@ public class DatagramTest
         ((IonValuePrivate)dg).getAssignedSymbolTable();
     }
 
-    @Test
-    public void testAddingIVM()
+    /**
+     * TODO ION-90 Datagram.set() should work, but it's documented to throw
+     * and doesn't work on lazy DOM.
+     */
+    @Test(expected = UnsupportedOperationException.class)
+    public void testSet()
     {
         IonDatagram dg = system().newDatagram();
-        IonSymbol ivm = system().newSymbol(SystemSymbols.ION_1_0);
-        dg.add(ivm);
-        // TODO ION-261
-        // assertEquals(0, dg.size());
+        dg.add().newNull();
+        dg.set(0, system().newBool(true));
     }
 }

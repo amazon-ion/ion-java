@@ -296,11 +296,6 @@ public class IonDatagramLite
         return clone;
     }
 
-    // IonSequenceLite version of this is the right one
-    // public boolean contains(Object o)
-
-    // IonSequenceLite version of this is the right one
-    // public boolean containsAll(Collection<?> c)
 
     @Override
     public void deepMaterialize()
@@ -310,7 +305,6 @@ public class IonDatagramLite
 
 
     @Override
-    @SuppressWarnings("unchecked")
     public <T extends IonValue> T[] extract(Class<T> type)
     {
         if (isNullValue()) return null;
@@ -320,17 +314,6 @@ public class IonDatagramLite
         return array;
     }
 
-    // from IonContainerLite
-    // public IonValue get(int index)
-
-    // from IonSequenceList
-    // public int indexOf(Object o)
-
-    // from IonSequenceLite
-    // public int lastIndexOf(Object o)
-
-    // uses IonContainerLite copy
-    // public ListIterator<IonValue> listIterator()
 
     @Override
     public ListIterator<IonValue> listIterator(int index)
@@ -397,21 +380,16 @@ public class IonDatagramLite
         return symbols;
     }
 
-    // from IonSequenceLite
-    // public IonValue remove(int index)
-
-    // from IonSequenceLite
-    // public boolean remove(Object o)
-
-    // from IonSequenceLite
-    // public boolean removeAll(Collection<?> c)
-
-    // from IonSequenceLite
-    // public boolean retainAll(Collection<?> c)
 
     @Override
     public IonValue set(int index, IonValue element)
     {
+        if (true)
+        {
+            // TODO JIRA ION-90
+            throw new UnsupportedOperationException("JIRA issue ION-90");
+        }
+
         IonValue previous = super.set(index, element);
         IonValueLite concrete = (IonValueLite)element;
 
@@ -439,32 +417,6 @@ public class IonDatagramLite
         return previous;
     }
 
-    // from IonSequenceLite
-    // public List<IonValue> subList(int fromIndex, int toIndex)
-
-    // from IonSequenceLite
-    // public synchronized IonValue[] toArray()
-
-    // from IonSequenceLite
-    // public <T> T[] toArray(T[] a)
-
-    // from IonContainerLite
-    // public void clear()
-
-    // from IonContainerLite
-    // public boolean isEmpty() throws NullValueException
-
-    // just a cover for listIterator(0), defined in IonContainerLite
-    // public Iterator<IonValue> iterator()
-
-    // from IonContainerLite
-    // public void makeNull()
-
-    // from IonContainerLite
-    // public boolean remove(IonValue element)
-
-    // from IonContainerLite
-    // public int size()
 
     @Override
     public void accept(ValueVisitor visitor) throws Exception
@@ -479,30 +431,12 @@ public class IonDatagramLite
         throw new UnsupportedOperationException(message);
     }
 
-    // defined in IonValueLite
-    // public void clearTypeAnnotations()
-
-    // defined in IonValueLite
-    // public void deepMaterialize()
 
     @Override
     public IonContainerLite getContainer()
     {
         return null;
     }
-
-    // defined in IonValueLite
-    // public int getFieldId()
-
-    // defined in IonValueLite
-    // public String getFieldName()
-
-    // defined in IonValueLite
-    // public int getFieldNameId()
-
-    // Moved into the context methods list to
-    // live next to context symbol table logic.
-    // public SymbolTable getSymbolTable()
 
     @Override
     public IonSystemLite getSystem()
@@ -516,31 +450,6 @@ public class IonDatagramLite
         return IonType.DATAGRAM;
     }
 
-    // defined in IonValueLite - always the empty array
-    //public String[] getTypeAnnotationStrings()
-
-    // defined in IonValueLite - always the empty array
-    // public String[] getTypeAnnotations()
-
-    // defined in IonValueLite
-    // public boolean hasTypeAnnotation(String annotation)
-
-    // defined in IonValueLite - always false
-    // public boolean isNullValue()
-
-    // defined in IonValueLite
-    // public boolean isReadOnly()
-
-    // from IonContainerLite
-    // public void makeReadOnly()
-
-    // the base version of this is fine since datagrams have no
-    // container to be removed from
-    // public boolean removeFromContainer()
-
-    // the base version of this is fine since datagrams have no
-    // annotations to be removed from
-    // public void removeTypeAnnotation(String annotation)
 
     //////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////
