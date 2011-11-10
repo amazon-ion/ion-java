@@ -482,6 +482,14 @@ public abstract class IonTestCase
     }
 
 
+    public void checkType(IonType expected, IonValue actual)
+    {
+        if (actual.getType() != expected)
+        {
+            fail("Expected type " + expected + ", found IonValue: " + actual);
+        }
+    }
+
 
     /**
      * Checks that the value is an IonInt with the given value.
@@ -489,7 +497,7 @@ public abstract class IonTestCase
      */
     public void checkInt(BigInteger expected, IonValue actual)
     {
-        assertSame(IonType.INT, actual.getType());
+        checkType(IonType.INT, actual);
         IonInt i = (IonInt) actual;
 
         if (expected == null) {
@@ -507,7 +515,7 @@ public abstract class IonTestCase
      */
     public void checkInt(Long expected, IonValue actual)
     {
-        assertSame(IonType.INT, actual.getType());
+        checkType(IonType.INT, actual);
         IonInt i = (IonInt) actual;
 
         if (expected == null) {
@@ -535,7 +543,7 @@ public abstract class IonTestCase
      */
     public void checkDecimal(Double expected, IonValue actual)
     {
-        assertSame(IonType.DECIMAL, actual.getType());
+        checkType(IonType.DECIMAL, actual);
         IonDecimal i = (IonDecimal) actual;
 
         if (expected == null) {
@@ -555,7 +563,7 @@ public abstract class IonTestCase
      */
     public void checkTimestamp(Timestamp expected, IonValue actual)
     {
-        assertSame(IonType.TIMESTAMP, actual.getType());
+        checkType(IonType.TIMESTAMP, actual);
         IonTimestamp v = (IonTimestamp) actual;
 
         Timestamp actualTime = v.timestampValue();
@@ -578,7 +586,7 @@ public abstract class IonTestCase
      */
     public void checkTimestamp(String expected, IonValue actual)
     {
-        assertSame(IonType.TIMESTAMP, actual.getType());
+        checkType(IonType.TIMESTAMP, actual);
         IonTimestamp v = (IonTimestamp) actual;
 
         if (expected == null) {
@@ -601,7 +609,7 @@ public abstract class IonTestCase
      */
     public void checkFloat(Double expected, IonValue actual)
     {
-        assertSame(IonType.FLOAT, actual.getType());
+        checkType(IonType.FLOAT, actual);
         IonFloat i = (IonFloat) actual;
 
         if (expected == null) {
@@ -614,14 +622,9 @@ public abstract class IonTestCase
         }
     }
 
-
-
     public void checkNullNull(IonValue actual)
     {
-        if (actual.getType() != IonType.NULL)
-        {
-            fail("Expected null.null, found " + actual);
-        }
+        checkType(IonType.NULL, actual);
     }
 
 
@@ -631,7 +634,7 @@ public abstract class IonTestCase
      */
     public void checkString(String text, IonValue value)
     {
-        assertSame(IonType.STRING, value.getType());
+        checkType(IonType.STRING, value);
         IonString str = (IonString) value;
         assertEquals("string content", text, str.stringValue());
     }
@@ -642,7 +645,7 @@ public abstract class IonTestCase
      */
     public void checkSymbol(String name, IonValue value)
     {
-        assertSame(IonType.SYMBOL, value.getType());
+        checkType(IonType.SYMBOL, value);
         IonSymbol sym = (IonSymbol) value;
         assertEquals("symbol name", name, sym.stringValue());
     }
@@ -653,7 +656,7 @@ public abstract class IonTestCase
      */
     public void checkSymbol(String name, int id, IonValue value)
     {
-        assertSame(IonType.SYMBOL, value.getType());
+        checkType(IonType.SYMBOL, value);
         IonSymbol sym = (IonSymbol) value;
         assertEquals("symbol name", name, sym.stringValue());
         // just so we can set a break point on this before we lose all context
