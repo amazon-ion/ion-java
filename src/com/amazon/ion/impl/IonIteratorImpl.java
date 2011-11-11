@@ -63,17 +63,13 @@ public class IonIteratorImpl
     {
         assert !_at_eof && _next == null;
 
-        if (! _reader.hasNext())
+        IonType type = _reader.next();
+        if (type == null)
         {
             _at_eof = true;
         }
         else
         {
-            IonType type = _reader.next();
-            // FIXME second clause shouldn't be needed.  ION-27
-//            assert !_reader.isInStruct() || type==IonType.STRUCT;
-            assert(type != null);
-
             IonValue v = readValue(_reader);
             _next = (IonValuePrivate) v;
             SymbolTable symbols = _next.getAssignedSymbolTable();
@@ -162,9 +158,8 @@ public class IonIteratorImpl
                 {
                     IonStruct struct = _valueFactory.newEmptyStruct();
                     _reader.stepIn();
-                    while (_reader.hasNext())
+                    while (_reader.next() != null)
                     {
-                        _reader.next();
                         String fieldName = _reader.getFieldName();
                         IonValue child = readValue(_reader);
                         struct.add(fieldName, child);
@@ -177,9 +172,8 @@ public class IonIteratorImpl
                 {
                     IonSequence seq = _valueFactory.newEmptyList();
                     _reader.stepIn();
-                    while (_reader.hasNext())
+                    while (_reader.next() != null)
                     {
-                        _reader.next();
                         IonValue child = readValue(_reader);
                         seq.add(child);
                     }
@@ -191,9 +185,8 @@ public class IonIteratorImpl
                 {
                     IonSequence seq = _valueFactory.newEmptySexp();
                     _reader.stepIn();
-                    while (_reader.hasNext())
+                    while (_reader.next() != null)
                     {
-                        _reader.next();
                         IonValue child = readValue(_reader);
                         seq.add(child);
                     }
