@@ -8,6 +8,7 @@ import com.amazon.ion.IonLob;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonStruct;
+import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
@@ -25,8 +26,8 @@ public class IonIteratorImpl
     private SymbolTable  _current_symbols;
 
     private boolean      _at_eof;
-    private IonValueImpl _curr;
-    private IonValueImpl _next;
+    private IonValue _curr;
+    private IonValuePrivate _next;
 
 
 
@@ -74,19 +75,21 @@ public class IonIteratorImpl
             assert(type != null);
 
             IonValue v = readValue(_reader);
-            _next = (IonValueImpl) v;
+            _next = (IonValuePrivate) v;
             SymbolTable symbols = _next.getAssignedSymbolTable();
             if (UnifiedSymbolTable.isTrivialTable(symbols) == true
              && UnifiedSymbolTable.isTrivialTable(this._current_symbols) == false
             ) {
+                // TODO why is this changing the symtab?
                 symbols = this._current_symbols;
                 _next.setSymbolTable(symbols);
             }
 
             if (UnifiedSymbolTable.isRealLocalTable(symbols) == false) {
+                // TODO why is this changing the symtab?
                 // so we have to make it a real
                 assert(symbols == null || symbols.isSharedTable() || symbols.isSystemTable());
-                IonSystemImpl system = _next.getSystem();
+                IonSystem system = _next.getSystem();
                 SymbolTable local =
                     makeNewLocalSymbolTable(system, system.getSystemSymbolTable());
                 _next.setSymbolTable(local);
@@ -203,8 +206,10 @@ public class IonIteratorImpl
             }
         }
 
+        // TODO this is too late in the case of system reading
+        // when v is a local symtab (it will get itself, not the prior symtab)
         SymbolTable symtab = _reader.getSymbolTable();
-        ((IonValueImpl)v).setSymbolTable(symtab);
+        ((IonValuePrivate)v).setSymbolTable(symtab);
 
         if (annotations.length != 0) {
             v.setTypeAnnotations(annotations);
@@ -214,7 +219,7 @@ public class IonIteratorImpl
     }
 
 
-    public IonValueImpl next() {
+    public IonValue next() {
         if (! _at_eof) {
             _curr = null;
             if (_next == null) {
