@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.UnifiedInputStreamX.makeStream;
 import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
 
 import com.amazon.ion.IonCatalog;
@@ -21,41 +22,9 @@ import java.io.Reader;
  *     other class for public consumption and this
  *     class should be deprecated
  */
+@SuppressWarnings("deprecation")
 public class IonReaderFactoryX
 {
-    // without a system you can only get a system reader
-    public static IonTextReader makeSystemReader(String ionText) {
-        IonTextReader r = new IonReaderTextSystemX((IonSystem)null, ionText, 0, ionText.length());
-        return r;
-    }
-    public static final IonTextReader makeSystemReader(char[] chars) {
-        IonTextReader r = makeSystemReader(chars, 0, chars.length);
-        return r;
-    }
-    public static final IonTextReader makeSystemReader(char[] chars, int offset, int length) {
-        IonTextReader r = new IonReaderTextSystemX((IonSystem)null, chars, offset, length);
-        return r;
-    }
-    public static final IonTextReader makeSystemReader(CharSequence chars) {
-        IonTextReader r = makeSystemReader(chars, 0, chars.length());
-        return r;
-    }
-    public static final IonTextReader makeSystemReader(CharSequence chars, int offset, int length) {
-        IonTextReader r = new IonReaderTextSystemX((IonSystem)null, chars, offset, length);
-        return r;
-    }
-    public static final IonTextReader makeSystemReader(Reader chars) {
-        IonTextReader r = new IonReaderTextSystemX((IonSystem)null, chars);
-        return r;
-    }
-    public static final IonReader makeSystemReader(IonValue value) {
-        IonReader r = new IonReaderTreeSystem(value);
-        return r;
-    }
-
-    // with a system you get a user reader since we
-    // can use the system to get a catalog and make
-    // symbol tables if we need to
     public static final IonTextReader makeReader(IonSystem system, char[] chars) {
         IonTextReader r = makeReader(system, system.getCatalog(), chars, 0, chars.length);
         return r;
@@ -86,20 +55,49 @@ public class IonReaderFactoryX
         IonTextReader r = makeReader(system, catalog, chars, 0, chars.length);
         return r;
     }
-    public static final IonTextReader makeReader(IonSystem system, IonCatalog catalog, char[] chars, int offset, int length) {
-        IonTextReader r = new IonReaderTextUserX(system, catalog, chars, offset, length);
+
+    public static final IonTextReader makeReader(IonSystem system,
+                                                 IonCatalog catalog,
+                                                 char[] chars,
+                                                 int offset,
+                                                 int length)
+    {
+        UnifiedInputStreamX in = makeStream(chars, offset, length);
+        IonTextReader r = new IonReaderTextUserX(system, catalog, in, offset);
         return r;
     }
-    public static final IonTextReader makeReader(IonSystem system, IonCatalog catalog, CharSequence chars) {
-        IonTextReader r = new IonReaderTextUserX(system, catalog, chars, 0, chars.length());
+
+    public static final IonTextReader makeReader(IonSystem system,
+                                                 IonCatalog catalog,
+                                                 CharSequence chars)
+    {
+        UnifiedInputStreamX in = makeStream(chars);
+        IonTextReader r = new IonReaderTextUserX(system, catalog, in);
         return r;
     }
-    public static final IonTextReader makeReader(IonSystem system, IonCatalog catalog, CharSequence chars, int offset, int length) {
-        IonTextReader r = new IonReaderTextUserX(system, catalog, chars, offset, length);
+
+    public static final IonTextReader makeReader(IonSystem system,
+                                                 IonCatalog catalog,
+                                                 CharSequence chars,
+                                                 int offset,
+                                                 int length)
+    {
+        UnifiedInputStreamX in = makeStream(chars, offset, length);
+        IonTextReader r = new IonReaderTextUserX(system, catalog, in, offset);
         return r;
     }
-    public static final IonTextReader makeReader(IonSystem system, IonCatalog catalog, Reader chars) {
-        IonTextReader r = new IonReaderTextUserX(system, catalog, chars);
+
+    public static final IonTextReader makeReader(IonSystem system,
+                                                 IonCatalog catalog,
+                                                 Reader chars) {
+        UnifiedInputStreamX in;
+        try {
+            in = makeStream(chars);
+        }
+        catch (IOException e) {
+            throw new IonException(e);
+        }
+        IonTextReader r = new IonReaderTextUserX(system, catalog, in);
         return r;
     }
 
@@ -111,31 +109,67 @@ public class IonReaderFactoryX
     // or with a system and the right request you can get a system reader
     // but since system reader don't do symbol tables a catalog is not
     // only useless but misleading
-    public static IonTextReader makeSystemReader(IonSystem system, String ionText) {
-        IonTextReader r = new IonReaderTextSystemX(system, ionText, 0, ionText.length());
+    public static IonTextReader makeSystemReader(IonSystem system,
+                                                 String ionText)
+    {
+        UnifiedInputStreamX in = makeStream(ionText);
+        IonTextReader r = new IonReaderTextSystemX(system, in);
         return r;
     }
-    public static final IonTextReader makeSystemReader(IonSystem system, char[] chars) {
-        IonTextReader r = new IonReaderTextSystemX(system, chars, 0, chars.length);
+
+    public static final IonTextReader makeSystemReader(IonSystem system,
+                                                       char[] chars)
+    {
+        UnifiedInputStreamX in = makeStream(chars);
+        IonTextReader r = new IonReaderTextSystemX(system, in);
         return r;
     }
-    public static final IonTextReader makeSystemReader(IonSystem system, char[] chars, int offset, int length) {
-        IonTextReader r = new IonReaderTextSystemX(system, chars, offset, length);
+
+    public static final IonTextReader makeSystemReader(IonSystem system,
+                                                       char[] chars,
+                                                       int offset,
+                                                       int length)
+    {
+        UnifiedInputStreamX in = makeStream(chars, offset, length);
+        IonTextReader r = new IonReaderTextSystemX(system, in);
         return r;
     }
-    public static final IonTextReader makeSystemReader(IonSystem system, CharSequence chars) {
-        IonTextReader r = new IonReaderTextSystemX(system, chars, 0, chars.length());
+
+    public static final IonTextReader makeSystemReader(IonSystem system,
+                                                       CharSequence chars)
+    {
+        UnifiedInputStreamX in = makeStream(chars);
+        IonTextReader r = new IonReaderTextSystemX(system, in);
         return r;
     }
-    public static final IonTextReader makeSystemReader(IonSystem system, CharSequence chars, int offset, int length) {
-        IonTextReader r = new IonReaderTextSystemX(system, chars, offset, length);
+
+    public static final IonTextReader makeSystemReader(IonSystem system,
+                                                       CharSequence chars,
+                                                       int offset,
+                                                       int length)
+    {
+        UnifiedInputStreamX in = makeStream(chars, offset, length);
+        IonTextReader r = new IonReaderTextSystemX(system, in);
         return r;
     }
-    public static final IonTextReader makeSystemReader(IonSystem system, Reader chars) {
-        IonTextReader r = new IonReaderTextSystemX(system, chars);
+
+    public static final IonTextReader makeSystemReader(IonSystem system,
+                                                       Reader chars)
+    {
+        UnifiedInputStreamX in;
+        try {
+            in = makeStream(chars);
+        }
+        catch (IOException e) {
+            throw new IonException(e);
+        }
+        IonTextReader r = new IonReaderTextSystemX(system, in);
         return r;
     }
-    public static final IonReader makeSystemReader(IonSystem system, IonValue value) {
+
+    public static final IonReader makeSystemReader(IonSystem system,
+                                                   IonValue value)
+    {
         if (system != null && system != value.getSystem()) {
             throw new IonException("you can't mix values from different systems");
         }
@@ -144,67 +178,33 @@ public class IonReaderFactoryX
     }
 
 
-    //
-    // for bytes sources we have to check the cookie
-    //
-    // with a system you get a user reader
-
-    public static final IonReader makeReader(byte[] bytes)
-    {
-        IonReader r = makeSystemReader((IonSystem)null, bytes, 0, bytes.length);
-        return r;
-    }
-    public static final IonReader makeReader(byte[] bytes, int offset, int length)
-    {
-        IonReader r = makeSystemReader((IonSystem)null, bytes, offset, length);
-//        IonReader r;
-//        if (has_binary_cookie(bytes, offset, length)) {
-//            r = new IonReaderBinarySystemX(null, bytes, offset, length);
-//        }
-//        else {
-//            r = new IonReaderTextSystemX(null, bytes, offset, length);
-//        }
-        return r;
-    }
-    public static final IonReader makeReader(InputStream is)
-    {
-        IonReader r = makeSystemReader((IonSystem)null, is);
-        return r;
-//        IonReader r;
-//        UnifiedInputStreamX uis;
-//        try {
-//            uis = UnifiedInputStreamX.makeStream(is);
-//            if (has_binary_cookie(uis)) {
-//                r = new IonReaderBinarySystemX(null, uis);
-//            }
-//            else {
-//                r = new IonReaderTextSystemX(null, uis);
-//            }
-//        }
-//        catch (IOException e) {
-//            throw new IonException(e);
-//        }
-//        return r;
-    }
     // with a system you get a user reader
     public static final IonReader makeReader(IonSystem system, byte[] bytes)
     {
         IonReader r = makeReader(system, system.getCatalog(), bytes, 0, bytes.length);
         return r;
     }
+
     public static final IonReader makeReader(IonSystem system, byte[] bytes, int offset, int length)
     {
         IonReader r = makeReader(system, system.getCatalog(), bytes, offset, length);
         return r;
     }
-    public static final IonReader makeReader(IonSystem system, IonCatalog catalog, byte[] bytes, int offset, int length)
+
+    public static final IonReader makeReader(IonSystem system,
+                                             IonCatalog catalog,
+                                             byte[] bytes,
+                                             int offset,
+                                             int length)
     {
+        UnifiedInputStreamX iis =
+            UnifiedInputStreamX.makeStream(bytes, offset, length);
         IonReader r;
         if (isIonBinary(bytes, offset, length)) {
-            r = new IonReaderBinaryUserX(system, catalog, bytes, offset, length);
+            r = new IonReaderBinaryUserX(system, catalog, iis, offset);
         }
         else {
-            r = new IonReaderTextUserX(system, catalog, bytes, offset, length);
+            r = new IonReaderTextUserX(system, catalog, iis, offset);
         }
         return r;
     }
@@ -213,7 +213,10 @@ public class IonReaderFactoryX
         IonReader r = makeReader(system, system.getCatalog(), is);
         return r;
     }
-    public static final IonReader makeReader(IonSystem system, IonCatalog catalog, InputStream is)
+
+    public static final IonReader makeReader(IonSystem system,
+                                             IonCatalog catalog,
+                                             InputStream is)
     {
         IonReader r;
         UnifiedInputStreamX uis;
@@ -240,12 +243,14 @@ public class IonReaderFactoryX
     }
     public static final IonReader makeSystemReader(IonSystem system, byte[] bytes, int offset, int length)
     {
+        UnifiedInputStreamX iis =
+            UnifiedInputStreamX.makeStream(bytes, offset, length);
         IonReader r;
         if (isIonBinary(bytes, offset, length)) {
-            r = new IonReaderBinarySystemX(system, bytes, offset, length);
+            r = new IonReaderBinarySystemX(system, iis); // FIXME pass offset?
         }
         else {
-            r = new IonReaderTextSystemX(system, bytes, offset, length);
+            r = new IonReaderTextSystemX(system, iis);
         }
         return r;
     }

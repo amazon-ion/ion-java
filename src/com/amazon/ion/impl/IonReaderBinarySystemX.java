@@ -6,7 +6,6 @@ import static com.amazon.ion.impl.IonImplUtils.EMPTY_INT_ARRAY;
 import static com.amazon.ion.impl.IonImplUtils.intIterator;
 
 import com.amazon.ion.Decimal;
-import com.amazon.ion.IonException;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
@@ -14,7 +13,6 @@ import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
 import com.amazon.ion.impl.IonScalarConversionsX.ValueVariant;
 import java.io.IOException;
-import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
@@ -29,27 +27,19 @@ class IonReaderBinarySystemX
 {
     IonSystem _system;
     // ValueVariant _v; actually owned by the raw reader so it can be cleared at appropriate times
-    protected IonReaderBinarySystemX(IonSystem system, byte[] bytes, int offset, int length) {
+
+    @Deprecated
+    IonReaderBinarySystemX(IonSystem system, byte[] bytes, int offset, int length) {
         super();
         UnifiedInputStreamX uis = UnifiedInputStreamX.makeStream(bytes, offset, length);
         init_raw(uis);
         _system = system;
     }
-    protected IonReaderBinarySystemX(IonSystem system, InputStream userBytes) {
+
+    IonReaderBinarySystemX(IonSystem system, UnifiedInputStreamX in)
+    {
         super();
-        UnifiedInputStreamX uis;
-        try {
-            uis = UnifiedInputStreamX.makeStream(userBytes);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-        init_raw(uis);
-        _system = system;
-    }
-    protected IonReaderBinarySystemX(IonSystem system, UnifiedInputStreamX userBytes) {
-        super();
-        init_raw(userBytes);
+        init_raw(in);
         _system = system;
     }
 

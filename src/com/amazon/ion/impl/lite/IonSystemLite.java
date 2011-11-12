@@ -5,6 +5,8 @@ package com.amazon.ion.impl.lite;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
+import static com.amazon.ion.impl.IonReaderFactoryX.makeReader;
+import static com.amazon.ion.impl.IonReaderFactoryX.makeSystemReader;
 import static com.amazon.ion.impl.IonWriterFactory.DEFAULT_OPTIONS;
 import static com.amazon.ion.impl.IonWriterFactory.makeWriter;
 import static com.amazon.ion.impl.UnifiedSymbolTable.initialSymbolTable;
@@ -114,7 +116,7 @@ public final class IonSystemLite
 
         IonDatagram datagram = newDatagram();
         IonWriter writer = IonWriterFactory.makeWriter(datagram);
-        IonReader reader = IonReaderFactoryX.makeSystemReader(value);
+        IonReader reader = makeSystemReader(value.getSystem(), value);
 
         try {
             writer.writeValues(reader);
@@ -943,7 +945,7 @@ public final class IonSystemLite
 
     public IonReader newReader(byte[] ionData, int offset, int len)
     {
-        IonReader reader = newReader(getCatalog(), ionData, offset, len);
+        IonReader reader = makeReader(this, _catalog, ionData, offset, len);
         return reader;
     }
 
@@ -956,20 +958,19 @@ public final class IonSystemLite
 
     public IonReader newReader(InputStream ionData)
     {
-        IonReader reader = newReader(this.getCatalog(), ionData);
-        return reader;
+        return makeReader(this, _catalog, ionData);
     }
 
     public IonReader newReader(IonCatalog catalog, InputStream ionData)
     {
         if (catalog == null) catalog = getCatalog();
-        IonReader reader = IonReaderFactoryX.makeReader(this, catalog, ionData);
+        IonReader reader = makeReader(this, catalog, ionData);
         return reader;
     }
 
     public IonReader newReader(IonValue value)
     {
-        IonReader reader = newReader(this.getCatalog(), value);
+        IonReader reader = makeReader(this, _catalog, value);
         return reader;
     }
 
@@ -1007,39 +1008,34 @@ public final class IonSystemLite
 
     public IonTextReader newSystemReader(String ionText)
     {
-        IonTextReader reader = IonReaderFactoryX.makeSystemReader(ionText);
-        return reader;
+        return makeSystemReader(this, ionText);
     }
 
     public IonTextReader newSystemReader(Reader ionText)
     {
-        IonTextReader reader = IonReaderFactoryX.makeSystemReader(ionText);
-        return reader;
+        return makeSystemReader(this, ionText);
     }
 
     public IonReader newSystemReader(byte[] ionData)
     {
-        IonReader reader = IonReaderFactoryX.makeReader(ionData);
-        return reader;
+        return makeSystemReader(this, ionData);
     }
 
     public IonReader newSystemReader(byte[] ionData, int offset, int len)
     {
-        IonReader reader = IonReaderFactoryX.makeReader(ionData, offset, len);
-        return reader;
+        return makeSystemReader(this, ionData, offset, len);
     }
 
     public IonReader newSystemReader(InputStream ionData)
     {
-        IonReader reader = IonReaderFactoryX.makeReader(ionData);
-        return reader;
+        return makeSystemReader(this, ionData);
     }
 
     public IonReader newSystemReader(IonValue value)
     {
-        IonReader reader = IonReaderFactoryX.makeSystemReader(value);
-        return reader;
+        return makeSystemReader(this, value);
     }
+
 
     public IonWriter newTextWriter(OutputStream out, boolean pretty)
     {

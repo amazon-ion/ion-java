@@ -20,11 +20,7 @@ import com.amazon.ion.impl.IonReaderTextRawTokensX.IonReaderTextTokenException;
 import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
 import com.amazon.ion.impl.IonScalarConversionsX.CantConvertException;
 import com.amazon.ion.impl.IonTokenConstsX.CharacterSequence;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.Reader;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
@@ -48,72 +44,9 @@ public class IonReaderTextSystemX
 
     protected IonSystem _system;
 
-    protected IonReaderTextSystemX(IonSystem system, char[] chars, int offset, int length) {
-        super();
-        _system = system;
-        UnifiedInputStreamX iis;
-        iis = UnifiedInputStreamX.makeStream(chars, offset, length);
-        init_once();
-        init(iis, IonType.DATAGRAM);
-    }
-    protected IonReaderTextSystemX(IonSystem system, CharSequence chars, int offset, int length) {
-        super();
-        _system = system;
-        UnifiedInputStreamX iis;
-        iis = UnifiedInputStreamX.makeStream(chars, offset, length);
-        init_once();
-        init(iis, IonType.DATAGRAM);
-    }
-    protected IonReaderTextSystemX(IonSystem system, Reader userChars) {
-        super();
-        _system = system;
-        UnifiedInputStreamX iis;
-        try {
-            iis = UnifiedInputStreamX.makeStream(userChars);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-        init_once();
-        init(iis, IonType.DATAGRAM);
-    }
-    protected IonReaderTextSystemX(IonSystem system, byte[] bytes, int offset, int length) {
-        super();
-        _system = system;
-        UnifiedInputStreamX iis;
-        iis = UnifiedInputStreamX.makeStream(bytes, offset, length);
-        init_once();
-        init(iis, IonType.DATAGRAM);
-    }
-    protected IonReaderTextSystemX(IonSystem system, InputStream userBytes) {
-        super();
-        _system = system;
-        UnifiedInputStreamX iis;
-        try {
-            iis = UnifiedInputStreamX.makeStream(userBytes);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-        init_once();
-        init(iis, IonType.DATAGRAM);
-    }
-    protected IonReaderTextSystemX(IonSystem system, File file) {
-        super();
-        _system = system;
-        UnifiedInputStreamX iis;
-        try {
-            InputStream userBytes = new FileInputStream(file);
-            iis = UnifiedInputStreamX.makeStream(userBytes);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-        init_once();
-        init(iis, IonType.DATAGRAM);
-    }
-    protected IonReaderTextSystemX(IonSystem system, UnifiedInputStreamX iis) {
-        super();
+
+    protected IonReaderTextSystemX(IonSystem system, UnifiedInputStreamX iis)
+    {
         _system = system;
         init_once();
         init(iis, IonType.DATAGRAM);

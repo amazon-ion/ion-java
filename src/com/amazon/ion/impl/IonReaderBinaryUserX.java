@@ -18,7 +18,6 @@ import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
 import com.amazon.ion.impl.UnifiedInputStreamX.FromByteArray;
 import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Iterator;
 
 class IonReaderBinaryUserX
@@ -70,17 +69,27 @@ class IonReaderBinaryUserX
         }
     }
 
+    @Deprecated
     public IonReaderBinaryUserX(IonSystem system, IonCatalog catalog, byte[] bytes, int offset, int length) {
         super(system, bytes, offset, length);
         _physical_start_offset = offset;
         init_user(catalog);
     }
-    public IonReaderBinaryUserX(IonSystem system, IonCatalog catalog, InputStream userBytes) {
+
+    public IonReaderBinaryUserX(IonSystem system,
+                                IonCatalog catalog,
+                                UnifiedInputStreamX userBytes,
+                                int physicalStartOffset)
+    {
         super(system, userBytes);
-        _physical_start_offset = 0;
+        _physical_start_offset = physicalStartOffset;
         init_user(catalog);
     }
-    public IonReaderBinaryUserX(IonSystem system, IonCatalog catalog, UnifiedInputStreamX userBytes) {
+
+    public IonReaderBinaryUserX(IonSystem system,
+                                IonCatalog catalog,
+                                UnifiedInputStreamX userBytes)
+    {
         super(system, userBytes);
         _physical_start_offset = 0;
         init_user(catalog);

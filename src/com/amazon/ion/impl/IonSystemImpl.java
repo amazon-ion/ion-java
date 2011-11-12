@@ -9,6 +9,8 @@ import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.IonImplUtils.UTF8_CHARSET;
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
+import static com.amazon.ion.impl.IonReaderFactoryX.makeReader;
+import static com.amazon.ion.impl.IonReaderFactoryX.makeSystemReader;
 import static com.amazon.ion.impl.IonWriterFactory.DEFAULT_OPTIONS;
 import static com.amazon.ion.impl.IonWriterFactory.makeWriter;
 import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemIterator;
@@ -372,113 +374,65 @@ public final class IonSystemImpl
     @SuppressWarnings("deprecation")
     public IonTextReader newReader(String ionText)
     {
-        return new IonReaderTextUserX(this, null, ionText, 0, ionText.length());
+        return makeReader(this, myCatalog, ionText);
     }
 
     @SuppressWarnings("deprecation")
     public IonTextReader newSystemReader(String ionText)
     {
-        return new IonReaderTextSystemX(this, ionText, 0, ionText.length());
+        return makeSystemReader(this, ionText);
     }
 
 
     @SuppressWarnings("deprecation")
     public IonTextReader newSystemReader(Reader ionText)
     {
-        return new IonReaderTextSystemX(this, ionText);
+        return makeSystemReader(this, ionText);
     }
 
 
     public IonReader newReader(byte[] ionData)
     {
-        return newReader(ionData, 0, ionData.length);
+        return makeReader(this, myCatalog, ionData, 0, ionData.length);
     }
 
     public IonReader newSystemReader(byte[] ionData)
     {
-        return newSystemReader(ionData, 0, ionData.length);
+        return makeSystemReader(this, ionData);
     }
 
 
     public IonReader newReader(byte[] ionData, int offset, int len)
     {
-        boolean isBinary = isIonBinary(ionData, offset, len);
-        if (isBinary)
-        {
-            return new IonReaderBinaryUserX(this, myCatalog, ionData, offset, len);
-        }
-
-        return new IonReaderTextUserX(this, myCatalog, ionData, offset, len);
+        return makeReader(this, myCatalog, ionData, offset, len);
     }
 
 
     public IonReader newSystemReader(byte[] ionData, int offset, int len)
     {
-        boolean isBinary = isIonBinary(ionData, offset, len);
-        if (isBinary)
-        {
-            return new IonReaderBinarySystemX(this, ionData, offset, len);
-        }
-
-        return new IonReaderTextSystemX(this, ionData, offset, len);
+        return makeSystemReader(this, ionData, offset, len);
     }
 
 
     public IonReader newReader(InputStream ionData)
     {
-        try
-        {
-            PushbackInputStream pushback =
-                new PushbackInputStream(ionData, 8);
-            boolean isBinary = IonImplUtils.streamIsIonBinary(pushback);
-
-            if (isBinary)
-            {
-                return new IonReaderBinaryUserX(this, myCatalog, pushback);
-            }
-
-            Reader reader = new InputStreamReader(pushback, UTF8_CHARSET);
-            return new IonReaderTextUserX(this, null, reader); // FIXME wrong catalog?
-        }
-        catch (IOException e)
-        {
-            throw new IonException(e);
-        }
+        return makeReader(this, myCatalog, ionData);
     }
 
     public IonReader newSystemReader(InputStream ionData)
     {
-        try
-        {
-            PushbackInputStream pushback =
-                new PushbackInputStream(ionData, 8);
-            boolean isBinary = IonImplUtils.streamIsIonBinary(pushback);
-
-            if (isBinary)
-            {
-                return new IonReaderBinarySystemX(this, pushback);
-            }
-
-            Reader reader = new InputStreamReader(pushback, UTF8_CHARSET);
-            return new IonReaderTextSystemX(this, reader);
-        }
-        catch (IOException e)
-        {
-            throw new IonException(e);
-        }
+        return makeSystemReader(this, ionData);
     }
 
 
     public IonReader newReader(IonValue value)
     {
-        IonReader reader = new IonReaderTreeUserX(value, getCatalog());
-        return reader;
+        return makeReader(this, myCatalog, value);
     }
 
     public IonReader newSystemReader(IonValue value)
     {
-        IonReader reader = new IonReaderTreeSystem(value);
-        return reader;
+        return makeSystemReader(this, value);
     }
 
 

@@ -3,6 +3,7 @@
 package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.impl.IonReaderFactoryX.makeSystemReader;
 import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 
 import com.amazon.ion.ContainedValueException;
@@ -18,7 +19,6 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl.IonReaderFactoryX;
 import com.amazon.ion.impl.IonWriterBinaryCompatibility;
 import com.amazon.ion.impl.UnifiedSymbolTable;
 import com.amazon.ion.impl._Private_IonDatagram;
@@ -469,7 +469,7 @@ public class IonDatagramLite
         IonWriterBinaryCompatibility.User writer =
             new IonWriterBinaryCompatibility.User(_system, _catalog,
                                                   streamCopyOptimized);
-        IonReader reader = IonReaderFactoryX.makeSystemReader(this);
+        IonReader reader = makeSystemReader(_system, this);
         writer.writeValues(reader);
         writer.finish();
         return writer;

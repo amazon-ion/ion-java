@@ -15,9 +15,6 @@ import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.TextSpan;
-import java.io.File;
-import java.io.InputStream;
-import java.io.Reader;
 import java.util.Iterator;
 
 /**
@@ -56,41 +53,23 @@ public class IonReaderTextUserX
     IonCatalog  _catalog;
     SymbolTable _symbols;
 
-    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, char[] chars, int offset, int length) {
-        super(system, chars, offset, length);
-        _physical_start_offset = offset;
+
+    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog,
+                                 UnifiedInputStreamX uis,
+                                 int physicalStartOffset)
+    {
+        super(system, uis);
+        _physical_start_offset = physicalStartOffset;
         initUserReader(system, catalog);
     }
-    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, CharSequence chars, int offset, int length) {
-        super(system, chars, offset, length);
-        _physical_start_offset = offset;
-        initUserReader(system, catalog);
-    }
-    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, Reader userChars) {
-        super(system, userChars);
-        _physical_start_offset = 0;
-        initUserReader(system, catalog);
-    }
-    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, byte[] bytes, int offset, int length) {
-        super(system, bytes, offset, length);
-        _physical_start_offset = offset;
-        initUserReader(system, catalog);
-    }
-    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, InputStream userBytes) {
-        super(system, userBytes);
-        _physical_start_offset = 0;
-        initUserReader(system, catalog);
-    }
-    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, File file) {
-        super(system, file);
-        _physical_start_offset = 0;
-        initUserReader(system, catalog);
-    }
-    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, UnifiedInputStreamX uis) {
+
+    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog,
+                                 UnifiedInputStreamX uis) {
         super(system, uis);
         _physical_start_offset = 0;
         initUserReader(system, catalog);
     }
+
     private void initUserReader(IonSystem system, IonCatalog catalog) {
         if (system == null) {
             throw new IllegalArgumentException();
