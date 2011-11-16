@@ -50,14 +50,23 @@ public class BadIonTest
     {
         if (! myFileIsBinary)
         {
-            String ionText = IonImplUtils.utf8FileToString(myTestFile);
+            String ionText;
+            try
+            {
+                // This will fail if the file has bad UTF-8 data.
+                // That's OK, the other test will still do the right thing.
+                ionText = IonImplUtils.utf8FileToString(myTestFile);
+            }
+            catch (IonException e)
+            {
+                assert myTestFile.getPath().contains("bad/utf8");
+                return;
+            }
 
             try
             {
+                @SuppressWarnings("unused")
                 IonDatagram dg = loader().load(ionText);
-
-                // Flush out any encoding problems in the data.
-                //forceMaterialization(dg);
 
                 fail("Expected IonException");
             }
