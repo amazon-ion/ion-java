@@ -213,19 +213,26 @@ public final class UnifiedSymbolTable
      * @param symbols will be retained by this symtab (but not modified).
      * It must not contain any empty strings.
      */
-    private void loadSharedSymbolTableContents(String name, int version, String[] symbols)
+    private void loadSharedSymbolTableContents(String name,
+                                               int version,
+                                               String[] symbols)
     {
         assert symbols != null;
 
         _symbols = symbols;
         _local_symbol_count = symbols.length;
-        for (int ii=0, sid= 1; ii < _local_symbol_count; ii++, sid++) {
+        for (int ii=0, sid= 1; ii < _local_symbol_count; ii++, sid++)
+        {
             String symName = symbols[ii];
             assert symName == null || symName.length() > 0;
+
             // When there's a duplicate name, don't replace the lower sid.
-            // TODO avoid double-lookup by calling put and checking result
-            if (! _id_map.containsKey(symName)) {
-                _id_map.put(symName, sid);
+            // This pattern avoids double-lookup in the normal happy case
+            // and only requires a second lookup when there's a duplicate.
+            Integer extantSid = _id_map.put(symName, sid);
+            if (extantSid != null && extantSid < sid)
+            {
+                _id_map.put(symName, extantSid);
             }
         }
 
