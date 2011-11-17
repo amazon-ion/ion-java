@@ -226,13 +226,16 @@ public final class UnifiedSymbolTable
             String symName = symbols[ii];
             assert symName == null || symName.length() > 0;
 
-            // When there's a duplicate name, don't replace the lower sid.
-            // This pattern avoids double-lookup in the normal happy case
-            // and only requires a second lookup when there's a duplicate.
-            Integer extantSid = _id_map.put(symName, sid);
-            if (extantSid != null && extantSid < sid)
+            if (symName != null)
             {
-                _id_map.put(symName, extantSid);
+                // When there's a duplicate name, don't replace the lower sid.
+                // This pattern avoids double-lookup in the normal happy case
+                // and only requires a second lookup when there's a duplicate.
+                Integer extantSid = _id_map.put(symName, sid);
+                if (extantSid != null && extantSid < sid)
+                {
+                    _id_map.put(symName, extantSid);
+                }
             }
         }
 
@@ -980,7 +983,7 @@ public final class UnifiedSymbolTable
             throw new IonException(message);
         }
 
-        if (_import_list.findSymbol(symbolName) < 0)
+        if (symbolName != null && _import_list.findSymbol(symbolName) < 0)
         {
             _id_map.put(symbolName, sid);
         }
