@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.IonType.STRUCT;
 import static com.amazon.ion.SystemSymbols.IMPORTS;
 import static com.amazon.ion.SystemSymbols.IMPORTS_SID;
 import static com.amazon.ion.SystemSymbols.ION;
@@ -285,12 +286,10 @@ public final class UnifiedSymbolTable
         share(name, version);
     }
 
-    private void loadSharedSymbolTableContents(IonReader reader, boolean isOnStruct)
+    private void loadSharedSymbolTableContents(IonReader reader,
+                                               boolean isOnStruct)
     {
         if (!isOnStruct) {
-            if (!IonImplUtils.READER_HASNEXT_REMOVED && !reader.hasNext()) {
-                throw new IonException("invalid symbol table image passed in reader");
-            }
             IonType t = reader.next();
             if (t != IonType.STRUCT) {
                 throw new IonException("invalid symbol table image passed in reader "+t+" encountered when a struct was expected");
@@ -312,13 +311,10 @@ public final class UnifiedSymbolTable
                                       boolean isOnStruct)
     {
         if (!isOnStruct) {
-            if (!IonImplUtils.READER_HASNEXT_REMOVED && !reader.hasNext()) {
-                throw new IonException("invalid symbol table image passed in reader");
-            }
             IonType t = reader.next();
             if (t != IonType.STRUCT) {
                 String message = "invalid symbol table image passed in reader "
-                               + t.toString()
+                               + t
                                + " encountered when a struct was expected";
                 throw new IonException(message);
             }
@@ -1219,9 +1215,9 @@ public final class UnifiedSymbolTable
 
         ArrayList<String> symbols = null;
 
-        while(reader.hasNext()) {
-            IonType fieldType = reader.next();
-
+        IonType fieldType;
+        while ((fieldType = reader.next()) != null)
+        {
             if (reader.isNullValue()) continue;
 
             int fieldId = reader.getFieldId();
@@ -1249,12 +1245,8 @@ public final class UnifiedSymbolTable
                     symbols = new ArrayList<String>();
 
                     reader.stepIn();
-                    while (reader.hasNext()) {
-                        IonType type = reader.next();
-                        if (type == null) {
-                            break;
-                        }
-
+                    IonType type;
+                    while ((type = reader.next()) != null) {
                         String text = null;
                         if (type == IonType.STRING && !reader.isNullValue()) {
                             text = reader.stringValue();
@@ -1362,12 +1354,9 @@ public final class UnifiedSymbolTable
         assert (reader.getType() == IonType.LIST);
 
         reader.stepIn();
-        while (reader.hasNext()) {
-            IonType t = reader.next();
-            if (t == null) {
-                break;
-            }
-            if (IonType.STRUCT.equals(t)) {
+        IonType t;
+        while ((t = reader.next()) != null) {
+            if (t == STRUCT) {
                 readOneImport(reader, catalog);
             }
         }
@@ -1392,12 +1381,9 @@ public final class UnifiedSymbolTable
         int    maxid = -1;
 
         ionRep.stepIn();
-        while (ionRep.hasNext()) {
-            IonType t = ionRep.next();
-            if (t == null) {
-                break;
-            }
-
+        IonType t;
+        while ((t = ionRep.next()) != null)
+        {
             if (ionRep.isNullValue()) continue;
 
             int field_id = ionRep.getFieldId();
