@@ -932,37 +932,10 @@ public final class UnifiedSymbolTable
         }
     }
 
-    @Deprecated // internal only
-    public
-    synchronized
-    void defineSymbol(String name, int id)
-    {
-        if (_name != null) {
-            throw new UnsupportedOperationException("can't change shared symbol table");
-        }
-        if (name == null || name.length() < 1 || id < 1) {
-            throw new IllegalArgumentException("invalid symbol definition");
-        }
-        if (id < _first_local_sid) {
-            throw new IllegalArgumentException("invalid symbol definition");
-        }
-
-        int sid = this.findSymbol(name);
-        if (sid != UNKNOWN_SYMBOL_ID && sid != id) {
-            throw new IllegalArgumentException("it's not valid to change a symbols id");
-        }
-        else if (sid == UNKNOWN_SYMBOL_ID) {
-            putSymbol(name, id);
-        }
-
-        // TODO disallow using sid within imports range
-    }
-
     /**
      * NOT SYNCHRONIZED! Call within constructor or from synch'd method.
      *
      * TODO streamline: we no longer accept arbitrary sid, its always > max_id
-     * (After we remove {@link #defineSymbol(String, int)} at least)
      *
      * @param symbolName may be null, indicating a gap in the symbol table.
      */
