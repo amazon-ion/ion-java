@@ -1533,7 +1533,7 @@ public final class UnifiedSymbolTable
         return new SymbolIterator();
     }
 
-    Iterator<UnifiedSymbolTable> getImportIterator()
+    Iterator<SymbolTable> getImportIterator()
     {
         return _import_list.getImportIterator();
     }

@@ -442,8 +442,8 @@ public class UnifiedSymbolTableReader
     int                          _flags;                  // has name, has ... optional top level values
     String                       _string_value;
     long                         _int_value;
-    Iterator<UnifiedSymbolTable> _import_iterator;
-    UnifiedSymbolTable           _current_import;
+    private Iterator<SymbolTable> _import_iterator;
+    private SymbolTable          _current_import;
     Iterator<String>             _local_symbols;
 
     public UnifiedSymbolTableReader(UnifiedSymbolTable symbol_table)

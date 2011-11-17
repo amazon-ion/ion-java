@@ -250,11 +250,11 @@ public class UnifiedSymbolTableImports
         return Arrays.toString(_imports);
     }
 
-    Iterator<UnifiedSymbolTable> getImportIterator() {
+    Iterator<SymbolTable> getImportIterator() {
         return new ImportIterator();
     }
 
-    final class ImportIterator implements Iterator<UnifiedSymbolTable>
+    final class ImportIterator implements Iterator<SymbolTable>
     {
         int _idx;
 
