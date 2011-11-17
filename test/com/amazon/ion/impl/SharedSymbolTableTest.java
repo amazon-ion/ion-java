@@ -184,6 +184,7 @@ public class SharedSymbolTableTest
         assertEquals(4, st.findSymbol("c"));
     }
 
+    // TODO test imports in shared symtabs
 
     /**
      * We need to normalize invalid values in a shared symtab, because there

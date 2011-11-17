@@ -135,7 +135,9 @@ public final class UnifiedSymbolTable
      */
     private int _first_local_sid = 1;
 
-    /** Map from symbol name to SID of local symbols only. */
+    /**
+     * Map from symbol name to SID of local symbols that are not in imports.
+     */
     private final Map<String, Integer> _id_map;
 
 
@@ -221,6 +223,7 @@ public final class UnifiedSymbolTable
             String symName = symbols[ii];
             assert symName == null || symName.length() > 0;
             // When there's a duplicate name, don't replace the lower sid.
+            // TODO avoid double-lookup by calling put and checking result
             if (! _id_map.containsKey(symName)) {
                 _id_map.put(symName, sid);
             }
@@ -997,7 +1000,10 @@ public final class UnifiedSymbolTable
             throw new IonException(message);
         }
 
-        _id_map.put(symbolName, sid);
+        if (_import_list.findSymbol(symbolName) < 0)
+        {
+            _id_map.put(symbolName, sid);
+        }
         _symbols[idx] = symbolName;
 
         if (idx >= _local_symbol_count) {
@@ -1318,12 +1324,6 @@ public final class UnifiedSymbolTable
             {
                 int sid = _first_local_sid;
                 for (String symbolText : symbols) {
-                    // Allocate a sid even when the symbols's text is malformed
-                    // FIXME ION-189 this needs to retain the text in case
-                    // there's a reference to the corresponding sid.
-                    if (symbolText != null && findSymbol(symbolText) != UNKNOWN_SYMBOL_ID) {
-                        symbolText = null;
-                    }
                     putSymbol(symbolText, sid);
                     sid++;
                 }

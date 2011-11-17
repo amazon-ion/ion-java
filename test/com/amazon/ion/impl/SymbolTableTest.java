@@ -7,6 +7,8 @@ import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.NAME;
+import static com.amazon.ion.SystemSymbols.NAME_SID;
 import static com.amazon.ion.SystemSymbols.SYMBOLS;
 import static com.amazon.ion.impl.IonImplUtils.stringIterator;
 
@@ -142,6 +144,12 @@ public class SymbolTableTest
         assertSame(systemTable, st.getSystemSymbolTable());
     }
 
+    public void testSystemFindSymbol()
+    {
+        SymbolTable st = system().getSystemSymbolTable();
+        assertEquals(NAME_SID, st.findSymbol(NAME));
+    }
+
     @Test(expected = UnsupportedOperationException.class)
     public void testSystemSymtabAddSymbol()
     {
@@ -245,13 +253,10 @@ public class SymbolTableTest
     @Test
     public void testOverridingSystemSymbolId()
     {
-        int nameSid =
-            system().getSystemSymbolTable("$ion_1_0").findSymbol("name");
-
         String importingText =
             LocalSymbolTablePrefix +
             "{" +
-            "  symbols:[ '''name''' ]," +
+            "  symbols:[ '''" + NAME + "''' ]," +
             "}\n" +
             "null";
 
@@ -259,16 +264,17 @@ public class SymbolTableTest
         IonValue v = scanner.next();
         SymbolTable symtab = v.getSymbolTable();
         assertTrue(symtab.isLocalTable());
-        assertEquals(nameSid, symtab.findSymbol("name"));
+        assertEquals(NAME_SID, symtab.findSymbol(NAME));
     }
 
 
     @Test
     public void testOverridingImportedSymbolId()
     {
-        registerImportedV1();
+        SymbolTable importedTable = registerImportedV1();
 
         final int import1id = systemMaxId() + 1;
+        final int import1DupId = systemMaxId() + importedTable.getMaxId() + 1;
 
         String importingText =
             "$ion_1_0 "+
@@ -283,9 +289,12 @@ public class SymbolTableTest
         Iterator<IonValue> scanner = system().iterate(importingText);
 
         IonValue value = scanner.next();
+        checkSymbol("imported 1", import1id, value);
+
         SymbolTable symtab = value.getSymbolTable();
         checkLocalTable(symtab);
-        checkSymbol("imported 1", import1id, value);
+        assertEquals(import1id, symtab.findSymbol("imported 1"));
+        assertEquals("imported 1", symtab.findSymbol(import1DupId));
 
         // Here the input text is $NNN  but it comes back correctly.
         value = scanner.next();
@@ -833,7 +842,7 @@ public class SymbolTableTest
         checkSharedTable("ST", 1,
                          new String[]{"fred_1", "fred_2", "a", "b"},
                          st);
-
+        assertEquals(fred1.findSymbol("fred_1"), st.findSymbol("fred_1"));
 
         // Again, with two imports
 
@@ -845,6 +854,26 @@ public class SymbolTableTest
                          st);
     }
 
+    @Test
+    public void testNewSharedSymtabFromReaderWithImports()
+    {
+        SymbolTable v1 = registerImportedV1();
+
+        String text =
+            SharedSymbolTablePrefix+
+            "{ name:\"ST\", version:1, " +
+            "  imports:[{name:\"imported\", version:1," +
+            "            max_id:" + v1.getMaxId() +
+            "  }]," +
+            "  symbols:[\"imported 1\"]" +
+            "}";
+
+        SymbolTable st =
+            system().newSharedSymbolTable(system().newReader(text));
+        assertEquals(v1.findSymbol("imported 1"),
+                     st.findSymbol("imported 1"));
+
+    }
 
     private SymbolTable extendSymtab(String name, int version, String... syms)
     {
