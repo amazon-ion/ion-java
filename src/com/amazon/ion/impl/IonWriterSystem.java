@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_INT_ARRAY;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
@@ -110,7 +111,7 @@ abstract class IonWriterSystem
     final int add_symbol(String name) throws IOException
     {
         int sid = _symbol_table.findSymbol(name);
-        if (sid > 0) return sid;
+        if (sid != UNKNOWN_SYMBOL_ID) return sid;
 
         if (_symbol_table.isSystemTable()) {
             _symbol_table = inject_local_symbol_table();

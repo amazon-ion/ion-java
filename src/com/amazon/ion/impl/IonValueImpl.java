@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
@@ -535,7 +536,7 @@ public abstract class IonValueImpl
         if (this._fieldSid == 0 && this._fieldName != null)
         {
             this._fieldSid = this.resolveSymbol(this._fieldName);
-            if (this._fieldSid == SymbolTable.UNKNOWN_SYMBOL_ID) {
+            if (this._fieldSid == UNKNOWN_SYMBOL_ID) {
                 this._fieldSid = this.addSymbol(this._fieldName);
             }
         }
@@ -553,11 +554,13 @@ public abstract class IonValueImpl
         if (this._fieldSid == 0 && this._fieldName != null)
         {
             this._fieldSid = this.resolveSymbol(this._fieldName);
-            if (this._fieldSid == SymbolTable.UNKNOWN_SYMBOL_ID) {
+            if (this._fieldSid == UNKNOWN_SYMBOL_ID) {
                 checkForLock();
                 symtab = this.addSymbol(this._fieldName, symtab);
                 this._fieldSid = symtab.findSymbol(this._fieldName);
-                assert( this._fieldSid != SymbolTable.UNKNOWN_SYMBOL_ID);
+
+                // TODO why is this assumed?
+                assert( this._fieldSid != UNKNOWN_SYMBOL_ID);
             }
         }
         return symtab;
@@ -746,7 +749,7 @@ public abstract class IonValueImpl
     {
         SymbolTable symbols = getSymbolTable();
         if (symbols == null) {
-            return SymbolTable.UNKNOWN_SYMBOL_ID;
+            return UNKNOWN_SYMBOL_ID;
         }
         int sid = symbols.findSymbol(name);
         return sid;
@@ -783,7 +786,7 @@ public abstract class IonValueImpl
     public int addSymbol(String name)
     {
         int sid = resolveSymbol(name);
-        if (sid != SymbolTable.UNKNOWN_SYMBOL_ID) {
+        if (sid != UNKNOWN_SYMBOL_ID) {
             return sid;
         }
         checkForLock();
@@ -802,7 +805,7 @@ public abstract class IonValueImpl
      */
     protected SymbolTable addSymbol(String name, SymbolTable symbols)
     {
-        assert resolveSymbol(name) == SymbolTable.UNKNOWN_SYMBOL_ID;
+        assert resolveSymbol(name) == UNKNOWN_SYMBOL_ID;
         assert symbols == this.getSymbolTable();
 
         if (UnifiedSymbolTable.isLocalTable(symbols) == false) {

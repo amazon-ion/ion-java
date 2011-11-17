@@ -858,7 +858,8 @@ public final class UnifiedSymbolTable
 
         Integer isid = _id_map.get(name);
         if (isid != null) {
-            return isid.intValue();
+            assert isid != UNKNOWN_SYMBOL_ID;
+            return isid;
         }
         return UNKNOWN_SYMBOL_ID;
     }

@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
@@ -79,7 +80,7 @@ class IonReaderTreeUserX
                         break;
                     }
                     int sid = sym.getSymbolId();
-                    if (sid == -1) {
+                    if (sid == UNKNOWN_SYMBOL_ID) {
                         String name = sym.stringValue();
                         if (name != null) {
                             sid = _system.getSystemSymbolTable().findSymbol(name);

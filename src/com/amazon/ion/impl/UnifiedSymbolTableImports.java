@@ -2,6 +2,8 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+
 import com.amazon.ion.IonException;
 import com.amazon.ion.SymbolTable;
 import java.util.Arrays;
@@ -166,7 +168,7 @@ public class UnifiedSymbolTableImports
 
         for (ii=0; ii<_import_count; ii++) {
             int local_sid = _imports[ii].findLocalSymbol(name);
-            if (local_sid > 0) {
+            if (local_sid != UNKNOWN_SYMBOL_ID) {
                 int this_base = _import_base_sid[ii];
                 int local_max = getMaxIdForIdChecking(ii);
                 if (local_sid <= local_max) {

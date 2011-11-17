@@ -840,6 +840,7 @@ public class IonBinary
             // add up the length of the encoded symbols
             for (int ii=0; ii<annotations.length; ii++) {
                 int symid = symbolTable.findSymbol(annotations[ii]);
+                assert symid > 0; // TODO ION-189
                 annotationLen += IonBinary.lenVarUInt(symid);
             }
 
@@ -2679,8 +2680,9 @@ done:       for (;;) {
 
             int annotationLen = 0;
             for (int ii=0; ii<annotations.length; ii++) {
-                symbols[ii] = symbolTable.findSymbol(annotations[ii]);
-                annotationLen += IonBinary.lenVarUInt(symbols[ii]);
+                int sym = symbols[ii] = symbolTable.findSymbol(annotations[ii]);
+                assert sym != SymbolTable.UNKNOWN_SYMBOL_ID;
+                annotationLen += IonBinary.lenVarUInt(sym);
             }
 
             // write the len of the list
@@ -2688,8 +2690,9 @@ done:       for (;;) {
 
             // write the symbol id's
             for (int ii=0; ii<annotations.length; ii++) {
-                symbols[ii] = symbolTable.findSymbol(annotations[ii]);
-                this.writeVarUIntValue(symbols[ii], true);
+                int sym = symbols[ii] = symbolTable.findSymbol(annotations[ii]);
+                assert sym != SymbolTable.UNKNOWN_SYMBOL_ID;
+                this.writeVarUIntValue(sym, true);
             }
 
             return this.position() - startPosition;

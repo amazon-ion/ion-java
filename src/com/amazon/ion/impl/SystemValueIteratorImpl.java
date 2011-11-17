@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_1_0;
 import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
@@ -381,7 +382,7 @@ class SystemValueIteratorImpl
     {
         SymbolTable symbols = this.getSymbolTable();
         int sid = symbols.findSymbol(name);
-        if (sid < 1) {
+        if (sid == UNKNOWN_SYMBOL_ID) {
             symbols = this.getLocalSymbolTable();
             sid = symbols.addSymbol(name);
         }

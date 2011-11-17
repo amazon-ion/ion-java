@@ -340,7 +340,7 @@ public abstract class IonValueLite
             return UNKNOWN_SYMBOL_ID;
         }
         int sid = symbolTable.findSymbol(_fieldName);
-        if (sid < 1) {
+        if (sid == UNKNOWN_SYMBOL_ID) {
             checkForLock();
             symbolTable = _context.getLocalSymbolTable(this);
             sid = symbolTable.addSymbol(_fieldName);
@@ -393,7 +393,7 @@ public abstract class IonValueLite
 
         int sid = symbols.findSymbol(name);
 
-        if (sid == UnifiedSymbolTable.UNKNOWN_SYMBOL_ID) {
+        if (sid == UNKNOWN_SYMBOL_ID) {
             if (!symbols.isLocalTable()) {
                 symbols = this._context.getLocalSymbolTable(this);
             }
@@ -467,7 +467,7 @@ public abstract class IonValueLite
     {
         SymbolTable symbols = getSymbolTable();
         if (symbols == null) {
-            return SymbolTable.UNKNOWN_SYMBOL_ID;
+            return UNKNOWN_SYMBOL_ID;
         }
         int sid = symbols.findSymbol(name);
         return sid;
@@ -486,7 +486,7 @@ public abstract class IonValueLite
     public int addSymbol(String name)
     {
         int sid = resolveSymbol(name);
-        if (sid != SymbolTable.UNKNOWN_SYMBOL_ID) {
+        if (sid != UNKNOWN_SYMBOL_ID) {
             return sid;
         }
         checkForLock();
