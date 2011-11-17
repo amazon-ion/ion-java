@@ -971,22 +971,6 @@ public abstract class IonReaderTextRawX
                         _value_type = IonType.BOOL;
                         current_value_is_bool(false);
                         break;
-                    case IonTokenConstsX.KEYWORD_PLUS_INF:
-                        // TODO: this case probably can't be encountered since it is now
-                        //       recognized as a special case in tokens starting with '+'
-                        _value_type = IonType.FLOAT;
-                        clear_current_value_buffer();
-                        _v.setValue(Double.POSITIVE_INFINITY);
-                        _v.setAuthoritativeType(AS_TYPE.double_value);
-                        break;
-                    case IonTokenConstsX.KEYWORD_MINUS_INF:
-                        // TODO: it's may be that this case can't be encountered since it is now
-                        //       recognized as a special case in tokens starting with '-'
-                        _value_type = IonType.FLOAT;
-                        clear_current_value_buffer();
-                        _v.setValue(Double.NEGATIVE_INFINITY);
-                        _v.setAuthoritativeType(AS_TYPE.double_value);
-                        break;
                     case IonTokenConstsX.KEYWORD_NAN:
                         _value_type = IonType.FLOAT;
                         clear_current_value_buffer();

@@ -261,12 +261,6 @@ public class IonReaderTextSystemX
                     case IonTokenConstsX.KEYWORD_NAN:
                         _v.setValue(Double.NaN);
                         break;
-                    case IonTokenConstsX.KEYWORD_PLUS_INF:
-                        _v.setValue(Double.POSITIVE_INFINITY);
-                        break;
-                    case IonTokenConstsX.KEYWORD_MINUS_INF:
-                        _v.setValue(Double.NEGATIVE_INFINITY);
-                        break;
                     default:
                         String message = "unexpected keyword "
                                        + s

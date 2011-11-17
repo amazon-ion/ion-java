@@ -87,8 +87,6 @@ public class IonTokenConstsX
     public static final int KEYWORD_SEXP      = 14;
     public static final int KEYWORD_STRUCT    = 15;
     public static final int KEYWORD_NAN       = 16;
-    public static final int KEYWORD_PLUS_INF  = 17;
-    public static final int KEYWORD_MINUS_INF = 18;
 
     public final static String getTokenName(int t) {
         switch (t) {
