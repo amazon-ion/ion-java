@@ -38,9 +38,16 @@ public class IonTokenConstsX
     public static final int TOKEN_FLOAT_MINUS_INF       =  7;
     public static final int TOKEN_TIMESTAMP             =  8;
 
-    public static final int TOKEN_SYMBOL_BASIC          =  9; // java identifier
-    public static final int TOKEN_SYMBOL_QUOTED         = 10; // single quoted string
-    public static final int TOKEN_SYMBOL_OPERATOR       = 11; // operator sequence for sexp
+    /**
+     * Unquoted identifier symbol, including keywords like {@code true} and
+     * {@code nan} as well as SIDs like {@code $123}
+     */
+    public static final int TOKEN_SYMBOL_IDENTIFIER     =  9;
+    /** Single-quoted symbol */
+    public static final int TOKEN_SYMBOL_QUOTED         = 10;
+    /** Unquoted operator sequence for sexp */
+    public static final int TOKEN_SYMBOL_OPERATOR       = 11;
+
     public static final int TOKEN_STRING_DOUBLE_QUOTE   = 12;
     public static final int TOKEN_STRING_TRIPLE_QUOTE   = 13;
 
@@ -97,7 +104,7 @@ public class IonTokenConstsX
         case TOKEN_FLOAT_MINUS_INF:    return "TOKEN_FLOAT_MINUS_INF";
         case TOKEN_TIMESTAMP:          return "TOKEN_TIMESTAMP";
 
-        case TOKEN_SYMBOL_BASIC:       return "TOKEN_SYMBOL_BASIC";
+        case TOKEN_SYMBOL_IDENTIFIER:  return "TOKEN_SYMBOL_IDENTIFIER";
         case TOKEN_SYMBOL_QUOTED:      return "TOKEN_SYMBOL_QUOTED";
         case TOKEN_SYMBOL_OPERATOR:    return "TOKEN_SYMBOL_OPERATOR";
         case TOKEN_STRING_DOUBLE_QUOTE:return "TOKEN_STRING_DOUBLE_QUOTE";
@@ -143,7 +150,7 @@ public class IonTokenConstsX
         case TOKEN_DECIMAL:             return IonType.DECIMAL;
         case TOKEN_FLOAT:               return IonType.FLOAT;
         case TOKEN_TIMESTAMP:           return IonType.TIMESTAMP;
-        case TOKEN_SYMBOL_BASIC:        return IonType.SYMBOL;
+        case TOKEN_SYMBOL_IDENTIFIER:   return IonType.SYMBOL;
         case TOKEN_SYMBOL_QUOTED:       return IonType.SYMBOL;
         case TOKEN_SYMBOL_OPERATOR:     return IonType.SYMBOL;
         case TOKEN_STRING_DOUBLE_QUOTE: return IonType.STRING;

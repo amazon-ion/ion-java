@@ -237,7 +237,7 @@ public class IonReaderTextSystemX
             }
             _v.setValue(t);
             break;
-        case IonTokenConstsX.TOKEN_SYMBOL_BASIC:
+        case IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER:
             // this includes the various value keywords like true
             // and nan, in addition to "normal" unquoted symbols
 

@@ -152,7 +152,7 @@ public abstract class IonReaderTextRawX
         actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_TIMESTAMP]          = ACTION_LOAD_SCALAR;
         actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_STRING_DOUBLE_QUOTE]= ACTION_LOAD_SCALAR;
         actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_STRING_TRIPLE_QUOTE]= ACTION_LOAD_SCALAR;
-        actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_SYMBOL_BASIC]       = ACTION_LOAD_ANNOTATION;
+        actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER]  = ACTION_LOAD_ANNOTATION;
         actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_SYMBOL_QUOTED]      = ACTION_LOAD_ANNOTATION;
         actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_OPEN_PAREN]         = ACTION_START_SEXP;
         actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_OPEN_BRACE]         = ACTION_START_STRUCT;
@@ -181,16 +181,16 @@ public abstract class IonReaderTextRawX
         actions[STATE_BEFORE_ANNOTATION_SEXP][IonTokenConstsX.TOKEN_CLOSE_SQUARE]        = ACTION_FINISH_CONTAINER;
 
         actions[STATE_BEFORE_VALUE_CONTENT][IonTokenConstsX.TOKEN_EOF]                   = 0;
-        actions[STATE_BEFORE_VALUE_CONTENT][IonTokenConstsX.TOKEN_SYMBOL_BASIC]          = ACTION_LOAD_SCALAR;
+        actions[STATE_BEFORE_VALUE_CONTENT][IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER]     = ACTION_LOAD_SCALAR;
         actions[STATE_BEFORE_VALUE_CONTENT][IonTokenConstsX.TOKEN_SYMBOL_QUOTED]         = ACTION_LOAD_SCALAR;
 
         actions[STATE_BEFORE_VALUE_CONTENT_SEXP][IonTokenConstsX.TOKEN_EOF]              = 0;
-        actions[STATE_BEFORE_VALUE_CONTENT_SEXP][IonTokenConstsX.TOKEN_SYMBOL_BASIC]     = ACTION_LOAD_SCALAR;
+        actions[STATE_BEFORE_VALUE_CONTENT_SEXP][IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER]= ACTION_LOAD_SCALAR;
         actions[STATE_BEFORE_VALUE_CONTENT_SEXP][IonTokenConstsX.TOKEN_SYMBOL_QUOTED]    = ACTION_LOAD_SCALAR;
         actions[STATE_BEFORE_VALUE_CONTENT_SEXP][IonTokenConstsX.TOKEN_SYMBOL_OPERATOR]  = ACTION_LOAD_SCALAR;
 
         actions[STATE_BEFORE_FIELD_NAME][IonTokenConstsX.TOKEN_EOF]                      = 0;
-        actions[STATE_BEFORE_FIELD_NAME][IonTokenConstsX.TOKEN_SYMBOL_BASIC]             = ACTION_LOAD_FIELD_NAME;
+        actions[STATE_BEFORE_FIELD_NAME][IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER]        = ACTION_LOAD_FIELD_NAME;
         actions[STATE_BEFORE_FIELD_NAME][IonTokenConstsX.TOKEN_SYMBOL_QUOTED]            = ACTION_LOAD_FIELD_NAME;
         actions[STATE_BEFORE_FIELD_NAME][IonTokenConstsX.TOKEN_STRING_DOUBLE_QUOTE]      = ACTION_LOAD_FIELD_NAME;
         actions[STATE_BEFORE_FIELD_NAME][IonTokenConstsX.TOKEN_STRING_TRIPLE_QUOTE]      = ACTION_LOAD_FIELD_NAME;
@@ -818,7 +818,7 @@ public abstract class IonReaderTextRawX
 
                 sb = token_contents_load(t);
 
-                if (t == IonTokenConstsX.TOKEN_SYMBOL_BASIC) {
+                if (t == IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER) {
                     // for a basic (unquoted) token we can use an simple loader
                     // and we'll have to check to make sure the symbol isn't
                     // one of the keywords
@@ -866,7 +866,7 @@ public abstract class IonReaderTextRawX
                     set_state(temp_state);
                     break;
                 }
-                if (t == IonTokenConstsX.TOKEN_SYMBOL_BASIC) {
+                if (t == IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER) {
                     int kw = IonTokenConstsX.keyword(sb, 0, sb.length());
                     switch (kw) {
                     case IonTokenConstsX.KEYWORD_FALSE:
@@ -888,7 +888,7 @@ public abstract class IonReaderTextRawX
                 // so nextToken won't see them
                 t = _scanner.nextToken();
                 switch(t) {
-                case IonTokenConstsX.TOKEN_SYMBOL_BASIC:
+                case IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER:
                 case IonTokenConstsX.TOKEN_SYMBOL_QUOTED:
                     break;
                 default:
@@ -933,7 +933,7 @@ public abstract class IonReaderTextRawX
                 }
                 return;
             case ACTION_LOAD_SCALAR:
-                if (t == IonTokenConstsX.TOKEN_SYMBOL_BASIC) {
+                if (t == IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER) {
                     sb = token_contents_load(t);
                     int _value_keyword = IonTokenConstsX.keyword(sb, 0, sb.length());
                     switch (_value_keyword) {
@@ -1082,7 +1082,7 @@ public abstract class IonReaderTextRawX
             default:
                 _scanner.load_raw_characters(sb);
                 break;
-            case IonTokenConstsX.TOKEN_SYMBOL_BASIC:
+            case IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER:
                 _scanner.load_symbol(sb);
                 _value_type = IonType.SYMBOL;
                 break;
@@ -1120,7 +1120,7 @@ public abstract class IonReaderTextRawX
             case IonTokenConstsX.TOKEN_TIMESTAMP:
                 _value_type = _scanner.load_number(sb);
                 break;
-            case IonTokenConstsX.TOKEN_SYMBOL_BASIC:
+            case IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER:
                 _scanner.load_symbol(sb);
                 _value_type = IonType.SYMBOL;
                 break;

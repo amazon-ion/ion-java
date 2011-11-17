@@ -464,7 +464,7 @@ public class IonReaderTextRawTokensX
         case IonTokenConstsX.TOKEN_TIMESTAMP:
             c = skip_over_timestamp(sp);
             break;
-        case IonTokenConstsX.TOKEN_SYMBOL_BASIC:
+        case IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER:
             c = skip_over_symbol(sp);
             break;
         case IonTokenConstsX.TOKEN_SYMBOL_QUOTED:
@@ -630,7 +630,7 @@ public class IonReaderTextRawTokensX
         case 'Y': case 'Z':
         case '$': case '_':
             unread_char(c);
-            return next_token_finish(IonTokenConstsX.TOKEN_SYMBOL_BASIC, true);
+            return next_token_finish(IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER, true);
         case '0': case '1': case '2': case '3': case '4':
         case '5': case '6': case '7': case '8': case '9':
             t = scan_for_numeric_type(c);
