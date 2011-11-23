@@ -494,8 +494,7 @@ abstract class IonWriterSystem
     {
         ensureAnnotationCapacity(_annotation_count + 1);
         if (_annotations_type == IonType.STRING) {
-            SymbolTable symtab = getSymbolTable();
-            String annotation = symtab.findSymbol(annotationId);
+            String annotation = assumeKnownSymbol(annotationId);
             addTypeAnnotation(annotation);
         }
         else {
