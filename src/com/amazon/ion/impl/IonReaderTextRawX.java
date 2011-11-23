@@ -6,6 +6,7 @@ import static com.amazon.ion.impl.IonTokenConstsX.TOKEN_CLOSE_BRACE;
 import static com.amazon.ion.impl.IonTokenConstsX.TOKEN_CLOSE_PAREN;
 import static com.amazon.ion.impl.IonTokenConstsX.TOKEN_CLOSE_SQUARE;
 
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonType;
@@ -1268,6 +1269,15 @@ if (depth == debugging_depth) {
             }
         }
         return name;
+    }
+
+    public final InternedSymbol getFieldNameSymbol()
+    {
+        String name = getFieldName();
+        // TODO wrong for synthetics in text
+        if (name == null) return null;
+        int sid = getFieldId();
+        return new InternedSymbolImpl(name, sid);
     }
 
     public Iterator<String> iterateTypeAnnotations()

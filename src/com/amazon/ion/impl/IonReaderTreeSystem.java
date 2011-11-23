@@ -298,6 +298,17 @@ class IonReaderTreeSystem
         return (_curr == null || (_hoisted && _top == 0)) ? null : _curr.getFieldName();
     }
 
+    public final InternedSymbol getFieldNameSymbol()
+    {
+        if (_curr == null || (_hoisted && _top == 0)) return null;
+        String name = _curr.getFieldName();
+        // FIXME doesn't handle unknown text
+        if (name == null) return null;
+        // FIXME IonValueImpl.getFieldId doesn't return -1 as specced here!
+        int sid = _curr.getFieldId();
+        return new InternedSymbolImpl(name, sid);
+    }
+
 
     public boolean booleanValue()
     {

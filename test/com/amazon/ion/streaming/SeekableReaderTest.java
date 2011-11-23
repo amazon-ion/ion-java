@@ -147,7 +147,7 @@ public class SeekableReaderTest
         expectTopEof();
 
         hoist(fPos);
-        assertEquals(null, in.getFieldName());
+        expectField(null);
         assertEquals(IonType.SYMBOL, in.next());
         expectTopLevel();
         assertEquals("v", in.stringValue());

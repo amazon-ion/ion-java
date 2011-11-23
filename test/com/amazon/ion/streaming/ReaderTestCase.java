@@ -63,4 +63,14 @@ public abstract class ReaderTestCase
     {
         IonAssert.assertTopEof(in);
     }
+
+    protected void expectField(String name)
+    {
+        IonAssert.expectField(in, name);
+    }
+
+    protected void expectNextField(String name)
+    {
+        IonAssert.expectNextField(in, name);
+    }
 }

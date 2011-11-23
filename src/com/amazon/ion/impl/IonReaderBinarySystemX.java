@@ -359,6 +359,12 @@ class IonReaderBinarySystemX
 //        throw new UnsupportedOperationException("not supported - use UserReader");
     }
 
+    public InternedSymbol getFieldNameSymbol()
+    {
+        // TODO ION-233 implement symbol text for system readers
+        return null;
+    }
+
     public Iterator<String> iterateTypeAnnotations()
     {
         // TODO ION-233 implement symbol text for system readers

@@ -221,6 +221,14 @@ public interface IonReader
      */
     public String getFieldName();
 
+    /**
+     * Gets the current value's field name as an interned symbol (text + ID).
+     *
+     * @return null if there is no current value or if the current value is
+     *  not a field of a struct.
+     */
+    public InternedSymbol getFieldNameSymbol();
+
 
     /**
      * Determines whether the current value is a null Ion value of any type

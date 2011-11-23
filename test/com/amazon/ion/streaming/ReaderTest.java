@@ -55,15 +55,12 @@ public class ReaderTest
 
         in.next();
         in.stepIn();
-        in.next();
-        assertEquals("a", in.getFieldName());
+        expectNextField("a");
         in.stepIn();
-        in.next();
-        assertEquals("b", in.getFieldName());
+        expectNextField("b");
         in.stepOut(); // skip c
         expectNoCurrentValue();
-        in.next();
-        assertEquals("d", in.getFieldName());
+        expectNextField("d");
         expectEof();
     }
 

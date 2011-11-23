@@ -1171,6 +1171,11 @@ public class UnifiedSymbolTableReader
         }
     }
 
+    public InternedSymbol getFieldNameSymbol()
+    {
+        return null;
+    }
+
     public boolean isNullValue()
     {
         switch (_current_state)

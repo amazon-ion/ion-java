@@ -286,6 +286,15 @@ class IonReaderBinaryUserX
     }
 
     @Override
+    public final InternedSymbol getFieldNameSymbol()
+    {
+        if (_value_field_id == SymbolTable.UNKNOWN_SYMBOL_ID) return null;
+        String name = _symbols.findSymbol(_value_field_id);
+        int sid = getFieldId();
+        return new InternedSymbolImpl(name, sid);
+    }
+
+    @Override
     public Iterator<String> iterateTypeAnnotations()
     {
         String[] annotations = getTypeAnnotations();

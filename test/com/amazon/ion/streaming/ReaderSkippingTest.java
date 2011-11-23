@@ -158,8 +158,7 @@ extends IonTestCase
         myFullReader.getFieldName();
         if (!skip())
         {
-            assertEquals(myFullReader.getFieldName(),
-                         mySkipReader.getFieldName());
+            IonAssert.expectField(mySkipReader, myFullReader.getFieldName());
         }
 
         myFullReader.getFieldId();

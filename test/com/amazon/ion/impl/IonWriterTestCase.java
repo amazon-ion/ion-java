@@ -6,6 +6,7 @@ import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
 import static com.amazon.ion.Symtabs.GINGER_MAX_IDS;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.TestUtils.FERMATA;
+import static com.amazon.ion.junit.IonAssert.expectNextField;
 
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonBlob;
@@ -423,8 +424,7 @@ public abstract class IonWriterTestCase
         IonReader ir = system().newReader(data);
         ir.next();
         ir.stepIn();
-        ir.next();
-        assertEquals("a", ir.getFieldName());
+        expectNextField(ir, "a");
 
         iw = makeWriter();
         iw.stepIn(IonType.STRUCT);
@@ -451,8 +451,7 @@ public abstract class IonWriterTestCase
         IonReader ir = system().newReader(data);
         ir.next();
         ir.stepIn();
-        ir.next();
-        assertEquals("a", ir.getFieldName());
+        expectNextField(ir, "a");
 
         iw = makeWriter();
         iw.stepIn(IonType.STRUCT);

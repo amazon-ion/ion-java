@@ -10,6 +10,7 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonLob;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSequence;
@@ -44,6 +45,7 @@ public class IonAssert
         if (! inStruct) {
             assertEquals("reader field name", null, in.getFieldName());
             assertTrue("reader shouldn't have fieldId", in.getFieldId() < 1);
+            assertEquals("reader field symbol", null, in.getFieldNameSymbol());
         }
 
         try {
@@ -63,6 +65,7 @@ public class IonAssert
 
         assertEquals(null, in.getFieldName());
         assertTrue(in.getFieldId() < 0);
+        assertEquals(null, in.getFieldNameSymbol());
 
         // TODO ION-213 Text reader doesn't throw, but others do.
         try {
@@ -113,6 +116,31 @@ public class IonAssert
         assertTopLevel(in);
         assertEof(in);
         assertTopLevel(in);
+    }
+
+    public static void expectField(IonReader in, String name)
+    {
+        assertEquals("field name", name, in.getFieldName());
+        InternedSymbol is = in.getFieldNameSymbol();
+        if (name == null)
+        {
+            assertEquals("Unexpected InternedSymbol", null, is);
+        }
+        else
+        {
+            assertEquals("field name InternedSymbol text",
+                         name, is.stringValue());
+        }
+        // TODO check sid
+    }
+
+    /**
+     * Move to the next value and check the field name.
+     */
+    public static void expectNextField(IonReader in, String name)
+    {
+        in.next();
+        expectField(in, name);
     }
 
 

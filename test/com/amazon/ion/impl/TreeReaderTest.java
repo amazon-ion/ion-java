@@ -3,6 +3,7 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.junit.IonAssert.assertTopLevel;
+import static com.amazon.ion.junit.IonAssert.expectField;
 
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonInt;
@@ -79,10 +80,10 @@ public class TreeReaderTest
         IonReader r = system().newReader(s.get("f"));
 
         assertTopLevel(r, /* inStruct */ true);
-        assertEquals("reader field name", null, r.getFieldName());
+        expectField(r, null);
 
         assertSame(IonType.NULL, r.next());
         assertTopLevel(r, /* inStruct */ true);
-        assertEquals("reader field name", "f", r.getFieldName());
+        expectField(r, "f");
     }
 }

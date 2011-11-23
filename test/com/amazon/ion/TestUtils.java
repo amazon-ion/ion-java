@@ -166,6 +166,7 @@ public class TestUtils
 
         reader.getFieldName();
         reader.getFieldId();
+        reader.getFieldNameSymbol();
 
         switch (t)
         {

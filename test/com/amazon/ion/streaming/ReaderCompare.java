@@ -7,6 +7,7 @@ package com.amazon.ion.streaming;
 import static com.amazon.ion.impl.IonImplUtils.READER_HASNEXT_REMOVED;
 
 import com.amazon.ion.Decimal;
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
@@ -110,9 +111,11 @@ public class ReaderCompare
         String f1 = it1.getFieldName();
         String f2 = it2.getFieldName();
         compareNonNullStrings("field name", f1, f2);
-        assertNotNull(f1);
-        assertNotNull(f2);
-        assertEquals(f1, f2);
+
+        InternedSymbol is1 = it1.getFieldNameSymbol();
+        InternedSymbol is2 = it1.getFieldNameSymbol();
+        assertEquals(f1, is1.stringValue());
+        assertEquals(f2, is2.stringValue());
     }
 
     public static void compareAnnotations(IonReader it1, IonReader it2) {

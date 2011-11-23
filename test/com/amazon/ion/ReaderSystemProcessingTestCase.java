@@ -6,6 +6,7 @@ import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_INT_ARRAY;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.junit.IonAssert.assertNoCurrentValue;
+import static com.amazon.ion.junit.IonAssert.expectNextField;
 
 import com.amazon.ion.junit.IonAssert;
 import java.util.Date;
@@ -381,8 +382,7 @@ public abstract class ReaderSystemProcessingTestCase
                             assertEquals("D", reader.getTypeAnnotations()[0]);
                             reader.stepIn();
                             {
-                                reader.next();
-                                assertEquals("f4", reader.getFieldName());
+                                expectNextField(reader, "f4");
                                 reader.stepIn();
                                 {
                                     reader.next();
@@ -420,15 +420,12 @@ public abstract class ReaderSystemProcessingTestCase
         IonReader r = myReader;
         r.next();
         r.stepIn();
-        r.next();
-        assertEquals("a", r.getFieldName());
+        expectNextField(r, "a");
         r.stepIn();
-        r.next();
-        assertEquals("b", r.getFieldName());
+        expectNextField(r, "b");
         r.stepOut(); // skip c
         assertNoCurrentValue(r);
-        r.next();
-        assertEquals("d", r.getFieldName());
+        expectNextField(r, "d");
     }
 
 
@@ -473,8 +470,7 @@ public abstract class ReaderSystemProcessingTestCase
         IonReader r = myReader;
         r.next();
         r.stepIn();
-        r.next();
-        assertEquals("X", r.getFieldName());
+        expectNextField(r, "X");
         checkEof();
         r.stepOut();
         checkTopEof();
