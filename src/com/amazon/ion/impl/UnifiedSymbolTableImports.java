@@ -199,12 +199,12 @@ public class UnifiedSymbolTableImports
             InternedSymbol is = _imports[ii].find(text);
             if (is != null)
             {
-                int local_sid = is.getSymbolId();
+                int local_sid = is.getId();
                 int local_max = getMaxIdForIdChecking(ii);
                 if (local_sid <= local_max) {
                     int this_base = _import_base_sid[ii];
                     int sid = local_sid + this_base;
-                    text = is.stringValue(); // Use interned instance
+                    text = is.getText(); // Use interned instance
                     assert text != null;
                     return new InternedSymbolImpl(text, sid);
                 }

@@ -89,7 +89,7 @@ public class ReaderTest
         assertEquals(null, is);
         in.next();
         is = in.symbolValue();
-        assertEquals("sym", is.stringValue());
+        assertEquals("sym", is.getText());
         // TODO sid
     }
 

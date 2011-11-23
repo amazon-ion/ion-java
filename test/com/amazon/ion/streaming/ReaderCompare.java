@@ -114,8 +114,8 @@ public class ReaderCompare
 
         InternedSymbol is1 = it1.getFieldNameSymbol();
         InternedSymbol is2 = it1.getFieldNameSymbol();
-        assertEquals(f1, is1.stringValue());
-        assertEquals(f2, is2.stringValue());
+        assertEquals(f1, is1.getText());
+        assertEquals(f2, is2.getText());
     }
 
     public static void compareAnnotations(IonReader it1, IonReader it2) {

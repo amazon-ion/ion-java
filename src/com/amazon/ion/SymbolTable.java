@@ -251,7 +251,7 @@ public interface SymbolTable
      *
      * @deprecated Use {@link #intern(String)} instead, replacing the caller's
      * parameter string with the interned instance in
-     * {@link InternedSymbol#stringValue()}.
+     * {@link InternedSymbol#getText()}.
      */
     @Deprecated
     public int addSymbol(String name);

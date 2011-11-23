@@ -45,19 +45,19 @@ public class LocalSymbolTableTest
         // Existing symbol from imports
         String fredSym = ST_FRED_V2.findKnownSymbol(3);
         InternedSymbol is = st.intern(new String(fredSym));
-        assertSame(fredSym, is.stringValue());
-        assertSame(st.getSystemSymbolTable().getMaxId() + 3, is.getSymbolId());
+        assertSame(fredSym, is.getText());
+        assertSame(st.getSystemSymbolTable().getMaxId() + 3, is.getId());
 
         String gingerSym = ST_GINGER_V1.findKnownSymbol(1);
         is = st.intern(new String(gingerSym));
-        assertSame(gingerSym, is.stringValue());
+        assertSame(gingerSym, is.getText());
         assertSame(st.getSystemSymbolTable().getMaxId() + ST_FRED_V2.getMaxId() + 1,
-                   is.getSymbolId());
+                   is.getId());
 
         // Existing local symbol
         is = st.intern(OTHER_A);
-        assertSame(A, is.stringValue());
-        assertEquals(st.getImportedMaxId() + 1, is.getSymbolId());
+        assertSame(A, is.getText());
+        assertEquals(st.getImportedMaxId() + 1, is.getId());
     }
 
     @Test
@@ -75,12 +75,12 @@ public class LocalSymbolTableTest
         String D = "d";
         assertEquals(UNKNOWN_SYMBOL_ID, st.findSymbol(D));
         InternedSymbol is = st.intern(D);
-        assertSame(D, is.stringValue());
-        assertEquals(st.getImportedMaxId() + 4, is.getSymbolId());
+        assertSame(D, is.getText());
+        assertEquals(st.getImportedMaxId() + 4, is.getId());
 
         is = st.intern(new String(D)); // Force a new instance
-        assertSame(D, is.stringValue());
-        assertEquals(st.getImportedMaxId() + 4, is.getSymbolId());
+        assertSame(D, is.getText());
+        assertEquals(st.getImportedMaxId() + 4, is.getId());
     }
 
     @Test
@@ -117,19 +117,19 @@ public class LocalSymbolTableTest
         // Existing symbol from imports
         String fredSym = ST_FRED_V2.findKnownSymbol(3);
         InternedSymbol is = st.find(new String(fredSym));
-        assertSame(fredSym, is.stringValue());
-        assertSame(st.getSystemSymbolTable().getMaxId() + 3, is.getSymbolId());
+        assertSame(fredSym, is.getText());
+        assertSame(st.getSystemSymbolTable().getMaxId() + 3, is.getId());
 
         String gingerSym = ST_GINGER_V1.findKnownSymbol(1);
         is = st.find(new String(gingerSym));
-        assertSame(gingerSym, is.stringValue());
+        assertSame(gingerSym, is.getText());
         assertSame(st.getSystemSymbolTable().getMaxId() + ST_FRED_V2.getMaxId() + 1,
-                   is.getSymbolId());
+                   is.getId());
 
         // Existing local symbol
         is = st.find(OTHER_A);
-        assertSame(A, is.stringValue());
-        assertEquals(st.getImportedMaxId() + 1, is.getSymbolId());
+        assertSame(A, is.getText());
+        assertEquals(st.getImportedMaxId() + 1, is.getId());
 
         // Non-existing symbol
         assertEquals(null, st.find("not there"));

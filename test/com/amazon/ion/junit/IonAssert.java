@@ -129,7 +129,7 @@ public class IonAssert
         else
         {
             assertEquals("field name InternedSymbol text",
-                         name, is.stringValue());
+                         name, is.getText());
         }
         // TODO check sid
     }

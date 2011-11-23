@@ -19,7 +19,7 @@ final class InternedSymbolImpl
     }
 
 
-    public String stringValue()
+    public String getText()
     {
         return myText;
     }
@@ -30,7 +30,7 @@ final class InternedSymbolImpl
         return myText;
     }
 
-    public int getSymbolId()
+    public int getId()
     {
         return mySid;
     }

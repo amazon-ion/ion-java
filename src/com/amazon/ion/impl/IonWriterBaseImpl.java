@@ -358,14 +358,14 @@ public abstract class IonWriterBaseImpl
                 throw new IllegalStateException("Field name not set");
             }
 
-            String name = is.stringValue();
+            String name = is.getText();
             if (name != null)
             {
                 setFieldName(name);
             }
             else
             {
-                int sid = is.getSymbolId();
+                int sid = is.getId();
                 assert sid != SymbolTable.UNKNOWN_SYMBOL_ID;
                 setFieldId(sid);
             }

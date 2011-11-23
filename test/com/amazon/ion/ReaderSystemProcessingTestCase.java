@@ -172,7 +172,7 @@ public abstract class ReaderSystemProcessingTestCase
             // TODO ION-58 this is shady
         }
 
-        if (was_checked) assertEquals(expected, sym.stringValue());
+        if (was_checked) assertEquals(expected, sym.getText());
 
 
         // now we check the binary value, which user readers
@@ -186,7 +186,7 @@ public abstract class ReaderSystemProcessingTestCase
             was_checked = true;
         }
 
-        assertEquals(sid, sym.getSymbolId());
+        assertEquals(sid, sym.getId());
 
 
         // finally we make sure we checked at least one of the

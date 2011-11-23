@@ -277,8 +277,8 @@ public class SharedSymbolTableTest
         SymbolTable st = makeAbcTable();
 
         InternedSymbol is = st.intern(OTHER_A);
-        assertSame(A, is.stringValue());
-        assertEquals(st.getImportedMaxId() + 1, is.getSymbolId());
+        assertSame(A, is.getText());
+        assertEquals(st.getImportedMaxId() + 1, is.getId());
     }
 
     @Test(expected = NullPointerException.class)
@@ -306,8 +306,8 @@ public class SharedSymbolTableTest
         SymbolTable st = makeAbcTable();
 
         InternedSymbol is = st.find(OTHER_A);
-        assertSame(A, is.stringValue());
-        assertEquals(st.getImportedMaxId() + 1, is.getSymbolId());
+        assertSame(A, is.getText());
+        assertEquals(st.getImportedMaxId() + 1, is.getId());
 
         is = st.find("not there");
         assertNull(is);
