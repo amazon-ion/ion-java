@@ -325,9 +325,9 @@ abstract class IonWriterUser
 
 
     @Override
-    final String find_symbol(int sid)
+    final String assumeKnownSymbol(int sid)
     {
-        return _system_writer.find_symbol(sid);
+        return _system_writer.assumeKnownSymbol(sid);
     }
 
     //========================================================================

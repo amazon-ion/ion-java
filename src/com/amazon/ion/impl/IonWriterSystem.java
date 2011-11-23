@@ -12,6 +12,7 @@ import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.UnknownSymbolException;
 import java.io.IOException;
 
 
@@ -101,11 +102,14 @@ abstract class IonWriterSystem
     }
 
     @Override
-    final String find_symbol(int sid)
+    final String assumeKnownSymbol(int sid)
     {
-        String name = _symbol_table.findSymbol(sid);
-        assert(name != null && name.length() > 0);
-        return name;
+        String text = _symbol_table.findKnownSymbol(sid);
+        if (text == null)
+        {
+            throw new UnknownSymbolException(sid);
+        }
+        return text;
     }
 
     final int add_symbol(String name) throws IOException
@@ -177,12 +181,15 @@ abstract class IonWriterSystem
      *
      * @return String name of the field about to be written or null if it is
      * not yet set.
+     *
+     * @throws UnknownSymbolException if the text of the field name is unknown.
      */
     final String getFieldName()
     {
         String name;
 
         if (_field_name_type == null) {
+            // TODO contradicts documented behavior
             throw new IllegalStateException("the field has not be set");
         }
         switch (_field_name_type) {
@@ -190,7 +197,7 @@ abstract class IonWriterSystem
             name = _field_name;
             break;
         case INT:
-            name = this.find_symbol(_field_name_sid);
+            name = assumeKnownSymbol(_field_name_sid);
             break;
         default:
             throw new IllegalStateException("the field has not be set");
@@ -300,6 +307,10 @@ abstract class IonWriterSystem
     }
 
 
+    /**
+     * @throws UnknownSymbolException if the text of any annotation is
+     *  unknown.
+     */
     private final String[] get_type_annotations_as_strings()
     {
         if (_annotation_count < 1) {
@@ -307,9 +318,8 @@ abstract class IonWriterSystem
         }
         else if (_annotations_type == IonType.INT) {
             for (int ii=0; ii<_annotation_count; ii++) {
-                String name;
                 int id = _annotation_sids[ii];
-                name = this.find_symbol(id);
+                String name = assumeKnownSymbol(id);
                 _annotations[ii] = name;
             }
         }

@@ -8,6 +8,7 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.UnknownSymbolException;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
@@ -86,7 +87,16 @@ public abstract class IonWriterBaseImpl
         throws IOException;
 
 
-    abstract String find_symbol(int sid);
+    /**
+     * Translates a symbol using the current symtab.
+     *
+     * @return not null.
+     *
+     * @throws UnknownSymbolException if the text is unknown.
+     *
+     * @see SymbolTable#findKnownSymbol(int)
+     */
+    abstract String assumeKnownSymbol(int sid);
 
 
     //========================================================================
@@ -333,6 +343,10 @@ public abstract class IonWriterBaseImpl
         }
     }
 
+    /**
+     * @throws UnknownSymbolException if the text of the field name is
+     *  unknown.
+     */
     private final void write_value_field_name_helper(IonReader reader)
     {
         if (this.isInStruct() && !isFieldNameSet())
@@ -341,7 +355,9 @@ public abstract class IonWriterBaseImpl
             if (field_name == null) {
                 int field_sid = reader.getFieldId();
                 if (field_sid > 0) {
-                    field_name = find_symbol(field_sid);
+                    // TODO Why would this not be true?
+                    // When can we have neither text nor SID?
+                    field_name = assumeKnownSymbol(field_sid);
                 }
             }
             if (field_name == null) {
@@ -415,7 +431,7 @@ public abstract class IonWriterBaseImpl
                 String name = reader.stringValue();
                 if (name == null) {
                     int sid = reader.getSymbolId();
-                    name = find_symbol(sid);
+                    name = assumeKnownSymbol(sid);
                 }
                 writeSymbol(name);
                 if (_debug_on) System.out.print("y");
