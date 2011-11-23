@@ -6,6 +6,7 @@ import static com.amazon.ion.Symtabs.sharedSymtabStruct;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.impl.SymbolTableTest.checkSharedTable;
 
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
@@ -27,6 +28,10 @@ import org.junit.Test;
 public class SharedSymbolTableTest
     extends IonTestCase
 {
+    private static final String A = "a";
+    private static final String OTHER_A = new String(A); // Force a new instance
+
+
     SharedSymtabMaker myMaker;
 
     public void setMaker(SharedSymtabMaker maker)
@@ -38,6 +43,16 @@ public class SharedSymbolTableTest
     public static final SharedSymtabMaker[] MAKERS =
         SharedSymtabMaker.values();
 
+
+    private SymbolTable makeAbcTable()
+    {
+        String[] syms = { A, "b", "c" };
+        SymbolTable st = myMaker.newSharedSymtab(system(), "ST", 1, syms);
+        return st;
+    }
+
+
+    //-------------------------------------------------------------------------
 
     @Test
     public void testBasicSharedSymtabCreation()
@@ -238,5 +253,60 @@ public class SharedSymbolTableTest
         {
             if (symtab != null) roundTrip(symtab);
         }
+    }
+
+
+    //-------------------------------------------------------------------------
+    // intern()
+
+    @Test
+    public void testInternKnownText()
+    {
+        assertNotSame(A, OTHER_A);
+
+        SymbolTable st = makeAbcTable();
+
+        InternedSymbol is = st.intern(OTHER_A);
+        assertSame(A, is.stringValue());
+        assertEquals(st.getImportedMaxId() + 1, is.getSymbolId());
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void testInternNull()
+    {
+        SymbolTable st = makeAbcTable();
+        st.intern(null);
+    }
+
+
+    @Test(expected = IonException.class)
+    public void testInternUnknownText()
+    {
+        SymbolTable st = makeAbcTable();
+        st.intern("d");
+    }
+
+
+    //-------------------------------------------------------------------------
+    // findInternedSymbol()
+
+    @Test
+    public void testFindInternedSymbol()
+    {
+        SymbolTable st = makeAbcTable();
+
+        InternedSymbol is = st.find(OTHER_A);
+        assertSame(A, is.stringValue());
+        assertEquals(st.getImportedMaxId() + 1, is.getSymbolId());
+
+        is = st.find("not there");
+        assertNull(is);
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void testFindInternSymbolNull()
+    {
+        SymbolTable st = makeAbcTable();
+        st.find(null);
     }
 }

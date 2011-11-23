@@ -22,6 +22,7 @@ import static com.amazon.ion.impl.SymbolTableType.SHARED;
 import static com.amazon.ion.util.IonTextUtils.printQuotedSymbol;
 
 import com.amazon.ion.EmptySymbolException;
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.InvalidSystemSymbolException;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
@@ -864,6 +865,43 @@ public final class UnifiedSymbolTable
         return UNKNOWN_SYMBOL_ID;
     }
 
+
+    public InternedSymbol intern(String text)
+    {
+        InternedSymbol is = find(text);
+        if (is == null)
+        {
+            validateSymbol(text);
+            int sid = getMaxId() + 1;
+            putSymbol(text, sid);
+            is = new InternedSymbolImpl(text, sid);
+        }
+        return is;
+    }
+
+
+    public InternedSymbol find(String text)
+    {
+        if (text.length() < 1) {
+            throw new EmptySymbolException();
+        }
+
+        int sid = findLocalSymbol(text);
+        if (sid != UNKNOWN_SYMBOL_ID)
+        {
+            int offset = convertSidToLocalOffset(sid);
+            String internedText = _symbols[offset];
+            return new InternedSymbolImpl(internedText, sid);
+        }
+
+        // Don't search imports on shared symtabs, they are "open content"
+        // TODO clarify whether _import_list is even filled in that case.
+        if (isSharedTable()) return null;
+
+        return _import_list.find(text);
+    }
+
+
     public static int decodeIntegerSymbol(String name)
     {
         if (name == null) return UNKNOWN_SYMBOL_ID;
@@ -948,9 +986,9 @@ public final class UnifiedSymbolTable
      */
     private void putSymbol(String symbolName, int sid)
     {
-        assert _name == null && _symbols != null;
-
         verify_not_read_only();
+
+        assert _name == null && _symbols != null;
 
         int idx = convertSidToLocalOffset(sid);
         assert idx >= 0;
@@ -980,6 +1018,7 @@ public final class UnifiedSymbolTable
             throw new IonException(message);
         }
 
+        // Don't add to _id_map if the text is covered by an import
         if (symbolName != null && _import_list.findSymbol(symbolName) < 0)
         {
             _id_map.put(symbolName, sid);

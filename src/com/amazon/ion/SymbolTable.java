@@ -160,6 +160,43 @@ public interface SymbolTable
 
 
     /**
+     * Adds a new symbol to this table, or finds an existing definition of it.
+     * <p>
+     * The resulting {@link InternedSymbol} has the same String instance that
+     * was first interned. In order to reduce memory
+     * footprint, callers should generally replace their copy of the text with
+     * the string in the result.
+     * <p>
+     * This method will not necessarily return the same instance given the
+     * same input.
+     *
+     * @param text the symbol text to intern.
+     *
+     * @return the interned symbol; not null.
+     *
+     * @throws IonException if this symtab {@link #isReadOnly()} and
+     * the text isn't already interned.
+     *
+     * @see #find(String)
+     */
+    public InternedSymbol intern(String text);
+
+    /**
+     * Finds a symbol already interned by this table.
+     * <p>
+     * This method will not necessarily return the same instance given the
+     * same input.
+     *
+     * @param text the symbol text to find.
+     *
+     * @return the interned symbol, or {@code null} if it's not already interned.
+     *
+     * @see #intern(String)
+     */
+    public InternedSymbol find(String text);
+
+
+    /**
      * Gets the symbol ID associated with a given symbol name.
      *
      * @param name must not be null or empty.
@@ -181,16 +218,21 @@ public interface SymbolTable
      * @return not <code>null</code>.
      *
      * @throws IllegalArgumentException if {@code id < 1}.
+     *
+     * @deprecated This method cannot distinguish between generic identifiers
+     * (like {@code $123}) and known symbols that happen the same text
+     * (like {@code '$123'}).  Use {@link #findKnownSymbol(int)} instead.
      */
+    @Deprecated
     public String findSymbol(int id);
 
 
     /**
-     * Gets a defined name for a symbol ID.
+     * Gets the interned text for a symbol ID.
      *
      * @param id the requested symbol ID.
-     * @return the name associated with the symbol ID, or <code>null</code> if
-     * the name is not known.
+     * @return the interned text associated with the symbol ID,
+     *  or {@code null} if the text is not known.
      *
      * @throws IllegalArgumentException if {@code id < 1}.
      */
@@ -205,7 +247,12 @@ public interface SymbolTable
      *
      * @throws IonException if {@link #isReadOnly()}
      * and the requested symbol is not already defined.
+     *
+     * @deprecated Use {@link #intern(String)} instead, replacing the caller's
+     * parameter string with the interned instance in
+     * {@link InternedSymbol#stringValue()}.
      */
+    @Deprecated
     public int addSymbol(String name);
 
 

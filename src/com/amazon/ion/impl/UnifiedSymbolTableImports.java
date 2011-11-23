@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.SymbolTable;
 import java.util.Arrays;
@@ -179,6 +180,38 @@ public class UnifiedSymbolTableImports
         }
         return sid;
     }
+
+    /**
+     * Finds a symbol already interned by an import, returning the lowest
+     * known SID.
+     * <p>
+     * This method will not necessarily return the same instance given the
+     * same input.
+     *
+     * @param text the symbol text to find.
+     *
+     * @return the interned symbol, or {@code null} if it's not defined by an
+     *  imported table.
+     */
+    InternedSymbol find(String text)
+    {
+        for (int ii=0; ii<_import_count; ii++) {
+            InternedSymbol is = _imports[ii].find(text);
+            if (is != null)
+            {
+                int local_sid = is.getSymbolId();
+                int local_max = getMaxIdForIdChecking(ii);
+                if (local_sid <= local_max) {
+                    int this_base = _import_base_sid[ii];
+                    int sid = local_sid + this_base;
+                    return new InternedSymbolImpl(is.stringValue(), sid);
+                }
+            }
+        }
+        return null;
+    }
+
+
     int getMaxId() {
         return _max_id;
     }

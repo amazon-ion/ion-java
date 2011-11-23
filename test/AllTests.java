@@ -43,6 +43,7 @@ import com.amazon.ion.impl.IonEqualsTest;
 import com.amazon.ion.impl.IonImplUtilsTest;
 import com.amazon.ion.impl.IonWriterTests;
 import com.amazon.ion.impl.IterationTest;
+import com.amazon.ion.impl.LocalSymbolTableTest;
 import com.amazon.ion.impl.ReaderTest;
 import com.amazon.ion.impl.SharedSymbolTableTest;
 import com.amazon.ion.impl.SymbolTableTest;
@@ -119,6 +120,7 @@ import org.junit.runners.Suite;
     PrinterTest.class,
     SymbolTableTest.class,
     SharedSymbolTableTest.class,
+    LocalSymbolTableTest.class,
 
     // equality testing
     EquivalenceTest.class,
