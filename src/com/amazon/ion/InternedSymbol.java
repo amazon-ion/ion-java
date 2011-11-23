@@ -22,6 +22,17 @@ public interface InternedSymbol
      */
     public String stringValue();
 
+
+    /**
+     * Gets the text of this symbol, throwing an exception if its unknown.
+     *
+     * @return the text of the symbol, not null.
+     *
+     * @throws UnknownSymbolException if the symbol text isn't known.
+     */
+    public String assumeText();
+
+
     /**
      * Gets the ID of this symbol.
      * <p>

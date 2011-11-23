@@ -3,6 +3,7 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.InternedSymbol;
+import com.amazon.ion.UnknownSymbolException;
 
 
 final class InternedSymbolImpl
@@ -20,6 +21,12 @@ final class InternedSymbolImpl
 
     public String stringValue()
     {
+        return myText;
+    }
+
+    public String assumeText()
+    {
+        if (myText == null) throw new UnknownSymbolException(mySid);
         return myText;
     }
 

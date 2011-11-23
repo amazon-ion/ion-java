@@ -172,7 +172,7 @@ public interface SymbolTable
      *
      * @param text the symbol text to intern.
      *
-     * @return the interned symbol; not null.
+     * @return the interned symbol, with both text and SID defined; not null.
      *
      * @throws IonException if this symtab {@link #isReadOnly()} and
      * the text isn't already interned.
@@ -189,7 +189,8 @@ public interface SymbolTable
      *
      * @param text the symbol text to find.
      *
-     * @return the interned symbol, or {@code null} if it's not already interned.
+     * @return the interned symbol, with both text and SID defined;
+     *  or {@code null} if it's not already interned.
      *
      * @see #intern(String)
      */

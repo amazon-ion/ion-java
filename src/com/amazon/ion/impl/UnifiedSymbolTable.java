@@ -884,6 +884,7 @@ public final class UnifiedSymbolTable
         {
             int offset = convertSidToLocalOffset(sid);
             String internedText = _symbols[offset];
+            assert internedText != null;
             return new InternedSymbolImpl(internedText, sid);
         }
 

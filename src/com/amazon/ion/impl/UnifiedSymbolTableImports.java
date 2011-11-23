@@ -190,8 +190,8 @@ public class UnifiedSymbolTableImports
      *
      * @param text the symbol text to find.
      *
-     * @return the interned symbol, or {@code null} if it's not defined by an
-     *  imported table.
+     * @return the interned symbol (with both text and SID),
+     * or {@code null} if it's not defined by an imported table.
      */
     InternedSymbol find(String text)
     {
@@ -204,7 +204,9 @@ public class UnifiedSymbolTableImports
                 if (local_sid <= local_max) {
                     int this_base = _import_base_sid[ii];
                     int sid = local_sid + this_base;
-                    return new InternedSymbolImpl(is.stringValue(), sid);
+                    text = is.stringValue(); // Use interned instance
+                    assert text != null;
+                    return new InternedSymbolImpl(text, sid);
                 }
             }
         }
