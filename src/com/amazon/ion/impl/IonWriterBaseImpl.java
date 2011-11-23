@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
@@ -351,19 +352,24 @@ public abstract class IonWriterBaseImpl
     {
         if (this.isInStruct() && !isFieldNameSet())
         {
-            String field_name = reader.getFieldName();
-            if (field_name == null) {
-                int field_sid = reader.getFieldId();
-                if (field_sid > 0) {
-                    // TODO Why would this not be true?
-                    // When can we have neither text nor SID?
-                    field_name = assumeKnownSymbol(field_sid);
-                }
+            InternedSymbol is = reader.getFieldNameSymbol();
+            if (is == null)
+            {
+                throw new IllegalStateException("Field name not set");
             }
-            if (field_name == null) {
-                throw new IllegalStateException("a field name is required for members of a struct");
+
+            String name = is.stringValue();
+            if (name != null)
+            {
+                setFieldName(name);
             }
-            setFieldName(field_name);
+            else
+            {
+                int sid = is.getSymbolId();
+                assert sid != SymbolTable.UNKNOWN_SYMBOL_ID;
+                setFieldId(sid);
+            }
+
             if (_debug_on) System.out.print(":");
         }
     }
