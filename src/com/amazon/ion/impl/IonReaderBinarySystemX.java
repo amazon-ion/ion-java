@@ -6,6 +6,7 @@ import static com.amazon.ion.impl.IonImplUtils.EMPTY_INT_ARRAY;
 import static com.amazon.ion.impl.IonImplUtils.intIterator;
 
 import com.amazon.ion.Decimal;
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
@@ -323,6 +324,16 @@ class IonReaderBinarySystemX
         }
         prepare_value(AS_TYPE.string_value);
         return _v.getString();
+    }
+
+    public InternedSymbol symbolValue()
+    {
+        // TODO handle non-symbol
+        // TODO handle null
+
+        String text = null; // TODO stringValue();
+        int sid = getSymbolId();
+        return new InternedSymbolImpl(text, sid);
     }
 
     public int getSymbolId()

@@ -5,6 +5,7 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.impl.IonImplUtils.readFully;
 
 import com.amazon.ion.Decimal;
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
@@ -394,11 +395,26 @@ class IonReaderTreeSystem
 
     public String stringValue()
     {
+        // TODO what is this doing? Should test type first
         if (_curr == null) return null;
         if (_curr instanceof IonText) {
             return ((IonText)_curr).stringValue();
         }
         throw new IllegalStateException("current value is not a symbol or string");
+    }
+
+    public InternedSymbol symbolValue()
+    {
+        if (! (_curr instanceof IonSymbol))
+        {
+            throw new IllegalStateException();
+        }
+        if (_curr.isNullValue()) return null;
+
+        String text = stringValue();
+        // TODO what if text is unknown?
+        int sid = getSymbolId();
+        return new InternedSymbolImpl(text, sid);
     }
 
     public int getSymbolId()

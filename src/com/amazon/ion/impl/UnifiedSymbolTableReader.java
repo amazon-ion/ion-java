@@ -19,6 +19,7 @@ import static com.amazon.ion.SystemSymbols.VERSION;
 import static com.amazon.ion.SystemSymbols.VERSION_SID;
 
 import com.amazon.ion.Decimal;
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
@@ -1306,6 +1307,12 @@ public class UnifiedSymbolTableReader
     public String stringValue()
     {
         return _string_value;
+    }
+
+    public InternedSymbol symbolValue()
+    {
+        // TODO handle null
+        throw new UnsupportedOperationException();
     }
 
     public int getSymbolId()

@@ -3,6 +3,7 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.Decimal;
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonException;
@@ -410,6 +411,7 @@ public class IonReaderTextSystemX
         return _v.getLong();
     }
 
+    @Override
     public BigInteger bigIntegerValue()
     {
         load_or_cast_cached_value(AS_TYPE.bigInteger_value);
@@ -449,6 +451,22 @@ public class IonReaderTextSystemX
         load_or_cast_cached_value(AS_TYPE.string_value);
         if (_v.isNull()) return null;
         return _v.getString();
+    }
+
+    public InternedSymbol symbolValue()
+    {
+        if (_value_type != IonType.SYMBOL)
+        {
+            throw new IllegalStateException();
+        }
+
+        if (_v.isNull()) return null;
+
+
+        String text = stringValue();
+        // TODO what if text is unknown?
+        int sid = getSymbolId();
+        return new InternedSymbolImpl(text, sid);
     }
 
     //

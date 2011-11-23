@@ -154,6 +154,9 @@ public abstract class ReaderSystemProcessingTestCase
     {
         assertSame(IonType.SYMBOL, myReader.getType());
 
+        InternedSymbol sym = myReader.symbolValue();
+
+
         // we'll use this to make sure we did check something here
         boolean was_checked = false;
 
@@ -164,7 +167,12 @@ public abstract class ReaderSystemProcessingTestCase
             assertEquals(expected, reader_name);
             was_checked = true;
         }
-        catch (UnsupportedOperationException e) { }
+        catch (UnsupportedOperationException e) {
+            // TODO ION-58 this is shady
+        }
+
+        if (was_checked) assertEquals(expected, sym.stringValue());
+
 
         // now we check the binary value, which user readers
         // and any non-text readers should understand
@@ -176,6 +184,9 @@ public abstract class ReaderSystemProcessingTestCase
             }
             was_checked = true;
         }
+
+        assertEquals(sid, sym.getSymbolId());
+
 
         // finally we make sure we checked at least one of the
         // two representations (symbol text or symbol id)

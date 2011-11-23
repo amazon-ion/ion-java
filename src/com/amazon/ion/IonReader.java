@@ -322,6 +322,17 @@ public interface IonReader
      */
     public String stringValue();
 
+
+    /**
+     * Returns the current value as an interned symbol (text + ID).
+     * This is only valid when {@link #getType()} returns
+     * {@link IonType#SYMBOL}.
+     *
+     * @return null if {@link #isNullValue()}
+     */
+    public InternedSymbol symbolValue();
+
+
     /**
      * Returns the current value as an int symbol ID.
      * This is only valid when {@link #getType()} returns

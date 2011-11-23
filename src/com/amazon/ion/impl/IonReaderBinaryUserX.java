@@ -6,6 +6,7 @@ import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
@@ -311,6 +312,7 @@ class IonReaderBinaryUserX
     @Override
     public String stringValue()
     {
+        // TODO should check type first
         if (_value_is_null) {
             return null;
         }
@@ -325,6 +327,21 @@ class IonReaderBinaryUserX
             prepare_value(AS_TYPE.string_value);
         }
         return _v.getString();
+    }
+
+    @Override
+    public InternedSymbol symbolValue()
+    {
+        if (_value_type != IonType.SYMBOL)
+        {
+            throw new IllegalStateException();
+        }
+
+        if (_value_is_null) return null;
+
+        String text = stringValue();
+        int sid = getSymbolId();
+        return new InternedSymbolImpl(text, sid);
     }
 
     @Override

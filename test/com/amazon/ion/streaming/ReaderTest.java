@@ -4,6 +4,7 @@ package com.amazon.ion.streaming;
 
 import static com.amazon.ion.impl.IonImplUtils.intIterator;
 
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.junit.Injected.Inject;
@@ -80,4 +81,29 @@ public class ReaderTest
         IonAssert.assertIteratorEquals(intIterator(10, 11), typeIds);
         expectEof();
     }
+
+    @Test
+    public void testSymbolValue()
+        throws Exception
+    {
+        read("null.symbol sym");
+        in.next();
+        InternedSymbol is = in.symbolValue();
+        assertEquals(null, is);
+        in.next();
+        is = in.symbolValue();
+        assertEquals("sym", is.stringValue());
+        // TODO sid
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testSymbolValueOnNonSymbol()
+        throws Exception
+    {
+        read("null");
+        in.next();
+        in.symbolValue();
+    }
+
+    // TODO test getSymbolId() on null.symbol
 }
