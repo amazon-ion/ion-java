@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.Symtabs.sharedSymtabStruct;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.impl.IonImplUtils.stringIterator;
 import static com.amazon.ion.impl.SymbolTableTest.checkSharedTable;
 
 import com.amazon.ion.InternedSymbol;
@@ -197,6 +198,15 @@ public class SharedSymbolTableTest
 
         assertEquals(1, st.findSymbol("a"));  // lowest sid wins
         assertEquals(4, st.findSymbol("c"));
+
+        // Now extend it
+        catalog().putTable(st);
+        SymbolTable st2 =
+            system().newSharedSymbolTable("ST", 2, stringIterator("x"));
+
+        assertEquals(1, st2.findSymbol("a"));  // lowest sid wins
+        assertEquals(4, st2.findSymbol("c"));
+        assertEquals(5, st2.findSymbol("x"));
     }
 
     // TODO test imports in shared symtabs

@@ -230,14 +230,7 @@ public final class UnifiedSymbolTable
 
             if (symName != null)
             {
-                // When there's a duplicate name, don't replace the lower sid.
-                // This pattern avoids double-lookup in the normal happy case
-                // and only requires a second lookup when there's a duplicate.
-                Integer extantSid = _id_map.put(symName, sid);
-                if (extantSid != null && extantSid < sid)
-                {
-                    _id_map.put(symName, extantSid);
-                }
+                putToIdMapIfNotThere(symName, sid);
             }
         }
 
@@ -1021,8 +1014,9 @@ public final class UnifiedSymbolTable
         // Don't add to _id_map if the text is covered by an import
         if (symbolName != null && _import_list.findSymbol(symbolName) < 0)
         {
-            _id_map.put(symbolName, sid);
+            putToIdMapIfNotThere(symbolName, sid);
         }
+
         _symbols[idx] = symbolName;
 
         if (idx >= _local_symbol_count) {
@@ -1032,6 +1026,20 @@ public final class UnifiedSymbolTable
         if (_image != null) {
             assert _local_symbol_count > 0;
             recordLocalSymbolInIonRep(_image, symbolName, sid);
+        }
+    }
+
+    private void putToIdMapIfNotThere(String text, int sid)
+    {
+        // When there's a duplicate name, don't replace the lower sid.
+        // This pattern avoids double-lookup in the normal happy case
+        // and only requires a second lookup when there's a duplicate.
+        Integer extantSid = _id_map.put(text, sid);
+        if (extantSid != null)
+        {
+            // We always insert symbols with increasing sids
+            assert extantSid < sid;
+            _id_map.put(text, extantSid);
         }
     }
 
