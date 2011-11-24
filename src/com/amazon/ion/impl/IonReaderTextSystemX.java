@@ -307,17 +307,17 @@ public class IonReaderTextSystemX
             parse_error("scalar token "+IonTokenConstsX.getTokenName(_scanner.getToken())+"isn't a recognized type");
         }
     }
-    private final void cast_cached_value(int value_type)
+    private final void cast_cached_value(int new_type)
     {
         // this should only be called when it actually has to do some work
-        assert !_v.hasValueOfType(value_type);
+        assert !_v.hasValueOfType(new_type);
 
         if (_v.isNull()) {
             return;
         }
 
         if (IonType.SYMBOL.equals(_value_type)) {
-            switch(value_type) {
+            switch(new_type) {
                 case AS_TYPE.int_value:
                     int sid = _v.getInt();
                     String sym = getSymbolTable().findSymbol(sid);
@@ -332,20 +332,20 @@ public class IonReaderTextSystemX
                 {   String message = "can't cast symbol from "
                         +IonScalarConversionsX.getValueTypeName(_v.getAuthoritativeType())
                         +" to "
-                        +IonScalarConversionsX.getValueTypeName(value_type);
+                        +IonScalarConversionsX.getValueTypeName(new_type);
                     throw new CantConvertException(message);
                 }
             }
         }
         else {
-            if (!_v.can_convert(value_type)) {
+            if (!_v.can_convert(new_type)) {
                 String message = "can't cast from "
                     +IonScalarConversionsX.getValueTypeName(_v.getAuthoritativeType())
                     +" to "
-                    +IonScalarConversionsX.getValueTypeName(value_type);
+                    +IonScalarConversionsX.getValueTypeName(new_type);
                 throw new CantConvertException(message);
             }
-            int fnid = _v.get_conversion_fnid(value_type);
+            int fnid = _v.get_conversion_fnid(new_type);
             _v.cast(fnid);
         }
     }
