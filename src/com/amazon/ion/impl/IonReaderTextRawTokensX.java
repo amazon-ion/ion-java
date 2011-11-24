@@ -1746,6 +1746,7 @@ public class IonReaderTextRawTokensX
         unread_char(c);
 
         if (all_numeric) {
+            // TODO I think this is unnecessary.
             // here we have to normalize (that is remove
             // any leading '0's) the int value
             // this should be an unusual case so the cost
@@ -1759,6 +1760,7 @@ public class IonReaderTextRawTokensX
             }
         }
 
+        // TODO whether this is a SID is just forgotten!
         return;
     }
 

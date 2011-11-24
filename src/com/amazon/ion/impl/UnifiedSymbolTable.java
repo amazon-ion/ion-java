@@ -823,7 +823,7 @@ public final class UnifiedSymbolTable
 
         if (sid == UNKNOWN_SYMBOL_ID && isSystemTable() == false) {
             sid = _import_list.findSymbol(name);
-            if (sid < 1 && name.charAt(0) == '$') {
+            if (/*true &&*/ sid < 1 && name.charAt(0) == '$') {
                 if (name.length() > 1 && Character.isDigit(name.charAt(1))) {
                     String sidText = name.substring(1);
                     try {

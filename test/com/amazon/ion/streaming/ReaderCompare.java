@@ -163,11 +163,28 @@ public class ReaderCompare
                 assertEquals(t1, t2);
                 break;
             case STRING:
-            case SYMBOL:
+            {
                 String s1 = it1.stringValue();
                 String s2 = it2.stringValue();
                 assertEquals(s1, s2);
                 break;
+            }
+            case SYMBOL:
+            {
+                InternedSymbol is1 = it1.symbolValue();
+                InternedSymbol is2 = it2.symbolValue();
+                if (is1.getText() == null || is2.getText() == null)
+                {
+                    assertEquals("sids", is1.getId(), is2.getId());
+                }
+                else
+                {
+                    String s1 = is1.getText();
+                    String s2 = is2.getText();
+                    assertEquals(s1, s2);
+                }
+                break;
+            }
             case BLOB:
             case CLOB:
                 byte[] b1 = it1.newBytes();

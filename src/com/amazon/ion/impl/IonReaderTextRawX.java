@@ -839,6 +839,7 @@ public abstract class IonReaderTextRawX
                     }
                 }
 
+                // TODO ION-58 wrong for SIDs
                 set_fieldname(sb.toString());
                 clear_current_value_buffer();  // token_contents_consumed();
                 t = _scanner.nextToken();
@@ -867,6 +868,8 @@ public abstract class IonReaderTextRawX
                     set_state(temp_state);
                     break;
                 }
+
+                // We have an annotation! Make sure it's not a keyword
                 if (t == IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER) {
                     int kw = IonTokenConstsX.keyword(sb, 0, sb.length());
                     switch (kw) {
@@ -883,6 +886,7 @@ public abstract class IonReaderTextRawX
                         break;
                     }
                 }
+                // TODO ION-58 wrong for SIDs
                 append_annotation(sb.toString());
                 clear_current_value_buffer();
                 // note: that peekDoubleColon() consumed the two colons
@@ -891,6 +895,8 @@ public abstract class IonReaderTextRawX
                 switch(t) {
                 case IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER:
                 case IonTokenConstsX.TOKEN_SYMBOL_QUOTED:
+                    // This may be another annotation, so stay in this state
+                    // and come around the horn again to check it out.
                     break;
                 default:
                     // we leave the error handling to the transition
@@ -978,7 +984,14 @@ public abstract class IonReaderTextRawX
                         _v.setValue(Double.NaN);
                         _v.setAuthoritativeType(AS_TYPE.double_value);
                         break;
+                    case IonTokenConstsX.KEYWORD_sid:
+                    {
+                        int sid = IonTokenConstsX.decodeSid(sb);
+                        _v.setValue(sid);
+                        _v.setAuthoritativeType(AS_TYPE.int_value);
+                    }
                     default:
+                        // We don't care about any other 'keywords'
                         _value_type = IonType.SYMBOL;
                         break;
                     }
@@ -1069,6 +1082,7 @@ public abstract class IonReaderTextRawX
                 break;
             case IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER:
                 _scanner.load_symbol(sb);
+                // TODO ION-58 this treats SIDS the same as quoted symbols
                 _value_type = IonType.SYMBOL;
                 break;
             case IonTokenConstsX.TOKEN_SYMBOL_OPERATOR:
@@ -1107,6 +1121,7 @@ public abstract class IonReaderTextRawX
                 break;
             case IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER:
                 _scanner.load_symbol(sb);
+                // TODO ION-58 this treats SIDS the same as quoted symbols
                 _value_type = IonType.SYMBOL;
                 break;
             case IonTokenConstsX.TOKEN_SYMBOL_OPERATOR:
@@ -1121,6 +1136,7 @@ public abstract class IonReaderTextRawX
                     //parse_error(message);
                     _scanner.unexpected_eof();
                 }
+                // TODO ION-58 this treats SIDS the same as quoted symbols
                 _value_type = IonType.SYMBOL;
                 break;
             case IonTokenConstsX.TOKEN_STRING_DOUBLE_QUOTE:

@@ -185,27 +185,6 @@ public class IonReaderTextUserX
         return id;
     }
 
-    @Override
-    public int getSymbolId()
-    {
-        if (getType() != IonType.SYMBOL) {
-            throw new IllegalStateException("only valid if the value is a symbol");
-        }
-        String symbol = stringValue();
-        SymbolTable symbols   = getSymbolTable();
-        // if (!_symbols.isLocalTable()) {
-        //     UnifiedSymbolTable local;
-        //     if (_symbols.isSystemTable()) {
-        //         local = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _system.getSystemSymbolTable());
-        //     }
-        //     else { // if (_symbols.isSharedTable()) {
-        //         local = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _system.getSystemSymbolTable(), _symbols);
-        //     }
-        //     _symbols = local;
-        // }
-        int    id     = symbols.addSymbol(symbol);
-        return id;
-    }
 
     @Override
     public SymbolTable getSymbolTable()

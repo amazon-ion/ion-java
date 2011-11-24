@@ -162,8 +162,11 @@ extends IonTestCase
         }
 
         myFullReader.getFieldId();
-        if (!skip())
+        if (false && !skip())
         {
+            // This test is shady since it assumes that SIDs always get
+            // assigned in the same order. We don't guarantee that for text
+            // readers.
             assertEquals(myFullReader.getFieldId(),
                          mySkipReader.getFieldId());
         }

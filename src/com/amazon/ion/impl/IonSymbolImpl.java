@@ -14,7 +14,6 @@ import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
 
@@ -139,7 +138,23 @@ public final class IonSymbolImpl
         if (value == null)
         {
             assert mySid > 0;
-            throw new UnknownSymbolException(mySid);
+            SymbolTable symbols = this.getSymbolTable();
+            if (symbols != null) {
+                 value = symbols.findKnownSymbol(mySid);
+            }
+            if (value == null)
+            {
+                // TODO ION-58 shouldn't return synthetic symbol
+                value = "$" + mySid;
+                // TODO should throw
+//              throw new UnknownSymbolException(_sid);
+            }
+            // TODO cache result
+            if (! isReadOnly())
+            {
+                _set_value(value);
+            }
+            return value;
         }
 
         // this only decodes a valid value if the symbol
@@ -334,7 +349,10 @@ public final class IonSymbolImpl
     void detachFromSymbolTable()
     {
         String name = stringValue();  // Force materialization
-        this.mySid = (name == null ? 0 : UNKNOWN_SYMBOL_ID);
+//        if (name != null)
+        {
+            this.mySid = (name == null ? 0 : UNKNOWN_SYMBOL_ID);
+        }
         super.detachFromSymbolTable();
     }
 

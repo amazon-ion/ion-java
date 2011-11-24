@@ -55,8 +55,10 @@ public class IonSymbolLite
                 }
                 super.setValue(text);
             }
-
-            _sid = sid;
+            else
+            {
+                _sid = sid;
+            }
         }
     }
 
@@ -147,6 +149,7 @@ public class IonSymbolLite
 
         // check for a $<digits> form of the symbol name
         // really this should be done down in the parser
+        // TODO ION-58 this shouldn't try to parse the value
         boolean is_encoded_sid = false;
         int sid = UNKNOWN_SYMBOL_ID;
         if (value != null && value.length() > 1 && value.charAt(0) == '$') {
@@ -248,6 +251,7 @@ public class IonSymbolLite
             SymbolTable symbols = getSymbolTable();
             name = symbols.findKnownSymbol(_sid);
             if (name == null) {
+                // TODO ION-58 shouldn't return synthetic symbol
                 name = symbols.findSymbol(_sid);
                 // TODO should throw
 //                throw new UnknownSymbolException(_sid);

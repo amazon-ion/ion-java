@@ -87,6 +87,7 @@ public class IonTokenConstsX
     public static final int KEYWORD_SEXP      = 14;
     public static final int KEYWORD_STRUCT    = 15;
     public static final int KEYWORD_NAN       = 16;
+    public static final int KEYWORD_sid       = 17;
 
     public final static String getTokenName(int t) {
         switch (t) {
@@ -483,12 +484,30 @@ public class IonTokenConstsX
         return (isValidStartSymbolCharacter[c & 0xff] && is8bitValue(c));
     }
 
+    public static int decodeSid(CharSequence sidToken)
+    {
+        assert sidToken.charAt(0) == '$';
+
+        int length = sidToken.length();
+        assert length > 1;
+
+        String digits = sidToken.subSequence(1, length).toString();
+        return Integer.parseInt(digits);
+    }
 
     static public int keyword(CharSequence word, int start_word, int end_word)
     {
         int c = word.charAt(start_word);
         int len = end_word - start_word; // +1 but we build that into the constants below
         switch (c) {
+        case '$':
+            if (len > 1) {
+                for (int i = start_word + 1; i < end_word; i++) {
+                    if (! isDigit(word.charAt(i))) return -1;
+                }
+                return KEYWORD_sid;
+            }
+            return -1;
         case 'b':
             if (len == 4) {
                 if (word.charAt(start_word+1) == 'o'

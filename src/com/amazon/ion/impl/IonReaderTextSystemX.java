@@ -255,6 +255,7 @@ public class IonReaderTextSystemX
             else {
                 switch(getType()) {
                 case SYMBOL:
+                    // TODO this is catching SIDs too, using wrong text.
                     _v.setValue(s);
                     break;
                 case FLOAT:
@@ -318,15 +319,16 @@ public class IonReaderTextSystemX
 
         if (IonType.SYMBOL.equals(_value_type)) {
             switch(new_type) {
-                case AS_TYPE.int_value:
-                    int sid = _v.getInt();
-                    String sym = getSymbolTable().findSymbol(sid);
-                    _v.setValue(sym);
-                    break;
                 case AS_TYPE.string_value:
+                    int sid = _v.getInt();
+                    String sym = getSymbolTable().findKnownSymbol(sid);
+                    // TODO what if sym is null?
+                    _v.addValue(sym);
+                    break;
+                case AS_TYPE.int_value:
                     sym = _v.getString();
                     sid = getSymbolTable().findSymbol(sym);
-                    _v.setValue(sid);
+                    _v.addValue(sid);
                     break;
                 default:
                 {   String message = "can't cast symbol from "
@@ -450,9 +452,10 @@ public class IonReaderTextSystemX
     /**
      * Horrible temporary hack.
      */
-    private final SymbolTable guessSymtab()
+    @Override
+    public SymbolTable getSymbolTable()
     {
-        SymbolTable symtab = getSymbolTable();
+        SymbolTable symtab = super.getSymbolTable();
         if (symtab == null)
         {
             symtab = _system.getSystemSymbolTable();
@@ -464,8 +467,15 @@ public class IonReaderTextSystemX
     {
         // TODO ION-233 implement sids for system readers
         // TODO test type
-        final SymbolTable symtab = guessSymtab();
+
+        if (_v.hasValueOfType(AS_TYPE.int_value))
+        {
+            return _v.getInt();
+        }
+
+        final SymbolTable symtab = getSymbolTable();
         final String text = stringValue();
+        if (symtab.isReadOnly()) return symtab.findSymbol(text);
         return symtab.addSymbol(text);
     }
 
@@ -480,8 +490,13 @@ public class IonReaderTextSystemX
 
 
         final String text = stringValue();
-        assert text != null;
-        final SymbolTable symtab = guessSymtab();
+        if (text == null)
+        {
+            int sid = getSymbolId();
+            return new InternedSymbolImpl(null, sid);
+        }
+
+        final SymbolTable symtab = getSymbolTable();
         InternedSymbol is = new InternedSymbol()
         {
             public String getText()
@@ -491,6 +506,10 @@ public class IonReaderTextSystemX
 
             public int getId()
             {
+                if (symtab.isReadOnly())
+                {
+                    return symtab.findSymbol(text);
+                }
                 return symtab.addSymbol(text);
             }
 

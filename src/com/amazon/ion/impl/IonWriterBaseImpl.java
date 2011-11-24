@@ -437,9 +437,12 @@ public abstract class IonWriterBaseImpl
                 String name = reader.stringValue();
                 if (name == null) {
                     int sid = reader.getSymbolId();
-                    name = assumeKnownSymbol(sid);
+//                    name = assumeKnownSymbol(sid);
+                    writeSymbol(sid);
                 }
-                writeSymbol(name);
+                else {
+                    writeSymbol(name);
+                }
                 if (_debug_on) System.out.print("y");
                 break;
             case BLOB:

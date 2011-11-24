@@ -272,6 +272,7 @@ public class IonAssert
             case SYMBOL:
             case TIMESTAMP:
             {
+                // "Normal" IonValue.equals()
                 assertEquals(path, expected, actual);
                 break;
             }

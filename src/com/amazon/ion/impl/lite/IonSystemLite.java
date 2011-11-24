@@ -401,7 +401,7 @@ public final class IonSystemLite
                 v = newTimestamp(reader.timestampValue());
                 break;
             case SYMBOL:
-                v = newSymbol(reader.stringValue());
+                v = newSymbol(reader.symbolValue());
                 symbol_is_present = true;
                 break;
             case STRING:

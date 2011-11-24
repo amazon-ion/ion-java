@@ -289,10 +289,9 @@ final class IonWriterSystemTree
     public void writeSymbol(int symbolId)
     {
         String name = getSymbolTable().findKnownSymbol(symbolId);
-        if (name == null) {
-            throw new IllegalArgumentException("undefined symbol id");
-        }
-        writeSymbol(name);
+        InternedSymbolImpl is = new InternedSymbolImpl(name, symbolId);
+        IonSymbol v = _factory.newSymbol(is);
+        append(v);
     }
 
     public void writeSymbol(String value)
