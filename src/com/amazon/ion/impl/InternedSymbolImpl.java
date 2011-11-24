@@ -14,6 +14,8 @@ final class InternedSymbolImpl
 
     InternedSymbolImpl(String text, int sid)
     {
+        assert text != null || sid > 0 : "Neither text nor sid is defined";
+
         myText = text;
         mySid = sid;
     }

@@ -354,12 +354,6 @@ public class IonReaderTextSystemX
     // public value routines
     //
 
-    public int getSymbolId()
-    {
-        // TODO ION-233 implement sids for system readers
-        return SymbolTable.UNKNOWN_SYMBOL_ID;
-    }
-
     public int getFieldId()
     {
         // TODO ION-233 implement sids for system readers
@@ -453,6 +447,28 @@ public class IonReaderTextSystemX
         return _v.getString();
     }
 
+    /**
+     * Horrible temporary hack.
+     */
+    private final SymbolTable guessSymtab()
+    {
+        SymbolTable symtab = getSymbolTable();
+        if (symtab == null)
+        {
+            symtab = _system.getSystemSymbolTable();
+        }
+        return symtab;
+    }
+
+    public int getSymbolId()
+    {
+        // TODO ION-233 implement sids for system readers
+        // TODO test type
+        final SymbolTable symtab = guessSymtab();
+        final String text = stringValue();
+        return symtab.addSymbol(text);
+    }
+
     public InternedSymbol symbolValue()
     {
         if (_value_type != IonType.SYMBOL)
@@ -463,10 +479,27 @@ public class IonReaderTextSystemX
         if (_v.isNull()) return null;
 
 
-        String text = stringValue();
-        // TODO what if text is unknown?
-        int sid = getSymbolId();
-        return new InternedSymbolImpl(text, sid);
+        final String text = stringValue();
+        assert text != null;
+        final SymbolTable symtab = guessSymtab();
+        InternedSymbol is = new InternedSymbol()
+        {
+            public String getText()
+            {
+                return text;
+            }
+
+            public int getId()
+            {
+                return symtab.addSymbol(text);
+            }
+
+            public String assumeText()
+            {
+                return text;
+            }
+        };
+        return is;
     }
 
     //

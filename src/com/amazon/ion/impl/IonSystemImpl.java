@@ -22,6 +22,7 @@ import static com.amazon.ion.util.IonTextUtils.printString;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.Decimal;
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonCatalog;
@@ -1148,6 +1149,11 @@ public final class IonSystemImpl
     public IonSymbol newSymbol(String name)
     {
         return new IonSymbolImpl(this, name);
+    }
+
+    public IonSymbol newSymbol(InternedSymbol value)
+    {
+        return new IonSymbolImpl(this, value);
     }
 
 

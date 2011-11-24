@@ -2,6 +2,7 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.impl.IonImplUtils;
 import org.junit.Test;
 
 
@@ -74,6 +75,46 @@ public class SymbolTest
         value = system().newSymbol("hello");
     }
 
+    public void testFactorySymbolWithSid(ValueFactory vf)
+    {
+        final int sid = 99;
+        InternedSymbol is = IonImplUtils.newInternedSymbol(null, sid);
+
+        IonSymbol value = vf.newSymbol(is);
+        assertFalse(value.isNullValue());
+        assertEquals(sid, value.getSymbolId());
+
+        try {
+            String s = value.stringValue();
+            // TODO should throw
+            // if we get an answer it's synthetic
+            assertEquals("$"+sid, s);
+//            fail("Expected exception");
+        }
+        catch (UnknownSymbolException e) {
+            assertEquals(sid, e.getSid());
+        }
+
+
+        is = IonImplUtils.newInternedSymbol("text", sid);
+        value = vf.newSymbol(is);
+        assertFalse(value.isNullValue());
+        assertEquals("text", value.stringValue());
+
+        // TODO this needs to be well-defined
+//        assertEquals(sid, value.getSymbolId());
+    }
+
+    @Test
+    public void testFactorySymbolWithSid()
+    {
+        ValueFactory vf = system();
+        testFactorySymbolWithSid(vf);
+
+        IonList list = system().newEmptyList();
+        vf = list.add();
+        testFactorySymbolWithSid(vf);
+    }
 
     @Test
     public void testNullSymbol()
@@ -125,8 +166,7 @@ public class SymbolTest
     {
         String symText = "$324";
         IonSymbol value = (IonSymbol) oneValue(symText);
-        checkSymbol(symText, value);
-        assertEquals(324, value.getSymbolId());
+        checkSymbol(null, 324, value);
     }
 
 

@@ -156,6 +156,10 @@ public final class IonImplUtils // TODO this class shouldn't be public
         }
     }
 
+    public static InternedSymbolImpl newInternedSymbol(String text, int sid)
+    {
+        return new InternedSymbolImpl(text, sid);
+    }
 
     //========================================================================
 

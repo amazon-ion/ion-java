@@ -4,8 +4,10 @@ package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.Decimal;
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonSexp;
+import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.Timestamp;
@@ -373,6 +375,11 @@ public class ValueFactoryLite
             ionValue.setValue(value);
         }
         return ionValue;
+    }
+
+    public IonSymbol newSymbol(InternedSymbol value)
+    {
+        return new IonSymbolLite(_system, value);
     }
 
     public IonTimestampLite newTimestamp(Timestamp value)

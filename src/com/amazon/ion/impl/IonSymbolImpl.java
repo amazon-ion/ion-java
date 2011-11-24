@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -8,11 +8,13 @@ import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.impl.IonConstants.BB_TOKEN_LEN;
 
 import com.amazon.ion.EmptySymbolException;
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
 
@@ -52,6 +54,29 @@ public final class IonSymbolImpl
     {
         this(system, NULL_SYMBOL_TYPEDESC);
         setValue(name);
+    }
+
+    public IonSymbolImpl(IonSystemImpl system, InternedSymbol sym)
+    {
+        this(system);
+
+        if (sym != null)
+        {
+            String text = sym.getText();
+            if (text != null)
+            {
+                if ("".equals(text)) {
+                    throw new EmptySymbolException();
+                }
+                _set_value(text);
+            }
+            else
+            {
+                mySid = sym.getId();
+            }
+
+            _isNullValue(false);
+        }
     }
 
     /**
@@ -111,6 +136,11 @@ public final class IonSymbolImpl
         makeReady();
 
         String value = _get_value();
+        if (value == null)
+        {
+            assert mySid > 0;
+            throw new UnknownSymbolException(mySid);
+        }
 
         // this only decodes a valid value if the symbol
         // is of the form $<digits>

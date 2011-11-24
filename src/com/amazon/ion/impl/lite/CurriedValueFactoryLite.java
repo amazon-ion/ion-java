@@ -3,6 +3,7 @@
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.ContainedValueException;
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonClob;
@@ -376,6 +377,13 @@ public abstract class CurriedValueFactoryLite
     }
 
     public IonSymbol newSymbol(String value)
+    {
+        IonSymbol v = myFactory.newSymbol(value);
+        handle(v);
+        return v;
+    }
+
+    public IonSymbol newSymbol(InternedSymbol value)
     {
         IonSymbol v = myFactory.newSymbol(value);
         handle(v);

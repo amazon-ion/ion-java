@@ -652,13 +652,29 @@ public abstract class IonTestCase
 
     /**
      * Checks that the value is an IonSymbol with the given name.
-     * @param name shouldn't be null.
      */
     public void checkSymbol(String name, int id, IonValue value)
     {
         checkType(IonType.SYMBOL, value);
         IonSymbol sym = (IonSymbol) value;
-        assertEquals("symbol name", name, sym.stringValue());
+
+        if (name == null)
+        {
+            try {
+                sym.stringValue();
+                // TODO stringValue should throw
+//                fail("Expected " + UnknownSymbolException.class);
+            }
+            catch (UnknownSymbolException e)
+            {
+                assertEquals(id, e.getSid());
+            }
+        }
+        else
+        {
+            assertEquals("symbol name", name, sym.stringValue());
+        }
+
         // just so we can set a break point on this before we lose all context
         int sid = sym.getSymbolId();
         if (sid != id) {

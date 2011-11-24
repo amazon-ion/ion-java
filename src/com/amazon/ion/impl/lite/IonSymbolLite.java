@@ -7,6 +7,7 @@ import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 
 import com.amazon.ion.EmptySymbolException;
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
@@ -37,6 +38,29 @@ public class IonSymbolLite
     {
         super(system, isNull);
     }
+
+    IonSymbolLite(IonSystemLite system, InternedSymbol sym)
+    {
+        super(system, sym == null);
+        if (sym != null)
+        {
+            String text = sym.getText();
+            int sid = sym.getId();
+            assert text != null || sid > 0;
+
+            if (text != null)
+            {
+                if ("".equals(text)) {
+                    throw new EmptySymbolException();
+                }
+                super.setValue(text);
+            }
+
+            _sid = sid;
+        }
+    }
+
+
     /**
      * makes a copy of this IonString. This calls up to
      * IonTextImpl to copy the string itself and that in
@@ -225,6 +249,8 @@ public class IonSymbolLite
             name = symbols.findKnownSymbol(_sid);
             if (name == null) {
                 name = symbols.findSymbol(_sid);
+                // TODO should throw
+//                throw new UnknownSymbolException(_sid);
             }
             else {
                 // if this is a mutable value we'll hang onto

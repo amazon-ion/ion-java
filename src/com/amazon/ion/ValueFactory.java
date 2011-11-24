@@ -520,6 +520,18 @@ public interface ValueFactory
     public IonSymbol newSymbol(String value);
 
 
+    /**
+     * Constructs a new Ion symbol with the given symbol fields.
+     * <p>
+     * <b>This is an "expert method": correct use requires deep understanding
+     * of the Ion binary format. You almost certainly don't want to use it.</b>
+     *
+     * @param value the text and/or SID of the symbol;
+     * may be <code>null</code> to make <code>null.symbol</code>.
+     */
+    public IonSymbol newSymbol(InternedSymbol value);
+
+
     //-------------------------------------------------------------------------
 
 

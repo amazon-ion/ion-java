@@ -137,8 +137,8 @@ public class IonIteratorImpl
                     v = _valueFactory.newString(_reader.stringValue());
                     break;
                 case SYMBOL:
-                    // FIXME handle case where only SID is known
-                    v = _valueFactory.newSymbol(_reader.stringValue());
+                    // TODO always pass the SID?  Is it correct?
+                    v = _valueFactory.newSymbol(_reader.symbolValue());
                     break;
                 case BLOB:
                 {
