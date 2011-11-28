@@ -165,20 +165,8 @@ public class UnifiedSymbolTableImports
 
     int findSymbol(String name)
     {
-        int ii, sid = -1;
-
-        for (ii=0; ii<_import_count; ii++) {
-            int local_sid = _imports[ii].findLocalSymbol(name);
-            if (local_sid != UNKNOWN_SYMBOL_ID) {
-                int this_base = _import_base_sid[ii];
-                int local_max = getMaxIdForIdChecking(ii);
-                if (local_sid <= local_max) {
-                    sid = local_sid + this_base;
-                    break;
-                }
-            }
-        }
-        return sid;
+        InternedSymbol sym = find(name);
+        return (sym == null ? UNKNOWN_SYMBOL_ID : sym.getId());
     }
 
     /**
