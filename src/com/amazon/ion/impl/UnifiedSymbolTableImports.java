@@ -16,17 +16,17 @@ import java.util.Iterator;
  * UnifiedSymbolTable.  It includes find methods to find either
  * sids or names in the imported tables it manages.
  */
-public class UnifiedSymbolTableImports
+class UnifiedSymbolTableImports
 {
     static final int DEFAULT_IMPORT_LENGTH = 4;
 
-    private int                  _max_id;
-    private boolean              _is_read_only;
+    private int           _max_id;
+    private boolean       _is_read_only;
 
-    private int                  _import_count;
-    private UnifiedSymbolTable[] _imports;
-    private int[]                _import_base_sid;
-    private int[]                _imports_max_id;
+    private int           _import_count;
+    private SymbolTable[] _imports;
+    private int[]         _import_base_sid;
+    private int[]         _imports_max_id;
 
     static final UnifiedSymbolTableImports emptyImportList =
         new UnifiedSymbolTableImports();
@@ -36,7 +36,7 @@ public class UnifiedSymbolTableImports
         makeReadOnly();
     }
 
-    UnifiedSymbolTableImports(UnifiedSymbolTable systemSymbols) {
+    UnifiedSymbolTableImports(SymbolTable systemSymbols) {
         if (systemSymbols != null) {
             add_import_helper(systemSymbols, -1);
         }
@@ -78,7 +78,7 @@ public class UnifiedSymbolTableImports
      * @throws IllegalArgumentException if the table is local or system.
      * @throws NullPointerException if the table is null.
      */
-    void addImport(UnifiedSymbolTable symtab, int maxId)
+    void addImport(SymbolTable symtab, int maxId)
     {
         if (symtab.isLocalTable() || symtab.isSystemTable()) {
             throw new IllegalArgumentException("only non-system shared tables can be imported");
@@ -86,7 +86,7 @@ public class UnifiedSymbolTableImports
         add_import_helper(symtab, maxId);
     }
 
-    private final void add_import_helper(UnifiedSymbolTable symtab, int maxId)
+    private final void add_import_helper(SymbolTable symtab, int maxId)
     {
         assert symtab.isReadOnly();
 
@@ -120,9 +120,9 @@ public class UnifiedSymbolTableImports
             newlen = DEFAULT_IMPORT_LENGTH;
         }
 
-        UnifiedSymbolTable[] temp1 = new UnifiedSymbolTable[newlen];
-        int[]                temp2 = new int[newlen];
-        int[]                temp3 = new int[newlen];
+        SymbolTable[] temp1 = new SymbolTable[newlen];
+        int[]         temp2 = new int[newlen];
+        int[]         temp3 = new int[newlen];
 
         if (oldlen > 0) {
             System.arraycopy(_imports, 0, temp1, 0, oldlen);
@@ -259,7 +259,7 @@ public class UnifiedSymbolTableImports
         }
         return non_system_count;
     }
-    void getImports(UnifiedSymbolTable[] imports, int count)
+    void getImports(SymbolTable[] imports, int count)
     {
         int non_system_base_offset = 0;
         if (hasSystemSymbolsImported()) {
@@ -299,10 +299,10 @@ public class UnifiedSymbolTableImports
             return false;
         }
 
-        public UnifiedSymbolTable next()
+        public SymbolTable next()
         {
             while (_idx < _import_count) {
-                UnifiedSymbolTable obj = _imports[_idx];
+                SymbolTable obj = _imports[_idx];
                 _idx++;
                 assert(UnifiedSymbolTable.isSystemTable(obj) == false);
                 return obj;

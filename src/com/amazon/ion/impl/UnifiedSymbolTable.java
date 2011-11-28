@@ -190,13 +190,10 @@ public final class UnifiedSymbolTable
                                SymbolTable systemSymbolTable)
     {
         this(imageFactory,
-             new UnifiedSymbolTableImports((UnifiedSymbolTable) systemSymbolTable),
+             new UnifiedSymbolTableImports(systemSymbolTable),
              new HashMap<String, Integer>(DEFAULT_CAPACITY));
 
         if (!systemSymbolTable.isSystemTable()) {
-            throw new IllegalArgumentException();
-        }
-        if (! (systemSymbolTable instanceof UnifiedSymbolTable)) {
             throw new IllegalArgumentException();
         }
 
@@ -728,8 +725,7 @@ public final class UnifiedSymbolTable
     synchronized
     int getMaxId()
     {
-        int maxid = _local_symbol_count;
-        maxid += _import_list.getMaxId();
+        int maxid = _local_symbol_count + _import_list.getMaxId();
         return maxid;
     }
 
@@ -821,6 +817,7 @@ public final class UnifiedSymbolTable
 
         int sid = findLocalSymbol(name);
 
+        // TODO why magic for system tables?
         if (sid == UNKNOWN_SYMBOL_ID && isSystemTable() == false) {
             sid = _import_list.findSymbol(name);
             if (/*true &&*/ sid < 1 && name.charAt(0) == '$') {
@@ -1066,7 +1063,7 @@ public final class UnifiedSymbolTable
     }
 
 
-    public UnifiedSymbolTable[] getImportedTables()
+    public SymbolTable[] getImportedTables()
     {
         if (isSharedTable()) return null;
 
@@ -1076,8 +1073,7 @@ public final class UnifiedSymbolTable
         // was: synchronized (this) {
 
         int count = _import_list.getImportCount();
-        UnifiedSymbolTable[] imports =
-            new UnifiedSymbolTable[count];
+        SymbolTable[] imports = new SymbolTable[count];
         if (count > 0) {
             _import_list.getImports(imports, count);
         }
@@ -1474,9 +1470,9 @@ public final class UnifiedSymbolTable
             version = 1;
         }
 
-        UnifiedSymbolTable itab = null;
+        SymbolTable itab = null;
         if (catalog != null) {
-            itab = (UnifiedSymbolTable) catalog.getTable(name, version);
+            itab = catalog.getTable(name, version);
         }
         if (maxid < 0
             && (itab == null || version != itab.getVersion()))
