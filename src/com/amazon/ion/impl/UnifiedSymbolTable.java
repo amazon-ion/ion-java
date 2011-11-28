@@ -40,11 +40,9 @@ import com.amazon.ion.ValueFactory;
 import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -778,9 +776,7 @@ public final class UnifiedSymbolTable
     synchronized
     Iterator<String> iterateDeclaredSymbolNames()
     {
-        List<String> slice =
-            Arrays.asList(_symbols).subList(0, _local_symbol_count);
-        return Collections.unmodifiableList(slice).iterator();
+        return new SymbolIterator();
     }
 
 
@@ -1541,19 +1537,13 @@ public final class UnifiedSymbolTable
 
     }
 
-    @SuppressWarnings("unchecked")
-    Iterator<String> getLocalSymbolIterator()
-    {
-        return new SymbolIterator();
-    }
-
     Iterator<SymbolTable> getImportIterator()
     {
         return _import_list.getImportIterator();
     }
 
 
-    final class SymbolIterator implements Iterator
+    private final class SymbolIterator implements Iterator<String>
     {
         int _idx = 0;
 
@@ -1565,14 +1555,11 @@ public final class UnifiedSymbolTable
             return false;
         }
 
-        public Object next()
+        public String next()
         {
             if (_idx < _local_symbol_count) {
                 String name = _symbols[_idx];
                 _idx++;
-                if (name == null) {
-                    name = "";
-                }
                 return name;
             }
             return null;

@@ -838,20 +838,13 @@ public class UnifiedSymbolTableReader
             // state do it's thing (which it will do every time
             // we move to the next symbol)
         case S_SYMBOL:
-            if (_local_symbols.hasNext() == true)
+            if (_local_symbols.hasNext())
             {
                 _string_value = _local_symbols.next();
-                // empty string means this symbol isn't defined which is a null
-                // in the actual list - so we switch it back from "" to null
-                // it is still included in the list since lists are accessed
-                // by location (ordinal) so we need the space holder
-                if (_string_value == "") {
-                    _string_value = null;
-                }
+                // null means this symbol isn't defined
                 new_state = S_SYMBOL;
             }
             else {
-                // null means the symbol iterator ran out of symbols
                 new_state = S_SYMBOL_LIST_CLOSE;
             }
             break;
@@ -948,7 +941,7 @@ public class UnifiedSymbolTableReader
             new_state = S_IN_IMPORT_STRUCT;
             break;
         case S_SYMBOL_LIST:
-            _local_symbols = _symbol_table.getLocalSymbolIterator();
+            _local_symbols = _symbol_table.iterateDeclaredSymbolNames();
             new_state = S_IN_SYMBOLS;
             break;
         default:
