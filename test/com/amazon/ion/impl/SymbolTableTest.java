@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
@@ -624,6 +625,7 @@ public class SymbolTableTest
         SymbolTable symbolTable = v.getSymbolTable();
         assertSame(importedV1, symbolTable.getImportedTables()[0]);
         assertEquals(systemMaxId() + 1, symbolTable.findSymbol("local"));
+        assertEquals(UNKNOWN_SYMBOL_ID, symbolTable.findSymbol("imported 1"));
     }
 
     @Test

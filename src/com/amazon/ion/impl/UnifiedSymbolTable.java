@@ -1470,19 +1470,23 @@ public final class UnifiedSymbolTable
         if (catalog != null) {
             itab = catalog.getTable(name, version);
         }
-        if (maxid < 0
-            && (itab == null || version != itab.getVersion()))
+        if (maxid < 0)
         {
-            String message =
-                "Import of shared table "
-                + IonTextUtils.printString(name)
-                + " lacks a valid max_id field, but an exact match was not"
-                + " found in the catalog";
-            if (itab != null) {
-                message += " (found version " + itab.getVersion() + ")";
+            if (itab == null || version != itab.getVersion())
+            {
+                String message =
+                    "Import of shared table "
+                        + IonTextUtils.printString(name)
+                        + " lacks a valid max_id field, but an exact match was not"
+                        + " found in the catalog";
+                if (itab != null) {
+                    message += " (found version " + itab.getVersion() + ")";
+                }
+                // TODO custom exception
+                throw new IonException(message);
             }
-            // TODO custom exception
-            throw new IonException(message);
+
+            maxid = itab.getMaxId();
         }
 
         if (itab == null) {

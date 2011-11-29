@@ -38,7 +38,7 @@ class UnifiedSymbolTableImports
 
     UnifiedSymbolTableImports(SymbolTable systemSymbols) {
         if (systemSymbols != null) {
-            add_import_helper(systemSymbols, -1);
+            add_import_helper(systemSymbols, systemSymbols.getMaxId());
         }
     }
 
@@ -89,6 +89,7 @@ class UnifiedSymbolTableImports
     private final void add_import_helper(SymbolTable symtab, int maxId)
     {
         assert symtab.isReadOnly();
+        assert maxId >= 0;
 
         verify_not_read_only();
 
@@ -103,11 +104,7 @@ class UnifiedSymbolTableImports
 
         _imports[idx] = symtab;
         _import_base_sid[idx] = _max_id;  // 0 based
-        _imports_max_id[idx]  =  maxId;   // may be -1 or 0 for none
-
-        if (maxId < 0) {
-            maxId = symtab.getMaxId();
-        }
+        _imports_max_id[idx]  =  maxId;
 
         _max_id += maxId;
         _import_base_sid[idx+1] = _max_id;  // sentinel for max id loops
@@ -155,7 +152,7 @@ class UnifiedSymbolTableImports
             }
             // if we run over _import_count the sid is in the last table
             int idx = sid - previous_base;
-            if (idx <= getMaxIdForIdChecking(ii-1)) {
+            if (idx <= getMaxIdForExport(ii-1)) {
                 name = _imports[ii-1].findKnownSymbol(idx);
             }
         }
@@ -188,7 +185,7 @@ class UnifiedSymbolTableImports
             if (is != null)
             {
                 int local_sid = is.getId();
-                int local_max = getMaxIdForIdChecking(ii);
+                int local_max = getMaxIdForExport(ii);
                 if (local_sid <= local_max) {
                     int this_base = _import_base_sid[ii];
                     int sid = local_sid + this_base;
@@ -221,21 +218,6 @@ class UnifiedSymbolTableImports
             throw new ArrayIndexOutOfBoundsException();
         }
         int max_id = _imports_max_id[idx];
-        return max_id;
-    }
-    int getMaxIdForIdChecking(int idx) {
-        int max_id = getMaxIdForExport(idx);
-
-        if (max_id < 1) {
-            // is this the last import table?
-            if (idx == _import_count - 1) {
-                max_id = _max_id; // then it gets the global max
-            }
-            else {
-                // otherwise it gets the delta
-                max_id = _import_base_sid[idx+1];
-            }
-        }
         return max_id;
     }
 
