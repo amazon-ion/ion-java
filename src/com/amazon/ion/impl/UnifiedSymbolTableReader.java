@@ -585,8 +585,8 @@ public class UnifiedSymbolTableReader
             return true;
 
         case S_IMPORT_VERSION:
-            if (_current_import.getMaxId() > 0) return true;
-            return false;
+            // we always have a max_id on imports
+            return true;
 
         case S_IMPORT_MAX_ID:
         case S_IMPORT_STRUCT_CLOSE:

@@ -58,6 +58,15 @@ public interface SymbolTable
      */
     public boolean isSharedTable();
 
+    /**
+     * Determines whether this instance is substituting for an imported
+     * shared table for which no exact match was found in the catalog.
+     * Such tables are not authoritative and may not even have any symbol text
+     * at all (as is the case when no version of an imported table is found).
+     * <p>
+     * Substitute tables are always shared, non-system tables.
+     */
+    public boolean isSubstitute();
 
     /**
      * Determines whether this symbol table is a system symbol table, and

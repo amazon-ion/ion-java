@@ -40,7 +40,6 @@ import com.amazon.ion.ValueFactory;
 import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -163,19 +162,6 @@ public final class UnifiedSymbolTable
     {
         this(imageFactory, UnifiedSymbolTableImports.emptyImportList,
              new HashMap<String, Integer>(DEFAULT_CAPACITY));
-    }
-
-    /**
-     * Constructs an empty "dummy" shared symtab, used when we can't find an
-     * imported table in the catalog. It just has a bunch of null symbols.
-     */
-    private UnifiedSymbolTable(String name, int version, int maxId)
-    {
-        this(null, UnifiedSymbolTableImports.emptyImportList,
-             Collections.EMPTY_MAP);
-
-        _local_symbol_count = maxId;
-        share(name, version);
     }
 
 
@@ -469,7 +455,7 @@ public final class UnifiedSymbolTable
         if (imports != null) {
             for (int ii=0; ii<imports.length; ii++) {
                 UnifiedSymbolTable symbolTable = (UnifiedSymbolTable) imports[ii];
-                table._import_list.addImport(symbolTable, symbolTable.getMaxId());
+                table._import_list.addImport(symbolTable);
             }
             table._first_local_sid = table._import_list.getMaxId() + 1;
         }
@@ -605,6 +591,16 @@ public final class UnifiedSymbolTable
         // the is locked test is a short cut since most tables are local and
         // locked, therefore the bool gets us out of here in a hurry
         return (_name != null && ION.equals(_name));
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This implementation always returns false.
+     */
+    public boolean isSubstitute()
+    {
+        return false;
     }
 
     /**
@@ -1168,10 +1164,8 @@ public final class UnifiedSymbolTable
                 IonStruct imp = factory.newEmptyStruct();
                 imp.add(NAME, factory.newString(imptable.getName()));
                 imp.add(VERSION, factory.newInt(imptable.getVersion()));
-                int max_id = _import_list.getMaxIdForExportAdjusted(ii);
-                if (max_id > 0) {
-                    imp.add(MAX_ID, factory.newInt(max_id));
-                }
+                int max_id = imptable.getMaxId();
+                imp.add(MAX_ID, factory.newInt(max_id));
                 imports_as_ion.add(imp);
             }
             ionRep.add(IMPORTS, imports_as_ion);
@@ -1492,11 +1486,16 @@ public final class UnifiedSymbolTable
         if (itab == null) {
             assert maxid >= 0;
 
-            // Construct dummy table with max_id undefined symbols
-            itab = new UnifiedSymbolTable(name, version, maxid);
+            // Construct substitute table with max_id undefined symbols
+            itab = new SubstituteSymbolTable(name, version, maxid);
+        }
+        else if (itab.getVersion() != version || itab.getMaxId() != maxid)
+        {
+            // Construct a substitute with correct specs
+            itab = new SubstituteSymbolTable(itab, version, maxid);
         }
 
-        _import_list.addImport(itab, maxid);
+        _import_list.addImport(itab);
         _first_local_sid = _import_list.getMaxId() + 1;
     }
 
@@ -1561,8 +1560,9 @@ public final class UnifiedSymbolTable
 
         public String next()
         {
+            // TODO bad failure mode if next() called beyond end
             if (_idx < _local_symbol_count) {
-                String name = _symbols[_idx];
+                String name = (_idx < _symbols.length) ? _symbols[_idx] : null;
                 _idx++;
                 return name;
             }

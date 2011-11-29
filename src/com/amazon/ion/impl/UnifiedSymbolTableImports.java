@@ -26,7 +26,6 @@ class UnifiedSymbolTableImports
     private int           _import_count;
     private SymbolTable[] _imports;
     private int[]         _import_base_sid;
-    private int[]         _imports_max_id;
 
     static final UnifiedSymbolTableImports emptyImportList =
         new UnifiedSymbolTableImports();
@@ -38,7 +37,7 @@ class UnifiedSymbolTableImports
 
     UnifiedSymbolTableImports(SymbolTable systemSymbols) {
         if (systemSymbols != null) {
-            add_import_helper(systemSymbols, systemSymbols.getMaxId());
+            add_import_helper(systemSymbols);
         }
     }
 
@@ -78,18 +77,17 @@ class UnifiedSymbolTableImports
      * @throws IllegalArgumentException if the table is local or system.
      * @throws NullPointerException if the table is null.
      */
-    void addImport(SymbolTable symtab, int maxId)
+    void addImport(SymbolTable symtab)
     {
         if (symtab.isLocalTable() || symtab.isSystemTable()) {
             throw new IllegalArgumentException("only non-system shared tables can be imported");
         }
-        add_import_helper(symtab, maxId);
+        add_import_helper(symtab);
     }
 
-    private final void add_import_helper(SymbolTable symtab, int maxId)
+    private final void add_import_helper(SymbolTable symtab)
     {
         assert symtab.isReadOnly();
-        assert maxId >= 0;
 
         verify_not_read_only();
 
@@ -101,12 +99,10 @@ class UnifiedSymbolTableImports
         }
 
         int idx = _import_count++;
-
         _imports[idx] = symtab;
         _import_base_sid[idx] = _max_id;  // 0 based
-        _imports_max_id[idx]  =  maxId;
 
-        _max_id += maxId;
+        _max_id += symtab.getMaxId();
         _import_base_sid[idx+1] = _max_id;  // sentinel for max id loops
     }
 
@@ -119,17 +115,14 @@ class UnifiedSymbolTableImports
 
         SymbolTable[] temp1 = new SymbolTable[newlen];
         int[]         temp2 = new int[newlen];
-        int[]         temp3 = new int[newlen];
 
         if (oldlen > 0) {
             System.arraycopy(_imports, 0, temp1, 0, oldlen);
             System.arraycopy(_import_base_sid, 0, temp2, 0, oldlen);
-            System.arraycopy(_imports_max_id, 0, temp3, 0, oldlen);
 
         }
         _imports         = temp1;
         _import_base_sid = temp2;
-        _imports_max_id  = temp3;
     }
 
     String findKnownSymbol(int sid)
@@ -210,14 +203,14 @@ class UnifiedSymbolTableImports
         if (idx < 0 || adjusted_idx >= _import_count) {
             throw new ArrayIndexOutOfBoundsException();
         }
-        int max_id = _imports_max_id[adjusted_idx];
+        int max_id = _imports[adjusted_idx].getMaxId();
         return max_id;
     }
     int getMaxIdForExport(int idx) {
         if (idx < 0 || idx >= _import_count) {
             throw new ArrayIndexOutOfBoundsException();
         }
-        int max_id = _imports_max_id[idx];
+        int max_id = _imports[idx].getMaxId();
         return max_id;
     }
 

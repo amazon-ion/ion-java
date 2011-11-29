@@ -401,6 +401,7 @@ abstract class IonWriterUser
     {
         // see if it looks like we're starting a local symbol table
         if (containerType == IonType.STRUCT
+            && _root_is_datagram
             && _system_writer.getDepth() == 0
             && has_annotation(ION_SYMBOL_TABLE, ION_SYMBOL_TABLE_SID))
         {
