@@ -28,6 +28,7 @@ import com.amazon.ion.Timestamp;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 
@@ -420,7 +421,7 @@ public class UnifiedSymbolTableReader
     /**
      * this is the symbol table this reader iterators over
      */
-    final UnifiedSymbolTable _symbol_table;
+    final SymbolTable _symbol_table;
 
     /**
      * _state tracks the progress through the various
@@ -443,11 +444,12 @@ public class UnifiedSymbolTableReader
     int                          _flags;                  // has name, has ... optional top level values
     String                       _string_value;
     long                         _int_value;
+    private SymbolTable[]        _imported_tables;
     private Iterator<SymbolTable> _import_iterator;
     private SymbolTable          _current_import;
     Iterator<String>             _local_symbols;
 
-    public UnifiedSymbolTableReader(UnifiedSymbolTable symbol_table)
+    public UnifiedSymbolTableReader(SymbolTable symbol_table)
     {
         _symbol_table = symbol_table;
         if (symbol_table.isLocalTable() == false) {
@@ -457,10 +459,11 @@ public class UnifiedSymbolTableReader
         if (symbol_table.getMaxId() > 0) {
             // FIXME: is this ever true?            set_flag(HAS_MAX_ID, true);
         }
-        if (_symbol_table.hasImports()) {
+        _imported_tables = _symbol_table.getImportedTables();
+        if (_imported_tables != null && _imported_tables.length != 0) {
             set_flag(HAS_IMPORT_LIST, true);
         }
-        if (_symbol_table.getLocalSymbolCount() > 0) {
+        if (_symbol_table.getImportedMaxId() < _symbol_table.getMaxId()) {
             set_flag(HAS_SYMBOL_LIST, true);
         }
     }
@@ -817,12 +820,12 @@ public class UnifiedSymbolTableReader
             break;
 
         case S_AFTER_IMPORT_LIST:
-            assert(_symbol_table.getLocalSymbolCount() > 0);
+            assert(_symbol_table.getImportedMaxId() < _symbol_table.getMaxId());
             new_state = S_SYMBOL_LIST;
             break;
 
         case S_SYMBOL_LIST:
-            assert(_symbol_table.getLocalSymbolCount() > 0);
+            assert(_symbol_table.getImportedMaxId() < _symbol_table.getMaxId());
             new_state = stateFollowingLocalSymbols();
             break;
 
@@ -933,7 +936,7 @@ public class UnifiedSymbolTableReader
             new_state = S_IN_STRUCT;
             break;
         case S_IMPORT_LIST:
-            _import_iterator = _symbol_table.getImportIterator();
+            _import_iterator = Arrays.asList(_imported_tables).iterator();
             new_state = S_IN_IMPORTS;
             break;
         case S_IMPORT_STRUCT:
