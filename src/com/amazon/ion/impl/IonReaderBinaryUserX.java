@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
@@ -328,6 +329,7 @@ class IonReaderBinaryUserX
         if (IonType.SYMBOL.equals(_value_type)) {
             if (!_v.hasValueOfType(AS_TYPE.string_value)) {
                 int sid = intValue();
+                // TODO ION-58 this returns SIDs $123
                 String sym = _symbols.findSymbol(sid);
                 _v.addValue(sym);
             }
@@ -348,8 +350,10 @@ class IonReaderBinaryUserX
 
         if (_value_is_null) return null;
 
-        String text = stringValue();
         int sid = getSymbolId();
+        assert sid != UNKNOWN_SYMBOL_ID;
+        String text = _symbols.findKnownSymbol(sid);
+
         return new InternedSymbolImpl(text, sid);
     }
 

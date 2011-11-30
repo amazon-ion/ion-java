@@ -439,7 +439,8 @@ if (table1 == table2) {
         nextValue();
         // it doesn't matter if fred 2 is local or not,
         // fred 3 should be in the shared symbol table
-        boolean is_fred3_a_local_symbol = checkMissingSymbol("fred_3", fred3id, local3id);
+        boolean is_fred3_a_local_symbol =
+            checkMissingSymbol("fred_3", fred3id, local3id);
 
 
         checkEof();
@@ -523,7 +524,8 @@ if (table1 == table2) {
         checkSymbol("fred_1", fred1id_symtab);
 
         nextValue();
-        boolean is_fred2_a_local_symbol = checkMissingSymbol("fred_2", fred2id_symtab, local3id);
+        boolean is_fred2_a_local_symbol =
+            checkMissingSymbol("fred_2", fred2id_symtab, local3id);
 
         nextValue();
         checkSymbol("fred_3", fred3id_symtab);

@@ -273,7 +273,7 @@ public class IonAssert
             case TIMESTAMP:
             {
                 // "Normal" IonValue.equals()
-                assertEquals(path, expected, actual);
+                assertEquals(path + " IonValue", expected, actual);
                 break;
             }
 

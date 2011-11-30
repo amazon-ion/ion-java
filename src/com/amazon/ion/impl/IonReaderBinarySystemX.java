@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_INT_ARRAY;
 import static com.amazon.ion.impl.IonImplUtils.intIterator;
 
@@ -319,8 +320,11 @@ class IonReaderBinarySystemX
             return null;
         }
         if (IonType.SYMBOL.equals(_value_type)) {
-            // TODO ION-233 implement symbol text for system readers
-            throw new UnsupportedOperationException("not supported - use UserReader");
+            int sid = getSymbolId();
+            assert sid != UNKNOWN_SYMBOL_ID;
+            // TODO not the right symtab
+            String text = _system.getSystemSymbolTable().findKnownSymbol(sid);
+            return text;
         }
         prepare_value(AS_TYPE.string_value);
         return _v.getString();
@@ -331,8 +335,10 @@ class IonReaderBinarySystemX
         // TODO handle non-symbol
         // TODO handle null
 
-        String text = null; // TODO stringValue();
         int sid = getSymbolId();
+        assert sid != UNKNOWN_SYMBOL_ID;
+        // TODO not the right symtab
+        String text = _system.getSystemSymbolTable().findKnownSymbol(sid);
         return new InternedSymbolImpl(text, sid);
     }
 

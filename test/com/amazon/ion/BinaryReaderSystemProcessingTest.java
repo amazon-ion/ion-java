@@ -35,10 +35,19 @@ public class BinaryReaderSystemProcessingTest
     }
 
     @Override
-    protected boolean checkMissingSymbol(String expected, int expectedSymbolTableSid, int expectedLocalSid)
+    protected boolean checkMissingSymbol(String expected,
+                                         int expectedSymbolTableSid,
+                                         int expectedLocalSid)
         throws Exception
     {
-        checkSymbol("$" + expectedSymbolTableSid, expectedSymbolTableSid);
+        assertSame(IonType.SYMBOL, myReader.getType());
+
+        InternedSymbol sym = myReader.symbolValue();
+        assertEquals(null, sym.getText());
+        assertEquals(expectedSymbolTableSid, sym.getId());
+
+        assertEquals("$" + expectedSymbolTableSid, myReader.stringValue());
+        assertEquals(expectedSymbolTableSid, myReader.getSymbolId());
 
         // when missing from a shared table the symbol
         // will not have been added to the local symbols
