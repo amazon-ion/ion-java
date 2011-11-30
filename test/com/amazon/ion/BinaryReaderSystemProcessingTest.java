@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -40,14 +38,7 @@ public class BinaryReaderSystemProcessingTest
                                          int expectedLocalSid)
         throws Exception
     {
-        assertSame(IonType.SYMBOL, myReader.getType());
-
-        InternedSymbol sym = myReader.symbolValue();
-        assertEquals(null, sym.getText());
-        assertEquals(expectedSymbolTableSid, sym.getId());
-
-        assertEquals("$" + expectedSymbolTableSid, myReader.stringValue());
-        assertEquals(expectedSymbolTableSid, myReader.getSymbolId());
+        checkSymbol(null, expectedSymbolTableSid);
 
         // when missing from a shared table the symbol
         // will not have been added to the local symbols

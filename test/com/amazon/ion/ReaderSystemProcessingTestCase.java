@@ -2,7 +2,6 @@
 
 package com.amazon.ion;
 
-import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_INT_ARRAY;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.junit.IonAssert.assertNoCurrentValue;
@@ -143,32 +142,31 @@ public abstract class ReaderSystemProcessingTestCase
     protected void checkSymbol(String expected) throws Exception
     {
         assertSame(IonType.SYMBOL, myReader.getType());
-        assertEquals(expected, myReader.stringValue());
-        // we don't really care what this returns, but it forces
-        // any symbol table processing to occur, if necessary
-        myReader.getSymbolId();
-    }
 
-    @Override
-    protected void checkSymbol(String expected, int expectedSid)
-    {
-        assertSame(IonType.SYMBOL, myReader.getType());
+        assertFalse(myReader.isNullValue());
 
         assertEquals(expected, myReader.stringValue());
-
-        // now we check the binary value, which user readers
-        // and any non-text readers should understand
-        int sid = myReader.getSymbolId();
-        if (sid != UNKNOWN_SYMBOL_ID) {
-            if (expectedSid != sid) {
-                int reader_sid = myReader.getSymbolId();
-                assertEquals(expectedSid, reader_sid);
-            }
-        }
 
         InternedSymbol sym = myReader.symbolValue();
         assertEquals(expected, sym.getText());
-        assertEquals(sid, sym.getId());
+    }
+
+    @Override
+    protected final void checkSymbol(String expectedText, int expectedSid)
+    {
+        assertSame(IonType.SYMBOL, myReader.getType());
+
+        assertFalse(myReader.isNullValue());
+
+        String expectedStringValue =
+            (expectedText == null ? "$" + expectedSid : expectedText);
+        assertEquals(expectedStringValue, myReader.stringValue());
+
+        assertEquals(expectedSid, myReader.getSymbolId());
+
+        InternedSymbol sym = myReader.symbolValue();
+        assertEquals(expectedText, sym.getText());
+        assertEquals(expectedSid,  sym.getId());
     }
 
 

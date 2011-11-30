@@ -105,14 +105,14 @@ public abstract class SystemProcessingTestCase
         throws Exception;
 
     /**
-     * Checks a symbol that's defined in a missing symbol table.
+     * Checks a symbol that's missing from the context symbol table,
+     * generally because there was no exact match to an import.
      *
-     * @returns
-     *        true when the symbol missing from a shared table
-     *        the symbol will have been added to the local symbol table
-     *        false when it will not have been
+     * @returns true when the local sid was matched
      */
-    protected abstract boolean checkMissingSymbol(String expected, int expectedSymbolTableSid, int expectedLocalSid)
+    protected abstract boolean checkMissingSymbol(String expected,
+                                                  int expectedSymbolTableSid,
+                                                  int expectedLocalSid)
         throws Exception;
 
     protected abstract void checkInt(long expected)
@@ -193,7 +193,8 @@ public abstract class SystemProcessingTestCase
 
         // FIXME --- how should this work?
         if (!IonType.INT.equals(currentValueType())) {
-            checkSymbol("$ion_1_0");  // if we didn't hit the int 1 then we should have the $ion_1_0
+            // if we didn't hit the int 1 then we should have the $ion_1_0
+            checkSymbol(ION_1_0, ION_1_0_SID);
             nextValue();
             // ???
         }
@@ -202,7 +203,8 @@ public abstract class SystemProcessingTestCase
         // we should have reset to the system symbol table here
         SymbolTable table3 = currentSymtab();
         assertNotSame(table1, table3);
-        // nope, this may be the next local that will hold 'far' and 'boo': assertTrue("the reset table should be a trivial table (system or null)", UnifiedSymbolTable.isTrivialTable(table3));
+        // nope, this may be the next local that will hold 'far' and 'boo':
+        // assertTrue("the reset table should be a trivial table (system or null)", UnifiedSymbolTable.isTrivialTable(table3));
 
         nextValue();
         checkSymbol("far");
@@ -256,7 +258,7 @@ if (table1 == table2) {
 //           might not preserve the $ion_1_0
         if (!IonType.INT.equals(currentValueType())) {
             // if we didn't hit the int 2 then we should have the $ion_1_0
-            checkSymbol("$ion_1_0");
+            checkSymbol(ION_1_0, ION_1_0_SID);
             nextValue();
         }
 
@@ -383,13 +385,11 @@ if (table1 == table2) {
         Symtabs.register("fred", 1, catalog);
         Symtabs.register("fred", 2, catalog);
 
-        // version: 1
         // {  name:"fred", version:1,
-        // symbols:["fred_1", "fred_2"]}
+        //    symbols:["fred_1", "fred_2"]}
 
-        // version: 2
-        //"{  name:"fred", version:2," +
-        //"  symbols:["fred_1","fred_2","fred_3","fred_4",]}
+        // {  name:"fred", version:2,
+        //    symbols:["fred_1","fred_2","fred_3","fred_4",]}
 
         String text =
             LocalSymbolTablePrefix +
@@ -554,7 +554,7 @@ if (table1 == table2) {
         String text =
             ION_1_0 + " " +
             SymbolTableTest.IMPORTED_1_SERIALIZED +
-            " 'imported 1'";
+            " 'imported 2'";
         assertNull(system().getCatalog().getTable("imported"));
 
         startIteration(text);
@@ -572,7 +572,7 @@ if (table1 == table2) {
         assertNull(system().getCatalog().getTable("imported"));
 
         nextValue();
-        checkSymbol("imported 1");
+        checkSymbol("imported 2", 10);
     }
 
 
