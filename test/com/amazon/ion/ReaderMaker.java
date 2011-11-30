@@ -2,8 +2,10 @@
 
 package com.amazon.ion;
 
+import static com.amazon.ion.TestUtils.ensureBinary;
+import static com.amazon.ion.TestUtils.ensureText;
+
 import com.amazon.ion.impl.IonImplUtils;
-import com.amazon.ion.util.IonStreamUtils;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -191,22 +193,5 @@ public enum ReaderMaker
             new ArrayList<ReaderMaker>(Arrays.asList(all));
         retained.removeAll(Arrays.asList(exclusions));
         return retained.toArray(new ReaderMaker[retained.size()]);
-    }
-
-    private static byte[] ensureBinary(IonSystem system, byte[] ionData)
-    {
-        if (IonStreamUtils.isIonBinary(ionData)) return ionData;
-
-        IonDatagram dg = system.getLoader().load(ionData);
-        return dg.getBytes();
-    }
-
-    private static byte[] ensureText(IonSystem system, byte[] ionData)
-    {
-        if (! IonStreamUtils.isIonBinary(ionData)) return ionData;
-
-        IonDatagram dg = system.getLoader().load(ionData);
-        String ionText = dg.toString();
-        return IonImplUtils.utf8(ionText);
     }
 }

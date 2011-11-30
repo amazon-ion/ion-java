@@ -5,6 +5,7 @@ package com.amazon.ion;
 import static com.amazon.ion.impl.IonImplUtils.READER_HASNEXT_REMOVED;
 
 import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.util.IonStreamUtils;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.math.BigDecimal;
@@ -145,6 +146,27 @@ public class TestUtils
     public static File[] testdataFiles(String... testdataDirs)
     {
         return testdataFiles(null, testdataDirs);
+    }
+
+
+    //========================================================================
+
+
+    static byte[] ensureBinary(IonSystem system, byte[] ionData)
+    {
+        if (IonStreamUtils.isIonBinary(ionData)) return ionData;
+
+        IonDatagram dg = system.getLoader().load(ionData);
+        return dg.getBytes();
+    }
+
+    static byte[] ensureText(IonSystem system, byte[] ionData)
+    {
+        if (! IonStreamUtils.isIonBinary(ionData)) return ionData;
+
+        IonDatagram dg = system.getLoader().load(ionData);
+        String ionText = dg.toString();
+        return IonImplUtils.utf8(ionText);
     }
 
 

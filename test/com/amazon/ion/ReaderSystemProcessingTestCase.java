@@ -160,7 +160,8 @@ public abstract class ReaderSystemProcessingTestCase
 
         String expectedStringValue =
             (expectedText == null ? "$" + expectedSid : expectedText);
-        assertEquals(expectedStringValue, myReader.stringValue());
+        assertEquals("IonReader.stringValue()",
+                     expectedStringValue, myReader.stringValue());
 
         assertEquals(expectedSid, myReader.getSymbolId());
 
