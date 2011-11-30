@@ -179,8 +179,7 @@ public class DatagramTest
         checkSymbol("swamp", datagram1.get(0));
 
         IonSymbol sym = (IonSymbol)datagram1.get(0);
-        sym.getSymbolId();
-        sym.stringValue();
+        checkSymbol("swamp", 10, sym);
 
         // System view should have IonVersionMarker(symbol), a symbol table then the symbol
         assertEquals(3, datagram1.systemSize()); // cas 22 apr 2008 was: 2

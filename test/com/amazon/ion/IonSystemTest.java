@@ -207,14 +207,11 @@ public class IonSystemTest
 
         IonDatagram dg2 = loader().load(bytes);
         IonSymbol s1 = (IonSymbol) dg2.get(0);
-        assertEquals(systemMaxId() + 1, s1.getSymbolId());
+        checkUnknownSymbol(systemMaxId() + 1, s1);
 
         SymbolTable symbolTable = s1.getSymbolTable();
         assertEquals("foobar", symbolTable.getImportedTables()[0].getName());
-
-        Iterator<String> declared = symbolTable.iterateDeclaredSymbolNames();
-        assertEquals("local symbol", "l1", declared.next());
-        assertFalse(declared.hasNext());
+        checkSymbol("l1", 11, symbolTable);
     }
 
 

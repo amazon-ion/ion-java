@@ -32,13 +32,12 @@ public class SymbolTest
         assertFalse(modValue.equals(value.stringValue()));
 
         value.setValue(modValue);
-        assertEquals(modValue, value.stringValue());
-        assertFalse(value.isNullValue());
+        checkSymbol(modValue, value);
 //        assertTrue(value.intValue() > 0);
 
         String modValue1 = "dude!";
         value.setValue(modValue1);
-        assertEquals(modValue1, value.stringValue());
+        checkSymbol(modValue1, value);
         int sid = value.getSymbolId();
 
         try {
@@ -46,8 +45,7 @@ public class SymbolTest
             fail("Expected EmptySymbolException");
         }
         catch (EmptySymbolException e) { }
-        assertEquals(modValue1, value.stringValue());
-        assertEquals(sid, value.getSymbolId());
+        checkSymbol(modValue1, sid, value);
 
         value.setValue(null);
         checkNullSymbol(value);
@@ -81,25 +79,12 @@ public class SymbolTest
         InternedSymbol is = IonImplUtils.newInternedSymbol(null, sid);
 
         IonSymbol value = vf.newSymbol(is);
-        assertFalse(value.isNullValue());
-        assertEquals(sid, value.getSymbolId());
-
-        try {
-            String s = value.stringValue();
-            // TODO should throw
-            // if we get an answer it's synthetic
-            assertEquals("$"+sid, s);
-//            fail("Expected exception");
-        }
-        catch (UnknownSymbolException e) {
-            assertEquals(sid, e.getSid());
-        }
-
+        checkUnknownSymbol(99, value);
 
         is = IonImplUtils.newInternedSymbol("text", sid);
         value = vf.newSymbol(is);
+        checkSymbol("text", value);
         assertFalse(value.isNullValue());
-        assertEquals("text", value.stringValue());
 
         // TODO this needs to be well-defined
 //        assertEquals(sid, value.getSymbolId());
@@ -142,20 +127,17 @@ public class SymbolTest
     public void testSymbols()
     {
         IonSymbol value = (IonSymbol) oneValue("foo");
-        assertSame(IonType.SYMBOL, value.getType());
-        assertEquals("foo", value.stringValue());
+        checkSymbol("foo", value);
         assertTrue(value.getSymbolId() > 0);
         modifySymbol(value);
 
         value = (IonSymbol) oneValue("'foo'");
-        assertSame(IonType.SYMBOL, value.getType());
-        assertEquals("foo", value.stringValue());
+        checkSymbol("foo", value);
         assertTrue(value.getSymbolId() > 0);
         modifySymbol(value);
 
         value = (IonSymbol) oneValue("'foo bar'");
-        assertSame(IonType.SYMBOL, value.getType());
-        assertEquals("foo bar", value.stringValue());
+        checkSymbol("foo bar", value);
         assertTrue(value.getSymbolId() > 0);
         modifySymbol(value);
     }
@@ -166,7 +148,7 @@ public class SymbolTest
     {
         String symText = "$324";
         IonSymbol value = (IonSymbol) oneValue(symText);
-        checkSymbol(null, 324, value);
+        checkUnknownSymbol(324, value);
     }
 
 

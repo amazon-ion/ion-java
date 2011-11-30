@@ -349,7 +349,7 @@ public class LoaderTest
         IonStruct struct = (IonStruct) dg2.get(0);
         assertTrue(struct.hasTypeAnnotation("ann"));
         IonSymbol value = (IonSymbol) struct.get("field");
-        assertEquals("value", value.stringValue());
+        checkSymbol("value", value);
     }
 
     @Test
@@ -403,8 +403,7 @@ public class LoaderTest
         IonLoader new_loader = sys.newLoader(newCatalog);
         IonDatagram new_dg = new_loader.load(raw);
         IonSymbol sym = (IonSymbol)new_dg.get(0);
-        String found = sym.stringValue();
-        assertEquals("barney_1", found);
+        checkSymbol("barney_1", sym);
     }
 
 final static boolean _debug_long_test = false;

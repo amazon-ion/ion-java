@@ -409,7 +409,7 @@ public class StructTest
         assertEquals(1, value.size());
         IonSymbol fieldA = (IonSymbol) value.get("a");
         assertEquals("a", fieldA.getFieldName());
-        assertEquals("b", fieldA.stringValue());
+        checkSymbol("b", fieldA);
         assertEquals("{a:b}", value.toString());
     }
 
@@ -420,7 +420,7 @@ public class StructTest
         assertEquals(1, value.size());
         IonSymbol fieldA = (IonSymbol) value.get("aa");
         assertEquals("aa", fieldA.getFieldName());
-        assertEquals("b",  fieldA.stringValue());
+        checkSymbol("b", fieldA);
         assertEquals("{aa:b}", value.toString());
     }
 
@@ -432,7 +432,8 @@ public class StructTest
         assertEquals(1, value.size());
         IonSymbol fieldA = (IonSymbol) value.get("123456789ABCDEF");
         assertEquals("123456789ABCDEF", fieldA.getFieldName());
-        assertEquals("b", fieldA.stringValue());
+        assertEquals("123456789ABCDEF", fieldA.getFieldName());
+        checkSymbol("b", fieldA);
     }
 
 
@@ -443,7 +444,7 @@ public class StructTest
         assertEquals(1, value.size());
         IonSymbol fieldA = (IonSymbol) value.get("123456789ABCDEF");
         assertEquals("123456789ABCDEF", fieldA.getFieldName());
-        assertEquals("b", fieldA.stringValue());
+        checkSymbol("b", fieldA);
     }
 
 

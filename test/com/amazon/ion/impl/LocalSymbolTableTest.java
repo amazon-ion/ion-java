@@ -2,8 +2,6 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-
 import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonTestCase;
@@ -73,7 +71,7 @@ public class LocalSymbolTableTest
         SymbolTable st = makeAbcTable(ST_FRED_V2, ST_GINGER_V1);
 
         String D = "d";
-        assertEquals(UNKNOWN_SYMBOL_ID, st.findSymbol(D));
+        checkUnknownSymbol(D, st);
         InternedSymbol is = st.intern(D);
         assertSame(D, is.getText());
         assertEquals(st.getImportedMaxId() + 4, is.getId());

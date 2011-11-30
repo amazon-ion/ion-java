@@ -39,10 +39,12 @@ public class DatagramBytesSystemProcessingTest
     }
 
     @Override
-    protected boolean checkMissingSymbol(String expected, int expectedSymbolTableSid, int expectedLocalSid)
+    protected boolean checkMissingSymbol(String expected,
+                                         int expectedSymbolTableSid,
+                                         int expectedLocalSid)
         throws Exception
     {
-        checkSymbol("$" + expectedSymbolTableSid, expectedSymbolTableSid);
+        checkMissingSymbol(expectedSymbolTableSid);
 
         // when missing from a shared table the symbol
         // will not have been added to the local symbols

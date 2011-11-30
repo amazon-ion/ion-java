@@ -152,7 +152,7 @@ public class SymbolTableTest
     public void testSystemFindSymbol()
     {
         SymbolTable st = system().getSystemSymbolTable();
-        assertEquals(NAME_SID, st.findSymbol(NAME));
+        checkSymbol(NAME, NAME_SID, st);
     }
 
     @Test(expected = UnsupportedOperationException.class)
@@ -188,8 +188,8 @@ public class SymbolTableTest
         checkSymbol("foo", systemMaxId() + 1, symbolTable);
         checkSymbol("bar", systemMaxId() + 2, symbolTable);
 
-        assertEquals(-1, symbolTable.findSymbol("not there"));
-        assertEquals("$33", symbolTable.findSymbol(33));
+        checkUnknownSymbol("not there", UNKNOWN_SYMBOL_ID, symbolTable);
+        checkUnknownSymbol(33, symbolTable);
     }
 
 
@@ -269,7 +269,7 @@ public class SymbolTableTest
         IonValue v = scanner.next();
         SymbolTable symtab = v.getSymbolTable();
         assertTrue(symtab.isLocalTable());
-        assertEquals(NAME_SID, symtab.findSymbol(NAME));
+        checkSymbol(NAME, NAME_SID, symtab);
     }
 
 
@@ -298,8 +298,8 @@ public class SymbolTableTest
 
         SymbolTable symtab = value.getSymbolTable();
         checkLocalTable(symtab);
-        assertEquals(import1id, symtab.findSymbol("imported 1"));
-        assertEquals("imported 1", symtab.findSymbol(import1DupId));
+        checkSymbol("imported 1", import1id, symtab);
+        checkSymbol("imported 1", import1DupId, /* dupe */ true, symtab);
 
         // Here the input text is $NNN  but it comes back correctly.
         value = scanner.next();
@@ -383,8 +383,8 @@ public class SymbolTableTest
         IonDatagram dg = loader().load(binary);
         checkSymbol("local1", local1id, dg.get(0));
         checkSymbol("local2", local2id, dg.get(1));
-        checkSymbol("$" + import1id, import1id, dg.get(2));
-        checkSymbol("$" + import2id, import2id, dg.get(3));
+        checkUnknownSymbol(import1id, dg.get(2));
+        checkUnknownSymbol(import2id, dg.get(3));
 
         SymbolTable st = dg.get(3).getSymbolTable();
         checkLocalTable(st);
@@ -436,7 +436,7 @@ public class SymbolTableTest
         checkSymbol("local2", local2id, dg.get(1));
         checkSymbol("imported 1", import1id, dg.get(2));
         checkSymbol("imported 2", import2id, dg.get(3));
-        checkSymbol("$" + fred3id, fred3id, dg.get(4));
+        checkUnknownSymbol(fred3id, dg.get(4));
 
         SymbolTable st = dg.get(0).getSymbolTable();
         checkFirstImport("imported", 2,
@@ -484,7 +484,7 @@ public class SymbolTableTest
         checkSymbol("local1", local1id, dg.get(0));
         checkSymbol("local2", local2id, dg.get(1));
         checkSymbol("imported 1", import1id, dg.get(2));
-        checkSymbol("$" + import2id, import2id, dg.get(3));
+        checkUnknownSymbol(import2id, dg.get(3));
         checkSymbol("fred3", fred3id, dg.get(4));
         checkSymbol("fred5", local3id, dg.get(5));
 
@@ -519,14 +519,14 @@ public class SymbolTableTest
         assertEquals(systemMaxId() + IMPORTED_1_MAX_ID + IMPORTED_2_MAX_ID,
                      symbolTable.getMaxId());
 
-        assertEquals(10, symbolTable.findSymbol("imported 1"));
-        assertEquals(11, symbolTable.findSymbol("imported 2"));
-        assertEquals(14, symbolTable.findSymbol("fred3"));
-        assertEquals(15, symbolTable.findSymbol("fred4"));
+        checkSymbol("imported 1", 10, symbolTable);
+        checkSymbol("imported 2", 11, symbolTable);
+        checkSymbol("fred3", 14, symbolTable);
+        checkSymbol("fred4", 15, symbolTable);
 
         // JIRA ION-76, redundant symbols should retain identity
-        assertEquals("imported 1", symbolTable.findKnownSymbol(12));
-        assertEquals("imported 2", symbolTable.findKnownSymbol(13));
+        checkSymbol("imported 1", 12, /* dupe */ true, symbolTable);
+        checkSymbol("imported 2", 13, /* dupe */ true, symbolTable);
     }
 
     // JIRA ION-75
@@ -547,10 +547,8 @@ public class SymbolTableTest
         final IonSystem ion2 = system(cat);
 
         dg = ion2.getLoader().load(dg.getBytes());
-        final IonSymbol sym1 = (IonSymbol) dg.get(0);
-        final IonSymbol sym2 = (IonSymbol) dg.get(1);
-        assertEquals(10, sym1.getSymbolId());
-        assertEquals(11, sym2.getSymbolId());
+        checkSymbol("s1", 10, dg.get(0));
+        checkSymbol("l1", 11, dg.get(1));
     }
 
 
@@ -584,7 +582,7 @@ public class SymbolTableTest
         IonValue v = oneValue(text);
         SymbolTable symbolTable = v.getSymbolTable();
         assertEquals(0, symbolTable.getImportedTables().length);
-        assertEquals(systemMaxId() + 1, symbolTable.findSymbol("local"));
+        checkSymbol("local", systemMaxId() + 1, symbolTable);
         assertEquals(systemMaxId() + 1, symbolTable.getMaxId());
     }
 
@@ -650,7 +648,7 @@ public class SymbolTableTest
         assertTrue(imported.isSubstitute());
         checkUnknownSymbol("imported 1", 1, imported);
 
-        assertEquals(systemMaxId() + 1, symbolTable.findSymbol("local"));
+        checkSymbol("local", systemMaxId() + 1, symbolTable);
         checkUnknownSymbol("imported 1", UNKNOWN_SYMBOL_ID, symbolTable);
     }
 

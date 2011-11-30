@@ -177,8 +177,7 @@ public class SharedSymbolTableTest
         checkSharedTable("ST", 5, new String[]{ null }, st);
 
         assertEquals(1, st.getMaxId());
-        assertEquals(null, st.findKnownSymbol(1));
-        assertEquals("$1", st.findSymbol(1));
+        checkUnknownSymbol(1, st);
     }
 
 
@@ -196,13 +195,19 @@ public class SharedSymbolTableTest
         checkSharedTable("ST", 1, new String[]{"a", "b", "a", "c"},
                          st);
 
-        assertEquals(1, st.findSymbol("a"));  // lowest sid wins
-        assertEquals(4, st.findSymbol("c"));
+        checkSymbol("a", 1, st);  // lowest sid wins
+        checkSymbol("b", 2, st);
+        checkSymbol("a", 3, /* dupe */ true, st);
+        checkSymbol("c", 4, st);
 
         // Now extend it
         catalog().putTable(st);
         SymbolTable st2 =
             system().newSharedSymbolTable("ST", 2, stringIterator("x"));
+
+        checkSymbol("a", 1, st2);  // lowest sid wins
+        checkSymbol("c", 4, st2);
+        checkSymbol("x", 5, st2);
 
         assertEquals(1, st2.findSymbol("a"));  // lowest sid wins
         assertEquals(4, st2.findSymbol("c"));
@@ -231,7 +236,7 @@ public class SharedSymbolTableTest
         checkSharedTable("ST", 1, new String[]{"a", null, null, "c", null},
                          st);
 
-        assertEquals(4, st.findSymbol("c"));
+        checkSymbol("c", 4, st);
     }
 
 

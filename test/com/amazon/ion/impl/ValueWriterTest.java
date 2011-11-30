@@ -98,7 +98,7 @@ public class ValueWriterTest
             Symtabs.register(Symtabs.FRED_NAME, 1, catalog());
         SymbolTable gingerSymtab =
             Symtabs.register(Symtabs.GINGER_NAME, 1, catalog());
-        String gingerSym = gingerSymtab.findSymbol(1);
+        String gingerSym = gingerSymtab.findKnownSymbol(1);
 
         // First setup some data to be copied.
         IonDatagram dg = system().newDatagram(gingerSymtab);
@@ -114,10 +114,8 @@ public class ValueWriterTest
         assertEquals(1, l.size());
 
         IonSymbol s = (IonSymbol) l.get(0);
-        assertEquals(gingerSym, s.stringValue());
         // Should've assigned a new SID
-        assertEquals(systemMaxId() + Symtabs.FRED_MAX_IDS[1] + 1,
-                     s.getSymbolId());
+        checkSymbol(gingerSym, systemMaxId() + Symtabs.FRED_MAX_IDS[1] + 1, s);
     }
 
 

@@ -80,8 +80,7 @@ public class IteratorSystemProcessingTest
             fail("Didn't find expected annotation: " + expected);
         }
 
-        int foundSid = myCurrentValue.getSymbolTable().findSymbol(expected);
-        assertEquals("symbol id", expectedSid, foundSid);
+        checkSymbol(expected, expectedSid, myCurrentValue.getSymbolTable());
     }
 
     @Override
@@ -145,8 +144,15 @@ public class IteratorSystemProcessingTest
         checkSymbol(expected, expectedSid, myCurrentValue);
     }
 
+    protected void checkMissingSymbol(int expectedSymbolTableSid)
+    {
+        checkUnknownSymbol(expectedSymbolTableSid, myCurrentValue);
+    }
+
     @Override
-    protected boolean checkMissingSymbol(String expected, int expectedSymbolTableSid, int expectedLocalSid)
+    protected boolean checkMissingSymbol(String expected,
+                                         int expectedSymbolTableSid,
+                                         int expectedLocalSid)
         throws Exception
     {
         checkSymbol(expected, expectedLocalSid, myCurrentValue);

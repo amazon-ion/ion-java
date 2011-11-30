@@ -649,6 +649,7 @@ public abstract class IonTestCase
         checkType(IonType.SYMBOL, value);
         IonSymbol sym = (IonSymbol) value;
         assertEquals("symbol name", name, sym.stringValue());
+        assertEquals("isNullValue", name == null, sym.isNullValue());
     }
 
     /**
@@ -659,6 +660,8 @@ public abstract class IonTestCase
         checkType(IonType.SYMBOL, value);
         IonSymbol sym = (IonSymbol) value;
 
+        assertFalse(value.isNullValue());
+        assert name != null;
         if (name == null)
         {
             try {
@@ -682,6 +685,28 @@ public abstract class IonTestCase
             assertEquals("symbol id", id, sym.getSymbolId());
         }
     }
+
+    public static void checkUnknownSymbol(int id, IonValue value)
+    {
+        checkType(IonType.SYMBOL, value);
+        IonSymbol sym = (IonSymbol) value;
+
+        assertFalse(value.isNullValue());
+
+        try {
+            String text = sym.stringValue();
+            assertEquals("$" + id, text);
+            // TODO stringValue should throw
+//          fail("Expected " + UnknownSymbolException.class);
+        }
+        catch (UnknownSymbolException e)
+        {
+            assertEquals(id, e.getSid());
+        }
+
+        assertEquals("symbol id", id, sym.getSymbolId());
+    }
+
 
     public static void checkSymbol(String text, int sid, SymbolTable symtab)
     {
@@ -725,8 +750,17 @@ public abstract class IonTestCase
         }
     }
 
-    public static void checkUnknownSymbol(String text, int sid,
-                                          SymbolTable symtab)
+    public static void checkUnknownSymbol(int sid, SymbolTable symtab)
+    {
+        assertEquals(null, symtab.findKnownSymbol(sid));
+        assertEquals("$"+sid, symtab.findSymbol(sid));
+    }
+
+    /**
+     * Check that a specific symbol's text isn't known by a symtab.
+     * @param text must not be null.
+     */
+    public static void checkUnknownSymbol(String text, SymbolTable symtab)
     {
         assertEquals(null, symtab.find(text));
         assertEquals(UNKNOWN_SYMBOL_ID, symtab.findSymbol(text));
@@ -744,14 +778,23 @@ public abstract class IonTestCase
             }
             catch (UnsupportedOperationException e) { }
         }
+    }
+
+    /**
+     * Check that a specific symbol's text isn't known by a symtab.
+     * @param text must not be null.
+     * @param sid can be {@link SymbolTable#UNKNOWN_SYMBOL_ID} if not known.
+     */
+    public static void checkUnknownSymbol(String text, int sid,
+                                          SymbolTable symtab)
+    {
+        checkUnknownSymbol(text, symtab);
 
         if (sid != UNKNOWN_SYMBOL_ID)
         {
-            assertEquals("$"+sid, symtab.findSymbol(sid));
-            assertEquals(null, symtab.findKnownSymbol(sid));
+            checkUnknownSymbol(sid, symtab);
         }
     }
-
 
 
     public static void checkAnnotation(String expectedAnnot, IonValue value)

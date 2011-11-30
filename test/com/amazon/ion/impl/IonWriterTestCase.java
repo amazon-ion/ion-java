@@ -252,7 +252,7 @@ public abstract class IonWriterTestCase
         assertEquals(text, t.stringValue());
 
         t = (IonSymbol) dg.get(1);
-        assertEquals(text, t.stringValue());
+        checkSymbol(text, t);
     }
 
     @Test
@@ -748,7 +748,7 @@ public abstract class IonWriterTestCase
 
         IonDatagram dg = reload();
         IonSymbol s = (IonSymbol) dg.get(0);
-        assertEquals(SystemSymbols.NAME, s.stringValue());
+        checkSymbol(SystemSymbols.NAME, SystemSymbols.NAME_SID, s);
     }
 
     @Test
@@ -759,7 +759,7 @@ public abstract class IonWriterTestCase
             Symtabs.register(Symtabs.FRED_NAME, 1, catalog());
         SymbolTable gingerSymtab =
             Symtabs.register(Symtabs.GINGER_NAME, 1, catalog());
-        String gingerSym = gingerSymtab.findSymbol(1);
+        String gingerSym = gingerSymtab.findKnownSymbol(1);
 
         // First setup some data to be copied.
         IonDatagram dg = system().newDatagram(gingerSymtab);
@@ -776,10 +776,8 @@ public abstract class IonWriterTestCase
         IonList l = (IonList) result.get(0);
         assertEquals(1, l.size());
         IonSymbol s = (IonSymbol) l.get(0);
-        assertEquals(gingerSym, s.stringValue());
         // Should've assigned a new SID
-        assertEquals(systemMaxId() + Symtabs.FRED_MAX_IDS[1] + 1,
-                     s.getSymbolId());
+        checkSymbol(gingerSym, systemMaxId() + Symtabs.FRED_MAX_IDS[1] + 1, s);
     }
 
     @Test

@@ -35,7 +35,7 @@ public class LoadBinaryBytesSystemProcessingTest
     {
         // we're working on a datagram, the symbol will have
         // been materialized during the datagram construction
-        checkSymbol("$" + expectedSymbolTableSid, expectedSymbolTableSid);
+        checkMissingSymbol(expectedSymbolTableSid);
         //checkSymbol(expected, expectedSymbolTableSid);
 
         // when missing from a shared table the symbol
