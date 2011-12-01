@@ -3,6 +3,7 @@
 package com.amazon.ion;
 
 import com.amazon.ion.junit.Injected.Inject;
+import org.junit.After;
 
 
 /**
@@ -17,7 +18,11 @@ public class DatagramTreeReaderSystemProcessingTest
     @Inject("loadTime")
     public static final LoadTime[] LOAD_TIMES = LoadTime.values();
 
+    @Inject("datagramMaker")
+    public static final DatagramMaker[] DATAGRAM_MAKERS = DatagramMaker.values();
+
     private LoadTime myLoadTime;
+    private DatagramMaker myDatagramMaker;
     private String myText;
     private IonDatagram myDatagram;
 
@@ -27,12 +32,27 @@ public class DatagramTreeReaderSystemProcessingTest
         myLoadTime = time;
     }
 
+    public void setDatagramMaker(DatagramMaker maker)
+    {
+        myDatagramMaker = maker;
+    }
+
+
     private void load(LoadTime now)
     {
         if (myLoadTime == now)
         {
-            myDatagram = loader().load(myText);
+            myDatagram = myDatagramMaker.newDatagram(system(), myText);
         }
+    }
+
+
+    @After @Override
+    public void tearDown() throws Exception
+    {
+        myText = null;
+        myDatagram = null;
+        super.tearDown();
     }
 
     // ========================================================================
