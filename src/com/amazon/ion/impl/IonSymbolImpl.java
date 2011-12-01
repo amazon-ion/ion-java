@@ -149,13 +149,14 @@ public final class IonSymbolImpl
                 // TODO should throw
 //              throw new UnknownSymbolException(_sid);
             }
-            // TODO cache result
-            if (! isReadOnly())
+            else if (! isReadOnly()) // Don't cache synthetics!
             {
                 _set_value(value);
             }
             return value;
         }
+
+        assert _hasNativeValue();
 
         // this only decodes a valid value if the symbol
         // is of the form $<digits>
@@ -216,6 +217,42 @@ public final class IonSymbolImpl
         assert mySid != 0;
         return mySid;
     }
+
+
+    /**
+     * Caller must check {@link #isNullValue()} and call {@link #makeReady()}.
+     * @return null if symbol text is unknown.
+     */
+    private String _stringValue()
+    {
+        String value = _get_value();
+        if (value == null)
+        {
+            assert mySid > 0;
+
+            SymbolTable symbols = getSymbolTable();
+            if (symbols != null)
+            {
+                 value = symbols.findKnownSymbol(mySid);
+                 if (value != null && ! isReadOnly())
+                 {
+                     _set_value(value);
+                 }
+            }
+        }
+        return value;
+    }
+
+
+    public InternedSymbol symbolValue()
+    {
+        if (isNullValue()) return null;
+
+        int sid = getSymbolId();
+        String text = _stringValue();
+        return IonImplUtils.newInternedSymbol(text, sid);
+    }
+
 
     @Override
     public void setValue(String value)
@@ -348,10 +385,16 @@ public final class IonSymbolImpl
     @Override
     void detachFromSymbolTable()
     {
-        String name = stringValue();  // Force materialization
-//        if (name != null)
+        if (! isNullValue())
         {
-            this.mySid = (name == null ? 0 : UNKNOWN_SYMBOL_ID);
+            makeReady();
+
+            // Don't lose the sid if that's all we have!
+            String text = _stringValue();
+            if (text != null)
+            {
+                this.mySid = UNKNOWN_SYMBOL_ID;
+            }
         }
         super.detachFromSymbolTable();
     }
@@ -403,7 +446,7 @@ public final class IonSymbolImpl
                 if (mySid == 0) {
                     throw new IonException("invalid symbol id for value, must be > 0");
                 }
-                _set_value(getSymbolTable().findSymbol(mySid));
+                // We don't find the symbol text, we can do that lazily.
                 break;
             }
         }
@@ -450,7 +493,8 @@ public final class IonSymbolImpl
             writer.write(IonConstants.BINARY_VERSION_MARKER_1_0);
         }
         else {
-            cumulativePositionDelta = super.writeValue(writer, cumulativePositionDelta);
+            cumulativePositionDelta =
+                super.writeValue(writer, cumulativePositionDelta);
         }
         return cumulativePositionDelta;
     }
@@ -458,6 +502,7 @@ public final class IonSymbolImpl
 
     public void accept(ValueVisitor visitor) throws Exception
     {
+        // TODO Not necessary, will be done when the visitor calls back
         makeReady();
         visitor.visit(this);
     }

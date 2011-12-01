@@ -42,6 +42,14 @@ public interface IonSymbol
 
 
     /**
+     * Returns this value as an interned symbol (text + ID).
+     *
+     * @return null if {@link #isNullValue()}
+     */
+    public InternedSymbol symbolValue();
+
+
+    /**
      * Changes the value of this element.
      *
      * @param value the new value of this symbol;

@@ -2,7 +2,6 @@
 
 package com.amazon.ion;
 
-import static com.amazon.ion.DatagramMaker.FROM_BYTES_BINARY;
 import static com.amazon.ion.DatagramMaker.FROM_BYTES_TEXT;
 
 import com.amazon.ion.junit.Injected.Inject;
@@ -23,8 +22,7 @@ public class DatagramTreeReaderSystemProcessingTest
 
     @Inject("datagramMaker")
     public static final DatagramMaker[] DATAGRAM_MAKERS =
-        DatagramMaker.valuesExcluding(FROM_BYTES_BINARY, // TODO unknown syms in tree
-                                      FROM_BYTES_TEXT    // TODO UTF8 issues
+        DatagramMaker.valuesExcluding(FROM_BYTES_TEXT    // TODO UTF8 issues
                                       );
 
     private LoadTime myLoadTime;

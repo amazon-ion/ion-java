@@ -823,19 +823,19 @@ public abstract class IonValueImpl
             throw new IllegalArgumentException("symbol table must be local or system");
         }
 
-        IonValueImpl parent = topLevelValue();
-        SymbolTable  currentSymtab = parent.getSymbolTable();
+        IonValueImpl top = topLevelValue();
+        SymbolTable  currentSymtab = top.getSymbolTable();
         if (currentSymtab != symtab) {
             checkForLock();
             if (UnifiedSymbolTable.isTrivialTable(currentSymtab) == false) {
-                parent.detachFromSymbolTable(); // Calls setDirty
+                top.detachFromSymbolTable(); // Calls setDirty
             }
             else {
-                parent.makeReady();
+                top.makeReady();
                 this.setDirty();
             }
-            parent._symboltable = symtab;
-            assert ((parent == this) || (this._symboltable == null));
+            top._symboltable = symtab;
+            assert ((top == this) || (this._symboltable == null));
         }
     }
 

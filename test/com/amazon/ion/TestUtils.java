@@ -152,7 +152,7 @@ public class TestUtils
     //========================================================================
 
 
-    static byte[] ensureBinary(IonSystem system, byte[] ionData)
+    public static byte[] ensureBinary(IonSystem system, byte[] ionData)
     {
         if (IonStreamUtils.isIonBinary(ionData)) return ionData;
 
@@ -160,7 +160,7 @@ public class TestUtils
         return dg.getBytes();
     }
 
-    static byte[] ensureText(IonSystem system, byte[] ionData)
+    public static byte[] ensureText(IonSystem system, byte[] ionData)
     {
         if (! IonStreamUtils.isIonBinary(ionData)) return ionData;
 

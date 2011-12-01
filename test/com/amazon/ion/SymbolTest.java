@@ -16,6 +16,7 @@ public class SymbolTest
         assertSame(IonType.SYMBOL, value.getType());
         assertTrue("isNullValue() is false",   value.isNullValue());
         assertNull("stringValue() isn't null", value.stringValue());
+        assertNull("symbolValue() isn't null", value.symbolValue());
 
         try {
             value.getSymbolId();
@@ -148,6 +149,16 @@ public class SymbolTest
     {
         String symText = "$324";
         IonSymbol value = (IonSymbol) oneValue(symText);
+        checkUnknownSymbol(324, value);
+
+        IonDatagram dg = loader().load(symText);
+        value = (IonSymbol) dg.get(0);
+        checkUnknownSymbol(324, value);
+
+        value.removeFromContainer();
+        checkUnknownSymbol(324, value);
+
+        value.makeReadOnly();
         checkUnknownSymbol(324, value);
     }
 

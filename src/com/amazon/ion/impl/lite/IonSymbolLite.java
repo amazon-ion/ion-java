@@ -13,6 +13,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueVisitor;
+import com.amazon.ion.impl.IonImplUtils;
 
 /**
  *
@@ -116,7 +117,7 @@ public class IonSymbolLite
     {
         validateThisNotNull();
 
-        if (_sid != UNKNOWN_SYMBOL_ID) {
+        if (_sid != UNKNOWN_SYMBOL_ID || isReadOnly()) {
             return _sid;
         }
 
@@ -135,10 +136,55 @@ public class IonSymbolLite
             }
             symtab = _context.getLocalSymbolTable(this);
         }
-        _sid = symtab.addSymbol(name);
+        InternedSymbol is = symtab.intern(name);
+        _sid = is.getId();
+        _set_value(is.getText()); // Use the interned instance of the text
+
         assert _sid > 0;
         return _sid;
     }
+
+
+    /**
+     * Get's the text of this NON-NULL symbol, finding it from our symbol
+     * table if it's not yet known (and caching the result if possible).
+     * <p>
+     * Caller must check {@link #isNullValue()}
+     *
+     * @return null if symbol text is unknown.
+     */
+    private String _stringValue()
+    {
+        String name = _get_value();
+        if (name == null)
+        {
+            assert _sid > 0;
+
+            SymbolTable symbols = getSymbolTable();
+            name = symbols.findKnownSymbol(_sid);
+            if (name != null)
+            {
+                // if this is a mutable value we'll hang onto
+                // our know known symbol table so we don't have
+                // to look it up again.
+                // If the value is immutable, honor that contract.
+                if (_isLocked() == false) {
+                    _set_value(name);
+                }
+            }
+        }
+        return name;
+    }
+
+    public InternedSymbol symbolValue()
+    {
+        if (isNullValue()) return null;
+
+        int sid = getSymbolId();
+        String text = _stringValue();
+        return IonImplUtils.newInternedSymbol(text, sid);
+    }
+
 
     @Override
     public void setValue(String value)
@@ -225,7 +271,12 @@ public class IonSymbolLite
     void clearSymbolIDValues()
     {
         super.clearSymbolIDValues();
-        _sid = UNKNOWN_SYMBOL_ID;
+
+        // Don't lose the sid if that's all we have!
+        if (! isNullValue() && _stringValue() != null)
+        {
+            _sid = UNKNOWN_SYMBOL_ID;
+        }
     }
 
     protected void setIsIonVersionMarker(boolean isIVM)
@@ -245,26 +296,10 @@ public class IonSymbolLite
         if (isNullValue()) {
             return null;
         }
-        String name = _get_value();
+        String name = _stringValue();
         if (name == null) {
             assert(_sid > 0);
-            SymbolTable symbols = getSymbolTable();
-            name = symbols.findKnownSymbol(_sid);
-            if (name == null) {
-                // TODO ION-58 shouldn't return synthetic symbol
-                name = symbols.findSymbol(_sid);
-                // TODO should throw
-//                throw new UnknownSymbolException(_sid);
-            }
-            else {
-                // if this is a mutable value we'll hang onto
-                // our know known symbol table so we don't have
-                // to look it up again.
-                // If the value is immutable, honor that contract.
-                if (_isLocked() == false) {
-                    _set_value(name);
-                }
-            }
+            name = "$" + _sid;
         }
         return name;
     }

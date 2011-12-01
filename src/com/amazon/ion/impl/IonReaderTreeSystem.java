@@ -421,11 +421,7 @@ class IonReaderTreeSystem
             throw new IllegalStateException();
         }
         if (_curr.isNullValue()) return null;
-
-        String text = stringValue();
-        // TODO what if text is unknown?
-        int sid = getSymbolId();
-        return new InternedSymbolImpl(text, sid);
+        return ((IonSymbol)_curr).symbolValue();
     }
 
     public int getSymbolId()

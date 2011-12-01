@@ -640,6 +640,17 @@ public abstract class IonTestCase
         assertEquals("string content", text, str.stringValue());
     }
 
+
+    /**
+     * @param text null means text is unknown
+     */
+    public static void checkSymbol(String text, int sid, InternedSymbol sym)
+    {
+        assertEquals("symbolValue.text", text, sym.getText());
+        assertEquals("symbolValue.id",   sid,  sym.getId());
+    }
+
+
     /**
      * Checks that the value is an IonSymbol with the given name.
      * @param name may be null to check for null.symbol
@@ -650,6 +661,16 @@ public abstract class IonTestCase
         IonSymbol sym = (IonSymbol) value;
         assertEquals("symbol name", name, sym.stringValue());
         assertEquals("isNullValue", name == null, sym.isNullValue());
+
+        InternedSymbol is = sym.symbolValue();
+        if (name == null)
+        {
+            assertEquals("IonSymbol.symbolValue()", null, is);
+        }
+        else
+        {
+            assertEquals("symbolValue.getText()", name, is.getText());
+        }
     }
 
     /**
@@ -684,6 +705,8 @@ public abstract class IonTestCase
         if (sid != id) {
             assertEquals("symbol id", id, sym.getSymbolId());
         }
+
+        checkSymbol(name, id, sym.symbolValue());
     }
 
     public static void checkUnknownSymbol(int id, IonValue value)
@@ -705,6 +728,8 @@ public abstract class IonTestCase
         }
 
         assertEquals("symbol id", id, sym.getSymbolId());
+
+        checkSymbol(null, id, sym.symbolValue());
     }
 
 
