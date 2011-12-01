@@ -2,13 +2,10 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
-
 import com.amazon.ion.IonLob;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
@@ -21,13 +18,10 @@ public class IonIteratorImpl
     implements Iterator<IonValue>
 {
     private final ValueFactory _valueFactory;
-
-    private IonReader    _reader;
-    private SymbolTable  _current_symbols;
-
-    private boolean      _at_eof;
+    private final IonReader _reader;
+    private boolean  _at_eof;
     private IonValue _curr;
-    private IonValuePrivate _next;
+    private IonValue _next;
 
 
 
@@ -70,36 +64,14 @@ public class IonIteratorImpl
         }
         else
         {
-            IonValue v = readValue(_reader);
-            _next = (IonValuePrivate) v;
-            SymbolTable symbols = _next.getAssignedSymbolTable();
-            if (UnifiedSymbolTable.isTrivialTable(symbols) == true
-             && UnifiedSymbolTable.isTrivialTable(this._current_symbols) == false
-            ) {
-                // TODO why is this changing the symtab?
-                symbols = this._current_symbols;
-                _next.setSymbolTable(symbols);
-            }
-
-            if (UnifiedSymbolTable.isRealLocalTable(symbols) == false) {
-                // TODO why is this changing the symtab?
-                // so we have to make it a real
-                assert(symbols == null || symbols.isSharedTable() || symbols.isSystemTable());
-                IonSystem system = _next.getSystem();
-                SymbolTable local =
-                    makeNewLocalSymbolTable(system, system.getSystemSymbolTable());
-                _next.setSymbolTable(local);
-                symbols = local;
-            }
-
-            this._current_symbols = symbols;
+            _next = readValue();
         }
 
         return _next;
     }
 
 
-    private IonValue readValue(IonReader reader)
+    private IonValue readValue()
     {
         IonType type = _reader.getType();
 
@@ -143,14 +115,14 @@ public class IonIteratorImpl
                 case BLOB:
                 {
                     IonLob lob = _valueFactory.newNullBlob();
-                    lob.setBytes(reader.newBytes());
+                    lob.setBytes(_reader.newBytes());
                     v = lob;
                     break;
                 }
                 case CLOB:
                 {
                     IonLob lob = _valueFactory.newNullClob();
-                    lob.setBytes(reader.newBytes());
+                    lob.setBytes(_reader.newBytes());
                     v = lob;
                     break;
                 }
@@ -161,7 +133,7 @@ public class IonIteratorImpl
                     while (_reader.next() != null)
                     {
                         String fieldName = _reader.getFieldName();
-                        IonValue child = readValue(_reader);
+                        IonValue child = readValue();
                         struct.add(fieldName, child);
                     }
                     _reader.stepOut();
@@ -174,7 +146,7 @@ public class IonIteratorImpl
                     _reader.stepIn();
                     while (_reader.next() != null)
                     {
-                        IonValue child = readValue(_reader);
+                        IonValue child = readValue();
                         seq.add(child);
                     }
                     _reader.stepOut();
@@ -187,7 +159,7 @@ public class IonIteratorImpl
                     _reader.stepIn();
                     while (_reader.next() != null)
                     {
-                        IonValue child = readValue(_reader);
+                        IonValue child = readValue();
                         seq.add(child);
                     }
                     _reader.stepOut();
