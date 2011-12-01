@@ -15,6 +15,7 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.IonReaderTextRawTokensX.IonReaderTextTokenException;
@@ -444,8 +445,10 @@ public class IonReaderTextSystemX
 
     public String stringValue()
     {
-        load_or_cast_cached_value(AS_TYPE.string_value);
+        if (! IonType.isText(_value_type)) throw new IllegalStateException();
         if (_v.isNull()) return null;
+
+        load_or_cast_cached_value(AS_TYPE.string_value);
         return _v.getString();
     }
 
@@ -465,9 +468,10 @@ public class IonReaderTextSystemX
 
     public int getSymbolId()
     {
-        // TODO ION-233 implement sids for system readers
-        // TODO test type
+        if (_value_type != IonType.SYMBOL) throw new IllegalStateException();
+        if (_v.isNull()) throw new NullValueException();
 
+        // TODO ION-233 implement sids for system readers
         if (_v.hasValueOfType(AS_TYPE.int_value))
         {
             return _v.getInt();
@@ -481,13 +485,8 @@ public class IonReaderTextSystemX
 
     public InternedSymbol symbolValue()
     {
-        if (_value_type != IonType.SYMBOL)
-        {
-            throw new IllegalStateException();
-        }
-
+        if (_value_type != IonType.SYMBOL) throw new IllegalStateException();
         if (_v.isNull()) return null;
-
 
         final String text = stringValue();
         if (text == null)

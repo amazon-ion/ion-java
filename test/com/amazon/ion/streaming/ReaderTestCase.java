@@ -2,8 +2,11 @@
 
 package com.amazon.ion.streaming;
 
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
+import com.amazon.ion.IonType;
+import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.junit.IonAssert;
 import org.junit.After;
@@ -72,5 +75,38 @@ public abstract class ReaderTestCase
     protected void expectNextField(String name)
     {
         IonAssert.expectNextField(in, name);
+    }
+
+    protected void expectString(String text)
+    {
+        assertEquals("getType", IonType.STRING, in.getType());
+        assertEquals("isNullValue", text == null, in.isNullValue());
+        assertEquals("stringValue", text, in.stringValue());
+    }
+
+    /**
+     * @param text null means to expect null.symbol
+     */
+    protected void expectSymbol(String text)
+    {
+        assertEquals("getType", IonType.SYMBOL, in.getType());
+        assertEquals("isNullValue", text == null, in.isNullValue());
+        assertEquals("stringValue", text, in.stringValue());
+
+        InternedSymbol is = in.symbolValue();
+        if (text == null)
+        {
+            assertEquals("symbolValue", null, is);
+            try {
+                in.getSymbolId();
+                fail("expected exception on " + in.getType());
+            }
+            catch (NullValueException e) { }
+        }
+        else
+        {
+            assertEquals("symbolValue.text", text, is.getText());
+            in.getSymbolId(); // Shouldn't throw, at least
+        }
     }
 }

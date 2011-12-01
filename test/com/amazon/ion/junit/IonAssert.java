@@ -95,6 +95,12 @@ public class IonAssert
 //            fail("expected exception");
         }
         catch (IllegalStateException e) { }
+
+        try {
+            in.stringValue();
+            fail("expected exception");
+        }
+        catch (IllegalStateException e) { }
     }
 
 

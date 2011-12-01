@@ -319,14 +319,13 @@ class IonReaderBinaryUserX
         return anns;
     }
 
-    @Override
+    @Override // TODO this override shouldn't be necessary
     public String stringValue()
     {
-        // TODO should check type first
-        if (_value_is_null) {
-            return null;
-        }
-        if (IonType.SYMBOL.equals(_value_type)) {
+        if (! IonType.isText(_value_type)) throw new IllegalStateException();
+        if (_value_is_null) return null;
+
+        if (_value_type == IonType.SYMBOL) {
             if (!_v.hasValueOfType(AS_TYPE.string_value)) {
                 int sid = intValue();
                 // TODO ION-58 this returns SIDs $123
@@ -343,11 +342,7 @@ class IonReaderBinaryUserX
     @Override
     public InternedSymbol symbolValue()
     {
-        if (_value_type != IonType.SYMBOL)
-        {
-            throw new IllegalStateException();
-        }
-
+        if (_value_type != IonType.SYMBOL) throw new IllegalStateException();
         if (_value_is_null) return null;
 
         int sid = getSymbolId();

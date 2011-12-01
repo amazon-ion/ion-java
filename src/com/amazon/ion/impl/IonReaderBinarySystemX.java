@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.IonType.SYMBOL;
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_INT_ARRAY;
 import static com.amazon.ion.impl.IonImplUtils.intIterator;
@@ -10,6 +11,7 @@ import com.amazon.ion.Decimal;
 import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
+import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
@@ -316,10 +318,10 @@ class IonReaderBinarySystemX
 
     public String stringValue()
     {
-        if (_value_is_null) {
-            return null;
-        }
-        if (IonType.SYMBOL.equals(_value_type)) {
+        if (! IonType.isText(_value_type)) throw new IllegalStateException();
+        if (_value_is_null) return null;
+
+        if (_value_type == SYMBOL) {
             int sid = getSymbolId();
             assert sid != UNKNOWN_SYMBOL_ID;
             // TODO not the right symtab
@@ -332,8 +334,8 @@ class IonReaderBinarySystemX
 
     public InternedSymbol symbolValue()
     {
-        // TODO handle non-symbol
-        // TODO handle null
+        if (_value_type != SYMBOL) throw new IllegalStateException();
+        if (_value_is_null) return null;
 
         int sid = getSymbolId();
         assert sid != UNKNOWN_SYMBOL_ID;
@@ -344,12 +346,9 @@ class IonReaderBinarySystemX
 
     public int getSymbolId()
     {
-        if (!IonType.SYMBOL.equals(_value_type)) {
-            String message = "can't cast from "
-                +IonScalarConversionsX.getValueTypeName(_v.getAuthoritativeType())
-                +" to SYMBOL ID";
-            throwErrorAt(message);
-        }
+        if (_value_type != SYMBOL) throw new IllegalStateException();
+        if (_value_is_null) throw new NullValueException();
+
         int sid = intValue();
         return sid;
     }

@@ -4,7 +4,6 @@ package com.amazon.ion.streaming;
 
 import static com.amazon.ion.impl.IonImplUtils.intIterator;
 
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.junit.Injected.Inject;
@@ -80,27 +79,77 @@ public class ReaderTest
     }
 
     @Test
+    public void testStringValueOnNull()
+        throws Exception
+    {
+        read("null.string null.symbol");
+
+        in.next();
+        expectString(null);
+        in.next();
+        expectSymbol(null);
+    }
+
+    @Test
+    public void testStringValueOnNonText()
+        throws Exception
+    {
+        // All non-text types
+        read("null true 1 1e2 1d2 2011-12-01T {{\"\"}} {{}} [] () {}");
+
+        while (in.next() != null)
+        {
+            try {
+                in.stringValue();
+                fail("expected exception on " + in.getType());
+            }
+            catch (IllegalStateException e) { }
+        }
+    }
+
+    @Test
     public void testSymbolValue()
         throws Exception
     {
         read("null.symbol sym");
         in.next();
-        InternedSymbol is = in.symbolValue();
-        assertEquals(null, is);
+        expectSymbol(null);
         in.next();
-        is = in.symbolValue();
-        assertEquals("sym", is.getText());
+        expectSymbol("sym");
         // TODO sid
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testSymbolValueOnNonSymbol()
         throws Exception
     {
-        read("null");
-        in.next();
-        in.symbolValue();
+        // All non-symbol types
+        read("null true 1 1e2 1d2 2011-12-01T \"\" {{\"\"}} {{}} [] () {}");
+
+        while (in.next() != null)
+        {
+            try {
+                in.symbolValue();
+                fail("expected exception on " + in.getType());
+            }
+            catch (IllegalStateException e) { }
+        }
     }
 
-    // TODO test getSymbolId() on null.symbol
+    @Test
+    public void testSymbolIdOnNonSymbol()
+        throws Exception
+    {
+        // All non-symbol types
+        read("null true 1 1e2 1d2 2011-12-01T \"\" {{\"\"}} {{}} [] () {}");
+
+        while (in.next() != null)
+        {
+            try {
+                in.getSymbolId();
+                fail("expected exception on " + in.getType());
+            }
+            catch (IllegalStateException e) { }
+        }
+    }
 }

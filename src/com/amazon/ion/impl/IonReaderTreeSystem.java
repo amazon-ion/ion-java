@@ -406,8 +406,6 @@ class IonReaderTreeSystem
 
     public String stringValue()
     {
-        // TODO what is this doing? Should test type first
-        if (_curr == null) return null;
         if (_curr instanceof IonText) {
             return ((IonText)_curr).stringValue();
         }
