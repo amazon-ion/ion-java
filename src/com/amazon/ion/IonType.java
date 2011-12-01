@@ -43,4 +43,30 @@ public enum IonType
     {
         return (t != null && (t.ordinal() >= LIST.ordinal()));
     }
+
+    /**
+     * Determines whether a type reperesents an Ion text scalar, namely
+     * {@link #STRING} or {@link #SYMBOL} (but not {@link #CLOB}).
+     *
+     * @param t may be null.
+     *
+     * @return true when {@code t} is {@link #STRING} or {@link #SYMBOL}.
+     */
+    public static boolean isText(IonType t)
+    {
+        return (t == STRING) || (t == SYMBOL);
+    }
+
+    /**
+     * Determines whether a type reperesents an Ion LOB scalar, namely
+     * {@link #BLOB} or {@link #CLOB}.
+     *
+     * @param t may be null.
+     *
+     * @return true when {@code t} is {@link #BLOB} or {@link #CLOB}.
+     */
+    public static boolean isLob(IonType t)
+    {
+        return (t == BLOB) || (t == CLOB);
+    }
 }
