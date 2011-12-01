@@ -2,6 +2,9 @@
 
 package com.amazon.ion;
 
+import static com.amazon.ion.DatagramMaker.FROM_BYTES_BINARY;
+import static com.amazon.ion.DatagramMaker.FROM_BYTES_TEXT;
+
 import com.amazon.ion.junit.Injected.Inject;
 import org.junit.After;
 
@@ -19,11 +22,15 @@ public class DatagramTreeReaderSystemProcessingTest
     public static final LoadTime[] LOAD_TIMES = LoadTime.values();
 
     @Inject("datagramMaker")
-    public static final DatagramMaker[] DATAGRAM_MAKERS = DatagramMaker.values();
+    public static final DatagramMaker[] DATAGRAM_MAKERS =
+        DatagramMaker.valuesExcluding(FROM_BYTES_BINARY, // TODO unknown syms in tree
+                                      FROM_BYTES_TEXT    // TODO UTF8 issues
+                                      );
 
     private LoadTime myLoadTime;
     private DatagramMaker myDatagramMaker;
     private String myText;
+    private byte[] myBinary;
     private IonDatagram myDatagram;
 
 
@@ -42,7 +49,14 @@ public class DatagramTreeReaderSystemProcessingTest
     {
         if (myLoadTime == now)
         {
-            myDatagram = myDatagramMaker.newDatagram(system(), myText);
+            if (myDatagramMaker.sourceIsBinary())
+            {
+                myDatagram = myDatagramMaker.newDatagram(system(), myBinary);
+            }
+            else
+            {
+                myDatagram = myDatagramMaker.newDatagram(system(), myText);
+            }
         }
     }
 
@@ -61,6 +75,12 @@ public class DatagramTreeReaderSystemProcessingTest
     protected void prepare(String text)
     {
         myText = text;
+        if (myDatagramMaker.sourceIsBinary())
+        {
+            IonDatagram dg = loader().load(text);
+            myBinary = dg.getBytes();
+        }
+
         load(LoadTime.LOAD_IN_PREPARE);
     }
 
@@ -89,6 +109,12 @@ public class DatagramTreeReaderSystemProcessingTest
             // The datagram loaded the text and encoded sid during prepare,
             // so the DOM retains the original sid.
             checkSymbol(expected, expectedSymbolTableSid);
+            return false;
+        }
+
+        if (myDatagramMaker.sourceIsBinary())
+        {
+            checkSymbol(null, expectedSymbolTableSid);
             return false;
         }
 
