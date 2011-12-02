@@ -2,6 +2,8 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.junit.IonAssert.assertEof;
+import static com.amazon.ion.junit.IonAssert.assertNoCurrentValue;
 import static com.amazon.ion.junit.IonAssert.assertTopLevel;
 import static com.amazon.ion.junit.IonAssert.expectField;
 
@@ -44,11 +46,11 @@ public class TreeReaderTest
         r.stepIn();
 
         assertEquals(1, r.getDepth());
-        assertFalse(r.hasNext());
+        assertEof(r);
 
         r.stepOut();
 
-        assertFalse(r.hasNext());
+        assertEof(r);
     }
 
     @Test
@@ -80,7 +82,7 @@ public class TreeReaderTest
         IonReader r = system().newReader(s.get("f"));
 
         assertTopLevel(r, /* inStruct */ true);
-        expectField(r, null);
+        assertNoCurrentValue(r);
 
         assertSame(IonType.NULL, r.next());
         assertTopLevel(r, /* inStruct */ true);
