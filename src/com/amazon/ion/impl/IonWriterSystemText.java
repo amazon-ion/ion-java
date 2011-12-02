@@ -335,7 +335,12 @@ class IonWriterSystemText
         if (_in_struct) {
             String name = getFieldName();
             if (name == null) {
-                throw new IllegalStateException(ERROR_MISSING_FIELD_NAME);
+                int sid = getFieldId();
+                if (sid == SymbolTable.UNKNOWN_SYMBOL_ID) {
+                    throw new IllegalStateException(ERROR_MISSING_FIELD_NAME);
+                }
+                // TODO ION-58
+                name = "$" + sid;
             }
             writeSymbolToken(name);
             _output.append(':');

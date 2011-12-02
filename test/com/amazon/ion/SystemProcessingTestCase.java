@@ -78,11 +78,30 @@ public abstract class SystemProcessingTestCase
     protected abstract void nextValue()
         throws Exception;
 
+    protected abstract void stepIn()
+        throws Exception;
+
+    protected abstract void stepOut()
+        throws Exception;
+
     protected abstract IonType currentValueType()
         throws Exception;
 
     protected abstract SymbolTable currentSymtab()
         throws Exception;
+
+
+    /**
+     * Checks a field name that's missing from the context symbol table,
+     * generally because there was no exact match to an import.
+     *
+     * @returns true when the local sid was matched
+     */
+    abstract boolean checkMissingFieldName(String expectedText,
+                                           int expectedEncodedSid,
+                                           int expectedLocalSid)
+        throws Exception;
+
 
     protected abstract void checkAnnotation(String expected, int expectedSid)
         throws Exception;
@@ -397,17 +416,14 @@ if (table1 == table2) {
             "  imports:[{name:\"fred\", version:2, " +
             "            max_id:" + Symtabs.FRED_MAX_IDS[2] + "}]," +
             "}\n" +
-            "local1 local2 fred_1 fred_2 fred_3";
+            "local1 local2 fred_1 fred_2 fred_3 {fred_3:local2}";
 
-        // fred_2 and fred_3 are defined during prep
         prepare(text);
 
         // Remove the imported table: fred version 2
-        // which will cause us to use fred version 3 with a max id of 4
-        // which leaves out fred_5 altogether (which wasn't recognized
-        // during prepare anyway) and causes fred_2 to "disappear"
-        // if forced to the system will assign fred_2 to a new
-        // local id after this
+        // We'll read using fred version 1 with a max id of 2
+        // which causes fred_3 to "disappear".
+        // If forced to, the reader will assign fred_2 to a new local id.
         assertNotNull(catalog.removeTable("fred", 2));
 
         // at this point the effective symbol list should be:
@@ -442,6 +458,15 @@ if (table1 == table2) {
         boolean is_fred3_a_local_symbol =
             checkMissingSymbol("fred_3", fred3id, local3id);
 
+        nextValue();
+        stepIn();
+
+        nextValue();
+        checkMissingFieldName("fred_3", fred3id, local3id);
+        checkSymbol("local2");
+
+        checkEof();
+        stepOut();
 
         checkEof();
 

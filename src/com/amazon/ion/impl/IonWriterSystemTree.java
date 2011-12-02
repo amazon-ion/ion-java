@@ -164,6 +164,10 @@ final class IonWriterSystemTree
 
         if (_in_struct) {
             String name = this.getFieldName();
+            if (name == null) {
+                // TODO ION-58 wrong handling of unknown symbol
+                name = "$" + getFieldId();
+            }
             ((IonStruct)_current_parent).add(name, value);
             this.clearFieldName();
         }

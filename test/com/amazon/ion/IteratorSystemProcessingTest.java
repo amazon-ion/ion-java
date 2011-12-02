@@ -58,6 +58,18 @@ public class IteratorSystemProcessingTest
     }
 
     @Override
+    protected void stepIn() throws Exception
+    {
+        myIterator = ((IonContainer)myCurrentValue).iterator();
+    }
+
+    @Override
+    protected void stepOut() throws Exception
+    {
+
+    }
+
+    @Override
     protected IonType currentValueType() throws Exception
     {
         if (myCurrentValue == null) {
@@ -65,6 +77,41 @@ public class IteratorSystemProcessingTest
         }
         return myCurrentValue.getType();
     }
+
+
+    /**
+     * @param expectedText null means absent
+     */
+    final void checkFieldName(String expectedText, int expectedSid)
+        throws Exception
+    {
+        String expectedStringValue =
+            (expectedText == null ? "$" + expectedSid : expectedText);
+        assertEquals("IonReader.getFieldName()",
+                     expectedStringValue, myCurrentValue.getFieldName());
+
+        assertEquals(expectedSid, myCurrentValue.getFieldId());
+
+        // TODO
+//        InternedSymbol sym = myReader.getFieldNameSymbol();
+//        checkSymbol(expectedText, expectedSid, sym);
+//        assertEquals(expectedText, sym.getText());
+//        assertEquals(expectedSid,  sym.getId());
+    }
+
+    @Override
+    boolean checkMissingFieldName(String expectedText,
+                                  int expectedEncodedSid,
+                                  int expectedLocalSid)
+        throws Exception
+    {
+        checkFieldName(expectedText, expectedLocalSid);
+
+        // when missing from a shared table the symbol
+        // will have been added to the local symbols
+        return true;
+    }
+
 
     @Override
     protected void checkAnnotation(String expected, int expectedSid)
@@ -150,12 +197,12 @@ public class IteratorSystemProcessingTest
     }
 
     @Override
-    protected boolean checkMissingSymbol(String expected,
-                                         int expectedSymbolTableSid,
+    protected boolean checkMissingSymbol(String expectedText,
+                                         int expectedEncodedSid,
                                          int expectedLocalSid)
         throws Exception
     {
-        checkSymbol(expected, expectedLocalSid, myCurrentValue);
+        checkSymbol(expectedText, expectedLocalSid, myCurrentValue);
 
         // when missing from a shared table the symbol
         // will have been added to the local symbols

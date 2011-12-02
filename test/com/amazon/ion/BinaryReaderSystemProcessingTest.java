@@ -33,12 +33,25 @@ public class BinaryReaderSystemProcessingTest
     }
 
     @Override
-    protected boolean checkMissingSymbol(String expected,
-                                         int expectedSymbolTableSid,
+    boolean checkMissingFieldName(String expectedText,
+                                  int expectedEncodedSid,
+                                  int expectedLocalSid)
+        throws Exception
+    {
+        checkFieldName(null, expectedEncodedSid);
+
+        // when missing from a shared table the symbol
+        // will not have been added to the local symbols
+        return false;
+    }
+
+    @Override
+    protected boolean checkMissingSymbol(String expectedText,
+                                         int expectedEncodedSid,
                                          int expectedLocalSid)
         throws Exception
     {
-        checkSymbol(null, expectedSymbolTableSid);
+        checkSymbol(null, expectedEncodedSid);
 
         // when missing from a shared table the symbol
         // will not have been added to the local symbols

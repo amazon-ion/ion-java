@@ -30,13 +30,29 @@ public class LoadBinaryBytesSystemProcessingTest
     }
 
     @Override
-    protected boolean checkMissingSymbol(String expected, int expectedSymbolTableSid, int expectedLocalSid)
+    boolean checkMissingFieldName(String expectedText,
+                                  int expectedEncodedSid,
+                                  int expectedLocalSid)
         throws Exception
     {
         // we're working on a datagram, the symbol will have
         // been materialized during the datagram construction
-        checkMissingSymbol(expectedSymbolTableSid);
-        //checkSymbol(expected, expectedSymbolTableSid);
+        checkFieldName(null, expectedEncodedSid);
+
+        // when missing from a shared table the symbol
+        // will have been added to the local symbols
+        return false;
+    }
+
+    @Override
+    protected boolean checkMissingSymbol(String expectedText,
+                                         int expectedEncodedSid,
+                                         int expectedLocalSid)
+        throws Exception
+    {
+        // we're working on a datagram, the symbol will have
+        // been materialized during the datagram construction
+        checkMissingSymbol(expectedEncodedSid);
 
         // when missing from a shared table the symbol
         // will have been added to the local symbols

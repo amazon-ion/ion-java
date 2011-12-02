@@ -97,8 +97,35 @@ public class DatagramTreeReaderSystemProcessingTest
     }
 
     @Override
-    protected boolean checkMissingSymbol(String expected,
-                                         int expectedSymbolTableSid,
+    boolean checkMissingFieldName(String expectedText,
+                                  int expectedEncodedSid,
+                                  int expectedLocalSid)
+        throws Exception
+    {
+        if (myLoadTime == LoadTime.LOAD_IN_PREPARE)
+        {
+            // The datagram loaded the text and encoded sid during prepare,
+            // so the DOM retains the original sid.
+            checkFieldName(expectedText, expectedEncodedSid);
+            return false;
+        }
+
+        if (myDatagramMaker.sourceIsBinary())
+        {
+            // TODO ION-58
+            checkFieldName("$"+expectedEncodedSid, expectedEncodedSid);
+            return false;
+        }
+
+        // The datagram was loaded after the catalog changed.
+        // We have no way to find the encoded sid, so a local one is assigned.
+        checkFieldName(expectedText, expectedLocalSid);
+        return true;
+    }
+
+    @Override
+    protected boolean checkMissingSymbol(String expectedText,
+                                         int expectedEncodedSid,
                                          int expectedLocalSid)
         throws Exception
     {
@@ -106,19 +133,19 @@ public class DatagramTreeReaderSystemProcessingTest
         {
             // The datagram loaded the text and encoded sid during prepare,
             // so the DOM retains the original sid.
-            checkSymbol(expected, expectedSymbolTableSid);
+            checkSymbol(expectedText, expectedEncodedSid);
             return false;
         }
 
         if (myDatagramMaker.sourceIsBinary())
         {
-            checkSymbol(null, expectedSymbolTableSid);
+            checkSymbol(null, expectedEncodedSid);
             return false;
         }
 
         // The datagram was loaded after the catalog changed.
         // We have no way to find the encoded sid, so a local one is assigned.
-        checkSymbol(expected, expectedLocalSid);
+        checkSymbol(expectedText, expectedLocalSid);
         return true;
     }
 }

@@ -186,6 +186,7 @@ abstract class IonWriterSystem
      */
     final String getFieldName()
     {
+        // TODO streamline
         String name;
 
         if (_field_name_type == null) {
@@ -197,7 +198,7 @@ abstract class IonWriterSystem
             name = _field_name;
             break;
         case INT:
-            name = assumeKnownSymbol(_field_name_sid);
+            name = null;
             break;
         default:
             throw new IllegalStateException("the field has not be set");
@@ -241,6 +242,7 @@ abstract class IonWriterSystem
                 catch (IOException e) {
                     throw new IonException(e);
                 }
+                // TODO cache the sid?
             break;
         case INT:
             id = _field_name_sid;

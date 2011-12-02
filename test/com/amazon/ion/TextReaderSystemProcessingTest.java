@@ -33,8 +33,25 @@ public class TextReaderSystemProcessingTest
     }
 
     @Override
-    protected boolean checkMissingSymbol(String expected,
-                                         int expectedSymbolTableSid,
+    boolean checkMissingFieldName(String expectedText,
+                                  int expectedEncodedSid,
+                                  int expectedLocalSid)
+        throws Exception
+    {
+        // When reading text and symtab is missing, we'll get the name right
+        // but we won't know the right sid.
+        // note that this form of checkSymbol does force a sid
+        // to be assigned to this symbol will have an id
+        checkFieldName(expectedText, expectedLocalSid);
+
+        // when missing from a shared table the symbol
+        // will have been added to the local symbols
+        return true;
+    }
+
+    @Override
+    protected boolean checkMissingSymbol(String expectedText,
+                                         int expectedEncodedSid,
                                          int expectedLocalSid)
         throws Exception
     {
@@ -42,7 +59,7 @@ public class TextReaderSystemProcessingTest
         // but we won't know the right sid.
         // note that this form of checkSymbol does force a sid
         // to be assigned to this symbol will have an id
-        checkSymbol(expected, expectedLocalSid);
+        checkSymbol(expectedText, expectedLocalSid);
 
         // when missing from a shared table the symbol
         // will have been added to the local symbols

@@ -58,6 +58,18 @@ public abstract class ReaderSystemProcessingTestCase
     }
 
     @Override
+    protected void stepIn() throws Exception
+    {
+        myReader.stepIn();
+    }
+
+    @Override
+    protected void stepOut() throws Exception
+    {
+
+    }
+
+    @Override
     protected IonType currentValueType() throws Exception
     {
         return myValueType;
@@ -68,6 +80,28 @@ public abstract class ReaderSystemProcessingTestCase
     {
         return myReader.getSymbolTable();
     }
+
+
+    /**
+     * @param expectedText null means absent
+     */
+    final void checkFieldName(String expectedText, int expectedSid)
+    {
+        String expectedStringValue =
+            (expectedText == null ? "$" + expectedSid : expectedText);
+        assertEquals("IonReader.getFieldName()",
+                     expectedStringValue, myReader.getFieldName());
+
+        assertEquals(expectedSid, myReader.getFieldId());
+
+        // XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX
+        // TODO broken for tree reader, tree doesn't handle absent field name
+        // XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX
+
+        InternedSymbol sym = myReader.getFieldNameSymbol();
+        checkSymbol(expectedText, expectedSid, sym);
+    }
+
 
     @Override
     protected void checkAnnotation(String expected, int expectedSid)
@@ -166,6 +200,7 @@ public abstract class ReaderSystemProcessingTestCase
         assertEquals(expectedSid, myReader.getSymbolId());
 
         InternedSymbol sym = myReader.symbolValue();
+        checkSymbol(expectedText, expectedSid, sym);
         assertEquals(expectedText, sym.getText());
         assertEquals(expectedSid,  sym.getId());
     }

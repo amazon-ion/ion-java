@@ -124,6 +124,22 @@ public class IonAssert
         assertTopLevel(in);
     }
 
+    public static void expectField(IonReader in, InternedSymbol sym)
+    {
+        InternedSymbol is = in.getFieldNameSymbol();
+        if (sym == null)
+        {
+            assertEquals("getFieldName", null, in.getFieldName());
+            assertEquals("getFieldNameSymbol", null, is);
+        }
+        else
+        {
+            assertEquals("field name InternedSymbol text",
+                         sym.getText(), is.getText());
+        }
+        // TODO check sid
+    }
+
     public static void expectField(IonReader in, String name)
     {
         assertEquals("field name", name, in.getFieldName());
