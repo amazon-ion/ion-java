@@ -171,6 +171,8 @@ public abstract class ReaderSystemProcessingTestCase
     @Override
     protected void checkSymbol(String expected) throws Exception
     {
+        assert expected != null;
+
         assertSame(IonType.SYMBOL, myReader.getType());
 
         assertFalse(myReader.isNullValue());
@@ -197,8 +199,6 @@ public abstract class ReaderSystemProcessingTestCase
 
         InternedSymbol sym = myReader.symbolValue();
         checkSymbol(expectedText, expectedSid, sym);
-        assertEquals(expectedText, sym.getText());
-        assertEquals(expectedSid,  sym.getId());
     }
 
 

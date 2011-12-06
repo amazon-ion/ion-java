@@ -696,11 +696,12 @@ public abstract class IonTestCase
         IonSymbol sym = (IonSymbol) value;
 
         assertFalse(value.isNullValue());
-        assert name != null;
+
         if (name == null)
         {
             try {
-                sym.stringValue();
+                String text = sym.stringValue();
+                assertEquals("$" + id, text);
                 // TODO stringValue should throw
 //                fail("Expected " + UnknownSymbolException.class);
             }
@@ -725,25 +726,7 @@ public abstract class IonTestCase
 
     public static void checkUnknownSymbol(int id, IonValue value)
     {
-        checkType(IonType.SYMBOL, value);
-        IonSymbol sym = (IonSymbol) value;
-
-        assertFalse(value.isNullValue());
-
-        try {
-            String text = sym.stringValue();
-            assertEquals("$" + id, text);
-            // TODO stringValue should throw
-//          fail("Expected " + UnknownSymbolException.class);
-        }
-        catch (UnknownSymbolException e)
-        {
-            assertEquals(id, e.getSid());
-        }
-
-        assertEquals("symbol id", id, sym.getSymbolId());
-
-        checkSymbol(null, id, sym.symbolValue());
+        checkSymbol(null, id, value);
     }
 
 

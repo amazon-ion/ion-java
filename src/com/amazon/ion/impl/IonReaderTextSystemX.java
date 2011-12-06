@@ -443,7 +443,7 @@ public class IonReaderTextSystemX
         return _v.getTimestamp();
     }
 
-    public String stringValue()
+    public final String stringValue()
     {
         if (! IonType.isText(_value_type)) throw new IllegalStateException();
         if (_v.isNull()) return null;

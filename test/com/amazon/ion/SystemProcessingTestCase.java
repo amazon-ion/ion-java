@@ -416,7 +416,7 @@ if (table1 == table2) {
             "  imports:[{name:\"fred\", version:2, " +
             "            max_id:" + Symtabs.FRED_MAX_IDS[2] + "}]," +
             "}\n" +
-            "local1 local2 fred_1 fred_2 fred_3 {fred_3:local2}";
+            "local1 local2 fred_1 fred_2 fred_3 $12 $99 {fred_3:local2}";
 
         prepare(text);
 
@@ -457,6 +457,12 @@ if (table1 == table2) {
         // fred 3 should be in the shared symbol table
         boolean is_fred3_a_local_symbol =
             checkMissingSymbol("fred_3", fred3id, local3id);
+
+        nextValue();
+// TODO checkAbsentSidLiteral("fred_3", fred3id);
+
+        nextValue();
+// TODO checkUndefinedSidLiteral(99);
 
         nextValue();
         stepIn();
