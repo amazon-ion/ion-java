@@ -5,7 +5,6 @@ package com.amazon.ion.impl;
 import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
@@ -209,23 +208,6 @@ public final class IonStructImpl
         return IonType.STRUCT;
     }
 
-
-    //public boolean oldisNullValue()
-    //{
-    //    if (_hasNativeValue() || !_isPositionLoaded()) {
-    //        return (_children == null);
-    //    }
-    //
-    //    int ln = this.pos_getLowNibble();
-    //    return (ln == IonConstants.lnIsNullStruct);
-    //}
-
-
-    public IonValue get(IonSymbol fieldName)
-    {
-        makeReady();
-        return get(fieldName.stringValue());
-    }
 
     public boolean containsKey(Object fieldName)
     {
