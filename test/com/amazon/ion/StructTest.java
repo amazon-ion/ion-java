@@ -1,6 +1,9 @@
 // Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+
+import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.lite.IonStructLite;
 import com.amazon.ion.impl.lite.IonValueLite;
 import java.util.ArrayList;
@@ -8,6 +11,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.Random;
+import org.junit.Ignore;
 import org.junit.Test;
 
 
@@ -563,7 +567,7 @@ public class StructTest
         IonBool nullBool = system().newNullBool();
 
         try {
-            value.add(null, nullBool);
+            value.add((String) null, nullBool);
             fail("Expected NullPointerException");
         }
         catch (NullPointerException e) { }
@@ -579,6 +583,80 @@ public class StructTest
             fail("Expected NullPointerException");
         }
         catch (NullPointerException e) { }
+    }
+
+
+    @Test @Ignore
+    public void testAddInternedSymbolWithBadSid()
+    {
+        IonStruct struct = system().newNullStruct();
+        IonBool nullBool = system().newNullBool();
+
+        InternedSymbol is = IonImplUtils.newInternedSymbol("f", 1);
+        struct.add(is, nullBool);
+
+        is = nullBool.getFieldNameSymbol();
+        checkSymbol("f", UNKNOWN_SYMBOL_ID, is);
+    }
+
+    @Test
+    public void testBadAddInternedSymbol()
+    {
+        IonStruct value = system().newNullStruct();
+        IonBool nullBool = system().newNullBool();
+
+        try {
+            value.add((InternedSymbol) null, nullBool);
+            fail("Expected NullPointerException");
+        }
+        catch (NullPointerException e) { }
+
+        InternedSymbol is = IonImplUtils.newInternedSymbol("f", 1);
+        try {
+            value.add(is, null);
+            fail("Expected NullPointerException");
+        }
+        catch (NullPointerException e) { }
+
+        IonValue contained = value.add("g").newNull();
+        try {
+            value.add(is, contained);
+            fail("Expected exception");
+        }
+        catch (ContainedValueException e) { }
+
+        IonValue dg = system().newDatagram();
+        try {
+            value.add(is, dg);
+            fail("Expected exception");
+        }
+        catch (IllegalArgumentException e) { }
+
+        is = new InternedSymbol()
+        {
+            public String getText()
+            {
+                return null;
+            }
+
+            public int getId()
+            {
+                return SymbolTable.UNKNOWN_SYMBOL_ID;
+            }
+
+            public String assumeText()
+            {
+                throw new UnknownSymbolException(1);
+            }
+        };
+
+        try {
+            value.add(is, nullBool);
+            fail("Expected IllegalArgumentException");
+        }
+        catch (IllegalArgumentException e) { }
+
+        // TODO other bad InternedSymbol values, eg "f",-2
     }
 
     @Test

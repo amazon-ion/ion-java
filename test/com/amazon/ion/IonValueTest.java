@@ -16,6 +16,16 @@ public class IonValueTest
     private final String ann = "ann";
     private final String ben = "ben";
 
+    @Test
+    public void testGetFieldNameSymbol()
+    {
+        IonValue v = system().newNull();
+        assertEquals(null, v.getFieldNameSymbol());
+
+        v.makeReadOnly();
+        assertEquals(null, v.getFieldNameSymbol());
+    }
+
 
     @Test(expected = ReadOnlyValueException.class)
     public void testSetTypeAnnotationsOnReadOnlyValue()

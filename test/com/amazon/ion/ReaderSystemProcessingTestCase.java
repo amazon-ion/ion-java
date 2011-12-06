@@ -94,10 +94,6 @@ public abstract class ReaderSystemProcessingTestCase
 
         assertEquals(expectedSid, myReader.getFieldId());
 
-        // XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX
-        // TODO broken for tree reader, tree doesn't handle absent field name
-        // XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX
-
         InternedSymbol sym = myReader.getFieldNameSymbol();
         checkSymbol(expectedText, expectedSid, sym);
     }

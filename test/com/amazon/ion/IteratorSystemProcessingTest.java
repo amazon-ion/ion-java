@@ -87,16 +87,16 @@ public class IteratorSystemProcessingTest
     {
         String expectedStringValue =
             (expectedText == null ? "$" + expectedSid : expectedText);
-        assertEquals("IonReader.getFieldName()",
+        assertEquals("IonValue.getFieldName()",
                      expectedStringValue, myCurrentValue.getFieldName());
 
-        assertEquals(expectedSid, myCurrentValue.getFieldId());
+        assertEquals("IonValue.getFieldId",
+                     expectedSid, myCurrentValue.getFieldId());
 
-        // TODO
-//        InternedSymbol sym = myReader.getFieldNameSymbol();
-//        checkSymbol(expectedText, expectedSid, sym);
-//        assertEquals(expectedText, sym.getText());
-//        assertEquals(expectedSid,  sym.getId());
+        InternedSymbol sym = myCurrentValue.getFieldNameSymbol();
+        checkSymbol(expectedText, expectedSid, sym);
+        assertEquals(expectedText, sym.getText());
+        assertEquals(expectedSid,  sym.getId());
     }
 
     @Override

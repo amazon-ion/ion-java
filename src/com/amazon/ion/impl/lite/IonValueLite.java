@@ -7,6 +7,7 @@ import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.util.Equivalence.ionEquals;
 
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
@@ -18,6 +19,7 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.IonValuePrivate;
@@ -152,7 +154,7 @@ public abstract class IonValueLite
         return flag;
     }
 
-    /**
+    /*
      * KEEP ALL MEMBER VALUES HERE
      *
      * This impl is intended to have a very light
@@ -164,8 +166,12 @@ public abstract class IonValueLite
      *
      * Thank you.
      *
+     * When this is not a field,
+     *   _fieldId = UNKNOWN_SYMBOL_ID  and  _fieldName = null
+     * Otherwise at least one must be defined.
      */
     private   int              _flags;
+    private   int              _fieldId = UNKNOWN_SYMBOL_ID;
 
     /** Not null. */
     protected IonContext       _context;
@@ -173,7 +179,7 @@ public abstract class IonValueLite
 
     /**
      * The annotation sequence. This array is overallocated and may have
-     * nulls at the end.
+     * nulls at the end denoting unused slots.
      */
     private   String[]         _annotations;
 
@@ -283,6 +289,7 @@ public abstract class IonValueLite
         }
 
         // and now values we don't copy
+        assert _fieldName == null && _fieldId == UNKNOWN_SYMBOL_ID;
         this._fieldName = null;
 
         // IonValue.clone() is specified to return a modifiable copy, but the
@@ -335,18 +342,64 @@ public abstract class IonValueLite
 
     public final int getFieldId()
     {
+        if (_fieldId != UNKNOWN_SYMBOL_ID || _fieldName == null)
+        {
+            return _fieldId;
+        }
+
         SymbolTable symbolTable = getSymbolTable();
-        if (_fieldName == null || symbolTable == null || _isLocked()) {
-            return UNKNOWN_SYMBOL_ID;
-        }
-        int sid = symbolTable.findSymbol(_fieldName);
-        if (sid == UNKNOWN_SYMBOL_ID) {
-            checkForLock();
+        if (symbolTable == null) return UNKNOWN_SYMBOL_ID;
+
+        InternedSymbol is = symbolTable.find(_fieldName);
+        if (is != null) return is.getId();
+
+        if (! isReadOnly())
+        {
             symbolTable = _context.getLocalSymbolTable(this);
-            sid = symbolTable.addSymbol(_fieldName);
+            is = symbolTable.intern(_fieldName);
+            _fieldName = is.getText();
+            _fieldId   = is.getId();
         }
-        return sid;
+        return _fieldId;
     }
+
+
+    public final InternedSymbol getFieldNameSymbol()
+    {
+        final int sid = _fieldId;
+        final String fieldName;
+        if (_fieldName != null) {
+            fieldName = _fieldName;
+        }
+        else if (sid > 0) {
+            fieldName = getSymbolTable().findKnownSymbol(sid);
+            // TODO memoize interned text?
+        }
+        else {
+            // not a field
+            return null;
+        }
+
+        return new InternedSymbol()
+        {
+            public String getText()
+            {
+                return fieldName;
+            }
+
+            public int getId()
+            {
+                return getFieldId();
+            }
+
+            public String assumeText()
+            {
+                if (fieldName != null) return fieldName;
+                throw new UnknownSymbolException(getFieldId());
+            }
+        };
+    }
+
 
     public SymbolTable populateSymbolValues(SymbolTable symbols)
     {
@@ -405,12 +458,36 @@ public abstract class IonValueLite
     final void setFieldName(String name)
     {
         assert(this.getContainer() == null);
+        assert _fieldId == UNKNOWN_SYMBOL_ID;
         _fieldName = name;
+    }
+
+    final void setFieldNameSymbol(InternedSymbol name)
+    {
+        assert(this.getContainer() == null);
+        assert _fieldId == UNKNOWN_SYMBOL_ID && _fieldName == null;
+        _fieldName = name.getText();
+        int sid = name.getId();
+        if (_fieldName != null && sid != UNKNOWN_SYMBOL_ID)
+        {
+
+        }
+        _fieldId   = name.getId();
+    }
+
+    final void setFieldId(int sid)
+    {
+        assert(this.getContainer() == null);
+        assert _fieldName == null;
+        _fieldId = sid;
     }
 
     public final String getFieldName()
     {
-        return _fieldName;
+        if (_fieldName != null) return _fieldName;
+        if (_fieldId < 0) return null;
+        // TODO ION-58
+        return "$" + _fieldId;
     }
 
     public final int getFieldNameId()

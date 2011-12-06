@@ -16,6 +16,7 @@ import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewSharedSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.newSystemSymbolTable;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
@@ -426,8 +427,8 @@ public final class IonSystemLite
             }
         }
         if (reader.isInStruct()) {
-            String fieldName = reader.getFieldName();
-            v.setFieldName(fieldName);
+            InternedSymbol sym = reader.getFieldNameSymbol();
+            v.setFieldNameSymbol(sym);
             symbol_is_present = true;
         }
         String[] uta = reader.getTypeAnnotations();

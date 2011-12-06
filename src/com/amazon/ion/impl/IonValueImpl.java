@@ -9,6 +9,7 @@ import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.util.Equivalence.ionEquals;
 
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
@@ -21,6 +22,7 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.Reader;
 import com.amazon.ion.impl.IonBinary.Writer;
@@ -526,8 +528,12 @@ public abstract class IonValueImpl
     {
         if (this._fieldName != null) return this._fieldName;
         if (this._fieldSid < 1) return null;
-        _fieldName = this.getSymbolTable().findSymbol(this._fieldSid);
-        assert _fieldName != null;
+
+        String text = getSymbolTable().findKnownSymbol(_fieldSid);
+        if (text == null) {
+            return "$" + _fieldSid;
+        }
+        _fieldName = text;
         return _fieldName;
     }
 
@@ -551,7 +557,7 @@ public abstract class IonValueImpl
     {
         assert symtab == this.getSymbolTable();
 
-        if (this._fieldSid == 0 && this._fieldName != null)
+        if (this._fieldSid <= 0 && this._fieldName != null)
         {
             this._fieldSid = this.resolveSymbol(this._fieldName);
             if (this._fieldSid == UNKNOWN_SYMBOL_ID) {
@@ -570,6 +576,43 @@ public abstract class IonValueImpl
     public final int getFieldNameId()
     {
         return getFieldId();
+    }
+
+
+    public final InternedSymbol getFieldNameSymbol()
+    {
+        final String fieldName;
+        if (_fieldName != null) {
+            fieldName = _fieldName;
+        }
+        else if (_fieldSid > 0) {
+            fieldName = getSymbolTable().findKnownSymbol(_fieldSid);
+            // TODO memoize interned text?
+        }
+        else {
+            // not a field
+            return null;
+        }
+
+        return new InternedSymbol()
+        {
+            public String getText()
+            {
+                return fieldName;
+            }
+
+            public int getId()
+            {
+                return getFieldId();
+            }
+
+            public String assumeText()
+            {
+                // TODO test
+                if (fieldName != null) return fieldName;
+                throw new UnknownSymbolException(getFieldId());
+            }
+        };
     }
 
     public IonValueImpl topLevelValue()
@@ -854,6 +897,7 @@ public abstract class IonValueImpl
             if (this._fieldName == null) {
                 this._fieldName = this.resolveSymbol(this._fieldSid);
             }
+            // TODO don't wipe out if we didn't find the name!
             this._fieldSid = 0; // FIXME should be UNKNOWN_SYMBOL_ID
         }
 
@@ -1127,10 +1171,6 @@ public abstract class IonValueImpl
         return IonConstants.getLowNibble(this._type_desc);
     }
 
-    public final int pos_getFieldId()
-    {
-        return _fieldSid;
-    }
     public final int pos_getFieldIdLen()
     {
         return IonBinary.lenVarUInt(_fieldSid);
@@ -1388,7 +1428,7 @@ public abstract class IonValueImpl
 
         _container = null;
         _fieldName = null;
-        assert _fieldSid == 0;
+        _fieldSid = 0;
         _elementid = 0;
     }
 
@@ -1409,6 +1449,25 @@ public abstract class IonValueImpl
             }
         }
         this.setDirty();
+    }
+
+    final void setFieldNameSymbol(InternedSymbol name)
+    {
+        assert _fieldName == null;
+        assert _container != null;
+
+        // Do these first on the odd chance that they throw an exception
+        // in which case we won't be in a halfway state.
+        String text = name.getText();
+        int sid = name.getId();
+
+        // First materialize, because we're gonna mark ourselves dirty.
+        makeReady();
+
+        _fieldName = text;
+        _fieldSid  = sid;
+
+        setDirty();
     }
 
 
@@ -1517,10 +1576,10 @@ public abstract class IonValueImpl
     {
         int len = 0;
 
-        // CAS: 14 jan 2010 changed fieldSid==0 to fieldSid<=0
         if (this._fieldSid <= 0 && this._fieldName != null)
         {
             // We haven't interned the symbol, do so now.
+            // TODO WRONG! this doesn't intern it.
             this._fieldSid = this.resolveSymbol(this._fieldName);
             if (this._fieldSid <= 0) {
                 throw new IonException("the field name must be in the symbol table, if you're using a name table");
@@ -1721,7 +1780,7 @@ public abstract class IonValueImpl
             }
         }
 
-        if (this._fieldName != null) {
+        if (this._fieldName != null || _fieldSid > 0) {
             symtab = this.getFieldId(symtab);
         }
 

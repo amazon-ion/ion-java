@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonClob;
@@ -163,12 +164,10 @@ final class IonWriterSystemTree
         }
 
         if (_in_struct) {
-            String name = this.getFieldName();
-            if (name == null) {
-                // TODO ION-58 wrong handling of unknown symbol
-                name = "$" + getFieldId();
-            }
-            ((IonStruct)_current_parent).add(name, value);
+            IonStruct struct = (IonStruct) _current_parent;
+
+            InternedSymbol sym = getFieldNameSymbol();
+            struct.add(sym, value);
             this.clearFieldName();
         }
         else {

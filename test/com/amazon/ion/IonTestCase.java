@@ -646,8 +646,22 @@ public abstract class IonTestCase
      */
     public static void checkSymbol(String text, int sid, InternedSymbol sym)
     {
-        assertEquals("symbolValue.text", text, sym.getText());
-        assertEquals("symbolValue.id",   sid,  sym.getId());
+        assertEquals("InternedSymbol.text", text, sym.getText());
+        assertEquals("InternedSymbol.id",   sid,  sym.getId());
+
+        if (text != null)
+        {
+            assertEquals("InternedSymbol.assumeText", text, sym.assumeText());
+        }
+        else
+        {
+            try
+            {
+                sym.assumeText();
+                fail("expected exception");
+            }
+            catch (RuntimeException e) { }
+        }
     }
 
 

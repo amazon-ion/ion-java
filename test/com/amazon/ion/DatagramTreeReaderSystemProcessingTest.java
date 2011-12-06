@@ -113,7 +113,7 @@ public class DatagramTreeReaderSystemProcessingTest
         if (myDatagramMaker.sourceIsBinary())
         {
             // TODO ION-58
-            checkFieldName("$"+expectedEncodedSid, expectedEncodedSid);
+            checkFieldName(null, expectedEncodedSid);
             return false;
         }
 

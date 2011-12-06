@@ -9,6 +9,7 @@ import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.EmptySymbolException;
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
@@ -37,7 +38,7 @@ abstract class IonWriterSystem
     /** really ion type is only used for int, string or null (unknown) */
     private IonType     _field_name_type;
     private String      _field_name;
-    private int         _field_name_sid;
+    private int         _field_name_sid = UNKNOWN_SYMBOL_ID;
 
     private static final int DEFAULT_ANNOTATION_COUNT = 4;
 
@@ -263,6 +264,11 @@ abstract class IonWriterSystem
         _field_name_sid = id;
     }
 
+    final InternedSymbol getFieldNameSymbol()
+    {
+        assert _field_name_type != null;
+        return new InternedSymbolImpl(_field_name, _field_name_sid);
+    }
 
     //========================================================================
     // Annotations

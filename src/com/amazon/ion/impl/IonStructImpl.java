@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
@@ -360,6 +361,28 @@ public final class IonStructImpl
         if (_field_map != null) {
             add_field(fieldName, concrete._elementid);
         }
+    }
+
+    public void add(InternedSymbol fieldName, IonValue child)
+    {
+        String text = fieldName.getText();
+        if (text != null)
+        {
+            // TODO should we always ignore the sid?
+            add(text, child);
+            return;
+        }
+        else if (fieldName.getId() < 0)
+        {
+            throw new IllegalArgumentException("fieldName has no text or ID");
+        }
+
+//      validateNewChild(value);          // This is done by add() below.
+
+        IonValueImpl concrete = (IonValueImpl) child;
+        add(concrete);
+
+        concrete.setFieldNameSymbol(fieldName);
     }
 
     public ValueFactory add(final String fieldName)

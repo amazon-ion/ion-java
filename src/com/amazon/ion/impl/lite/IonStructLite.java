@@ -3,6 +3,7 @@
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.ContainedValueException;
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
@@ -415,10 +416,19 @@ public class IonStructLite
         throws NullPointerException, IllegalArgumentException,
         ContainedValueException
     {
-        String field_name = child.getFieldName();
-        add(field_name, child);
+        // TODO validate in struct.setFieldName
+        String text = child.getFieldNameSymbol().getText();
+        if (text != null)
+        {
+            validateFieldName(text);
+        }
 
-        return true; // add always works, or throws, since we allow dupicate fields
+        validateNewChild(child);
+
+        IonValueLite concrete = (IonValueLite) child;
+        _add(text, concrete);
+
+        return true;
     }
 
 
@@ -434,27 +444,70 @@ public class IonStructLite
         };
     }
 
+
+    /**
+     * @param fieldName may be null
+     * @param child must be validated and have field name or id set
+     */
+    private void _add(String fieldName, IonValueLite child)
+    {
+        int size = get_child_count();
+
+        // add this to the Container child collection
+        add(size, child);
+
+        // if we have a hash map we need to update it now
+        if (_field_map != null) {
+            add_field(fieldName, child._elementid());
+        }
+    }
+
     public void add(String fieldName, IonValue value)
     {
         validateNewChild(value);
         validateFieldName(fieldName);
 
+        // TODO USE _add
         IonValueLite concrete = (IonValueLite) value;
-        int size = get_child_count();
+//        int size = get_child_count();
 
         // set the fieldname first so that setFieldName
         // doesn't complain that we're changing the name
         // of a field that's already in a struct somewhere.
         concrete.setFieldName(fieldName);
 
-        // add this to the Container child collection
-        add(size, concrete);
+        _add(fieldName, concrete);
 
-        // if we have a hash map we need to update it now
-        if (_field_map != null) {
-            add_field(fieldName, concrete._elementid());
-        }
+//        // add this to the Container child collection
+//        add(size, concrete);
+//
+//        // if we have a hash map we need to update it now
+//        if (_field_map != null) {
+//            add_field(fieldName, concrete._elementid());
+//        }
     }
+
+    public void add(InternedSymbol fieldName, IonValue child)
+    {
+        String text = fieldName.getText();
+        if (text != null)
+        {
+            // TODO should we always ignore the sid?
+            add(text, child);
+            return;
+        }
+        else if (fieldName.getId() < 0)
+        {
+            throw new IllegalArgumentException("fieldName has no text or ID");
+        }
+
+        validateNewChild(child);
+
+        IonValueLite concrete = (IonValueLite) child;
+        concrete.setFieldNameSymbol(fieldName);
+        _add(text, concrete);
+    }
+
 
     public ValueFactory put(final String fieldName)
     {

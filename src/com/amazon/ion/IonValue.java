@@ -149,6 +149,15 @@ public interface IonValue
 
 
     /**
+     * Gets the field name attached to this value as an interned symbol
+     * (text + ID).
+     *
+     * @return null if this value isn't a struct field.
+     */
+    public InternedSymbol getFieldNameSymbol();
+
+
+    /**
      * Gets the field name attached to this value,
      * or <code>null</code> if this is not part of an {@link IonStruct}.
      *
@@ -166,6 +175,7 @@ public interface IonValue
      * determined, this method returns a value <em>less than one</em>.
      */
     public int getFieldId();
+    // TODO deprecate
 
 
     /**

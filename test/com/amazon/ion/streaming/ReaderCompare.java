@@ -108,14 +108,19 @@ public class ReaderCompare
     }
 
     public static void compareFieldNames(IonReader it1, IonReader it2) {
-        String f1 = it1.getFieldName();
-        String f2 = it2.getFieldName();
-        compareNonNullStrings("field name", f1, f2);
-
         InternedSymbol is1 = it1.getFieldNameSymbol();
         InternedSymbol is2 = it1.getFieldNameSymbol();
-        assertEquals(f1, is1.getText());
-        assertEquals(f2, is2.getText());
+        String fn = is1.getText();
+        assertEquals(fn, is2.getText());
+
+        if (fn == null) {
+            fn = "$" + is1.getId();
+        }
+
+        String f1 = it1.getFieldName();
+        String f2 = it2.getFieldName();
+        compareNonNullStrings("field name", fn, f1);
+        compareNonNullStrings("field name", fn, f2);
     }
 
     public static void compareAnnotations(IonReader it1, IonReader it2) {
