@@ -434,17 +434,24 @@ public abstract class IonWriterBaseImpl
                 if (_debug_on) System.out.print("$");
                 break;
             case SYMBOL:
-                String name = reader.stringValue();
-                if (name == null) {
-                    int sid = reader.getSymbolId();
-//                    name = assumeKnownSymbol(sid);
-                    writeSymbol(sid);
+            {
+                InternedSymbol is = reader.symbolValue();
+                // TODO this should pass the IS over directly so the writer
+                // can remap unknown symbols when possible.
+                String text = is.getText();
+                if (text != null)
+                {
+                    writeSymbol(text);
                 }
-                else {
-                    writeSymbol(name);
+                else
+                {
+                    int sid = is.getId();
+                    assert sid != SymbolTable.UNKNOWN_SYMBOL_ID;
+                    writeSymbol(sid);
                 }
                 if (_debug_on) System.out.print("y");
                 break;
+            }
             case BLOB:
                 writeBlob(reader.newBytes());
                 if (_debug_on) System.out.print("B");

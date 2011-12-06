@@ -1,6 +1,7 @@
 package com.amazon.ion.util;
 
 import com.amazon.ion.Decimal;
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDecimal;
@@ -9,6 +10,7 @@ import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonLob;
 import com.amazon.ion.IonStruct;
+import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonText;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
@@ -99,6 +101,31 @@ public final class Equivalence {
     private Equivalence() {
     }
 
+
+    private static int compare(int i1, int i2)
+    {
+        if (i1 < i2) return -1;
+        if (i2 > i2) return  1;
+        return 0;
+    }
+
+
+    private static int compare(InternedSymbol is1, InternedSymbol is2)
+    {
+        String text1 = is1.getText();
+        String text2 = is2.getText();
+        if (text1 == null || text2 == null) {
+            if (text1 != null) return  1;
+            if (text2 != null) return -1;
+
+            // otherwise v1 == v2 == null
+            return compare(is1.getId(), is2.getId());
+        }
+
+        return text1.compareTo(text2);
+    }
+
+
     /** Compare LOB content by stream--assuming non-null. */
     private static int lobContentCompare(final IonLob lob1, final IonLob lob2)
     {
@@ -141,8 +168,12 @@ public final class Equivalence {
         if (_debug_stop_on_false && result != 0) debugStopOnFalse();
         return result;
     }
+
+
     static private int _false_count = 0;
     static private int _false_target = -1;
+
+    @SuppressWarnings("unused")
     static void debugStopOnFalse() {
         _false_count++;
         if (_debug_stop_on_false) {
@@ -387,10 +418,13 @@ public final class Equivalence {
                     break;
                 }
                 case STRING:
-                case SYMBOL:
                     string1 = ((IonText) v1).stringValue();
                     string2 = ((IonText) v2).stringValue();
                     result = string1.compareTo(string2);
+                    break;
+                case SYMBOL:
+                    result = compare(((IonSymbol) v1).symbolValue(),
+                                     ((IonSymbol) v2).symbolValue());
                     break;
                 case BLOB:
                 case CLOB:
@@ -485,7 +519,9 @@ public final class Equivalence {
      *
      * @return true if two Ion Values represent the same data.
      */
-    public static final boolean ionEquals(final IonValue v1, final IonValue v2) {
+    public static final boolean ionEquals(final IonValue v1,
+                                          final IonValue v2)
+    {
         return ionEqualsImpl(v1, v2, true);
     }
 
@@ -501,7 +537,9 @@ public final class Equivalence {
      * @return true if two Ion Values represent the same data without regard to
      *         annotations.
      */
-    public static final boolean ionEqualsByContent(final IonValue v1, final IonValue v2) {
+    public static final boolean ionEqualsByContent(final IonValue v1,
+                                                   final IonValue v2)
+    {
         return ionEqualsImpl(v1, v2, false);
     }
 
