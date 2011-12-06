@@ -1346,7 +1346,10 @@ public final class UnifiedSymbolTable
     final
     int get_symbol_sid_helper(String fieldName)
     {
-        if (fieldName != null && fieldName.length() > 0) {
+        final int shortestFieldNameLength = 4; // 'name'
+
+        if (fieldName != null && fieldName.length() >= shortestFieldNameLength)
+        {
             int c = fieldName.charAt(0);
             switch (c) {
             case 'v':
@@ -1368,6 +1371,11 @@ public final class UnifiedSymbolTable
             case 'i':
                 if (IMPORTS.equals(fieldName)) {
                     return IMPORTS_SID;
+                }
+                break;
+            case 'm':
+                if (MAX_ID.equals(fieldName)) {
+                    return MAX_ID_SID;
                 }
                 break;
             default:
