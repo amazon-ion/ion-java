@@ -94,6 +94,7 @@ public class IonSymbolLite
     public int hashCode() {
         int hash = HASH_SIGNATURE;
         if (!isNullValue())  {
+            // TODO ION-266 broken when symbol text in unknown
             hash ^= stringValue().hashCode();
         }
         return hash;

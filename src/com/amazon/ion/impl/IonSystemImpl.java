@@ -723,8 +723,9 @@ public final class IonSystemImpl
                 return true;
             }
             else if (sid < 1 || sid > SystemSymbolTable.ION_1_0_MAX_ID) {
-                String image = symbol.stringValue();
-                return textIsSystemId(image);
+                InternedSymbol is = symbol.symbolValue();
+                String image = is.getText();
+                return image != null && textIsSystemId(image);
             }
         }
         return false;
