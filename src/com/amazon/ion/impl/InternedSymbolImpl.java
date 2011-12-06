@@ -2,9 +2,10 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.util.IonTextUtils.printString;
+
 import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.UnknownSymbolException;
-import com.amazon.ion.util.IonTextUtils;
 
 
 final class InternedSymbolImpl
@@ -49,7 +50,7 @@ final class InternedSymbolImpl
     @Override
     public String toString()
     {
-        return "InternedSymbol::{text:" + IonTextUtils.printString(myText)
-            + ",id:" + mySid + "}";
+        String text = (myText == null ? null : printString(myText));
+        return "InternedSymbol::{text:" + text + ",id:" + mySid + "}";
     }
 }
