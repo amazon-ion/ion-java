@@ -2,6 +2,8 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
@@ -458,7 +460,8 @@ abstract public class IonContainerImpl
         {
             IonValueImpl child;
             reader.setPosition(pos);
-            child = IonValueImpl.makeValueFromReader(0, reader, buffer, symtab, this, _system);
+            child = makeValueFromReader(UNKNOWN_SYMBOL_ID, reader, buffer,
+                                        symtab, this, _system);
             child._elementid = get_child_count(); //_children.length;
             add_child(child._elementid, child);
             pos = child.pos_getOffsetofNextValue();

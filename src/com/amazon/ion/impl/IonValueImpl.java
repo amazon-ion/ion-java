@@ -65,7 +65,13 @@ public abstract class IonValueImpl
     //             ^ [+ len(mid)]   value_content_start ^
     //                                               next_start ^
     //
-    private int _fieldSid;        // field symbol id in buffer
+
+    /**
+     * The field-name symbol id, {@link SymbolTable#UNKNOWN_SYMBOL_ID} if this
+     * isn't a field (in which case {@link #_fieldName} must be null) or if we
+     * don't know the sid (in which case {@link #_fieldName} must not be null).
+     */
+    private int _fieldSid = UNKNOWN_SYMBOL_ID;
 
     /**
      * The actual TD byte of the value.
@@ -426,12 +432,14 @@ public abstract class IonValueImpl
                                                    IonSystemImpl system)
         throws IOException
     {
+        assert fieldSID > 0 || fieldSID == UNKNOWN_SYMBOL_ID;
+
         IonValueImpl value;
         int pos = reader.position();
         int tdb = reader.readActualTypeDesc();
 
         value = makeValue(tdb, system);
-        value._fieldSid    = fieldSID;
+//      value._fieldSid    = fieldSID; // Done in pos_load
         value._buffer      = buffer;
         value._container   = container;
         value._symboltable = symboltable;
@@ -539,7 +547,7 @@ public abstract class IonValueImpl
 
     public int getFieldId()
     {
-        if (this._fieldSid == 0 && this._fieldName != null)
+        if (this._fieldSid == UNKNOWN_SYMBOL_ID && this._fieldName != null)
         {
             this._fieldSid = this.resolveSymbol(this._fieldName);
             if (this._fieldSid == UNKNOWN_SYMBOL_ID) {
@@ -564,8 +572,7 @@ public abstract class IonValueImpl
                 checkForLock();
                 symtab = this.addSymbol(this._fieldName, symtab);
                 this._fieldSid = symtab.findSymbol(this._fieldName);
-
-                // TODO why is this assumed?
+                // Because we just added it:
                 assert( this._fieldSid != UNKNOWN_SYMBOL_ID);
             }
         }
@@ -898,7 +905,7 @@ public abstract class IonValueImpl
                 this._fieldName = this.resolveSymbol(this._fieldSid);
             }
             // TODO don't wipe out if we didn't find the name!
-            this._fieldSid = 0; // FIXME should be UNKNOWN_SYMBOL_ID
+            this._fieldSid = UNKNOWN_SYMBOL_ID;
         }
 
         this._symboltable = null;
@@ -1011,7 +1018,7 @@ public abstract class IonValueImpl
 
     void pos_init()
     {
-        _fieldSid           =  0;
+        _fieldSid           =  UNKNOWN_SYMBOL_ID;
         _entry_start        = -1;
         _value_td_start     = -1;
         _value_content_start= -1;
@@ -1047,7 +1054,7 @@ public abstract class IonValueImpl
         _isPositionLoaded(false);
         _isDirty(true);
 
-        _fieldSid           =  0;
+        _fieldSid           =  UNKNOWN_SYMBOL_ID;
         _entry_start        = -1;
         _value_td_start     = -1;
         _value_content_start= -1;
@@ -1063,7 +1070,7 @@ public abstract class IonValueImpl
         // if we have a buffer, and it's not loaded, it has to be clean
         _isDirty(false);
 
-        _fieldSid           = 0;
+        _fieldSid           = UNKNOWN_SYMBOL_ID;
         _type_desc          = typeDesc;
         // FIXME verify or remove - cas: 22 apr 2008
         _entry_start        = 0; // BINARY_VERSION_MARKER_SIZE;
@@ -1078,7 +1085,7 @@ public abstract class IonValueImpl
         _isPositionLoaded(false);
         _isDirty(true);
 
-        _fieldSid           =  0;
+        _fieldSid           =  UNKNOWN_SYMBOL_ID;
         _type_desc          =  0;
         _entry_start        = -1;
         _value_td_start     = -1;
@@ -1173,18 +1180,13 @@ public abstract class IonValueImpl
 
     public final int pos_getFieldIdLen()
     {
+        if (_fieldSid == UNKNOWN_SYMBOL_ID) return 0;
         return IonBinary.lenVarUInt(_fieldSid);
     }
     public final void pos_setFieldId(int fieldNameSid)
     {
-        assert fieldNameSid >= 0;
         int old_field_len = pos_getFieldIdLen();
-        if (fieldNameSid == 0) {
-            _fieldSid = 0;
-        }
-        else {
-            _fieldSid = fieldNameSid;
-        }
+        _fieldSid = fieldNameSid;
         int new_field_len = pos_getFieldIdLen();
         int delta = (new_field_len - old_field_len);
         // with more space taken by the field id, the actual
@@ -1204,7 +1206,7 @@ public abstract class IonValueImpl
     }
     public final boolean pos_isAnnotated()
     {
-        return (this._entry_start + IonBinary.lenVarUInt(this._fieldSid) != this._value_td_start);
+        return (this._entry_start + pos_getFieldIdLen() != this._value_td_start);
     }
     public final int pos_getOffsetAtAnnotationTD()
     {
@@ -1428,7 +1430,7 @@ public abstract class IonValueImpl
 
         _container = null;
         _fieldName = null;
-        _fieldSid = 0;
+        _fieldSid = UNKNOWN_SYMBOL_ID;
         _elementid = 0;
     }
 
@@ -1440,7 +1442,7 @@ public abstract class IonValueImpl
         makeReady();
         String oldname = this._fieldName;
         this._fieldName = name;
-        this._fieldSid  = 0;
+        this._fieldSid  = UNKNOWN_SYMBOL_ID;
         IonContainer container = this._container;
         if (container != null) {
             if (IonType.STRUCT.equals(container.getType())) {
@@ -1689,14 +1691,15 @@ public abstract class IonValueImpl
         //             ^ + len(fid)                      next_start ^
 
         int fieldSidLen = 0;
-        int newFieldSid = 0;
+        int newFieldSid = UNKNOWN_SYMBOL_ID;
         if (_fieldName != null) {
             assert this._container != null;
             assert this._container.pos_getType() == IonConstants.tidStruct;
 
             newFieldSid  = this.resolveSymbol(_fieldName);
-            if (newFieldSid < 1) {
+            if (newFieldSid == UNKNOWN_SYMBOL_ID) {
                 newFieldSid = this.addSymbol(_fieldName);
+                assert newFieldSid != UNKNOWN_SYMBOL_ID;
             }
             fieldSidLen  = IonBinary.lenVarUInt(newFieldSid);
         }

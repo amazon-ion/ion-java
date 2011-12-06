@@ -5,6 +5,7 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_1_0;
 import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
+import static com.amazon.ion.impl.IonValueImpl.makeValueFromReader;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.IonCatalog;
@@ -489,7 +490,7 @@ class SystemValueIteratorImpl
                 IonBinary.Reader reader = buffer.reader();
                 reader.sync();
                 reader.setPosition(_buffer_offset);
-                IonValueImpl value = IonValueImpl.makeValueFromReader(0
+                IonValueImpl value = makeValueFromReader(UNKNOWN_SYMBOL_ID
                                                         ,reader
                                                         ,buffer
                                                         ,_currentSymbolTable
