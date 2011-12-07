@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonLob;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSequence;
@@ -132,9 +133,9 @@ public class IonIteratorImpl
                     _reader.stepIn();
                     while (_reader.next() != null)
                     {
-                        String fieldName = _reader.getFieldName();
+                        InternedSymbol name = _reader.getFieldNameSymbol();
                         IonValue child = readValue();
-                        struct.add(fieldName, child);
+                        struct.add(name, child);
                     }
                     _reader.stepOut();
                     v = struct;

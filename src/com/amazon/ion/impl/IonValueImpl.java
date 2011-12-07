@@ -1018,6 +1018,7 @@ public abstract class IonValueImpl
 
     void pos_init()
     {
+        _fieldName          = null;
         _fieldSid           =  UNKNOWN_SYMBOL_ID;
         _entry_start        = -1;
         _value_td_start     = -1;
@@ -1054,7 +1055,8 @@ public abstract class IonValueImpl
         _isPositionLoaded(false);
         _isDirty(true);
 
-        _fieldSid           =  UNKNOWN_SYMBOL_ID;
+        // Don't do this, we may not have text!
+//      _fieldSid           =  UNKNOWN_SYMBOL_ID;
         _entry_start        = -1;
         _value_td_start     = -1;
         _value_content_start= -1;
@@ -1063,6 +1065,8 @@ public abstract class IonValueImpl
 
     void pos_initDatagram(int typeDesc, int length)
     {
+        assert this instanceof IonDatagram;
+
         _isMaterialized(false);
         _isPositionLoaded(true);
         _hasNativeValue(false);
@@ -1437,6 +1441,7 @@ public abstract class IonValueImpl
     protected void setFieldName(String name)
     {
         assert this._fieldName == null;
+        assert name != null;
 
         // First materialize, because we're gonna mark ourselves dirty.
         makeReady();
@@ -1462,6 +1467,7 @@ public abstract class IonValueImpl
         // in which case we won't be in a halfway state.
         String text = name.getText();
         int sid = name.getId();
+        assert text != null || sid != UNKNOWN_SYMBOL_ID;
 
         // First materialize, because we're gonna mark ourselves dirty.
         makeReady();
@@ -1691,17 +1697,20 @@ public abstract class IonValueImpl
         //             ^ + len(fid)                      next_start ^
 
         int fieldSidLen = 0;
-        int newFieldSid = UNKNOWN_SYMBOL_ID;
-        if (_fieldName != null) {
+        if (_fieldName != null || _fieldSid != UNKNOWN_SYMBOL_ID) {
             assert this._container != null;
             assert this._container.pos_getType() == IonConstants.tidStruct;
 
-            newFieldSid  = this.resolveSymbol(_fieldName);
-            if (newFieldSid == UNKNOWN_SYMBOL_ID) {
-                newFieldSid = this.addSymbol(_fieldName);
-                assert newFieldSid != UNKNOWN_SYMBOL_ID;
+            if (_fieldSid == UNKNOWN_SYMBOL_ID) {
+                int newFieldSid  = this.resolveSymbol(_fieldName);
+                if (newFieldSid == UNKNOWN_SYMBOL_ID) {
+                    newFieldSid = this.addSymbol(_fieldName);
+                    assert newFieldSid != UNKNOWN_SYMBOL_ID;
+                }
+                _fieldSid = newFieldSid;
             }
-            fieldSidLen  = IonBinary.lenVarUInt(newFieldSid);
+
+            fieldSidLen = IonBinary.lenVarUInt(_fieldSid);
         }
 
         int valuelen      = this.getNakedValueLength();
@@ -1724,9 +1733,6 @@ public abstract class IonValueImpl
         _next_start = _value_td_start + tdwithvlenlen + valuelen;
 
         _type_desc = computeTypeDesc(valuelen);
-
-        // overwrite the sid as everything is computed on the new value
-        _fieldSid = newFieldSid;
 
         _isPositionLoaded(true);
 

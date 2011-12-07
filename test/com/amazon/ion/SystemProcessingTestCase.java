@@ -416,7 +416,7 @@ if (table1 == table2) {
             "  imports:[{name:\"fred\", version:2, " +
             "            max_id:" + Symtabs.FRED_MAX_IDS[2] + "}]," +
             "}\n" +
-            "local1 local2 fred_1 fred_2 fred_3 $12 $99 {fred_3:local2}";
+            "local1 local2 fred_1 fred_2 fred_3 $12 $99 {fred_3:local2, $98:$97}";
 
         prepare(text);
 
@@ -462,6 +462,7 @@ if (table1 == table2) {
 // TODO checkAbsentSidLiteral("fred_3", fred3id);
 
         nextValue();
+//        checkSymbol(null, 99);
 // TODO checkUndefinedSidLiteral(99);
 
         nextValue();
@@ -470,6 +471,9 @@ if (table1 == table2) {
         nextValue();
         checkMissingFieldName("fred_3", fred3id, local3id);
         checkSymbol("local2");
+
+        nextValue();
+        checkMissingFieldName(null, 98, 98);
 
         checkEof();
         stepOut();

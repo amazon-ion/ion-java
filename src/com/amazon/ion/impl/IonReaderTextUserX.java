@@ -175,13 +175,17 @@ public class IonReaderTextUserX
     @Override
     public int getFieldId()
     {
-        String fieldname = getFieldName();
-        if (fieldname == null) {
-            return SymbolTable.UNKNOWN_SYMBOL_ID;
+        // Superclass handles hoisting logic
+        int id = super.getFieldId();
+        if (id == SymbolTable.UNKNOWN_SYMBOL_ID)
+        {
+            String fieldname = getRawFieldName();
+            if (fieldname != null)
+            {
+                SymbolTable symbols = getSymbolTable();
+                id = symbols.findSymbol(fieldname);
+            }
         }
-
-        SymbolTable symbols = getSymbolTable();
-        int         id      = symbols.findSymbol(fieldname);
         return id;
     }
 

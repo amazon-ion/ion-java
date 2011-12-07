@@ -290,7 +290,6 @@ public abstract class IonValueLite
 
         // and now values we don't copy
         assert _fieldName == null && _fieldId == UNKNOWN_SYMBOL_ID;
-        this._fieldName = null;
 
         // IonValue.clone() is specified to return a modifiable copy, but the
         // flag assignment above copies all the flags, including locked.

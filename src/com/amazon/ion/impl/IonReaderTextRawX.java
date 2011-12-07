@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.impl.IonTokenConstsX.TOKEN_CLOSE_BRACE;
 import static com.amazon.ion.impl.IonTokenConstsX.TOKEN_CLOSE_PAREN;
 import static com.amazon.ion.impl.IonTokenConstsX.TOKEN_CLOSE_SQUARE;
@@ -258,6 +259,7 @@ public abstract class IonReaderTextRawX
     int                 _value_keyword;
     IonType             _null_type;
     String              _field_name;
+    int                 _field_name_sid = UNKNOWN_SYMBOL_ID;
     int                 _annotation_count;
     String[]            _annotations;
 
@@ -340,6 +342,7 @@ public abstract class IonReaderTextRawX
         _value_keyword = 0;
         _null_type = null;
         _field_name = null;
+        _field_name_sid = UNKNOWN_SYMBOL_ID;
         _annotation_count = 0;
         _current_value_save_point_loaded = false;
         _current_value_buffer_loaded = false;
@@ -402,16 +405,17 @@ public abstract class IonReaderTextRawX
         _v.setAuthoritativeType(IonScalarConversionsX.AS_TYPE.boolean_value);
     }
 
-    private final void set_fieldname(String fieldname) {
-        if (fieldname == null || fieldname.length() < 1) {
+    private final void set_fieldname(String text, int sid) {
+        if (text != null && text.length() < 1) {
             parse_error("empty strings are not valid field names");
         }
-        clear_fieldname();
-        _field_name = fieldname;
+        _field_name = text;
+        _field_name_sid = sid;
     }
 
     private final void clear_fieldname() {
         _field_name = null;
+        _field_name_sid = UNKNOWN_SYMBOL_ID;
     }
 
     private final void append_annotation(String name) {
@@ -815,6 +819,7 @@ public abstract class IonReaderTextRawX
                 _eof = true;
                 return;
             case ACTION_LOAD_FIELD_NAME:
+            {
                 if (!is_in_struct_internal()) {
                     throw new IllegalStateException("field names have to be in structs");
                 }
@@ -822,6 +827,9 @@ public abstract class IonReaderTextRawX
                 finish_and_save_value();
 
                 sb = token_contents_load(t);
+
+                String text;
+                int sid;
 
                 if (t == IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER) {
                     // for a basic (unquoted) token we can use an simple loader
@@ -838,13 +846,22 @@ public abstract class IonReaderTextRawX
                                         + sb.toString()
                                         + " as a field name";
                         parse_error(reason);
+                    case IonTokenConstsX.KEYWORD_sid:
+                        text = null;
+                        sid = IonTokenConstsX.decodeSid(sb);
+                        break;
                     default:
+                        text = sb.toString();
+                        sid = UNKNOWN_SYMBOL_ID;
                         break;
                     }
                 }
+                else {
+                    text = sb.toString();
+                    sid = UNKNOWN_SYMBOL_ID;
+                }
 
-                // TODO ION-58 wrong for SIDs
-                set_fieldname(sb.toString());
+                set_fieldname(text, sid);
                 clear_current_value_buffer();  // token_contents_consumed();
                 t = _scanner.nextToken();
                 if (t != IonTokenConstsX.TOKEN_COLON) {
@@ -856,6 +873,7 @@ public abstract class IonReaderTextRawX
                 set_state(STATE_BEFORE_ANNOTATION_CONTAINED);
                 t = _scanner.nextToken();
                 break;
+            }
             case ACTION_LOAD_ANNOTATION:
                 sb = token_contents_load(t);
                 if (sb.length() < 1) {
@@ -1280,23 +1298,42 @@ if (depth == debugging_depth) {
         }
         return depth;
     }
-    public String getFieldName()
+
+    public final String getFieldName()
     {
+        // For hoisting
+        if (getDepth() == 0 && is_in_struct_internal()) return null;
+
         String name = _field_name;
-        if (name != null) {
-            if (getDepth() == 0 && is_in_struct_internal()) {
-                name = null;
-            }
+        if (name == null && _field_name_sid > 0)
+        {
+            name = "$" + _field_name_sid;
         }
         return name;
     }
 
+    final String getRawFieldName()
+    {
+        // For hoisting
+        if (getDepth() == 0 && is_in_struct_internal()) return null;
+        return _field_name;
+    }
+
+    public int getFieldId()
+    {
+        // For hoisting
+        if (getDepth() == 0 && is_in_struct_internal()) return UNKNOWN_SYMBOL_ID;
+        return _field_name_sid;
+    }
+
     public final InternedSymbol getFieldNameSymbol()
     {
-        String name = getFieldName();
-        // TODO wrong for synthetics in text
-        if (name == null) return null;
+        // For hoisting
+        if (getDepth() == 0 && is_in_struct_internal()) return null;
+
+        String name = _field_name;
         int sid = getFieldId();
+        if (name == null && sid == UNKNOWN_SYMBOL_ID) return null;
         return new InternedSymbolImpl(name, sid);
     }
 

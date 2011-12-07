@@ -357,13 +357,6 @@ public class IonReaderTextSystemX
     // public value routines
     //
 
-    public int getFieldId()
-    {
-        // TODO ION-233 implement sids for system readers
-        return -1;
-        // throw new UnsupportedOperationException("not supported - use UserReader");
-    }
-
     public int[] getTypeAnnotationIds()
     {
         // TODO ION-233 implement sids for system readers
