@@ -178,19 +178,7 @@ public abstract class ReaderSystemProcessingTestCase
     @Override
     protected final void checkSymbol(String expectedText, int expectedSid)
     {
-        assertSame(IonType.SYMBOL, myReader.getType());
-
-        assertFalse(myReader.isNullValue());
-
-        String expectedStringValue =
-            (expectedText == null ? "$" + expectedSid : expectedText);
-        assertEquals("IonReader.stringValue()",
-                     expectedStringValue, myReader.stringValue());
-
-        assertEquals(expectedSid, myReader.getSymbolId());
-
-        InternedSymbol sym = myReader.symbolValue();
-        checkSymbol(expectedText, expectedSid, sym);
+        IonAssert.checkSymbol(myReader, expectedText, expectedSid);
     }
 
 

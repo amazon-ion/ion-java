@@ -186,6 +186,28 @@ public class IonAssert
     }
 
 
+    /**
+     * @param expectedText null means absent
+     */
+    public static void checkSymbol(IonReader in,
+                                   String expectedText,
+                                   int expectedSid)
+    {
+        assertSame(IonType.SYMBOL, in.getType());
+
+        assertFalse(in.isNullValue());
+
+        String expectedStringValue =
+            (expectedText == null ? "$" + expectedSid : expectedText);
+        assertEquals("IonReader.stringValue()",
+                     expectedStringValue, in.stringValue());
+
+        assertEquals(expectedSid, in.getSymbolId());
+
+        InternedSymbol sym = in.symbolValue();
+        IonTestCase.checkSymbol(expectedText, expectedSid, sym);
+    }
+
     //========================================================================
     // DOM assertions
 
