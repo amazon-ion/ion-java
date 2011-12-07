@@ -262,6 +262,7 @@ abstract class IonWriterSystem
         }
         _field_name_type = IonType.INT;
         _field_name_sid = id;
+        _field_name = null;
     }
 
     final InternedSymbol getFieldNameSymbol()

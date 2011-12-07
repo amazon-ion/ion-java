@@ -87,15 +87,7 @@ public abstract class ReaderSystemProcessingTestCase
      */
     final void checkFieldName(String expectedText, int expectedSid)
     {
-        String expectedStringValue =
-            (expectedText == null ? "$" + expectedSid : expectedText);
-        assertEquals("IonReader.getFieldName()",
-                     expectedStringValue, myReader.getFieldName());
-
-        assertEquals(expectedSid, myReader.getFieldId());
-
-        InternedSymbol sym = myReader.getFieldNameSymbol();
-        checkSymbol(expectedText, expectedSid, sym);
+        IonAssert.expectField(myReader, expectedText, expectedSid);
     }
 
 

@@ -6,6 +6,7 @@ import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
 import static com.amazon.ion.Symtabs.GINGER_MAX_IDS;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.TestUtils.FERMATA;
+import static com.amazon.ion.junit.IonAssert.expectField;
 import static com.amazon.ion.junit.IonAssert.expectNextField;
 
 import com.amazon.ion.EmptySymbolException;
@@ -198,6 +199,23 @@ public abstract class IonWriterTestCase
 
     // TODO test stepOut() when at top-level
 
+    @Test
+    public void testWritingFieldName()
+        throws Exception
+    {
+        iw = makeWriter();
+        iw.stepIn(IonType.STRUCT);
+        iw.setFieldName("foo");
+        iw.setFieldId(99);
+        iw.writeNull();
+        iw.stepOut();
+
+        IonReader r = reread();
+        r.next();
+        r.stepIn();
+        r.next();
+        expectField(r, null, 99);
+    }
 
     @Test
     public void testWriteInt()

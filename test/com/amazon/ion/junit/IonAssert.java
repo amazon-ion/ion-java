@@ -16,6 +16,7 @@ import com.amazon.ion.IonLob;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonStruct;
+import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import java.util.ArrayList;
@@ -123,6 +124,24 @@ public class IonAssert
         assertTopLevel(in);
         assertEof(in);
         assertTopLevel(in);
+    }
+
+    /**
+     * @param expectedText null means absent
+     */
+    public static void expectField(IonReader in,
+                                   String expectedText,
+                                   int expectedSid)
+    {
+        String expectedStringValue =
+            (expectedText == null ? "$" + expectedSid : expectedText);
+        assertEquals("IonReader.getFieldName()",
+                     expectedStringValue, in.getFieldName());
+
+        assertEquals(expectedSid, in.getFieldId());
+
+        InternedSymbol sym = in.getFieldNameSymbol();
+        IonTestCase.checkSymbol(expectedText, expectedSid, sym);
     }
 
     public static void expectField(IonReader in, InternedSymbol sym)
