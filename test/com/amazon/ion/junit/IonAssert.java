@@ -2,6 +2,7 @@
 
 package com.amazon.ion.junit;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.util.IonTextUtils.printSymbol;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -44,7 +45,7 @@ public class IonAssert
 
         if (! inStruct) {
             assertEquals("reader field name", null, in.getFieldName());
-            assertTrue("reader shouldn't have fieldId", in.getFieldId() < 1);
+            assertEquals("reader fieldId", UNKNOWN_SYMBOL_ID, in.getFieldId());
             assertEquals("reader field symbol", null, in.getFieldNameSymbol());
         }
 

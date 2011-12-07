@@ -599,7 +599,7 @@ public abstract class IonReaderTextRawX
                            + _scanner.input_position();
             throw new IonException(message);
         }
-        if (_nesting_parent != null) {
+        if (_nesting_parent != null && getDepth() == 0) {
             state_after_scalar = STATE_EOF;
         }
         return state_after_scalar;
@@ -696,6 +696,9 @@ public abstract class IonReaderTextRawX
                         + _scanner.input_position();
                     throw new IonException(message);
             }
+            if (_nesting_parent != null && getDepth() == 0) {
+                new_state = STATE_EOF;
+            }
         }
         return new_state;
     }
@@ -771,6 +774,7 @@ public abstract class IonReaderTextRawX
             switch (action) {
             case ACTION_NOT_DEFINED:
                 {
+                    // TODO why would we get here?
                     boolean span_eof = false;
 
                     if (_nesting_parent != null) {

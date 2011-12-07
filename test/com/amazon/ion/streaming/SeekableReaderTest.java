@@ -100,7 +100,7 @@ public class SeekableReaderTest
     @Test
     public void testHoistingWithinContainers()
     {
-        read("{f:v,g:[c]} s");
+        read("{f:v,g:[c, (d), e]} s");
 
         in.next();
         in.stepIn();
@@ -113,7 +113,6 @@ public class SeekableReaderTest
                 in.next();
                 assertEquals("c", in.stringValue());
                 Span cPos = sr.currentSpan();
-                expectEof();
             in.stepOut();
             expectEof();
         in.stepOut();
@@ -141,7 +140,14 @@ public class SeekableReaderTest
         in.stepIn();
             in.next();
             assertEquals("c", in.stringValue());
-            assertEquals(null, in.next());
+            assertEquals(IonType.SEXP, in.next()); // (d)
+            in.stepIn();
+                in.next();
+                assertEquals("d", in.stringValue());
+                expectEof();
+            in.stepOut();
+            assertEquals(IonType.SYMBOL, in.next());
+            assertEquals("e", in.stringValue());
             expectEof();
         in.stepOut();
         expectTopEof();
