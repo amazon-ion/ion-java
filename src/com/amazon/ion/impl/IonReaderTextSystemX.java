@@ -2,6 +2,8 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.IonScalarConversionsX.getValueTypeName;
+
 import com.amazon.ion.Decimal;
 import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonBlob;
@@ -323,7 +325,6 @@ public class IonReaderTextSystemX
                 case AS_TYPE.string_value:
                     int sid = _v.getInt();
                     String sym = getSymbolTable().findKnownSymbol(sid);
-                    // TODO what if sym is null?
                     _v.addValue(sym);
                     break;
                 case AS_TYPE.int_value:
@@ -333,9 +334,9 @@ public class IonReaderTextSystemX
                     break;
                 default:
                 {   String message = "can't cast symbol from "
-                        +IonScalarConversionsX.getValueTypeName(_v.getAuthoritativeType())
+                        +getValueTypeName(_v.getAuthoritativeType())
                         +" to "
-                        +IonScalarConversionsX.getValueTypeName(new_type);
+                        +getValueTypeName(new_type);
                     throw new CantConvertException(message);
                 }
             }
@@ -343,9 +344,9 @@ public class IonReaderTextSystemX
         else {
             if (!_v.can_convert(new_type)) {
                 String message = "can't cast from "
-                    +IonScalarConversionsX.getValueTypeName(_v.getAuthoritativeType())
+                    +getValueTypeName(_v.getAuthoritativeType())
                     +" to "
-                    +IonScalarConversionsX.getValueTypeName(new_type);
+                    +getValueTypeName(new_type);
                 throw new CantConvertException(message);
             }
             int fnid = _v.get_conversion_fnid(new_type);
