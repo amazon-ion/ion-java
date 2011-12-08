@@ -332,6 +332,11 @@ public final class IonSystemImpl
     {
         if (ionData == null) throw new NullPointerException();
 
+        if (true && !system) {
+            IonReader reader = newReader(ionData);
+            return new IonIteratorImpl(this, reader);
+        }
+
         SystemValueIterator systemReader;
         boolean binaryData;
         try

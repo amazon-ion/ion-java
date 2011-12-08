@@ -229,7 +229,8 @@ public abstract class ContainerTestCase
     }
 
 
-    @Test
+    /** TODO ION-165 datagram is lazy creating local symtabs */
+    @Test @Ignore
     public void testDetachHasDifferentSymtab()
     {
         String data = wrap("sym1", "[sym2]", "{f:sym3}", "a::3");
@@ -247,6 +248,7 @@ it.next();
         if (list instanceof IonDatagram) return;
 
         SymbolTable topSymtab = list.getSymbolTable();
+        checkLocalTable(topSymtab);
         assertNotNull(topSymtab);
 
         {

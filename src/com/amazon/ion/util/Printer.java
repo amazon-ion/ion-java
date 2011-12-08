@@ -8,6 +8,7 @@ import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.SYMBOLS;
 
 import com.amazon.ion.Decimal;
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonClob;
@@ -599,6 +600,32 @@ public class Printer
             myOut.append(close);
         }
 
+        public void writeSymbolToken(InternedSymbol sym) throws IOException
+        {
+            String text = sym.getText();
+            if (text != null)
+            {
+                writeSymbol(text);
+            }
+            else
+            {
+                int sid = sym.getId();
+                if (sid < 1)
+                {
+                    throw new IllegalArgumentException("Bad SID " + sid);
+                }
+
+                text = "$" + sym.getId();
+                if (myOptions.symbolAsString)
+                {
+                    writeString(text);
+                }
+                else
+                {
+                    myOut.append(text);  // SID literal is never quoted
+                }
+            }
+        }
 
         public void writeSymbol(String text) throws IOException
         {
@@ -1066,7 +1093,8 @@ public class Printer
                     }
                     hitOne = true;
 
-                    writeSymbol(child.getFieldName());
+                    InternedSymbol sym = child.getFieldNameSymbol();
+                    writeSymbolToken(sym);
                     myOut.append(':');
                     writeChild(child, true);
                 }

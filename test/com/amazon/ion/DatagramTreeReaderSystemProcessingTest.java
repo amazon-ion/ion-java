@@ -3,6 +3,7 @@
 package com.amazon.ion;
 
 import static com.amazon.ion.DatagramMaker.FROM_BYTES_TEXT;
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 
 import com.amazon.ion.junit.Injected.Inject;
 import org.junit.After;
@@ -102,6 +103,12 @@ public class DatagramTreeReaderSystemProcessingTest
                                   int expectedLocalSid)
         throws Exception
     {
+        if (expectedText == null)
+        {
+            checkFieldName(expectedText, expectedEncodedSid);
+            return false;
+        }
+
         if (myLoadTime == LoadTime.LOAD_IN_PREPARE)
         {
             // The datagram loaded the text and encoded sid during prepare,
@@ -119,7 +126,7 @@ public class DatagramTreeReaderSystemProcessingTest
 
         // The datagram was loaded after the catalog changed.
         // We have no way to find the encoded sid, so a local one is assigned.
-        checkFieldName(expectedText, expectedLocalSid);
+        checkFieldName(expectedText, UNKNOWN_SYMBOL_ID);
         return true;
     }
 
@@ -145,7 +152,7 @@ public class DatagramTreeReaderSystemProcessingTest
 
         // The datagram was loaded after the catalog changed.
         // We have no way to find the encoded sid, so a local one is assigned.
-        checkSymbol(expectedText, expectedLocalSid);
+        checkSymbol(expectedText, UNKNOWN_SYMBOL_ID);
         return true;
     }
 }

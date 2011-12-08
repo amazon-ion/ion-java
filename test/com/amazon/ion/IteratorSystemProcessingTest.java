@@ -2,6 +2,8 @@
 
 package com.amazon.ion;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+
 import com.amazon.ion.impl.IonSystemPrivate;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -105,7 +107,15 @@ public class IteratorSystemProcessingTest
                                   int expectedLocalSid)
         throws Exception
     {
-        checkFieldName(expectedText, expectedLocalSid);
+        // Behavior for most text-based sources
+        if (expectedText == null)
+        {
+            checkFieldName(expectedText, expectedLocalSid);
+        }
+        else
+        {
+            checkFieldName(expectedText, UNKNOWN_SYMBOL_ID);
+        }
 
         // when missing from a shared table the symbol
         // will have been added to the local symbols
@@ -141,7 +151,7 @@ public class IteratorSystemProcessingTest
         for (int i = 0; i < expecteds.length; i++)
         {
             int foundSid = symtab.findSymbol(expecteds[i]);
-            if (foundSid != SymbolTable.UNKNOWN_SYMBOL_ID)
+            if (foundSid != UNKNOWN_SYMBOL_ID)
             {
                 assertEquals("symbol id", expectedSids[i], foundSid);
             }
@@ -202,7 +212,7 @@ public class IteratorSystemProcessingTest
                                          int expectedLocalSid)
         throws Exception
     {
-        checkSymbol(expectedText, expectedLocalSid, myCurrentValue);
+        checkSymbol(expectedText, UNKNOWN_SYMBOL_ID, myCurrentValue);
 
         // when missing from a shared table the symbol
         // will have been added to the local symbols

@@ -94,8 +94,7 @@ public class IonIteratorImpl
                     v = _valueFactory.newBool(_reader.booleanValue());
                     break;
                 case INT:
-                    // FIXME should use bigInteger
-                    v = _valueFactory.newInt(_reader.longValue());
+                    v = _valueFactory.newInt(_reader.bigIntegerValue());
                     break;
                 case FLOAT:
                     v = _valueFactory.newFloat(_reader.doubleValue());

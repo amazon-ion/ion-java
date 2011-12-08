@@ -582,14 +582,7 @@ public class IonDatagramLite
 
     public ListIterator<IonValue> systemIterator()
     {
-        // read only values have already had their
-        // symbols updated, and should not be modified
-        if (isReadOnly() == false) {
-            populateSymbolValues(null);
-        }
-
-        ListIterator<IonValue> iterator = new SystemContentIterator(this.isReadOnly());
-        return iterator;
+        return new SystemContentIterator(isReadOnly());
     }
 
 

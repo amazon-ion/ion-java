@@ -2,7 +2,6 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl.IonValuePrivate;
 import java.util.Iterator;
 
 /**
@@ -37,9 +36,6 @@ public class NewDatagramIteratorSystemProcessingTest
 
         writer.writeValues(reader);
         writer.close();
-
-        // not needed, used populateSymbolValue instead: datagram.deepMaterialize();
-        ((IonValuePrivate)datagram).populateSymbolValues(null);
 
         return datagram.iterator();
     }

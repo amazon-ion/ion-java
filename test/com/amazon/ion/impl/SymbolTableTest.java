@@ -242,7 +242,7 @@ public class SymbolTableTest
         IonValue value = scanner.next();
         SymbolTable symtab = value.getSymbolTable();
         checkLocalTable(symtab);
-        checkSymbol("local2", local2id, value);
+        checkSymbol("local2", value);
 
         value = scanner.next();
         checkSymbol("local1", local1id, value);

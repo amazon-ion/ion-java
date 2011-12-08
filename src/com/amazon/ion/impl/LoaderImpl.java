@@ -139,9 +139,6 @@ public class LoaderImpl
             else {
                 dg = new IonDatagramImpl(mySystem, myCatalog, ionData);
             }
-
-            // Force symtab preparation  FIXME should not be necessary
-            dg.byteSize();
         }
         catch (IOException e)  // Not expected since we're reading a buffer.
         {

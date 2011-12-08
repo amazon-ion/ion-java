@@ -135,13 +135,13 @@ public class IonSymbolLite
             if (_sid > 0 || isReadOnly()) {
                 return _sid;
             }
-            symtab = _context.getLocalSymbolTable(this);
         }
-        InternedSymbol is = symtab.intern(name);
-        _sid = is.getId();
-        _set_value(is.getText()); // Use the interned instance of the text
-
-        assert _sid > 0;
+        InternedSymbol is = symtab.find(name);
+        if (is != null)
+        {
+            _sid = is.getId();
+            _set_value(is.getText()); // Use the interned instance of the text
+        }
         return _sid;
     }
 

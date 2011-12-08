@@ -203,14 +203,7 @@ public final class IonSymbolImpl
             }
             if (symtab != null) {
                 String name = _get_value();
-                if (symtab.isLocalTable())
-                {
-                    mySid = symtab.addSymbol(name);
-                }
-                else
-                {
-                    mySid = symtab.findSymbol(name);
-                }
+                mySid = symtab.findSymbol(name);
             }
         }
 

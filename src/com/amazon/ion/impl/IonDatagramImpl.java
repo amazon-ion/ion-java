@@ -185,8 +185,6 @@ public final class IonDatagramImpl
             IonWriter treeWriter = system.newTreeSystemWriter(this);
 
             treeWriter.writeValues(ionData);
-
-            populateSymbolValues(null);
         }
     }
 

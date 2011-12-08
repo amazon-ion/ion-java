@@ -19,7 +19,6 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.IonValuePrivate;
@@ -339,6 +338,17 @@ public abstract class IonValueLite
         return this._elementid();
     }
 
+    private int findSymbol(String text)
+    {
+        SymbolTable symbolTable = getSymbolTable();
+        if (symbolTable != null)
+        {
+            InternedSymbol is = symbolTable.find(_fieldName);
+            if (is != null) return is.getId();
+        }
+        return UNKNOWN_SYMBOL_ID;
+    }
+
     public final int getFieldId()
     {
         if (_fieldId != UNKNOWN_SYMBOL_ID || _fieldName == null)
@@ -346,32 +356,23 @@ public abstract class IonValueLite
             return _fieldId;
         }
 
-        SymbolTable symbolTable = getSymbolTable();
-        if (symbolTable == null) return UNKNOWN_SYMBOL_ID;
-
-        InternedSymbol is = symbolTable.find(_fieldName);
-        if (is != null) return is.getId();
-
-        if (! isReadOnly())
-        {
-            symbolTable = _context.getLocalSymbolTable(this);
-            is = symbolTable.intern(_fieldName);
-            _fieldName = is.getText();
-            _fieldId   = is.getId();
-        }
-        return _fieldId;
+        int sid = findSymbol(_fieldName);
+        return sid;
     }
 
 
     public final InternedSymbol getFieldNameSymbol()
     {
-        final int sid = _fieldId;
-        final String fieldName;
+        int sid = _fieldId;
+        String text;
         if (_fieldName != null) {
-            fieldName = _fieldName;
+            text = _fieldName;
+            if (sid == UNKNOWN_SYMBOL_ID) {
+                sid = findSymbol(_fieldName);
+            }
         }
         else if (sid > 0) {
-            fieldName = getSymbolTable().findKnownSymbol(sid);
+            text = getSymbolTable().findKnownSymbol(sid);
             // TODO memoize interned text?
         }
         else {
@@ -379,24 +380,7 @@ public abstract class IonValueLite
             return null;
         }
 
-        return new InternedSymbol()
-        {
-            public String getText()
-            {
-                return fieldName;
-            }
-
-            public int getId()
-            {
-                return getFieldId();
-            }
-
-            public String assumeText()
-            {
-                if (fieldName != null) return fieldName;
-                throw new UnknownSymbolException(getFieldId());
-            }
-        };
+        return IonImplUtils.newInternedSymbol(text, sid);
     }
 
 

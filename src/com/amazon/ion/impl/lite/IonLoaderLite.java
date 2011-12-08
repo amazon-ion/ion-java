@@ -64,7 +64,6 @@ public class IonLoaderLite
         IonDatagramLite datagram = new IonDatagramLite(_system, _catalog);
         IonWriter writer = IonWriterFactory.makeWriter(datagram);
         writer.writeValues(reader);
-        datagram.populateSymbolValues(null);
         return datagram;
     }
 

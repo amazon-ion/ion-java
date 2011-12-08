@@ -990,7 +990,6 @@ public class StructTest
         IonStruct s = (IonStruct) oneValue("{f:12}");
         IonValue f = s.get("f");
         assertEquals("f", f.getFieldName());
-        assertTrue(0 < f.getFieldId());
 
         IonValue clone = f.clone();
         assertNull("field name shouldn't be cloned", clone.getFieldName());

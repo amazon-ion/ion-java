@@ -26,10 +26,6 @@ public class LoadTextStreamSystemProcessingTest
         InputStream in = new ByteArrayInputStream(myBytes);
         IonLoader loader = loader();
         IonDatagram datagram = loader.load(in);
-
-        // Force symtab preparation  FIXME should not be necessary
-        datagram.byteSize();
-
         return datagram;
     }
 }
