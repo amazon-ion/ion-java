@@ -44,15 +44,16 @@ import com.amazon.ion.impl.IonImplUtilsTest;
 import com.amazon.ion.impl.IonWriterTests;
 import com.amazon.ion.impl.IterationTest;
 import com.amazon.ion.impl.LocalSymbolTableTest;
-import com.amazon.ion.impl.ReaderTest;
 import com.amazon.ion.impl.SharedSymbolTableTest;
 import com.amazon.ion.impl.SymbolTableTest;
 import com.amazon.ion.impl.TreeReaderTest;
 import com.amazon.ion.streaming.BadIonStreamingTest;
 import com.amazon.ion.streaming.BinaryStreamingTest;
 import com.amazon.ion.streaming.GoodIonStreamingTest;
+import com.amazon.ion.streaming.InputStreamReaderTest;
 import com.amazon.ion.streaming.MiscStreamingTest;
 import com.amazon.ion.streaming.ReaderSkippingTest;
+import com.amazon.ion.streaming.ReaderTest;
 import com.amazon.ion.streaming.RoundTripStreamingTest;
 import com.amazon.ion.streaming.SpanTests;
 import com.amazon.ion.system.IonSystemBuilderTest;
@@ -116,7 +117,6 @@ import org.junit.runners.Suite;
     JarInfoTest.class,
     LoaderTest.class,
     IterationTest.class,
-    ReaderTest.class,
     PrinterTest.class,
     SymbolTableTest.class,
     SharedSymbolTableTest.class,
@@ -146,6 +146,7 @@ import org.junit.runners.Suite;
     MiscStreamingTest.class,
     BinaryStreamingTest.class,
     ReaderTest.class,
+    InputStreamReaderTest.class,
 
     BadIonStreamingTest.class,
     GoodIonStreamingTest.class,

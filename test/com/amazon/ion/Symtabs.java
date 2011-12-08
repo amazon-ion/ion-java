@@ -4,6 +4,7 @@ package com.amazon.ion;
 
 import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+import static com.amazon.ion.util.IonTextUtils.printString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
@@ -158,4 +159,21 @@ public class Symtabs
         return s;
     }
 
+
+    public static String printLocalSymtab(String... symbols)
+    {
+        StringBuilder s = new StringBuilder(LocalSymbolTablePrefix);
+
+        s.append("{symbols:[");
+
+        for (String symbol : symbols)
+        {
+            s.append(printString(symbol));
+            s.append(',');
+        }
+
+        s.append("]} ");
+
+        return s.toString();
+    }
 }

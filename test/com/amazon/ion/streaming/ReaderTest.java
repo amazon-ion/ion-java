@@ -2,13 +2,16 @@
 
 package com.amazon.ion.streaming;
 
+import static com.amazon.ion.Symtabs.printLocalSymtab;
 import static com.amazon.ion.impl.IonImplUtils.intIterator;
 
+import com.amazon.ion.BinaryTest;
 import com.amazon.ion.IonType;
 import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Iterator;
 import org.junit.Test;
 
@@ -21,6 +24,25 @@ public class ReaderTest
     @Inject("readerMaker")
     public static final ReaderMaker[] READER_MAKERS = ReaderMaker.values();
 
+
+    @Test
+    public void testNullInt()
+    {
+        {
+            read("null.int");
+            assertEquals(IonType.INT, in.next());
+            assertTrue(in.isNullValue());
+            assertEquals(null, in.bigIntegerValue());
+        }
+        {
+            for (final String hex : Arrays.asList("E0 01 00 EA 2F", "E0 01 00 EA 3F")) {
+                read(BinaryTest.hexToBytes(hex));
+                assertEquals(IonType.INT, in.next());
+                assertTrue(in.isNullValue());
+                assertEquals(null, in.bigIntegerValue());
+            }
+        }
+    }
 
     @Test
     public void testStepInOnNull() throws IOException
@@ -68,9 +90,11 @@ public class ReaderTest
     public void testIterateTypeAnnotationIds()
     throws Exception
     {
-        if (myReaderMaker.sourceIsText()) return;
+        String ionText =
+            printLocalSymtab("ann", "ben")
+            + "ann::ben::null";
 
-        read("ann::ben::null");
+        read(ionText);
 
         in.next();
         Iterator<Integer> typeIds = in.iterateTypeAnnotationIds();

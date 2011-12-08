@@ -7,6 +7,7 @@ import static com.amazon.ion.TestUtils.ensureText;
 
 import com.amazon.ion.impl.IonImplUtils;
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -103,6 +104,17 @@ public enum ReaderMaker
     FROM_INPUT_STREAM_BINARY(Feature.BINARY, Feature.STREAM)
     {
         @Override
+        public IonReader newReader(IonSystem system, byte[] ionData,
+                                   InputStreamWrapper wrapper)
+            throws IOException
+        {
+            ionData = ensureBinary(system, ionData);
+            InputStream in = new ByteArrayInputStream(ionData);
+            InputStream wrapped = wrapper.wrap(in);
+            return system.newReader(wrapped);
+        }
+
+        @Override
         public IonReader newReader(IonSystem system, byte[] ionData)
         {
             ionData = ensureBinary(system, ionData);
@@ -117,6 +129,17 @@ public enum ReaderMaker
      */
     FROM_INPUT_STREAM_TEXT(Feature.TEXT, Feature.STREAM)
     {
+        @Override
+        public IonReader newReader(IonSystem system, byte[] ionData,
+                                   InputStreamWrapper wrapper)
+            throws IOException
+        {
+            ionData = ensureText(system, ionData);
+            InputStream in = new ByteArrayInputStream(ionData);
+            InputStream wrapped = wrapper.wrap(in);
+            return system.newReader(wrapped);
+        }
+
         @Override
         public IonReader newReader(IonSystem system, byte[] ionData)
         {
@@ -187,6 +210,22 @@ public enum ReaderMaker
         IonDatagram dg = system.getLoader().load(ionData);
         String ionText = dg.toString();
         return newReader(system, ionText);
+    }
+
+
+    public IonReader newReader(IonSystem system, byte[] ionData,
+                               InputStreamWrapper wrapper)
+        throws IOException
+    {
+        return newReader(system, ionData);
+    }
+
+
+    public IonReader newReader(IonSystem system, InputStream ionData)
+        throws IOException
+    {
+        byte[] bytes = IonImplUtils.loadStreamBytes(ionData);
+        return newReader(system, bytes);
     }
 
 

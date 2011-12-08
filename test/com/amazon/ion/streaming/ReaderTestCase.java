@@ -2,6 +2,7 @@
 
 package com.amazon.ion.streaming;
 
+import com.amazon.ion.InputStreamWrapper;
 import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
@@ -9,6 +10,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.junit.IonAssert;
+import java.io.IOException;
 import org.junit.After;
 
 
@@ -35,12 +37,18 @@ public abstract class ReaderTestCase
 
     //========================================================================
 
-    protected void read(byte[] ionData)
+    void read(byte[] ionData)
     {
         in = myReaderMaker.newReader(system(), ionData);
     }
 
-    protected void read(String ionText)
+    void read(byte[] ionData, InputStreamWrapper wrapper)
+        throws IOException
+    {
+        in = myReaderMaker.newReader(system(), ionData, wrapper);
+    }
+
+    void read(String ionText)
     {
         in = myReaderMaker.newReader(system(), ionText);
     }
