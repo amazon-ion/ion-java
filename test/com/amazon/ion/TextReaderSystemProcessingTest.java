@@ -2,6 +2,8 @@
 
 package com.amazon.ion;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+
 import org.junit.Assert;
 
 
@@ -38,11 +40,17 @@ public class TextReaderSystemProcessingTest
                                   int expectedLocalSid)
         throws Exception
     {
-        // When reading text and symtab is missing, we'll get the name right
-        // but we won't know the right sid.
-        // note that this form of checkSymbol does force a sid
-        // to be assigned to this symbol will have an id
-        checkFieldName(expectedText, expectedLocalSid);
+        if (expectedText == null)
+        {
+            checkFieldName(expectedText, expectedEncodedSid);
+        }
+        else
+        {
+            // When reading text and symbol is missing, we'll get the name right
+            // but we won't know the right sid.  Also there's no need to have
+            // the text reader lazily assign SIDs.
+            checkFieldName(expectedText, UNKNOWN_SYMBOL_ID);
+        }
 
         // when missing from a shared table the symbol
         // will have been added to the local symbols
@@ -59,7 +67,7 @@ public class TextReaderSystemProcessingTest
         // but we won't know the right sid.
         // note that this form of checkSymbol does force a sid
         // to be assigned to this symbol will have an id
-        checkSymbol(expectedText, expectedLocalSid);
+        checkSymbol(expectedText, UNKNOWN_SYMBOL_ID);
 
         // when missing from a shared table the symbol
         // will have been added to the local symbols

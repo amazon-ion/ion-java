@@ -87,8 +87,7 @@ public abstract class SystemProcessingTestCase
     protected abstract IonType currentValueType()
         throws Exception;
 
-    protected abstract SymbolTable currentSymtab()
-        throws Exception;
+    abstract SymbolTable currentSymtab();
 
 
     /**
@@ -331,8 +330,7 @@ if (table1 == table2) {
         assertTrue(systemMaxId() + 2 >= table2.getMaxId());
 
         nextValue();
-        checkSymbol("foo", systemMaxId() + 2);
-        assertEquals(systemMaxId() + 2, table2.getMaxId());
+        checkSymbol("foo");
         assertSame(table2, currentSymtab());
     }
 
@@ -396,8 +394,6 @@ if (table1 == table2) {
         final int fred3id = systemMaxId() + 3;
 
         final int local = systemMaxId() + Symtabs.FRED_MAX_IDS[2];
-        final int local1id = local + 1;
-        final int local2id = local + 2;
         final int local3id = local + 3;
 
         SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
@@ -441,10 +437,10 @@ if (table1 == table2) {
         startIteration();
 
         nextValue();
-        checkSymbol("local1", local1id);
+        checkSymbol("local1");
 
         nextValue();
-        checkSymbol("local2", local2id);
+        checkSymbol("local2");
 
         nextValue();
         checkSymbol("fred_1", fred1id);
@@ -474,6 +470,7 @@ if (table1 == table2) {
 
         nextValue();
         checkMissingFieldName(null, 98, 98);
+// TODO checkSymbol(null, 97);
 
         checkEof();
         stepOut();
@@ -550,31 +547,22 @@ if (table1 == table2) {
         startIteration();
 
         nextValue();
-        checkSymbol("local1", local1id);
+        checkSymbol("local1");
 
         nextValue();
-        checkSymbol("local2", local2id);
+        checkSymbol("local2");
 
         nextValue();
         checkSymbol("fred_1", fred1id_symtab);
 
         nextValue();
-        boolean is_fred2_a_local_symbol =
-            checkMissingSymbol("fred_2", fred2id_symtab, local3id);
+        checkMissingSymbol("fred_2", fred2id_symtab, local3id);
 
         nextValue();
         checkSymbol("fred_3", fred3id_symtab);
 
         nextValue();
-
-        int fred_5_local_id;
-        if (is_fred2_a_local_symbol) {
-            fred_5_local_id = local4id;
-        }
-        else {
-            fred_5_local_id = local3id;
-        }
-        checkSymbol("fred_5", fred_5_local_id);
+        checkSymbol("fred_5");
 
         checkEof();
     }
@@ -607,7 +595,7 @@ if (table1 == table2) {
         assertNull(system().getCatalog().getTable("imported"));
 
         nextValue();
-        checkSymbol("imported 2", 10);
+        checkSymbol("imported 2");
     }
 
 

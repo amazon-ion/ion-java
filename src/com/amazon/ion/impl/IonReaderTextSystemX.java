@@ -459,7 +459,7 @@ public class IonReaderTextSystemX
         return symtab;
     }
 
-    public int getSymbolId()
+    public final int getSymbolId()
     {
         if (_value_type != IonType.SYMBOL) throw new IllegalStateException();
         if (_v.isNull()) throw new NullValueException();
@@ -472,8 +472,7 @@ public class IonReaderTextSystemX
 
         final SymbolTable symtab = getSymbolTable();
         final String text = stringValue();
-        if (symtab.isReadOnly()) return symtab.findSymbol(text);
-        return symtab.addSymbol(text);
+        return symtab.findSymbol(text);
     }
 
     public InternedSymbol symbolValue()
@@ -489,28 +488,8 @@ public class IonReaderTextSystemX
         }
 
         final SymbolTable symtab = getSymbolTable();
-        InternedSymbol is = new InternedSymbol()
-        {
-            public String getText()
-            {
-                return text;
-            }
-
-            public int getId()
-            {
-                if (symtab.isReadOnly())
-                {
-                    return symtab.findSymbol(text);
-                }
-                return symtab.addSymbol(text);
-            }
-
-            public String assumeText()
-            {
-                return text;
-            }
-        };
-        return is;
+        final int sid = symtab.findSymbol(text);
+        return new InternedSymbolImpl(text, sid);
     }
 
     //

@@ -216,7 +216,7 @@ public class IteratorSystemProcessingTest
     }
 
     @Override
-    protected SymbolTable currentSymtab() throws Exception
+    SymbolTable currentSymtab()
     {
         return myCurrentValue.getSymbolTable();
     }

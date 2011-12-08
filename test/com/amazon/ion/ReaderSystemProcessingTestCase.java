@@ -76,7 +76,7 @@ public abstract class ReaderSystemProcessingTestCase
     }
 
     @Override
-    protected SymbolTable currentSymtab() throws Exception
+    SymbolTable currentSymtab()
     {
         return myReader.getSymbolTable();
     }
