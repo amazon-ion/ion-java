@@ -461,8 +461,7 @@ if (table1 == table2) {
 // TODO checkAbsentSidLiteral("fred_3", fred3id);
 
         nextValue();
-//        checkSymbol(null, 99);
-// TODO checkUndefinedSidLiteral(99);
+        checkSymbol(null, 99);
 
         nextValue();
         stepIn();
@@ -474,7 +473,7 @@ if (table1 == table2) {
 
                 nextValue();
                 checkMissingFieldName(null, 98, 98);
-        // TODO checkSymbol(null, 97);
+                checkSymbol(null, 97);
 
                 checkEof();
             stepOut();

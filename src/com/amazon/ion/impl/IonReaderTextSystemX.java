@@ -442,7 +442,14 @@ public class IonReaderTextSystemX
         if (_v.isNull()) return null;
 
         load_or_cast_cached_value(AS_TYPE.string_value);
-        return _v.getString();
+        String text = _v.getString();
+        if (text == null) {
+            assert _value_type == IonType.SYMBOL;
+            int sid = _v.getInt();
+            assert sid > 0;
+            text = "$" + sid;
+        }
+        return text;
     }
 
     /**
@@ -464,15 +471,8 @@ public class IonReaderTextSystemX
         if (_value_type != IonType.SYMBOL) throw new IllegalStateException();
         if (_v.isNull()) throw new NullValueException();
 
-        // TODO ION-233 implement sids for system readers
-        if (_v.hasValueOfType(AS_TYPE.int_value))
-        {
-            return _v.getInt();
-        }
-
-        final SymbolTable symtab = getSymbolTable();
-        final String text = stringValue();
-        return symtab.findSymbol(text);
+        load_or_cast_cached_value(AS_TYPE.int_value);
+        return _v.getInt();
     }
 
     public InternedSymbol symbolValue()
@@ -480,15 +480,14 @@ public class IonReaderTextSystemX
         if (_value_type != IonType.SYMBOL) throw new IllegalStateException();
         if (_v.isNull()) return null;
 
-        final String text = stringValue();
-        if (text == null)
+        load_or_cast_cached_value(AS_TYPE.string_value);
+        if (! _v.hasValueOfType(AS_TYPE.int_value))
         {
-            int sid = getSymbolId();
-            return new InternedSymbolImpl(null, sid);
+            cast_cached_value(AS_TYPE.int_value);
         }
 
-        final SymbolTable symtab = getSymbolTable();
-        final int sid = symtab.findSymbol(text);
+        String text = _v.getString();
+        int    sid  = _v.getInt();
         return new InternedSymbolImpl(text, sid);
     }
 
