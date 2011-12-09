@@ -4,6 +4,7 @@ package com.amazon.ion.streaming;
 
 import static com.amazon.ion.Symtabs.printLocalSymtab;
 import static com.amazon.ion.impl.IonImplUtils.intIterator;
+import static com.amazon.ion.junit.IonAssert.checkNullSymbol;
 
 import com.amazon.ion.BinaryTest;
 import com.amazon.ion.IonType;
@@ -111,7 +112,7 @@ public class ReaderTest
         in.next();
         expectString(null);
         in.next();
-        expectSymbol(null);
+        checkNullSymbol(in);
     }
 
     @Test
@@ -137,10 +138,9 @@ public class ReaderTest
     {
         read("null.symbol sym");
         in.next();
-        expectSymbol(null);
+        checkNullSymbol(in);
         in.next();
-        expectSymbol("sym");
-        // TODO sid
+        IonAssert.checkSymbol("sym", in);
     }
 
     @Test

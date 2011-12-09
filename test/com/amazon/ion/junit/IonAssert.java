@@ -19,6 +19,7 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.NullValueException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -207,6 +208,39 @@ public class IonAssert
         InternedSymbol sym = in.symbolValue();
         IonTestCase.checkSymbol(expectedText, expectedSid, sym);
     }
+
+    /**
+     * @param expectedText null means null.symbol
+     */
+    public static void checkSymbol(String expectedText,
+                                   IonReader in)
+    {
+        assertEquals("getType", IonType.SYMBOL, in.getType());
+        assertEquals("isNullValue", expectedText == null, in.isNullValue());
+        assertEquals("stringValue", expectedText, in.stringValue());
+
+        InternedSymbol is = in.symbolValue();
+        if (expectedText == null)
+        {
+            assertEquals("symbolValue", null, is);
+            try {
+                in.getSymbolId();
+                fail("expected exception on " + in.getType());
+            }
+            catch (NullValueException e) { }
+        }
+        else
+        {
+            assertEquals("symbolValue.text", expectedText, is.getText());
+            in.getSymbolId(); // Shouldn't throw, at least
+        }
+    }
+
+    public static void checkNullSymbol(IonReader in)
+    {
+        checkSymbol(null, in);
+    }
+
 
     //========================================================================
     // DOM assertions
