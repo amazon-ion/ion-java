@@ -28,6 +28,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.TestUtils;
+import com.amazon.ion.junit.IonAssert;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -294,6 +295,18 @@ public abstract class IonWriterTestCase
             fail("expected exception");
         }
         catch (EmptySymbolException e) { }
+    }
+
+    @Test
+    public void testWritingUnknownSymbol()
+        throws Exception
+    {
+        iw = makeWriter();
+        iw.writeSymbol(99);
+
+        IonReader in = reread();
+        in.next();
+        IonAssert.checkSymbol(in, null, 99);
     }
 
     public void testBadText(String text)
