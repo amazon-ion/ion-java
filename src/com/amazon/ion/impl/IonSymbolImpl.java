@@ -153,30 +153,8 @@ public final class IonSymbolImpl
             {
                 _set_value(value);
             }
-            return value;
         }
 
-        assert _hasNativeValue();
-
-        // this only decodes a valid value if the symbol
-        // is of the form $<digits>
-        int sid = UnifiedSymbolTable.decodeIntegerSymbol(value);
-        if (this._hasNativeValue()) {
-            if (sid != UnifiedSymbolTable.UNKNOWN_SYMBOL_ID) {
-                SymbolTable symbols = this.getSymbolTable();
-                if (symbols != null) {
-                     value = symbols.findSymbol(sid);
-                }
-            }
-        }
-        else {
-            // we have to look up the string for this
-            sid = this.getSymbolId();
-            SymbolTable symbols = this.getSymbolTable();
-            if (symbols != null) {
-                 value = symbols.findSymbol(sid);
-            }
-        }
         return value;
     }
 
