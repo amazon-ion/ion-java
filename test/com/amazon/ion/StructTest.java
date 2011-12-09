@@ -594,8 +594,13 @@ public class StructTest
 
         InternedSymbol is = IonImplUtils.newInternedSymbol("f", 1);
         struct.add(is, nullBool);
-
         is = nullBool.getFieldNameSymbol();
+        checkSymbol("f", UNKNOWN_SYMBOL_ID, is);
+
+        IonBool nullBool2 = system().newNullBool();
+        is = new FakeInternedSymbol("h", -2);
+        struct.add(is, nullBool2);
+        is = nullBool2.getFieldNameSymbol();
         checkSymbol("f", UNKNOWN_SYMBOL_ID, is);
     }
 
@@ -632,31 +637,22 @@ public class StructTest
         }
         catch (IllegalArgumentException e) { }
 
-        is = new InternedSymbol()
-        {
-            public String getText()
-            {
-                return null;
-            }
-
-            public int getId()
-            {
-                return SymbolTable.UNKNOWN_SYMBOL_ID;
-            }
-
-            public String assumeText()
-            {
-                throw new UnknownSymbolException(1);
-            }
-        };
-
+        is = new FakeInternedSymbol(null, UNKNOWN_SYMBOL_ID);
         try {
             value.add(is, nullBool);
             fail("Expected IllegalArgumentException");
         }
         catch (IllegalArgumentException e) { }
 
-        // TODO other bad InternedSymbol values, eg "f",-2
+        is = new FakeInternedSymbol(null, -2);
+        try {
+            value.add(is, nullBool);
+            fail("Expected IllegalArgumentException");
+        }
+        catch (IllegalArgumentException e) { }
+
+        value.remove(contained);
+        assertTrue(value.isEmpty());
     }
 
     @Test

@@ -485,13 +485,16 @@ public class IonStructLite
     public void add(InternedSymbol fieldName, IonValue child)
     {
         String text = fieldName.getText();
+        int id = fieldName.getId();
+
         if (text != null)
         {
             // TODO should we always ignore the sid?
             add(text, child);
             return;
         }
-        else if (fieldName.getId() < 0)
+
+        if (id < 1)
         {
             throw new IllegalArgumentException("fieldName has no text or ID");
         }
