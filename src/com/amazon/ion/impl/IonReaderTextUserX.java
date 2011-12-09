@@ -6,6 +6,7 @@ import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
@@ -150,7 +151,8 @@ public class IonReaderTextUserX
                     }
                     break;
                 case SYMBOL:
-                    String sym = stringValue();
+                    InternedSymbol is = symbolValue();
+                    String sym = is.getText();
                     if (ION_1_0.equals(sym)) {
                         symbol_table_reset();
                         push_symbol_table(_system.getSystemSymbolTable());

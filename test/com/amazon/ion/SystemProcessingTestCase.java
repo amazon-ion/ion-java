@@ -574,6 +574,15 @@ if (table1 == table2) {
 
 
     @Test
+    public void testSidLiteralForIvm()
+        throws Exception
+    {
+        startIteration("$2 $2");
+        checkEof();
+    }
+
+
+    @Test
     public void testSharedTableNotAddedToCatalog()
         throws Exception
     {
