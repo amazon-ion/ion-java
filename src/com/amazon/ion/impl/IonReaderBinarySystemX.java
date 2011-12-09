@@ -386,7 +386,7 @@ class IonReaderBinarySystemX
 
     public SymbolTable getSymbolTable()
     {
-        return null;
+        return _system.getSystemSymbolTable();
     }
 
     // system readers don't skip any symbol tables

@@ -24,7 +24,6 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
@@ -34,7 +33,6 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.UnsupportedIonVersionException;
 import com.amazon.ion.impl.$PrivateTextOptions;
-import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonReaderFactoryX;
 import com.amazon.ion.impl.IonReaderWriterPrivate;
 import com.amazon.ion.impl.IonScalarConversionsX.CantConvertException;
@@ -43,7 +41,6 @@ import com.amazon.ion.impl.IonWriterBaseImpl;
 import com.amazon.ion.impl.IonWriterBinaryCompatibility;
 import com.amazon.ion.impl.IonWriterFactory;
 import com.amazon.ion.impl.IonWriterUserBinary;
-import com.amazon.ion.impl.SystemValueIterator;
 import com.amazon.ion.impl.UnifiedSymbolTable;
 import java.io.Closeable;
 import java.io.IOException;
@@ -701,7 +698,7 @@ public final class IonSystemLite
     }
 
     static class ReaderIterator
-        implements SystemValueIterator, Iterator<IonValue>, Closeable
+        implements Iterator<IonValue>, Closeable
     {
         private final IonReader        _reader;
         private final IonSystemLite    _system;
@@ -717,10 +714,6 @@ public final class IonSystemLite
             _reader = reader;
             _system = system;
             _previous_symbols = _system.getSystemSymbolTable();
-        }
-
-        public SymbolTable getSymbolTable() {
-            return _reader.getSymbolTable();
         }
 
         public boolean hasNext()
@@ -794,72 +787,6 @@ public final class IonSystemLite
         public void close() throws IOException
         {
             // TODO _reader.close();
-        }
-
-        //
-        //  Bonus methods to support old SystemReader iteration interface
-        //
-        public boolean canSetLocalSymbolTable()
-        {
-            return false;
-        }
-
-        public boolean currentIsHidden()
-        {
-            IonType t = _reader.getType();
-            if (t == null) {
-                return false;
-            }
-            switch(t) {
-            case SYMBOL:
-                String symbol = _reader.stringValue();
-                if (ION_1_0.equals(symbol)) {
-                    return true;
-                }
-                break;
-            case STRUCT:
-                String [] annotations = _reader.getTypeAnnotations();
-                for (int ii=0; ii<annotations.length; ii++) {
-                    if (ION_SYMBOL_TABLE.equals(annotations[ii])) {
-                        return true;
-                    }
-                }
-                break;
-            default:
-                break;
-            }
-            return false;
-        }
-
-        public BufferManager getBuffer()
-        {
-            return null;
-        }
-
-        public IonCatalog getCatalog()
-        {
-            // TODO: get catalog from reader
-            return _system.getCatalog();
-        }
-
-        public SymbolTable getLocalSymbolTable()
-        {
-            return _reader.getSymbolTable();
-        }
-
-        public IonSystem getSystem()
-        {
-            return _system;
-        }
-
-        public void resetBuffer()
-        {
-            return;
-        }
-
-        public void setLocalSymbolTable(SymbolTable symbolTable)
-        {
-            throw new UnsupportedOperationException();
         }
     }
 
@@ -1064,6 +991,17 @@ public final class IonSystemLite
         return writer;
     }
 
+
+    /**
+     * FIXME ION-160 This method consumes the entire stream!
+     */
+    public Iterator<IonValue> systemIterate(Reader ionText)
+    {
+        IonReader reader = IonReaderFactoryX.makeReader(this, ionText);
+        Iterator<IonValue> iterator = make_system_iterator(reader);
+        return iterator;
+    }
+
     public Iterator<IonValue> systemIterate(String ionText)
     {
         IonReader reader = IonReaderFactoryX.makeSystemReader(this, ionText);
@@ -1077,6 +1015,16 @@ public final class IonSystemLite
     public Iterator<IonValue> systemIterate(InputStream ionData)
     {
         IonReader reader = IonReaderFactoryX.makeReader(this, ionData);
+        Iterator<IonValue> iterator = make_system_iterator(reader);
+        return iterator;
+    }
+
+    /**
+     * FIXME ION-160 This method consumes the entire stream!
+     */
+    public Iterator<IonValue> systemIterate(byte[] ionData)
+    {
+        IonReader reader = IonReaderFactoryX.makeSystemReader(this, ionData);
         Iterator<IonValue> iterator = make_system_iterator(reader);
         return iterator;
     }

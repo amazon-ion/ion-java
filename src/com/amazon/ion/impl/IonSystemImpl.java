@@ -257,28 +257,14 @@ public final class IonSystemImpl
 
     public Iterator<IonValue> iterate(Reader reader)
     {
-        // TODO optimize to use IonTextReader, but first that must truly stream
-        // instead of requiring a full-stream buffer.
-        // See https://jira2.amazon.com/browse/ION-31
-        UserValueIterator userReader =
-            new UserValueIterator(this, this.newLocalSymbolTable(), reader);
-        userReader.setBufferToRecycle();
-        return userReader;
+        IonReader ir = newReader(reader);
+        return new IonIteratorImpl(this, ir);
     }
 
-    /**
-     * TODO Must correct ION-160 before exposing this or using from public API.
-     * Unclear how to do buffer recycling since that's currently done by the
-     * {@link UserValueIterator} an not by the system level.
-     */
-    protected SystemValueIterator systemIterate(Reader reader)
+    public Iterator<IonValue> systemIterate(Reader reader)
     {
-        SystemValueIterator sysreader =
-            makeSystemIterator(this,
-                               getCatalog(),
-                               newLocalSymbolTable(),  // FIXME: should be null
-                               reader);
-        return sysreader;
+        IonReader ir = newSystemReader(reader);
+        return new IonIteratorImpl(this, ir);
     }
 
     public Iterator<IonValue> iterate(String ionText)
@@ -304,17 +290,21 @@ public final class IonSystemImpl
 
     public Iterator<IonValue> iterate(byte[] ionData)
     {
-        SystemValueIterator systemReader =
-            newLegacySystemIterator(getCatalog(), ionData);
-        UserValueIterator userReader = new UserValueIterator(systemReader);
-        // Don't use buffer-clearing!
-        return userReader;
+        IonReader reader = newReader(ionData);
+        return new IonIteratorImpl(this, reader);
+    }
+
+    public Iterator<IonValue> systemIterate(byte[] ionData)
+    {
+        IonReader reader = newSystemReader(ionData);
+        return new IonIteratorImpl(this, reader);
     }
 
 
     public Iterator<IonValue> iterate(InputStream ionData)
     {
-        return iterate(ionData, false);
+        IonReader reader = newReader(ionData);
+        return new IonIteratorImpl(this, reader);
     }
 
     /**
@@ -325,19 +315,9 @@ public final class IonSystemImpl
      */
     public Iterator<IonValue> systemIterate(InputStream ionData)
     {
-        return iterate(ionData, true);
-    }
-
-    private Iterator<IonValue> iterate(InputStream ionData, boolean system)
-    {
         if (ionData == null) throw new NullPointerException();
 
-        if (true && !system) {
-            IonReader reader = newReader(ionData);
-            return new IonIteratorImpl(this, reader);
-        }
-
-        SystemValueIterator systemReader;
+        Iterator<IonValue> systemReader;
         boolean binaryData;
         try
         {
@@ -362,15 +342,7 @@ public final class IonSystemImpl
             throw new IonException(e);
         }
 
-        if (system) return systemReader;
-
-        UserValueIterator userReader = new UserValueIterator(systemReader);
-        if (!binaryData)
-        {
-            // This prevents us from accumulating all the transcoded data.
-            userReader.setBufferToRecycle();
-        }
-        return userReader;
+        return systemReader;
     }
 
     //=========================================================================
@@ -389,6 +361,12 @@ public final class IonSystemImpl
         return makeSystemReader(this, ionText);
     }
 
+
+    @SuppressWarnings("deprecation")
+    public IonTextReader newReader(Reader ionText)
+    {
+        return makeReader(this, ionText);
+    }
 
     @SuppressWarnings("deprecation")
     public IonTextReader newSystemReader(Reader ionText)
@@ -590,6 +568,7 @@ public final class IonSystemImpl
      *
      * @throws NullPointerException if <code>ionData</code> is null.
      */
+    @Deprecated // TODO remove!
     SystemValueIterator newLegacySystemIterator(IonCatalog catalog,
                                                 byte[] ionData)
     {

@@ -61,19 +61,6 @@ class SystemValueIteratorImpl
         return reader;
     }
 
-    /**
-     * TODO Must correct ION-160 before exposing this or using from public API.
-     */
-    static SystemValueIterator makeSystemIterator(IonSystemImpl system,
-                                                  IonCatalog catalog,
-                                                  SymbolTable initialSymtab,
-                                                  Reader input)
-    {
-        SystemValueIterator reader =
-            new SystemValueIteratorImpl(system, catalog, initialSymtab, input);
-        return reader;
-    }
-
     static SystemValueIterator makeSystemIterator(IonSystemImpl system,
                                                   IonCatalog catalog,
                                                   BufferManager buffer)
