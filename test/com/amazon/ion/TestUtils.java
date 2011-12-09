@@ -294,8 +294,7 @@ public class TestUtils
                 String s = reader.stringValue();
                 break;
             case SYMBOL:
-                int sid = reader.getSymbolId();
-                String sy = reader.stringValue();
+                InternedSymbol is = reader.symbolValue();
                 break;
             case BLOB:
             case CLOB:
