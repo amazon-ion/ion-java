@@ -23,12 +23,14 @@ public abstract class ReaderSystemProcessingTestCase
     protected IonReader myReader;
     private IonType   myValueType;
 
+
     @After @Override
     public void tearDown() throws Exception
     {
         super.tearDown();
         if (myReader != null) myReader.close();
     }
+
 
     protected abstract IonReader read()
         throws Exception;
@@ -85,6 +87,7 @@ public abstract class ReaderSystemProcessingTestCase
     /**
      * @param expectedText null means absent
      */
+    @Override
     final void checkFieldName(String expectedText, int expectedSid)
     {
         IonAssert.expectField(myReader, expectedText, expectedSid);

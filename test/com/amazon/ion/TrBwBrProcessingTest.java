@@ -13,6 +13,8 @@ public class TrBwBrProcessingTest
     protected void prepare(String text)
         throws Exception
     {
+        myMissingSymbolTokensHaveText = false;
+
         IonReader textReader = system().newSystemReader(text);
         IonBinaryWriter binaryWriter = system().newBinaryWriter();
         binaryWriter.writeValues(textReader);

@@ -3,7 +3,6 @@
 package com.amazon.ion;
 
 import static com.amazon.ion.DatagramMaker.FROM_BYTES_TEXT;
-import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 
 import com.amazon.ion.junit.Injected.Inject;
 import org.junit.After;
@@ -73,6 +72,10 @@ public class DatagramTreeReaderSystemProcessingTest
     @Override
     protected void prepare(String text)
     {
+        myMissingSymbolTokensHaveText =
+            (myDatagramMaker.sourceIsText()
+                || myLoadTime == LoadTime.LOAD_IN_PREPARE);
+
         myText = text;
         if (myDatagramMaker.sourceIsBinary())
         {
@@ -98,61 +101,34 @@ public class DatagramTreeReaderSystemProcessingTest
     }
 
     @Override
-    boolean checkMissingFieldName(String expectedText,
-                                  int expectedEncodedSid,
-                                  int expectedLocalSid)
+    void checkMissingFieldName(String expectedText, int expectedSid)
         throws Exception
     {
-        if (expectedText == null)
-        {
-            checkFieldName(expectedText, expectedEncodedSid);
-            return false;
-        }
-
         if (myLoadTime == LoadTime.LOAD_IN_PREPARE)
         {
             // The datagram loaded the text and encoded sid during prepare,
             // so the DOM retains the original sid.
-            checkFieldName(expectedText, expectedEncodedSid);
-            return false;
+            checkFieldName(expectedText, expectedSid);
         }
-
-        if (myDatagramMaker.sourceIsBinary())
+        else
         {
-            // TODO ION-58
-            checkFieldName(null, expectedEncodedSid);
-            return false;
+            super.checkMissingFieldName(expectedText, expectedSid);
         }
-
-        // The datagram was loaded after the catalog changed.
-        // We have no way to find the encoded sid, so a local one is assigned.
-        checkFieldName(expectedText, UNKNOWN_SYMBOL_ID);
-        return true;
     }
 
     @Override
-    protected boolean checkMissingSymbol(String expectedText,
-                                         int expectedEncodedSid,
-                                         int expectedLocalSid)
+    void checkMissingSymbol(String expectedText, int expectedSid)
         throws Exception
     {
         if (myLoadTime == LoadTime.LOAD_IN_PREPARE)
         {
             // The datagram loaded the text and encoded sid during prepare,
             // so the DOM retains the original sid.
-            checkSymbol(expectedText, expectedEncodedSid);
-            return false;
+            checkSymbol(expectedText, expectedSid);
         }
-
-        if (myDatagramMaker.sourceIsBinary())
+        else
         {
-            checkSymbol(null, expectedEncodedSid);
-            return false;
+            super.checkMissingSymbol(expectedText, expectedSid);
         }
-
-        // The datagram was loaded after the catalog changed.
-        // We have no way to find the encoded sid, so a local one is assigned.
-        checkSymbol(expectedText, UNKNOWN_SYMBOL_ID);
-        return true;
     }
 }

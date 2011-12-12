@@ -19,6 +19,7 @@ public class IteratorSystemProcessingTest
     private Iterator<IonValue> myIterator;
     private IonValue myCurrentValue;
 
+
     protected Iterator<IonValue> iterate()
         throws Exception
     {
@@ -84,6 +85,7 @@ public class IteratorSystemProcessingTest
     /**
      * @param expectedText null means absent
      */
+    @Override
     final void checkFieldName(String expectedText, int expectedSid)
         throws Exception
     {
@@ -101,26 +103,6 @@ public class IteratorSystemProcessingTest
         assertEquals(expectedSid,  sym.getId());
     }
 
-    @Override
-    boolean checkMissingFieldName(String expectedText,
-                                  int expectedEncodedSid,
-                                  int expectedLocalSid)
-        throws Exception
-    {
-        // Behavior for most text-based sources
-        if (expectedText == null)
-        {
-            checkFieldName(expectedText, expectedLocalSid);
-        }
-        else
-        {
-            checkFieldName(expectedText, UNKNOWN_SYMBOL_ID);
-        }
-
-        // when missing from a shared table the symbol
-        // will have been added to the local symbols
-        return true;
-    }
 
 
     @Override
@@ -201,23 +183,6 @@ public class IteratorSystemProcessingTest
         checkSymbol(expected, expectedSid, myCurrentValue);
     }
 
-    protected void checkMissingSymbol(int expectedSymbolTableSid)
-    {
-        checkUnknownSymbol(expectedSymbolTableSid, myCurrentValue);
-    }
-
-    @Override
-    protected boolean checkMissingSymbol(String expectedText,
-                                         int expectedEncodedSid,
-                                         int expectedLocalSid)
-        throws Exception
-    {
-        checkSymbol(expectedText, UNKNOWN_SYMBOL_ID, myCurrentValue);
-
-        // when missing from a shared table the symbol
-        // will have been added to the local symbols
-        return true;
-    }
 
     @Override
     protected void checkTimestamp(Timestamp expected) throws Exception

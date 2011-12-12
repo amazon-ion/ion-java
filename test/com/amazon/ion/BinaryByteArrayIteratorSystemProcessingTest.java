@@ -10,10 +10,12 @@ public class BinaryByteArrayIteratorSystemProcessingTest
 {
     private byte[] myBytes;
 
+
     @Override
     protected void prepare(String text)
         throws Exception
     {
+        myMissingSymbolTokensHaveText = false;
         myBytes = encode(text);
     }
 
@@ -27,31 +29,5 @@ public class BinaryByteArrayIteratorSystemProcessingTest
     protected Iterator<IonValue> systemIterate()
     {
         return system().systemIterate(myBytes);
-    }
-
-    @Override
-    boolean checkMissingFieldName(String expectedText,
-                                  int expectedEncodedSid,
-                                  int expectedLocalSid)
-        throws Exception
-    {
-        checkFieldName(null, expectedEncodedSid);
-
-        // when missing from a shared table the symbol
-        // will not have been added to the local symbols
-        return false;
-    }
-
-    @Override
-    protected boolean checkMissingSymbol(String expectedText,
-                                         int expectedEncodedSid,
-                                         int expectedLocalSid)
-        throws Exception
-    {
-        checkMissingSymbol(expectedEncodedSid);
-
-        // when missing from a shared table the symbol
-        // will not have been added to the local symbols
-        return false;
     }
 }

@@ -2,6 +2,7 @@
 
 package com.amazon.ion;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.Symtabs.LocalSymbolTablePrefix;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
@@ -59,6 +60,10 @@ public abstract class SystemProcessingTestCase
         return;
     }
 
+
+    boolean myMissingSymbolTokensHaveText = true;
+
+
     protected abstract void prepare(String text)
         throws Exception;
 
@@ -91,15 +96,27 @@ public abstract class SystemProcessingTestCase
 
 
     /**
+     * @param expectedText null means absent
+     */
+    abstract void checkFieldName(String expectedText, int expectedSid)
+        throws Exception;
+
+    /**
      * Checks a field name that's missing from the context symbol table,
      * generally because there was no exact match to an import.
-     *
-     * @returns true when the local sid was matched
      */
-    abstract boolean checkMissingFieldName(String expectedText,
-                                           int expectedEncodedSid,
-                                           int expectedLocalSid)
-        throws Exception;
+    void checkMissingFieldName(String expectedText, int expectedSid)
+        throws Exception
+    {
+        if (myMissingSymbolTokensHaveText && expectedText != null)
+        {
+            checkFieldName(expectedText, UNKNOWN_SYMBOL_ID);
+        }
+        else
+        {
+            checkFieldName(null, expectedSid);
+        }
+    }
 
 
     protected abstract void checkAnnotation(String expected, int expectedSid)
@@ -125,13 +142,20 @@ public abstract class SystemProcessingTestCase
     /**
      * Checks a symbol that's missing from the context symbol table,
      * generally because there was no exact match to an import.
-     *
-     * @returns true when the local sid was matched
      */
-    protected abstract boolean checkMissingSymbol(String expected,
-                                                  int expectedSymbolTableSid,
-                                                  int expectedLocalSid)
-        throws Exception;
+    void checkMissingSymbol(String expectedText, int expectedSid)
+        throws Exception
+    {
+        if (myMissingSymbolTokensHaveText)
+        {
+            checkSymbol(expectedText, UNKNOWN_SYMBOL_ID);
+        }
+        else
+        {
+            checkSymbol(null, expectedSid);
+        }
+    }
+
 
     protected abstract void checkInt(long expected)
         throws Exception;
@@ -454,8 +478,7 @@ if (table1 == table2) {
         nextValue();
         // it doesn't matter if fred 2 is local or not,
         // fred 3 should be in the shared symbol table
-        boolean is_fred3_a_local_symbol =
-            checkMissingSymbol("fred_3", fred3id, local3id);
+        checkMissingSymbol("fred_3", fred3id);
 
         nextValue();
 // TODO checkAbsentSidLiteral("fred_3", fred3id);
@@ -468,11 +491,11 @@ if (table1 == table2) {
             nextValue();
             stepIn();
                 nextValue();
-                checkMissingFieldName("fred_3", fred3id, local3id);
+                checkMissingFieldName("fred_3", fred3id);
                 checkSymbol("local2");
 
                 nextValue();
-                checkMissingFieldName(null, 98, 98);
+                checkMissingFieldName(null, 98);
                 checkSymbol(null, 97);
 
                 checkEof();
@@ -481,8 +504,6 @@ if (table1 == table2) {
         stepOut();
 
         checkEof();
-
-        if (is_fred3_a_local_symbol) return; // force is_fred2_a_local_symbol to be used
     }
 
     /**
@@ -561,7 +582,7 @@ if (table1 == table2) {
         checkSymbol("fred_1", fred1id_symtab);
 
         nextValue();
-        checkMissingSymbol("fred_2", fred2id_symtab, local3id);
+        checkMissingSymbol("fred_2", fred2id_symtab);
 
         nextValue();
         checkSymbol("fred_3", fred3id_symtab);
@@ -937,7 +958,7 @@ if (table1 == table2) {
         int sid = systemMaxId() + 1;
 
         startIteration("$ion_symbol_table::{symbols:[\"ann\"]} " +
-        		"ann::ann::null");
+                "ann::ann::null");
         nextValue();
         checkAnnotations(new String[]{ "ann", "ann" },
                          new int[]{ sid, sid });
