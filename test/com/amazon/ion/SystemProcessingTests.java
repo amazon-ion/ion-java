@@ -20,7 +20,6 @@ import org.junit.runners.Suite;
     LoadTextStreamSystemProcessingTest.class,
     LoadBinaryBytesSystemProcessingTest.class,
     LoadBinaryStreamSystemProcessingTest.class,
-    DatagramBytesSystemProcessingTest.class,
     DatagramIteratorSystemProcessingTest.class,
     BinaryReaderSystemProcessingTest.class,
     DatagramTreeReaderSystemProcessingTest.class,
