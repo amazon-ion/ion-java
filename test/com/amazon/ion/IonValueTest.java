@@ -27,6 +27,21 @@ public class IonValueTest
     }
 
 
+    @Test
+    public void testGetTypeAnnotationsImmutability()
+    {
+        IonValue v = system().newNull();
+        v.setTypeAnnotations(ann);
+
+        String[] anns = v.getTypeAnnotations();
+        assertEquals(ann, anns[0]);
+        anns[0] = ben;
+
+        anns = v.getTypeAnnotations();
+        assertEquals(ann, anns[0]);
+    }
+
+
     @Test(expected = ReadOnlyValueException.class)
     public void testSetTypeAnnotationsOnReadOnlyValue()
     {

@@ -919,13 +919,13 @@ public abstract class IonValueImpl
     public String[] getTypeAnnotations()
     {
         // if we have a list, then it's a good one
-        if (this._annotations != null) return this._annotations;
+        if (this._annotations != null) return _annotations.clone();
 
         // if this has been materialized (and we clearly don't
         // have a list) then there is no annotations
         makeReady();
 
-        return this._annotations == null ? EMPTY_STRING_ARRAY : this._annotations;
+        return this._annotations == null ? EMPTY_STRING_ARRAY : _annotations.clone();
     }
 
     public void setTypeAnnotations(String... annotations)
