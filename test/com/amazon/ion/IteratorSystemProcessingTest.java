@@ -125,8 +125,6 @@ public class IteratorSystemProcessingTest
         {
             fail("Didn't find expected annotation: " + expectedStringValue);
         }
-
-// TODO ??? checkSymbol(expected, expectedSid, myCurrentValue.getSymbolTable());
     }
 
     @Override

@@ -730,16 +730,6 @@ public abstract class IonTestCase
     }
 
 
-    public static void checkSymbol(String text, int sid, SymbolTable symtab)
-    {
-        assertEquals("sid " + sid, text, symtab.findKnownSymbol(sid));
-
-        assertEquals(sid,  symtab.findSymbol(text));
-        assertEquals(text, symtab.findSymbol(sid));
-
-        checkSymbol(text, sid, false, symtab);
-    }
-
     public static void checkSymbol(String text, int sid, boolean dupe,
                                    SymbolTable symtab)
     {
@@ -747,12 +737,17 @@ public abstract class IonTestCase
 
         String msg = "text:" + text + " sid:" + sid;
 
-        assertEquals(msg, text, symtab.findKnownSymbol(sid));
+        String expectedStringValue =
+            (text == null ? "$" + sid : text);
+
+        if (sid >= 0)
+        {
+            assertEquals(msg, expectedStringValue, symtab.findSymbol(sid));
+            assertEquals(msg, text, symtab.findKnownSymbol(sid));
+        }
 
         if (text != null)
         {
-            assertEquals(msg, text, symtab.findSymbol(sid));
-
             // Can't do this stuff when we have a duplicate symbol.
             if (! dupe)
             {
@@ -766,16 +761,16 @@ public abstract class IonTestCase
                 assertEquals(msg, sid, sym.getId());
             }
         }
-        else
-        {
-            assertEquals("$" + sid, symtab.findSymbol(sid));
-        }
+    }
+
+    public static void checkSymbol(String text, int sid, SymbolTable symtab)
+    {
+        checkSymbol(text, sid, false, symtab);
     }
 
     public static void checkUnknownSymbol(int sid, SymbolTable symtab)
     {
-        assertEquals(null, symtab.findKnownSymbol(sid));
-        assertEquals("$"+sid, symtab.findSymbol(sid));
+        checkSymbol(null, sid, false, symtab);
     }
 
     /**
