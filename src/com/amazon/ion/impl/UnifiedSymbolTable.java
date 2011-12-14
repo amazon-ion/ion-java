@@ -902,9 +902,8 @@ public final class UnifiedSymbolTable
         return id;
     }
 
-    public
-    synchronized
-    String findSymbol(int id)
+    @Deprecated
+    public synchronized String findSymbol(int id)
     {
         String name = findKnownSymbol(id);
         if (name == null) {
@@ -913,9 +912,7 @@ public final class UnifiedSymbolTable
         return name;
     }
 
-    public
-    synchronized
-    int addSymbol(String name)
+    public synchronized int addSymbol(String name)
     {
         int sid = this.findSymbol(name);
         if (sid == UNKNOWN_SYMBOL_ID) {
@@ -929,10 +926,7 @@ public final class UnifiedSymbolTable
         return sid;
     }
 
-    public
-    static
-    final
-    void validateSymbol(String name)
+    public static final void validateSymbol(String name)
     {
         // not synchronized since this is local to the string which is immutable
         if (name == null || name.length() < 1) {

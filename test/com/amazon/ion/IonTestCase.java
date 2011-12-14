@@ -702,8 +702,7 @@ public abstract class IonTestCase
             try {
                 String text = sym.stringValue();
                 assertEquals("$" + id, text);
-                // TODO stringValue should throw
-//                fail("Expected " + UnknownSymbolException.class);
+                // TODO ION-58 stringValue should throw
             }
             catch (UnknownSymbolException e)
             {

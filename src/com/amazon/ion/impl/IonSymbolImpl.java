@@ -146,8 +146,6 @@ public final class IonSymbolImpl
             {
                 // TODO ION-58 shouldn't return synthetic symbol
                 value = "$" + mySid;
-                // TODO should throw
-//              throw new UnknownSymbolException(_sid);
             }
             else if (! isReadOnly()) // Don't cache synthetics!
             {

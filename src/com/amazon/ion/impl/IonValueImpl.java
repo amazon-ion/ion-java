@@ -44,6 +44,13 @@ public abstract class IonValueImpl
      * the container may be mutable and have values added or removed.
      */
     protected int    _elementid;
+
+    /**
+     * The field-name symbol id, {@link SymbolTable#UNKNOWN_SYMBOL_ID} if this
+     * isn't a field (in which case {@link #_fieldName} must be null) or if we
+     * don't know the sid (in which case {@link #_fieldName} must not be null).
+     */
+    private int _fieldSid = UNKNOWN_SYMBOL_ID;
     private String   _fieldName;
     private InternedSymbol[] _annotations;
 
@@ -66,13 +73,6 @@ public abstract class IonValueImpl
     //             ^ [+ len(mid)]   value_content_start ^
     //                                               next_start ^
     //
-
-    /**
-     * The field-name symbol id, {@link SymbolTable#UNKNOWN_SYMBOL_ID} if this
-     * isn't a field (in which case {@link #_fieldName} must be null) or if we
-     * don't know the sid (in which case {@link #_fieldName} must not be null).
-     */
-    private int _fieldSid = UNKNOWN_SYMBOL_ID;
 
     /**
      * The actual TD byte of the value.
