@@ -456,7 +456,9 @@ if (table1 == table2) {
             "            max_id:" + Symtabs.FRED_MAX_IDS[2] + "}]," +
             "}\n" +
             "local1 local2 fred_1 fred_2 fred_3 $12 " +
-            "fred_3::$99 [{fred_3:local2, $98:$97}]";
+            "fred_3::$99 $99::local1 [{fred_3:local2, $98:$97}]";
+        // TODO { $12:something }
+        // TODO $12::something
         // Nesting flushed out a bug at one point
 
 
@@ -495,8 +497,6 @@ if (table1 == table2) {
         checkSymbol("fred_2", fred2id);
 
         nextValue();
-        // it doesn't matter if fred 2 is local or not,
-        // fred 3 should be in the shared symbol table
         checkMissingSymbol("fred_3", fred3id);
 
         nextValue();
@@ -505,6 +505,10 @@ if (table1 == table2) {
         nextValue();
         checkSymbol(null, 99);
         checkMissingAnnotation("fred_3", fred3id);
+
+        nextValue();
+        checkSymbol("local1");
+        checkMissingAnnotation(null, 99);
 
         nextValue();
         stepIn();
