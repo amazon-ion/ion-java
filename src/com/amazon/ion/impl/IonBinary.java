@@ -9,6 +9,7 @@ import static com.amazon.ion.impl.IonTimestampImpl.precisionIncludes;
 import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
 
 import com.amazon.ion.Decimal;
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
@@ -663,10 +664,10 @@ public class IonBinary
     public static boolean isNibbleZero(BigDecimal bd, boolean forceContent)
     {
         if (forceContent) return false;
-    	if (Decimal.isNegativeZero(bd)) return false;
-    	if (bd.signum() != 0) return false;
-    	int scale = bd.scale();
-    	return (scale == 0);
+        if (Decimal.isNegativeZero(bd)) return false;
+        if (bd.signum() != 0) return false;
+        int scale = bd.scale();
+        return (scale == 0);
     }
 
     /**
@@ -709,35 +710,35 @@ public class IonBinary
     {
         if (di == null) return 0;
 
-    	int len = 0;
-    	switch (di.getPrecision()) {
-    	case FRACTION:
-    	    // TODO why was this explicitly NEGATIVE_ZERO?
-    	    // As a result we've been generating binary data with wacky
-    	    // fractions.
-    	    len += IonBinary.lenIonDecimal(di.getFractionalSecond(),
-    	                                   /* forceContent */ true);
-    	case SECOND:
-    	    len++; // len of seconds < 60
-    	case MINUTE:
-    	    len += 2; // len of hour and minutes (both < 127)
-    	case DAY:
-    		len += 1; // len of month and day (both < 127)
-    	case MONTH:
-    		len += 1; // len of month and day (both < 127)
-    	case YEAR:
-    		len += IonBinary.lenVarUInt(di.getZYear());
-     	}
-    	Integer offset = di.getLocalOffset();
-    	if (offset == null) {
-    	    len++; // room for the -0 (i.e. offset is "no specified offset")
-    	}
-    	else if (offset == 0) {
-    	    len++;
-    	}
-    	else {
-    	    len += IonBinary.lenVarInt(offset.longValue());
-    	}
+        int len = 0;
+        switch (di.getPrecision()) {
+        case FRACTION:
+            // TODO why was this explicitly NEGATIVE_ZERO?
+            // As a result we've been generating binary data with wacky
+            // fractions.
+            len += IonBinary.lenIonDecimal(di.getFractionalSecond(),
+                                        /* forceContent */ true);
+        case SECOND:
+            len++; // len of seconds < 60
+        case MINUTE:
+            len += 2; // len of hour and minutes (both < 127)
+        case DAY:
+            len += 1; // len of month and day (both < 127)
+        case MONTH:
+            len += 1; // len of month and day (both < 127)
+        case YEAR:
+            len += IonBinary.lenVarUInt(di.getZYear());
+        }
+        Integer offset = di.getLocalOffset();
+        if (offset == null) {
+            len++; // room for the -0 (i.e. offset is "no specified offset")
+        }
+        else if (offset == 0) {
+            len++;
+        }
+        else {
+            len += IonBinary.lenVarInt(offset.longValue());
+        }
         return len;
     }
 
@@ -1672,7 +1673,7 @@ done:       for (;;) {
         {
             if (len < 1) {
                 // nothing to do here - and the timestamp will be NULL
-            	return null;
+                return null;
             }
 
             Timestamp  val;
@@ -1691,35 +1692,35 @@ done:       for (;;) {
             if (position() < end) {  // FIXME remove
                 // year is from 0001 to 9999
                 // or 0x1 to 0x270F or 14 bits - 1 or 2 bytes
-            	year  = readVarUIntAsInt();
+                year  = readVarUIntAsInt();
                 p = Precision.YEAR; // our lowest significant option
 
-            	if (position() < end) {
-	            	month = readVarUIntAsInt();
-	                p = Precision.MONTH; // our lowest significant option
+                if (position() < end) {
+                    month = readVarUIntAsInt();
+                    p = Precision.MONTH; // our lowest significant option
 
-	            	if (position() < end) {
-	            	day   = readVarUIntAsInt();
-	                p = Precision.DAY; // our lowest significant option
+                    if (position() < end) {
+                    day   = readVarUIntAsInt();
+                    p = Precision.DAY; // our lowest significant option
 
-	                // now we look for hours and minutes
-	                if (position() < end) {
-	                    hour   = readVarUIntAsInt();
-	                    minute = readVarUIntAsInt();
-	                    p = Precision.MINUTE;
+                    // now we look for hours and minutes
+                    if (position() < end) {
+                        hour   = readVarUIntAsInt();
+                        minute = readVarUIntAsInt();
+                        p = Precision.MINUTE;
 
-	                    if (position() < end) {
-	                        second = readVarUIntAsInt();
-	                        p = Precision.SECOND;
+                        if (position() < end) {
+                            second = readVarUIntAsInt();
+                            p = Precision.SECOND;
 
-	                        remaining = end - position();
-	                        if (remaining > 0) {
-	                            // now we read in our actual "milliseconds since the epoch"
-	                            frac = this.readDecimalValue(remaining);
-	                            p = Precision.FRACTION;
-	                        }
-	                    }
-	                }
+                            remaining = end - position();
+                            if (remaining > 0) {
+                                // now we read in our actual "milliseconds since the epoch"
+                                frac = this.readDecimalValue(remaining);
+                                p = Precision.FRACTION;
+                            }
+                        }
+                    }
                     }
                 }
             }
@@ -2672,15 +2673,14 @@ done:       for (;;) {
             return 1;
         }
 
-        public int writeAnnotations(String[] annotations,
+        public int writeAnnotations(InternedSymbol[] annotations,
                                     SymbolTable symbolTable) throws IOException
         {
             int startPosition = this.position();
-            int[] symbols = new int[annotations.length];
 
             int annotationLen = 0;
             for (int ii=0; ii<annotations.length; ii++) {
-                int sym = symbols[ii] = symbolTable.findSymbol(annotations[ii]);
+                int sym = annotations[ii].getId();
                 assert sym != SymbolTable.UNKNOWN_SYMBOL_ID;
                 annotationLen += IonBinary.lenVarUInt(sym);
             }
@@ -2690,8 +2690,7 @@ done:       for (;;) {
 
             // write the symbol id's
             for (int ii=0; ii<annotations.length; ii++) {
-                int sym = symbols[ii] = symbolTable.findSymbol(annotations[ii]);
-                assert sym != SymbolTable.UNKNOWN_SYMBOL_ID;
+                int sym = annotations[ii].getId();
                 this.writeVarUIntValue(sym, true);
             }
 
@@ -2876,41 +2875,41 @@ done:       for (;;) {
             int precision_flags =
                 IonTimestampImpl.getPrecisionAsBitFlags(di.getPrecision());
 
-        	Integer offset = di.getLocalOffset();
-        	if (offset == null) {
+            Integer offset = di.getLocalOffset();
+            if (offset == null) {
                 // TODO don't use magic numbers!
                 this.write((byte)(0xff & (0x80 | 0x40))); // negative 0 (no timezone)
                 returnlen ++;
-        	}
-        	else {
-        		returnlen += this.writeVarIntValue(offset.intValue(), true);
-        	}
+            }
+            else {
+                returnlen += this.writeVarIntValue(offset.intValue(), true);
+            }
 
-        	// now the date - year, month, day as varUint7's
-        	// if we have a non-null value we have at least the date
-        	if (precisionIncludes(precision_flags, Precision.YEAR)) {
-        		returnlen += this.writeVarUIntValue(di.getZYear(), true);
-        	}
-        	if (precisionIncludes(precision_flags, Precision.MONTH)) {
-        		returnlen += this.writeVarUIntValue(di.getZMonth(), true);
-        	}
-        	if (precisionIncludes(precision_flags, Precision.DAY)) {
-        		returnlen += this.writeVarUIntValue(di.getZDay(), true);
-        	}
+            // now the date - year, month, day as varUint7's
+            // if we have a non-null value we have at least the date
+            if (precisionIncludes(precision_flags, Precision.YEAR)) {
+                returnlen += this.writeVarUIntValue(di.getZYear(), true);
+            }
+            if (precisionIncludes(precision_flags, Precision.MONTH)) {
+                returnlen += this.writeVarUIntValue(di.getZMonth(), true);
+            }
+            if (precisionIncludes(precision_flags, Precision.DAY)) {
+                returnlen += this.writeVarUIntValue(di.getZDay(), true);
+            }
 
-        	// now the time portion
-        	if (precisionIncludes(precision_flags, Precision.MINUTE)) {
-        		returnlen += this.writeVarUIntValue(di.getZHour(), true);
-        		returnlen += this.writeVarUIntValue(di.getZMinute(), true);
-        	}
-        	if (precisionIncludes(precision_flags, Precision.SECOND)) {
-        		returnlen += this.writeVarUIntValue(di.getZSecond(), true);
-        	}
-        	if (precisionIncludes(precision_flags, Precision.FRACTION)) {
+            // now the time portion
+            if (precisionIncludes(precision_flags, Precision.MINUTE)) {
+                returnlen += this.writeVarUIntValue(di.getZHour(), true);
+                returnlen += this.writeVarUIntValue(di.getZMinute(), true);
+            }
+            if (precisionIncludes(precision_flags, Precision.SECOND)) {
+                returnlen += this.writeVarUIntValue(di.getZSecond(), true);
+            }
+            if (precisionIncludes(precision_flags, Precision.FRACTION)) {
                 // and, finally, any fractional component that is known
-        	    returnlen += this.writeDecimalContent(di.getZFractionalSecond(),
-        	                                          true /* forceContent */);
-        	}
+                returnlen += this.writeDecimalContent(di.getZFractionalSecond(),
+                                                    true /* forceContent */);
+            }
             return returnlen;
         }
 
@@ -2932,21 +2931,21 @@ done:       for (;;) {
                 int len = IonBinary.lenIonDecimal(bd, false);
 
                 if (len < IonConstants.lnIsVarLen) {
-                	returnlen = this.writeByte(
-                			IonConstants.makeTypeDescriptor(
-                					IonConstants.tidDecimal
-                					, len
-                			)
-                      	);
+                    returnlen = this.writeByte(
+                            IonConstants.makeTypeDescriptor(
+                                    IonConstants.tidDecimal
+                                    , len
+                            )
+                        );
                 }
                 else {
-                	returnlen = this.writeByte(
-                			IonConstants.makeTypeDescriptor(
-                					IonConstants.tidDecimal
-                					, IonConstants.lnIsVarLen
-                			)
-                      	);
-                	this.writeVarIntValue(len, false);
+                    returnlen = this.writeByte(
+                            IonConstants.makeTypeDescriptor(
+                                    IonConstants.tidDecimal
+                                    , IonConstants.lnIsVarLen
+                            )
+                        );
+                    this.writeVarIntValue(len, false);
                 }
                 int wroteDecimalLen = writeDecimalContent(bd, false);
                 assert wroteDecimalLen == len;
@@ -2980,30 +2979,30 @@ done:       for (;;) {
             boolean needExtraByteForSign;
             switch (mantissa.signum()) {
             default:
-            	throw new IllegalStateException("mantissa signum out of range");
+                throw new IllegalStateException("mantissa signum out of range");
             case 0:
                 // FIXME ION-105 (?) Why does forceContent imply negative zero?
                 if (forceContent || Decimal.isNegativeZero(bd)) {
                     mantissaBits = negativeZeroBitArray;
-            	}
-            	else {
-            	    mantissaBits = positiveZeroBitArray;
-            	}
-            	// NOTE: we're lieing about this, since the negative zero bit
-            	// array has the sign bit set already
-            	isNegative = false;
-            	needExtraByteForSign = false;
-            	break;
+                }
+                else {
+                    mantissaBits = positiveZeroBitArray;
+                }
+                // NOTE: we're lieing about this, since the negative zero bit
+                // array has the sign bit set already
+                isNegative = false;
+                needExtraByteForSign = false;
+                break;
             case -1:
-            	mantissaBits = mantissa.negate().toByteArray();
-            	needExtraByteForSign = ((mantissaBits[0] & 0x80) != 0);
-            	isNegative = true;
-            	break;
+                mantissaBits = mantissa.negate().toByteArray();
+                needExtraByteForSign = ((mantissaBits[0] & 0x80) != 0);
+                isNegative = true;
+                break;
             case 1:
-            	mantissaBits = mantissa.toByteArray();
-            	needExtraByteForSign = ((mantissaBits[0] & 0x80) != 0);
-            	isNegative = false;
-            	break;
+                mantissaBits = mantissa.toByteArray();
+                needExtraByteForSign = ((mantissaBits[0] & 0x80) != 0);
+                isNegative = false;
+                break;
             }
 
 
@@ -3019,9 +3018,9 @@ done:       for (;;) {
                 returnlen++;
             }
             else if (isNegative) {
-            	// note that bits must always have at least 1 byte for negative values
-            	// since negative zero is handled specially
-            	mantissaBits[0] |= 0x80;
+                // note that bits must always have at least 1 byte for negative values
+                // since negative zero is handled specially
+                mantissaBits[0] |= 0x80;
             }
             this.write(mantissaBits, 0, mantissaBits.length);
             returnlen += mantissaBits.length;

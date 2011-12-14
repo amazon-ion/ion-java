@@ -170,6 +170,14 @@ public interface IonReader
     public String[] getTypeAnnotations();
 
     /**
+     * Gets the current value's annotations as interned symbols (text + ID).
+     *
+     * @return the (ordered) annotations on the current value, or an empty
+     * array (not {@code null}) if there are none.
+     */
+    public InternedSymbol[] getTypeAnnotationSymbols();
+
+    /**
      * Return the symbol IDs of the annotations on the current value as an
      * array of ints.
      * <p>
@@ -178,7 +186,10 @@ public interface IonReader
      *
      * @return the (ordered) annotations on the current value, or an empty
      * array (not {@code null}) if there are none.
+     *
+     * @deprecated Use {@link #getTypeAnnotationSymbols()} instead.
      */
+    @Deprecated
     public int[] getTypeAnnotationIds();
 
     /**
@@ -199,7 +210,10 @@ public interface IonReader
      * of the Ion binary format. You almost certainly don't want to use it.</b>
      *
      * @return not null.
+     *
+     * @deprecated Use {@link #getTypeAnnotationSymbols()} instead.
      */
+    @Deprecated
     public Iterator<Integer> iterateTypeAnnotationIds();
 
     /**

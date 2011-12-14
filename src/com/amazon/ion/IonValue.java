@@ -224,6 +224,15 @@ public interface IonValue
 
 
     /**
+     * Gets this value's user type annotations as interned symbols (text + ID).
+     *
+     * @return the (ordered) annotations on the current value, or an empty
+     * array (not {@code null}) if there are none.
+     */
+    public InternedSymbol[] getTypeAnnotationSymbols();
+
+
+    /**
      * Determines whether or not the value is annotated with
      * a particular user type annotation.
      * @param annotation as a string value.

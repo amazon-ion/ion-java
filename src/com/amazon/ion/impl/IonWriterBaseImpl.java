@@ -376,8 +376,11 @@ public abstract class IonWriterBaseImpl
 
     private final void write_value_annotations_helper(IonReader reader)
     {
-        String [] a = reader.getTypeAnnotations();
-        setTypeAnnotations(a);
+        InternedSymbol[] a = reader.getTypeAnnotationSymbols();
+        // At present, we must always call this, even when the list is empty,
+        // because local symtab diversion leaves the $ion_symbol_table
+        // dangling on the system writer!  TODO fix that, it's broken.
+        setTypeAnnotationSymbols(a);
         if (_debug_on) System.out.print(";");
     }
 

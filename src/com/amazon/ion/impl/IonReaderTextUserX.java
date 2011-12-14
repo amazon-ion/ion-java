@@ -136,8 +136,9 @@ public class IonReaderTextUserX
                 case STRUCT:
                     if (_annotation_count > 0) {
                         for (int ii=0; ii<_annotation_count; ii++) {
-                            String a = _annotations[ii];
-                            if (ION_SYMBOL_TABLE.equals(a)) {
+                            InternedSymbol a = _annotations[ii];
+                            // TODO SID only?
+                            if (ION_SYMBOL_TABLE.equals(a.getText())) {
                                 _symbols = makeNewLocalSymbolTable(_system,
                                                                    _system.getSystemSymbolTable(),
                                                                    _catalog,
@@ -203,7 +204,7 @@ public class IonReaderTextUserX
     }
 
     @Override
-    public int[] getTypeAnnotationIds()
+    public int[] getTypeAnnotationIds() // TODO hoist
     {
         int[]    ids;
         String[] syms = getTypeAnnotations();

@@ -9,6 +9,7 @@ import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
 import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
@@ -227,6 +228,7 @@ abstract class IonWriterUser
         // annotation list, since it's presence is what got us here.
         assert(_current_writer.has_annotation(ION_SYMBOL_TABLE, ION_SYMBOL_TABLE_SID)
         );
+        // TODO ION-58 Wrong if annotations includes an unknown SID
         _symbol_table_value.setTypeAnnotations(getTypeAnnotations());
 
         _current_writer = new IonWriterSystemTree(activeSystemSymbolTable(),
@@ -373,6 +375,11 @@ abstract class IonWriterUser
     public void setTypeAnnotations(String... annotations)
     {
         _current_writer.setTypeAnnotations(annotations);
+    }
+
+    public void setTypeAnnotationSymbols(InternedSymbol... annotations)
+    {
+        _current_writer.setTypeAnnotationSymbols(annotations);
     }
 
     @Override

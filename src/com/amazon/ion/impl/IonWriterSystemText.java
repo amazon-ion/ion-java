@@ -350,6 +350,7 @@ class IonWriterSystemText
         // write annotations
         if (hasAnnotations()) {
             if (! _options._skip_annotations) {
+                // TODO ION-58
                 String[] annotations = getTypeAnnotations();
                 for (String name : annotations) {
                     IonTextUtils.printSymbol(_output, name);

@@ -77,7 +77,7 @@ public class SymbolTest
     public void testFactorySymbolWithSid(ValueFactory vf)
     {
         final int sid = 99;
-        InternedSymbol is = IonImplUtils.newInternedSymbol(null, sid);
+        InternedSymbol is = IonImplUtils.newInternedSymbol((String)null, sid);
 
         IonSymbol value = vf.newSymbol(is);
         checkUnknownSymbol(99, value);

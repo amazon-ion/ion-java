@@ -95,21 +95,37 @@ public abstract class ReaderSystemProcessingTestCase
 
 
     @Override
-    protected void checkAnnotation(String expected, int expectedSid)
+    protected void checkAnnotation(String expectedText, int expectedSid)
     {
         String[] typeAnnotations = myReader.getTypeAnnotations();
         int[] sids = myReader.getTypeAnnotationIds();
 
-        for (int i = 0; i < typeAnnotations.length; i++)
+
+        InternedSymbol[] annSyms = myReader.getTypeAnnotationSymbols();
+        checkSymbol(expectedText, expectedSid, annSyms[0]);
+
+        if (expectedText == null)
         {
-            // FIXME ION-172 this assumes all annotations are known.
-            if (typeAnnotations[i].equals(expected))
-            {
-                assertEquals("symbol id", expectedSid, sids[i]);
-                return;
-            }
+            // TODO ION-58
+            assertEquals("symbol text", "$" + expectedSid, typeAnnotations[0]);
         }
-        fail("Didn't find expected annotation: " + expected);
+        else
+        {
+            assertEquals("symbol text", expectedText, typeAnnotations[0]);
+        }
+
+        assertEquals("sid", expectedSid, sids[0]);
+//
+//        for (int i = 0; i < typeAnnotations.length; i++)
+//        {
+//            // FIXME ION-172 this assumes all annotations are known.
+//            if (typeAnnotations[i].equals(expectedText))
+//            {
+//                assertEquals("symbol id", expectedSid, sids[i]);
+//                return;
+//            }
+//        }
+//        fail("Didn't find expected annotation: " + expectedText);
     }
 
     @Override

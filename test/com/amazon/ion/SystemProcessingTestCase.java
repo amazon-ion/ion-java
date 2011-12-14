@@ -127,6 +127,24 @@ public abstract class SystemProcessingTestCase
                                              int[] expectedSids)
         throws Exception;
 
+    /**
+     * Checks an annotation that's missing from the context symbol table,
+     * generally because there was no exact match to an import.
+     */
+    void checkMissingAnnotation(String expectedText, int expectedSid)
+        throws Exception
+    {
+        if (myMissingSymbolTokensHaveText && expectedText != null)
+        {
+            checkAnnotation(expectedText, UNKNOWN_SYMBOL_ID);
+        }
+        else
+        {
+            checkAnnotation(null, expectedSid);
+        }
+    }
+
+
     protected abstract void checkType(IonType expected)
         throws Exception;
 
@@ -437,7 +455,8 @@ if (table1 == table2) {
             "  imports:[{name:\"fred\", version:2, " +
             "            max_id:" + Symtabs.FRED_MAX_IDS[2] + "}]," +
             "}\n" +
-            "local1 local2 fred_1 fred_2 fred_3 $12 $99 [{fred_3:local2, $98:$97}]";
+            "local1 local2 fred_1 fred_2 fred_3 $12 " +
+            "fred_3::$99 [{fred_3:local2, $98:$97}]";
         // Nesting flushed out a bug at one point
 
 
@@ -485,6 +504,7 @@ if (table1 == table2) {
 
         nextValue();
         checkSymbol(null, 99);
+        checkMissingAnnotation("fred_3", fred3id);
 
         nextValue();
         stepIn();

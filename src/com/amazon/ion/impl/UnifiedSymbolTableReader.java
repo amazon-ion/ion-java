@@ -17,6 +17,7 @@ import static com.amazon.ion.SystemSymbols.SYMBOLS;
 import static com.amazon.ion.SystemSymbols.SYMBOLS_SID;
 import static com.amazon.ion.SystemSymbols.VERSION;
 import static com.amazon.ion.SystemSymbols.VERSION_SID;
+import static com.amazon.ion.impl.IonImplUtils.newInternedSymbol;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.InternedSymbol;
@@ -1055,6 +1056,31 @@ public class UnifiedSymbolTableReader
             return new String[] { ION_SHARED_SYMBOL_TABLE };
         }
         return IonImplUtils.EMPTY_STRING_ARRAY;
+    }
+
+    private static final InternedSymbol ION_SYMBOL_TABLE_SYM =
+        newInternedSymbol(ION_SYMBOL_TABLE, ION_SYMBOL_TABLE_SID);
+
+    private static final InternedSymbol ION_SHARED_SYMBOL_TABLE_SYM =
+        newInternedSymbol(ION_SHARED_SYMBOL_TABLE, ION_SHARED_SYMBOL_TABLE_SID);
+
+    public InternedSymbol[] getTypeAnnotationSymbols()
+    {
+        if (_current_state == S_STRUCT) {
+            InternedSymbol sym;
+            if (_symbol_table.isLocalTable() || _symbol_table.isSystemTable())
+            {
+                sym = ION_SYMBOL_TABLE_SYM;
+            }
+            else
+            {
+                sym = ION_SHARED_SYMBOL_TABLE_SYM;
+            }
+
+            // Must return a new array each time to prevent user from changing it
+            return new InternedSymbol[] { sym };
+        }
+        return InternedSymbol.EMPTY_ARRAY;
     }
 
 

@@ -360,6 +360,7 @@ public final class IonSystemLite
             throw new IonException("No value available");
         }
         if (value._isSymbolPresent()) {
+            // TODO why is this necessary?
             value.populateSymbolValues(null);
         }
         return value;
@@ -428,9 +429,9 @@ public final class IonSystemLite
             v.setFieldNameSymbol(sym);
             symbol_is_present = true;
         }
-        String[] uta = reader.getTypeAnnotations();
+        InternedSymbol[] uta = reader.getTypeAnnotationSymbols();
         if (uta.length > 0) {
-            v.setTypeAnnotations(uta);
+            v.setTypeAnnotationSymbols(uta);
             symbol_is_present = true;
         }
         if (!reader.isNullValue()) {

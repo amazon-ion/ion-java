@@ -358,6 +358,35 @@ public class IonReaderTextSystemX
     // public value routines
     //
 
+    public InternedSymbol[] getTypeAnnotationSymbols()
+    {
+        final int count = _annotation_count;
+        if (count == 0) return InternedSymbol.EMPTY_ARRAY;
+
+        SymbolTable symbols = getSymbolTable();
+
+        InternedSymbol[] result = new InternedSymbol[count];
+        for (int i = 0; i < count; i++)
+        {
+            InternedSymbol sym = _annotations[i];
+            int sid = sym.getId();
+            if (sid < 0)
+            {
+                String text = sym.getText();
+                assert text != null;
+
+                int internedSid = symbols.findSymbol(text);
+                if (internedSid != sid) {
+                    sym = new InternedSymbolImpl(text, internedSid);
+                }
+            }
+
+            result[i] = sym;
+        }
+
+        return result;
+    }
+
     public int[] getTypeAnnotationIds()
     {
         // TODO ION-233 implement sids for system readers

@@ -9,6 +9,7 @@ import static com.amazon.ion.junit.IonAssert.expectField;
 import static com.amazon.ion.junit.IonAssert.expectNextField;
 
 import com.amazon.ion.EmptySymbolException;
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonDatagram;
@@ -584,6 +585,24 @@ public abstract class IonWriterTestCase
 
         iw.addTypeAnnotation("b");
         iw.setTypeAnnotations();
+        iw.writeNull();
+        v = expected.add().newNull();
+        v.clearTypeAnnotations();
+
+        iw.addTypeAnnotation("b");
+        iw.setTypeAnnotationSymbols(new InternedSymbol[0]);
+        iw.writeNull();
+        v = expected.add().newNull();
+        v.clearTypeAnnotations();
+
+        iw.addTypeAnnotation("b");
+        iw.setTypeAnnotationSymbols((InternedSymbol[])null);
+        iw.writeNull();
+        v = expected.add().newNull();
+        v.clearTypeAnnotations();
+
+        iw.addTypeAnnotation("b");
+        iw.setTypeAnnotationSymbols();
         iw.writeNull();
         v = expected.add().newNull();
         v.clearTypeAnnotations();

@@ -242,6 +242,15 @@ class IonReaderTreeSystem
         return _curr.getTypeAnnotations();
     }
 
+
+    public InternedSymbol[] getTypeAnnotationSymbols()
+    {
+        if (_curr == null) {
+            throw new IllegalStateException();
+        }
+        return _curr.getTypeAnnotationSymbols();
+    }
+
     public int[] getTypeAnnotationIds()
     {
         String [] annotations = getTypeAnnotations();

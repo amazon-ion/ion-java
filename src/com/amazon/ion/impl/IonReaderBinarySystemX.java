@@ -59,6 +59,26 @@ class IonReaderBinarySystemX
         return _value_field_id;
     }
 
+    public InternedSymbol[] getTypeAnnotationSymbols()
+    {
+        load_annotations();
+
+        int count = _annotation_count;
+        if (count == 0) return InternedSymbol.EMPTY_ARRAY;
+
+        SymbolTable symtab = getSymbolTable();
+
+        InternedSymbol[] result = new InternedSymbol[count];
+        for (int i = 0; i < count; i++)
+        {
+            int sid = _annotation_ids[i];
+            String text = symtab.findKnownSymbol(sid);
+            result[i] = new InternedSymbolImpl(text, sid);
+        }
+
+        return result;
+    }
+
     public Iterator<Integer> iterateTypeAnnotationIds()
     {
         load_annotations();

@@ -5,6 +5,8 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.impl.IonImplUtils.newInternedSymbol;
+import static com.amazon.ion.impl.IonImplUtils.newInternedSymbols;
 import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.util.Equivalence.ionEquals;
@@ -43,7 +45,7 @@ public abstract class IonValueImpl
      */
     protected int    _elementid;
     private String   _fieldName;
-    private String[] _annotations;
+    private InternedSymbol[] _annotations;
 
     //
     //      | td w vlen | value |
@@ -383,7 +385,7 @@ public abstract class IonValueImpl
         // getting the type annotations will also force the
         // this instance to be "ready" (i.e. it will call
         // MakeReady()) which we'll want.
-        String[] a = source.getTypeAnnotations();
+        InternedSymbol[] a = source.getTypeAnnotationSymbols();
         // underlying code relies on null for empty
         _annotations = a.length == 0 ? null : a;
     }
@@ -804,6 +806,24 @@ public abstract class IonValueImpl
         return name;
     }
 
+
+    public InternedSymbol ensureSid(InternedSymbol sym)
+    {
+        String text = sym.getText();
+        int currentSid = sym.getId();
+
+        if (text != null && currentSid == UNKNOWN_SYMBOL_ID)
+        {
+            int internedSid = addSymbol(text);
+            if (internedSid > 0)
+            {
+                sym = new InternedSymbolImpl(text, internedSid);
+            }
+        }
+
+        return sym;
+    }
+
     /**
      * adds a symbol name to the current symbol
      * table.  This may change the current symbol
@@ -919,29 +939,59 @@ public abstract class IonValueImpl
     public String[] getTypeAnnotations()
     {
         // if we have a list, then it's a good one
-        if (this._annotations != null) return _annotations.clone();
+        if (_annotations == null)
+        {
+            // if this has been materialized (and we clearly don't
+            // have a list) then there is no annotations
+            makeReady();
+        }
 
-        // if this has been materialized (and we clearly don't
-        // have a list) then there is no annotations
-        makeReady();
+        if (_annotations == null) return EMPTY_STRING_ARRAY;
 
-        return this._annotations == null ? EMPTY_STRING_ARRAY : _annotations.clone();
+        return IonImplUtils.toStrings(_annotations, _annotations.length);
+    }
+
+    public InternedSymbol[] getTypeAnnotationSymbols()
+    {
+        // if we have a list, then it's a good one
+        if (_annotations == null)
+        {
+            // if this has been materialized (and we clearly don't
+            // have a list) then there is no annotations
+            makeReady();
+        }
+
+        if (_annotations == null) return InternedSymbol.EMPTY_ARRAY;
+
+        SymbolTable symtab = getSymbolTable();
+        IonImplUtils.localize(symtab, _annotations);
+        return _annotations.clone();
     }
 
     public void setTypeAnnotations(String... annotations)
     {
         checkForLock();
         makeReady();
+        _annotations = newInternedSymbols(getSymbolTable(), annotations);
+        setDirty();
+    }
+
+    public void setTypeAnnotationSymbols(InternedSymbol... annotations)
+    {
+        checkForLock();
 
         if (annotations == null || annotations.length == 0)
         {
             // Normalize all empty lists to the same instance.
-            _annotations = EMPTY_STRING_ARRAY;
+            _annotations = InternedSymbol.EMPTY_ARRAY;
         }
         else
         {
             IonImplUtils.ensureNonEmptySymbols(annotations);
             _annotations = annotations.clone();
+
+            SymbolTable symtab = getSymbolTable();
+            IonImplUtils.localize(symtab, _annotations);
         }
         setDirty();
     }
@@ -956,10 +1006,13 @@ public abstract class IonValueImpl
 
     public boolean hasTypeAnnotation(String annotation)
     {
+        if (annotation == null) return false;
+
         makeReady();
         if (_annotations != null) {
-            for (String s : _annotations) {
-                if (s.equals(annotation)) return true;
+            for (InternedSymbol s : _annotations) {
+                String text = s.getText();
+                if (annotation.equals(text)) return true;
             }
         }
         return false;
@@ -967,16 +1020,20 @@ public abstract class IonValueImpl
 
     public void removeTypeAnnotation(String annotation)
     {
-        checkForLock();
-        if (!this.hasTypeAnnotation(annotation)) return;
+        if (!hasTypeAnnotation(annotation)) return;
 
-        String[] temp = (_annotations.length == 1) ? null : new String[_annotations.length - 1];
-        for (int ii=0, jj=0; ii < _annotations.length; ii++) {
-            if (ii != jj || !_annotations[ii].equals(annotation)) {
+        checkForLock();
+
+        int count = _annotations.length;
+        InternedSymbol[] temp =
+            (count == 1) ? null : new InternedSymbol[count - 1];
+        for (int ii=0, jj=0; ii < count; ii++) {
+            if (ii != jj || !annotation.equals(_annotations[ii].getText())) {
                 temp[jj++] = _annotations[ii];
             }
         }
         _annotations = temp;
+        setDirty();
     }
 
     public void addTypeAnnotation(String annotation)
@@ -987,12 +1044,12 @@ public abstract class IonValueImpl
         // allocate a larger array and copy if necessary
         int oldlen = (_annotations == null) ? 0 : _annotations.length;
         int newlen = oldlen + 1;
-        String[] temp = new String[newlen];
+        InternedSymbol[] temp = new InternedSymbol[newlen];
         if (_annotations != null) {
             System.arraycopy(this._annotations, 0, temp, 0, oldlen);
         }
-        // load the new sid
-        temp[newlen - 1] = annotation;
+
+        temp[newlen - 1] = newInternedSymbol(annotation, UNKNOWN_SYMBOL_ID);
         this._annotations = temp;
 
         setDirty();
@@ -1000,6 +1057,7 @@ public abstract class IonValueImpl
 
     void pos_init()
     {
+        // TODO clear annotations?
         _fieldName          = null;
         _fieldSid           =  UNKNOWN_SYMBOL_ID;
         _entry_start        = -1;
@@ -1353,12 +1411,13 @@ public abstract class IonValueImpl
 
         // and convert them to strings
         int len = sids.length;
-        this._annotations = new String[len];
+        this._annotations = new InternedSymbol[len];
         SymbolTable symtab = getSymbolTable();
         assert symtab != null || len < 1 ;
         for (int ii=0; ii<len; ii++) {
-            int id = sids[ii];
-            this._annotations[ii] = symtab.findSymbol(id);
+            int sid = sids[ii];
+            String text = symtab.findKnownSymbol(sid);
+            this._annotations[ii] = new InternedSymbolImpl(text, sid);
         }
     }
 
@@ -1542,14 +1601,21 @@ public abstract class IonValueImpl
 
         // first add up the length of the annotations symbol id lengths
         for (int ii=0; ii<_annotations.length; ii++) {
-            int symId = resolveSymbol(_annotations[ii]);
-            if (symId <= 0) {
-                symId = addSymbol(_annotations[ii]);
+            InternedSymbol sym = _annotations[ii];
+            int sid = sym.getId();
+            if (sid == UNKNOWN_SYMBOL_ID)
+            {
+                sym = ensureSid(sym);
+                sid = sym.getId();
+                if (sid != UNKNOWN_SYMBOL_ID)
+                {
+                    _annotations[ii] = sym;
+                }
             }
-            if (symId <= 0) {
+            if (sid <= 0) {
                 throw new IllegalStateException("the annotation must be in the symbol table");
             }
-            int vlen = IonBinary.lenVarUInt(symId);
+            int vlen = IonBinary.lenVarUInt(sid);
             len += vlen;
         }
         // then add the length of the symbol list which will preceed the symbols
@@ -1684,11 +1750,8 @@ public abstract class IonValueImpl
             assert this._container.pos_getType() == IonConstants.tidStruct;
 
             if (_fieldSid == UNKNOWN_SYMBOL_ID) {
-                int newFieldSid  = this.resolveSymbol(_fieldName);
-                if (newFieldSid == UNKNOWN_SYMBOL_ID) {
-                    newFieldSid = this.addSymbol(_fieldName);
-                    assert newFieldSid != UNKNOWN_SYMBOL_ID;
-                }
+                int newFieldSid  = addSymbol(_fieldName);
+                assert newFieldSid != UNKNOWN_SYMBOL_ID;
                 _fieldSid = newFieldSid;
             }
 
@@ -1762,12 +1825,15 @@ public abstract class IonValueImpl
         // TODO can any of this be short-circuited?
 
         if (this._annotations != null) {
-            for (String s : this._annotations) {
-                int sid = this.resolveSymbol(s);
-                if (sid < 1) {
-                    checkForLock();
-                    symtab = this.addSymbol(s, symtab);
+            for (int i = 0; i < _annotations.length; i++)
+            {
+                InternedSymbol sym = _annotations[i];
+                InternedSymbol interned = ensureSid(sym);
+                if (sym != interned)
+                {
+                    _annotations[i] = interned;
                 }
+                symtab = getSymbolTable();
             }
         }
 

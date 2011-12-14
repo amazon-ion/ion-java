@@ -333,6 +333,7 @@ public class IonAssert
             IonValue actualValue   = actual.next();
             doAssertIonEquals("iterator[" + i + ']',
                               expectedValue, actualValue);
+            i++;
         }
 
         assertFalse("unexpected next value [" + i + ']',

@@ -426,13 +426,11 @@ public class IonWriterSystemBinary
         int annotations_len = 0;
         int sid_count = annotationCount();
         if (sid_count > 0) {
-            int[] sids = super.get_type_annotations_as_ints();
+            int[] sids = super.internAnnotationsAndGetSids();
 
             // FIRST add up the length of the annotation symbols as they'll appear in the buffer
             for (int ii=0; ii<sid_count; ii++) {
-                if (sids[ii] < 1) {
-                    throw new UnsupportedOperationException("symbol resolution must be handled by the user writer");
-                }
+                assert sids[ii] > 0;
                 annotations_len += IonBinary.lenVarUInt(sids[ii]);
             }
 

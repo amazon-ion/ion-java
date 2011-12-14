@@ -3,8 +3,8 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static com.amazon.ion.impl.IonImplUtils.EMPTY_INT_ARRAY;
-import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.impl.IonImplUtils.newInternedSymbol;
+import static com.amazon.ion.impl.IonImplUtils.newInternedSymbols;
 import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
@@ -42,11 +42,9 @@ abstract class IonWriterSystem
 
     private static final int DEFAULT_ANNOTATION_COUNT = 4;
 
-    /** really ion type is only used for int, string or null (unknown) */
-    private IonType     _annotations_type;
     private int         _annotation_count;
-    private String[]    _annotations = new String[DEFAULT_ANNOTATION_COUNT];
-    private int[]       _annotation_sids = new int[DEFAULT_ANNOTATION_COUNT];
+    private InternedSymbol[] _annotations =
+        new InternedSymbol[DEFAULT_ANNOTATION_COUNT];
 
 
     //========================================================================
@@ -274,18 +272,6 @@ abstract class IonWriterSystem
     //========================================================================
     // Annotations
 
-
-    private final boolean no_illegal_annotations()
-    {
-        for (int ii=0; ii<_annotation_count; ii++) {
-            String a = _annotations[ii];
-            if (a == null || a.length() < 1) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     /**
      * Ensures that our {@link #_annotations} and {@link #_annotation_sids}
      * arrays have enough capacity to hold the given number of annotations.
@@ -300,58 +286,34 @@ abstract class IonWriterSystem
             newlen = length;
         }
 
-        String[] temp1 = new String[newlen];
-        int[]    temp2 = new int[newlen];
+        InternedSymbol[] temp1 = new InternedSymbol[newlen];
 
         if (oldlen > 0) {
-            if (_annotations_type == IonType.STRING) {
-                System.arraycopy(_annotations, 0, temp1, 0, oldlen);
-            }
-            if (_annotations_type == IonType.INT) {
-                System.arraycopy(_annotation_sids, 0, temp2, 0, oldlen);
-            }
+            System.arraycopy(_annotations, 0, temp1, 0, oldlen);
         }
         _annotations = temp1;
-        _annotation_sids = temp2;
     }
 
 
-    /**
-     * @throws UnknownSymbolException if the text of any annotation is
-     *  unknown.
-     */
-    private final String[] get_type_annotations_as_strings()
+    final int[] internAnnotationsAndGetSids() throws IOException
     {
-        if (_annotation_count < 1) {
-            return EMPTY_STRING_ARRAY;
-        }
-        else if (_annotations_type == IonType.INT) {
-            for (int ii=0; ii<_annotation_count; ii++) {
-                int id = _annotation_sids[ii];
-                String name = assumeKnownSymbol(id);
-                _annotations[ii] = name;
-            }
-        }
-        return _annotations;
-    }
+        int count = _annotation_count;
+        if (count == 0) return IonImplUtils.EMPTY_INT_ARRAY;
 
-    final int[] get_type_annotations_as_ints()
-    {
-        if (_annotation_count < 1) {
-            return EMPTY_INT_ARRAY;
-        }
-        else if (_annotations_type == IonType.STRING) {
-            for (int ii=0; ii<_annotation_count; ii++) {
-                String name = _annotations[ii];
-                try {
-                    _annotation_sids[ii] = add_symbol(name);
-                }
-                catch (IOException e) {
-                    throw new IonException(e);
-                }
+        int[] sids = new int[count];
+        for (int i = 0; i < count; i++)
+        {
+            InternedSymbol sym = _annotations[i];
+            int sid = sym.getId();
+            if (sid == UNKNOWN_SYMBOL_ID)
+            {
+                String text = sym.getText();
+                sid = add_symbol(text);
+                _annotations[i] = new InternedSymbolImpl(text, sid);
             }
+            sids[i] = sid;
         }
-        return _annotation_sids;
+        return sids;
     }
 
 
@@ -368,7 +330,6 @@ abstract class IonWriterSystem
     final void clearAnnotations()
     {
         _annotation_count = 0;
-        _annotations_type = IonType.NULL;
     }
 
 
@@ -379,136 +340,97 @@ abstract class IonWriterSystem
         if (_annotation_count < 1) {
             return false;
         }
-        else if (_annotations_type == IonType.INT) {
-            for (int ii=0; ii<_annotation_count; ii++) {
-                if (_annotation_sids[ii] == id) {
-                    return true;
-                }
+
+        for (int ii=0; ii<_annotation_count; ii++) {
+            if (name.equals(_annotations[ii].getText())) {
+                return true;
             }
-        }
-        else if (_annotations_type == IonType.STRING) {
-            for (int ii=0; ii<_annotation_count; ii++) {
-                // TODO: currently this method is only called internally for
-                //       system symbols.  If this is to be expanded to user
-                //       symbols (or our system symbols get more complex)
-                //       these names will have to be "washed" to handle
-                //       escape characters and $15 style names
-                if (name.equals(_annotations[ii])) {
-                    return true;
-                }
-            }
-        }
-        else {
-            assert("if there are annotation they have to be either string or int".length() < 0);
         }
         return false;
     }
 
+    final InternedSymbol[] getTypeAnnotationSymbols()
+    {
+        int count = _annotation_count;
+        if (count == 0) return InternedSymbol.EMPTY_ARRAY;
+
+        InternedSymbol[] syms = new InternedSymbol[count];
+        System.arraycopy(_annotations, 0, syms, 0, count);
+        return syms;
+    }
+
+    public final void setTypeAnnotationSymbols(InternedSymbol... annotations)
+    {
+        if (annotations == null || annotations.length == 0)
+        {
+            _annotation_count = 0;
+        }
+        else
+        {
+            int count = annotations.length;
+            // TODO the following makes two copy passes
+            // TODO validate the input
+            ensureAnnotationCapacity(count);
+
+            SymbolTable symtab = getSymbolTable();
+            for (int i = 0; i < count; i++)
+            {
+                InternedSymbol sym = annotations[i];
+                sym = IonImplUtils.localize(symtab, sym);
+                _annotations[i] = sym;
+            }
+            _annotation_count = count;
+        }
+    }
 
     @Override
     final String[] getTypeAnnotations()
     {
-        if (_annotation_count < 1) {
-            // no annotations, just give them the empty array
-            return EMPTY_STRING_ARRAY;
-        }
-        if (IonType.INT.equals(_annotations_type) && getSymbolTable() == null) {
-            // the native form of the annotations are ints
-            // but there's no symbol table to convert them
-            // we're done - no data for the caller
-            return null;
-        }
-
-        // go get the string (original or converted from ints)
-        String[] user_copy = new String[_annotation_count];
-        String[] annotations = get_type_annotations_as_strings();
-        System.arraycopy(annotations, 0, user_copy, 0, _annotation_count);
-
-        return user_copy;
+        return IonImplUtils.toStrings(_annotations, _annotation_count);
     }
 
     public final void setTypeAnnotations(String... annotations)
     {
-        _annotations_type = IonType.STRING;
-        if (annotations == null) {
-            annotations = IonImplUtils.EMPTY_STRING_ARRAY;
+        if (annotations == null || annotations.length == 0)
+        {
+            _annotation_count = 0;
         }
-        else if (annotations.length > _annotation_count) {
-            ensureAnnotationCapacity(annotations.length);
+        else
+        {
+            InternedSymbol[] syms =
+                newInternedSymbols(getSymbolTable(), annotations);
+            int count = syms.length;
+            // TODO the following makes two copy passes
+            ensureAnnotationCapacity(count);
+            System.arraycopy(syms, 0, _annotations, 0, count);
+            _annotation_count = count;
         }
-        System.arraycopy(annotations, 0, _annotations, 0, annotations.length);
-        _annotation_count = annotations.length;
-        assert(no_illegal_annotations() == true);
     }
 
     public final void addTypeAnnotation(String annotation)
     {
+        InternedSymbol is = newInternedSymbol(getSymbolTable(), annotation);
         ensureAnnotationCapacity(_annotation_count + 1);
-        if (_annotations_type == IonType.INT) {
-            int sid;
-            try {
-                sid = add_symbol(annotation);
-            }
-            catch (IOException e) {
-                throw new IonException(e);
-            }
-            addTypeAnnotationId(sid);
-        }
-        else {
-            _annotations_type = IonType.STRING;
-            // FIXME: annotations need to be "washed" through a symbol
-            //        table to address issues like $0234 -> $234 or 'xyzzx'
-            _annotations[_annotation_count++] = annotation;
-        }
+        _annotations[_annotation_count++] = is;
     }
 
 
     @Override
     final int[] getTypeAnnotationIds()
     {
-        if (_annotation_count < 1) {
-            // no annotations, just give them the empty array
-            return EMPTY_INT_ARRAY;
-        }
-        if (IonType.STRING.equals(_annotations_type) && getSymbolTable() == null) {
-            // the native form of the annotations are strings
-            // but there's no symbol table to convert them
-            // we're done - no data for the caller
-            return null;
-        }
-
-        // get the user the ids, either native or converted
-        // throught the current symbol table
-        int[] user_copy = new int[_annotation_count];
-        int[] annotations = get_type_annotations_as_ints();
-        System.arraycopy(annotations, 0, user_copy, 0, _annotation_count);
-
-        return user_copy;
+        return IonImplUtils.toSids(_annotations, _annotation_count);
     }
 
     public final void setTypeAnnotationIds(int... annotationIds)
     {
-        _annotations_type = IonType.INT;
-        if (annotationIds == null) {
-            annotationIds = IonImplUtils.EMPTY_INT_ARRAY;
-        }
-        else if (annotationIds.length > _annotation_count) {
-            ensureAnnotationCapacity(annotationIds.length);
-        }
-        System.arraycopy(annotationIds, 0, _annotation_sids, 0, annotationIds.length);
-        _annotation_count = annotationIds.length;
+        _annotations = newInternedSymbols(getSymbolTable(), annotationIds);
+        _annotation_count = _annotations.length;
     }
 
     public final void addTypeAnnotationId(int annotationId)
     {
+        InternedSymbol is = newInternedSymbol(getSymbolTable(), annotationId);
         ensureAnnotationCapacity(_annotation_count + 1);
-        if (_annotations_type == IonType.STRING) {
-            String annotation = assumeKnownSymbol(annotationId);
-            addTypeAnnotation(annotation);
-        }
-        else {
-            _annotations_type = IonType.INT;
-            _annotation_sids[_annotation_count++] = annotationId;
-        }
+        _annotations[_annotation_count++] = is;
     }
 }

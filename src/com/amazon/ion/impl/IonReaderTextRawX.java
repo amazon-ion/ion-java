@@ -261,7 +261,7 @@ public abstract class IonReaderTextRawX
     String              _field_name;
     int                 _field_name_sid = UNKNOWN_SYMBOL_ID;
     int                 _annotation_count;
-    String[]            _annotations;
+    InternedSymbol[]    _annotations;
 
     boolean             _current_value_save_point_loaded;
     SavePoint           _current_value_save_point;
@@ -302,7 +302,7 @@ public abstract class IonReaderTextRawX
 
     protected final void init_once() {
         _current_value_buffer = new StringBuilder();
-        _annotations = new String[DEFAULT_ANNOTATION_COUNT];
+        _annotations = new InternedSymbol[DEFAULT_ANNOTATION_COUNT];
     }
 
     protected final void init(UnifiedInputStreamX iis, IonType parent)
@@ -405,7 +405,9 @@ public abstract class IonReaderTextRawX
         _v.setAuthoritativeType(IonScalarConversionsX.AS_TYPE.boolean_value);
     }
 
-    private final void set_fieldname(String text, int sid) {
+    private final void set_fieldname(InternedSymbol sym) {
+        String text = sym.getText();
+        int sid = sym.getId();
         if (text != null && text.length() < 1) {
             parse_error("empty strings are not valid field names");
         }
@@ -418,15 +420,16 @@ public abstract class IonReaderTextRawX
         _field_name_sid = UNKNOWN_SYMBOL_ID;
     }
 
-    private final void append_annotation(String name) {
+    private final void append_annotation(InternedSymbol sym) {
+        // empty text is checked by caller
         int oldlen = _annotations.length;
         if (_annotation_count >= oldlen) {
             int newlen = oldlen * 2;
-            String[] temp = new String[newlen];
+            InternedSymbol[] temp = new InternedSymbol[newlen];
             System.arraycopy(_annotations, 0, temp, 0, oldlen);
             _annotations = temp;
         }
-        _annotations[_annotation_count++] = name;
+        _annotations[_annotation_count++] = sym;
     }
 
     private final void clear_annotation_list() {
@@ -745,6 +748,47 @@ public abstract class IonReaderTextRawX
         }
         return new_state;
     }
+
+
+    private final InternedSymbol parseSymbolToken(String context,
+                                                  StringBuilder sb,
+                                                  int t)
+        throws IOException
+    {
+        String text;
+        int sid;
+
+        if (t == IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER) {
+            int kw = IonTokenConstsX.keyword(sb, 0, sb.length());
+            switch (kw) {
+                case IonTokenConstsX.KEYWORD_FALSE:
+                case IonTokenConstsX.KEYWORD_TRUE:
+                case IonTokenConstsX.KEYWORD_NULL:
+                case IonTokenConstsX.KEYWORD_NAN:
+                    // keywords are not ok unless they're quoted
+                    String reason =
+                    "Cannot use unquoted keyword " +
+                        sb.toString() + " as " + context;
+                    parse_error(reason);
+                case IonTokenConstsX.KEYWORD_sid:
+                    text = null;
+                    sid = IonTokenConstsX.decodeSid(sb);
+                    break;
+                default:
+                    text = sb.toString();
+                    sid = UNKNOWN_SYMBOL_ID;
+                    break;
+            }
+        }
+        else {
+            text = sb.toString();
+            sid = UNKNOWN_SYMBOL_ID;
+        }
+
+        return new InternedSymbolImpl(text, sid);
+    }
+
+
     protected final void parse_to_next_value() throws IOException
     {
         int t;
@@ -828,41 +872,10 @@ public abstract class IonReaderTextRawX
 
                 sb = token_contents_load(t);
 
-                String text;
-                int sid;
+                InternedSymbol sym = parseSymbolToken("a field name", sb, t);
+                set_fieldname(sym);
+                clear_current_value_buffer();
 
-                if (t == IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER) {
-                    // for a basic (unquoted) token we can use an simple loader
-                    // and we'll have to check to make sure the symbol isn't
-                    // one of the keywords
-                    int kw = IonTokenConstsX.keyword(sb, 0, sb.length());
-                    switch (kw) {
-                    case IonTokenConstsX.KEYWORD_FALSE:
-                    case IonTokenConstsX.KEYWORD_TRUE:
-                    case IonTokenConstsX.KEYWORD_NULL:
-                    case IonTokenConstsX.KEYWORD_NAN:
-                        // keywords are not OK unless they're quoted
-                        String reason = "Cannot use unquoted keyword "
-                                        + sb.toString()
-                                        + " as a field name";
-                        parse_error(reason);
-                    case IonTokenConstsX.KEYWORD_sid:
-                        text = null;
-                        sid = IonTokenConstsX.decodeSid(sb);
-                        break;
-                    default:
-                        text = sb.toString();
-                        sid = UNKNOWN_SYMBOL_ID;
-                        break;
-                    }
-                }
-                else {
-                    text = sb.toString();
-                    sid = UNKNOWN_SYMBOL_ID;
-                }
-
-                set_fieldname(text, sid);
-                clear_current_value_buffer();  // token_contents_consumed();
                 t = _scanner.nextToken();
                 if (t != IonTokenConstsX.TOKEN_COLON) {
                     String message = "field name must be followed by a colon, not a "
@@ -875,6 +888,7 @@ public abstract class IonReaderTextRawX
                 break;
             }
             case ACTION_LOAD_ANNOTATION:
+            {
                 sb = token_contents_load(t);
                 if (sb.length() < 1) {
                     // this is the case for an empty symbol
@@ -891,26 +905,12 @@ public abstract class IonReaderTextRawX
                     break;
                 }
 
-                // We have an annotation! Make sure it's not a keyword
-                if (t == IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER) {
-                    int kw = IonTokenConstsX.keyword(sb, 0, sb.length());
-                    switch (kw) {
-                    case IonTokenConstsX.KEYWORD_FALSE:
-                    case IonTokenConstsX.KEYWORD_TRUE:
-                    case IonTokenConstsX.KEYWORD_NULL:
-                    case IonTokenConstsX.KEYWORD_NAN:
-                        // keywords are not ok unless they're quoted
-                        String reason =
-                            "Cannot use unquoted keyword " +
-                            sb.toString() + " as an annotation";
-                        parse_error(reason);
-                    default:
-                        break;
-                    }
-                }
-                // TODO ION-58 wrong for SIDs
-                append_annotation(sb.toString());
+                // We have an annotation!
+                InternedSymbol sym = parseSymbolToken("an annotation", sb, t);
+                append_annotation(sym);
                 clear_current_value_buffer();
+
+                // Consumed the annotation, move on.
                 // note: that peekDoubleColon() consumed the two colons
                 // so nextToken won't see them
                 t = _scanner.nextToken();
@@ -927,6 +927,7 @@ public abstract class IonReaderTextRawX
                     break;
                 }
                 break;
+            }
             case ACTION_START_STRUCT:
                 _value_type = IonType.STRUCT;
                 temp_state = STATE_BEFORE_FIELD_NAME;
@@ -1339,21 +1340,15 @@ if (depth == debugging_depth) {
 
     public Iterator<String> iterateTypeAnnotations()
     {
-        return IonImplUtils.stringIterator(_annotations, _annotation_count);
+        return IonImplUtils.stringIterator(getTypeAnnotations());
     }
 
     public String[] getTypeAnnotations()
     {
-        String[] annotations;
-        if (_annotation_count > 0) {
-            annotations = new String[_annotation_count];
-            System.arraycopy(_annotations, 0, annotations, 0, _annotation_count);
-        }
-        else {
-            annotations = IonImplUtils.EMPTY_STRING_ARRAY;
-        }
-        return annotations;
+        return IonImplUtils.toStrings(_annotations, _annotation_count);
     }
+
+
     public void stepIn()
     {
         if (_value_type == null || _eof) {

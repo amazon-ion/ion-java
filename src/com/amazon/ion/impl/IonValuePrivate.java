@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
@@ -17,6 +18,9 @@ public interface IonValuePrivate
      * @return int the offset of this value in its containers member list
      */
     public int         getElementId();
+
+
+    void setTypeAnnotationSymbols(InternedSymbol... annotations);
 
 
     /**

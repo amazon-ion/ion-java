@@ -117,6 +117,20 @@ public class DatagramTreeReaderSystemProcessingTest
     }
 
     @Override
+    void checkMissingAnnotation(String expectedText, int expectedSid)
+        throws Exception
+    {
+        if (myLoadTime == LoadTime.LOAD_IN_PREPARE)
+        {
+            checkAnnotation(expectedText, expectedSid);
+        }
+        else
+        {
+            super.checkMissingAnnotation(expectedText, expectedSid);
+        }
+    }
+
+    @Override
     void checkMissingSymbol(String expectedText, int expectedSid)
         throws Exception
     {

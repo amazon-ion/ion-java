@@ -202,6 +202,23 @@ public interface IonWriter
      */
     public void setTypeAnnotations(String... annotations);
 
+
+    /**
+     * Sets the full list of pending annotations to the given symbols.
+     * Any pending annotations are cleared.
+     * The contents of the {@code annotations} array are copied into this
+     * writer, so the caller does not need to preserve the array.
+     * <p>
+     * The list of pending annotations is cleared when the current value is
+     * written via {@link #stepIn(IonType) stepIn()} or one of the
+     * {@code write*()} methods.
+     *
+     * @param annotations
+     * If null or empty, any pending annotations are cleared.
+     */
+    public void setTypeAnnotationSymbols(InternedSymbol... annotations);
+
+
     /**
      * Sets the full list of pending annotations to the given symbol ids.
      * Any pending annotations are cleared.

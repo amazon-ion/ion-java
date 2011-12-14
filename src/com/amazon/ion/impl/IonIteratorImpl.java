@@ -76,7 +76,7 @@ public class IonIteratorImpl
     {
         IonType type = _reader.getType();
 
-        String [] annotations = _reader.getTypeAnnotations();
+        InternedSymbol[] annotations = _reader.getTypeAnnotationSymbols();
 
         IonValue v;
 
@@ -177,7 +177,7 @@ public class IonIteratorImpl
         ((IonValuePrivate)v).setSymbolTable(symtab);
 
         if (annotations.length != 0) {
-            v.setTypeAnnotations(annotations);
+            ((IonValuePrivate)v).setTypeAnnotationSymbols(annotations);
         }
 
         return v;

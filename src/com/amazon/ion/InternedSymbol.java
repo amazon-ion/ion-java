@@ -12,6 +12,12 @@ package com.amazon.ion;
 public interface InternedSymbol
 {
     /**
+     * A zero-length array.
+     */
+    public static final InternedSymbol[] EMPTY_ARRAY = new InternedSymbol[0];
+
+
+    /**
      * Gets the text of this symbol.
      * <p>
      * If the text is not known (usually due to a shared symbol table being

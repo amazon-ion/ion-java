@@ -99,27 +99,34 @@ public class IteratorSystemProcessingTest
 
         InternedSymbol sym = myCurrentValue.getFieldNameSymbol();
         checkSymbol(expectedText, expectedSid, sym);
-        assertEquals(expectedText, sym.getText());
-        assertEquals(expectedSid,  sym.getId());
     }
 
 
 
     @Override
-    protected void checkAnnotation(String expected, int expectedSid)
+    protected void checkAnnotation(String expectedText, int expectedSid)
     {
-        if (! myCurrentValue.hasTypeAnnotation(expected))
+        String expectedStringValue =
+            (expectedText == null ? "$" + expectedSid : expectedText);
+
+        if (expectedText != null && ! myCurrentValue.hasTypeAnnotation(expectedStringValue))
         {
-            fail("Didn't find expected annotation: " + expected);
+            fail("Didn't find expected annotation: " + expectedStringValue);
         }
+        myCurrentValue.hasTypeAnnotation("just make sure it doesn't blow up");
 
         String[] typeAnnotations = myCurrentValue.getTypeAnnotations();
-        if (! Arrays.asList(typeAnnotations).contains(expected))
+        assertEquals(expectedStringValue, typeAnnotations[0]);
+
+        InternedSymbol[] annSyms = myCurrentValue.getTypeAnnotationSymbols();
+        checkSymbol(expectedText, expectedSid, annSyms[0]);
+
+        if (! Arrays.asList(typeAnnotations).contains(expectedStringValue))
         {
-            fail("Didn't find expected annotation: " + expected);
+            fail("Didn't find expected annotation: " + expectedStringValue);
         }
 
-        checkSymbol(expected, expectedSid, myCurrentValue.getSymbolTable());
+// TODO ??? checkSymbol(expected, expectedSid, myCurrentValue.getSymbolTable());
     }
 
     @Override
