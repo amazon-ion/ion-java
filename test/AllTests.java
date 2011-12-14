@@ -19,6 +19,7 @@ import com.amazon.ion.HashCodeDistributionTest;
 import com.amazon.ion.IntTest;
 import com.amazon.ion.IonExceptionTest;
 import com.amazon.ion.IonSystemTest;
+import com.amazon.ion.IonValueTest;
 import com.amazon.ion.JavaNumericsTest;
 import com.amazon.ion.ListTest;
 import com.amazon.ion.LoaderTest;
@@ -87,6 +88,7 @@ import org.junit.runners.Suite;
     SimpleCatalogTest.class,
 
     // Type-based DOM tests
+    IonValueTest.class,
     BlobTest.class,
     BoolTest.class,
     ClobTest.class,
