@@ -22,15 +22,10 @@ public class IonSymbolLite
     extends IonTextLite
     implements IonSymbol
 {
-    private static final int NULL_SYMBOL_ID = 0;
-
     private static final int HASH_SIGNATURE =
         IonType.SYMBOL.toString().hashCode();
 
-    /**
-     * SID is zero when this is null.symbol
-     */
-    private int     _sid = UNKNOWN_SYMBOL_ID;
+    private int _sid = UNKNOWN_SYMBOL_ID;
 
     /**
      * Constructs a <code>null.symbol</code> value.
@@ -232,7 +227,7 @@ public class IonSymbolLite
         }
         else {
             _isNullValue(true);
-            _sid = NULL_SYMBOL_ID;
+            _sid = UNKNOWN_SYMBOL_ID;
         }
     }
 
@@ -300,6 +295,7 @@ public class IonSymbolLite
         String name = _stringValue();
         if (name == null) {
             assert(_sid > 0);
+            // TODO ION-58
             name = "$" + _sid;
         }
         return name;

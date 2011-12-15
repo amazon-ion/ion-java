@@ -29,8 +29,6 @@ public final class IonSymbolImpl
         IonConstants.makeTypeDescriptor(IonConstants.tidSymbol,
                                         IonConstants.lnIsNullAtom);
 
-    private static final int NULL_SYMBOL_ID = 0;
-
     private static final int HASH_SIGNATURE =
         IonType.SYMBOL.toString().hashCode();
 
@@ -231,12 +229,7 @@ public final class IonSymbolImpl
         }
 
         super.setValue(value);  // Calls checkForLock
-        if (value != null) {
-            mySid = UNKNOWN_SYMBOL_ID;
-        }
-        else {
-            mySid = NULL_SYMBOL_ID;
-        }
+        mySid = UNKNOWN_SYMBOL_ID;
     }
 
     @Override
@@ -247,6 +240,8 @@ public final class IonSymbolImpl
         if (this.isIonVersionMarker()) {
             return IonConstants.BINARY_VERSION_MARKER_SIZE;
         }
+
+        if (_isNullValue()) return 0;
 
         assert mySid >= 0;
         return IonBinary.lenUInt(mySid);
@@ -272,21 +267,20 @@ public final class IonSymbolImpl
     {
         assert _hasNativeValue() == true;
 
-        if (mySid == UNKNOWN_SYMBOL_ID) {
+        boolean isNull = _isNullValue();
+
+        if (mySid == UNKNOWN_SYMBOL_ID && ! isNull) {
             assert _hasNativeValue() == true && isDirty();
             String name = _get_value();
-            mySid = (name == null
-                         ? NULL_SYMBOL_ID
-                         : getSymbolTable().addSymbol(name));
+            mySid = getSymbolTable().addSymbol(name);
         }
-        assert mySid >= 0;
 
         int ln;
         if (isIonVersionMarker()) {
             // the low nibble of the ion version marker is always 0
             ln = 0;
         }
-        else if (mySid == NULL_SYMBOL_ID) {
+        else if (isNull) {
             ln = IonConstants.lnIsNullAtom;
         }
         else {
@@ -402,7 +396,7 @@ public final class IonSymbolImpl
             int ln = this.pos_getLowNibble();
             switch ((0xf & ln)) {
             case IonConstants.lnIsNullAtom:
-                mySid = NULL_SYMBOL_ID;
+                mySid = UNKNOWN_SYMBOL_ID;
                 _set_value(null);
                 break;
             case 0:
