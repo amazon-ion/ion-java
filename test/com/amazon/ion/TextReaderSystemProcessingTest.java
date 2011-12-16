@@ -2,7 +2,6 @@
 
 package com.amazon.ion;
 
-import org.junit.Assert;
 
 
 
@@ -30,17 +29,5 @@ public class TextReaderSystemProcessingTest
     protected IonReader systemRead() throws Exception
     {
         return system().newSystemReader(myText);
-    }
-
-
-    @Override
-    protected void checkAnnotations(String[] expecteds, int[] expectedSids)
-    {
-        String[] typeAnnotations = myReader.getTypeAnnotations();
-        Assert.assertArrayEquals(expecteds, typeAnnotations);
-
-        // TODO ION-172
-//        int[] sids = myReader.getTypeAnnotationIds();
-//        Assert.assertArrayEquals(expectedSids, sids);
     }
 }

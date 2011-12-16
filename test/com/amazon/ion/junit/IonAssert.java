@@ -20,6 +20,7 @@ import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.NullValueException;
+import com.amazon.ion.ReaderChecker;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -127,59 +128,21 @@ public class IonAssert
         assertTopLevel(in);
     }
 
+
     /**
-     * @param expectedText null means absent
+     * @deprecated Use {@link ReaderChecker}.
      */
-    public static void expectField(IonReader in,
-                                   String expectedText,
-                                   int expectedSid)
-    {
-        String expectedStringValue =
-            (expectedText == null ? "$" + expectedSid : expectedText);
-        assertEquals("IonReader.getFieldName()",
-                     expectedStringValue, in.getFieldName());
-
-        assertEquals(expectedSid, in.getFieldId());
-
-        InternedSymbol sym = in.getFieldNameSymbol();
-        IonTestCase.checkSymbol(expectedText, expectedSid, sym);
-    }
-
-    public static void expectField(IonReader in, InternedSymbol sym)
-    {
-        InternedSymbol is = in.getFieldNameSymbol();
-        if (sym == null)
-        {
-            assertEquals("getFieldName", null, in.getFieldName());
-            assertEquals("getFieldNameSymbol", null, is);
-        }
-        else
-        {
-            assertEquals("field name InternedSymbol text",
-                         sym.getText(), is.getText());
-        }
-        // TODO check sid
-    }
-
+    @Deprecated
     public static void expectField(IonReader in, String name)
     {
-        assertEquals("field name", name, in.getFieldName());
-        InternedSymbol is = in.getFieldNameSymbol();
-        if (name == null)
-        {
-            assertEquals("Unexpected InternedSymbol", null, is);
-        }
-        else
-        {
-            assertEquals("field name InternedSymbol text",
-                         name, is.getText());
-        }
-        // TODO check sid
+        IonTestCase.check(in).fieldName(name);
     }
 
     /**
      * Move to the next value and check the field name.
+     * @deprecated Use {@link ReaderChecker}.
      */
+    @Deprecated
     public static void expectNextField(IonReader in, String name)
     {
         in.next();

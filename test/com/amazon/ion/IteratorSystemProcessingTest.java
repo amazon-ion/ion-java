@@ -2,12 +2,8 @@
 
 package com.amazon.ion;
 
-import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-
 import com.amazon.ion.impl.IonSystemPrivate;
-import java.util.Arrays;
 import java.util.Iterator;
-import org.junit.Assert;
 
 /**
  *
@@ -82,68 +78,12 @@ public class IteratorSystemProcessingTest
     }
 
 
-    /**
-     * @param expectedText null means absent
-     */
     @Override
-    final void checkFieldName(String expectedText, int expectedSid)
-        throws Exception
+    Checker check()
     {
-        String expectedStringValue =
-            (expectedText == null ? "$" + expectedSid : expectedText);
-        assertEquals("IonValue.getFieldName()",
-                     expectedStringValue, myCurrentValue.getFieldName());
-
-        assertEquals("IonValue.getFieldId",
-                     expectedSid, myCurrentValue.getFieldId());
-
-        InternedSymbol sym = myCurrentValue.getFieldNameSymbol();
-        checkSymbol(expectedText, expectedSid, sym);
+        return new IonValueChecker(myCurrentValue);
     }
 
-
-
-    @Override
-    protected void checkAnnotation(String expectedText, int expectedSid)
-    {
-        String expectedStringValue =
-            (expectedText == null ? "$" + expectedSid : expectedText);
-
-        if (expectedText != null && ! myCurrentValue.hasTypeAnnotation(expectedStringValue))
-        {
-            fail("Didn't find expected annotation: " + expectedStringValue);
-        }
-        myCurrentValue.hasTypeAnnotation("just make sure it doesn't blow up");
-
-        String[] typeAnnotations = myCurrentValue.getTypeAnnotations();
-        assertEquals(expectedStringValue, typeAnnotations[0]);
-
-        InternedSymbol[] annSyms = myCurrentValue.getTypeAnnotationSymbols();
-        checkSymbol(expectedText, expectedSid, annSyms[0]);
-
-        if (! Arrays.asList(typeAnnotations).contains(expectedStringValue))
-        {
-            fail("Didn't find expected annotation: " + expectedStringValue);
-        }
-    }
-
-    @Override
-    protected void checkAnnotations(String[] expecteds,
-                                    int[] expectedSids)
-    {
-        String[] typeAnnotations = myCurrentValue.getTypeAnnotations();
-        Assert.assertArrayEquals(expecteds, typeAnnotations);
-
-        SymbolTable symtab = myCurrentValue.getSymbolTable();
-        for (int i = 0; i < expecteds.length; i++)
-        {
-            int foundSid = symtab.findSymbol(expecteds[i]);
-            if (foundSid != UNKNOWN_SYMBOL_ID)
-            {
-                assertEquals("symbol id", expectedSids[i], foundSid);
-            }
-        }
-    }
 
     @Override
     protected void checkType(IonType expected)

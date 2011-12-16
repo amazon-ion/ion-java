@@ -95,11 +95,16 @@ public abstract class SystemProcessingTestCase
     abstract SymbolTable currentSymtab();
 
 
+    abstract Checker check();
+
     /**
      * @param expectedText null means absent
      */
-    abstract void checkFieldName(String expectedText, int expectedSid)
-        throws Exception;
+    final void checkFieldName(String expectedText, int expectedSid)
+    {
+        check().fieldName(expectedText, expectedSid);
+    }
+
 
     /**
      * Checks a field name that's missing from the context symbol table,
@@ -118,14 +123,18 @@ public abstract class SystemProcessingTestCase
         }
     }
 
-
-    protected abstract void checkAnnotation(String expected, int expectedSid)
-        throws Exception;
+    /** Check the first annotation. */
+    final void checkAnnotation(String expectedText, int expectedSid)
+    {
+        check().annotation(expectedText, expectedSid);
+    }
 
     /** Check that all the annotations exist in the given order. */
-    protected abstract void checkAnnotations(String[] expecteds,
-                                             int[] expectedSids)
-        throws Exception;
+    final void checkAnnotations(String[] expectedTexts, int[] expectedSids)
+    {
+        check().annotations(expectedTexts, expectedSids);
+    }
+
 
     /**
      * Checks an annotation that's missing from the context symbol table,
@@ -982,7 +991,7 @@ if (table1 == table2) {
         int sid = systemMaxId() + 1;
 
         startIteration("$ion_symbol_table::{symbols:[\"ann\"]} " +
-                "ann::ann::null");
+                       "ann::ann::null");
         nextValue();
         checkAnnotations(new String[]{ "ann", "ann" },
                          new int[]{ sid, sid });

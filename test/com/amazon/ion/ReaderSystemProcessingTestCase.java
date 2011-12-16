@@ -84,47 +84,12 @@ public abstract class ReaderSystemProcessingTestCase
     }
 
 
-    /**
-     * @param expectedText null means absent
-     */
     @Override
-    final void checkFieldName(String expectedText, int expectedSid)
+    Checker check()
     {
-        IonAssert.expectField(myReader, expectedText, expectedSid);
+        return new ReaderChecker(myReader);
     }
 
-
-    @Override
-    protected void checkAnnotation(String expectedText, int expectedSid)
-    {
-        String[] typeAnnotations = myReader.getTypeAnnotations();
-        int[] sids = myReader.getTypeAnnotationIds();
-
-        if (expectedText == null)
-        {
-            // TODO ION-58
-            assertEquals("symbol text", "$" + expectedSid, typeAnnotations[0]);
-        }
-        else
-        {
-            assertEquals("symbol text", expectedText, typeAnnotations[0]);
-        }
-
-        assertEquals("sid", expectedSid, sids[0]);
-
-        InternedSymbol[] annSyms = myReader.getTypeAnnotationSymbols();
-        checkSymbol(expectedText, expectedSid, annSyms[0]);
-    }
-
-    @Override
-    protected void checkAnnotations(String[] expecteds, int[] expectedSids)
-    {
-        String[] typeAnnotations = myReader.getTypeAnnotations();
-        Assert.assertArrayEquals(expecteds, typeAnnotations);
-
-        int[] sids = myReader.getTypeAnnotationIds();
-        Assert.assertArrayEquals(expectedSids, sids);
-    }
 
     @Override
     protected void checkType(IonType expected)

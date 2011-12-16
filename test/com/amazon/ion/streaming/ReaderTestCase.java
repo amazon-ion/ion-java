@@ -6,6 +6,7 @@ import com.amazon.ion.InputStreamWrapper;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
+import com.amazon.ion.ReaderChecker;
 import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.junit.IonAssert;
 import java.io.IOException;
@@ -53,6 +54,12 @@ public abstract class ReaderTestCase
 
     //========================================================================
 
+    protected ReaderChecker check()
+    {
+        return new ReaderChecker(in);
+    }
+
+
     protected void expectNoCurrentValue()
     {
         IonAssert.assertNoCurrentValue(in);
@@ -73,14 +80,10 @@ public abstract class ReaderTestCase
         IonAssert.assertTopEof(in);
     }
 
-    protected void expectField(String name)
-    {
-        IonAssert.expectField(in, name);
-    }
 
     protected void expectNextField(String name)
     {
-        IonAssert.expectNextField(in, name);
+        check().next().fieldName(name);
     }
 
     protected void expectString(String text)

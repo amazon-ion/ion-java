@@ -483,6 +483,17 @@ public abstract class IonTestCase
     }
 
 
+    public static ReaderChecker check(IonReader reader)
+    {
+        return new ReaderChecker(reader);
+    }
+
+    public static IonValueChecker check(IonValue value)
+    {
+        return new IonValueChecker(value);
+    }
+
+
     public static void checkType(IonType expected, IonValue actual)
     {
         if (actual.getType() != expected)

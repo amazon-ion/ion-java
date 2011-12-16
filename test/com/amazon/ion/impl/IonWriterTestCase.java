@@ -214,7 +214,7 @@ public abstract class IonWriterTestCase
         r.next();
         r.stepIn();
         r.next();
-        expectField(r, null, 99);
+        check(r).fieldName(null, 99);
     }
 
     @Test
