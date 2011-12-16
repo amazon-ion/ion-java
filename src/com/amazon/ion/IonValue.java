@@ -254,6 +254,7 @@ public interface IonValue
      */
     public void setTypeAnnotations(String... annotations);
 
+    public void setTypeAnnotationSymbols(InternedSymbol... annotations);
 
     /**
      * Removes all the user type annotations attached to this value.
