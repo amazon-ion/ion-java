@@ -21,6 +21,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReaderChecker;
+import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.util.Equivalence;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -162,10 +163,22 @@ public class IonAssert
 
         assertFalse(in.isNullValue());
 
-        String expectedStringValue =
-            (expectedText == null ? "$" + expectedSid : expectedText);
-        assertEquals("IonReader.stringValue()",
-                     expectedStringValue, in.stringValue());
+        if (expectedText == null)
+        {
+            try {
+                in.stringValue();
+                fail("Expected " + UnknownSymbolException.class);
+            }
+            catch (UnknownSymbolException e)
+            {
+                assertEquals(expectedSid, e.getSid());
+            }
+        }
+        else
+        {
+            assertEquals("IonReader.stringValue()",
+                         expectedText, in.stringValue());
+        }
 
         assertEquals(expectedSid, in.getSymbolId());
 

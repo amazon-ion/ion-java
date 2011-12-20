@@ -1013,4 +1013,28 @@ if (table1 == table2) {
         checkAnnotations(new String[]{ "ann", "ann" },
                          new int[]{ sid, sid });
     }
+
+    @Test
+    public void testIvmWithUnknownAnnotation()
+    throws Exception
+    {
+        startIteration("$99::$ion_1_0 23");
+        nextValue();
+        // TODO ION-187 inconsistent handling of annotated IVM.
+        if (currentValueType() == IonType.SYMBOL)
+        {
+            nextValue();
+        }
+        checkEof();
+    }
+
+    @Test
+    public void testLocalSymtabWithUnknownAnnotation()
+        throws Exception
+    {
+        String text = "$99::" + Symtabs.printLocalSymtab("s1") + " null";
+        startIteration(text);
+        nextValue();
+        checkEof();
+    }
 }

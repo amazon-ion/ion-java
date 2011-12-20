@@ -711,9 +711,8 @@ public abstract class IonTestCase
         if (name == null)
         {
             try {
-                String text = sym.stringValue();
-                assertEquals("$" + id, text);
-                // TODO ION-58 stringValue should throw
+                sym.stringValue();
+                fail("Expected " + UnknownSymbolException.class);
             }
             catch (UnknownSymbolException e)
             {
@@ -747,17 +746,14 @@ public abstract class IonTestCase
 
         String msg = "text:" + text + " sid:" + sid;
 
-        String expectedStringValue =
-            (text == null ? "$" + sid : text);
-
-        if (sid >= 0)
-        {
-            assertEquals(msg, expectedStringValue, symtab.findSymbol(sid));
-            assertEquals(msg, text, symtab.findKnownSymbol(sid));
-        }
-
         if (text != null)
         {
+            if (sid >= 0)
+            {
+                assertEquals(msg, text, symtab.findSymbol(sid));
+                assertEquals(msg, text, symtab.findKnownSymbol(sid));
+            }
+
             // Can't do this stuff when we have a duplicate symbol.
             if (! dupe)
             {
@@ -769,6 +765,20 @@ public abstract class IonTestCase
 
                 sym = symtab.find(text);
                 assertEquals(msg, sid, sym.getId());
+            }
+        }
+        else // No text expected, must have sid
+        {
+            assertEquals(msg, text, symtab.findKnownSymbol(sid));
+
+            try
+            {
+                symtab.findSymbol(sid);
+                fail("Expected " + UnknownSymbolException.class);
+            }
+            catch (UnknownSymbolException e)
+            {
+                assertEquals(sid, e.getSid());
             }
         }
     }

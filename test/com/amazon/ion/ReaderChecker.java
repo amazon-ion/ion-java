@@ -4,9 +4,15 @@ package com.amazon.ion;
 
 import static com.amazon.ion.IonTestCase.checkSymbol;
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+import static com.amazon.ion.impl.IonImplUtils.stringIterator;
+import static com.amazon.ion.junit.IonAssert.assertIteratorEquals;
 import static com.amazon.ion.junit.IonAssert.assertSymbolEquals;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.fail;
+
+import java.util.Iterator;
 
 /**
  *
@@ -47,11 +53,22 @@ public class ReaderChecker
 
     public ReaderChecker fieldName(String expectedText, int expectedSid)
     {
-        String expectedStringValue =
-            (expectedText == null ? "$" + expectedSid : expectedText);
-
-        assertEquals("IonReader.getFieldName()",
-                     expectedStringValue, myReader.getFieldName());
+        if (expectedText == null)
+        {
+            try {
+                myReader.getFieldName();
+                fail("Expected " + UnknownSymbolException.class);
+            }
+            catch (UnknownSymbolException e)
+            {
+                assertEquals(expectedSid, e.getSid());
+            }
+        }
+        else
+        {
+            assertEquals("IonReader.getFieldName()",
+                         expectedText, myReader.getFieldName());
+        }
 
         assertEquals("IonReader.getFieldId()",
                      expectedSid, myReader.getFieldId());
@@ -63,7 +80,7 @@ public class ReaderChecker
     }
 
     /**
-     * @param name null means no name expected.
+     * @param name null means no field name expected.
      */
     public ReaderChecker fieldName(String name)
     {
@@ -85,22 +102,22 @@ public class ReaderChecker
         return this;
     }
 
-    public ReaderChecker fieldName(InternedSymbol sym)
+    /**
+     * @param name null means no field name expected.
+     */
+    public ReaderChecker fieldName(InternedSymbol name)
     {
-        InternedSymbol is = myReader.getFieldNameSymbol();
-        if (sym == null)
+        if (name == null)
         {
             assertEquals("IonReader.getFieldName()",
                          null, myReader.getFieldName());
             assertEquals("IonReader.getFieldNameSymbol()",
-                         null, is);
+                         null, myReader.getFieldNameSymbol());
         }
         else
         {
-            assertEquals("field name InternedSymbol text",
-                         sym.getText(), is.getText());
+            fieldName(name.getText(), name.getId());
         }
-        // TODO check sid
 
         return this;
     }
@@ -108,11 +125,35 @@ public class ReaderChecker
 
     public ReaderChecker annotation(String expectedText, int expectedSid)
     {
-        String expectedStringValue =
-            (expectedText == null ? "$" + expectedSid : expectedText);
+        if (expectedText == null)
+        {
+            try {
+                myReader.getTypeAnnotations();
+                fail("Expected " + UnknownSymbolException.class);
+            }
+            catch (UnknownSymbolException e)
+            {
+                assertEquals(expectedSid, e.getSid());
+            }
 
-        String[] typeAnnotations = myReader.getTypeAnnotations();
-        assertEquals("symbol text", expectedStringValue, typeAnnotations[0]);
+            try {
+                myReader.iterateTypeAnnotations();
+                fail("Expected " + UnknownSymbolException.class);
+            }
+            catch (UnknownSymbolException e)
+            {
+                assertEquals(expectedSid, e.getSid());
+            }
+        }
+        else
+        {
+            String[] typeAnnotations = myReader.getTypeAnnotations();
+            assertEquals("symbol text", expectedText, typeAnnotations[0]);
+
+            Iterator<String> anns = myReader.iterateTypeAnnotations();
+            assertEquals("symbol text", expectedText, anns.next());
+            assertFalse(anns.hasNext());
+        }
 
         int[] sids = myReader.getTypeAnnotationIds();
         assertEquals("sid", expectedSid, sids[0]);
@@ -127,6 +168,9 @@ public class ReaderChecker
     {
         String[] typeAnnotations = myReader.getTypeAnnotations();
         assertArrayEquals(expectedTexts, typeAnnotations);
+
+        Iterator<String> anns = myReader.iterateTypeAnnotations();
+        assertIteratorEquals(stringIterator(expectedTexts), anns);
 
         int[] sids = myReader.getTypeAnnotationIds();
         assertArrayEquals(expectedSids, sids);

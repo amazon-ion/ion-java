@@ -24,11 +24,23 @@ public class IonValueChecker
 
     public IonValueChecker fieldName(String expectedText, int expectedSid)
     {
-        String expectedStringValue =
-            (expectedText == null ? "$" + expectedSid : expectedText);
-
-        assertEquals("IonValue.getFieldName()",
-                     expectedStringValue, myCurrentValue.getFieldName());
+        if (expectedText == null)
+        {
+            try
+            {
+                myCurrentValue.getFieldName();
+                fail("Expected " + UnknownSymbolException.class);
+            }
+            catch (UnknownSymbolException e)
+            {
+                assertEquals(expectedSid, e.getSid());
+            }
+        }
+        else
+        {
+            assertEquals("IonValue.getFieldName()",
+                         expectedText, myCurrentValue.getFieldName());
+        }
 
         assertEquals("IonValue.getFieldId",
                      expectedSid, myCurrentValue.getFieldId());
@@ -42,20 +54,27 @@ public class IonValueChecker
 
     public IonValueChecker annotation(String expectedText, int expectedSid)
     {
-        String expectedStringValue =
-            (expectedText == null ? "$" + expectedSid : expectedText);
-
-        String[] typeAnnotations = myCurrentValue.getTypeAnnotations();
-        assertEquals(expectedStringValue, typeAnnotations[0]);
+        if (expectedText == null)
+        {
+            try
+            {
+                myCurrentValue.getTypeAnnotations();
+                fail("Expected " + UnknownSymbolException.class);
+            }
+            catch (UnknownSymbolException e)
+            {
+                assertEquals(expectedSid, e.getSid());
+            }
+        }
+        else
+        {
+            String[] typeAnnotations = myCurrentValue.getTypeAnnotations();
+            assertEquals(expectedText, typeAnnotations[0]);
+        }
 
         InternedSymbol[] annSyms = myCurrentValue.getTypeAnnotationSymbols();
         checkSymbol(expectedText, expectedSid, annSyms[0]);
 
-        if (expectedText != null
-            && ! myCurrentValue.hasTypeAnnotation(expectedStringValue))
-        {
-            fail("Didn't find expected annotation: " + expectedStringValue);
-        }
         myCurrentValue.hasTypeAnnotation("just make sure it doesn't blow up");
 
         return this;
