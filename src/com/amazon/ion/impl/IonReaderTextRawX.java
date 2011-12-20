@@ -38,7 +38,7 @@ import java.util.Iterator;
  *
  * This reader scan skip values and in doing so it does not
  * materialize the contents and it does not validate the contents.
- * TODO: We may want to make validation on skip optional.
+ * TODO ION-161 We may want to make validation on skip optional.
  *
  * This manages the value buffer (_v ValueVariant) and the lob
  * content (_lob_*) which is cached in some cases.  It's main
@@ -1105,8 +1105,7 @@ public abstract class IonReaderTextRawX
                 _scanner.load_raw_characters(sb);
                 break;
             case IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER:
-                _scanner.load_symbol(sb);
-                // TODO ION-58 this treats SIDS the same as quoted symbols
+                _scanner.load_symbol_identifier(sb);
                 _value_type = IonType.SYMBOL;
                 break;
             case IonTokenConstsX.TOKEN_SYMBOL_OPERATOR:
@@ -1144,8 +1143,7 @@ public abstract class IonReaderTextRawX
                 _value_type = _scanner.load_number(sb);
                 break;
             case IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER:
-                _scanner.load_symbol(sb);
-                // TODO ION-58 this treats SIDS the same as quoted symbols
+                _scanner.load_symbol_identifier(sb);
                 _value_type = IonType.SYMBOL;
                 break;
             case IonTokenConstsX.TOKEN_SYMBOL_OPERATOR:
@@ -1160,7 +1158,6 @@ public abstract class IonReaderTextRawX
                     //parse_error(message);
                     _scanner.unexpected_eof();
                 }
-                // TODO ION-58 this treats SIDS the same as quoted symbols
                 _value_type = IonType.SYMBOL;
                 break;
             case IonTokenConstsX.TOKEN_STRING_DOUBLE_QUOTE:

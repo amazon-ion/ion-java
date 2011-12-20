@@ -465,7 +465,7 @@ public class IonReaderTextRawTokensX
             c = skip_over_timestamp(sp);
             break;
         case IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER:
-            c = skip_over_symbol(sp);
+            c = skip_over_symbol_identifier(sp);
             break;
         case IonTokenConstsX.TOKEN_SYMBOL_QUOTED:
             // Initial single-quote has been consumed!
@@ -1697,7 +1697,7 @@ public class IonReaderTextRawTokensX
         return c;
     }
 
-    private final int skip_over_symbol(SavePoint sp) throws IOException
+    private final int skip_over_symbol_identifier(SavePoint sp) throws IOException
     {
         int c = read_char();
 
@@ -1710,63 +1710,19 @@ public class IonReaderTextRawTokensX
          }
         return c;
     }
-    protected void load_symbol(StringBuilder sb) throws IOException
-    {
-        int c = read_char();
-        if (c == '$') {
-            // since this *might* be a '$'<number> symbol it get special treatment
-            sb.append((char)c);
-            load_symbol_as_possible_id(sb);
-        }
-        else {
-            // as long as this isn't a '$'<number> symbol just load it
-            while(IonTokenConstsX.isValidSymbolCharacter(c)) {
-                sb.append((char)c);
-                c = read_char();
-            }
-            unread_char(c);
-        }
-        return;
-    }
-    private void load_symbol_as_possible_id(StringBuilder sb) throws IOException
-    {
-        // note the first character was a '$'
-        assert(sb.length() == 1 && sb.charAt(0) == '$');
 
-        boolean all_numeric = true;
-
+    protected void load_symbol_identifier(StringBuilder sb) throws IOException
+    {
         int c = read_char();
         while(IonTokenConstsX.isValidSymbolCharacter(c)) {
             sb.append((char)c);
-            if (!IonTokenConstsX.isDigit(c)) {
-                all_numeric = false;
-            }
             c = read_char();
         }
         unread_char(c);
-
-        if (all_numeric) {
-            // TODO I think this is unnecessary.
-            // here we have to normalize (that is remove
-            // any leading '0's) the int value
-            // this should be an unusual case so the cost
-            // here isn't a major issue
-            while(sb.length() > 2) {
-                c = sb.charAt(1); // right after the '$'
-                if (c != '0') {
-                    break;
-                }
-                sb.deleteCharAt(1);
-            }
-        }
-
-        // TODO whether this is a SID is just forgotten!
-        return;
     }
 
     private int skip_over_symbol_operator(SavePoint sp) throws IOException
     {
-        //int token_type;
         int c = read_char();
 
         // lookahead for +inf and -inf
@@ -2271,7 +2227,7 @@ public class IonReaderTextRawTokensX
                 bad_escape_sequence(c1);
             }
         }
-        if (!IonTokenConstsX.isValueEscapeStart(c1)) {
+        if (!IonTokenConstsX.isValidEscapeStart(c1)) {
             bad_escape_sequence(c1);
         }
         int c2 = IonTokenConstsX.escapeReplacementCharacter(c1);

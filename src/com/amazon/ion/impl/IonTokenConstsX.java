@@ -326,13 +326,12 @@ public class IonTokenConstsX
         return escapeCharacterImage[c];
     }
 
-    // FIXME: this should be isValidEscapeStart (valid, not value)
-    public final static boolean isValueEscapeStart(int c) {
+    public final static boolean isValidEscapeStart(int c) {
         return (escapeCharactersValues[c & 0xff] != ESCAPE_NOT_DEFINED)
          && is8bitValue(c);
     }
     public final static int escapeReplacementCharacter(int c) {
-        if (!isValueEscapeStart(c)) {
+        if (!isValidEscapeStart(c)) {
             throw new IllegalArgumentException("not a valid escape sequence character: "+c);
         }
         return escapeCharactersValues[c];
