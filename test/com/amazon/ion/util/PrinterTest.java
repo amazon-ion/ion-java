@@ -97,17 +97,18 @@ public class PrinterTest
     public void testPrintingAnnotations()
         throws Exception
     {
-        IonNull value = (IonNull) oneValue("an::null");
-        checkRendering("an::null", value);
+        IonNull value = (IonNull) oneValue("an::$99::null");
+        checkRendering("an::$99::null", value);
 
         value.addTypeAnnotation("+");
         value.addTypeAnnotation("\u0000");
-        checkRendering("an::'+'::'\\0'::null", value);
+        value.addTypeAnnotation("$99");
+        checkRendering("an::$99::'+'::'\\0'::'$99'::null", value);
 
         myPrinter.setPrintSymbolAsString(true);
-        checkRendering("an::'+'::'\\0'::null", value);
+        checkRendering("an::$99::'+'::'\\0'::'$99'::null", value);
         myPrinter.setPrintStringAsJson(true);
-        checkRendering("an::'+'::'\\0'::null", value);
+        checkRendering("an::$99::'+'::'\\0'::'$99'::null", value);
         myPrinter.setPrintSymbolAsString(false);
         myPrinter.setPrintStringAsJson(false);
 
@@ -117,11 +118,11 @@ public class PrinterTest
 
         IonSexp s = system().newEmptySexp();
         s.add(value);
-        checkRendering("(an::'+'::'\\0'::null)", s);
+        checkRendering("(an::$99::'+'::'\\0'::'$99'::null)", s);
         myPrinter.setPrintSymbolAsString(true);
-        checkRendering("(an::'+'::'\\0'::null)", s);
+        checkRendering("(an::$99::'+'::'\\0'::'$99'::null)", s);
         myPrinter.setPrintStringAsJson(true);
-        checkRendering("(an::'+'::'\\0'::null)", s);
+        checkRendering("(an::$99::'+'::'\\0'::'$99'::null)", s);
 
         value.setTypeAnnotations("boo", "boo");
         checkRendering("boo::boo::null", value);
@@ -558,6 +559,24 @@ public class PrinterTest
         checkRendering("\"Ab\\u0000\"", value);
         myPrinter.setPrintSymbolAsString(false);
         checkRendering("'Ab\\0'", value);
+
+        value = system().newSymbol("$99"); // Known, sidlike text
+        checkRendering("'$99'", value);
+        myPrinter.setPrintSymbolAsString(true);
+        checkRendering("\"$99\"", value);
+        myPrinter.setPrintStringAsJson(true);
+        checkRendering("\"$99\"", value);
+        myPrinter.setPrintSymbolAsString(false);
+        checkRendering("'$99'", value);
+
+        value = (IonSymbol) system().singleValue("$99");  // Unknown symbol
+        checkRendering("$99", value);
+        myPrinter.setPrintSymbolAsString(true);
+        checkRendering("\"$99\"", value);
+        myPrinter.setPrintStringAsJson(true);
+        checkRendering("\"$99\"", value);
+        myPrinter.setPrintSymbolAsString(false);
+        checkRendering("$99", value);
     }
 
     @Test
