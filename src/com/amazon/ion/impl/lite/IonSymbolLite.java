@@ -12,6 +12,7 @@ import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonImplUtils;
 
@@ -189,46 +190,8 @@ public class IonSymbolLite
             throw new EmptySymbolException();
         }
 
-        // check for a $<digits> form of the symbol name
-        // really this should be done down in the parser
-        // TODO ION-58 this shouldn't try to parse the value
-        boolean is_encoded_sid = false;
-        int sid = UNKNOWN_SYMBOL_ID;
-        if (value != null && value.length() > 1 && value.charAt(0) == '$') {
-            if (Character.isDigit(value.charAt(1))) {
-                is_encoded_sid = true;
-                for (int ii=2; ii<value.length(); ii++) {
-                    if (!Character.isDigit(value.charAt(ii))) {
-                        is_encoded_sid = false;
-                        break;
-                    }
-                }
-                if (is_encoded_sid) {
-                    sid = Integer.parseInt(value.substring(1));
-                    if (sid < 1) {
-                        // we reject $0 (as an encoded sid)
-                        is_encoded_sid = false;
-                    }
-                    else {
-                        value = null;
-                    }
-                }
-            }
-        }
-
-        super.setValue(value);  // Calls checkForLock
-        if (is_encoded_sid) {
-            _sid = sid;
-            _isNullValue(false);
-        }
-        else if (value != null) {
-            _isNullValue(false);
-            _sid = UNKNOWN_SYMBOL_ID;
-        }
-        else {
-            _isNullValue(true);
-            _sid = UNKNOWN_SYMBOL_ID;
-        }
+        super.setValue(value);  // Calls checkForLock and _isNullValue
+        _sid = UNKNOWN_SYMBOL_ID;
     }
 
     protected boolean isIonVersionMarker() {
@@ -295,8 +258,7 @@ public class IonSymbolLite
         String name = _stringValue();
         if (name == null) {
             assert(_sid > 0);
-            // TODO ION-58
-            name = "$" + _sid;
+            throw new UnknownSymbolException(_sid);
         }
         return name;
     }

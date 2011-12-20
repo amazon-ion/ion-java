@@ -7,6 +7,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.UnknownSymbolException;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Iterator;
@@ -167,7 +168,7 @@ class SubstituteSymbolTable
     {
         if (id > myMaxId || myDelegate == null)
         {
-            return "$" + id;
+            throw new UnknownSymbolException(id);
         }
         return myDelegate.findSymbol(id);
     }

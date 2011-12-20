@@ -14,6 +14,10 @@ public interface IonText
      *
      * @return the text of this Ion value, or <code>null</code> if
      * <code>this.isNullValue()</code>.
+     *
+     * @throws UnknownSymbolException if this is a symbol with unknown text.
+     *
+     * @see IonSymbol#symbolValue()
      */
     public String stringValue();
 

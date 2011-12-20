@@ -23,7 +23,6 @@ import static com.amazon.ion.util.IonTextUtils.printQuotedSymbol;
 
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.InternedSymbol;
-import com.amazon.ion.InvalidSystemSymbolException;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonList;
@@ -34,8 +33,8 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.SystemSymbols;
+import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
@@ -812,25 +811,6 @@ public final class UnifiedSymbolTable
         // TODO why magic for system tables?
         if (sid == UNKNOWN_SYMBOL_ID && isSystemTable() == false) {
             sid = _import_list.findSymbol(name);
-            if (/*true &&*/ sid < 1 && name.charAt(0) == '$') {
-                if (name.length() > 1 && Character.isDigit(name.charAt(1))) {
-                    String sidText = name.substring(1);
-                    try {
-                        sid = Integer.parseInt(sidText);
-                        if (sid <= 0) {
-                            sid = UNKNOWN_SYMBOL_ID;
-                        }
-                        // else fall through
-                    }
-                    catch (NumberFormatException e) {
-                        if (name.startsWith(SystemSymbolTable.ION_RESERVED_PREFIX)) {
-                            throw new InvalidSystemSymbolException(name);
-                        }
-                        // else symbol is unknown and then fall through to return
-                        sid = UNKNOWN_SYMBOL_ID;
-                    }
-                }
-            }
         }
         return sid;
     }
@@ -884,30 +864,12 @@ public final class UnifiedSymbolTable
         return _import_list.find(text);
     }
 
-
-    public static int decodeIntegerSymbol(String name)
-    {
-        if (name == null) return UNKNOWN_SYMBOL_ID;
-        if (name.length() < 2) return UNKNOWN_SYMBOL_ID;
-        if (name.startsWith("$") == false) return UNKNOWN_SYMBOL_ID;
-        int id = 0;
-        for (int ii=1; ii<name.length(); ii++) {
-            char c = name.charAt(ii);
-            if (Character.isDigit(c) == false) {
-                return UNKNOWN_SYMBOL_ID;
-            }
-            id *= 10;
-            id += c - '0';
-        }
-        return id;
-    }
-
     @Deprecated
     public synchronized String findSymbol(int id)
     {
         String name = findKnownSymbol(id);
         if (name == null) {
-            name = unknownSymbolName(id);
+            throw new UnknownSymbolException(id);
         }
         return name;
     }

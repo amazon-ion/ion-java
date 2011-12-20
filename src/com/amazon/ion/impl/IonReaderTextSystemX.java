@@ -20,6 +20,7 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.IonReaderTextRawTokensX.IonReaderTextTokenException;
 import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
 import com.amazon.ion.impl.IonScalarConversionsX.CantConvertException;
@@ -465,7 +466,7 @@ public class IonReaderTextSystemX
             assert _value_type == IonType.SYMBOL;
             int sid = _v.getInt();
             assert sid > 0;
-            text = "$" + sid;
+            throw new UnknownSymbolException(sid);
         }
         return text;
     }
@@ -514,7 +515,10 @@ public class IonReaderTextSystemX
             {
                 SymbolTable symbols = getSymbolTable();
                 text = symbols.findKnownSymbol(id);
-                if (text == null) text = "$" + id; // TODO ION-58
+                if (text == null)
+                {
+                    throw new UnknownSymbolException(id);
+                }
             }
         }
         return text;

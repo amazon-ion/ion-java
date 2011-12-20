@@ -24,6 +24,7 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.Reader;
 import com.amazon.ion.impl.IonBinary.Writer;
@@ -540,7 +541,7 @@ public abstract class IonValueImpl
 
         String text = getSymbolTable().findKnownSymbol(_fieldSid);
         if (text == null) {
-            return "$" + _fieldSid;
+            throw new UnknownSymbolException(_fieldSid);
         }
         _fieldName = text;
         return _fieldName;

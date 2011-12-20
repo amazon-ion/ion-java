@@ -328,7 +328,6 @@ class IonReaderBinaryUserX
         if (_value_type == IonType.SYMBOL) {
             if (!_v.hasValueOfType(AS_TYPE.string_value)) {
                 int sid = intValue();
-                // TODO ION-58 this returns SIDs $123
                 String sym = _symbols.findSymbol(sid);
                 _v.addValue(sym);
             }

@@ -12,6 +12,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
 import com.amazon.ion.impl.IonScalarConversionsX.ValueVariant;
 import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
@@ -1308,7 +1309,7 @@ if (depth == debugging_depth) {
         String name = _field_name;
         if (name == null && _field_name_sid > 0)
         {
-            name = "$" + _field_name_sid; // TODO ION-58
+            throw new UnknownSymbolException(_field_name_sid);
         }
         return name;
     }

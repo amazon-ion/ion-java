@@ -11,6 +11,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.Reader;
 import com.amazon.ion.system.IonSystemBuilder;
@@ -344,8 +345,10 @@ public final class IonImplUtils // TODO this class shouldn't be public
         {
             InternedSymbol sym = symbols[i];
             String text = sym.getText();
-            // TODO ION-58
-            if (text == null) text = "$" + sym.getId();
+            if (text == null)
+            {
+                throw new UnknownSymbolException(sym.getId());
+            }
             annotations[i] = text;
         }
         return annotations;

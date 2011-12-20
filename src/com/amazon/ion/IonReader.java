@@ -166,6 +166,8 @@ public interface IonReader
      *
      * @return the (ordered) annotations on the current value, or an empty
      * array (not {@code null}) if there are none.
+     *
+     * @throws UnknownSymbolException if any annotation has unknown text.
      */
     public String[] getTypeAnnotations();
 
@@ -197,6 +199,8 @@ public interface IonReader
      * iterator is empty (hasNext() returns false on the first call) if
      * there are no annotations on the current value.
      *
+     * @throws UnknownSymbolException if any annotation has unknown text.
+     *
      * @return not null.
      */
     public Iterator<String> iterateTypeAnnotations();
@@ -226,12 +230,17 @@ public interface IonReader
      * field within a struct.
      * If the current value is not a field, or if the symbol ID cannot be
      * determined, this method returns a value <em>less than one</em>.
+     *
+     * @deprecated Use {@link #getFieldNameSymbol()} instead.
      */
+    @Deprecated
     public int getFieldId();
 
     /**
      * Return the field name of the current value. Or null if there is no valid
      * current value or if the current value is not a field of a struct.
+     *
+     * @throws UnknownSymbolException if the field name has unknown text.
      */
     public String getFieldName();
 
@@ -341,6 +350,11 @@ public interface IonReader
      * Returns the current value as a Java String.
      * This is only valid when {@link #getType()} returns
      * {@link IonType#STRING} or {@link IonType#SYMBOL}.
+     *
+     * @throws UnknownSymbolException if the current value is a symbol
+     * with unknown text.
+     *
+     * @see #symbolValue()
      */
     public String stringValue();
 

@@ -220,14 +220,13 @@ public interface SymbolTable
 
 
     /**
-     * Gets a name for a symbol ID, whether or not a definition is known.
-     * If the ID is unknown then a generic name is returned; for example,
-     * {@code "$23"}.
+     * Gets a name for a symbol ID, throwing if a definition is not known.
      *
      * @param id the requested symbol ID.
      * @return not <code>null</code>.
      *
      * @throws IllegalArgumentException if {@code id < 1}.
+     * @throws UnknownSymbolException if the symbol text isn't known.
      *
      * @deprecated This method cannot distinguish between generic identifiers
      * (like {@code $123}) and known symbols that happen the same text

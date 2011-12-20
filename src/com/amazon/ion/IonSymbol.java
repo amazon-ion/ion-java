@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -9,10 +9,12 @@ public interface IonSymbol
     extends IonText
 {
     /**
-     * Gets the characters that name this symbol.
+     * Gets the text content of this symbol.
      *
      * @return the text of the symbol, or <code>null</code> if this is
      * <code>null.symbol</code>.
+     *
+     * @throws UnknownSymbolException if this symbol has unknown text.
      */
     public String stringValue();
 

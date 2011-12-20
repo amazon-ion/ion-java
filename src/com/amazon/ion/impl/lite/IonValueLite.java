@@ -20,6 +20,7 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.IonValuePrivate;
@@ -476,8 +477,8 @@ public abstract class IonValueLite
     {
         if (_fieldName != null) return _fieldName;
         if (_fieldId < 0) return null;
-        // TODO ION-58
-        return "$" + _fieldId;
+
+        throw new UnknownSymbolException(_fieldId);
     }
 
     public final int getFieldNameId()

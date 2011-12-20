@@ -14,6 +14,7 @@ import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
 
@@ -142,8 +143,7 @@ public final class IonSymbolImpl
             }
             if (value == null)
             {
-                // TODO ION-58 shouldn't return synthetic symbol
-                value = "$" + mySid;
+                throw new UnknownSymbolException(mySid);
             }
             else if (! isReadOnly()) // Don't cache synthetics!
             {

@@ -144,6 +144,8 @@ public interface IonValue
     /**
      * Gets the field name attached to this value,
      * or <code>null</code> if this is not part of an {@link IonStruct}.
+     *
+     * @throws UnknownSymbolException if the field name has unknown text.
      */
     public String getFieldName();
 
