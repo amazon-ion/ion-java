@@ -193,11 +193,18 @@ public final class Equivalence {
         private final boolean strict;
         private int count;
 
-        public StructItem(final String myKey,
-                          final IonValue myValue,
-                          final boolean myStrict) {
-            assert myKey != null;
-            key = myKey;
+        /**
+         * Problematic with unknown field names.
+         * See IonAssert for another use of this idiom.
+         */
+        public StructItem(final IonValue myValue, final boolean myStrict)
+        {
+            InternedSymbol is = myValue.getFieldNameSymbol();
+            String k = is.getText();
+            if (k == null) {
+                k = " -- UNKNOWN SYMBOL -- $" + is.getId(); // TODO ION-58
+            }
+            key = k;
             value = myValue;
             strict = myStrict;
             // we use -1 for searching
@@ -270,7 +277,7 @@ public final class Equivalence {
     private static final Map<StructItem, StructItem> createStructItems(final IonStruct source, final boolean strict) {
         final Map<StructItem, StructItem> values = new HashMap<StructItem, StructItem>();
         for (final IonValue val : source) {
-            final StructItem item = new StructItem(val.getFieldName(), val, strict);
+            final StructItem item = new StructItem(val, strict);
             StructItem curr = values.get(item);
             if (curr == null) {
                 // new item--put it in
@@ -285,30 +292,21 @@ public final class Equivalence {
         return values;
     }
 
-    private static int ionCompareAnnotations(String[] an1, String[] an2)
+    private static int ionCompareAnnotations(InternedSymbol[] an1,
+                                             InternedSymbol[] an2)
     {
         int result = 0;
-        String s1, s2;
 
-        if (an1 == null || an2 == null) {
-            if (an1 != null) result =  1;
-            if (an2 != null) result = -1;
-            // otherwise they're both null and, therefore, equal
+        int len = an1.length;
+        if (len != an2.length) {
+            result = len - an2.length;
         }
         else {
-            // here they're both non-null
-            int len = an1.length;
-            if (len != an2.length) {
-                result = len - an2.length;
-            }
-            else {
-                for (int ii=0; (result == 0) && (ii < len); ii++) {
-                    s1 = an1[ii];
-                    s2 = an2[ii];
-                    result = s1.compareTo(s2);
-                }
+            for (int ii=0; (result == 0) && (ii < len); ii++) {
+                result = compare(an1[ii], an2[ii]);
             }
         }
+
         return result;
     }
 
@@ -331,7 +329,6 @@ public final class Equivalence {
         String       string1, string2;
         IonValue     stop_value;
         IonValue     next1, next2;
-        String[]     an1, an2;
 
 
         if (_debug_stop_on_false) {
@@ -441,9 +438,9 @@ public final class Equivalence {
                                 = createStructItems(s1, strict);
 
                         for (IonValue val : s2) {
-                            StructItem key =
-                                new StructItem(val.getFieldName(), val, strict);
-                            StructItem active = items1.get(key);  // this matches both the key and the value
+                            StructItem key = new StructItem(val, strict);
+                            // this matches both the key and the value:
+                            StructItem active = items1.get(key);
                             if (active == null) {
                                 // nope we already have an inconsistency
                                 result = -1;
@@ -493,8 +490,8 @@ public final class Equivalence {
         if (strict && (result == 0)) {
             // check tuple equality over the annotations
             // (which are strings)
-            an1 = v1.getTypeAnnotations();
-            an2 = v2.getTypeAnnotations();
+            InternedSymbol[] an1 = v1.getTypeAnnotationSymbols();
+            InternedSymbol[] an2 = v2.getTypeAnnotationSymbols();
             result = ionCompareAnnotations(an1, an2);
         }
 

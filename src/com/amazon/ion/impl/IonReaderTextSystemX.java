@@ -369,19 +369,9 @@ public class IonReaderTextSystemX
         for (int i = 0; i < count; i++)
         {
             InternedSymbol sym = _annotations[i];
-            int sid = sym.getId();
-            if (sid < 0)
-            {
-                String text = sym.getText();
-                assert text != null;
-
-                int internedSid = symbols.findSymbol(text);
-                if (internedSid != sid) {
-                    sym = new InternedSymbolImpl(text, internedSid);
-                }
-            }
-
-            result[i] = sym;
+            InternedSymbol updated = IonImplUtils.localize(symbols, sym);
+            if (updated != sym) _annotations[i] = updated;
+            result[i] = updated;
         }
 
         return result;
@@ -389,16 +379,14 @@ public class IonReaderTextSystemX
 
     public int[] getTypeAnnotationIds()
     {
-        // TODO ION-233 implement sids for system readers
-        return IonImplUtils.EMPTY_INT_ARRAY;
-//        throw new UnsupportedOperationException("not supported - use UserReader");
+        InternedSymbol[] syms = getTypeAnnotationSymbols();
+        return IonImplUtils.toSids(syms, syms.length);
     }
 
     public Iterator<Integer> iterateTypeAnnotationIds()
     {
-        // TODO ION-233 implement sids for system readers
-        return IonImplUtils.<Integer>emptyIterator();
-//        throw new UnsupportedOperationException("not supported - use UserReader");
+        int[] ids = getTypeAnnotationIds();
+        return IonImplUtils.intIterator(ids);
     }
 
 
@@ -494,6 +482,53 @@ public class IonReaderTextSystemX
             symtab = _system.getSystemSymbolTable();
         }
         return symtab;
+    }
+
+
+    @Override
+    public final int getFieldId()
+    {
+        // Superclass handles hoisting logic
+        int id = super.getFieldId();
+        if (id == SymbolTable.UNKNOWN_SYMBOL_ID)
+        {
+            String fieldname = getRawFieldName();
+            if (fieldname != null)
+            {
+                SymbolTable symbols = getSymbolTable();
+                id = symbols.findSymbol(fieldname);
+            }
+        }
+        return id;
+    }
+
+    @Override
+    public final String getFieldName()
+    {
+        // Superclass handles hoisting logic
+        String text = getRawFieldName();
+        if (text == null)
+        {
+            int id = getFieldId();
+            if (id != SymbolTable.UNKNOWN_SYMBOL_ID)
+            {
+                SymbolTable symbols = getSymbolTable();
+                text = symbols.findKnownSymbol(id);
+                if (text == null) text = "$" + id; // TODO ION-58
+            }
+        }
+        return text;
+    }
+
+    @Override
+    public final InternedSymbol getFieldNameSymbol()
+    {
+        InternedSymbol sym = super.getFieldNameSymbol();
+        if (sym != null)
+        {
+            sym = IonImplUtils.localize(getSymbolTable(), sym);
+        }
+        return sym;
     }
 
     public final int getSymbolId()

@@ -184,6 +184,14 @@ public final class IonImplUtils // TODO this class shouldn't be public
     }
 
     /**
+     * @return not null
+     */
+    public static InternedSymbolImpl newInternedSymbol(int sid)
+    {
+        return new InternedSymbolImpl(sid);
+    }
+
+    /**
      * Checks symbol content.
      * @return not null
      */
@@ -301,18 +309,29 @@ public final class IonImplUtils // TODO this class shouldn't be public
 
 
     /**
+    *
+    * @param syms may be mutated, replacing entries with localized updates!
+    */
+    public static void localize(SymbolTable symtab,
+                                InternedSymbol[] syms,
+                                int count)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            InternedSymbol sym = syms[i];
+            InternedSymbol updated = localize(symtab, sym);
+            if (updated != sym) syms[i] = updated;
+        }
+    }
+
+    /**
      *
      * @param syms may be mutated, replacing entries with localized updates!
      */
     public static void localize(SymbolTable symtab,
                                 InternedSymbol[] syms)
     {
-        for (int i = 0; i < syms.length; i++)
-        {
-            InternedSymbol sym = syms[i];
-            InternedSymbol updated = localize(symtab, sym);
-            if (updated != sym) syms[i] = updated;
-        }
+        localize(symtab, syms, syms.length);
     }
 
 

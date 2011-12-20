@@ -228,8 +228,8 @@ abstract class IonWriterUser
         // annotation list, since it's presence is what got us here.
         assert(_current_writer.has_annotation(ION_SYMBOL_TABLE, ION_SYMBOL_TABLE_SID)
         );
-        // TODO ION-58 Wrong if annotations includes an unknown SID
-        _symbol_table_value.setTypeAnnotations(getTypeAnnotations());
+
+        _symbol_table_value.setTypeAnnotationSymbols(getTypeAnnotationSymbols());
 
         _current_writer = new IonWriterSystemTree(activeSystemSymbolTable(),
                                                   _catalog,
@@ -392,6 +392,11 @@ abstract class IonWriterUser
     int[] getTypeAnnotationIds()
     {
         return _current_writer.getTypeAnnotationIds();
+    }
+
+    final InternedSymbol[] getTypeAnnotationSymbols()
+    {
+        return _current_writer.getTypeAnnotationSymbols();
     }
 
     /**

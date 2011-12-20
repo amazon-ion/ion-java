@@ -189,15 +189,16 @@ public final class IonStructImpl
                 new HashSet<String>(Arrays.asList(fieldNames));
             for (IonValue value : this)
             {
-                String fieldName = value.getFieldName();
+                InternedSymbol fieldNameSymbol = value.getFieldNameSymbol();
+                String fieldName = fieldNameSymbol.getText();
                 if (fields.contains(fieldName) == keep)
                 {
-                    clone.add(fieldName, value.clone());
+                    clone.add(fieldNameSymbol, value.clone());
                 }
             }
         }
 
-        clone.setTypeAnnotations(getTypeAnnotations());
+        clone.setTypeAnnotationSymbols(getTypeAnnotationSymbols());
 
         return clone;
     }

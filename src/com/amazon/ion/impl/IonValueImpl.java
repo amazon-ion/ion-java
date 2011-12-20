@@ -593,8 +593,14 @@ public abstract class IonValueImpl
             text = _fieldName;
         }
         else if (sid > 0) {
-            text = getSymbolTable().findKnownSymbol(sid);
-            // TODO memoize interned text?
+            SymbolTable symtab = getSymbolTable();
+            if (symtab != null) {
+                text = symtab.findKnownSymbol(sid);
+                // TODO memoize interned text?
+            }
+            else {
+                text = null;
+            }
         }
         else {
             // not a field
@@ -898,7 +904,7 @@ public abstract class IonValueImpl
     void detachFromSymbolTable()
     {
         // Force reading of annotation text
-        getTypeAnnotations();
+        getTypeAnnotationSymbols();
 
         if (this._fieldSid > 0) {
             if (this._fieldName == null) {
@@ -1575,10 +1581,8 @@ public abstract class IonValueImpl
     public int getAnnotationOverheadLength(int valueLen)
     {
         int len = 0;
-        String[] annotationStrings = this.getTypeAnnotations();
-        assert annotationStrings != null;
 
-        if (annotationStrings.length != 0)
+        if (getTypeAnnotationSymbols().length != 0)
         {
             len = getAnnotationLength();
 

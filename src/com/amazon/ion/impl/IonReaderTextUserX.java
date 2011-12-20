@@ -16,7 +16,6 @@ import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.TextSpan;
-import java.util.Iterator;
 
 /**
  *    The text user reader add support for symbols and recognizes,
@@ -175,23 +174,6 @@ public class IonReaderTextUserX
         return;
     }
 
-    @Override
-    public int getFieldId()
-    {
-        // Superclass handles hoisting logic
-        int id = super.getFieldId();
-        if (id == SymbolTable.UNKNOWN_SYMBOL_ID)
-        {
-            String fieldname = getRawFieldName();
-            if (fieldname != null)
-            {
-                SymbolTable symbols = getSymbolTable();
-                id = symbols.findSymbol(fieldname);
-            }
-        }
-        return id;
-    }
-
 
     @Override
     public SymbolTable getSymbolTable()
@@ -201,34 +183,6 @@ public class IonReaderTextUserX
             _symbols = makeNewLocalSymbolTable(_system, system_symbols);
         }
         return _symbols;
-    }
-
-    @Override
-    public int[] getTypeAnnotationIds() // TODO hoist
-    {
-        int[]    ids;
-        String[] syms = getTypeAnnotations();
-        int      len  = syms.length;
-
-        if (len == 0) {
-            ids = IonImplUtils.EMPTY_INT_ARRAY;
-        }
-        else {
-            SymbolTable symbols = getSymbolTable();
-            ids  = new int[len];
-            for (int ii=0; ii<len; ii++) {
-                String sym = syms[ii];
-                ids[ii] = symbols.findSymbol(sym);
-            }
-        }
-        return ids;
-    }
-
-    @Override
-    public Iterator<Integer> iterateTypeAnnotationIds()
-    {
-        int[] ids = getTypeAnnotationIds();
-        return IonImplUtils.intIterator(ids);
     }
 
 

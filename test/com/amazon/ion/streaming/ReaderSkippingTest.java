@@ -2,8 +2,10 @@
 
 package com.amazon.ion.streaming;
 
+import static com.amazon.ion.TestUtils.consumeCurrentValue;
 import static com.amazon.ion.TestUtils.testdataFiles;
 
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
@@ -15,7 +17,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.util.Random;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -141,39 +142,26 @@ extends IonTestCase
         // Read all data from myFullReader,
         // but only some data from mySkipReader
 
-        myFullReader.getTypeAnnotations();
+        myFullReader.getTypeAnnotationSymbols();
         if (!skip())
         {
-            Assert.assertArrayEquals(myFullReader.getTypeAnnotations(),
-                                     mySkipReader.getTypeAnnotations());
+            InternedSymbol[] expecteds = myFullReader.getTypeAnnotationSymbols();
+            check(mySkipReader).annotations(expecteds);
         }
 
-        myFullReader.getTypeAnnotationIds();
-        if (!skip())
-        {
-            Assert.assertArrayEquals(myFullReader.getTypeAnnotationIds(),
-                                     mySkipReader.getTypeAnnotationIds());
-        }
+        // We don't test SIDs since that assumes that SIDs always get assigned
+        // in the same order. We don't guarantee that for all readers.
 
-        myFullReader.getFieldName();
+        myFullReader.getFieldNameSymbol();
         if (!skip())
         {
             check(mySkipReader).fieldName(myFullReader.getFieldNameSymbol());
         }
 
-        myFullReader.getFieldId();
-        if (false && !skip())
-        {
-            // This test is shady since it assumes that SIDs always get
-            // assigned in the same order. We don't guarantee that for text
-            // readers.
-            assertEquals(myFullReader.getFieldId(),
-                         mySkipReader.getFieldId());
-        }
 
         if (skip())
         {
-            system().newValue(myFullReader);
+            consumeCurrentValue(myFullReader);
         }
         else
         {

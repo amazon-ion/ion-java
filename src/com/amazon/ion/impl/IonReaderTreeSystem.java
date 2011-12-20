@@ -234,7 +234,7 @@ class IonReaderTreeSystem
         return (_curr == null) ? null : _curr.getType();
     }
 
-    public String[] getTypeAnnotations()
+    public final String[] getTypeAnnotations()
     {
         if (_curr == null) {
             throw new IllegalStateException();
@@ -243,38 +243,28 @@ class IonReaderTreeSystem
     }
 
 
-    public InternedSymbol[] getTypeAnnotationSymbols()
+    public final InternedSymbol[] getTypeAnnotationSymbols()
     {
         if (_curr == null) {
             throw new IllegalStateException();
         }
+        // TODO should this localize the symbols?
         return _curr.getTypeAnnotationSymbols();
     }
 
-    public int[] getTypeAnnotationIds()
+    public final int[] getTypeAnnotationIds()
     {
-        String [] annotations = getTypeAnnotations();
-        if (annotations.length == 0) {
-            return IonImplUtils.EMPTY_INT_ARRAY;
-        }
-
-        int [] ids = new int[annotations.length];
-        SymbolTable sym = _curr.getSymbolTable();
-
-        for (int ii=0; ii<annotations.length; ii++) {
-            ids[ii] = sym.findSymbol(annotations[ii]);
-        }
-
-        return ids;
+        InternedSymbol[] syms = getTypeAnnotationSymbols(); // Checks nullValue
+        return IonImplUtils.toSids(syms, syms.length);
     }
 
-    public Iterator<Integer> iterateTypeAnnotationIds()
+    public final Iterator<Integer> iterateTypeAnnotationIds()
     {
         int [] ids = getTypeAnnotationIds();
         return IonImplUtils.intIterator(ids);
     }
 
-    public Iterator<String> iterateTypeAnnotations()
+    public final Iterator<String> iterateTypeAnnotations()
     {
         String [] annotations = getTypeAnnotations();
         return IonImplUtils.stringIterator(annotations);

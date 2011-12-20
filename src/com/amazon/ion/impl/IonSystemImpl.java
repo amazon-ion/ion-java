@@ -669,17 +669,7 @@ public final class IonSystemImpl
 
         SymbolTable symtab = systemId.getSymbolTable();
 
-        // generally we don't want the IVM holding the symbol
-        // table, but if it has an annotation it's another matter
-        if (systemId.getTypeAnnotations().length == 0) {
-            symtab = getSystemSymbolTable(systemId.stringValue());
-        }
-        else if (UnifiedSymbolTable.isLocalTable(symtab) == false) {
-            if (symtab == null) {
-                symtab = this.mySystemSymbols;
-            }
-            symtab = UnifiedSymbolTable.makeNewLocalSymbolTable(this, symtab);
-        }
+        symtab = getSystemSymbolTable(systemId.stringValue());
 
         systemId.setSymbolTable(symtab);  // This clears the sid
         systemId.setIsIonVersionMarker(true);
@@ -698,7 +688,7 @@ public final class IonSystemImpl
     {
         if (value instanceof IonSymbol
             && ! value.isNullValue()
-            && value.getTypeAnnotations().length == 0)
+            && value.getTypeAnnotationSymbols().length == 0)
         {
             IonSymbol symbol = (IonSymbol) value;
             int sid = symbol.getSymbolId();

@@ -12,6 +12,7 @@ import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.junit.IonAssert;
 import org.junit.Assert;
 
 /**
@@ -113,32 +114,19 @@ public class ReaderCompare
         String fn = is1.getText();
         assertEquals(fn, is2.getText());
 
-        if (fn == null) {
-            fn = "$" + is1.getId();
+        if (fn != null) {
+            String f1 = it1.getFieldName();
+            String f2 = it2.getFieldName();
+            compareNonNullStrings("field name", fn, f1);
+            compareNonNullStrings("field name", fn, f2);
         }
-
-        String f1 = it1.getFieldName();
-        String f2 = it2.getFieldName();
-        compareNonNullStrings("field name", fn, f1);
-        compareNonNullStrings("field name", fn, f2);
     }
 
     public static void compareAnnotations(IonReader it1, IonReader it2) {
-        String[] a1 = it1.getTypeAnnotations();
-        String[] a2 = it2.getTypeAnnotations();
-        if (a1 == null) {
-            assertNull(a2);
-        }
-        else {
-            assertEquals("annotation count", a1.length, a2.length);
-            for (int ii=0; ii<a1.length; ii++) {
-                String s1 = a1[ii];
-                String s2 = a2[ii];
-                compareNonNullStrings("annotation", s1, s2);
-                assert s1 != null && s2 != null;
-                assert s1.equals(s2);
-            }
-        }
+        InternedSymbol[] syms1 = it1.getTypeAnnotationSymbols();
+        InternedSymbol[] syms2 = it2.getTypeAnnotationSymbols();
+
+        IonAssert.assertSymbolEquals("annotation", syms1, syms2);
     }
 
     public static void compareScalars(IonType t, IonReader it1, IonReader it2) {

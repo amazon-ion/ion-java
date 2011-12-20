@@ -1096,39 +1096,6 @@ public class IonBinary
             return annotations;
         }
 
-        public String[] readAnnotations(SymbolTable symbolTable) throws IOException
-        {
-            String[] annotations = null;
-
-            int annotationLen = this.readVarUIntAsInt();
-            int annotationPos = this.position(); // pos at the first ann sid
-            int annotationEnd = annotationPos + annotationLen;
-            int annotationCount = 0;
-
-            // first we read through and count
-            while(this.position() < annotationEnd) {
-                // read the annotation symbol id itself
-                // and for this first pass we just throw that
-                // value away, since we're just counting
-                this.readVarUIntAsInt();
-                annotationCount++;
-            }
-            if (annotationCount > 0) {
-                // then, if there are any there, we
-                // allocate the array, and re-read the sids
-                // look them up and fill in the array
-                annotations = new String[annotationCount];
-                int annotationIdx = 0;
-                this.setPosition(annotationPos);
-                while(this.position() < annotationEnd) {
-                    // read the annotation symbol id itself
-                    int sid = this.readVarUIntAsInt();
-                    annotations[annotationIdx++] = symbolTable.findSymbol(sid);
-                }
-            }
-
-            return annotations;
-        }
 
         public int readLength(int td, int ln) throws IOException
         {

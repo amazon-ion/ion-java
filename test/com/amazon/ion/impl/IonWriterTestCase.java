@@ -5,7 +5,7 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.TestUtils.FERMATA;
-import static com.amazon.ion.junit.IonAssert.expectField;
+import static com.amazon.ion.impl.IonImplUtils.newInternedSymbol;
 import static com.amazon.ion.junit.IonAssert.expectNextField;
 
 import com.amazon.ion.EmptySymbolException;
@@ -628,6 +628,21 @@ public abstract class IonWriterTestCase
         iw.writeNull();
         v = expected.add().newNull();
         v.clearTypeAnnotations();
+
+        assertEquals(expected, reload());
+    }
+
+    @Test
+    public void testWritingUnknownAnnotationId()
+        throws Exception
+    {
+        iw = makeWriter();
+        IonDatagram expected = system().newDatagram();
+
+        iw.addTypeAnnotationId(99);
+        iw.writeNull();
+        IonValue v = expected.add().newNull();
+        v.setTypeAnnotationSymbols(newInternedSymbol(99));
 
         assertEquals(expected, reload());
     }

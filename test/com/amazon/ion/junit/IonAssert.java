@@ -21,6 +21,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReaderChecker;
+import com.amazon.ion.util.Equivalence;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -205,6 +206,34 @@ public class IonAssert
     }
 
 
+    public static void assertSymbolEquals(String path,
+                                          InternedSymbol actual,
+                                          InternedSymbol expected)
+    {
+        String text1 = actual.getText();
+        String text2 = expected.getText();
+        assertEquals(path + " text", text1, text2);
+
+        if (text1 == null)
+        {
+            assertEquals(path + " sid", actual.getId(), expected.getId());
+        }
+    }
+
+    public static void assertSymbolEquals(String path,
+                                          InternedSymbol[] actuals,
+                                          InternedSymbol[] expecteds)
+    {
+        assertEquals(path + " count", actuals.length, expecteds.length);
+
+        for (int i = 0; i < actuals.length; i++)
+        {
+            assertSymbolEquals(path + "[" + i + "]",
+                               actuals[i], expecteds[i]);
+        }
+    }
+
+
     //========================================================================
     // DOM assertions
 
@@ -226,12 +255,7 @@ public class IonAssert
     public static void assertEqualAnnotations(IonValue expected,
                                               IonValue actual)
     {
-        if (expected == actual) return;
-
-        String[] expectedAnn = expected.getTypeAnnotations();
-        String[] actualAnn   = actual.getTypeAnnotations();
-
-        assertArrayEquals("Ion annotations", expectedAnn, actualAnn);
+        assertEqualAnnotations("IonValue", expected, actual);
     }
 
     private static void assertEqualAnnotations(String path,
@@ -240,11 +264,10 @@ public class IonAssert
     {
         if (expected == actual) return;
 
-        String[] expectedAnn = expected.getTypeAnnotations();
-        String[] actualAnn   = actual.getTypeAnnotations();
+        InternedSymbol[] expecteds = expected.getTypeAnnotationSymbols();
+        InternedSymbol[] actuals   = actual.getTypeAnnotationSymbols();
 
-        assertArrayEquals(path + " annotations",
-                          expectedAnn, actualAnn);
+        assertSymbolEquals(path + " annotation", expecteds, actuals);
     }
 
 
@@ -398,6 +421,14 @@ public class IonAssert
                                            IonStruct expected,
                                            IonStruct actual)
     {
+        int expectedSize = expected.size();
+        int actualSize = actual.size();
+        if (expectedSize != actualSize)
+        {
+            fail(path + " size, expected:" + expectedSize
+                 + " actual:" + actualSize);
+        }
+
         HashMap<String,List<IonValue>> expectedFields = sortFields(expected);
         HashMap<String,List<IonValue>> actualFields   = sortFields(actual);
 
@@ -421,17 +452,26 @@ public class IonAssert
         }
     }
 
+    /**
+     * Problematic with unknown field names.
+     * See {@link Equivalence} for another use of this idiom.
+     */
     private static HashMap<String,List<IonValue>> sortFields(IonStruct s)
     {
         HashMap<String,List<IonValue>> sorted =
             new HashMap<String,List<IonValue>>();
         for (IonValue v : s)
         {
-            List<IonValue> fields = sorted.get(v.getFieldName());
+            InternedSymbol is = v.getFieldNameSymbol();
+            String text = is.getText();
+            if (text == null) {
+                text = " --UNKNOWN SYMBOL-- $" + is.getId(); // TODO ION-58
+            }
+            List<IonValue> fields = sorted.get(text);
             if (fields == null)
             {
                 fields = new ArrayList<IonValue>(2);
-                sorted.put(v.getFieldName(), fields);
+                sorted.put(text, fields);
             }
             fields.add(v);
         }

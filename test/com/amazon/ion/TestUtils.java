@@ -183,12 +183,8 @@ public class TestUtils
         IonType t = reader.getType();
         if (t == null) return;
 
-        reader.getTypeAnnotationIds();
-        reader.getTypeAnnotations();
-
-        reader.getFieldName();
-        reader.getFieldId();
         reader.getFieldNameSymbol();
+        reader.getTypeAnnotationSymbols();
 
         switch (t)
         {

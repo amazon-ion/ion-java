@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.SYMBOLS;
 
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
@@ -131,13 +132,13 @@ public class IonWriterUserText
             // move onto and write the struct header
             IonType t = reader.next();
             assert(IonType.STRUCT.equals(t));
-            String[] a = reader.getTypeAnnotations();
+            InternedSymbol[] a = reader.getTypeAnnotationSymbols();
             // you (should) always have the $ion_symbol_table annotation
             assert(a != null && a.length >= 1);
 
             // now we'll start a local symbol table struct
             // in the underlying system writer
-            _system_writer.setTypeAnnotations(a);
+            _system_writer.setTypeAnnotationSymbols(a);
             _system_writer.stepIn(IonType.STRUCT);
 
             // step into the symbol table struct and

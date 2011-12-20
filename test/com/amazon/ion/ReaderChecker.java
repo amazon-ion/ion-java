@@ -4,6 +4,7 @@ package com.amazon.ion;
 
 import static com.amazon.ion.IonTestCase.checkSymbol;
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+import static com.amazon.ion.junit.IonAssert.assertSymbolEquals;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
@@ -122,13 +123,22 @@ public class ReaderChecker
         return this;
     }
 
-    public ReaderChecker annotations(String[] expecteds, int[] expectedSids)
+    public ReaderChecker annotations(String[] expectedTexts, int[] expectedSids)
     {
         String[] typeAnnotations = myReader.getTypeAnnotations();
-        assertArrayEquals(expecteds, typeAnnotations);
+        assertArrayEquals(expectedTexts, typeAnnotations);
 
         int[] sids = myReader.getTypeAnnotationIds();
         assertArrayEquals(expectedSids, sids);
+
+        return this;
+    }
+
+    public ReaderChecker annotations(InternedSymbol[] expecteds)
+    {
+        InternedSymbol[] actuals = myReader.getTypeAnnotationSymbols();
+
+        assertSymbolEquals("annotation", expecteds, actuals);
 
         return this;
     }

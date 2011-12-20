@@ -4,6 +4,7 @@ package com.amazon.ion;
 
 import static com.amazon.ion.junit.IonAssert.assertAnnotations;
 
+import com.amazon.ion.junit.IonAssert;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -249,4 +250,15 @@ public class IonValueTest
         v.removeTypeAnnotation(ann);
         assertAnnotations(v, ben, ann);
     }
+
+    @Test
+    public void testDetachWithUnknownAnnotation()
+    {
+        IonList list = (IonList) system().singleValue("[$99::null]");
+        IonValue child = list.get(0);
+        child.removeFromContainer();
+
+        IonAssert.assertIonEquals(system().singleValue("$99::null"), child);
+    }
+
 }

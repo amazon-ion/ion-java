@@ -8,6 +8,7 @@ import static com.amazon.ion.impl.IonConstants.tidSexp;
 import static com.amazon.ion.impl.IonConstants.tidStruct;
 
 import com.amazon.ion.Decimal;
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
@@ -350,9 +351,12 @@ class IonWriterSystemText
         // write annotations
         if (hasAnnotations()) {
             if (! _options._skip_annotations) {
-                // TODO ION-58
-                String[] annotations = getTypeAnnotations();
-                for (String name : annotations) {
+                InternedSymbol[] annotations = getTypeAnnotationSymbols();
+                for (InternedSymbol ann : annotations) {
+                    String name = ann.getText();
+                    if (name == null) {
+                        name = "$" + ann.getId(); // TODO ION-58
+                    }
                     IonTextUtils.printSymbol(_output, name);
                     _output.append("::");
                 }
@@ -694,9 +698,18 @@ class IonWriterSystemText
         throws IOException
     {
         SymbolTable symtab = getSymbolTable();
-        String symbol = symtab.findSymbol(symbolId);
-        // FIXME this mangles symbols that aren't found
-        writeSymbol(symbol);
+        String symbol = symtab.findKnownSymbol(symbolId);
+        if (symbol != null)
+        {
+            writeSymbol(symbol);
+        }
+        else
+        {
+            startValue();
+            _output.append('$');
+            _output.append(Integer.toString(symbolId));
+            closeValue();
+        }
     }
 
     public void writeSymbol(String value)

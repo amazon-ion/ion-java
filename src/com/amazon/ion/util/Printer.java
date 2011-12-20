@@ -551,11 +551,15 @@ public class Printer
         {
             if (! myOptions.skipAnnotations)
             {
-                String[] anns = value.getTypeAnnotations();
+                InternedSymbol[] anns = value.getTypeAnnotationSymbols();
                 if (anns != null)
                 {
-                    for (String ann : anns) {
-                        IonTextUtils.printSymbol(myOut, ann);
+                    for (InternedSymbol ann : anns) {
+                        String text = ann.getText();
+                        if (text == null) {
+                            text = "$" + ann.getId(); // TODO ION-58
+                        }
+                        IonTextUtils.printSymbol(myOut, text);
                         myOut.append("::");
                     }
                 }
@@ -1108,13 +1112,14 @@ public class Printer
         {
             writeAnnotations(value);
 
-            if (value.isNullValue())
+            InternedSymbol is = value.symbolValue();
+            if (is == null)
             {
                 writeNull("symbol");
             }
             else
             {
-                writeSymbol(value.stringValue());
+                writeSymbolToken(is);
             }
         }
 

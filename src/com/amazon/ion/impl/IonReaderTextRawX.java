@@ -1300,7 +1300,7 @@ if (depth == debugging_depth) {
         return depth;
     }
 
-    public final String getFieldName()
+    public String getFieldName()
     {
         // For hoisting
         if (getDepth() == 0 && is_in_struct_internal()) return null;
@@ -1308,7 +1308,7 @@ if (depth == debugging_depth) {
         String name = _field_name;
         if (name == null && _field_name_sid > 0)
         {
-            name = "$" + _field_name_sid;
+            name = "$" + _field_name_sid; // TODO ION-58
         }
         return name;
     }
@@ -1327,7 +1327,7 @@ if (depth == debugging_depth) {
         return _field_name_sid;
     }
 
-    public final InternedSymbol getFieldNameSymbol()
+    public InternedSymbol getFieldNameSymbol()
     {
         // For hoisting
         if (getDepth() == 0 && is_in_struct_internal()) return null;

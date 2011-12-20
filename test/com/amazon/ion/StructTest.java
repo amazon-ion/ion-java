@@ -1053,30 +1053,60 @@ public class StructTest
     @Test
     public void testCloneAndRemove()
     {
-        IonStruct s1 = struct("a::b::{c:1,d:2,e:3,d:3}");
+        IonStruct s1 = struct("a::$99::{c:1,d:2,e:3,d:3}");
         IonStruct actual = s1.cloneAndRemove("c", "e");
-        IonStruct expected = struct("a::b::{d:2,d:3}");
+        IonStruct expected = struct("a::$99::{d:2,d:3}");
         assertEquals(expected, actual);
 
-        assertEquals(struct("a::b::{}"), actual.cloneAndRemove("d"));
+        assertEquals(struct("a::$99::{}"), actual.cloneAndRemove("d"));
+
+        IonStruct n = struct("$55::y::null.struct");
+        IonStruct n2 = n.cloneAndRemove("a");
+        assertEquals(struct("$55::y::null.struct"), n2);
+    }
+
+    @Test
+    public void testCloneAndRemoveWithSpecialFieldNames()
+    {
+        IonStruct s1 = struct("{c:1,$99:2,'$19':3,'$20':3}");
+        IonStruct actual = s1.cloneAndRemove("c", "$19");
+        IonStruct expected = struct("{$99:2,'$20':3}");
+        assertEquals(expected, actual);
+
+        assertEquals(struct("{}"), actual.cloneAndRemove("$20", null));
 
         IonStruct n = struct("x::y::null.struct");
-        IonStruct n2 = n.cloneAndRemove("a");
+        IonStruct n2 = n.cloneAndRemove("$20");
         assertEquals(struct("x::y::null.struct"), n2);
     }
 
     @Test
     public void testCloneAndRetain()
     {
-        IonStruct s1 = struct("a::b::{c:1,d:2,e:3,d:3}");
+        IonStruct s1 = struct("a::$99::{c:1,d:2,e:3,d:3}");
         IonStruct actual = s1.cloneAndRetain("c", "d");
-        IonStruct expected = struct("a::b::{c:1,d:2,d:3}");
+        IonStruct expected = struct("a::$99::{c:1,d:2,d:3}");
         assertEquals(expected, actual);
 
-        assertEquals(struct("a::b::{}"), actual.cloneAndRetain("e"));
+        assertEquals(struct("a::$99::{}"), actual.cloneAndRetain("e"));
+
+        IonStruct n = struct("$55::y::null.struct");
+        IonStruct n2 = n.cloneAndRetain("a");
+        assertEquals(struct("$55::y::null.struct"), n2);
+    }
+
+    @Test
+    public void testCloneAndRetainWithSpecialFieldNames()
+    {
+        IonStruct s1 = struct("{c:1,$99:2,'$19':3,'$20':3}");
+        IonStruct actual = s1.cloneAndRetain("c", "$20", null);
+        IonStruct expected = struct("{c:1,$99:2,'$20':3}");
+        assertEquals(expected, actual);
+
+        assertEquals(struct("{}"), actual.cloneAndRetain("$99"));
 
         IonStruct n = struct("x::y::null.struct");
-        IonStruct n2 = n.cloneAndRetain("a");
+        IonStruct n2 = n.cloneAndRetain("$20");
         assertEquals(struct("x::y::null.struct"), n2);
     }
 

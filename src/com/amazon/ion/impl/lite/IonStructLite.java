@@ -96,7 +96,8 @@ public class IonStructLite
         int count = get_child_count();
         for (int ii=0; ii<count; ii++) {
             IonValueLite v = get_child_lite(ii);
-            String name = v.getFieldName();
+            InternedSymbol fieldNameSymbol = v.getFieldNameSymbol();
+            String name = fieldNameSymbol.getText();
             if (_field_map.get(name) != null) {
                 _field_map_duplicate_count++;
             }
@@ -326,15 +327,16 @@ public class IonStructLite
                 new HashSet<String>(Arrays.asList(fieldNames));
             for (IonValue value : this)
             {
-                String fieldName = value.getFieldName();
+                InternedSymbol fieldNameSymbol = value.getFieldNameSymbol();
+                String fieldName = fieldNameSymbol.getText();
                 if (fields.contains(fieldName) == keep)
                 {
-                    clone.add(fieldName, value.clone());
+                    clone.add(fieldNameSymbol, value.clone());
                 }
             }
         }
 
-        clone.setTypeAnnotations(getTypeAnnotations());
+        clone.setTypeAnnotationSymbols(getTypeAnnotationSymbols());
 
         return clone;
     }

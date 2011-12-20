@@ -7,6 +7,7 @@ import static com.amazon.ion.impl.IonReaderFactoryX.makeSystemReader;
 import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 
 import com.amazon.ion.ContainedValueException;
+import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
@@ -1147,10 +1148,10 @@ public class IonDatagramLite
         {
             if (value instanceof IonSymbol) {
                 IonSymbol sym = (IonSymbol)value;
-                if (!sym.isNullValue()) {
-                    if (sym.stringValue().equals(ION_1_0)) {
-                        return true;
-                    }
+                InternedSymbol is = sym.symbolValue();
+                if (is != null && ION_1_0.equals(is.getText()))
+                {
+                    return true;
                 }
             }
             return false;
