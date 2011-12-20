@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
@@ -105,57 +105,6 @@ public class Text
         return OPERATOR_CHAR_FLAGS[c];
     }
 
-    /**
-     * Determines whether the given text matches one of the Ion identifier
-     * keywords <code>null</code>, <code>true</code>, or <code>false</code>.
-     * <p>
-     * This does <em>not</em> check for non-identifier keywords such as
-     * <code>null.int</code>.
-     *
-     * @param text the symbol to check.
-     * @return <code>true</code> if the text is an identifier keyword.
-     */
-    private static boolean isIdentifierKeyword(CharSequence text)
-    {
-        int pos = 0;
-        int valuelen = text.length();
-        boolean keyword = false;
-
-        // there has to be at least 1 character or we wouldn't be here
-        switch (text.charAt(pos++)) {
-        case 'f':
-            if (valuelen == 5 //      'f'
-             && text.charAt(pos++) == 'a'
-             && text.charAt(pos++) == 'l'
-             && text.charAt(pos++) == 's'
-             && text.charAt(pos++) == 'e'
-            ) {
-                keyword = true;
-            }
-            break;
-        case 'n':
-            if (valuelen == 4 //      'n'
-             && text.charAt(pos++) == 'u'
-             && text.charAt(pos++) == 'l'
-             && text.charAt(pos++) == 'l'
-            ) {
-                keyword = true;
-            }
-            break;
-        case 't':
-            if (valuelen == 4 //      't'
-             && text.charAt(pos++) == 'r'
-             && text.charAt(pos++) == 'u'
-             && text.charAt(pos++) == 'e'
-            ) {
-                keyword = true;
-            }
-            break;
-        }
-
-        return keyword;
-    }
-
 
     /**
      * Determines whether the text of a symbol requires (single) quotes.
@@ -174,43 +123,7 @@ public class Text
     public static boolean symbolNeedsQuoting(CharSequence symbol,
                                              boolean      quoteOperators)
     {
-        int length = symbol.length();
-        if (length == 0) {
-            throw new IllegalArgumentException("symbol must be non-empty");
-        }
-
-        // If the symbol's text matches an Ion keyword, we must quote it.
-        // Eg, the symbol 'false' must be rendered quoted.
-        if (! isIdentifierKeyword(symbol))
-        {
-            char c = symbol.charAt(0);
-            if (!quoteOperators && isOperatorChar(c))
-            {
-                for (int ii = 0; ii < length; ii++) {
-                    c = symbol.charAt(ii);
-                    // We don't need to look for escapes since all
-                    // operator characters are ASCII.
-                    if (!isOperatorChar(c)) {
-                        return true;
-                    }
-                }
-                return false;
-            }
-            else if (isIdentifierStartChar(c))
-            {
-                for (int ii = 0; ii < length; ii++) {
-                    c = symbol.charAt(ii);
-                    if (needsEscapeForAsciiPrinting(c, '\'')
-                        || !isIdentifierFollowChar(c))
-                    {
-                        return true;
-                    }
-                }
-                return false;
-            }
-        }
-
-        return true;
+        return IonTextUtils.symbolNeedsQuoting(symbol, quoteOperators);
     }
 
 

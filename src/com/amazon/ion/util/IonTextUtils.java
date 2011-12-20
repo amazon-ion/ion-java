@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
@@ -124,6 +124,11 @@ public class IonTextUtils
         }
     }
 
+    private static boolean isDecimalDigit(int codePoint)
+    {
+        return (codePoint >= '0' && codePoint <= '9');
+    }
+
     public static boolean isDigit(int codePoint, int radix)
     {
         switch (codePoint) {
@@ -164,7 +169,7 @@ public class IonTextUtils
      * @param text the symbol to check.
      * @return <code>true</code> if the text is an identifier keyword.
      */
-    private static boolean isIdentifierKeyword(CharSequence text)
+    static boolean isIdentifierKeyword(CharSequence text)
     {
         int pos = 0;
         int valuelen = text.length();
@@ -172,6 +177,13 @@ public class IonTextUtils
 
         // there has to be at least 1 character or we wouldn't be here
         switch (text.charAt(pos++)) {
+        case '$':
+            if (valuelen == 1) return false;
+            while (pos < valuelen) {
+                char c = text.charAt(pos++);
+                if (! isDecimalDigit(c)) return false;
+            }
+            return true;
         case 'f':
             if (valuelen == 5 //      'f'
              && text.charAt(pos++) == 'a'
@@ -226,8 +238,8 @@ public class IonTextUtils
      *         if <code>symbol</code> is <code>null</code>.
      * @throws EmptySymbolException if <code>symbol</code> is empty.
      */
-    private static boolean symbolNeedsQuoting(CharSequence symbol,
-                                              boolean      quoteOperators)
+    static boolean symbolNeedsQuoting(CharSequence symbol,
+                                      boolean      quoteOperators)
     {
         int length = symbol.length();
         if (length == 0) {

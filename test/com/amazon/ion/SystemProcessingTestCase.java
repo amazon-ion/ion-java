@@ -11,7 +11,6 @@ import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE_SID;
 import static com.amazon.ion.TestUtils.FERMATA;
 
 import com.amazon.ion.impl.IonImplUtils;
-import com.amazon.ion.impl.IonReaderTextRawTokensX;
 import com.amazon.ion.impl.IonUTF8;
 import com.amazon.ion.impl.SymbolTableTest;
 import com.amazon.ion.system.SimpleCatalog;
@@ -635,6 +634,22 @@ if (table1 == table2) {
         checkEof();
     }
 
+    @Test
+    public void testSidlikeSymbols()
+        throws Exception
+    {
+        String text =
+            Symtabs.printLocalSymtab("$7", "$6", "$5")
+            + "{ '$7':'$6'::'$7'::'$5' }";
+
+        startIteration(text);
+        nextValue();
+        stepIn();
+        nextValue();
+        checkFieldName("$7", 10);
+        checkAnnotations(new String[]{ "$6", "$7"}, new int[]{ 11, 10 });
+        checkSymbol("$5", 12);
+    }
 
     @Test
     public void testSharedTableNotAddedToCatalog()
@@ -649,13 +664,7 @@ if (table1 == table2) {
         assertNull(system().getCatalog().getTable("imported"));
 
         startIteration(text);
-        try {
-            nextValue();
-        }
-        catch (IonReaderTextRawTokensX.IonReaderTextTokenException e) {
-            // FIXME what the heck?
-            testSharedTableNotAddedToCatalog();
-        }
+        nextValue();
         checkType(IonType.STRUCT);
         checkAnnotation(ION_SHARED_SYMBOL_TABLE,
                         ION_SHARED_SYMBOL_TABLE_SID);

@@ -560,6 +560,23 @@ public class PrinterTest
         checkRendering("'Ab\\0'", value);
     }
 
+    @Test
+    public void testPrintingSidlikeSymbol()
+        throws Exception
+    {
+        IonSymbol value = system().newSymbol("$");
+        checkRendering("$", value);
+
+        value = system().newSymbol("$0");
+        checkRendering("'$0'", value);
+
+        value = system().newSymbol("$99");
+        checkRendering("'$99'", value);
+    }
+
+    // TODO annotations
+    // TODO field names
+
 
     @Test
     public void testPrintingTimestamp()

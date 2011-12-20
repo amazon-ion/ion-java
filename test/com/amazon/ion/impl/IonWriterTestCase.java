@@ -206,7 +206,7 @@ public abstract class IonWriterTestCase
         iw = makeWriter();
         iw.stepIn(IonType.STRUCT);
         iw.setFieldName("foo");
-        iw.setFieldId(99);
+        iw.setFieldId(99);      // Replaces "foo"
         iw.writeNull();
         iw.stepOut();
 
@@ -309,6 +309,24 @@ public abstract class IonWriterTestCase
         in.next();
         IonAssert.checkSymbol(in, null, 99);
     }
+
+    @Test
+    public void testWritingSidlikeSymbols()
+        throws Exception
+    {
+        iw = makeWriter();
+
+        // XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX
+        // Binary writer broken here: Symtab.findSymbol(String) decoding SID
+        // XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX
+
+        iw.writeSymbol("$99");
+
+        IonReader in = reread();
+        in.next();
+        IonAssert.checkSymbol("$99", in);
+    }
+
 
     public void testBadText(String text)
         throws Exception

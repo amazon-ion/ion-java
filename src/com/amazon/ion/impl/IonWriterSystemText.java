@@ -261,6 +261,17 @@ class IonWriterSystemText
     }
 
 
+    private void writeSidLiteral(int sid)
+        throws IOException
+    {
+        assert sid > 0;
+
+        _output.append('$');
+        // TODO optimize to avoid intermediate string
+        _output.append(Integer.toString(sid));
+    }
+
+
     /**
      * @param value must not be null.
      */
@@ -340,10 +351,11 @@ class IonWriterSystemText
                 if (sid == SymbolTable.UNKNOWN_SYMBOL_ID) {
                     throw new IllegalStateException(ERROR_MISSING_FIELD_NAME);
                 }
-                // TODO ION-58
-                name = "$" + sid;
+                writeSidLiteral(sid);
             }
-            writeSymbolToken(name);
+            else {
+                writeSymbolToken(name);
+            }
             _output.append(':');
             super.clearFieldName();
         }
@@ -355,9 +367,12 @@ class IonWriterSystemText
                 for (InternedSymbol ann : annotations) {
                     String name = ann.getText();
                     if (name == null) {
-                        name = "$" + ann.getId(); // TODO ION-58
+                        _output.append('$');
+                        _output.append(Integer.toString(ann.getId()));
                     }
-                    IonTextUtils.printSymbol(_output, name);
+                    else {
+                        IonTextUtils.printSymbol(_output, name);
+                    }
                     _output.append("::");
                 }
             }
@@ -706,8 +721,7 @@ class IonWriterSystemText
         else
         {
             startValue();
-            _output.append('$');
-            _output.append(Integer.toString(symbolId));
+            writeSidLiteral(symbolId);
             closeValue();
         }
     }

@@ -557,9 +557,12 @@ public class Printer
                     for (InternedSymbol ann : anns) {
                         String text = ann.getText();
                         if (text == null) {
-                            text = "$" + ann.getId(); // TODO ION-58
+                            myOut.append('$');
+                            myOut.append(Integer.toString(ann.getId()));
                         }
-                        IonTextUtils.printSymbol(myOut, text);
+                        else {
+                            IonTextUtils.printSymbol(myOut, text);
+                        }
                         myOut.append("::");
                     }
                 }
