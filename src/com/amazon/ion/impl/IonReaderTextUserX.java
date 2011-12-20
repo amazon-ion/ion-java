@@ -40,7 +40,7 @@ import com.amazon.ion.TextSpan;
  */
 public class IonReaderTextUserX
     extends IonReaderTextSystemX
-    implements IonReaderWriterPrivate, IonReaderWithPosition
+    implements IonReaderWriterPrivate
 {
     /**
      * This is the physical start-of-stream offset when this reader was created.
@@ -227,9 +227,9 @@ public class IonReaderTextUserX
     }
 
 
-    static final class IonReaderTextPosition
-        extends IonReaderPositionBase
-        implements TextSpan, OffsetSpan
+    private static final class IonReaderTextSpan
+        extends DowncastingFaceted
+        implements Span, TextSpan, OffsetSpan
     {
         private final UnifiedDataPageX _data_page;
         private final IonType          _container_type;
@@ -238,7 +238,7 @@ public class IonReaderTextUserX
         private final long             _start_line;
         private final long             _start_column;
 
-        IonReaderTextPosition(IonReaderTextUserX reader)
+        IonReaderTextSpan(IonReaderTextUserX reader)
         {
             // TODO: convert _start_char_offset from a long and data page
             //       to be an abstract reference into the Unified* data source
@@ -302,21 +302,21 @@ public class IonReaderTextUserX
     }
 
 
-    public IonReaderPosition getCurrentPosition()
+    public Span currentSpanImpl()
     {
         if (getType() == null) {
             throw new IllegalStateException("must be on a value");
         }
-        IonReaderTextPosition pos = new IonReaderTextPosition(this);
+        IonReaderTextSpan pos = new IonReaderTextSpan(this);
         return pos;
     }
 
     private void hoistImpl(Span span)
     {
-        if (!(span instanceof IonReaderTextPosition)) {
+        if (!(span instanceof IonReaderTextSpan)) {
             throw new IllegalArgumentException("position must match the reader");
         }
-        IonReaderTextPosition text_span = (IonReaderTextPosition)span;
+        IonReaderTextSpan text_span = (IonReaderTextSpan)span;
 
         UnifiedInputStreamX current_stream = _scanner.getSourceStream();
         UnifiedDataPageX    curr_page      = text_span.getDataPage();
@@ -358,11 +358,6 @@ public class IonReaderTextUserX
         re_init(iis, container, text_span._start_line, text_span._start_column);
     }
 
-    public void seek(IonReaderPosition position)
-    {
-        hoistImpl(position);
-    }
-
 
     //========================================================================
 
@@ -370,11 +365,6 @@ public class IonReaderTextUserX
     @Override
     public <T> T asFacet(Class<T> facetType)
     {
-        if (facetType == IonReaderWithPosition.class)
-        {
-            return facetType.cast(this);
-        }
-
         if (facetType == SpanProvider.class)
         {
             return facetType.cast(new SpanProviderFacet());
@@ -394,7 +384,7 @@ public class IonReaderTextUserX
     {
         public Span currentSpan()
         {
-            return getCurrentPosition();
+            return currentSpanImpl();
         }
     }
 

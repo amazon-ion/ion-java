@@ -24,7 +24,7 @@ import com.amazon.ion.SymbolTable;
  */
 class IonReaderTreeUserX
     extends IonReaderTreeSystem
-    implements IonReaderWriterPrivate, IonReaderWithPosition
+    implements IonReaderWriterPrivate
 {
     IonCatalog _catalog;
 
@@ -158,13 +158,14 @@ class IonReaderTreeUserX
     }
 
 
-    private static class TreeSpan extends IonReaderPositionBase
+    private static final class TreeSpan
+        extends DowncastingFaceted
+        implements Span
     {
         IonValue _value;
     }
 
-    @Deprecated
-    public IonReaderPosition getCurrentPosition()
+    private final Span currentSpanImpl()
     {
         if (this._curr == null) {
             throw new IllegalStateException("Reader has no current value");
@@ -176,11 +177,6 @@ class IonReaderTreeUserX
         return span;
     }
 
-    @Deprecated
-    public void seek(IonReaderPosition position)
-    {
-        hoistImpl(position);
-    }
 
     private void hoistImpl(Span span)
     {
@@ -202,11 +198,6 @@ class IonReaderTreeUserX
     @Override
     public <T> T asFacet(Class<T> facetType)
     {
-        if (facetType == IonReaderWithPosition.class)
-        {
-            return facetType.cast(this);
-        }
-
         if ((facetType == SeekableReader.class) ||
             (facetType == SpanProvider.class))
         {
@@ -221,7 +212,7 @@ class IonReaderTreeUserX
     {
         public Span currentSpan()
         {
-            return getCurrentPosition();
+            return currentSpanImpl();
         }
 
         public void hoist(Span span)

@@ -12,7 +12,6 @@ import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
 import com.amazon.ion.TextSpan;
 import com.amazon.ion.facet.Facets;
-import com.amazon.ion.impl.IonReaderOctetPosition;
 import org.junit.After;
 
 /**
@@ -141,18 +140,5 @@ public abstract class ReaderFacetTestCase
 
         offsets = currentSpan(OffsetSpan.class, in);
         checkSpan(start, finish, offsets);
-
-        // Transitional APIs
-        if (myReaderMaker.sourceIsBinary())
-        {
-            long len = finish - start;
-
-            IonReaderOctetPosition pos =
-                assumeFacet(IonReaderOctetPosition.class, span);
-            assertEquals(start,  pos.getOffset());
-            assertEquals(start,  pos.getStartOffset());
-            assertEquals(len,    pos.getLength());
-            assertEquals(finish, pos.getFinishOffset());
-        }
     }
 }

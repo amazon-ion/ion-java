@@ -24,7 +24,7 @@ import java.util.Iterator;
 
 class IonReaderBinaryUserX
     extends IonReaderBinarySystemX
-    implements IonReaderWriterPrivate, IonReaderWithPosition
+    implements IonReaderWriterPrivate
 {
     /**
      * This is the physical start-of-stream offset when this reader was created.
@@ -36,29 +36,14 @@ class IonReaderBinaryUserX
     SymbolTable _symbols;
     IonCatalog  _catalog;
 
-    private static class IonReaderBinaryPosition
-        extends IonReaderPositionBase
-        implements IonReaderOctetPosition, OffsetSpan
+    private static final class IonReaderBinarySpan
+        extends DowncastingFaceted
+        implements Span, OffsetSpan
     {
         State       _state;
         long        _offset;
         long        _limit;
-        IonType     _value_type;
-        boolean     _value_is_null;
-        boolean     _value_is_true;
         SymbolTable _symbol_table;
-
-        IonReaderBinaryPosition() {}
-
-        public long getOffset()
-        {
-            return _offset;
-        }
-
-        public long getLength()
-        {
-            return _limit - _offset;
-        }
 
         public long getStartOffset()
         {
@@ -72,7 +57,9 @@ class IonReaderBinaryUserX
     }
 
     @Deprecated
-    public IonReaderBinaryUserX(IonSystem system, IonCatalog catalog, byte[] bytes, int offset, int length) {
+    public IonReaderBinaryUserX(IonSystem system, IonCatalog catalog,
+                                byte[] bytes, int offset, int length)
+    {
         super(system, bytes, offset, length);
         _physical_start_offset = offset;
         init_user(catalog);
@@ -118,9 +105,9 @@ class IonReaderBinaryUserX
      * @throws IllegalStateException if the reader doesn't have a current
      * value.
      */
-    public IonReaderBinaryPosition getCurrentPosition()
+    public Span getCurrentPosition()
     {
-        IonReaderBinaryPosition pos = new IonReaderBinaryPosition();
+        IonReaderBinarySpan pos = new IonReaderBinarySpan();
 
         if (getType() == null)
         {
@@ -142,18 +129,15 @@ class IonReaderBinaryUserX
             pos._symbol_table = _symbols;
         }
 
-        pos._state         = _state;
-        pos._value_type    = _value_type;
-        pos._value_is_null = _value_is_null;
-        pos._value_is_true = _value_is_true;
+        pos._state = _state;
 
         return pos;
     }
 
 
-    public void seek(IonReaderPosition position)
+    public void seek(IonReaderBinarySpan position)
     {
-        IonReaderBinaryPosition pos = position.asFacet(IonReaderBinaryPosition.class);
+        IonReaderBinarySpan pos = position;
 
         if (pos == null)
         {
@@ -412,11 +396,6 @@ class IonReaderBinaryUserX
         // TODO ION-243 support seeking over InputStream
         if (_input instanceof FromByteArray)
         {
-            if (facetType == IonReaderWithPosition.class)
-            {
-                return facetType.cast(this);
-            }
-
             if (facetType == SeekableReader.class)
             {
                 return facetType.cast(new SeekableReaderFacet());
@@ -460,12 +439,12 @@ class IonReaderBinaryUserX
     {
         public void hoist(Span span)
         {
-            if (! (span instanceof IonReaderBinaryPosition))
+            if (! (span instanceof IonReaderBinarySpan))
             {
                 throw new IllegalArgumentException("Span isn't compatible with this reader.");
             }
 
-            seek((IonReaderBinaryPosition) span);
+            seek((IonReaderBinarySpan) span);
         }
     }
 
