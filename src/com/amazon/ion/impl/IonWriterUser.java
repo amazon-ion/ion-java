@@ -222,14 +222,10 @@ abstract class IonWriterUser
 
         _symbol_table_value = _symtab_value_factory.newEmptyStruct();
 
-        // WAS: _symbol_table_value.addTypeAnnotation(UnifiedSymbolTable.ION_SYMBOL_TABLE);
-        // while the previous version did create a valid symbol table, it dropped
-        // any extra annotations.  The local symbol table annotation will exist in the
-        // annotation list, since it's presence is what got us here.
-        assert(_current_writer.has_annotation(ION_SYMBOL_TABLE, ION_SYMBOL_TABLE_SID)
-        );
+        InternedSymbol[] anns = _system_writer.getTypeAnnotationSymbols();
+        _system_writer.clearAnnotations();
 
-        _symbol_table_value.setTypeAnnotationSymbols(getTypeAnnotationSymbols());
+        _symbol_table_value.setTypeAnnotationSymbols(anns);
 
         _current_writer = new IonWriterSystemTree(activeSystemSymbolTable(),
                                                   _catalog,

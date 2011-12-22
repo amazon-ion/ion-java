@@ -787,6 +787,23 @@ public abstract class IonWriterTestCase
         // Per ION-181, close() doesn't stepOut()
     }
 
+    @Test
+    public void testWritingEmptySymtab()
+    throws Exception
+    {
+        iw = makeWriter();
+        iw.addTypeAnnotation(ION_SYMBOL_TABLE);
+        iw.stepIn(IonType.STRUCT);
+        iw.stepOut();
+        iw.writeSymbol("foo");
+        iw.close();
+
+        IonDatagram dg = reload();
+        IonSymbol foo = (IonSymbol) dg.get(0);
+        assertEquals(0, foo.getTypeAnnotations().length);
+    }
+
+
     @Test @Ignore // TODO ION-236
     public void testWritingSymtabWithExtraAnnotations()
     throws Exception

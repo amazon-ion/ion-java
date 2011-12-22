@@ -357,7 +357,7 @@ class IonWriterSystemText
                 writeSymbolToken(name);
             }
             _output.append(':');
-            super.clearFieldName();
+            clearFieldName();
         }
 
         // write annotations
@@ -376,7 +376,7 @@ class IonWriterSystemText
                     _output.append("::");
                 }
             }
-            super.clearAnnotations();
+            clearAnnotations();
         }
     }
 

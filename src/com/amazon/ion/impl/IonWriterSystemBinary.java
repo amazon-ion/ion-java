@@ -419,7 +419,7 @@ public class IonWriterSystemBinary
                 throw new UnsupportedOperationException("symbol resolution must be handled by the user writer");
             }
             patch_len += _writer.writeVarUIntValue(sid, true);
-            super.clearFieldName();
+            clearFieldName();
         }
 
         // write annotations
@@ -476,7 +476,7 @@ public class IonWriterSystemBinary
                 _writer.writeVarUIntValue(sids[ii], true);
             }
             // we patch any wrapper the annotation is in with whatever we wrote here
-            super.clearAnnotations();
+            clearAnnotations();
         }
         if (patch_len > 0) {
             patch(patch_len);
