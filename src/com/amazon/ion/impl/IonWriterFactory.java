@@ -92,18 +92,22 @@ public class IonWriterFactory
             break;
         }
         case USER_TEXT:
+        {
+            SymbolTable symtab = _system.getSystemSymbolTable();
+            IonWriterSystemText systemWriter;
             if (_out != null) {
-                writer = new IonWriterUserText(_system, _catalog, _out,
-                                               _options);
+                systemWriter = new IonWriterSystemText(symtab, _out, _options);
             }
             else if (_chars != null) {
-                writer = new IonWriterUserText(_system, _catalog, _chars,
-                                               _options);
+                systemWriter = new IonWriterSystemText(symtab, _chars, _options);
             }
             else {
                 throw new IllegalStateException();
             }
+            writer = new IonWriterUserText(_catalog, _system, _options,
+                                           systemWriter);
             break;
+        }
         case USER_BINARY:
             IonWriterSystemBinary binary_system =
                 new IonWriterSystemBinary(systemSymbolTable, _out,
@@ -393,15 +397,6 @@ public class IonWriterFactory
         return writer;
     }
 
-    public static IonWriter makeWriter(IonSystem system, OutputStream output)
-    {
-        IonCatalog catalog = system.getCatalog();
-        boolean streamCopyOptimized = false;
-        IonWriter writer =
-            newBinaryWriter(system, catalog, streamCopyOptimized, output);
-        return writer;
-    }
-
 
     public static IonWriterUserBinary newBinaryWriter(IonSystem system,
                                                       IonCatalog catalog,
@@ -457,20 +452,12 @@ public class IonWriterFactory
                                               true /* filterOutSymbolTables */);
         }
 
-        IonWriterBaseImpl writer =
-            new IonWriterUserText(system, catalog, output, options);
+        IonWriterSystemText systemWriter =
+            new IonWriterSystemText(system.getSystemSymbolTable(),
+                                    output, options);
 
-        if (imports != null && imports.length != 0)
-        {
-            SymbolTable initialSymtab = initialSymbolTable(system, imports);
-
-            if (initialSymtab.isLocalTable()
-                || ! options.issuppressIonVersionMarkerOn())
-            {
-                setSymbolTable(writer, initialSymtab);
-            }
-        }
-        return writer;
+        return new IonWriterUserText(catalog, system, options, systemWriter,
+                                     imports);
     }
 
     /**
@@ -501,20 +488,12 @@ public class IonWriterFactory
                                               true /* filterOutSymbolTables */);
         }
 
-        IonWriterBaseImpl writer =
-            new IonWriterUserText(system, catalog, output, options);
+        IonWriterSystemText systemWriter =
+            new IonWriterSystemText(system.getSystemSymbolTable(),
+                                    output, options);
 
-        if (imports != null && imports.length != 0)
-        {
-            SymbolTable initialSymtab = initialSymbolTable(system, imports);
-
-            if (initialSymtab.isLocalTable()
-                || ! options.issuppressIonVersionMarkerOn())
-            {
-                setSymbolTable(writer, initialSymtab);
-            }
-        }
-        return writer;
+        return new IonWriterUserText(catalog, system, options, systemWriter,
+                                     imports);
     }
 
     /**

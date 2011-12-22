@@ -3,9 +3,11 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.SYMBOLS;
+import static com.amazon.ion.impl.UnifiedSymbolTable.initialSymbolTable;
 
 import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonCatalog;
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
@@ -43,6 +45,40 @@ public class IonWriterUserText
 
     final private boolean _filter_symbol_tables;
 
+
+    protected IonWriterUserText(IonCatalog catalog,
+                                IonSystem system,
+                                _Private_TextOptions options,
+                                IonWriterSystemText systemWriter,
+                                SymbolTable... imports)
+    {
+        super(catalog, system, systemWriter, true /* rootIsDatagram */,
+              options.issuppressIonVersionMarkerOn());
+
+        _filter_symbol_tables = options.isFilterSymbolTablesOn();
+
+        // Tricky WRT suppress-IVM option
+
+        if (imports != null && imports.length != 0)
+        {
+            SymbolTable initialSymtab = initialSymbolTable(system, imports);
+
+            if (initialSymtab.isLocalTable()
+                || ! options.issuppressIonVersionMarkerOn())
+            {
+                try {
+                    setSymbolTable(initialSymtab);
+                }
+                catch (IOException e) {
+                    throw new IonException(e);
+                }
+            }
+        }
+    }
+
+
+    /** @deprecated */
+    @Deprecated
     protected IonWriterUserText(IonSystem sys, IonCatalog catalog,
                                 OutputStream out, _Private_TextOptions options)
     {
@@ -54,6 +90,8 @@ public class IonWriterUserText
         _filter_symbol_tables = options.isFilterSymbolTablesOn();
     }
 
+    /** @deprecated */
+    @Deprecated
     protected IonWriterUserText(IonSystem sys, IonCatalog catalog,
                                 Appendable out, _Private_TextOptions options)
     {
@@ -73,7 +111,9 @@ public class IonWriterUserText
     {
         // for the text user writer if the symbol table
         // isn't changing we don't care
-        if (prev_symbols == new_symbols) {
+        // TODO this should be the "minimize distant IVMs" option
+        // TODO identity equality is very shady.
+        if (prev_symbols == new_symbols) {  // XXX different in new build path
             return;
         }
 

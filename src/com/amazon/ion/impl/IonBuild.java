@@ -114,7 +114,9 @@ public class IonBuild
 
         JarInfo info = new JarInfo();
 
-        IonWriter w = IonWriterFactory.makeWriter(sys, (Appendable)System.out, options);
+        IonWriter w =
+            ((IonSystemPrivate)sys).newTextWriter((Appendable)System.out,
+                                                  options);
         w.stepIn(IonType.STRUCT);
         {
             w.setFieldName("release_label");

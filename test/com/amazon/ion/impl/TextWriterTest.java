@@ -25,12 +25,7 @@ public class TextWriterTest
     protected IonWriter makeWriter(OutputStream out, SymbolTable... imports)
         throws Exception
     {
-        if (options != null)
-        {
-            return system().newTextWriter(out, options, imports);
-        }
-
-        return system().newTextWriter(out, imports);
+        return system().newTextWriter(out, options, imports);
     }
 
     protected String outputString()

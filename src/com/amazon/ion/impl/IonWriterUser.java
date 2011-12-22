@@ -116,6 +116,8 @@ abstract class IonWriterUser
     {
         this(catalog, symtabValueFactory, systemWriter, rootIsDatagram);
 
+        // TODO This isn't "not suppressing" it's actively injecting!
+        // Suppression shouldn't happen here, it should happen when writing.
         if (suppressIVM == false) {
             try {
                 SymbolTable initialSymtab = _system_writer.getSymbolTable();
