@@ -220,29 +220,29 @@ public class IonAssert
 
 
     public static void assertSymbolEquals(String path,
-                                          InternedSymbol actual,
-                                          InternedSymbol expected)
+                                          InternedSymbol expected,
+                                          InternedSymbol actual)
     {
-        String text1 = actual.getText();
-        String text2 = expected.getText();
-        assertEquals(path + " text", text1, text2);
+        String expectedText = expected.getText();
+        String actualText   = actual.getText();
+        assertEquals(path + " text", expectedText, actualText);
 
-        if (text1 == null)
+        if (expectedText == null)
         {
-            assertEquals(path + " sid", actual.getId(), expected.getId());
+            assertEquals(path + " sid", expected.getId(), actual.getId());
         }
     }
 
     public static void assertSymbolEquals(String path,
-                                          InternedSymbol[] actuals,
-                                          InternedSymbol[] expecteds)
+                                          InternedSymbol[] expecteds,
+                                          InternedSymbol[] actuals)
     {
-        assertEquals(path + " count", actuals.length, expecteds.length);
+        assertEquals(path + " count", expecteds.length, actuals.length);
 
-        for (int i = 0; i < actuals.length; i++)
+        for (int i = 0; i < expecteds.length; i++)
         {
             assertSymbolEquals(path + "[" + i + "]",
-                               actuals[i], expecteds[i]);
+                               expecteds[i], actuals[i]);
         }
     }
 
