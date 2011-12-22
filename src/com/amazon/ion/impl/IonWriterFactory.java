@@ -4,7 +4,6 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.UnifiedSymbolTable.initialSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
-import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonContainer;
@@ -458,13 +457,19 @@ public class IonWriterFactory
                                               true /* filterOutSymbolTables */);
         }
 
-        // TODO should only create Local table if required.
-        SymbolTable lst = //initialSymbolTable(system, imports);
-            makeNewLocalSymbolTable(system, system.getSystemSymbolTable(), imports);
         IonWriterBaseImpl writer =
             new IonWriterUserText(system, catalog, output, options);
-        // TODO should only do this if its local
-        setSymbolTable(writer, lst);
+
+        if (imports != null && imports.length != 0)
+        {
+            SymbolTable initialSymtab = initialSymbolTable(system, imports);
+
+            if (initialSymtab.isLocalTable()
+                || ! options.issuppressIonVersionMarkerOn())
+            {
+                setSymbolTable(writer, initialSymtab);
+            }
+        }
         return writer;
     }
 
@@ -496,13 +501,19 @@ public class IonWriterFactory
                                               true /* filterOutSymbolTables */);
         }
 
-        // TODO should only create Local table if required.
-        SymbolTable lst = //initialSymbolTable(system, imports);
-            makeNewLocalSymbolTable(system, system.getSystemSymbolTable(), imports);
         IonWriterBaseImpl writer =
             new IonWriterUserText(system, catalog, output, options);
-        // TODO should only do this if its local
-        setSymbolTable(writer, lst);
+
+        if (imports != null && imports.length != 0)
+        {
+            SymbolTable initialSymtab = initialSymbolTable(system, imports);
+
+            if (initialSymtab.isLocalTable()
+                || ! options.issuppressIonVersionMarkerOn())
+            {
+                setSymbolTable(writer, initialSymtab);
+            }
+        }
         return writer;
     }
 

@@ -3,9 +3,11 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonDatagram;
+import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
+import com.amazon.ion.SystemSymbols;
 import java.io.ByteArrayOutputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
@@ -113,8 +115,13 @@ public abstract class OutputStreamWriterTestCase
         throws Exception
     {
         iw = makeWriter();
-        iw.writeSymbol("force a local symtab"); // TODO ION-165
-        SymbolTable symtab = iw.getSymbolTable();
+
+        // Force a local symtab.  TODO ION-165 Should have an API for this
+        iw.addTypeAnnotation(SystemSymbols.ION_SYMBOL_TABLE);
+        iw.stepIn(IonType.STRUCT);
+        iw.stepOut();
+
+        SymbolTable symtab = iw.getSymbolTable();  // TODO ION-269
         symtab.addSymbol("fred_1");
         symtab.addSymbol("fred_2");
         testFlushing();
@@ -126,7 +133,6 @@ public abstract class OutputStreamWriterTestCase
     {
         SymbolTable fred1 = Symtabs.register("fred",   1, catalog());
         iw = makeWriter(fred1);
-        iw.writeSymbol("force a local symtab"); // TODO ION-165
         testFlushing();
     }
 
@@ -134,7 +140,6 @@ public abstract class OutputStreamWriterTestCase
         throws IOException
     {
         IonDatagram expected = system().newDatagram();
-        expected.add().newSymbol("force a local symtab");
 
         PrivateDmsdkUtils.lockLocalSymbolTable(iw.getSymbolTable());
 
