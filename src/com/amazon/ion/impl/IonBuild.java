@@ -105,7 +105,7 @@ public class IonBuild
     {
         IonSystem sys = IonSystemBuilder.standard().build();
 
-        $PrivateTextOptions options = new $PrivateTextOptions(
+        _Private_TextOptions options = new _Private_TextOptions(
                  true  // boolean prettyPrint
                 ,true  // boolean printAscii
                 ,true  // boolean filterOutSymbolTables

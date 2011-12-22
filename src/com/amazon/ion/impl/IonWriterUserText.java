@@ -21,7 +21,7 @@ public class IonWriterUserText
     extends IonWriterUser
 {
     @Deprecated
-    static public class TextOptions extends $PrivateTextOptions
+    static public class TextOptions extends _Private_TextOptions
     {
         public TextOptions(boolean prettyPrint, boolean printAscii)
         {
@@ -44,7 +44,7 @@ public class IonWriterUserText
     final private boolean _filter_symbol_tables;
 
     protected IonWriterUserText(IonSystem sys, IonCatalog catalog,
-                                OutputStream out, $PrivateTextOptions options)
+                                OutputStream out, _Private_TextOptions options)
     {
         super(catalog, sys,
               new IonWriterSystemText(sys.getSystemSymbolTable(),
@@ -55,7 +55,7 @@ public class IonWriterUserText
     }
 
     protected IonWriterUserText(IonSystem sys, IonCatalog catalog,
-                                Appendable out, $PrivateTextOptions options)
+                                Appendable out, _Private_TextOptions options)
     {
         super(catalog, sys,
               new IonWriterSystemText(sys.getSystemSymbolTable(),

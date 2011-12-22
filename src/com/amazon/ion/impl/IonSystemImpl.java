@@ -437,14 +437,14 @@ public final class IonSystemImpl
 
     public IonWriter newTextWriter(Appendable out, boolean pretty)
     {
-        $PrivateTextOptions options =
-            new $PrivateTextOptions(pretty /* prettyPrint */,
+        _Private_TextOptions options =
+            new _Private_TextOptions(pretty /* prettyPrint */,
                                     true /* printAscii */,
                                     true /* filterOutSymbolTables */);
         return makeWriter(this, myCatalog, out, options);
     }
 
-    public IonWriter newTextWriter(Appendable out, $PrivateTextOptions options)
+    public IonWriter newTextWriter(Appendable out, _Private_TextOptions options)
     {
         return makeWriter(this, myCatalog, out, options);
     }
@@ -455,7 +455,7 @@ public final class IonSystemImpl
     }
 
     public IonWriter newTextWriter(Appendable out,
-                                   $PrivateTextOptions options,
+                                   _Private_TextOptions options,
                                    SymbolTable... imports)
     {
         return makeWriter(this, myCatalog, out, options, imports);
@@ -467,7 +467,7 @@ public final class IonSystemImpl
     }
 
     public IonWriter newTextWriter(OutputStream out,
-                                   $PrivateTextOptions options)
+                                   _Private_TextOptions options)
     {
         return makeWriter(this, myCatalog, out, options);
     }
@@ -478,7 +478,7 @@ public final class IonSystemImpl
     }
 
     public IonWriter newTextWriter(OutputStream out,
-                                   $PrivateTextOptions options,
+                                   _Private_TextOptions options,
                                    SymbolTable... imports)
     {
         return makeWriter(this, myCatalog, out, options, imports);
@@ -491,8 +491,8 @@ public final class IonSystemImpl
     public IonWriter newTextWriter(OutputStream out, boolean pretty)
     {
         // return new IonTextWriter(out, pretty);
-        $PrivateTextOptions options =
-            new $PrivateTextOptions(pretty,
+        _Private_TextOptions options =
+            new _Private_TextOptions(pretty,
                                     true /* printAscii */,
                                     true /* filterOutSymbolTables */);
         IonWriter userWriter = newTextWriter(out, options);

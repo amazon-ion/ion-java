@@ -32,7 +32,6 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.UnsupportedIonVersionException;
-import com.amazon.ion.impl.$PrivateTextOptions;
 import com.amazon.ion.impl.IonReaderFactoryX;
 import com.amazon.ion.impl.IonReaderWriterPrivate;
 import com.amazon.ion.impl.IonScalarConversionsX.CantConvertException;
@@ -42,6 +41,7 @@ import com.amazon.ion.impl.IonWriterBinaryCompatibility;
 import com.amazon.ion.impl.IonWriterFactory;
 import com.amazon.ion.impl.IonWriterUserBinary;
 import com.amazon.ion.impl.UnifiedSymbolTable;
+import com.amazon.ion.impl._Private_TextOptions;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
@@ -237,8 +237,8 @@ public final class IonSystemLite
 
     public IonWriter newTextWriter(Appendable out, boolean pretty)
     {
-        $PrivateTextOptions options =
-            new $PrivateTextOptions(pretty /* prettyPrint */,
+        _Private_TextOptions options =
+            new _Private_TextOptions(pretty /* prettyPrint */,
                                     true /* printAscii */,
                                     true /* filterOutSymbolTables */);
         IonWriter userWriter = newTextWriter(out, options);
@@ -246,7 +246,7 @@ public final class IonSystemLite
     }
 
     public IonWriterBaseImpl newTextWriter(Appendable out,
-                                           $PrivateTextOptions options)
+                                           _Private_TextOptions options)
     {
         IonWriterBaseImpl userWriter = makeWriter(this, out, options);
         return userWriter;
@@ -259,7 +259,7 @@ public final class IonSystemLite
     }
 
     public IonWriter newTextWriter(Appendable out,
-                                   $PrivateTextOptions options,
+                                   _Private_TextOptions options,
                                    SymbolTable... imports)
         throws IOException
     {
@@ -272,7 +272,7 @@ public final class IonSystemLite
     }
 
     public IonWriterBaseImpl newTextWriter(OutputStream out,
-                                           $PrivateTextOptions options)
+                                           _Private_TextOptions options)
     {
         return makeWriter(this, out, options);
     }
@@ -284,7 +284,7 @@ public final class IonSystemLite
     }
 
     public IonWriter newTextWriter(OutputStream out,
-                                   $PrivateTextOptions options,
+                                   _Private_TextOptions options,
                                    SymbolTable... imports)
         throws IOException
     {
@@ -969,7 +969,7 @@ public final class IonSystemLite
     public IonWriter newTextWriter(OutputStream out, boolean pretty)
     {
         // prettyPrint, boolean printAscii, boolean filterOutSymbolTables
-        $PrivateTextOptions options = new $PrivateTextOptions(pretty, true, true);
+        _Private_TextOptions options = new _Private_TextOptions(pretty, true, true);
         IonWriter writer = IonWriterFactory.makeWriter(this, out, options);
         return writer;
     }

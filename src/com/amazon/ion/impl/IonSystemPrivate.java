@@ -63,21 +63,21 @@ public interface IonSystemPrivate
 
     public IonWriter newTextWriter(Appendable out, boolean pretty);
 
-    public IonWriter newTextWriter(Appendable out, $PrivateTextOptions options);
+    public IonWriter newTextWriter(Appendable out, _Private_TextOptions options);
 
     public IonWriter newTextWriter(Appendable out, SymbolTable... imports) throws IOException;
 
-    public IonWriter newTextWriter(Appendable out, $PrivateTextOptions options, SymbolTable... imports) throws IOException;
+    public IonWriter newTextWriter(Appendable out, _Private_TextOptions options, SymbolTable... imports) throws IOException;
 
     public IonWriter newTextWriter(OutputStream out);
 
     public IonWriter newTextWriter(OutputStream out, boolean pretty);
 
-    public IonWriter newTextWriter(OutputStream out, $PrivateTextOptions options);
+    public IonWriter newTextWriter(OutputStream out, _Private_TextOptions options);
 
     public IonWriter newTextWriter(OutputStream out, SymbolTable... imports) throws IOException;
 
-    public IonWriter newTextWriter(OutputStream out, $PrivateTextOptions options, SymbolTable... imports) throws IOException;
+    public IonWriter newTextWriter(OutputStream out, _Private_TextOptions options, SymbolTable... imports) throws IOException;
 
     public IonWriter newTreeWriter(IonContainer container);
 

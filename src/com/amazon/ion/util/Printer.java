@@ -29,8 +29,8 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.impl.$PrivateTextOptions;
 import com.amazon.ion.impl.IonSystemPrivate;
+import com.amazon.ion.impl._Private_TextOptions;
 import com.amazon.ion.util.IonTextUtils.SymbolVariant;
 import java.io.IOException;
 import java.io.InputStream;
@@ -416,8 +416,8 @@ public class Printer
             boolean dg = value instanceof IonDatagram;
 
             IonSystemPrivate s = ((IonSystemPrivate)value.getSystem());
-            $PrivateTextOptions o =
-                new $PrivateTextOptions(/*prettyPrint*/ false,
+            _Private_TextOptions o =
+                new _Private_TextOptions(/*prettyPrint*/ false,
                                         /*printAscii*/ true,
                                         /*filterOutSymbolTables*/ options.skipSystemValues,
                                         /*suppressIonVersionMarker*/ !dg);

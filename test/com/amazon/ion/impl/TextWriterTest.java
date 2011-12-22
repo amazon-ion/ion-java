@@ -19,7 +19,7 @@ import org.junit.Test;
 public class TextWriterTest
     extends OutputStreamWriterTestCase
 {
-    private $PrivateTextOptions options;
+    private _Private_TextOptions options;
 
     @Override
     protected IonWriter makeWriter(OutputStream out, SymbolTable... imports)
@@ -74,7 +74,7 @@ public class TextWriterTest
     public void testWritingLongStrings()
         throws Exception
     {
-        options = new $PrivateTextOptions(/*prettyPrint*/ false,
+        options = new _Private_TextOptions(/*prettyPrint*/ false,
                                           /*printAscii*/ false,
                                           /*filterOutSymbolTables*/ true,
                                           /*suppressIonVersionMarker*/ true);
@@ -133,7 +133,7 @@ public class TextWriterTest
     public void testWritingLongClobs()
         throws Exception
     {
-        options = new $PrivateTextOptions(/*prettyPrint*/ false,
+        options = new _Private_TextOptions(/*prettyPrint*/ false,
                                           /*printAscii*/ false,
                                           /*filterOutSymbolTables*/ true,
                                           /*suppressIonVersionMarker*/ true);

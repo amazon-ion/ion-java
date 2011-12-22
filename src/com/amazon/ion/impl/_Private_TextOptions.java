@@ -4,7 +4,7 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.util.Printer;
 
-public class $PrivateTextOptions
+public class _Private_TextOptions
 {
     private final static CharSequence SPACE_CHARACTER = " ";
     private final static CharSequence LINE_SEPARATOR = System.getProperty("line.separator");
@@ -34,10 +34,10 @@ public class $PrivateTextOptions
     /**
      * Behaves like {@link Printer#setJsonMode()}
      */
-    public static $PrivateTextOptions prettyJson()
+    public static _Private_TextOptions prettyJson()
     {
-        $PrivateTextOptions o =
-            new $PrivateTextOptions(/*prettyPrint*/ true,
+        _Private_TextOptions o =
+            new _Private_TextOptions(/*prettyPrint*/ true,
                                     /*printAscii*/ true,
                                     /*filterOutSymbolTables*/ true,
                                     /*suppressIonVersionMarker*/ true);
@@ -56,7 +56,7 @@ public class $PrivateTextOptions
         return o;
     }
 
-    public $PrivateTextOptions(boolean prettyPrint, boolean printAscii)
+    public _Private_TextOptions(boolean prettyPrint, boolean printAscii)
     {
         _pretty_print = prettyPrint;
         _ascii_only   = printAscii;
@@ -69,7 +69,7 @@ public class $PrivateTextOptions
         _filter_symbol_tables = false;
         _suppress_ion_version_marker = false;
     }
-    public $PrivateTextOptions(boolean prettyPrint, boolean printAscii,
+    public _Private_TextOptions(boolean prettyPrint, boolean printAscii,
                                boolean filterOutSymbolTables)
     {
         _pretty_print = prettyPrint;
@@ -83,7 +83,7 @@ public class $PrivateTextOptions
         _filter_symbol_tables = filterOutSymbolTables;
         _suppress_ion_version_marker = false;
     }
-    public $PrivateTextOptions(boolean prettyPrint, boolean printAscii,
+    public _Private_TextOptions(boolean prettyPrint, boolean printAscii,
                                boolean filterOutSymbolTables,
                                boolean suppressIonVersionMarker)
     {

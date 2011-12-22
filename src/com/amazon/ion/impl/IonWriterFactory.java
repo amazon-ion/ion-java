@@ -31,7 +31,7 @@ public class IonWriterFactory
     IonCatalog          _catalog;
     OutputStream        _out;
     Appendable          _chars;
-    $PrivateTextOptions _options;
+    _Private_TextOptions _options;
     IonContainer        _container;
     boolean             _auto_flush;
     private boolean     _suppress_ivm;
@@ -197,7 +197,7 @@ public class IonWriterFactory
         _chars = chars;
     }
 
-    public synchronized void set($PrivateTextOptions options)
+    public synchronized void set(_Private_TextOptions options)
     {
         force_in_progress();
         _options = options;
@@ -334,7 +334,7 @@ public class IonWriterFactory
         // text writer must have options set
         if (_options == null && _type.isText()) {
             boolean filter_symbol_tables = _type.isUser();
-            _options = new $PrivateTextOptions(false, true, filter_symbol_tables);
+            _options = new _Private_TextOptions(false, true, filter_symbol_tables);
         }
 
         // if we have imports then we should cons up a local symbol table
@@ -428,14 +428,14 @@ public class IonWriterFactory
         return writer;
     }
 
-    public static final $PrivateTextOptions DEFAULT_OPTIONS = null;
+    public static final _Private_TextOptions DEFAULT_OPTIONS = null;
 
     /**
      * Doesn't write a local symtab.
      */
     public static IonWriterBaseImpl makeWriter(IonSystem system,
                                                Appendable output,
-                                               $PrivateTextOptions options)
+                                               _Private_TextOptions options)
     {
         return makeWriter(system, null, output, options);
     }
@@ -446,14 +446,14 @@ public class IonWriterFactory
     public static IonWriterBaseImpl makeWriter(IonSystem system,
                                                IonCatalog catalog,
                                                Appendable output,
-                                               $PrivateTextOptions options,
+                                               _Private_TextOptions options,
                                                SymbolTable... imports)
     {
         if (catalog == null) catalog = system.getCatalog();
 
         if (options == null)
         {
-            options = new $PrivateTextOptions(false /* prettyPrint */,
+            options = new _Private_TextOptions(false /* prettyPrint */,
                                               true /* printAscii */,
                                               true /* filterOutSymbolTables */);
         }
@@ -473,7 +473,7 @@ public class IonWriterFactory
      */
     public static IonWriterBaseImpl makeWriter(IonSystem system,
                                                OutputStream output,
-                                               $PrivateTextOptions options)
+                                               _Private_TextOptions options)
     {
         return makeWriter(system, null, output, options);
     }
@@ -484,14 +484,14 @@ public class IonWriterFactory
     public static IonWriterBaseImpl makeWriter(IonSystem system,
                                                IonCatalog catalog,
                                                OutputStream output,
-                                               $PrivateTextOptions options,
+                                               _Private_TextOptions options,
                                                SymbolTable... imports)
     {
         if (catalog == null) catalog = system.getCatalog();
 
         if (options == null)
         {
-            options = new $PrivateTextOptions(false /* prettyPrint */,
+            options = new _Private_TextOptions(false /* prettyPrint */,
                                               true /* printAscii */,
                                               true /* filterOutSymbolTables */);
         }
@@ -531,7 +531,7 @@ public class IonWriterFactory
 
     public static IonWriter makeSystemWriter(SymbolTable initialSystemSymtab,
                                              Appendable output,
-                                             $PrivateTextOptions options)
+                                             _Private_TextOptions options)
     {
         IonWriter writer =
             new IonWriterSystemText(initialSystemSymtab, output, options);
@@ -540,7 +540,7 @@ public class IonWriterFactory
 
     public static IonWriter makeSystemWriter(SymbolTable initialSystemSymtab,
                                              OutputStream output,
-                                             $PrivateTextOptions options)
+                                             _Private_TextOptions options)
     {
         IonWriter writer =
             new IonWriterSystemText(initialSystemSymtab, output, options);

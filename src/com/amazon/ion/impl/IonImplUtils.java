@@ -623,7 +623,7 @@ public final class IonImplUtils // TODO this class shouldn't be public
     public static String valueToString(IonReader reader)
     {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        $PrivateTextOptions options = new $PrivateTextOptions(false, true, false); // pretty print, ascii only, filter symbol tables
+        _Private_TextOptions options = new _Private_TextOptions(false, true, false); // pretty print, ascii only, filter symbol tables
 
         // This is vaguely inappropriate.
         IonSystem system = IonSystemBuilder.standard().build();
