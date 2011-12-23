@@ -3,7 +3,6 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
-import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonSequence;
@@ -25,6 +24,7 @@ public class TextWriterTest
     protected IonWriter makeWriter(OutputStream out, SymbolTable... imports)
         throws Exception
     {
+        myOutputForm = OutputForm.TEXT;
         return system().newTextWriter(out, options, imports);
     }
 
@@ -43,13 +43,7 @@ public class TextWriterTest
         iw.writeSymbol("holla");
         String ionText = outputString();
 
-        if (! ionText.startsWith(ION_1_0)) {
-            fail("TextWriter didn't write IVM: " + ionText);
-        }
-
-        if (ionText.contains(ION_SYMBOL_TABLE)) {
-            fail("TextWriter shouldn't write symtab: " + ionText);
-        }
+        assertEquals("holla", ionText);
     }
 
 
@@ -145,5 +139,31 @@ public class TextWriterTest
         expectRendering("{{'''ab\n" +
                         "c'''}}",
                         dg);
+    }
+
+    @Test
+    public void testSuppressInitialIvm()
+        throws Exception
+    {
+        iw = makeWriter();
+        iw.writeSymbol(ION_1_0);
+        iw.writeNull();
+        iw.writeSymbol(ION_1_0);
+        iw.writeNull();
+
+        assertEquals(ION_1_0 + " null " + ION_1_0 + " null", outputString());
+
+
+        options = new _Private_TextOptions(/*prettyPrint*/ false,
+                                           /*printAscii*/ false,
+                                           /*filterOutSymbolTables*/ false,
+                                           /*suppressIonVersionMarker*/ true);
+        iw = makeWriter();
+        iw.writeSymbol(ION_1_0);
+        iw.writeNull();
+        iw.writeSymbol(ION_1_0);
+        iw.writeNull();
+
+        assertEquals("null " + ION_1_0 + " null", outputString());
     }
 }

@@ -322,6 +322,6 @@ public class MiscStreamingTest
         writer.writeValue(system().newSymbol("foo"));
         writer.close();
 
-        assertEquals("$ion_1_0 foo", utf8(out.toByteArray()));
+        assertEquals("foo", utf8(out.toByteArray()));
     }
 }

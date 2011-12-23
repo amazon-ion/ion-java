@@ -282,16 +282,22 @@ final class IonWriterSystemTree
         append(v);
     }
 
+
+
     @Override
-    public void writeIonVersionMarker() throws IOException
+    void writeIonVersionMarker(SymbolTable systemSymtab)
+        throws IOException
     {
-        SymbolTable system_symbols = _default_system_symbol_table;
-        writeSymbol(system_symbols.getIonVersionId());
-        setSymbolTable(system_symbols);
+        IonValue root = get_root();
+        ((_Private_IonDatagram)root).appendTrailingSymbolTable(systemSymtab);
+
+        super.writeIonVersionMarker(systemSymtab);
     }
+
 
     public void writeSymbol(int symbolId)
     {
+        // TODO ION-165 this should handle IVMs
         String name = getSymbolTable().findKnownSymbol(symbolId);
         InternedSymbolImpl is = new InternedSymbolImpl(name, symbolId);
         IonSymbol v = _factory.newSymbol(is);
@@ -300,6 +306,7 @@ final class IonWriterSystemTree
 
     public void writeSymbol(String value)
     {
+        // TODO ION-165 this should handle IVMs
         IonSymbol v = _factory.newSymbol(value);
         append(v);
     }

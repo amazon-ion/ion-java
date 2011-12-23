@@ -35,12 +35,11 @@ public class IonWriterUserBinary
     protected IonWriterUserBinary(IonCatalog catalog,
                                   ValueFactory symtabValueFactory,
                                   IonWriterSystemBinary systemWriter,
-                                  boolean suppressIVM,
                                   boolean streamCopyOptimized)
     {
         super(catalog, symtabValueFactory, systemWriter,
               true /* rootIsDatagram */,
-              suppressIVM);
+              false /* suppressInitialIvm */);
         myStreamCopyOptimized = streamCopyOptimized;
     }
 
@@ -52,27 +51,16 @@ public class IonWriterUserBinary
     }
 
     @Override
-    public void set_symbol_table_helper(SymbolTable prev_symbols,
-                                        SymbolTable new_symbols)
+    public void set_symbol_table_helper(SymbolTable new_symbols)
         throws IOException
     {
-        // for a binary writer we always write out symbol tables
-        // writeUserSymbolTable(new_symbols);
         if (new_symbols.isSystemTable()) {
-            // TODO: this will suppress multiple attempts to write
-            //       a system symbol table - do we want that?  (usually
-            //       we do, but always?)
-            if (!MODIFIED_IVM_HANDLING && _previous_value_was_ivm) { // XXX
-                return;
-            }
             // writing to the system writer keeps us from
             // recursing on the writeIonVersionMarker call
-            _system_writer.writeIonVersionMarker();
+            _system_writer.writeIonVersionMarker(new_symbols);
             _previous_value_was_ivm = true;
         }
         else {
-            assert(new_symbols.isLocalTable());
-            assert(_system_writer instanceof IonWriterSystemBinary);
             ((IonWriterSystemBinary)_system_writer).patchInSymbolTable(new_symbols);
         }
     }

@@ -474,12 +474,15 @@ public abstract class IonTestCase
 
     public static void checkBinaryHeader(byte[] datagram)
     {
-        assertTrue("datagram is too small", datagram.length >= 4);
+        if (datagram.length != 0) // Allow empty "binary" stream
+        {
+            assertTrue("datagram is too small", datagram.length >= 4);
 
-        assertEquals("datagram cookie byte 1", 0xE0, datagram[0] & 0xff );
-        assertEquals("datagram cookie byte 2", 0x01, datagram[1] & 0xff);
-        assertEquals("datagram cookie byte 3", 0x00, datagram[2] & 0xff);
-        assertEquals("datagram cookie byte 4", 0xEA, datagram[3] & 0xff);
+            assertEquals("datagram cookie byte 1", 0xE0, datagram[0] & 0xff );
+            assertEquals("datagram cookie byte 2", 0x01, datagram[1] & 0xff);
+            assertEquals("datagram cookie byte 3", 0x00, datagram[2] & 0xff);
+            assertEquals("datagram cookie byte 4", 0xEA, datagram[3] & 0xff);
+        }
     }
 
 
@@ -836,8 +839,11 @@ public abstract class IonTestCase
 
     public static void checkAnnotation(String expectedAnnot, IonValue value)
     {
-        assertTrue("missing annotation",
-                   value.hasTypeAnnotation(expectedAnnot));
+        if (! value.hasTypeAnnotation(expectedAnnot))
+        {
+            fail("missing annotation " + expectedAnnot
+                 + " on IonValue " + value);
+        }
     }
 
 

@@ -23,8 +23,6 @@ import java.util.Date;
 public abstract class IonWriterBaseImpl
     implements IonWriter, IonReaderWriterPrivate
 {
-    static final boolean MODIFIED_IVM_HANDLING = false;
-
     protected static final String ERROR_MISSING_FIELD_NAME =
         "IonWriter.setFieldName() must be called before writing a value into a struct.";
 
@@ -33,11 +31,6 @@ public abstract class IonWriterBaseImpl
 
     private static final boolean _debug_on = false;
 
-
-
-    IonWriterBaseImpl()
-    {
-    }
 
 
     /**

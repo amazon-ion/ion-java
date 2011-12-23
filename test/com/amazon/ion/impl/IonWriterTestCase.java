@@ -47,6 +47,10 @@ import org.junit.Test;
 public abstract class IonWriterTestCase
     extends IonTestCase
 {
+    enum OutputForm { TEXT, BINARY, DOM };
+
+    OutputForm myOutputForm;
+
     protected IonWriter iw;
 
     /**
@@ -315,11 +319,6 @@ public abstract class IonWriterTestCase
         throws Exception
     {
         iw = makeWriter();
-
-        // XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX
-        // Binary writer broken here: Symtab.findSymbol(String) decoding SID
-        // XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX
-
         iw.writeSymbol("$99");
 
         IonReader in = reread();
@@ -703,6 +702,18 @@ public abstract class IonWriterTestCase
         assertEquals(4, dg.systemSize());
     }
 
+    Iterator<IonValue> systemIterateOutput()
+        throws Exception
+    {
+        // TODO ION-165 Hack to work around the lite DOM munging system values
+        IonSystemPrivate lazySystem = new IonSystemImpl(catalog(), false);
+
+        byte[] data = outputByteArray();
+        Iterator<IonValue> it =
+            lazySystem.systemIterate(new ByteArrayInputStream(data));
+        return it;
+    }
+
     @Test
     public void testFinishDoesReset()
     throws Exception
@@ -714,19 +725,14 @@ public abstract class IonWriterTestCase
         iw.writeNull();
         iw.close();
 
-        // Should have: IMV SYMTAB hey IMV null
+        // Should have: IVM SYMTAB hey IVM null
 
-        // TODO ION-165 Hack to work around the lazy DOM munging system values
-        IonSystemPrivate lazySystem = new IonSystemImpl(catalog(), false);
+        Iterator<IonValue> it = systemIterateOutput();
 
-        byte[] data = outputByteArray();
-        Iterator<IonValue> it =
-            lazySystem.systemIterate(new ByteArrayInputStream(data));
-        IonSymbol ivm = (IonSymbol) it.next();
-        checkSymbol(SystemSymbols.ION_1_0, ivm);
-
-        IonStruct symtab = (IonStruct) it.next();
-        checkAnnotation(SystemSymbols.ION_SYMBOL_TABLE, symtab);
+        if (myOutputForm != OutputForm.TEXT) { // TODO ION-165
+            checkSymbol(SystemSymbols.ION_1_0, it.next());
+        }
+        checkAnnotation(SystemSymbols.ION_SYMBOL_TABLE, it.next());
         checkSymbol("hey", it.next());
         checkSymbol(SystemSymbols.ION_1_0, it.next());
         checkNullNull(it.next());
@@ -878,7 +884,10 @@ public abstract class IonWriterTestCase
         checkSymbol(gingerSym, s);
     }
 
-    /** TODO ION-165 datagram is lazy creating local symtabs */
+    /**
+     * TODO ION-165 datagram is lazy creating local symtabs.
+     * Should use a reader to check the results.
+     */
     @Test @Ignore
     public void testWriteIVMImplicitly()
         throws Exception
@@ -893,6 +902,14 @@ public abstract class IonWriterTestCase
         assertNotSame("symbol table instance",
                       dg.get(0).getSymbolTable(),
                       dg.get(1).getSymbolTable());
+
+        Iterator<IonValue> it = systemIterateOutput();
+        if (myOutputForm != OutputForm.TEXT) {
+            checkSymbol(SystemSymbols.ION_1_0, it.next());
+        }
+        checkSymbol("foo", it.next());
+        checkSymbol(SystemSymbols.ION_1_0, it.next());
+        checkInt(1, it.next());
     }
 
     @Test
@@ -906,5 +923,33 @@ public abstract class IonWriterTestCase
 
         IonDatagram dg = reload();
         assertEquals(2, dg.size());
+
+    }
+
+    @Test // TODO ION-165 Inconsistencies between writers
+    public void testWritingDatagram()
+        throws Exception
+    {
+        IonDatagram dg = loader().load("foo");
+        iw = makeWriter();
+        dg.writeTo(iw);
+        iw.writeValue(dg);
+
+        Iterator<IonValue> it = systemIterateOutput();
+        //if (myOutputIsBinary)
+        {
+            checkSymbol(SystemSymbols.ION_1_0, it.next());
+        }
+        if (myOutputForm != OutputForm.TEXT) {
+            checkAnnotation(SystemSymbols.ION_SYMBOL_TABLE, it.next());
+        }
+        checkSymbol("foo", it.next());
+        if (myOutputForm != OutputForm.DOM) {
+            checkSymbol(SystemSymbols.ION_1_0, it.next());
+        }
+        if (myOutputForm == OutputForm.BINARY) {
+            checkAnnotation(SystemSymbols.ION_SYMBOL_TABLE, it.next());
+        }
+        checkSymbol("foo", it.next());
     }
 }

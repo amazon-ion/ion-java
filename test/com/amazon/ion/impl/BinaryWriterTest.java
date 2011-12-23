@@ -29,6 +29,7 @@ public class BinaryWriterTest
     protected IonWriter makeWriter(OutputStream out, SymbolTable... imports)
         throws Exception
     {
+        myOutputForm = OutputForm.BINARY;
         return system().newBinaryWriter(out, imports);
     }
 

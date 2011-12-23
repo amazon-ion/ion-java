@@ -36,7 +36,7 @@ public abstract class IonWriterBinaryCompatibility
         public System(SymbolTable systemSymbolTable, boolean autoFlush)
         {
             super(systemSymbolTable, make_output_stream(), autoFlush,
-                  false /* suppressIVM */);
+                  true /* ensureInitialIvm */);
             assert(getOutputStream() instanceof BlockedBuffer.BufferedOutputStream);
         }
 
@@ -96,7 +96,6 @@ public abstract class IonWriterBinaryCompatibility
             super(catalog, system,
                   new System(system.getSystemSymbolTable(),
                              false /* autoflush */ ),
-                  MODIFIED_IVM_HANDLING||false /* suppressIVM */, // XXX
                   streamCopyOptimized);
 
             assert(getOutputStream() instanceof BufferedOutputStream);

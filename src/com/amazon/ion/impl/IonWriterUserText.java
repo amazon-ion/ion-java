@@ -57,21 +57,15 @@ public class IonWriterUserText
 
         _filter_symbol_tables = options.isFilterSymbolTablesOn();
 
-        // Tricky WRT suppress-IVM option
-
         if (imports != null && imports.length != 0)
         {
             SymbolTable initialSymtab = initialSymbolTable(system, imports);
 
-            if (initialSymtab.isLocalTable()
-                || ! options.issuppressIonVersionMarkerOn())
-            {
-                try {
-                    setSymbolTable(initialSymtab);
-                }
-                catch (IOException e) {
-                    throw new IonException(e);
-                }
+            try {
+                setSymbolTable(initialSymtab);
+            }
+            catch (IOException e) {
+                throw new IonException(e);
             }
         }
     }
@@ -105,17 +99,10 @@ public class IonWriterUserText
 
 
     @Override
-    public void set_symbol_table_helper(SymbolTable prev_symbols,
-                                        SymbolTable new_symbols)
+    public void set_symbol_table_helper(SymbolTable new_symbols)
         throws IOException
     {
-        // for the text user writer if the symbol table
-        // isn't changing we don't care
         // TODO this should be the "minimize distant IVMs" option
-        // TODO identity equality is very shady.
-        if (prev_symbols == new_symbols) {  // XXX different in new build path
-            return;
-        }
 
         assert(_system_writer == _current_writer);
 
@@ -124,7 +111,7 @@ public class IonWriterUserText
         if (new_symbols.isSystemTable())
         {
             // system writer call won't recurse back on us
-            _system_writer.writeIonVersionMarker();
+            _system_writer.writeIonVersionMarker(new_symbols);
             _previous_value_was_ivm = true;
         }
         else // local symtab

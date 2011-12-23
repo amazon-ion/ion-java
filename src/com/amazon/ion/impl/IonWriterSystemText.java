@@ -2,7 +2,6 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.impl.IonConstants.tidList;
 import static com.amazon.ion.impl.IonConstants.tidSexp;
 import static com.amazon.ion.impl.IonConstants.tidStruct;
@@ -712,6 +711,7 @@ class IonWriterSystemText
     public void writeSymbol(int symbolId)
         throws IOException
     {
+        // TODO ION-165 this should handle IVMs
         SymbolTable symtab = getSymbolTable();
         String symbol = symtab.findKnownSymbol(symbolId);
         if (symbol != null)
@@ -729,6 +729,7 @@ class IonWriterSystemText
     public void writeSymbol(String value)
         throws IOException
     {
+        // TODO ION-165 this should handle IVMs
         if (value == null)
         {
             writeNull(IonType.SYMBOL);
@@ -740,11 +741,15 @@ class IonWriterSystemText
         closeValue();
     }
 
+
     @Override
-    public void writeIonVersionMarker() throws IOException
+    void writeIonVersionMarker(SymbolTable systemSymtab)
+        throws IOException
     {
-        writeSymbol(ION_1_0);
+        writeSymbol(systemSymtab.getIonVersionId());
+        super.writeIonVersionMarker(systemSymtab);
     }
+
 
     public void writeBlob(byte[] value, int start, int len)
         throws IOException

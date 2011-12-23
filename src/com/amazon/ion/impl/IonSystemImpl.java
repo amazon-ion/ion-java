@@ -14,6 +14,7 @@ import static com.amazon.ion.impl.IonReaderFactoryX.makeSystemReader;
 import static com.amazon.ion.impl.IonWriterFactory.DEFAULT_OPTIONS;
 import static com.amazon.ion.impl.IonWriterFactory.makeWriter;
 import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemIterator;
+import static com.amazon.ion.impl.UnifiedSymbolTable.initialSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewSharedSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.newSystemSymbolTable;
@@ -511,17 +512,17 @@ public final class IonSystemImpl
     @Deprecated
     public com.amazon.ion.IonBinaryWriter newBinaryWriter(SymbolTable... imports)
     {
-        UnifiedSymbolTable lst = newLocalSymbolTable(imports);
-        IonWriterBinaryCompatibility.User user_writer =
+        SymbolTable symbols = initialSymbolTable(this, imports);
+        IonWriterBinaryCompatibility.User writer =
             new IonWriterBinaryCompatibility.User(this, myCatalog,
                                                   myStreamCopyOptimized);
         try {
-            user_writer.setSymbolTable(lst);
+            writer.setSymbolTable(symbols);
         }
         catch (IOException e) {
             throw new IonException(e);
         }
-        return user_writer;
+        return writer;
     }
 
     public IonWriter newBinaryWriter(OutputStream out, SymbolTable... imports)

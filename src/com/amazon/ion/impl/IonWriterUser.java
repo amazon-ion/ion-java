@@ -11,7 +11,6 @@ import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonCatalog;
-import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
@@ -46,6 +45,9 @@ abstract class IonWriterUser
 
     /** Used to make correct local symbol tables. May be null. */
     private final IonCatalog _catalog;
+
+    /** Turns false once we've written non-IVM data. */
+    private boolean _suppress_initial_ivm;
 
     /**
      * Indicates whether the (immediately) previous value was an IVM.
@@ -107,26 +109,18 @@ abstract class IonWriterUser
      * @param catalog may be null.
      * @param symtabValueFactory must not be null.
      * @param systemWriter must not be null.
+     * @param suppressInitialIvm when true, any initial {@code $ion_1_0} IVMs
+     *  will be suppressed even when the user explicitly writes one.
      */
     IonWriterUser(IonCatalog catalog,
                   ValueFactory symtabValueFactory,
                   IonWriterSystem systemWriter,
                   boolean rootIsDatagram,
-                  boolean suppressIVM)
+                  boolean suppressInitialIvm)
     {
         this(catalog, symtabValueFactory, systemWriter, rootIsDatagram);
 
-        // TODO This isn't "not suppressing" it's actively injecting!
-        // Suppression shouldn't happen here, it should happen when writing.
-        if (suppressIVM == false) {
-            try {
-                SymbolTable initialSymtab = _system_writer.getSymbolTable();
-                set_symbol_table_helper(null, initialSymtab);
-            }
-            catch (IOException e) {
-                throw new IonException(e);
-            }
-        }
+        _suppress_initial_ivm = suppressInitialIvm;
     }
 
     //========================================================================
@@ -258,8 +252,7 @@ abstract class IonWriterUser
     /**
      * @param new_symbols Must not be null.
      */
-    abstract void set_symbol_table_helper(SymbolTable prev_symbols,
-                                          SymbolTable new_symbols)
+    abstract void set_symbol_table_helper(SymbolTable new_symbols)
         throws IOException;
 
 
@@ -270,20 +263,29 @@ abstract class IonWriterUser
         if (symbols == null || isNonSystemSharedTable(symbols)) {
             throw new IllegalArgumentException("symbol table must be local or system to be set, or reset");
         }
+
+        if (symbols.isSystemTable())
+        {
+            writeIonVersionMarker(symbols);
+            return;
+        }
+
         if (getDepth() > 0) {
             throw new IllegalStateException("the symbol table cannot be set, or reset, while a container is open");
         }
 
-        SymbolTable prev = _system_writer.getSymbolTable();
 
         // the subclass should do what they want to on
         // this transition often nothing, sometimes we
         // write the symbol table to the system writer
         // comparing prev and new prevents recursing
         // on writeIVM calls
-        set_symbol_table_helper(prev, symbols);
+        set_symbol_table_helper(symbols);
 
+        // TODO wrong for case where this is a tree writer into a container!
         _system_writer.setSymbolTable(symbols);
+
+        _suppress_initial_ivm = false;  // We're past the initial IVM now.
     }
 
     /**
@@ -399,12 +401,13 @@ abstract class IonWriterUser
 
     /**
      * To be called at the end of every value.
-     * Sets {@link #_previous_value_was_ivm} to false, althought that may
-     * be overwritten by the caller.
+     * Sets {@link #_previous_value_was_ivm} and {@link #_suppress_initial_ivm}
+     * to false, althought they may be overwritten by the caller.
      */
     private final void finish_value()
     {
         _previous_value_was_ivm = false;
+        _suppress_initial_ivm = false;
     }
 
     public void stepIn(IonType containerType) throws IOException
@@ -500,7 +503,7 @@ abstract class IonWriterUser
         finish_value();
     }
 
-    public void writeSymbol(int symbolId) throws IOException
+    public final void writeSymbol(int symbolId) throws IOException
     {
         if (write_as_ivm(symbolId)) {
             if (! previousValueWasIvm()) {
@@ -515,15 +518,13 @@ abstract class IonWriterUser
         finish_value();
     }
 
-    public void writeSymbol(String value) throws IOException
+    public final void writeSymbol(String value) throws IOException
     {
         if (ION_1_0.equals(value) && write_as_ivm(ION_1_0_SID))
         {
-            // TODO this swallows duplicate IVMs.  May not always be desired.
-            if (!MODIFIED_IVM_HANDLING && ! previousValueWasIvm()) { // XXX
-                writeIonVersionMarker();
-                // calls finish_value() for us
-            }
+            // TODO make sure to get the right symtab, default may differ.
+            writeIonVersionMarker();
+            // calls finish_value() for us
         }
         else {
             _current_writer.writeSymbol(value);
@@ -535,10 +536,6 @@ abstract class IonWriterUser
     {
         // we only treat the $ion_1_0 symbol as an IVM
         // if we're at the top level in a datagram
-
-        // TODO do we need to check whether _current_writer == _system_writer?
-        // That's done in writeIonVersionMarker()
-
         boolean treat_as_ivm =
             (sid == ION_1_0_SID
              && _root_is_datagram
@@ -554,8 +551,9 @@ abstract class IonWriterUser
         return _previous_value_was_ivm;
     }
 
-    @Override
-    public void writeIonVersionMarker() throws IOException
+
+    final void writeIonVersionMarker(SymbolTable systemSymtab)
+        throws IOException
     {
         if (getDepth() != 0 || _root_is_datagram == false) {
             String message =
@@ -565,22 +563,32 @@ abstract class IonWriterUser
         }
         assert(_current_writer == _system_writer);
 
-        if (!MODIFIED_IVM_HANDLING) {
-            _current_writer.writeIonVersionMarker();
+        // TODO This always minimizes adjacent IVMs; should be optional.
+        boolean suppress = _suppress_initial_ivm;
+        if (! _suppress_initial_ivm && ! _previous_value_was_ivm) {
+            _system_writer.writeIonVersionMarker(systemSymtab);
             _previous_value_was_ivm = true;
         }
-
-        // TODO must ensure this is the right symtab for the IVM above
-        setSymbolTable(activeSystemSymbolTable());
+        else
+        {
+            // TODO mustn't suppress if default isn't $ion_1_0
+            assert _system_writer.getSymbolTable() == _system_writer._default_system_symbol_table;
+        }
 
         finish_value();
-        // we reset this after our call to finish since
-        // finish sets this to false (which is the correct
-        // behavior except here)  We could add a flag to
-        // finish to tell it whether we were finishing a
-        // IVM or not, but since this is the only time
-        // it's the case it's easier to just patch it here
+        // We reset these since finish sets themto false (which is the correct
+        // behavior except here).  We could add a flag to finish to tell it
+        // whether we were finishing a IVM or not, but since this is the only
+        // time it's the case it's easier to just patch it here.
         _previous_value_was_ivm = true;
+        _suppress_initial_ivm = suppress;
+    }
+
+    @Override
+    public final void writeIonVersionMarker()
+        throws IOException
+    {
+        writeIonVersionMarker(_system_writer._default_system_symbol_table);
     }
 
 

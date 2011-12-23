@@ -12,6 +12,7 @@ import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.BlockedBuffer.BlockedByteInputStream;
 import com.amazon.ion.impl.IonBinary.BufferManager;
@@ -43,8 +44,7 @@ public class IonWriterSystemBinary
     private final boolean _auto_flush;
 
     /** Forces IVM in the event the caller forgets to write an IVM. */
-    boolean           _assure_ivm;
-//    boolean           _any_values_written;
+    private boolean _ensure_initial_ivm;
 
     boolean           _in_struct;
 
@@ -96,13 +96,16 @@ public class IonWriterSystemBinary
      * @param out OutputStream the users output byte stream, if specified
      * @param autoFlush when true the writer flushes to the output stream
      *  between top level values
-     *
+     * @param ensureInitialIvm when true, an initial IVM will be emitted even
+     *  when the user doesn't explicitly write one. When false, an initial IVM
+     *  won't be emitted unless the user does it. That can result in an invalid
+     *  Ion stream if not used carefully.
      * @throws NullPointerException if any parameter is null.
      */
     public IonWriterSystemBinary(SymbolTable defaultSystemSymtab,
                                  OutputStream out,
                                  boolean autoFlush,
-                                 boolean suppressIVM)
+                                 boolean ensureInitialIvm)
     {
         super(defaultSystemSymtab);
 
@@ -115,7 +118,7 @@ public class IonWriterSystemBinary
         _manager = new BufferManager();
         _writer = _manager.openWriter();
         _auto_flush = autoFlush;
-        _assure_ivm = (suppressIVM == false);
+        _ensure_initial_ivm = ensureInitialIvm;
     }
 
     /**
@@ -152,7 +155,7 @@ public class IonWriterSystemBinary
 
         writeAllBufferedData();
         super.finish();
-        _assure_ivm = true;
+        _ensure_initial_ivm = true;
     }
 
     protected final OutputStream getOutputStream()
@@ -331,7 +334,7 @@ public class IonWriterSystemBinary
 
     final void patchInSymbolTable(SymbolTable symbols) throws IOException
     {
-        if (_assure_ivm) { //  && !_any_values_written) {
+        if (_ensure_initial_ivm) {
             // we have to check for this here since we
             // may be patching a symbol table in before
             // the version marker has been written
@@ -405,7 +408,7 @@ public class IonWriterSystemBinary
     {
         int patch_len = 0;
 
-        if (_assure_ivm) { //  && !_any_values_written) {
+        if (_ensure_initial_ivm) {
             writeIonVersionMarker();
         }
 
@@ -716,18 +719,24 @@ public class IonWriterSystemBinary
         patch(patch_len);
     }
 
+
     @Override
-    public void writeIonVersionMarker() throws IOException
+    void writeIonVersionMarker(SymbolTable systemSymtab)
+        throws IOException
     {
         if (!atDatagramLevel()) {
             throw new IllegalStateException("you can only write Ion Version Markers when you are at the datagram level");
         }
-        _writer.write(IonConstants.BINARY_VERSION_MARKER_1_0);
-//        _any_values_written = true;
-        _assure_ivm = false;  // we've done our job, we can turn this off now
+        if (! SystemSymbols.ION_1_0.equals(systemSymtab.getIonVersionId())) {
+            throw new UnsupportedOperationException("This library only supports Ion 1.0");
+        }
 
-        // TODO now our symbol table is out of date
+        _writer.write(IonConstants.BINARY_VERSION_MARKER_1_0);
+        _ensure_initial_ivm = false;  // we've done our job, we can turn this off now
+
+        super.writeIonVersionMarker(systemSymtab);
     }
+
 
     public void writeTimestamp(Timestamp value) throws IOException
     {
@@ -1339,7 +1348,7 @@ public class IonWriterSystemBinary
             new IonWriterSystemBinary(_default_system_symbol_table,
                                       cs,
                                       false /* autoflush */ ,
-                                      true  /* suppress ivm */);
+                                      false /* ensureInitialIvm */);
         symtab.writeTo(writer);
         writer.finish();
         int symtab_len = cs.getBytesWritten();

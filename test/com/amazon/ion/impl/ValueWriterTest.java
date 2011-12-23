@@ -10,6 +10,7 @@ import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -27,6 +28,8 @@ public class ValueWriterTest
     protected IonWriter makeWriter(SymbolTable... imports)
         throws Exception
     {
+        myOutputForm = OutputForm.DOM;
+
         myDatagram = system().newDatagram(imports);
 
         IonContainer c =
@@ -119,8 +122,7 @@ public class ValueWriterTest
     }
 
 
-
-    @Override @Test
+    @Override @Test @Ignore // TODO ION-165
     public void testWriteIVMImplicitly()
         throws Exception
     {

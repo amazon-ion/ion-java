@@ -82,7 +82,8 @@ public class IonWriterFactory
             break;
         case SYSTEM_BINARY:
             writer = new IonWriterSystemBinary(systemSymbolTable,
-                                               _out, _auto_flush, _suppress_ivm);
+                                               _out, _auto_flush,
+                                               true /* ensureInitialIvm */);
             break;
         case SYSTEM_ION_VALUE:
         {
@@ -113,7 +114,6 @@ public class IonWriterFactory
                 new IonWriterSystemBinary(systemSymbolTable, _out,
                                           _auto_flush, _suppress_ivm);
             writer = new IonWriterUserBinary(_catalog, _system, binary_system,
-                                             _suppress_ivm,
                                              _stream_copy_optimized);
             break;
         case USER_ION_VALUE:
@@ -413,10 +413,9 @@ public class IonWriterFactory
             new IonWriterSystemBinary(initialSystemSymtab,
                                       output,
                                       /* autoFlush */    false,
-                                      /* suppressIVM */  false); // TODO ???
+                                      /* ensureInitialIvm */ true);
         IonWriterUserBinary writer =
             new IonWriterUserBinary(catalog, system, system_writer,
-                                    /* suppressIVM */ true,      // TODO ??? diff above
                                     streamCopyOptimized);
         setSymbolTableIfLocal(writer, initialSymtab);
         return writer;
@@ -514,7 +513,7 @@ public class IonWriterFactory
         IonWriter writer = new IonWriterSystemBinary(initialSystemSymtab,
                                                      output,
                                                      /* autoFlush */ false,
-                                                     /*suppressIVM*/ false
+                                                     /* ensureInitialIvm */ true
                                                      );
         return writer;
     }

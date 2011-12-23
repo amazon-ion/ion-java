@@ -87,6 +87,26 @@ abstract class IonWriterSystem
         _symbol_table = symbols;
     }
 
+
+    /**
+     * Sets {@link #_symbol_table}.
+     * Subclasses should override to generate output.
+     */
+    void writeIonVersionMarker(SymbolTable systemSymtab)
+        throws IOException
+    {
+        assert systemSymtab.isSystemTable();
+        _symbol_table = systemSymtab;
+    }
+
+    @Override
+    public final void writeIonVersionMarker()
+        throws IOException
+    {
+        writeIonVersionMarker(_default_system_symbol_table);
+    }
+
+
     /**
      * Builds a new local symbol table from the current contextual symtab
      * (a system symtab).
