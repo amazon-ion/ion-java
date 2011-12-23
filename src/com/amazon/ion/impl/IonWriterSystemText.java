@@ -344,12 +344,11 @@ class IonWriterSystemText
 
         // write field name
         if (_in_struct) {
-            String name = getFieldName();
+            InternedSymbol sym = assumeFieldNameSymbol();
+            String name = sym.getText();
             if (name == null) {
                 int sid = getFieldId();
-                if (sid == SymbolTable.UNKNOWN_SYMBOL_ID) {
-                    throw new IllegalStateException(ERROR_MISSING_FIELD_NAME);
-                }
+                assert sid != SymbolTable.UNKNOWN_SYMBOL_ID;
                 writeSidLiteral(sid);
             }
             else {

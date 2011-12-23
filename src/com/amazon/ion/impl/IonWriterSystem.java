@@ -193,39 +193,6 @@ abstract class IonWriterSystem
     }
 
 
-    /**
-     * This returns the field name of the value about to be written
-     * if the field name has been set.  If the field name has not been
-     * defined this will return null.
-     *
-     * @return String name of the field about to be written or null if it is
-     * not yet set.
-     *
-     * @throws UnknownSymbolException if the text of the field name is unknown.
-     */
-    final String getFieldName()
-    {
-        // TODO streamline
-        String name;
-
-        if (_field_name_type == null) {
-            // TODO contradicts documented behavior
-            throw new IllegalStateException("the field has not be set");
-        }
-        switch (_field_name_type) {
-        case STRING:
-            name = _field_name;
-            break;
-        case INT:
-            name = null;
-            break;
-        default:
-            throw new IllegalStateException("the field has not be set");
-        }
-
-        return name;
-    }
-
     public final void setFieldName(String name)
     {
         if (!this.isInStruct()) {
@@ -283,9 +250,11 @@ abstract class IonWriterSystem
         _field_name = null;
     }
 
-    final InternedSymbol getFieldNameSymbol()
+    final InternedSymbol assumeFieldNameSymbol()
     {
-        assert _field_name_type != null;
+        if (_field_name_type == null)  {
+            throw new IllegalStateException(ERROR_MISSING_FIELD_NAME);
+        }
         return new InternedSymbolImpl(_field_name, _field_name_sid);
     }
 

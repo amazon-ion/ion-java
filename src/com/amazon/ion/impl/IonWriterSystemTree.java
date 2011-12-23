@@ -41,6 +41,8 @@ final class IonWriterSystemTree
     /** Used to construct new local symtabs. May be null */
     private final IonCatalog    _catalog;
 
+    private final int _initialDepth;
+
     /**
      * Set by {@link #finish()} to force writing of $ion_1_0 before any further
      * data.
@@ -73,16 +75,28 @@ final class IonWriterSystemTree
         _catalog = catalog;
         _current_parent = rootContainer;
         _in_struct = (_current_parent instanceof IonStruct);
+
+        int depth = 0;
+        if (! (rootContainer instanceof IonDatagram)) {
+            IonContainer c = rootContainer;
+            do {
+                depth++;
+                c = c.getContainer();
+            } while (c != null);
+        }
+        _initialDepth = depth;
     }
 
     //
     // informational methods
     //
+
     @Override
     public int getDepth()
     {
-        return _parent_stack_top;
+        return _parent_stack_top + _initialDepth;
     }
+
     protected IonType getContainer()
     {
         IonType containerType;
@@ -165,9 +179,8 @@ final class IonWriterSystemTree
         }
 
         if (_in_struct) {
+            InternedSymbol sym = assumeFieldNameSymbol();
             IonStruct struct = (IonStruct) _current_parent;
-
-            InternedSymbol sym = getFieldNameSymbol();
             struct.add(sym, value);
             this.clearFieldName();
         }

@@ -6,6 +6,7 @@ import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.TestUtils.FERMATA;
 import static com.amazon.ion.impl.IonImplUtils.newInternedSymbol;
+import static com.amazon.ion.impl.IonWriterBaseImpl.ERROR_MISSING_FIELD_NAME;
 import static com.amazon.ion.junit.IonAssert.expectNextField;
 
 import com.amazon.ion.EmptySymbolException;
@@ -951,5 +952,42 @@ public abstract class IonWriterTestCase
             checkAnnotation(SystemSymbols.ION_SYMBOL_TABLE, it.next());
         }
         checkSymbol("foo", it.next());
+    }
+
+    @Test
+    public void testWritingFieldWithoutName()
+        throws Exception
+    {
+        iw = makeWriter();
+        iw.stepIn(IonType.STRUCT);
+        try {
+            iw.writeNull();
+            fail("Expected exception");
+        }
+        catch (IllegalStateException e) {
+            assertTrue(e.getMessage().contains(ERROR_MISSING_FIELD_NAME));
+        }
+    }
+
+    @Test
+    public void testWritingNestedSymtab()
+        throws Exception
+    {
+        iw = makeWriter();
+        iw.addTypeAnnotation(SystemSymbols.ION_SYMBOL_TABLE);
+        iw.stepIn(IonType.STRUCT);
+        {
+            assertEquals(1, ((IonWriterUser)iw).getDepth());
+
+            iw.setFieldName("open");
+            iw.addTypeAnnotation(SystemSymbols.ION_SYMBOL_TABLE);
+            iw.stepIn(IonType.STRUCT);
+            {
+                assertEquals(2, ((IonWriterUser)iw).getDepth());
+            }
+            iw.stepOut();
+        }
+        iw.stepOut();
+
     }
 }

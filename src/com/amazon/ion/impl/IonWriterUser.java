@@ -134,7 +134,6 @@ abstract class IonWriterUser
     @Override
     public int getDepth()
     {
-        // TODO this is wrong when the stream is diverted.
         return _current_writer.getDepth();
     }
 
@@ -146,8 +145,6 @@ abstract class IonWriterUser
 
     public void flush() throws IOException
     {
-        // TODO this doesn't behave correctly when the stream is diverted.
-        // The diverted symtab stream will think its at top-level when its not.
         _current_writer.flush();
     }
 
@@ -415,11 +412,9 @@ abstract class IonWriterUser
         // see if it looks like we're starting a local symbol table
         if (containerType == IonType.STRUCT
             && _root_is_datagram
-            && _system_writer.getDepth() == 0
+            && _current_writer.getDepth() == 0
             && has_annotation(ION_SYMBOL_TABLE, ION_SYMBOL_TABLE_SID))
         {
-            // TODO this can be re-entered if we have a nested symtab (!!)
-            // if so we'll divert all the data until it's finished
             open_local_symbol_table_copy();
         }
         else {
@@ -432,7 +427,7 @@ abstract class IonWriterUser
 
     public void stepOut() throws IOException
     {
-        if (symbol_table_being_collected() && _current_writer.getDepth() == 0)
+        if (symbol_table_being_collected() && _current_writer.getDepth() == 1)
         {
             close_local_symbol_table_copy();
         }
@@ -472,6 +467,7 @@ abstract class IonWriterUser
         finish_value();
     }
 
+    @SuppressWarnings("cast")
     public void writeInt(int value) throws IOException
     {
         _current_writer.writeInt((long)value);

@@ -32,6 +32,9 @@ class IonWriterUserTree
               systemWriter,
               systemWriter.get_root().getType() == IonType.DATAGRAM);
 
+        // TODO ION-165 this shouldn't be needed.
+        // If removed, the datagram can end up with extra IVM sometimes.
+
         // Datagrams have an implicit initial IVM
         _previous_value_was_ivm = true;
         // TODO what if container isn't a datagram?
@@ -42,8 +45,7 @@ class IonWriterUserTree
     public void set_symbol_table_helper(SymbolTable new_symbols)
         throws IOException
     {
-        // TODO Not always at datagram level here, which is buggy because that
-        // means the depth is being computed incorrectly.
+        assert _root_is_datagram;
 
         // we do nothing here, the symbol tables will get picked up as
         // tree writer picks up symbol tables on the values as they
@@ -55,20 +57,16 @@ class IonWriterUserTree
         // in the case of tree to tree action this call is benign since
         // the value being appended will have a symbol table on it, and
         // that table takes precedence (and should be the same in any event)
-        if (_root_is_datagram)
+
+        if (new_symbols.isSystemTable())
         {
-            if (new_symbols.isSystemTable())
-            {
-                // FIXME this doesn't work in Lite DOM
-                // It adds the IVM as a user value.
-                _system_writer.writeIonVersionMarker(new_symbols);
-                _previous_value_was_ivm = true;
-            }
-            else
-            {
-                IonValue root = ((IonWriterSystemTree)_system_writer).get_root();
-                ((_Private_IonDatagram)root).appendTrailingSymbolTable(new_symbols);
-            }
+            _system_writer.writeIonVersionMarker(new_symbols);
+            _previous_value_was_ivm = true;
+        }
+        else
+        {
+            IonValue root = ((IonWriterSystemTree)_system_writer).get_root();
+            ((_Private_IonDatagram)root).appendTrailingSymbolTable(new_symbols);
         }
     }
 }
