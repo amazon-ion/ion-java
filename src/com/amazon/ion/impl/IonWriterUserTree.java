@@ -4,9 +4,6 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonType;
-import com.amazon.ion.IonValue;
-import com.amazon.ion.SymbolTable;
-import java.io.IOException;
 
 
 
@@ -38,35 +35,5 @@ class IonWriterUserTree
         // Datagrams have an implicit initial IVM
         _previous_value_was_ivm = true;
         // TODO what if container isn't a datagram?
-    }
-
-
-    @Override
-    public void set_symbol_table_helper(SymbolTable new_symbols)
-        throws IOException
-    {
-        assert _root_is_datagram;
-
-        // we do nothing here, the symbol tables will get picked up as
-        // tree writer picks up symbol tables on the values as they
-        // are appended to the parent value
-
-        // oops, except when they don't come through as values because
-        //       we're reading from a non-dom stream and writing what we see.
-
-        // in the case of tree to tree action this call is benign since
-        // the value being appended will have a symbol table on it, and
-        // that table takes precedence (and should be the same in any event)
-
-        if (new_symbols.isSystemTable())
-        {
-            _system_writer.writeIonVersionMarker(new_symbols);
-            _previous_value_was_ivm = true;
-        }
-        else
-        {
-            IonValue root = ((IonWriterSystemTree)_system_writer).get_root();
-            ((_Private_IonDatagram)root).appendTrailingSymbolTable(new_symbols);
-        }
     }
 }

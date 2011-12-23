@@ -7,7 +7,6 @@ import static com.amazon.ion.impl.IonImplUtils.symtabExtends;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
-import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueFactory;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -50,20 +49,6 @@ public class IonWriterUserBinary
         return ((IonWriterSystemBinary)_system_writer).getOutputStream();
     }
 
-    @Override
-    public void set_symbol_table_helper(SymbolTable new_symbols)
-        throws IOException
-    {
-        if (new_symbols.isSystemTable()) {
-            // writing to the system writer keeps us from
-            // recursing on the writeIonVersionMarker call
-            _system_writer.writeIonVersionMarker(new_symbols);
-            _previous_value_was_ivm = true;
-        }
-        else {
-            ((IonWriterSystemBinary)_system_writer).patchInSymbolTable(new_symbols);
-        }
-    }
 
 
     @Override

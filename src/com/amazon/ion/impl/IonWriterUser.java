@@ -246,12 +246,6 @@ abstract class IonWriterUser
         this.setSymbolTable(symtab);
     }
 
-    /**
-     * @param new_symbols Must not be null.
-     */
-    abstract void set_symbol_table_helper(SymbolTable new_symbols)
-        throws IOException;
-
 
     @Override
     public final void setSymbolTable(SymbolTable symbols)
@@ -271,48 +265,9 @@ abstract class IonWriterUser
             throw new IllegalStateException("the symbol table cannot be set, or reset, while a container is open");
         }
 
-
-        // the subclass should do what they want to on
-        // this transition often nothing, sometimes we
-        // write the symbol table to the system writer
-        // comparing prev and new prevents recursing
-        // on writeIVM calls
-        set_symbol_table_helper(symbols);
-
-        // TODO wrong for case where this is a tree writer into a container!
-        _system_writer.setSymbolTable(symbols);
+        _system_writer.writeLocalSymtab(symbols);
 
         _suppress_initial_ivm = false;  // We're past the initial IVM now.
-    }
-
-    /**
-     * to do when they are called on to now actually write the
-     * symbol table.  The symbol table has already been "captured"
-     * and constructed and is will be set as the current symbol
-     * table upon return.
-     *
-     * @param symbols
-     */
-    protected final void xxx_writeUserSymbolTable(SymbolTable symbols) throws IOException
-    {
-        // if our symbol table changed we need to write it out
-        // to the system writer ... IF, and only if, this is binary writer
-        if (symbols.isSystemTable()) {
-            if (!_previous_value_was_ivm) {
-                // writing to the system writer keeps us from
-                // recursing on the writeIonVersionMarker call
-                _system_writer.writeIonVersionMarker();
-            }
-        }
-        else if (symbols.isLocalTable()) {
-            //really we have to patch in symbol tables, not write them
-            //since they will may get updated as the value is
-            //built up
-            symbols.writeTo(_system_writer);
-        }
-        else {
-            assert("symbol table must be a system or a local table".length() < 0);
-        }
     }
 
 

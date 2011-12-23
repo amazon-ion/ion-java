@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SystemSymbols.SYMBOLS;
 import static com.amazon.ion.impl.IonConstants.tidList;
 import static com.amazon.ion.impl.IonConstants.tidSexp;
 import static com.amazon.ion.impl.IonConstants.tidStruct;
@@ -9,6 +10,7 @@ import static com.amazon.ion.impl.IonConstants.tidStruct;
 import com.amazon.ion.Decimal;
 import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbols;
@@ -382,6 +384,62 @@ class IonWriterSystemText
         _pending_separator = true;
     }
 
+
+
+    @Override
+    void writeIonVersionMarker(SymbolTable systemSymtab)
+        throws IOException
+    {
+        writeSymbol(systemSymtab.getIonVersionId());
+        super.writeIonVersionMarker(systemSymtab);
+    }
+
+    @Override
+    void writeLocalSymtab(SymbolTable symtab)
+        throws IOException
+    {
+        // TODO implement _filter_symbol_tables
+
+        // TODO this always ignores local symtabs w/o imports
+        SymbolTable[] imports = symtab.getImportedTables();
+        if (imports.length > 0) {
+            // TODO: remove cast below with update IonReader over symbol table
+            IonReader reader =
+                ((UnifiedSymbolTable)symtab).getReader();
+            // move onto and write the struct header
+            IonType t = reader.next();
+            assert(IonType.STRUCT.equals(t));
+            InternedSymbol[] a = reader.getTypeAnnotationSymbols();
+            // you (should) always have the $ion_symbol_table annotation
+            assert(a != null && a.length >= 1);
+
+            // now we'll start a local symbol table struct
+            // in the underlying system writer
+            setTypeAnnotationSymbols(a);
+            stepIn(IonType.STRUCT);
+
+            // step into the symbol table struct and
+            // write the values - EXCEPT the symbols field
+            reader.stepIn();
+            for (;;) {
+                t = reader.next();
+                if (t == null) break;
+                // get the field name and skip over 'symbols'
+                String name = reader.getFieldName();
+                if (SYMBOLS.equals(name)) {
+                    continue;
+                }
+                writeValue(reader);
+            }
+
+            // we're done step out and move along
+            stepOut();
+        }
+
+        super.writeLocalSymtab(symtab);
+    }
+
+
     public void stepIn(IonType containerType) throws IOException
     {
         startValue();
@@ -739,16 +797,6 @@ class IonWriterSystemText
         writeSymbolToken(value);
         closeValue();
     }
-
-
-    @Override
-    void writeIonVersionMarker(SymbolTable systemSymtab)
-        throws IOException
-    {
-        writeSymbol(systemSymtab.getIonVersionId());
-        super.writeIonVersionMarker(systemSymtab);
-    }
-
 
     public void writeBlob(byte[] value, int start, int len)
         throws IOException

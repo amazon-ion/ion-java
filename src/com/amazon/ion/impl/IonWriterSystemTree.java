@@ -223,6 +223,27 @@ final class IonWriterSystemTree
 
 
     @Override
+    void writeIonVersionMarker(SymbolTable systemSymtab)
+        throws IOException
+    {
+        IonValue root = get_root();
+        ((_Private_IonDatagram)root).appendTrailingSymbolTable(systemSymtab);
+
+        super.writeIonVersionMarker(systemSymtab);
+    }
+
+
+    @Override
+    void writeLocalSymtab(SymbolTable symtab)
+        throws IOException
+    {
+        IonValue root = get_root();
+        ((_Private_IonDatagram)root).appendTrailingSymbolTable(symtab);
+
+        super.writeLocalSymtab(symtab);
+    }
+
+    @Override
     final UnifiedSymbolTable inject_local_symbol_table() throws IOException
     {
         return makeNewLocalSymbolTable(_factory, getSymbolTable());
@@ -293,18 +314,6 @@ final class IonWriterSystemTree
     {
         IonString v = _factory.newString(value);
         append(v);
-    }
-
-
-
-    @Override
-    void writeIonVersionMarker(SymbolTable systemSymtab)
-        throws IOException
-    {
-        IonValue root = get_root();
-        ((_Private_IonDatagram)root).appendTrailingSymbolTable(systemSymtab);
-
-        super.writeIonVersionMarker(systemSymtab);
     }
 
 

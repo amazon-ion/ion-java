@@ -551,6 +551,34 @@ public class IonWriterSystemBinary
     }
 
 
+
+    @Override
+    void writeIonVersionMarker(SymbolTable systemSymtab)
+        throws IOException
+    {
+        if (!atDatagramLevel()) {
+            throw new IllegalStateException("you can only write Ion Version Markers when you are at the datagram level");
+        }
+        if (! SystemSymbols.ION_1_0.equals(systemSymtab.getIonVersionId())) {
+            throw new UnsupportedOperationException("This library only supports Ion 1.0");
+        }
+
+        _writer.write(IonConstants.BINARY_VERSION_MARKER_1_0);
+        _ensure_initial_ivm = false;  // we've done our job, we can turn this off now
+
+        super.writeIonVersionMarker(systemSymtab);
+    }
+
+    @Override
+    void writeLocalSymtab(SymbolTable symtab)
+        throws IOException
+    {
+        patchInSymbolTable(symtab);
+        super.writeLocalSymtab(symtab);
+    }
+
+
+
     public final void stepIn(IonType containerType) throws IOException
     {
         startValue(containerType, UNKNOWN_LENGTH);
@@ -718,25 +746,6 @@ public class IonWriterSystemBinary
         patch_len += wroteLen;
         patch(patch_len);
     }
-
-
-    @Override
-    void writeIonVersionMarker(SymbolTable systemSymtab)
-        throws IOException
-    {
-        if (!atDatagramLevel()) {
-            throw new IllegalStateException("you can only write Ion Version Markers when you are at the datagram level");
-        }
-        if (! SystemSymbols.ION_1_0.equals(systemSymtab.getIonVersionId())) {
-            throw new UnsupportedOperationException("This library only supports Ion 1.0");
-        }
-
-        _writer.write(IonConstants.BINARY_VERSION_MARKER_1_0);
-        _ensure_initial_ivm = false;  // we've done our job, we can turn this off now
-
-        super.writeIonVersionMarker(systemSymtab);
-    }
-
 
     public void writeTimestamp(Timestamp value) throws IOException
     {

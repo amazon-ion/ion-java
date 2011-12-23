@@ -107,6 +107,14 @@ abstract class IonWriterSystem
     }
 
 
+    void writeLocalSymtab(SymbolTable symtab)
+        throws IOException
+    {
+        assert symtab.isLocalTable();
+        _symbol_table = symtab;
+    }
+
+
     /**
      * Builds a new local symbol table from the current contextual symtab
      * (a system symtab).
