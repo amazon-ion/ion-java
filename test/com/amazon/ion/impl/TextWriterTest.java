@@ -20,7 +20,7 @@ import org.junit.Test;
 public class TextWriterTest
     extends OutputStreamWriterTestCase
 {
-    private _Private_IonTextWriterBuilder options;
+    private IonTextWriterBuilder options;
 
     @Override
     protected IonWriter makeWriter(OutputStream out, SymbolTable... imports)
@@ -68,10 +68,9 @@ public class TextWriterTest
     public void testWritingLongStrings()
         throws Exception
     {
-        options = (_Private_IonTextWriterBuilder)
-            IonTextWriterBuilder.standard().withInitialIvmHandling(SUPPRESS);
-        options._filter_symbol_tables = true;
-        options._long_string_threshold = 10;
+        options = IonTextWriterBuilder.standard();
+        options.setInitialIvmHandling(SUPPRESS);
+        options.setLongStringThreshold(10);
 
         // TODO support long strings at datagram and sexp level?
         // That is tricky because we must avoid triple-quoting multiple
@@ -108,6 +107,11 @@ public class TextWriterTest
                         "doc''']",
                         dg);
 
+        options.setLongStringThreshold(0);
+        expectRendering("[null.string,\"hello\",\"hello\\nnurse\",\"what's\\nup\\ndoc\"]",
+            dg);
+
+        options.setLongStringThreshold(10);
         dg.clear();
         IonStruct struct = dg.add().newEmptyStruct();
         struct.add("a").newNullString();
@@ -126,10 +130,9 @@ public class TextWriterTest
     public void testWritingLongClobs()
         throws Exception
     {
-        options = (_Private_IonTextWriterBuilder)
-            IonTextWriterBuilder.standard().withInitialIvmHandling(SUPPRESS);
-        options._filter_symbol_tables = true;
-        options._long_string_threshold = 3;
+        options = IonTextWriterBuilder.standard();
+        options.setInitialIvmHandling(SUPPRESS);
+        options.setLongStringThreshold(3);
 
 
         IonDatagram dg = system().newDatagram();
@@ -156,8 +159,7 @@ public class TextWriterTest
 
         assertEquals(ION_1_0 + " null " + ION_1_0 + " null", outputString());
 
-        options = (_Private_IonTextWriterBuilder)
-            IonTextWriterBuilder.standard().withInitialIvmHandling(SUPPRESS);
+        options = IonTextWriterBuilder.standard().withInitialIvmHandling(SUPPRESS);
 
         iw = makeWriter();
         iw.writeSymbol(ION_1_0);

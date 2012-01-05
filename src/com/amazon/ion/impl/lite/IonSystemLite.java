@@ -39,7 +39,6 @@ import com.amazon.ion.impl.IonWriterFactory;
 import com.amazon.ion.impl.IonWriterUserBinary;
 import com.amazon.ion.impl.UnifiedSymbolTable;
 import com.amazon.ion.impl._Private_IonBinaryWriterImpl;
-import com.amazon.ion.impl._Private_IonTextWriterBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import java.io.Closeable;
 import java.io.IOException;
@@ -70,7 +69,7 @@ public final class IonSystemLite
     private final IonLoader          _loader;
     private final boolean myStreamCopyOptimized;
     /** Immutable. */
-    private final _Private_IonTextWriterBuilder myTextWriterBuilder;
+    private final IonTextWriterBuilder myTextWriterBuilder;
 
 
     /**
@@ -98,7 +97,7 @@ public final class IonSystemLite
 
         IonTextWriterBuilder twb = IonTextWriterBuilder.simplifiedAscii();
         twb.setCatalog(catalog);
-        myTextWriterBuilder = (_Private_IonTextWriterBuilder) twb.immutable();
+        myTextWriterBuilder = twb.immutable();
 
         // whacked but I'm not going to figure this out right now
         _value_factory = this;

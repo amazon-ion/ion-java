@@ -36,9 +36,11 @@ final class IonWriterSystemText
     extends IonWriterSystem
 {
     /** Not null. */
-    final private Appendable _output;
+    private final Appendable _output;
     /** Not null. */
-    final private _Private_IonTextWriterBuilder _options;
+    private final _Private_IonTextWriterBuilder _options;
+    /** At least one. */
+    private final int _long_string_threshold;
 
     BufferManager _manager;
 
@@ -68,19 +70,11 @@ final class IonWriterSystemText
                                   _Private_IonTextWriterBuilder options,
                                   OutputStream out)
     {
-        super(defaultSystemSymtab);
-
-        out.getClass(); // Efficient null check
-        options.getClass(); // Efficient null check
-
-        if (out instanceof Appendable) {
-            _output = (Appendable)out;
-        }
-        else {
-            _output = new IonUTF8.CharToUTF8(out);
-        }
-        _options = options;
-        set_separator_character();
+        this(defaultSystemSymtab,
+             options,
+             (out instanceof Appendable
+                 ? (Appendable) out
+                 : new IonUTF8.CharToUTF8(out)));
     }
 
     /**
@@ -93,11 +87,20 @@ final class IonWriterSystemText
         super(defaultSystemSymtab);
 
         out.getClass(); // Efficient null check
-        options.getClass(); // Efficient null check
 
         _output = out;
         _options = options;
-        set_separator_character();
+
+        if (_options.isPrettyPrintOn()) {
+            _separator_character = '\n';
+        }
+        else {
+            _separator_character = ' ';
+        }
+
+        int threshold = _options.getLongStringThreshold();
+        if (threshold < 1) threshold = Integer.MAX_VALUE;
+        _long_string_threshold = threshold;
     }
 
     /**
@@ -113,17 +116,6 @@ final class IonWriterSystemText
     {
         return _options;
     }
-
-    void set_separator_character()
-    {
-        if (_options.isPrettyPrintOn()) {
-            _separator_character = '\n';
-        }
-        else {
-            _separator_character = ' ';
-        }
-    }
-
 
     @Override
     public int getDepth()
@@ -733,7 +725,7 @@ final class IonWriterSystemText
         startValue();
         if (value != null
             && containerIsListOrStruct()
-            && _options._long_string_threshold < value.length())
+            && _long_string_threshold < value.length())
         {
             // TODO This can lead to mixed newlines in the output.
             // It assumes NL line separators, but _options could use CR+NL
@@ -871,7 +863,7 @@ final class IonWriterSystemText
         final boolean json =
             _options._clob_as_string && _options._string_as_json;
 
-        boolean longString = (_options._long_string_threshold < value.length);
+        boolean longString = (_long_string_threshold < value.length);
 
         if (longString) {
             _output.append("'''");

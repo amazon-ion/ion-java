@@ -303,4 +303,18 @@ public class IonTextWriterBuilderTest
         b.setImports(new SymbolTable[0]);
         assertArrayEquals(new SymbolTable[0], b.getImports());
     }
+
+    //-------------------------------------------------------------------------
+
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testLongStringThresholdImmutability()
+    {
+        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        b.setLongStringThreshold(99);
+
+        IonTextWriterBuilder b2 = b.immutable();
+        assertEquals(99, b2.getLongStringThreshold());
+        b2.setLongStringThreshold(80);
+    }
 }

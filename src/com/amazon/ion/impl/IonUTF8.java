@@ -421,6 +421,7 @@ public class IonUTF8 {
               private char         _pending_low_surrogate = NO_SURROGATE;
 
         public CharToUTF8(OutputStream byteStream) {
+            byteStream.getClass(); // Efficient null check
             _byte_stream = byteStream;
         }
         public final OutputStream getOutputStream() {

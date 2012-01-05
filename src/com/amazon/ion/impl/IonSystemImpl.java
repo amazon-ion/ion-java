@@ -86,7 +86,7 @@ public final class IonSystemImpl
     private final IonLoader myLoader;
     private final boolean myStreamCopyOptimized;
     /** Immutable. */
-    private final _Private_IonTextWriterBuilder myTextWriterBuilder;
+    private final IonTextWriterBuilder myTextWriterBuilder;
 
 
     /**
@@ -102,7 +102,7 @@ public final class IonSystemImpl
 
         IonTextWriterBuilder twb = IonTextWriterBuilder.simplifiedAscii();
         twb.setCatalog(catalog);
-        myTextWriterBuilder = (_Private_IonTextWriterBuilder) twb.immutable();
+        myTextWriterBuilder = twb.immutable();
     }
 
 

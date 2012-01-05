@@ -70,6 +70,7 @@ public abstract class IonTextWriterBuilder
     private Charset myCharset;
     private InitialIvmHandling myInitialIvmHandling;
     private SymbolTable[] myImports;
+    private int _long_string_threshold;
 
 
     protected IonTextWriterBuilder()
@@ -78,10 +79,11 @@ public abstract class IonTextWriterBuilder
 
     protected IonTextWriterBuilder(IonTextWriterBuilder that)
     {
-        this.myCatalog            = that.myCatalog;
-        this.myCharset            = that.myCharset;
-        this.myInitialIvmHandling = that.myInitialIvmHandling;
-        this.myImports            = that.myImports;
+        this.myCatalog              = that.myCatalog;
+        this.myCharset              = that.myCharset;
+        this.myInitialIvmHandling   = that.myInitialIvmHandling;
+        this.myImports              = that.myImports;
+        this._long_string_threshold = that._long_string_threshold;
     }
 
     //=========================================================================
@@ -162,6 +164,8 @@ public abstract class IonTextWriterBuilder
      *
      * @see #getCharset()
      * @see #withCharset(Charset)
+     *
+     * @throws UnsupportedOperationException if this is immutable.
      */
     public void setCharset(Charset charset)
     {
@@ -239,6 +243,8 @@ public abstract class IonTextWriterBuilder
      *
      * @see #getInitialIvmHandling()
      * @see #withInitialIvmHandling(InitialIvmHandling)
+     *
+     * @throws UnsupportedOperationException if this is immutable.
      */
     public void setInitialIvmHandling(InitialIvmHandling handling)
     {
@@ -284,8 +290,6 @@ public abstract class IonTextWriterBuilder
      *
      * @see #setImports(SymbolTable...)
      * @see #withImports(SymbolTable...)
-     *
-     * @throws UnsupportedOperationException if this is immutable.
      */
     public final SymbolTable[] getImports()
     {
@@ -337,6 +341,60 @@ public abstract class IonTextWriterBuilder
         return b;
     }
 
+    //-------------------------------------------------------------------------
+
+    /**
+     * Gets the length beyond which string and clob content will be rendered
+     * as triple-quoted "long strings".
+     * At present, such content will only line-break on extant newlines.
+     *
+     * @return the threshold for printing triple-quoted strings and clobs.
+     * Zero means no limit.
+     *
+     * @see #setLongStringThreshold(int)
+     * @see #withLongStringThreshold(int)
+     */
+    public final int getLongStringThreshold()
+    {
+        return _long_string_threshold;
+    }
+
+    /**
+     * Sets the length beyond which string and clob content will be rendered
+     * as triple-quoted "long strings".
+     * At present, such content will only line-break on extant newlines.
+     *
+     * @param threshold the new threshold; zero means none.
+     *
+     * @see #getLongStringThreshold()
+     * @see #withLongStringThreshold(int)
+     *
+     * @throws UnsupportedOperationException if this is immutable.
+     */
+    public void setLongStringThreshold(int threshold)
+    {
+        _long_string_threshold = threshold;
+    }
+
+    /**
+     * Declares the length beyond which string and clob content will be rendered
+     * as triple-quoted "long strings".
+     * At present, such content will only line-break on extant newlines.
+     *
+     * @param threshold the new threshold; zero means none.
+     *
+     * @see #getLongStringThreshold()
+     * @see #setLongStringThreshold(int)
+     *
+     * @return this instance, if mutable;
+     * otherwise a mutable copy of this instance.
+     */
+    public final IonTextWriterBuilder withLongStringThreshold(int threshold)
+    {
+        IonTextWriterBuilder b = mutable();
+        b.setLongStringThreshold(threshold);
+        return b;
+    }
 
     //=========================================================================
 

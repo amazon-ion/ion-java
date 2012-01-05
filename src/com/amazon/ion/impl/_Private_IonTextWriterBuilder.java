@@ -39,14 +39,7 @@ public class _Private_IonTextWriterBuilder
     //=========================================================================
 
     private boolean _pretty_print;
-    public boolean       _filter_symbol_tables;
-
-    /**
-     * Strings and clobs longer than this length will be rendered as
-     * long-strings, but will only line-break on extant '\n' code points.
-     */
-    public int _long_string_threshold = Integer.MAX_VALUE;
-
+    public boolean _filter_symbol_tables;
     public boolean _blob_as_string;
     public boolean _clob_as_string;
     public boolean _decimal_as_float;
@@ -73,7 +66,6 @@ public class _Private_IonTextWriterBuilder
 
         this._pretty_print                = that._pretty_print               ;
         this._filter_symbol_tables        = that._filter_symbol_tables       ;
-        this._long_string_threshold       = that._long_string_threshold      ;
         this._blob_as_string              = that._blob_as_string             ;
         this._clob_as_string              = that._clob_as_string             ;
         this._decimal_as_float            = that._decimal_as_float           ;
@@ -219,6 +211,12 @@ public class _Private_IonTextWriterBuilder
 
         @Override
         public void setImports(SymbolTable... imports)
+        {
+            mutationFailure();
+        }
+
+        @Override
+        public void setLongStringThreshold(int threshold)
         {
             mutationFailure();
         }
