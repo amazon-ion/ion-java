@@ -12,12 +12,12 @@ import java.io.OutputStream;
 
 
 /**
- *
+ * NOT SUPPORTED FOR APPLICATION USE!
  */
-public class IonWriterUserText
+public class IonWriterUserText // TODO ION-271 protect after IMS is migrated
     extends IonWriterUser
 {
-    @Deprecated
+    @Deprecated // TODO ION-271 remove after IMS is migrated
     static public class TextOptions
     {
         private final static CharSequence SPACE_CHARACTER = " ";
@@ -89,9 +89,9 @@ public class IonWriterUserText
         }
     }
 
-
-    private static _Private_IonTextWriterBuilder builderFor(IonCatalog catalog,
-                                                            TextOptions options)
+    // TODO ION-271 remove after IMS is migrated
+    static _Private_IonTextWriterBuilder builderFor(IonCatalog catalog,
+                                                    TextOptions options)
     {
         _Private_IonTextWriterBuilder b =
             _Private_IonTextWriterBuilder.standard();
@@ -116,16 +116,16 @@ public class IonWriterUserText
     IonWriterUserText(ValueFactory symtabValueFactory,
                       IonWriterSystemText systemWriter)
     {
-        super(systemWriter.getOptions().getCatalog(),
+        super(systemWriter.getBuilder().getCatalog(),
               symtabValueFactory,
               systemWriter,
-              systemWriter.getOptions().getInitialIvmHandling() == SUPPRESS,
-              systemWriter.getOptions().getImports());
+              systemWriter.getBuilder().getInitialIvmHandling() == SUPPRESS,
+              systemWriter.getBuilder().getImports());
     }
 
 
     /** @deprecated */
-    @Deprecated
+    @Deprecated // TODO ION-271 remove after IMS is migrated
     protected IonWriterUserText(IonSystem sys, IonCatalog catalog,
                                 OutputStream out, TextOptions options)
     {
@@ -136,7 +136,7 @@ public class IonWriterUserText
     }
 
     /** @deprecated */
-    @Deprecated
+    @Deprecated // TODO ION-271 remove after IMS is migrated
     protected IonWriterUserText(IonSystem sys, IonCatalog catalog,
                                 Appendable out, TextOptions options)
     {

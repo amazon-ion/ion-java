@@ -6,18 +6,21 @@ import static com.amazon.ion.SystemSymbols.SYMBOLS;
 import static com.amazon.ion.impl.IonConstants.tidList;
 import static com.amazon.ion.impl.IonConstants.tidSexp;
 import static com.amazon.ion.impl.IonConstants.tidStruct;
+import static com.amazon.ion.impl.IonWriterUserText.builderFor;
 import static com.amazon.ion.system.IonTextWriterBuilder.ASCII;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
+import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.Base64Encoder.TextStream;
 import com.amazon.ion.impl.IonBinary.BufferManager;
+import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import com.amazon.ion.util.IonTextUtils;
 import com.amazon.ion.util.IonTextUtils.SymbolVariant;
 import java.io.ByteArrayInputStream;
@@ -32,7 +35,7 @@ import java.nio.CharBuffer;
 /**
  *
  */
-final class IonWriterSystemText
+class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
     extends IonWriterSystem
 {
     /** Not null. */
@@ -103,6 +106,17 @@ final class IonWriterSystemText
         _long_string_threshold = threshold;
     }
 
+    @Deprecated // TODO ION-271 remove after IMS is migrated
+    IonWriterSystemText(IonSystem sys,
+                        SymbolTable defaultSystemSymtab,
+                        Appendable out,
+                        IonWriterUserText.TextOptions options)
+    {
+        this(defaultSystemSymtab,
+             builderFor(sys.getCatalog(), options),
+             out);
+    }
+
     /**
      * FIXME HACK for IMSv3 that WILL NOT BE MAINTAINED
      */
@@ -112,7 +126,14 @@ final class IonWriterSystemText
         return _output;
     }
 
-    _Private_IonTextWriterBuilder getOptions()
+    @Deprecated // TODO ION-271 remove after IMS is migrated
+    TextOptions getOptions()
+    {
+        return new TextOptions(_options.isPrettyPrintOn(),
+                               ASCII.equals(_options.getCharset()));
+    }
+
+    _Private_IonTextWriterBuilder getBuilder()
     {
         return _options;
     }

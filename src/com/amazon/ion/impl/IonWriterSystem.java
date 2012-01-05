@@ -104,8 +104,8 @@ abstract class IonWriterSystem
         _symbol_table = systemSymtab;
     }
 
-    @Override
-    public final void writeIonVersionMarker()
+    @Override // TODO ION-271 make final after IMS is migrated
+    public void writeIonVersionMarker()
         throws IOException
     {
         writeIonVersionMarker(_default_system_symbol_table);
@@ -197,6 +197,35 @@ abstract class IonWriterSystem
         return false;
     }
 
+    /**
+     * This returns the field name of the value about to be written
+     * if the field name has been set.  If the field name has not been
+     * defined this will return null.
+     *
+     * @return String name of the field about to be written or null if it is
+     * not yet set.
+     */
+    @Deprecated // TODO ION-271 remove after IMS is migrated
+    String getFieldName()
+    {
+        String name;
+
+        if (_field_name_type == null) {
+            throw new IllegalStateException("the field has not be set");
+        }
+        switch (_field_name_type) {
+        case STRING:
+            name = _field_name;
+            break;
+        case INT:
+            name = _symbol_table.findSymbol(_field_name_sid);
+            break;
+        default:
+            throw new IllegalStateException("the field has not be set");
+        }
+
+        return name;
+    }
 
     final void clearFieldName()
     {
