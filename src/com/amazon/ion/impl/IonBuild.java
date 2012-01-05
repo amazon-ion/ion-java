@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util.JarInfo;
 import java.io.IOException;
 
@@ -103,8 +104,8 @@ public class IonBuild
     {
         _Private_IonTextWriterBuilder b =
             _Private_IonTextWriterBuilder.standard();
+        b.setCharset(IonTextWriterBuilder.ASCII);
         b._pretty_print = true;
-        b._ascii_only = true;
 
         JarInfo info = new JarInfo();
 

@@ -6,6 +6,7 @@ import static com.amazon.ion.SystemSymbols.SYMBOLS;
 import static com.amazon.ion.impl.IonConstants.tidList;
 import static com.amazon.ion.impl.IonConstants.tidSexp;
 import static com.amazon.ion.impl.IonConstants.tidStruct;
+import static com.amazon.ion.system.IonTextWriterBuilder.ASCII;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.InternedSymbol;
@@ -878,7 +879,7 @@ final class IonWriterSystemText
             _output.append('"');
         }
 
-        boolean just_ascii = _options.isAsciiOutputOn();
+        boolean just_ascii = ASCII.equals(_options.getCharset());
         int end = start + len;
         for (int ii=start; ii<end; ii++) {
             char c = (char)(value[ii] & 0xff);

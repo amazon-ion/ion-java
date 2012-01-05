@@ -5,6 +5,7 @@ package com.amazon.ion.impl;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.ValueFactory;
+import com.amazon.ion.system.IonTextWriterBuilder;
 import java.io.OutputStream;
 
 
@@ -92,7 +93,10 @@ public class IonWriterUserText
     {
         _Private_IonTextWriterBuilder b = new _Private_IonTextWriterBuilder();
         b._pretty_print                = options._pretty_print;
-        b._ascii_only                  = options._ascii_only;
+        if (options._ascii_only)
+        {
+            b.setCharset(IonTextWriterBuilder.ASCII);
+        }
         b._filter_symbol_tables        = options._filter_symbol_tables;
         b._suppress_ion_version_marker = options._suppress_ion_version_marker;
         b.setCatalog(catalog);

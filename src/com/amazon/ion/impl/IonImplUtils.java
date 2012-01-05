@@ -14,6 +14,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.Reader;
+import com.amazon.ion.system.IonTextWriterBuilder;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -64,6 +65,12 @@ public final class IonImplUtils // TODO this class shouldn't be public
      */
     public static final int MAX_LOOKAHEAD_UTF16 = 11;
 
+
+
+    public static final String ASCII_CHARSET_NAME = "US-ASCII";
+
+    public static final Charset ASCII_CHARSET =
+        Charset.forName(ASCII_CHARSET_NAME);
 
     /** The string {@code "UTF-8"}. */
     public static final String UTF8_CHARSET_NAME = "UTF-8";
@@ -623,9 +630,8 @@ public final class IonImplUtils // TODO this class shouldn't be public
     {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-        _Private_IonTextWriterBuilder b =
-            _Private_IonTextWriterBuilder.standard();
-        b._ascii_only = true;
+        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        b.setCharset(IonTextWriterBuilder.ASCII);
         IonWriter writer = b.build(out);
 
         try

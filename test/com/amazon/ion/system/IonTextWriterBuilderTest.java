@@ -2,6 +2,8 @@
 
 package com.amazon.ion.system;
 
+import static com.amazon.ion.system.IonTextWriterBuilder.ASCII;
+import static com.amazon.ion.system.IonTextWriterBuilder.UTF8;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
@@ -14,6 +16,7 @@ import com.amazon.ion.Symtabs;
 import com.amazon.ion.impl.IonWriterUserText;
 import com.amazon.ion.impl._Private_IonWriter;
 import java.io.OutputStream;
+import java.nio.charset.Charset;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -54,6 +57,15 @@ public class IonTextWriterBuilderTest
     }
 
 
+    @Test
+    public void testSimplifiedAscii()
+    {
+        IonTextWriterBuilder b = IonTextWriterBuilder.simplifiedAscii();
+        assertSame(ASCII, b.getCharset());
+
+    }
+
+    //-------------------------------------------------------------------------
 
     @Test
     public void testCustomCatalog()
@@ -88,10 +100,8 @@ public class IonTextWriterBuilderTest
         assertSame(catalog2, b3.getCatalog());
     }
 
-
-
     @Test(expected = UnsupportedOperationException.class)
-    public void testCatalogLockCheck()
+    public void testCatalogImmutability()
     {
         IonCatalog catalog = new SimpleCatalog();
 
@@ -103,7 +113,55 @@ public class IonTextWriterBuilderTest
         b2.setCatalog(null);
     }
 
+    //-------------------------------------------------------------------------
 
+    @Test
+    public void testCharset()
+    {
+        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        b.setCharset(ASCII);
+        assertSame(ASCII, b.getCharset());
+        b.setCharset(null);
+        assertSame(null, b.getCharset());
+
+        // Test with...() on mutable builder
+
+        IonTextWriterBuilder b2 = b.withCharset(UTF8);
+        assertSame(b, b2);
+        assertSame(UTF8, b2.getCharset());
+
+        // Test with...() on immutable builder
+
+        b2 = b.immutable();
+        assertSame(UTF8, b2.getCharset());
+        IonTextWriterBuilder b3 = b2.withCharset(ASCII);
+        assertNotSame(b2, b3);
+        assertSame(UTF8, b2.getCharset());
+        assertSame(ASCII, b3.getCharset());
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testCharsetImmutability()
+    {
+        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        b.setCharset(ASCII);
+        assertSame(ASCII, b.getCharset());
+
+
+        IonTextWriterBuilder b2 = b.immutable();
+        assertSame(ASCII, b2.getCharset());
+        b2.setCharset(null);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testCharsetValidation()
+    {
+        Charset iso = Charset.forName("ISO-8859-1");
+        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        b.setCharset(iso);
+    }
+
+    //-------------------------------------------------------------------------
 
     @Test
     public void testImports()
@@ -152,7 +210,7 @@ public class IonTextWriterBuilderTest
     }
 
     @Test(expected = UnsupportedOperationException.class)
-    public void testImportsLockCheck()
+    public void testImportsImmutability()
     {
         SymbolTable f = Symtabs.CATALOG.getTable("fred", 1);
         SymbolTable[] symtabs = new SymbolTable[] { f };

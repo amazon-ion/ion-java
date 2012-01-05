@@ -30,6 +30,7 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl._Private_IonTextWriterBuilder;
+import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util.IonTextUtils.SymbolVariant;
 import java.io.IOException;
 import java.io.InputStream;
@@ -415,7 +416,7 @@ public class Printer
             boolean dg = value instanceof IonDatagram;
 
             _Private_IonTextWriterBuilder o = _Private_IonTextWriterBuilder.standard();
-            o._ascii_only = true;
+            o.setCharset(IonTextWriterBuilder.ASCII);
             o._filter_symbol_tables = options.skipSystemValues;
             o._suppress_ion_version_marker = !dg;
 

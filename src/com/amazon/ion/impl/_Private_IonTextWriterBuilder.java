@@ -10,6 +10,7 @@ import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.OutputStream;
+import java.nio.charset.Charset;
 
 /**
  *
@@ -30,7 +31,7 @@ public class _Private_IonTextWriterBuilder
     public static IonTextWriterBuilder simplifiedAscii()
     {
         _Private_IonTextWriterBuilder b = new _Private_IonTextWriterBuilder();
-        b._ascii_only = true;
+        b.setCharset(ASCII);
         b._filter_symbol_tables = true;
         return b;
     }
@@ -38,7 +39,6 @@ public class _Private_IonTextWriterBuilder
     //=========================================================================
 
     public boolean       _pretty_print;
-    public boolean       _ascii_only;
     public boolean       _filter_symbol_tables;
     public boolean       _suppress_ion_version_marker;
 
@@ -73,7 +73,6 @@ public class _Private_IonTextWriterBuilder
         super(that);
 
         this._pretty_print                = that._pretty_print               ;
-        this._ascii_only                  = that._ascii_only                 ;
         this._filter_symbol_tables        = that._filter_symbol_tables       ;
         this._suppress_ion_version_marker = that._suppress_ion_version_marker;
         this._long_string_threshold       = that._long_string_threshold      ;
@@ -103,11 +102,6 @@ public class _Private_IonTextWriterBuilder
     final boolean isPrettyPrintOn()
     {
         return _pretty_print;
-    }
-
-    final boolean isAsciiOutputOn()
-    {
-        return _ascii_only;
     }
 
     public final boolean isFilteringSymbolTables()
@@ -205,6 +199,12 @@ public class _Private_IonTextWriterBuilder
 
         @Override
         public void setCatalog(IonCatalog catalog)
+        {
+            mutationFailure();
+        }
+
+        @Override
+        public void setCharset(Charset charset)
         {
             mutationFailure();
         }

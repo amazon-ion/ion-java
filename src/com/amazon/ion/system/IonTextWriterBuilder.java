@@ -5,14 +5,27 @@ package com.amazon.ion.system;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl._Private_IonTextWriterBuilder;
 import java.io.OutputStream;
+import java.nio.charset.Charset;
 
 /**
  *
  */
 public abstract class IonTextWriterBuilder
 {
+    /**
+     * The {@code "US-ASCII"} charset.
+     */
+    public static final Charset ASCII = IonImplUtils.ASCII_CHARSET;
+
+    /**
+     * The {@code "UTF-8"} charset.
+     */
+    public static final Charset UTF8 = IonImplUtils.UTF8_CHARSET;
+
+
     /**
      * The standard builder of {@link IonWriter}s.
      * See the class documentation for the standard configuration.
@@ -37,6 +50,7 @@ public abstract class IonTextWriterBuilder
     //   * Indentation CharSeq
 
     private IonCatalog myCatalog;
+    private Charset myCharset;
     private SymbolTable[] myImports;
 
 
@@ -47,6 +61,7 @@ public abstract class IonTextWriterBuilder
     protected IonTextWriterBuilder(IonTextWriterBuilder that)
     {
         this.myCatalog = that.myCatalog;
+        this.myCharset = that.myCharset;
         this.myImports = that.myImports;
     }
 
@@ -97,6 +112,64 @@ public abstract class IonTextWriterBuilder
     {
         IonTextWriterBuilder b = mutable();
         b.setCatalog(catalog);
+        return b;
+    }
+
+    //-------------------------------------------------------------------------
+
+    /**
+     * Gets the charset denoting the output encoding.
+     * Only ASCII and UTF-8 are supported.
+     *
+     * @return may be null, denoting the default of UTF-8.
+     *
+     * @see #setCharset(Charset)
+     * @see #withCharset(Charset)
+     */
+    public Charset getCharset()
+    {
+        return myCharset;
+    }
+
+    /**
+     * Sets the charset denoting the output encoding.
+     * Only ASCII and UTF-8 are supported; applications can use the helper
+     * constants {@link #ASCII} and {@link #UTF8}.
+     *
+     * @para charset may be null, denoting the default of UTF-8.
+     *
+     * @see #getCharset()
+     * @see #withCharset(Charset)
+     */
+    public void setCharset(Charset charset)
+    {
+        if (charset == null
+            || charset.equals(ASCII)
+            || charset.equals(UTF8))
+        {
+            myCharset = charset;
+        }
+        else
+        {
+            throw new IllegalArgumentException("Unsupported Charset "
+                                               + charset);
+        }
+    }
+
+    /**
+     * Declares the charset denoting the output encoding.
+     * Only ASCII and UTF-8 are supported; applications can use the helper
+     * constants {@link #ASCII} and {@link #UTF8}.
+     *
+     * @para charset may be null, denoting the default of UTF-8.
+     *
+     * @see #getCharset()
+     * @see #setCharset(Charset)
+     */
+    public final IonTextWriterBuilder withCharset(Charset charset)
+    {
+        IonTextWriterBuilder b = mutable();
+        b.setCharset(charset);
         return b;
     }
 
