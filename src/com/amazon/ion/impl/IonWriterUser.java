@@ -6,11 +6,13 @@ import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
+import static com.amazon.ion.impl.UnifiedSymbolTable.initialSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonCatalog;
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
@@ -91,8 +93,7 @@ abstract class IonWriterUser
      */
     IonWriterUser(IonCatalog catalog,
                   ValueFactory symtabValueFactory,
-                  IonWriterSystem systemWriter,
-                  boolean rootIsDatagram)
+                  IonWriterSystem systemWriter)
     {
         _symtab_value_factory = symtabValueFactory;
         _catalog = catalog;
@@ -100,11 +101,15 @@ abstract class IonWriterUser
         assert systemWriter != null;
         _system_writer = systemWriter;
         _current_writer = systemWriter;
-        _root_is_datagram = rootIsDatagram;
+        _root_is_datagram = systemWriter.getDepth() == 0;
     }
+
 
     /**
      * Constructor for text and binary writers.
+     * <p>
+     * POSTCONDITION: {@link IonWriterUser#_system_writer} ==
+     * {@link #_current_writer} == systemWriter
      *
      * @param catalog may be null.
      * @param symtabValueFactory must not be null.
@@ -115,12 +120,28 @@ abstract class IonWriterUser
     IonWriterUser(IonCatalog catalog,
                   ValueFactory symtabValueFactory,
                   IonWriterSystem systemWriter,
-                  boolean rootIsDatagram,
-                  boolean suppressInitialIvm)
+                  boolean suppressInitialIvm,
+                  SymbolTable... imports)
     {
-        this(catalog, symtabValueFactory, systemWriter, rootIsDatagram);
+        this(catalog, symtabValueFactory, systemWriter);
 
         _suppress_initial_ivm = suppressInitialIvm;
+
+        SymbolTable defaultSystemSymtab =
+            systemWriter.getDefaultSystemSymtab();
+
+        SymbolTable initialSymtab =
+            initialSymbolTable(symtabValueFactory, defaultSystemSymtab,
+                               imports);
+        if (initialSymtab.isLocalTable() || initialSymtab != defaultSystemSymtab)
+        {
+            try {
+                setSymbolTable(initialSymtab);
+            }
+            catch (IOException e) {
+                throw new IonException(e);
+            }
+        }
     }
 
     //========================================================================

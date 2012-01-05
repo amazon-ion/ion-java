@@ -3,14 +3,13 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonCatalog;
-import com.amazon.ion.IonType;
-
+import com.amazon.ion.ValueFactory;
 
 
 /**
  *
  */
-class IonWriterUserTree
+final class IonWriterUserTree
     extends IonWriterUser
 {
     /**
@@ -22,12 +21,10 @@ class IonWriterUserTree
      *   Must not be null.
      */
     protected IonWriterUserTree(IonCatalog catalog,
+                                ValueFactory symtabValueFactory,
                                 IonWriterSystemTree systemWriter)
     {
-        super(catalog,
-              systemWriter.get_root().getSystem(),
-              systemWriter,
-              systemWriter.get_root().getType() == IonType.DATAGRAM);
+        super(catalog, symtabValueFactory, systemWriter);
 
         // TODO ION-165 this shouldn't be needed.
         // If removed, the datagram can end up with extra IVM sometimes.

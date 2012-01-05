@@ -8,7 +8,6 @@ import static com.amazon.ion.impl.IonConstants.tidList;
 import static com.amazon.ion.impl.IonConstants.tidSexp;
 import static com.amazon.ion.impl.IonConstants.tidStruct;
 
-import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
@@ -24,7 +23,7 @@ import java.math.BigInteger;
 /**
  *
  */
-public class IonWriterSystemBinary
+public final class IonWriterSystemBinary  // TODO protect, must fix IonStreamUtils
     extends IonWriterSystem
 {
     // private static final boolean _verbose_debug = false;
@@ -85,11 +84,13 @@ public class IonWriterSystemBinary
     int    _top;
     int [] _patch_stack = new int[DEFAULT_PATCH_DEPTH];
 
-    // this is the depth as seen by the user.  Since there are
-    // cases where we don't push onto the patch stack and
-    // cases where we push non-user containers onto the patch
-    // stack we compute this separately during stepIn and stepOut.
-    int _user_depth;
+    /**
+     * This is the depth as seen by the user.  Since there are cases where we
+     * don't push onto the patch stack and cases where we push non-user
+     * containers onto the patch stack we compute this separately during
+     * stepIn and stepOut.
+     */
+    private int _user_depth;
 
 
     /**
@@ -102,10 +103,10 @@ public class IonWriterSystemBinary
      *  Ion stream if not used carefully.
      * @throws NullPointerException if any parameter is null.
      */
-    public IonWriterSystemBinary(SymbolTable defaultSystemSymtab,
-                                 OutputStream out,
-                                 boolean autoFlush,
-                                 boolean ensureInitialIvm)
+    IonWriterSystemBinary(SymbolTable defaultSystemSymtab,
+                          OutputStream out,
+                          boolean autoFlush,
+                          boolean ensureInitialIvm)
     {
         super(defaultSystemSymtab);
 
@@ -158,7 +159,7 @@ public class IonWriterSystemBinary
         _ensure_initial_ivm = true;
     }
 
-    protected final OutputStream getOutputStream()
+    final OutputStream getOutputStream()
     {
         return _user_output_stream;
     }
@@ -382,10 +383,6 @@ public class IonWriterSystemBinary
 
     private final int topLength() {
         return _patch_lengths[_patch_stack[_top - 1]];
-    }
-
-    private final int topPosition(){
-        return _patch_offsets[_patch_stack[_top - 1]];
     }
 
     private final int topType() {
@@ -1208,7 +1205,7 @@ public class IonWriterSystemBinary
      * Writes everything we've got into the output stream, performing all
      * necessary patches along the way.
      *
-     * This implements {@link IonBinaryWriter#writeBytes(OutputStream)}
+     * This implements {@link com.amazon.ion.IonBinaryWriter#writeBytes(OutputStream)}
      * via our subclass {@link IonWriterBinaryCompatibility.System}.
      */
     int writeBytes(OutputStream userstream) throws IOException

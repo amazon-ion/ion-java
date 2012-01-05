@@ -2,7 +2,6 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl.UnifiedSymbolTable.initialSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 
 import com.amazon.ion.IonCatalog;
@@ -105,8 +104,8 @@ public class IonWriterFactory
             else {
                 throw new IllegalStateException();
             }
-            writer = new IonWriterUserText(_catalog, _system, _options,
-                                           systemWriter);
+            writer = new IonWriterUserText(_catalog, _system, systemWriter,
+                                           _options);
             break;
         }
         case USER_BINARY:
@@ -123,7 +122,7 @@ public class IonWriterFactory
             IonWriterSystemTree tree_system =
                 new IonWriterSystemTree(systemSymbolTable, _catalog, c);
             writer =
-                new IonWriterUserTree(_catalog, tree_system);
+                new IonWriterUserTree(_catalog, _system, tree_system);
             break;
         }
         default:
@@ -389,11 +388,12 @@ public class IonWriterFactory
                                        IonContainer container)
     {
         IonSystem sys = container.getSystem();
+        SymbolTable defaultSystemSymtab = sys.getSystemSymbolTable();
+
         IonWriterSystemTree system_writer =
-            new IonWriterSystemTree(sys.getSystemSymbolTable(), catalog,
-                                    container);
-        IonWriter writer =
-            new IonWriterUserTree(catalog, system_writer);
+            new IonWriterSystemTree(defaultSystemSymtab, catalog, container);
+
+        IonWriter writer = new IonWriterUserTree(catalog, sys, system_writer);
         return writer;
     }
 
@@ -404,20 +404,16 @@ public class IonWriterFactory
                                                       OutputStream output,
                                                       SymbolTable... imports)
     {
-        SymbolTable initialSymtab = initialSymbolTable(system, imports);
-
-        // The imports may override the system's default.
-        SymbolTable initialSystemSymtab = initialSymtab.getSystemSymbolTable();
+        SymbolTable defaultSystemSymtab = system.getSystemSymbolTable();
 
         IonWriterSystemBinary system_writer =
-            new IonWriterSystemBinary(initialSystemSymtab,
-                                      output,
+            new IonWriterSystemBinary(defaultSystemSymtab, output,
                                       /* autoFlush */    false,
                                       /* ensureInitialIvm */ true);
+
         IonWriterUserBinary writer =
             new IonWriterUserBinary(catalog, system, system_writer,
-                                    streamCopyOptimized);
-        setSymbolTableIfLocal(writer, initialSymtab);
+                                    streamCopyOptimized, imports);
         return writer;
     }
 
@@ -434,7 +430,7 @@ public class IonWriterFactory
     }
 
     /**
-     * Doesn't write a local symtab.
+     * Writes a local symtab only if there's a real import.
      */
     public static IonWriterBaseImpl makeWriter(IonSystem system,
                                                IonCatalog catalog,
@@ -451,11 +447,12 @@ public class IonWriterFactory
                                               true /* filterOutSymbolTables */);
         }
 
-        IonWriterSystemText systemWriter =
-            new IonWriterSystemText(system.getSystemSymbolTable(),
-                                    output, options);
+        SymbolTable defaultSystemSymtab = system.getSystemSymbolTable();
 
-        return new IonWriterUserText(catalog, system, options, systemWriter,
+        IonWriterSystemText systemWriter =
+            new IonWriterSystemText(defaultSystemSymtab, output, options);
+
+        return new IonWriterUserText(catalog, system, systemWriter, options,
                                      imports);
     }
 
@@ -487,11 +484,12 @@ public class IonWriterFactory
                                               true /* filterOutSymbolTables */);
         }
 
-        IonWriterSystemText systemWriter =
-            new IonWriterSystemText(system.getSystemSymbolTable(),
-                                    output, options);
+        SymbolTable defaultSystemSymtab = system.getSystemSymbolTable();
 
-        return new IonWriterUserText(catalog, system, options, systemWriter,
+        IonWriterSystemText systemWriter =
+            new IonWriterSystemText(defaultSystemSymtab, output, options);
+
+        return new IonWriterUserText(catalog, system, systemWriter, options,
                                      imports);
     }
 
@@ -502,58 +500,9 @@ public class IonWriterFactory
     {
         IonSystem sys = container.getSystem();
         IonCatalog cat = sys.getCatalog();
-        IonWriter writer = new IonWriterSystemTree(sys.getSystemSymbolTable(),
-                                                   cat, container);
-        return writer;
-    }
-
-    public static IonWriter makeSystemWriter(SymbolTable initialSystemSymtab,
-                                             OutputStream output)
-    {
-        IonWriter writer = new IonWriterSystemBinary(initialSystemSymtab,
-                                                     output,
-                                                     /* autoFlush */ false,
-                                                     /* ensureInitialIvm */ true
-                                                     );
-        return writer;
-    }
-
-    public static IonWriter makeSystemWriter(SymbolTable initialSystemSymtab,
-                                             Appendable output,
-                                             _Private_TextOptions options)
-    {
+        SymbolTable defaultSystemSymtab = sys.getSystemSymbolTable();
         IonWriter writer =
-            new IonWriterSystemText(initialSystemSymtab, output, options);
+            new IonWriterSystemTree(defaultSystemSymtab, cat, container);
         return writer;
-    }
-
-    public static IonWriter makeSystemWriter(SymbolTable initialSystemSymtab,
-                                             OutputStream output,
-                                             _Private_TextOptions options)
-    {
-        IonWriter writer =
-            new IonWriterSystemText(initialSystemSymtab, output, options);
-        return writer;
-    }
-
-    private static void setSymbolTable(IonWriterBaseImpl writer,
-                                       SymbolTable symtab)
-    {
-        try {
-            writer.setSymbolTable(symtab);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-    }
-
-    private static void setSymbolTableIfLocal(IonWriterBaseImpl writer,
-                                              SymbolTable symtab)
-    {
-        if (symtab.isLocalTable())
-        {
-            // We must have had some "real" imports
-            setSymbolTable(writer, symtab);
-        }
     }
 }

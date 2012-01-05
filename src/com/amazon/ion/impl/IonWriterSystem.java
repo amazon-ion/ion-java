@@ -63,6 +63,11 @@ abstract class IonWriterSystem
     //========================================================================
     // Context management
 
+    final SymbolTable getDefaultSystemSymtab()
+    {
+        return _default_system_symbol_table;
+    }
+
     public final SymbolTable getSymbolTable()
     {
         return _symbol_table;

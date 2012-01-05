@@ -20,8 +20,8 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl.IonWriterBinaryCompatibility;
 import com.amazon.ion.impl.UnifiedSymbolTable;
+import com.amazon.ion.impl._Private_IonBinaryWriterImpl;
 import com.amazon.ion.impl._Private_IonDatagram;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -309,6 +309,8 @@ public class IonDatagramLite
     public <T extends IonValue> T[] extract(Class<T> type)
     {
         if (isNullValue()) return null;
+
+        @SuppressWarnings("unchecked")
         T[] array = (T[]) Array.newInstance(type, size());
         toArray(array);
         clear();
@@ -463,13 +465,16 @@ public class IonDatagramLite
     /**
      * This doesn't wrap IOException because some callers need to propagate it.
      */
+    @SuppressWarnings("deprecation")
     private IonBinaryWriter make_filled_binary_writer()
     throws IOException
     {
         boolean streamCopyOptimized = false;
-        IonWriterBinaryCompatibility.User writer =
-            new IonWriterBinaryCompatibility.User(_system, _catalog,
-                                                  streamCopyOptimized);
+        _Private_IonBinaryWriterImpl writer =
+            new _Private_IonBinaryWriterImpl(_catalog,
+                                             _system.getSystemSymbolTable(),
+                                             _system,
+                                             streamCopyOptimized);
         IonReader reader = makeSystemReader(_system, this);
         writer.writeValues(reader);
         writer.finish();
@@ -479,6 +484,7 @@ public class IonDatagramLite
     @SuppressWarnings("deprecation")
     public int byteSize() throws IonException
     {
+        // TODO this is horrible, users will end up encoding multiple times!
         try {
             IonBinaryWriter writer = make_filled_binary_writer();
             int size = writer.byteSize();
@@ -502,6 +508,7 @@ public class IonDatagramLite
         }
     }
 
+    @SuppressWarnings("deprecation")
     public int getBytes(byte[] dst) throws IonException
     {
         try {
@@ -514,6 +521,7 @@ public class IonDatagramLite
         }
     }
 
+    @SuppressWarnings("deprecation")
     public int getBytes(byte[] dst, int offset) throws IonException
     {
         try {
@@ -526,6 +534,7 @@ public class IonDatagramLite
         }
     }
 
+    @SuppressWarnings("deprecation")
     public int getBytes(OutputStream out) throws IOException, IonException
     {
         IonBinaryWriter writer = make_filled_binary_writer();
@@ -594,12 +603,14 @@ public class IonDatagramLite
         int count = 0;
         ListIterator<IonValue> iterator = systemIterator();
         while (iterator.hasNext()) {
+            @SuppressWarnings("unused")
             IonValue value = iterator.next();
             count++;
         }
         return count;
     }
 
+    @SuppressWarnings("deprecation")
     public byte[] toBytes() throws IonException
     {
         byte[] bytes;
@@ -624,7 +635,7 @@ public class IonDatagramLite
     protected synchronized IonSymbolLite get_ivm()
     {
         if (_ivm == null) {
-            _ivm = (IonSymbolLite) getSystem().newSymbol(ION_1_0);
+            _ivm = getSystem().newSymbol(ION_1_0);
         }
         return _ivm;
     }

@@ -2,13 +2,10 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl.UnifiedSymbolTable.initialSymbolTable;
-
 import com.amazon.ion.IonCatalog;
-import com.amazon.ion.IonException;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.SymbolTable;
-import java.io.IOException;
+import com.amazon.ion.ValueFactory;
 import java.io.OutputStream;
 
 
@@ -39,26 +36,14 @@ public class IonWriterUserText
         }
     }
 
-    protected IonWriterUserText(IonCatalog catalog,
-                                IonSystem system,
-                                _Private_TextOptions options,
-                                IonWriterSystemText systemWriter,
-                                SymbolTable... imports)
+    IonWriterUserText(IonCatalog catalog,
+                      ValueFactory symtabValueFactory,
+                      IonWriterSystemText systemWriter,
+                      _Private_TextOptions options,
+                      SymbolTable... imports)
     {
-        super(catalog, system, systemWriter, true /* rootIsDatagram */,
-              options.issuppressIonVersionMarkerOn());
-
-        if (imports != null && imports.length != 0)
-        {
-            SymbolTable initialSymtab = initialSymbolTable(system, imports);
-
-            try {
-                setSymbolTable(initialSymtab);
-            }
-            catch (IOException e) {
-                throw new IonException(e);
-            }
-        }
+        super(catalog, symtabValueFactory, systemWriter,
+              options.issuppressIonVersionMarkerOn(), imports);
     }
 
 
@@ -67,11 +52,9 @@ public class IonWriterUserText
     protected IonWriterUserText(IonSystem sys, IonCatalog catalog,
                                 OutputStream out, _Private_TextOptions options)
     {
-        super(catalog, sys,
-              new IonWriterSystemText(sys.getSystemSymbolTable(),
-                                      out, options),
-              true /* rootIsDatagram */,
-              options.issuppressIonVersionMarkerOn());
+        this(catalog, sys,
+             new IonWriterSystemText(sys.getSystemSymbolTable(), out, options),
+             options);
     }
 
     /** @deprecated */
@@ -79,10 +62,8 @@ public class IonWriterUserText
     protected IonWriterUserText(IonSystem sys, IonCatalog catalog,
                                 Appendable out, _Private_TextOptions options)
     {
-        super(catalog, sys,
-              new IonWriterSystemText(sys.getSystemSymbolTable(),
-                                      out, options),
-              true /* rootIsDatagram */,
-              options.issuppressIonVersionMarkerOn());
+        this(catalog, sys,
+             new IonWriterSystemText(sys.getSystemSymbolTable(), out, options),
+             options);
     }
 }

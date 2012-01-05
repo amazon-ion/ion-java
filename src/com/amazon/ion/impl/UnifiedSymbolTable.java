@@ -312,17 +312,23 @@ public final class UnifiedSymbolTable
      * given values. If the imports are empty, the default system symtab is
      * returned.
      *
-     * @param system must not be null.
-     * @param imports can be null or empty.
+     * @param imageFactory The factory to use when building a DOM image.
+     *  May be null.
+     * @param defaultSystemSymtab is used if a system symtab isn't the first
+     *  import.
+     * @param imports the set of shared symbol tables to import.
+     * The first (and only the first) may be a system table, in which case the
+     * default is ignored. May be null or empty.
      *
      * @return not null.
      */
-    public static SymbolTable initialSymbolTable(IonSystem system,
+    public static SymbolTable initialSymbolTable(ValueFactory imageFactory,
+                                                 SymbolTable defaultSystemSymtab,
                                                  SymbolTable... imports)
     {
         if (imports == null || imports.length == 0)
         {
-            return system.getSystemSymbolTable();
+            return defaultSystemSymtab;
         }
 
         if (imports.length == 1 && imports[0].isSystemTable())
@@ -330,8 +336,8 @@ public final class UnifiedSymbolTable
             return imports[0];
         }
 
-        return makeNewLocalSymbolTable(system,
-                                       system.getSystemSymbolTable(),
+        return makeNewLocalSymbolTable(imageFactory,
+                                       defaultSystemSymtab,
                                        imports);
     }
 

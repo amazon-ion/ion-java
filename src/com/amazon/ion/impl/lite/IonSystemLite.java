@@ -17,6 +17,7 @@ import static com.amazon.ion.impl.UnifiedSymbolTable.newSystemSymbolTable;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
 import com.amazon.ion.InternedSymbol;
+import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
@@ -37,10 +38,10 @@ import com.amazon.ion.impl.IonReaderWriterPrivate;
 import com.amazon.ion.impl.IonScalarConversionsX.CantConvertException;
 import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.impl.IonWriterBaseImpl;
-import com.amazon.ion.impl.IonWriterBinaryCompatibility;
 import com.amazon.ion.impl.IonWriterFactory;
 import com.amazon.ion.impl.IonWriterUserBinary;
 import com.amazon.ion.impl.UnifiedSymbolTable;
+import com.amazon.ion.impl._Private_IonBinaryWriterImpl;
 import com.amazon.ion.impl._Private_TextOptions;
 import java.io.Closeable;
 import java.io.IOException;
@@ -55,6 +56,7 @@ import java.util.NoSuchElementException;
 /**
  *
  */
+@SuppressWarnings("deprecation")
 public final class IonSystemLite
     extends ValueFactoryLite
     implements IonSystemPrivate, IonContext
@@ -197,27 +199,22 @@ public final class IonSystemLite
     }
 
     @Deprecated
-    public com.amazon.ion.IonBinaryWriter newBinaryWriter()
+    public IonBinaryWriter newBinaryWriter()
     {
-        IonWriterBinaryCompatibility.User writer =
-            new IonWriterBinaryCompatibility.User(this, _catalog,
-                                                  myStreamCopyOptimized);
-        return writer;
+        SymbolTable[] imports = null;
+        return newBinaryWriter(imports);
     }
 
     @Deprecated
-    public com.amazon.ion.IonBinaryWriter newBinaryWriter(SymbolTable... imports)
+    public IonBinaryWriter newBinaryWriter(SymbolTable... imports)
     {
-        SymbolTable symbols = initialSymbolTable(this, imports);
-        IonWriterBinaryCompatibility.User writer =
-            new IonWriterBinaryCompatibility.User(this, _catalog,
-                                                  myStreamCopyOptimized);
-        try {
-            writer.setSymbolTable(symbols);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
+        SymbolTable defaultSystemSymtab = getSystemSymbolTable();
+        _Private_IonBinaryWriterImpl writer =
+            new _Private_IonBinaryWriterImpl(_catalog,
+                                             defaultSystemSymtab,
+                                             this,
+                                             myStreamCopyOptimized,
+                                             imports);
         return writer;
     }
 
@@ -848,7 +845,9 @@ public final class IonSystemLite
 
     public IonDatagram newDatagram(IonCatalog catalog, SymbolTable... imports)
     {
-        SymbolTable symbols = initialSymbolTable(this, imports);
+        SymbolTable defaultSystemSymtab = getSystemSymbolTable();
+        SymbolTable symbols =
+            initialSymbolTable(this, defaultSystemSymtab, imports);
         IonDatagramLite dg = newDatagram(catalog);
         dg.appendTrailingSymbolTable(symbols);
         return dg;

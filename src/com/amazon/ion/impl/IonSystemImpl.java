@@ -14,7 +14,6 @@ import static com.amazon.ion.impl.IonReaderFactoryX.makeSystemReader;
 import static com.amazon.ion.impl.IonWriterFactory.DEFAULT_OPTIONS;
 import static com.amazon.ion.impl.IonWriterFactory.makeWriter;
 import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemIterator;
-import static com.amazon.ion.impl.UnifiedSymbolTable.initialSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewSharedSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.newSystemSymbolTable;
@@ -75,6 +74,7 @@ import java.util.List;
 /**
  * The standard implementation of Ion.
  */
+@SuppressWarnings("deprecation")
 public final class IonSystemImpl
     implements IonSystemPrivate
 {
@@ -350,26 +350,22 @@ public final class IonSystemImpl
     // IonReader creation
 
 
-    @SuppressWarnings("deprecation")
     public IonTextReader newReader(String ionText)
     {
         return makeReader(this, myCatalog, ionText);
     }
 
-    @SuppressWarnings("deprecation")
     public IonTextReader newSystemReader(String ionText)
     {
         return makeSystemReader(this, ionText);
     }
 
 
-    @SuppressWarnings("deprecation")
     public IonTextReader newReader(Reader ionText)
     {
         return makeReader(this, ionText);
     }
 
-    @SuppressWarnings("deprecation")
     public IonTextReader newSystemReader(Reader ionText)
     {
         return makeSystemReader(this, ionText);
@@ -503,25 +499,20 @@ public final class IonSystemImpl
     @Deprecated
     public com.amazon.ion.IonBinaryWriter newBinaryWriter()
     {
-        IonWriterBinaryCompatibility.User writer =
-            new IonWriterBinaryCompatibility.User(this, myCatalog,
-                                                  myStreamCopyOptimized);
-        return writer;
+        SymbolTable[] imports = null;
+        return newBinaryWriter(imports);
     }
 
     @Deprecated
     public com.amazon.ion.IonBinaryWriter newBinaryWriter(SymbolTable... imports)
     {
-        SymbolTable symbols = initialSymbolTable(this, imports);
-        IonWriterBinaryCompatibility.User writer =
-            new IonWriterBinaryCompatibility.User(this, myCatalog,
-                                                  myStreamCopyOptimized);
-        try {
-            writer.setSymbolTable(symbols);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
+        SymbolTable defaultSystemSymtab = getSystemSymbolTable();
+        _Private_IonBinaryWriterImpl writer =
+            new _Private_IonBinaryWriterImpl(myCatalog,
+                                             defaultSystemSymtab,
+                                             this,
+                                             myStreamCopyOptimized,
+                                             imports);
         return writer;
     }
 
