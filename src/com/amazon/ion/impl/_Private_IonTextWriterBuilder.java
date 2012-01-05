@@ -13,7 +13,7 @@ import java.io.OutputStream;
 import java.nio.charset.Charset;
 
 /**
- *
+ * NOT FOR APPLICATION USE!
  */
 public class _Private_IonTextWriterBuilder
     extends IonTextWriterBuilder
@@ -28,18 +28,10 @@ public class _Private_IonTextWriterBuilder
         return new _Private_IonTextWriterBuilder();
     }
 
-    public static IonTextWriterBuilder simplifiedAscii()
-    {
-        _Private_IonTextWriterBuilder b = new _Private_IonTextWriterBuilder();
-        b.setCharset(ASCII);
-        b._filter_symbol_tables = true;
-        return b;
-    }
 
     //=========================================================================
 
     private boolean _pretty_print;
-    public boolean _filter_symbol_tables;
     public boolean _blob_as_string;
     public boolean _clob_as_string;
     public boolean _decimal_as_float;
@@ -60,24 +52,29 @@ public class _Private_IonTextWriterBuilder
         super();
     }
 
-    public _Private_IonTextWriterBuilder(_Private_IonTextWriterBuilder that)
+    private _Private_IonTextWriterBuilder(_Private_IonTextWriterBuilder that)
     {
         super(that);
 
-        this._pretty_print                = that._pretty_print               ;
-        this._filter_symbol_tables        = that._filter_symbol_tables       ;
-        this._blob_as_string              = that._blob_as_string             ;
-        this._clob_as_string              = that._clob_as_string             ;
-        this._decimal_as_float            = that._decimal_as_float           ;
-        this._sexp_as_list                = that._sexp_as_list               ;
-        this._skip_annotations            = that._skip_annotations           ;
-        this._string_as_json              = that._string_as_json             ;
-        this._symbol_as_string            = that._symbol_as_string           ;
-        this._timestamp_as_millis         = that._timestamp_as_millis        ;
-        this._timestamp_as_string         = that._timestamp_as_string        ;
-        this._untyped_nulls               = that._untyped_nulls              ;
+        this._pretty_print        = that._pretty_print       ;
+        this._blob_as_string      = that._blob_as_string     ;
+        this._clob_as_string      = that._clob_as_string     ;
+        this._decimal_as_float    = that._decimal_as_float   ;
+        this._sexp_as_list        = that._sexp_as_list       ;
+        this._skip_annotations    = that._skip_annotations   ;
+        this._string_as_json      = that._string_as_json     ;
+        this._symbol_as_string    = that._symbol_as_string   ;
+        this._timestamp_as_millis = that._timestamp_as_millis;
+        this._timestamp_as_string = that._timestamp_as_string;
+        this._untyped_nulls       = that._untyped_nulls      ;
     }
 
+
+    @Override
+    public final IonTextWriterBuilder copy()
+    {
+        return new _Private_IonTextWriterBuilder(this);
+    }
 
     @Override
     public IonTextWriterBuilder immutable()
@@ -85,6 +82,11 @@ public class _Private_IonTextWriterBuilder
         return new Immutable(this);
     }
 
+    @Override
+    public IonTextWriterBuilder mutable()
+    {
+        return this;
+    }
 
     //=========================================================================
 
@@ -103,12 +105,8 @@ public class _Private_IonTextWriterBuilder
         return _pretty_print;
     }
 
-    public final boolean isFilteringSymbolTables()
+    final CharSequence lineSeparator()
     {
-        return _filter_symbol_tables;
-    }
-
-    public final CharSequence lineSeparator() {
         if (_pretty_print) {
             return LINE_SEPARATOR;
         }
@@ -120,7 +118,7 @@ public class _Private_IonTextWriterBuilder
 
     //=========================================================================
 
-    _Private_IonTextWriterBuilder fillDefaults()
+    private _Private_IonTextWriterBuilder fillDefaults()
     {
         IonTextWriterBuilder b = this;
         if (b.getCatalog() == null)

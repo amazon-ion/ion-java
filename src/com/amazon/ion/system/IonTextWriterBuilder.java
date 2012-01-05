@@ -11,7 +11,20 @@ import java.io.OutputStream;
 import java.nio.charset.Charset;
 
 /**
- *
+ * The builder for creating {@link IonWriter}s emitting the Ion text syntax.
+ * <p>
+ * Builders may be configured once and reused to construct multiple
+ * objects.
+ * Builder instances are <em>not</em> thread-safe unless they are immutable.
+ * <p>
+ * The easiest way to get going is to just use the {@link #standard()} builder:
+ * <pre>
+ *  IonWriter w = IonTextWriterBuilder.standard().build(outputStream);
+ *</pre>
+ * <p>
+ * Configuration properties follow the standard JavaBeans idiom in order to be
+ * friendly to dependency injection systems.  They also provide alternative
+ * {@code with...()} mutation methods that enable a more fluid style.
  */
 public abstract class IonTextWriterBuilder
     extends IonWriterBuilder
@@ -28,8 +41,8 @@ public abstract class IonTextWriterBuilder
 
 
     /**
-     * The standard builder of {@link IonWriter}s.
-     * See the class documentation for the standard configuration.
+     * The standard builder of {@link IonWriter}s, with all configuration
+     * properties having their default values.
      *
      * @return a new, mutable builder instance.
      */
@@ -54,10 +67,6 @@ public abstract class IonTextWriterBuilder
         return standard().withPrettyPrinting();
     }
 
-    public static IonTextWriterBuilder simplifiedAscii()
-    {
-        return _Private_IonTextWriterBuilder.simplifiedAscii();
-    }
 
     //=========================================================================
 
@@ -73,10 +82,12 @@ public abstract class IonTextWriterBuilder
     private int _long_string_threshold;
 
 
+    /** NOT FOR APPLICATION USE! */
     protected IonTextWriterBuilder()
     {
     }
 
+    /** NOT FOR APPLICATION USE! */
     protected IonTextWriterBuilder(IonTextWriterBuilder that)
     {
         this.myCatalog              = that.myCatalog;
@@ -150,7 +161,7 @@ public abstract class IonTextWriterBuilder
      * @see #setCharset(Charset)
      * @see #withCharset(Charset)
      */
-    public Charset getCharset()
+    public final Charset getCharset()
     {
         return myCharset;
     }
@@ -201,6 +212,17 @@ public abstract class IonTextWriterBuilder
         IonTextWriterBuilder b = mutable();
         b.setCharset(charset);
         return b;
+    }
+
+    /**
+     * Declares the output encoding to be {@code US-ASCII}.
+     *
+     * @return this instance, if mutable;
+     * otherwise a mutable copy of this instance.
+     */
+    public final IonTextWriterBuilder withCharsetAscii()
+    {
+        return withCharset(ASCII);
     }
 
     //-------------------------------------------------------------------------
@@ -276,9 +298,12 @@ public abstract class IonTextWriterBuilder
 
     //-------------------------------------------------------------------------
 
-    private static SymbolTable[] clone(SymbolTable[] imports)
+    private static SymbolTable[] safeCopy(SymbolTable[] imports)
     {
-        if (imports != null) imports = imports.clone();
+        if (imports != null && imports.length != 0)
+        {
+            imports = imports.clone();
+        }
         return imports;
     }
 
@@ -293,7 +318,7 @@ public abstract class IonTextWriterBuilder
      */
     public final SymbolTable[] getImports()
     {
-        return clone(myImports);
+        return safeCopy(myImports);
     }
 
     /**
@@ -314,7 +339,7 @@ public abstract class IonTextWriterBuilder
      */
     public void setImports(SymbolTable... imports)
     {
-        myImports = clone(imports);
+        myImports = safeCopy(imports);
     }
 
     /**
@@ -399,6 +424,13 @@ public abstract class IonTextWriterBuilder
     //=========================================================================
 
     /**
+     * Creates a mutable copy of this builder.
+     *
+     * @return a new builder with the same configuration as {@code this}.
+     */
+    public abstract IonTextWriterBuilder copy();
+
+    /**
      * Returns an immutable builder configured exactly like this one.
      *
      * @return this instance, if immutable;
@@ -412,10 +444,7 @@ public abstract class IonTextWriterBuilder
      * @return this instance, if mutable;
      * otherwise a mutable copy of this instance.
      */
-    public IonTextWriterBuilder mutable()
-    {
-        return this;
-    }
+    public abstract IonTextWriterBuilder mutable();
 
 
     //=========================================================================

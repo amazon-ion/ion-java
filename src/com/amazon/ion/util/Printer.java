@@ -422,7 +422,7 @@ public class Printer
             {
                 o.setInitialIvmHandling(InitialIvmHandling.SUPPRESS);
             }
-            o._filter_symbol_tables = options.skipSystemValues;
+//          o._filter_symbol_tables = options.skipSystemValues;
 
             o._blob_as_string      = options.blobAsString;
             o._clob_as_string      = options.clobAsString;

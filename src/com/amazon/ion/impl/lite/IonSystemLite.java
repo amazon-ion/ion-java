@@ -95,7 +95,8 @@ public final class IonSystemLite
         _loader = new IonLoaderLite(this, catalog);
         myStreamCopyOptimized = streamCopyOptimized;
 
-        IonTextWriterBuilder twb = IonTextWriterBuilder.simplifiedAscii();
+        IonTextWriterBuilder twb =
+            IonTextWriterBuilder.standard().withCharsetAscii();
         twb.setCatalog(catalog);
         myTextWriterBuilder = twb.immutable();
 

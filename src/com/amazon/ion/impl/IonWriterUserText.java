@@ -107,7 +107,6 @@ public class IonWriterUserText
         {
             b.setInitialIvmHandling(SUPPRESS);
         }
-        b._filter_symbol_tables        = options._filter_symbol_tables;
         b.setCatalog(catalog);
         return b;
     }

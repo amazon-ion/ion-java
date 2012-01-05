@@ -100,7 +100,8 @@ public final class IonSystemImpl
         mySystemSymbols = newSystemSymbolTable(SYSTEM_VERSION);
         myStreamCopyOptimized = streamCopyOptimized;
 
-        IonTextWriterBuilder twb = IonTextWriterBuilder.simplifiedAscii();
+        IonTextWriterBuilder twb =
+            IonTextWriterBuilder.standard().withCharsetAscii();
         twb.setCatalog(catalog);
         myTextWriterBuilder = twb.immutable();
     }

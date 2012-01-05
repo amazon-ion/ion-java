@@ -61,14 +61,6 @@ public class IonTextWriterBuilderTest
     }
 
 
-    @Test
-    public void testSimplifiedAscii()
-    {
-        IonTextWriterBuilder b = IonTextWriterBuilder.simplifiedAscii();
-        assertSame(ASCII, b.getCharset());
-
-    }
-
     //-------------------------------------------------------------------------
 
     @Test
