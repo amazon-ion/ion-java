@@ -573,7 +573,7 @@ public class IonStructLite
             {
                 ii--;
                 IonValueLite child = get_child_lite(ii);
-                if (fieldName.equals(child.getFieldName()))
+                if (fieldName.equals(child.getFieldNameSymbol().getText()))
                 {
                     // done by remove_child: child.detachFromContainer();
                     remove_child(ii);

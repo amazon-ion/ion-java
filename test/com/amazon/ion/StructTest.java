@@ -179,6 +179,12 @@ public class StructTest
         testClearContainer(value);
     }
 
+    @Test
+    public void testPutAfterUnknownFieldName()
+    {
+        IonStruct value = struct("{$99:null}");
+        value.put("hi", system().newNull());
+    }
 
     //=========================================================================
     // Test cases

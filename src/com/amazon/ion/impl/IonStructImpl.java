@@ -271,7 +271,7 @@ public final class IonStructImpl
                 for (int i = get_child_count() - 1; i >= 0; i--)
                 {
                     IonValue child = get_child(i);
-                    if (fieldName.equals(child.getFieldName()))
+                    if (fieldName.equals(child.getFieldNameSymbol().getText()))
                     {
                         ((IonValueImpl)child).detachFromContainer();
                         this.remove_child(i);
