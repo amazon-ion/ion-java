@@ -37,7 +37,6 @@ import com.amazon.ion.impl.IonReaderFactoryX;
 import com.amazon.ion.impl.IonReaderWriterPrivate;
 import com.amazon.ion.impl.IonScalarConversionsX.CantConvertException;
 import com.amazon.ion.impl.IonSystemPrivate;
-import com.amazon.ion.impl.IonWriterBaseImpl;
 import com.amazon.ion.impl.IonWriterFactory;
 import com.amazon.ion.impl.IonWriterUserBinary;
 import com.amazon.ion.impl.UnifiedSymbolTable;
@@ -232,23 +231,6 @@ public final class IonSystemLite
         return makeWriter(this, _catalog, out, DEFAULT_OPTIONS);
     }
 
-    public IonWriter newTextWriter(Appendable out, boolean pretty)
-    {
-        _Private_TextOptions options =
-            new _Private_TextOptions(pretty /* prettyPrint */,
-                                    true /* printAscii */,
-                                    true /* filterOutSymbolTables */);
-        IonWriter userWriter = newTextWriter(out, options);
-        return userWriter;
-    }
-
-    public IonWriterBaseImpl newTextWriter(Appendable out,
-                                           _Private_TextOptions options)
-    {
-        IonWriterBaseImpl userWriter = makeWriter(this, out, options);
-        return userWriter;
-    }
-
     public IonWriter newTextWriter(Appendable out, SymbolTable... imports)
         throws IOException
     {
@@ -266,12 +248,6 @@ public final class IonSystemLite
     public IonWriter newTextWriter(OutputStream out)
     {
         return makeWriter(this, _catalog, out, DEFAULT_OPTIONS);
-    }
-
-    public IonWriterBaseImpl newTextWriter(OutputStream out,
-                                           _Private_TextOptions options)
-    {
-        return makeWriter(this, out, options);
     }
 
     public IonWriter newTextWriter(OutputStream out, SymbolTable... imports)
@@ -964,14 +940,6 @@ public final class IonSystemLite
         return makeSystemReader(this, value);
     }
 
-
-    public IonWriter newTextWriter(OutputStream out, boolean pretty)
-    {
-        // prettyPrint, boolean printAscii, boolean filterOutSymbolTables
-        _Private_TextOptions options = new _Private_TextOptions(pretty, true, true);
-        IonWriter writer = IonWriterFactory.makeWriter(this, out, options);
-        return writer;
-    }
 
     /**
      * @param container must not be null.

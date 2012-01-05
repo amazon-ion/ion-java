@@ -432,20 +432,6 @@ public final class IonSystemImpl
         return makeWriter(this, myCatalog, out, DEFAULT_OPTIONS);
     }
 
-    public IonWriter newTextWriter(Appendable out, boolean pretty)
-    {
-        _Private_TextOptions options =
-            new _Private_TextOptions(pretty /* prettyPrint */,
-                                    true /* printAscii */,
-                                    true /* filterOutSymbolTables */);
-        return makeWriter(this, myCatalog, out, options);
-    }
-
-    public IonWriter newTextWriter(Appendable out, _Private_TextOptions options)
-    {
-        return makeWriter(this, myCatalog, out, options);
-    }
-
     public IonWriter newTextWriter(Appendable out, SymbolTable... imports)
     {
         return makeWriter(this, myCatalog, out, DEFAULT_OPTIONS, imports);
@@ -463,12 +449,6 @@ public final class IonSystemImpl
         return makeWriter(this, myCatalog, out, DEFAULT_OPTIONS);
     }
 
-    public IonWriter newTextWriter(OutputStream out,
-                                   _Private_TextOptions options)
-    {
-        return makeWriter(this, myCatalog, out, options);
-    }
-
     public IonWriter newTextWriter(OutputStream out, SymbolTable... imports)
     {
         return makeWriter(this, myCatalog, out, DEFAULT_OPTIONS, imports);
@@ -481,20 +461,6 @@ public final class IonSystemImpl
         return makeWriter(this, myCatalog, out, options, imports);
     }
 
-
-    // TODO also Utf8AsAscii flag - this should be extended to be
-    //      printer options which can pick up tab width, JSON format
-    //      choices and other text related options.
-    public IonWriter newTextWriter(OutputStream out, boolean pretty)
-    {
-        // return new IonTextWriter(out, pretty);
-        _Private_TextOptions options =
-            new _Private_TextOptions(pretty,
-                                    true /* printAscii */,
-                                    true /* filterOutSymbolTables */);
-        IonWriter userWriter = newTextWriter(out, options);
-        return userWriter;
-    }
 
     @Deprecated
     public com.amazon.ion.IonBinaryWriter newBinaryWriter()
