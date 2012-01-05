@@ -7,8 +7,6 @@ import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
 import static com.amazon.ion.impl.IonReaderFactoryX.makeReader;
 import static com.amazon.ion.impl.IonReaderFactoryX.makeSystemReader;
-import static com.amazon.ion.impl.IonWriterFactory.DEFAULT_OPTIONS;
-import static com.amazon.ion.impl.IonWriterFactory.makeWriter;
 import static com.amazon.ion.impl.UnifiedSymbolTable.initialSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
@@ -41,7 +39,9 @@ import com.amazon.ion.impl.IonWriterFactory;
 import com.amazon.ion.impl.IonWriterUserBinary;
 import com.amazon.ion.impl.UnifiedSymbolTable;
 import com.amazon.ion.impl._Private_IonBinaryWriterImpl;
+import com.amazon.ion.impl._Private_IonTextWriterBuilder;
 import com.amazon.ion.impl._Private_TextOptions;
+import com.amazon.ion.system.IonTextWriterBuilder;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
@@ -70,6 +70,8 @@ public final class IonSystemLite
     private       ValueFactoryLite   _value_factory;
     private final IonLoader          _loader;
     private final boolean myStreamCopyOptimized;
+    /** Immutable. */
+    private final _Private_IonTextWriterBuilder myTextWriterBuilder;
 
 
     /**
@@ -94,6 +96,10 @@ public final class IonSystemLite
         _catalog = catalog;
         _loader = new IonLoaderLite(this, catalog);
         myStreamCopyOptimized = streamCopyOptimized;
+
+        IonTextWriterBuilder twb = IonTextWriterBuilder.simplifiedAscii();
+        twb.setCatalog(catalog);
+        myTextWriterBuilder = (_Private_IonTextWriterBuilder) twb.immutable();
 
         // whacked but I'm not going to figure this out right now
         _value_factory = this;
@@ -228,13 +234,13 @@ public final class IonSystemLite
 
     public IonWriter newTextWriter(Appendable out)
     {
-        return makeWriter(this, _catalog, out, DEFAULT_OPTIONS);
+        return myTextWriterBuilder.build(out);
     }
 
     public IonWriter newTextWriter(Appendable out, SymbolTable... imports)
         throws IOException
     {
-        return makeWriter(this, _catalog, out, DEFAULT_OPTIONS, imports);
+        return myTextWriterBuilder.withImports(imports).build(out);
     }
 
     public IonWriter newTextWriter(Appendable out,
@@ -242,18 +248,20 @@ public final class IonSystemLite
                                    SymbolTable... imports)
         throws IOException
     {
-        return makeWriter(this, _catalog, out, options, imports);
+        return myTextWriterBuilder.withOptions(options)
+            .withImports(imports)
+            .build(out);
     }
 
     public IonWriter newTextWriter(OutputStream out)
     {
-        return makeWriter(this, _catalog, out, DEFAULT_OPTIONS);
+        return myTextWriterBuilder.build(out);
     }
 
     public IonWriter newTextWriter(OutputStream out, SymbolTable... imports)
         throws IOException
     {
-        return makeWriter(this, _catalog, out, DEFAULT_OPTIONS, imports);
+        return myTextWriterBuilder.withImports(imports).build(out);
     }
 
     public IonWriter newTextWriter(OutputStream out,
@@ -261,7 +269,9 @@ public final class IonSystemLite
                                    SymbolTable... imports)
         throws IOException
     {
-        return makeWriter(this, _catalog, out, options, imports);
+        return myTextWriterBuilder.withOptions(options)
+            .withImports(imports)
+            .build(out);
     }
 
     public UnifiedSymbolTable newLocalSymbolTable(SymbolTable... imports)

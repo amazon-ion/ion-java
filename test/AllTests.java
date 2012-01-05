@@ -58,6 +58,7 @@ import com.amazon.ion.streaming.ReaderTest;
 import com.amazon.ion.streaming.RoundTripStreamingTest;
 import com.amazon.ion.streaming.SpanTests;
 import com.amazon.ion.system.IonSystemBuilderTest;
+import com.amazon.ion.system.IonTextWriterBuilderTest;
 import com.amazon.ion.system.SimpleCatalogTest;
 import com.amazon.ion.util.EquivalenceTest;
 import com.amazon.ion.util.IonStreamUtilsTest;
@@ -157,7 +158,8 @@ import org.junit.runners.Suite;
 
     IonSystemTest.class,
     ValueFactorySequenceTest.class,
-    IonSystemBuilderTest.class
+    IonSystemBuilderTest.class,
+    IonTextWriterBuilderTest.class
 })
 public class AllTests
 {

@@ -41,6 +41,7 @@ import java.math.BigInteger;
  */
 abstract class IonWriterUser
     extends IonWriterBaseImpl  // should be IonWriterSystem ?
+    implements _Private_IonWriter
 {
     /** Factory for constructing the DOM of local symtabs. Not null. */
     private final ValueFactory _symtab_value_factory;
@@ -145,6 +146,12 @@ abstract class IonWriterUser
     }
 
     //========================================================================
+
+    public IonCatalog getCatalog()
+    {
+        return _catalog;
+    }
+
 
     @Override
     boolean has_annotation(String name, int id)

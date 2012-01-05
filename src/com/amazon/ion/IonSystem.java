@@ -454,7 +454,8 @@ public interface IonSystem
      *
      * @param out the stream that will receive Ion text data.
      * Must not be null.
-     * @param imports a sequence of shared symbol tables
+     * @param imports a sequence of shared symbol tables.
+     * The first (and only the first) may be a system table.
      *
      * @return a new {@link IonWriter} instance; not {@code null}.
      *

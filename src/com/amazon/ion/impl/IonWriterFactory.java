@@ -417,11 +417,14 @@ public class IonWriterFactory
         return writer;
     }
 
+
+    @Deprecated
     public static final _Private_TextOptions DEFAULT_OPTIONS = null;
 
     /**
      * Doesn't write a local symtab.
      */
+    @Deprecated
     public static IonWriterBaseImpl makeWriter(IonSystem system,
                                                Appendable output,
                                                _Private_TextOptions options)
@@ -432,6 +435,7 @@ public class IonWriterFactory
     /**
      * Writes a local symtab only if there's a real import.
      */
+    @Deprecated
     public static IonWriterBaseImpl makeWriter(IonSystem system,
                                                IonCatalog catalog,
                                                Appendable output,
@@ -459,6 +463,7 @@ public class IonWriterFactory
     /**
      * Doesn't write a local symtab.
      */
+    @Deprecated
     public static IonWriterBaseImpl makeWriter(IonSystem system,
                                                OutputStream output,
                                                _Private_TextOptions options)
@@ -469,6 +474,7 @@ public class IonWriterFactory
     /**
      * Writes a local symtab only if there's a real import.
      */
+    @Deprecated
     public static IonWriterBaseImpl makeWriter(IonSystem system,
                                                IonCatalog catalog,
                                                OutputStream output,

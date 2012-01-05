@@ -11,8 +11,6 @@ import static com.amazon.ion.impl.IonImplUtils.UTF8_CHARSET;
 import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
 import static com.amazon.ion.impl.IonReaderFactoryX.makeReader;
 import static com.amazon.ion.impl.IonReaderFactoryX.makeSystemReader;
-import static com.amazon.ion.impl.IonWriterFactory.DEFAULT_OPTIONS;
-import static com.amazon.ion.impl.IonWriterFactory.makeWriter;
 import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemIterator;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewSharedSymbolTable;
@@ -53,6 +51,7 @@ import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.UnsupportedIonVersionException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
+import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util.Printer;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -86,6 +85,8 @@ public final class IonSystemImpl
     private final IonCatalog myCatalog;
     private final IonLoader myLoader;
     private final boolean myStreamCopyOptimized;
+    /** Immutable. */
+    private final _Private_IonTextWriterBuilder myTextWriterBuilder;
 
 
     /**
@@ -98,6 +99,10 @@ public final class IonSystemImpl
         myLoader = new LoaderImpl(this, myCatalog);
         mySystemSymbols = newSystemSymbolTable(SYSTEM_VERSION);
         myStreamCopyOptimized = streamCopyOptimized;
+
+        IonTextWriterBuilder twb = IonTextWriterBuilder.simplifiedAscii();
+        twb.setCatalog(catalog);
+        myTextWriterBuilder = (_Private_IonTextWriterBuilder) twb.immutable();
     }
 
 
@@ -429,36 +434,40 @@ public final class IonSystemImpl
 
     public IonWriter newTextWriter(Appendable out)
     {
-        return makeWriter(this, myCatalog, out, DEFAULT_OPTIONS);
+        return myTextWriterBuilder.build(out);
     }
 
     public IonWriter newTextWriter(Appendable out, SymbolTable... imports)
     {
-        return makeWriter(this, myCatalog, out, DEFAULT_OPTIONS, imports);
+        return myTextWriterBuilder.withImports(imports).build(out);
     }
 
     public IonWriter newTextWriter(Appendable out,
                                    _Private_TextOptions options,
                                    SymbolTable... imports)
     {
-        return makeWriter(this, myCatalog, out, options, imports);
+        return myTextWriterBuilder.withOptions(options)
+                                  .withImports(imports)
+                                  .build(out);
     }
 
     public IonWriter newTextWriter(OutputStream out)
     {
-        return makeWriter(this, myCatalog, out, DEFAULT_OPTIONS);
+        return myTextWriterBuilder.build(out);
     }
 
     public IonWriter newTextWriter(OutputStream out, SymbolTable... imports)
     {
-        return makeWriter(this, myCatalog, out, DEFAULT_OPTIONS, imports);
+        return myTextWriterBuilder.withImports(imports).build(out);
     }
 
     public IonWriter newTextWriter(OutputStream out,
                                    _Private_TextOptions options,
                                    SymbolTable... imports)
     {
-        return makeWriter(this, myCatalog, out, options, imports);
+        return myTextWriterBuilder.withOptions(options)
+                                  .withImports(imports)
+                                  .build(out);
     }
 
 
