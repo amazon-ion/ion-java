@@ -499,11 +499,13 @@ public class PrinterTest
         value.addTypeAnnotation("an");
         checkRendering("an::{}", value);
 
+
+        value = (IonStruct) oneValue("an::{$99:null}");
         value.addTypeAnnotation("\u0007");
         value.put("A\u0000", system().newInt(12));
-        checkRendering("an::'\\a'::{\"A\\0\":12}", value);
+        checkRendering("an::'\\a'::{\"$99\":null,\"A\\0\":12}", value);
         myPrinter.setPrintStringAsJson(true);
-        checkRendering("an::'\\a'::{\"A\\u0000\":12}", value);
+        checkRendering("an::'\\a'::{\"$99\":null,\"A\\u0000\":12}", value);
     }
 
 

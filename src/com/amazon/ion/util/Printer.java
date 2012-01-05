@@ -18,6 +18,7 @@ import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonNull;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonString;
@@ -29,6 +30,7 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.impl._Private_IonTextWriterBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
@@ -416,11 +418,20 @@ public class Printer
 
             boolean dg = value instanceof IonDatagram;
 
-            _Private_IonTextWriterBuilder o = _Private_IonTextWriterBuilder.standard();
+            _Private_IonTextWriterBuilder o =
+                _Private_IonTextWriterBuilder.standard();
             o.setCharset(IonTextWriterBuilder.ASCII);
-            if (!dg)
+            if (dg)
             {
-                o.setInitialIvmHandling(InitialIvmHandling.SUPPRESS);
+                if (options.skipSystemValues)
+                {
+                    o.setInitialIvmHandling(InitialIvmHandling.SUPPRESS);
+                }
+                else if (options.simplifySystemValues) {
+                    // TODO minimize distant IVMs
+                    // TODO discard LST open content
+                    // TODO shrink LSTs
+                }
             }
 //          o._filter_symbol_tables = options.skipSystemValues;
 
@@ -437,7 +448,11 @@ public class Printer
             o._untyped_nulls       = options.untypedNulls;
 
             IonWriter writer = o.build(out);
-            value.writeTo(writer);
+            // TODO doesn't work for datagram since it skips system values
+            // value.writeTo(writer);
+            IonSystemPrivate system = (IonSystemPrivate) value.getSystem();
+            IonReader reader = system.newSystemReader(value);
+            writer.writeValues(reader);
             writer.finish();
         }
     }
@@ -790,7 +805,8 @@ public class Printer
 
             boolean hitOne = false;
 
-            // If we're skipping system values we don't need to simplify them.
+            // If we're skipping system values at the iterator level,
+            // we don't need to bother trying to simplify them.
             final boolean simplify_system_values =
                 myOptions.simplifySystemValues && ! myOptions.skipSystemValues;
 
@@ -803,7 +819,7 @@ public class Printer
                 if (simplify_system_values)
                 {
                     SymbolTable new_symbols = child.getSymbolTable();
-                    child = simplify(child, previous_symbols, new_symbols);
+                    child = simplify(child, previous_symbols);
                     previous_symbols = new_symbols;
                 }
 
@@ -825,17 +841,12 @@ public class Printer
         }
 
         private final IonValue simplify(IonValue child,
-                                        SymbolTable previous_symbols,
-                                        SymbolTable new_symbols)
+                                        SymbolTable previous_symbols)
         {
             IonType t = child.getType();
             switch (t) {
             case STRUCT:
                 if (child.hasTypeAnnotation(ION_SYMBOL_TABLE)) {
-                    // TODO What keeps us from having this struct as first thing
-                    // in the datagram?  It could be manually constructed.
-                    assert(previous_symbols != null && new_symbols != null);
-
                     if (symbol_table_struct_has_imports(child))
                     {
                         return ((IonStruct)child).cloneAndRemove(SYMBOLS);

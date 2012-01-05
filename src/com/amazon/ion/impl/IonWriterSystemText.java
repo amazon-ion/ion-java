@@ -262,9 +262,16 @@ final class IonWriterSystemText
     {
         assert sid > 0;
 
+        // No extra handling needed for JSON strings, this is already legal.
+
+        boolean asString = _options._symbol_as_string;
+        if (asString) _output.append('"');
+
         _output.append('$');
         // TODO optimize to avoid intermediate string
         _output.append(Integer.toString(sid));
+
+        if (asString) _output.append('"');
     }
 
 

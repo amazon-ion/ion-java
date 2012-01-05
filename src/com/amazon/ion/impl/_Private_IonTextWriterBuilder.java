@@ -83,7 +83,7 @@ public class _Private_IonTextWriterBuilder
     }
 
     @Override
-    public IonTextWriterBuilder mutable()
+    public _Private_IonTextWriterBuilder mutable()
     {
         return this;
     }
@@ -93,9 +93,31 @@ public class _Private_IonTextWriterBuilder
     @Override
     public final IonTextWriterBuilder withPrettyPrinting()
     {
-        _Private_IonTextWriterBuilder b = (_Private_IonTextWriterBuilder)
-            mutable();
+        _Private_IonTextWriterBuilder b = mutable();
         b._pretty_print = true;
+        return b;
+    }
+
+    @Override
+    public final IonTextWriterBuilder withJsonDowngrade()
+    {
+        _Private_IonTextWriterBuilder b = mutable();
+
+        b.setInitialIvmHandling(InitialIvmHandling.SUPPRESS);
+
+        _blob_as_string      = true;
+        _clob_as_string      = true;
+        // datagramAsList    = true; // TODO
+        _decimal_as_float    = true;
+        _sexp_as_list        = true;
+        _skip_annotations    = true;
+        // skipSystemValues  = true; // TODO
+        _string_as_json      = true;
+        _symbol_as_string    = true;
+        _timestamp_as_string = true;  // TODO different from Printer
+        _timestamp_as_millis = false;
+        _untyped_nulls       = true;
+
         return b;
     }
 
@@ -178,7 +200,7 @@ public class _Private_IonTextWriterBuilder
         }
 
         @Override
-        public IonTextWriterBuilder mutable()
+        public _Private_IonTextWriterBuilder mutable()
         {
             return new _Private_IonTextWriterBuilder(this);
         }

@@ -546,6 +546,7 @@ public class DatagramTest
     @Test
     public void testToString()
     {
+        // TODO ION-165 I think this is wrong, the datagram has injected IVM
         IonDatagram dg = loader().load("1");
         assertEquals("$ion_1_0 1", dg.toString());
 

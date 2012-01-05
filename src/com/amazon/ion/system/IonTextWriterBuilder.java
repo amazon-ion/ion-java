@@ -67,6 +67,10 @@ public abstract class IonTextWriterBuilder
         return standard().withPrettyPrinting();
     }
 
+    public static IonTextWriterBuilder json()
+    {
+        return standard().withJsonDowngrade();
+    }
 
     //=========================================================================
 
@@ -240,6 +244,10 @@ public abstract class IonTextWriterBuilder
      * otherwise a mutable copy of this instance.
      */
     public abstract IonTextWriterBuilder withPrettyPrinting();
+
+
+    public abstract IonTextWriterBuilder withJsonDowngrade();
+
 
     //-------------------------------------------------------------------------
 
