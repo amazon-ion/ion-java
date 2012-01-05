@@ -5,7 +5,7 @@ package com.amazon.ion.system;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.system.IonTextWriterBuilder.ASCII;
 import static com.amazon.ion.system.IonTextWriterBuilder.UTF8;
-import static com.amazon.ion.system.IonTextWriterBuilder.InitialIvmHandling.SUPPRESS;
+import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;

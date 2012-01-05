@@ -3,7 +3,7 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
-import static com.amazon.ion.system.IonTextWriterBuilder.InitialIvmHandling.SUPPRESS;
+import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS;
 
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonSequence;

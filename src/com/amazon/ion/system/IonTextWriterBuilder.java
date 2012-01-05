@@ -14,6 +14,7 @@ import java.nio.charset.Charset;
  *
  */
 public abstract class IonTextWriterBuilder
+    extends IonWriterBuilder
 {
     /**
      * The {@code "US-ASCII"} charset.
@@ -107,6 +108,9 @@ public abstract class IonTextWriterBuilder
      *  If null, the writer will be unable to resolve manually-written imports
      *  and may throw an exception.
      *
+     * @return this instance, if mutable;
+     * otherwise a mutable copy of this instance.
+     *
      * @see #getCatalog()
      * @see #setCatalog(IonCatalog)
      */
@@ -159,11 +163,15 @@ public abstract class IonTextWriterBuilder
     }
 
     /**
-     * Declares the charset denoting the output encoding.
+     * Declares the charset denoting the output encoding,
+     * returning a new mutable builder if this is immutable.
      * Only ASCII and UTF-8 are supported; applications can use the helper
      * constants {@link #ASCII} and {@link #UTF8}.
      *
      * @para charset may be null, denoting the default of UTF-8.
+     *
+     * @return this instance, if mutable;
+     * otherwise a mutable copy of this instance.
      *
      * @see #getCharset()
      * @see #setCharset(Charset)
@@ -177,22 +185,49 @@ public abstract class IonTextWriterBuilder
 
     //-------------------------------------------------------------------------
 
-    public enum InitialIvmHandling
-    {
-        // ENSURE,
-        SUPPRESS
-    }
-
+    /**
+     * {@inheritDoc}
+     *
+     * @see #setInitialIvmHandling(InitialIvmHandling)
+     * @see #withInitialIvmHandling(InitialIvmHandling)
+     */
+    @Override
     public final InitialIvmHandling getInitialIvmHandling()
     {
         return myInitialIvmHandling;
     }
 
+    /**
+     * Gets the strategy for emitting Ion version markers at the start
+     * of the stream. By default, IVMs are emitted only when explicitly
+     * written or when necessary (for example, before data that's not Ion 1.0).
+     *
+     * @param handling the initial IVM strategy.
+     * Null indicates that explicitly-written IVMs will be emitted.
+     *
+     * @see #getInitialIvmHandling()
+     * @see #withInitialIvmHandling(InitialIvmHandling)
+     */
     public void setInitialIvmHandling(InitialIvmHandling handling)
     {
         myInitialIvmHandling = handling;
     }
 
+    /**
+     * Declares the strategy for emitting Ion version markers at the start
+     * of the stream, returning a new mutable builder if this is immutable.
+     * By default, IVMs are emitted only when explicitly
+     * written or when necessary (for example, before data that's not Ion 1.0).
+     *
+     * @param handling the initial IVM strategy.
+     * Null indicates that explicitly-written IVMs will be emitted.
+     *
+     * @return this instance, if mutable;
+     * otherwise a mutable copy of this instance.
+     *
+     * @see #setInitialIvmHandling(InitialIvmHandling)
+     * @see #withInitialIvmHandling(InitialIvmHandling)
+     */
     public final IonTextWriterBuilder
     withInitialIvmHandling(InitialIvmHandling handling)
     {
@@ -200,7 +235,6 @@ public abstract class IonTextWriterBuilder
         b.setInitialIvmHandling(handling);
         return b;
     }
-
 
     //-------------------------------------------------------------------------
 
@@ -257,6 +291,9 @@ public abstract class IonTextWriterBuilder
      *
      * @param imports a sequence of shared symbol tables.
      * The first (and only the first) may be a system table.
+     *
+     * @return this instance, if mutable;
+     * otherwise a mutable copy of this instance.
      *
      * @see #getImports()
      * @see #setImports(SymbolTable...)

@@ -2,7 +2,7 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.system.IonTextWriterBuilder.InitialIvmHandling.SUPPRESS;
+import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;

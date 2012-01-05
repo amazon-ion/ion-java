@@ -4,7 +4,7 @@ package com.amazon.ion.streaming;
 
 import static com.amazon.ion.TestUtils.testdataFiles;
 import static com.amazon.ion.impl.IonImplUtils.utf8;
-import static com.amazon.ion.system.IonTextWriterBuilder.InitialIvmHandling.SUPPRESS;
+import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS;
 
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonDatagram;
