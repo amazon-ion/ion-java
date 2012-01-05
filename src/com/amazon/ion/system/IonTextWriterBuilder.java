@@ -1,4 +1,4 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.system;
 
@@ -51,6 +51,7 @@ public abstract class IonTextWriterBuilder
 
     private IonCatalog myCatalog;
     private Charset myCharset;
+    private InitialIvmHandling myInitialIvmHandling;
     private SymbolTable[] myImports;
 
 
@@ -60,9 +61,10 @@ public abstract class IonTextWriterBuilder
 
     protected IonTextWriterBuilder(IonTextWriterBuilder that)
     {
-        this.myCatalog = that.myCatalog;
-        this.myCharset = that.myCharset;
-        this.myImports = that.myImports;
+        this.myCatalog            = that.myCatalog;
+        this.myCharset            = that.myCharset;
+        this.myInitialIvmHandling = that.myInitialIvmHandling;
+        this.myImports            = that.myImports;
     }
 
     //=========================================================================
@@ -173,6 +175,34 @@ public abstract class IonTextWriterBuilder
         return b;
     }
 
+    //-------------------------------------------------------------------------
+
+    public enum InitialIvmHandling
+    {
+        // ENSURE,
+        SUPPRESS
+    }
+
+    public final InitialIvmHandling getInitialIvmHandling()
+    {
+        return myInitialIvmHandling;
+    }
+
+    public void setInitialIvmHandling(InitialIvmHandling handling)
+    {
+        myInitialIvmHandling = handling;
+    }
+
+    public final IonTextWriterBuilder
+    withInitialIvmHandling(InitialIvmHandling handling)
+    {
+        IonTextWriterBuilder b = mutable();
+        b.setInitialIvmHandling(handling);
+        return b;
+    }
+
+
+    //-------------------------------------------------------------------------
 
     private static SymbolTable[] clone(SymbolTable[] imports)
     {

@@ -1,4 +1,4 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -40,7 +40,6 @@ public class _Private_IonTextWriterBuilder
 
     public boolean       _pretty_print;
     public boolean       _filter_symbol_tables;
-    public boolean       _suppress_ion_version_marker;
 
     /**
      * Strings and clobs longer than this length will be rendered as
@@ -74,7 +73,6 @@ public class _Private_IonTextWriterBuilder
 
         this._pretty_print                = that._pretty_print               ;
         this._filter_symbol_tables        = that._filter_symbol_tables       ;
-        this._suppress_ion_version_marker = that._suppress_ion_version_marker;
         this._long_string_threshold       = that._long_string_threshold      ;
         this._blob_as_string              = that._blob_as_string             ;
         this._clob_as_string              = that._clob_as_string             ;
@@ -107,11 +105,6 @@ public class _Private_IonTextWriterBuilder
     public final boolean isFilteringSymbolTables()
     {
         return _filter_symbol_tables;
-    }
-
-    public final boolean isSuppressingInitialIvm()
-    {
-        return this._suppress_ion_version_marker;
     }
 
     public final CharSequence lineSeparator() {
@@ -205,6 +198,12 @@ public class _Private_IonTextWriterBuilder
 
         @Override
         public void setCharset(Charset charset)
+        {
+            mutationFailure();
+        }
+
+        @Override
+        public void setInitialIvmHandling(InitialIvmHandling handling)
         {
             mutationFailure();
         }

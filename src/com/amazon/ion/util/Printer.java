@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
@@ -31,6 +31,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl._Private_IonTextWriterBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
+import com.amazon.ion.system.IonTextWriterBuilder.InitialIvmHandling;
 import com.amazon.ion.util.IonTextUtils.SymbolVariant;
 import java.io.IOException;
 import java.io.InputStream;
@@ -417,8 +418,11 @@ public class Printer
 
             _Private_IonTextWriterBuilder o = _Private_IonTextWriterBuilder.standard();
             o.setCharset(IonTextWriterBuilder.ASCII);
+            if (!dg)
+            {
+                o.setInitialIvmHandling(InitialIvmHandling.SUPPRESS);
+            }
             o._filter_symbol_tables = options.skipSystemValues;
-            o._suppress_ion_version_marker = !dg;
 
             o._blob_as_string      = options.blobAsString;
             o._clob_as_string      = options.clobAsString;

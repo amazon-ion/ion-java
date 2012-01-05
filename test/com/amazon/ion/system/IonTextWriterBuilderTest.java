@@ -1,10 +1,13 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.system;
 
+import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.system.IonTextWriterBuilder.ASCII;
 import static com.amazon.ion.system.IonTextWriterBuilder.UTF8;
+import static com.amazon.ion.system.IonTextWriterBuilder.InitialIvmHandling.SUPPRESS;
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.fail;
@@ -15,6 +18,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
 import com.amazon.ion.impl.IonWriterUserText;
 import com.amazon.ion.impl._Private_IonWriter;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 import org.junit.Assert;
@@ -112,6 +116,68 @@ public class IonTextWriterBuilderTest
         assertSame(catalog, b2.getCatalog());
         b2.setCatalog(null);
     }
+
+    //-------------------------------------------------------------------------
+
+    @Test
+    public void testInitialIvmHandling()
+    {
+        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        b.setInitialIvmHandling(SUPPRESS);
+        assertSame(SUPPRESS, b.getInitialIvmHandling());
+
+        // Test with...() on mutable builder
+
+        IonTextWriterBuilder b2 = b.withInitialIvmHandling(null);
+        assertSame(b, b2);
+        assertSame(null, b.getInitialIvmHandling());
+
+        // Test with...() on immutable builder
+
+        b2 = b.immutable();
+        assertSame(null, b2.getInitialIvmHandling());
+        IonTextWriterBuilder b3 = b2.withInitialIvmHandling(SUPPRESS);
+        assertNotSame(b2, b3);
+        assertSame(null, b2.getInitialIvmHandling());
+        assertSame(SUPPRESS, b3.getInitialIvmHandling());
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testInitialIvmHandlingImmutability()
+    {
+        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        b.setInitialIvmHandling(SUPPRESS);
+
+        IonTextWriterBuilder b2 = b.immutable();
+        assertSame(SUPPRESS, b2.getInitialIvmHandling());
+        b2.setInitialIvmHandling(null);
+    }
+
+    @Test
+    public void testInitialIvmSuppression()
+        throws IOException
+    {
+        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+
+        StringBuilder out = new StringBuilder();
+        IonWriter writer = b.build(out);
+        writer.writeSymbol(ION_1_0);
+        writer.writeNull();
+        writer.writeSymbol(ION_1_0);
+        writer.close();
+        assertEquals(ION_1_0 + " null " + ION_1_0, out.toString());
+
+        b.withInitialIvmHandling(SUPPRESS);
+        out.setLength(0);
+        writer = b.build(out);
+        writer.writeSymbol(ION_1_0);
+        writer.writeSymbol(ION_1_0);
+        writer.writeNull();
+        writer.writeSymbol(ION_1_0);
+        writer.close();
+        assertEquals("null " + ION_1_0, out.toString());
+    }
+
 
     //-------------------------------------------------------------------------
 

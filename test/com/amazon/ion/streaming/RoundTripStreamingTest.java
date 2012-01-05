@@ -1,9 +1,10 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.streaming;
 
 import static com.amazon.ion.TestUtils.testdataFiles;
 import static com.amazon.ion.impl.IonImplUtils.utf8;
+import static com.amazon.ion.system.IonTextWriterBuilder.InitialIvmHandling.SUPPRESS;
 
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonDatagram;
@@ -129,8 +130,8 @@ extends IonTestCase
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         _Private_IonTextWriterBuilder b =
             _Private_IonTextWriterBuilder.standard();
+        b.setInitialIvmHandling(SUPPRESS);
         b._pretty_print = prettyPrint;
-        b._suppress_ion_version_marker = true;
 
         IonWriter tw = b.build(out);
 

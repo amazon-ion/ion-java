@@ -1,14 +1,16 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.system.IonTextWriterBuilder.InitialIvmHandling.SUPPRESS;
 
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.system.IonTextWriterBuilder;
 import java.io.OutputStream;
 import org.junit.Test;
 
@@ -66,9 +68,9 @@ public class TextWriterTest
     public void testWritingLongStrings()
         throws Exception
     {
-        options = _Private_IonTextWriterBuilder.standard();
+        options = (_Private_IonTextWriterBuilder)
+            IonTextWriterBuilder.standard().withInitialIvmHandling(SUPPRESS);
         options._filter_symbol_tables = true;
-        options._suppress_ion_version_marker = true;
         options._long_string_threshold = 10;
 
         // TODO support long strings at datagram and sexp level?
@@ -124,9 +126,9 @@ public class TextWriterTest
     public void testWritingLongClobs()
         throws Exception
     {
-        options = _Private_IonTextWriterBuilder.standard();
+        options = (_Private_IonTextWriterBuilder)
+            IonTextWriterBuilder.standard().withInitialIvmHandling(SUPPRESS);
         options._filter_symbol_tables = true;
-        options._suppress_ion_version_marker = true;
         options._long_string_threshold = 3;
 
 
@@ -154,8 +156,8 @@ public class TextWriterTest
 
         assertEquals(ION_1_0 + " null " + ION_1_0 + " null", outputString());
 
-        options = _Private_IonTextWriterBuilder.standard();
-        options._suppress_ion_version_marker = true;
+        options = (_Private_IonTextWriterBuilder)
+            IonTextWriterBuilder.standard().withInitialIvmHandling(SUPPRESS);
 
         iw = makeWriter();
         iw.writeSymbol(ION_1_0);

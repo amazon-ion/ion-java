@@ -1,6 +1,8 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
+
+import static com.amazon.ion.system.IonTextWriterBuilder.InitialIvmHandling.SUPPRESS;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
@@ -97,8 +99,11 @@ public class IonWriterUserText
         {
             b.setCharset(IonTextWriterBuilder.ASCII);
         }
+        if (options._suppress_ion_version_marker)
+        {
+            b.setInitialIvmHandling(SUPPRESS);
+        }
         b._filter_symbol_tables        = options._filter_symbol_tables;
-        b._suppress_ion_version_marker = options._suppress_ion_version_marker;
         b.setCatalog(catalog);
         return b;
     }
@@ -111,7 +116,7 @@ public class IonWriterUserText
         super(systemWriter.getOptions().getCatalog(),
               symtabValueFactory,
               systemWriter,
-              systemWriter.getOptions().isSuppressingInitialIvm(),
+              systemWriter.getOptions().getInitialIvmHandling() == SUPPRESS,
               systemWriter.getOptions().getImports());
     }
 
