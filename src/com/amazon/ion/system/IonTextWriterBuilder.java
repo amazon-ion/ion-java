@@ -38,6 +38,22 @@ public abstract class IonTextWriterBuilder
         return _Private_IonTextWriterBuilder.standard();
     }
 
+    /**
+     * Creates a builder preconfigured for basic pretty-printing.
+     * <p>
+     * The specifics of this configuration may change between releases of this
+     * library, so automated processes should not depend on the exact output
+     * formatting.
+     *
+     * @return a new, mutable builder instance.
+     *
+     * @see #withPrettyPrinting()
+     */
+    public static IonTextWriterBuilder pretty()
+    {
+        return standard().withPrettyPrinting();
+    }
+
     public static IonTextWriterBuilder simplifiedAscii()
     {
         return _Private_IonTextWriterBuilder.simplifiedAscii();
@@ -182,6 +198,22 @@ public abstract class IonTextWriterBuilder
         b.setCharset(charset);
         return b;
     }
+
+    //-------------------------------------------------------------------------
+
+    /**
+     * Declares that this builder should use basic pretty-printing.
+     * Calling this method alters several other configuration properties,
+     * so code should call it first, then make any necessary overrides.
+     * <p>
+     * The specifics of this configuration may change between releases of this
+     * library, so automated processes should not depend on the exact output
+     * formatting.
+     *
+     * @return this instance, if mutable;
+     * otherwise a mutable copy of this instance.
+     */
+    public abstract IonTextWriterBuilder withPrettyPrinting();
 
     //-------------------------------------------------------------------------
 

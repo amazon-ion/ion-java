@@ -38,7 +38,7 @@ public class _Private_IonTextWriterBuilder
 
     //=========================================================================
 
-    public boolean       _pretty_print;
+    private boolean _pretty_print;
     public boolean       _filter_symbol_tables;
 
     /**
@@ -62,7 +62,7 @@ public class _Private_IonTextWriterBuilder
     /**
      *
      */
-    public _Private_IonTextWriterBuilder()
+    private _Private_IonTextWriterBuilder()
     {
         super();
     }
@@ -95,6 +95,15 @@ public class _Private_IonTextWriterBuilder
 
 
     //=========================================================================
+
+    @Override
+    public final IonTextWriterBuilder withPrettyPrinting()
+    {
+        _Private_IonTextWriterBuilder b = (_Private_IonTextWriterBuilder)
+            mutable();
+        b._pretty_print = true;
+        return b;
+    }
 
 
     final boolean isPrettyPrintOn()

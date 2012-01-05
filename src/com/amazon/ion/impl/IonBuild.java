@@ -102,10 +102,8 @@ public class IonBuild
 
     private static void doPrintVersion() throws IOException
     {
-        _Private_IonTextWriterBuilder b =
-            _Private_IonTextWriterBuilder.standard();
+        IonTextWriterBuilder b = IonTextWriterBuilder.pretty();
         b.setCharset(IonTextWriterBuilder.ASCII);
-        b._pretty_print = true;
 
         JarInfo info = new JarInfo();
 

@@ -16,9 +16,9 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.TestUtils;
 import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.IonWriterUserBinary;
-import com.amazon.ion.impl._Private_IonTextWriterBuilder;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
+import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util.Equivalence;
 import com.amazon.ion.util.Printer;
 import java.io.ByteArrayOutputStream;
@@ -128,10 +128,12 @@ extends IonTestCase
     {
         IonReader in = makeIterator(buffer);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        _Private_IonTextWriterBuilder b =
-            _Private_IonTextWriterBuilder.standard();
+        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        if (prettyPrint)
+        {
+            b.withPrettyPrinting();
+        }
         b.setInitialIvmHandling(SUPPRESS);
-        b._pretty_print = prettyPrint;
 
         IonWriter tw = b.build(out);
 

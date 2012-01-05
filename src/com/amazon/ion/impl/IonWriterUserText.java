@@ -93,8 +93,12 @@ public class IonWriterUserText
     private static _Private_IonTextWriterBuilder builderFor(IonCatalog catalog,
                                                             TextOptions options)
     {
-        _Private_IonTextWriterBuilder b = new _Private_IonTextWriterBuilder();
-        b._pretty_print                = options._pretty_print;
+        _Private_IonTextWriterBuilder b =
+            _Private_IonTextWriterBuilder.standard();
+        if (options._pretty_print)
+        {
+            b.withPrettyPrinting();
+        }
         if (options._ascii_only)
         {
             b.setCharset(IonTextWriterBuilder.ASCII);
