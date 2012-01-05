@@ -40,7 +40,6 @@ import com.amazon.ion.impl.IonWriterUserBinary;
 import com.amazon.ion.impl.UnifiedSymbolTable;
 import com.amazon.ion.impl._Private_IonBinaryWriterImpl;
 import com.amazon.ion.impl._Private_IonTextWriterBuilder;
-import com.amazon.ion.impl._Private_TextOptions;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import java.io.Closeable;
 import java.io.IOException;
@@ -243,16 +242,6 @@ public final class IonSystemLite
         return myTextWriterBuilder.withImports(imports).build(out);
     }
 
-    public IonWriter newTextWriter(Appendable out,
-                                   _Private_TextOptions options,
-                                   SymbolTable... imports)
-        throws IOException
-    {
-        return myTextWriterBuilder.withOptions(options)
-            .withImports(imports)
-            .build(out);
-    }
-
     public IonWriter newTextWriter(OutputStream out)
     {
         return myTextWriterBuilder.build(out);
@@ -264,15 +253,6 @@ public final class IonSystemLite
         return myTextWriterBuilder.withImports(imports).build(out);
     }
 
-    public IonWriter newTextWriter(OutputStream out,
-                                   _Private_TextOptions options,
-                                   SymbolTable... imports)
-        throws IOException
-    {
-        return myTextWriterBuilder.withOptions(options)
-            .withImports(imports)
-            .build(out);
-    }
 
     public UnifiedSymbolTable newLocalSymbolTable(SymbolTable... imports)
     {

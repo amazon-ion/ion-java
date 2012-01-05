@@ -15,7 +15,7 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.TestUtils;
 import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.IonWriterUserBinary;
-import com.amazon.ion.impl._Private_TextOptions;
+import com.amazon.ion.impl._Private_IonTextWriterBuilder;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
 import com.amazon.ion.util.Equivalence;
@@ -127,12 +127,12 @@ extends IonTestCase
     {
         IonReader in = makeIterator(buffer);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        _Private_TextOptions options = new _Private_TextOptions(prettyPrint // boolean prettyPrint
-                                              ,false // boolean printAscii
-                                              ,false // boolean filterOutSymbolTables
-                                              ,true  // boolean suppressIonVersionMarker
-        );
-        IonWriter tw = system().newTextWriter(out, options);
+        _Private_IonTextWriterBuilder b =
+            _Private_IonTextWriterBuilder.standard();
+        b._pretty_print = prettyPrint;
+        b._suppress_ion_version_marker = true;
+
+        IonWriter tw = b.build(out);
 
         tw.writeValues(in);
         tw.close();

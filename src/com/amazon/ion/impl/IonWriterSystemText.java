@@ -37,7 +37,7 @@ final class IonWriterSystemText
     /** Not null. */
     final private Appendable _output;
     /** Not null. */
-    final private _Private_TextOptions _options;
+    final private _Private_IonTextWriterBuilder _options;
 
     BufferManager _manager;
 
@@ -64,7 +64,8 @@ final class IonWriterSystemText
      * @throws NullPointerException if any parameter is null.
      */
     protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
-                                  OutputStream out, _Private_TextOptions options)
+                                  _Private_IonTextWriterBuilder options,
+                                  OutputStream out)
     {
         super(defaultSystemSymtab);
 
@@ -85,7 +86,8 @@ final class IonWriterSystemText
      * @throws NullPointerException if any parameter is null.
      */
     protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
-                                  Appendable out, _Private_TextOptions options)
+                                  _Private_IonTextWriterBuilder options,
+                                  Appendable out)
     {
         super(defaultSystemSymtab);
 
@@ -106,7 +108,7 @@ final class IonWriterSystemText
         return _output;
     }
 
-    _Private_TextOptions getOptions()
+    _Private_IonTextWriterBuilder getOptions()
     {
         return _options;
     }

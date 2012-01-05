@@ -2,10 +2,8 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.util.JarInfo;
 import java.io.IOException;
 
@@ -103,20 +101,14 @@ public class IonBuild
 
     private static void doPrintVersion() throws IOException
     {
-        IonSystem sys = IonSystemBuilder.standard().build();
-
-        _Private_TextOptions options = new _Private_TextOptions(
-                 true  // boolean prettyPrint
-                ,true  // boolean printAscii
-                ,true  // boolean filterOutSymbolTables
-                ,false // boolean suppressIonVersionMarker
-        );
+        _Private_IonTextWriterBuilder b =
+            _Private_IonTextWriterBuilder.standard();
+        b._pretty_print = true;
+        b._ascii_only = true;
 
         JarInfo info = new JarInfo();
 
-        IonWriter w =
-            ((IonSystemPrivate)sys).newTextWriter((Appendable)System.out,
-                                                  options);
+        IonWriter w = b.build((Appendable)System.out);
         w.stepIn(IonType.STRUCT);
         {
             w.setFieldName("release_label");

@@ -9,10 +9,7 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.SymbolTable;
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.Reader;
 import java.util.Iterator;
 
@@ -60,16 +57,10 @@ public interface IonSystemPrivate
     public IonReader newSystemReader(IonValue value);
 
 
-    public IonWriter newTextWriter(Appendable out, _Private_TextOptions options, SymbolTable... imports) throws IOException;
-
-    public IonWriter newTextWriter(OutputStream out, _Private_TextOptions options, SymbolTable... imports) throws IOException;
-
-
     public IonWriter newTreeWriter(IonContainer container);
 
     public IonWriter newTreeSystemWriter(IonContainer container);
 
 
     public boolean valueIsSharedSymbolTable(IonValue value);
-
 }

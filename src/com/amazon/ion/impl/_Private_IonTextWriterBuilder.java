@@ -17,26 +17,48 @@ import java.io.OutputStream;
 public class _Private_IonTextWriterBuilder
     extends IonTextWriterBuilder
 {
-    public static IonTextWriterBuilder standard()
+    private final static CharSequence SPACE_CHARACTER = " ";
+    /** TODO shouldn't be platform-specific */
+    private final static CharSequence LINE_SEPARATOR = System.getProperty("line.separator");
+
+
+    public static _Private_IonTextWriterBuilder standard()
     {
         return new _Private_IonTextWriterBuilder();
     }
 
-    public static IonTextWriterBuilder simplifiedAscii()  // TODO test
+    public static IonTextWriterBuilder simplifiedAscii()
     {
-        _Private_TextOptions options =
-            new _Private_TextOptions(false /* prettyPrint */,
-                                     true /* printAscii */,
-                                     true /* filterOutSymbolTables */);
-
         _Private_IonTextWriterBuilder b = new _Private_IonTextWriterBuilder();
-        b.setOptions(options);
+        b._ascii_only = true;
+        b._filter_symbol_tables = true;
         return b;
     }
 
     //=========================================================================
 
-    private _Private_TextOptions myOptions;
+    public boolean       _pretty_print;
+    public boolean       _ascii_only;
+    public boolean       _filter_symbol_tables;
+    public boolean       _suppress_ion_version_marker;
+
+    /**
+     * Strings and clobs longer than this length will be rendered as
+     * long-strings, but will only line-break on extant '\n' code points.
+     */
+    public int _long_string_threshold = Integer.MAX_VALUE;
+
+    public boolean _blob_as_string;
+    public boolean _clob_as_string;
+    public boolean _decimal_as_float;
+    public boolean _sexp_as_list;
+    public boolean _skip_annotations;
+    public boolean _string_as_json;
+    public boolean _symbol_as_string;
+    public boolean _timestamp_as_millis;
+    public boolean _timestamp_as_string;
+    public boolean _untyped_nulls;
+
 
     /**
      *
@@ -49,7 +71,22 @@ public class _Private_IonTextWriterBuilder
     public _Private_IonTextWriterBuilder(_Private_IonTextWriterBuilder that)
     {
         super(that);
-        this.myOptions = that.myOptions;  // TODO clone?
+
+        this._pretty_print                = that._pretty_print               ;
+        this._ascii_only                  = that._ascii_only                 ;
+        this._filter_symbol_tables        = that._filter_symbol_tables       ;
+        this._suppress_ion_version_marker = that._suppress_ion_version_marker;
+        this._long_string_threshold       = that._long_string_threshold      ;
+        this._blob_as_string              = that._blob_as_string             ;
+        this._clob_as_string              = that._clob_as_string             ;
+        this._decimal_as_float            = that._decimal_as_float           ;
+        this._sexp_as_list                = that._sexp_as_list               ;
+        this._skip_annotations            = that._skip_annotations           ;
+        this._string_as_json              = that._string_as_json             ;
+        this._symbol_as_string            = that._symbol_as_string           ;
+        this._timestamp_as_millis         = that._timestamp_as_millis        ;
+        this._timestamp_as_string         = that._timestamp_as_string        ;
+        this._untyped_nulls               = that._untyped_nulls              ;
     }
 
 
@@ -63,77 +100,79 @@ public class _Private_IonTextWriterBuilder
     //=========================================================================
 
 
-    protected _Private_TextOptions getOptions()
+    final boolean isPrettyPrintOn()
     {
-        return myOptions;
+        return _pretty_print;
     }
 
-    protected void setOptions(_Private_TextOptions options)
+    final boolean isAsciiOutputOn()
     {
-        myOptions = options; // TODO copy
+        return _ascii_only;
     }
 
-    public IonTextWriterBuilder withOptions(_Private_TextOptions options)
+    public final boolean isFilteringSymbolTables()
     {
-        _Private_IonTextWriterBuilder b =
-            (_Private_IonTextWriterBuilder) mutable();
-        b.setOptions(options); // TODO copy
-        return b;
+        return _filter_symbol_tables;
     }
 
-    private _Private_TextOptions effectiveOptions()
+    public final boolean isSuppressingInitialIvm()
     {
-        _Private_TextOptions options = getOptions();
-        if (options != null) return options;
-
-        return new _Private_TextOptions(false /* prettyPrint */,
-                                        true /* printAscii */,
-                                        true /* filterOutSymbolTables */);
+        return this._suppress_ion_version_marker;
     }
 
+    public final CharSequence lineSeparator() {
+        if (_pretty_print) {
+            return LINE_SEPARATOR;
+        }
+        else {
+            return SPACE_CHARACTER;
+        }
+    }
 
 
     //=========================================================================
 
+    _Private_IonTextWriterBuilder fillDefaults()
+    {
+        IonTextWriterBuilder b = this;
+        if (b.getCatalog() == null)
+        {
+            b = b.withCatalog(new SimpleCatalog());
+        }
+
+        return (_Private_IonTextWriterBuilder) b.immutable();
+    }
 
     @Override
     public final IonWriter build(Appendable out)
     {
-        IonCatalog catalog = getCatalog();
-        if (catalog == null) catalog = new SimpleCatalog();
+        _Private_IonTextWriterBuilder b = fillDefaults();
+        IonCatalog catalog = b.getCatalog();
 
         // TODO We shouldn't need a system here
         IonSystem system =
             IonSystemBuilder.standard().withCatalog(catalog).build();
 
-        _Private_TextOptions options = effectiveOptions();
-
         IonWriterSystemText systemWriter =
-            new IonWriterSystemText(system.getSystemSymbolTable(),
-                                    out, options);
+            new IonWriterSystemText(system.getSystemSymbolTable(), b, out);
 
-        return new IonWriterUserText(catalog, system, systemWriter, options,
-                                     getImports());
+        return new IonWriterUserText(system, systemWriter);
     }
 
     @Override
     public final IonWriter build(OutputStream out)
     {
-        IonCatalog catalog = getCatalog();
-        if (catalog == null) catalog = new SimpleCatalog();
+        _Private_IonTextWriterBuilder b = fillDefaults();
+        IonCatalog catalog = b.getCatalog();
 
         // TODO We shouldn't need a system here
         IonSystem system =
             IonSystemBuilder.standard().withCatalog(catalog).build();
 
-        _Private_TextOptions options = effectiveOptions();
-
         IonWriterSystemText systemWriter =
-            new IonWriterSystemText(system.getSystemSymbolTable(),
-                                    out, options);
+            new IonWriterSystemText(system.getSystemSymbolTable(), b, out);
 
-        return new IonWriterUserText(catalog, system, systemWriter, options,
-                                     getImports());
+        return new IonWriterUserText(system, systemWriter);
     }
 
     //=========================================================================

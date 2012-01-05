@@ -18,14 +18,17 @@ import org.junit.Test;
 public class TextWriterTest
     extends OutputStreamWriterTestCase
 {
-    private _Private_TextOptions options;
+    private _Private_IonTextWriterBuilder options;
 
     @Override
     protected IonWriter makeWriter(OutputStream out, SymbolTable... imports)
         throws Exception
     {
         myOutputForm = OutputForm.TEXT;
-        return system().newTextWriter(out, options, imports);
+
+        if (options != null) return options.withImports(imports).build(out);
+
+        return system().newTextWriter(out, imports);
     }
 
     protected String outputString()
@@ -63,10 +66,9 @@ public class TextWriterTest
     public void testWritingLongStrings()
         throws Exception
     {
-        options = new _Private_TextOptions(/*prettyPrint*/ false,
-                                          /*printAscii*/ false,
-                                          /*filterOutSymbolTables*/ true,
-                                          /*suppressIonVersionMarker*/ true);
+        options = _Private_IonTextWriterBuilder.standard();
+        options._filter_symbol_tables = true;
+        options._suppress_ion_version_marker = true;
         options._long_string_threshold = 10;
 
         // TODO support long strings at datagram and sexp level?
@@ -122,10 +124,9 @@ public class TextWriterTest
     public void testWritingLongClobs()
         throws Exception
     {
-        options = new _Private_TextOptions(/*prettyPrint*/ false,
-                                          /*printAscii*/ false,
-                                          /*filterOutSymbolTables*/ true,
-                                          /*suppressIonVersionMarker*/ true);
+        options = _Private_IonTextWriterBuilder.standard();
+        options._filter_symbol_tables = true;
+        options._suppress_ion_version_marker = true;
         options._long_string_threshold = 3;
 
 
@@ -153,11 +154,9 @@ public class TextWriterTest
 
         assertEquals(ION_1_0 + " null " + ION_1_0 + " null", outputString());
 
+        options = _Private_IonTextWriterBuilder.standard();
+        options._suppress_ion_version_marker = true;
 
-        options = new _Private_TextOptions(/*prettyPrint*/ false,
-                                           /*printAscii*/ false,
-                                           /*filterOutSymbolTables*/ false,
-                                           /*suppressIonVersionMarker*/ true);
         iw = makeWriter();
         iw.writeSymbol(ION_1_0);
         iw.writeNull();

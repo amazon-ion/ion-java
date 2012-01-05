@@ -9,12 +9,11 @@ import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
-import com.amazon.ion.IonSystem;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.Reader;
-import com.amazon.ion.system.IonSystemBuilder;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -623,14 +622,11 @@ public final class IonImplUtils // TODO this class shouldn't be public
     public static String valueToString(IonReader reader)
     {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        _Private_TextOptions options = new _Private_TextOptions(false, true, false); // pretty print, ascii only, filter symbol tables
 
-        // This is vaguely inappropriate.
-        IonSystem system = IonSystemBuilder.standard().build();
-        SymbolTable systemSymtab = system.getSystemSymbolTable();
-        IonWriterSystemText writer =
-            new IonWriterSystemText(systemSymtab, out, options);
-        // IonWriter writer = IonWriterUserText new IonTextWriter(out);
+        _Private_IonTextWriterBuilder b =
+            _Private_IonTextWriterBuilder.standard();
+        b._ascii_only = true;
+        IonWriter writer = b.build(out);
 
         try
         {

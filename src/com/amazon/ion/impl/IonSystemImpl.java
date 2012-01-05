@@ -442,15 +442,6 @@ public final class IonSystemImpl
         return myTextWriterBuilder.withImports(imports).build(out);
     }
 
-    public IonWriter newTextWriter(Appendable out,
-                                   _Private_TextOptions options,
-                                   SymbolTable... imports)
-    {
-        return myTextWriterBuilder.withOptions(options)
-                                  .withImports(imports)
-                                  .build(out);
-    }
-
     public IonWriter newTextWriter(OutputStream out)
     {
         return myTextWriterBuilder.build(out);
@@ -461,14 +452,6 @@ public final class IonSystemImpl
         return myTextWriterBuilder.withImports(imports).build(out);
     }
 
-    public IonWriter newTextWriter(OutputStream out,
-                                   _Private_TextOptions options,
-                                   SymbolTable... imports)
-    {
-        return myTextWriterBuilder.withOptions(options)
-                                  .withImports(imports)
-                                  .build(out);
-    }
 
 
     @Deprecated
