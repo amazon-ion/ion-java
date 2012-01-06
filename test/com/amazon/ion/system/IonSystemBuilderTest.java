@@ -1,4 +1,4 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.system;
 
@@ -28,7 +28,7 @@ public class IonSystemBuilderTest
     }
 
     @Test
-    public void testDefault()
+    public void testStandard()
     {
         assertEquals(false, IonSystemBuilder.standard().isBinaryBacked());
         assertEquals(null, IonSystemBuilder.standard().getCatalog());

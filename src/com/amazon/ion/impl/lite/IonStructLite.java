@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -127,12 +127,9 @@ public class IonStructLite
         _field_map.remove(fieldName);
         _field_map_duplicate_count -= (copies - 1);
     }
-    private void remove_field(String fieldName, int idx)
-    {
-        if (_field_map == null) {
-            return;
-        }
 
+    private void remove_field_from_field_map(String fieldName, int idx)
+    {
         Integer field_idx = _field_map.get(fieldName);
         assert(field_idx != null);
 
@@ -183,9 +180,6 @@ public class IonStructLite
             IonValueLite value = get_child_lite(ii);
             String  field_name = value.getFieldName();
             Integer map_idx = _field_map.get(field_name);
-            if (map_idx == null) {
-                assert(map_idx != null);
-            }
             if (map_idx.intValue() != ii) {
                 // if this is a field that to the right of
                 // the removed (in process of removing) value
@@ -557,7 +551,7 @@ public class IonStructLite
             Integer idx = _field_map.get(fieldName);
             if (idx != null) {
                 lowestRemovedIndex = idx.intValue();
-                remove_field(fieldName, lowestRemovedIndex);
+                remove_field_from_field_map(fieldName, lowestRemovedIndex);
                 remove_child(lowestRemovedIndex);
                 any_removed = true;
             }
@@ -632,7 +626,7 @@ public class IonStructLite
                 assert(concrete_idx == idx);
 
                 if (_field_map != null) {
-                    remove_field(concrete.getFieldName(), idx);
+                    remove_field_from_field_map(concrete.getFieldName(), idx);
                 }
                 super.remove();
 
@@ -651,7 +645,7 @@ public class IonStructLite
         if (field == null) {
             return null;
         }
-        assert(field instanceof IonValueLite);
+
         int idx = ((IonValueLite)field)._elementid();
 
         // update the hash map first we don't want
@@ -660,7 +654,7 @@ public class IonStructLite
         // index value of the remove field to be
         // correct and unchanged.
         if (_field_map != null) {
-            remove_field(fieldName, idx);
+            remove_field_from_field_map(fieldName, idx);
         }
 
         super.remove(field);
@@ -678,7 +672,6 @@ public class IonStructLite
         if (element == null) {
             throw new NullPointerException();
         }
-        assert (element instanceof IonValueLite);
 
         checkForLock();
 
@@ -695,7 +688,7 @@ public class IonStructLite
         // index value of the remove field to be
         // correct and unchanged.
         if (_field_map != null) {
-            remove_field(concrete.getFieldName(), idx);
+            remove_field_from_field_map(concrete.getFieldName(), idx);
         }
 
         super.remove(concrete);
