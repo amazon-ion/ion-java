@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -449,28 +449,17 @@ public abstract class IonValueLite
     final void setFieldName(String name)
     {
         assert(this.getContainer() == null);
-        assert _fieldId == UNKNOWN_SYMBOL_ID;
+        assert _fieldId == UNKNOWN_SYMBOL_ID && _fieldName == null;
         _fieldName = name;
     }
 
+    /** Both parts of the symbol are trusted! */
     final void setFieldNameSymbol(InternedSymbol name)
     {
         assert(this.getContainer() == null);
         assert _fieldId == UNKNOWN_SYMBOL_ID && _fieldName == null;
         _fieldName = name.getText();
-        int sid = name.getId();
-        if (_fieldName != null && sid != UNKNOWN_SYMBOL_ID)
-        {
-
-        }
         _fieldId   = name.getId();
-    }
-
-    final void setFieldId(int sid)
-    {
-        assert(this.getContainer() == null);
-        assert _fieldName == null;
-        _fieldId = sid;
     }
 
     public final String getFieldName()
@@ -854,6 +843,7 @@ public abstract class IonValueLite
         _context = this.getSystem();
 
         _fieldName = null;
+        _fieldId = UNKNOWN_SYMBOL_ID;
         _elementid(0);
     }
 

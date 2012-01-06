@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
@@ -11,7 +11,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.Random;
-import org.junit.Ignore;
 import org.junit.Test;
 
 
@@ -592,7 +591,7 @@ public class StructTest
     }
 
 
-    @Test @Ignore
+    @Test
     public void testAddInternedSymbolWithBadSid()
     {
         IonStruct struct = system().newNullStruct();
@@ -603,11 +602,17 @@ public class StructTest
         is = nullBool.getFieldNameSymbol();
         checkSymbol("f", UNKNOWN_SYMBOL_ID, is);
 
+        nullBool = system().newNullBool();
+        is = new FakeInternedSymbol("g", 99);
+        struct.add(is, nullBool);
+        is = nullBool.getFieldNameSymbol();
+        checkSymbol("g", UNKNOWN_SYMBOL_ID, is);
+
         IonBool nullBool2 = system().newNullBool();
         is = new FakeInternedSymbol("h", -2);
         struct.add(is, nullBool2);
         is = nullBool2.getFieldNameSymbol();
-        checkSymbol("f", UNKNOWN_SYMBOL_ID, is);
+        checkSymbol("h", UNKNOWN_SYMBOL_ID, is);
     }
 
     @Test
@@ -757,6 +762,37 @@ public class StructTest
         assertNull(s.remove("something"));
         assertTrue(s.isNullValue());
     }
+
+    public void testRemoveClearsFieldName(IonStruct s)
+    {
+        IonValue f = s.get("f");
+
+        // TODO ION-172
+        if (getDomType() == DomType.LITE) {
+            assertTrue(f.getFieldId() > 0);
+        }
+
+        f.removeFromContainer();
+        assertEquals(null, f.getFieldName());
+        assertEquals(SymbolTable.UNKNOWN_SYMBOL_ID, f.getFieldId());
+    }
+
+    @Test
+    public void testRemoveClearsFieldName()
+    {
+        IonDatagram dg = loader().load("{f:null}");
+        dg = reload(dg);
+        byte[] bytes = dg.getBytes(); // Force symbol interning
+
+        IonStruct s = (IonStruct) dg.get(0);
+        testRemoveClearsFieldName(s);
+
+        IonReader r = system().newReader(bytes);
+        r.next();
+        s = (IonStruct) system().newValue(r);
+        testRemoveClearsFieldName(s);
+    }
+
 
     @Test
     public void testRemoveOnReadOnlyStruct()

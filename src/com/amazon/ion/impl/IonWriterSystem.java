@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -297,6 +297,8 @@ abstract class IonWriterSystem
         if (_field_name_type == null)  {
             throw new IllegalStateException(ERROR_MISSING_FIELD_NAME);
         }
+        // Exactly one of our fields is set.
+        assert _field_name != null ^ _field_name_sid >= 0;
         return new InternedSymbolImpl(_field_name, _field_name_sid);
     }
 
