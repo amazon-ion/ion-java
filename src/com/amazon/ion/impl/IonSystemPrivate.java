@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -10,6 +10,7 @@ import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.Reader;
 import java.util.Iterator;
 
@@ -56,6 +57,8 @@ public interface IonSystemPrivate
 
     public IonReader newSystemReader(IonValue value);
 
+    @Deprecated // TODO ION-271 remove after IMS is migrated
+    public IonWriter newTextWriter(OutputStream out, boolean pretty);
 
     public IonWriter newTreeWriter(IonContainer container);
 

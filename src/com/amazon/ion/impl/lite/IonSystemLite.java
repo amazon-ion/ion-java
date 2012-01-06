@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -245,6 +245,17 @@ public final class IonSystemLite
     public IonWriter newTextWriter(OutputStream out)
     {
         return myTextWriterBuilder.build(out);
+    }
+
+    @Deprecated // TODO ION-271 remove after IMS is migrated
+    public IonWriter newTextWriter(OutputStream out, boolean pretty)
+    {
+        IonTextWriterBuilder b = myTextWriterBuilder;
+        if (pretty)
+        {
+            b = b.withPrettyPrinting();
+        }
+        return b.build(out);
     }
 
     public IonWriter newTextWriter(OutputStream out, SymbolTable... imports)
@@ -541,7 +552,6 @@ public final class IonSystemLite
         // a system symbol table.  Local symbol tables are
         // all owned by the children of system. (and often
         // shared with following siblings)
-        return;
     }
 
 
@@ -558,7 +568,7 @@ public final class IonSystemLite
                                     IonValueLite child)
     {
         assert child._context == this;
-        assert container.getSystem() == this : "system mismatch";
+//        assert container.getSystem() == this : "system mismatch";
 
         // The new container becomes the context, we replace ourself.
         child.setContext(container);

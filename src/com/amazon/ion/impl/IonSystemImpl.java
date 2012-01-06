@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -446,6 +446,17 @@ public final class IonSystemImpl
     public IonWriter newTextWriter(OutputStream out)
     {
         return myTextWriterBuilder.build(out);
+    }
+
+    @Deprecated // TODO ION-271 remove after IMS is migrated
+    public IonWriter newTextWriter(OutputStream out, boolean pretty)
+    {
+        IonTextWriterBuilder b = myTextWriterBuilder;
+        if (pretty)
+        {
+            b = b.withPrettyPrinting();
+        }
+        return b.build(out);
     }
 
     public IonWriter newTextWriter(OutputStream out, SymbolTable... imports)
