@@ -304,6 +304,11 @@ public final class IonImplUtils // TODO this class shouldn't be public
                 {
                     sym = newSym;
                 }
+                else if (sid >= 0)
+                {
+                    // We can't trust the sid, discard it.
+                    sym = new InternedSymbolImpl(text, UNKNOWN_SYMBOL_ID);
+                }
             }
         }
         else if (text != null && sid >= 0)

@@ -473,6 +473,8 @@ public class IonReaderTextSystemX
 
     /**
      * Horrible temporary hack.
+     *
+     * @return not null.
      */
     @Override
     public SymbolTable getSymbolTable()

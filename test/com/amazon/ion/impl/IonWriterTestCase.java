@@ -666,6 +666,21 @@ public abstract class IonWriterTestCase
     }
 
     @Test
+    public void testWritingBadAnnotationId()
+        throws Exception
+    {
+        iw = makeWriter();
+        IonDatagram expected = system().newDatagram();
+
+        iw.setTypeAnnotationSymbols(newInternedSymbol("a", 99));
+        iw.writeNull();
+        IonValue v = expected.add().newNull();
+        v.setTypeAnnotations("a");
+
+        assertEquals(expected, reload());
+    }
+
+    @Test
     public void testFlushMidValue()
         throws Exception
     {
