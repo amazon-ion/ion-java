@@ -204,7 +204,7 @@ public final class Equivalence {
             SymbolToken tok = myValue.getFieldNameSymbol();
             String k = tok.getText();
             if (k == null) {
-                k = " -- UNKNOWN SYMBOL -- $" + tok.getSid(); // TODO ION-58
+                k = " -- UNKNOWN SYMBOL -- $" + tok.getSid(); // TODO ION-272
             }
             key = k;
             value = myValue;

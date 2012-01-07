@@ -478,7 +478,7 @@ public class IonAssert
             SymbolToken tok = v.getFieldNameSymbol();
             String text = tok.getText();
             if (text == null) {
-                text = " --UNKNOWN SYMBOL-- $" + tok.getSid(); // TODO ION-58
+                text = " --UNKNOWN SYMBOL-- $" + tok.getSid(); // TODO ION-272
             }
             List<IonValue> fields = sorted.get(text);
             if (fields == null)

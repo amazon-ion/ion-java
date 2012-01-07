@@ -422,7 +422,7 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
     {
         // TODO implement _filter_symbol_tables
 
-        // TODO this always ignores local symtabs w/o imports
+        // TODO ION-274 this always suppresses local symtabs w/o imports
         SymbolTable[] imports = symtab.getImportedTables();
         if (imports.length > 0) {
             // TODO: remove cast below with update IonReader over symbol table

@@ -767,7 +767,7 @@ public class StructTest
     {
         IonValue f = s.get("f");
 
-        // TODO ION-172
+        // TODO ION-273
         if (getDomType() == DomType.LITE) {
             assertTrue(f.getFieldId() > 0);
         }
