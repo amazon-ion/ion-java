@@ -1,4 +1,4 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.streaming;
 
@@ -172,6 +172,36 @@ public class ReaderTest
             try {
                 in.getSymbolId();
                 fail("expected exception on " + in.getType());
+            }
+            catch (IllegalStateException e) { }
+        }
+    }
+
+    @Test
+    public void testIntValueOnNonNumber()
+    {
+        // All non-numeric types
+        read("null true 2011-12-01T \"\" sym {{\"\"}} {{}} [] () {}");
+
+        while (in.next() != null)
+        {
+            IonType type = in.getType();
+
+            try {
+                in.intValue();
+                fail("expected exception from intValue on" + type);
+            }
+            catch (IllegalStateException e) { }
+
+            try {
+                in.longValue();
+                fail("expected exception from longValue on " + type);
+            }
+            catch (IllegalStateException e) { }
+
+            try {
+                in.bigIntegerValue();
+                fail("expected exception from bigIntegerValue on " + type);
             }
             catch (IllegalStateException e) { }
         }

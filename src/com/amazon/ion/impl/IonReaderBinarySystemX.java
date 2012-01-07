@@ -124,7 +124,7 @@ class IonReaderBinarySystemX
                     +IonScalarConversionsX.getValueTypeName(_v.getAuthoritativeType())
                     +" to "
                     +IonScalarConversionsX.getValueTypeName(as_type);
-                throwErrorAt(message);
+                throw new IllegalStateException(message);
             }
             int fnid = _v.get_conversion_fnid(as_type);
             _v.cast(fnid);
@@ -284,18 +284,39 @@ class IonReaderBinarySystemX
 
     public int intValue()
     {
+        if (_value_type != IonType.INT &&
+            _value_type != IonType.DECIMAL &&
+            _value_type != IonType.FLOAT)
+        {
+            throw new IllegalStateException();
+        }
+
         prepare_value(AS_TYPE.int_value);
         return _v.getInt();
     }
 
     public long longValue()
     {
+        if (_value_type != IonType.INT &&
+            _value_type != IonType.DECIMAL &&
+            _value_type != IonType.FLOAT)
+        {
+            throw new IllegalStateException();
+        }
+
         prepare_value(AS_TYPE.long_value);
         return _v.getLong();
     }
 
     public BigInteger bigIntegerValue()
     {
+        if (_value_type != IonType.INT &&
+            _value_type != IonType.DECIMAL &&
+            _value_type != IonType.FLOAT)
+        {
+            throw new IllegalStateException();
+        }
+
         if (_value_is_null) {
             return null;
         }
@@ -370,8 +391,8 @@ class IonReaderBinarySystemX
         if (_value_type != SYMBOL) throw new IllegalStateException();
         if (_value_is_null) throw new NullValueException();
 
-        int sid = intValue();
-        return sid;
+        prepare_value(AS_TYPE.int_value);
+        return _v.getInt();
     }
 
     //

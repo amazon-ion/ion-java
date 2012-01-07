@@ -410,12 +410,26 @@ public class IonReaderTextSystemX
 
     public int intValue()
     {
+        if (_value_type != IonType.INT &&
+            _value_type != IonType.DECIMAL &&
+            _value_type != IonType.FLOAT)
+        {
+            throw new IllegalStateException();
+        }
+
         load_or_cast_cached_value(AS_TYPE.int_value);
         return _v.getInt();
     }
 
     public long longValue()
     {
+        if (_value_type != IonType.INT &&
+            _value_type != IonType.DECIMAL &&
+            _value_type != IonType.FLOAT)
+        {
+            throw new IllegalStateException();
+        }
+
         load_or_cast_cached_value(AS_TYPE.long_value);
         return _v.getLong();
     }
@@ -423,6 +437,13 @@ public class IonReaderTextSystemX
     @Override
     public BigInteger bigIntegerValue()
     {
+        if (_value_type != IonType.INT &&
+            _value_type != IonType.DECIMAL &&
+            _value_type != IonType.FLOAT)
+        {
+            throw new IllegalStateException();
+        }
+
         load_or_cast_cached_value(AS_TYPE.bigInteger_value);
         if (_v.isNull()) return null;
         return _v.getBigInteger();

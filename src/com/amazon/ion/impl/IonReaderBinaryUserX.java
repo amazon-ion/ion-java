@@ -311,7 +311,7 @@ class IonReaderBinaryUserX
 
         if (_value_type == IonType.SYMBOL) {
             if (!_v.hasValueOfType(AS_TYPE.string_value)) {
-                int sid = intValue();
+                int sid = getSymbolId();
                 String sym = _symbols.findSymbol(sid);
                 _v.addValue(sym);
             }
