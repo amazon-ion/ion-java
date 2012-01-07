@@ -899,7 +899,6 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
             _output.append('"');
         }
 
-        boolean just_ascii = ASCII.equals(_options.getCharset());
         int end = start + len;
         for (int ii=start; ii<end; ii++) {
             char c = (char)(value[ii] & 0xff);
@@ -916,21 +915,16 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
             }
             else if (c > 127) {
                 if (json) {
-                    // This is always ASCII
+                    // JSON uses u00HH
                     IonTextUtils.printJsonCodePoint(_output, c);
                 }
-                else if (just_ascii) {
-                    // ascii uses backslash-X hex encoding
+                else
+                {
+                    // Ion uses \xHH
                     _output.append("\\x");
-                    assert (c > 0x7f && c <= 0xff); // this should always be 2 hex chars
+                    // this should always be 2 hex chars
+                    assert (c > 0x7f && c <= 0xff);
                     _output.append(Integer.toHexString(c));
-                }
-                else {
-                    // FIXME ION-256 this is wrong!  Clob data is never UTF-8
-                    // But is always ASCII-safe.
-                    // non-ascii (utf8) uses a 2 byte utf8 sequence (it's always 2 bytes)
-                    _output.append((char)(IonUTF8.getByte1Of2(c) & 0xff));
-                    _output.append((char)(IonUTF8.getByte2Of2(c) & 0xff));
                 }
             }
             else {

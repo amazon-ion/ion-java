@@ -169,4 +169,20 @@ public class TextWriterTest
 
         assertEquals("null " + ION_1_0 + " null", outputString());
     }
+
+    @Test
+    public void testWritingLob()
+        throws Exception
+    {
+        super.testWritingLob();
+
+        options = IonTextWriterBuilder.standard();
+        super.testWritingLob();
+
+        options = IonTextWriterBuilder.pretty();
+        super.testWritingLob();
+
+        options.setLongStringThreshold(2);
+        super.testWritingLob();
+    }
 }

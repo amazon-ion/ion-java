@@ -393,7 +393,8 @@ public abstract class IonWriterBaseImpl
      */
     public void writeValue(IonReader reader) throws IOException
     {
-        writeValueRecursively(reader.getType(), reader);
+        IonType type = reader.getType();
+        writeValueRecursively(type, reader);
     }
 
     /**

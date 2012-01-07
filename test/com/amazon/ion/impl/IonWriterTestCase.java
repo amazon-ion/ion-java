@@ -50,7 +50,7 @@ import org.junit.Test;
 public abstract class IonWriterTestCase
     extends IonTestCase
 {
-    enum OutputForm { TEXT, BINARY, DOM };
+    enum OutputForm { TEXT, BINARY, DOM }
 
     OutputForm myOutputForm;
 
@@ -1060,6 +1060,24 @@ public abstract class IonWriterTestCase
             iw.stepOut();
         }
         iw.stepOut();
+    }
 
+    @Test
+    public void testWritingLob()
+        throws Exception
+    {
+        byte[] lobData = new byte[]{ 19, 0, Byte.MAX_VALUE, Byte.MIN_VALUE };
+        iw = makeWriter();
+        iw.writeClob(lobData);
+        iw.writeBlob(lobData);
+
+        IonReader r = reread();
+        r.next();
+        byte[] d = r.newBytes();
+        assertArrayEquals(lobData, d);
+
+        r.next();
+        d = r.newBytes();
+        assertArrayEquals(lobData, d);
     }
 }

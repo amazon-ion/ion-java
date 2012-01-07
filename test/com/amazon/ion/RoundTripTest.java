@@ -8,8 +8,12 @@ import static com.amazon.ion.TestUtils.testdataFiles;
 import com.amazon.ion.TestUtils.And;
 import com.amazon.ion.impl.IonWriterUserBinary;
 import com.amazon.ion.junit.Injected.Inject;
+import com.amazon.ion.streaming.ReaderCompare;
+import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util.Printer;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Iterator;
 import org.junit.After;
@@ -202,5 +206,45 @@ public class RoundTripTest
         // TODO the next step is, if they are still not the same, then
         //      convert them to binary and back to string and compare again
         return s1.equals(s2);
+    }
+
+
+    @Test
+    public void testStandardTextWriter()
+        throws Exception
+    {
+        byte[] outBytes;
+
+        FileInputStream fileIn = new FileInputStream(myTestFile);
+        try
+        {
+            IonReader r0 = system().newSystemReader(fileIn);
+
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            IonWriter w = IonTextWriterBuilder.standard().build(out);
+            w.writeValues(r0);
+            w.close();
+
+            outBytes = out.toByteArray();
+        }
+        finally
+        {
+            fileIn.close();
+        }
+
+        fileIn = new FileInputStream(myTestFile);
+        try
+        {
+            // TODO ION-274 this should compare system readers
+            // but that doesn't work on testfile36.ion
+            IonReader r0 = system().newReader(fileIn);
+            IonReader r1 = system().newReader(outBytes);
+
+            ReaderCompare.compare(r0, r1);
+        }
+        finally
+        {
+            fileIn.close();
+        }
     }
 }
