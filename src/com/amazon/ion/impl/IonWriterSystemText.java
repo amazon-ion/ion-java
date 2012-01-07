@@ -372,8 +372,7 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
             SymbolToken sym = assumeFieldNameSymbol();
             String name = sym.getText();
             if (name == null) {
-                int sid = getFieldId();
-                assert sid != SymbolTable.UNKNOWN_SYMBOL_ID;
+                int sid = sym.getSid();
                 writeSidLiteral(sid);
             }
             else {
@@ -788,15 +787,16 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
         return '\\'+LOW_ESCAPE_SEQUENCES[c];
     }
 
+    @Deprecated
     public void writeSymbol(int symbolId)
         throws IOException
     {
         // TODO ION-165 this should handle IVMs
         SymbolTable symtab = getSymbolTable();
-        String symbol = symtab.findKnownSymbol(symbolId);
-        if (symbol != null)
+        String text = symtab.findKnownSymbol(symbolId);
+        if (text != null)
         {
-            writeSymbol(symbol);
+            writeSymbol(text);
         }
         else
         {

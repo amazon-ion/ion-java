@@ -316,20 +316,26 @@ abstract class IonWriterUser
     // Field names
 
 
-    public void setFieldName(String name)
+    public final void setFieldName(String name)
     {
         _current_writer.setFieldName(name);
     }
 
-    public void setFieldId(int id)
+    @Deprecated
+    public final void setFieldId(int id)
     {
         _current_writer.setFieldId(id);
     }
 
+    public final void setFieldNameSymbol(SymbolToken name)
+    {
+        _current_writer.setFieldNameSymbol(name);
+    }
+
     @Override
-    boolean isFieldNameSet() {
-        boolean is_set = _current_writer.isFieldNameSet();
-        return is_set;
+    final boolean isFieldNameSet()
+    {
+        return _current_writer.isFieldNameSet();
     }
 
 
@@ -482,6 +488,7 @@ abstract class IonWriterUser
         finish_value();
     }
 
+    @Deprecated
     public final void writeSymbol(int symbolId) throws IOException
     {
         if (write_as_ivm(symbolId)) {

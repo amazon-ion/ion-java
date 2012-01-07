@@ -4,12 +4,14 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.NAME_SID;
 import static com.amazon.ion.TestUtils.FERMATA;
 import static com.amazon.ion.impl.IonImplUtils.newSymbolToken;
 import static com.amazon.ion.impl.IonWriterBaseImpl.ERROR_MISSING_FIELD_NAME;
 import static com.amazon.ion.junit.IonAssert.expectNextField;
 
 import com.amazon.ion.EmptySymbolException;
+import com.amazon.ion.FakeSymbolToken;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonDatagram;
@@ -211,6 +213,24 @@ public abstract class IonWriterTestCase
         iw = makeWriter();
         iw.stepIn(IonType.STRUCT);
         iw.setFieldName("foo");
+        iw.setFieldNameSymbol(new FakeSymbolToken(null, 99)); // Replaces "foo"
+        iw.writeNull();
+        iw.stepOut();
+
+        IonReader r = reread();
+        r.next();
+        r.stepIn();
+        r.next();
+        check(r).fieldName(null, 99);
+    }
+
+    @Test
+    public void testWritingFieldName2()
+        throws Exception
+    {
+        iw = makeWriter();
+        iw.stepIn(IonType.STRUCT);
+        iw.setFieldName("foo");
         iw.setFieldId(99);      // Replaces "foo"
         iw.writeNull();
         iw.stepOut();
@@ -311,6 +331,14 @@ public abstract class IonWriterTestCase
         iw.writeSymbol(99);
 
         IonReader in = reread();
+        in.next();
+        IonAssert.checkSymbol(in, null, 99);
+
+
+        iw = makeWriter();
+        iw.writeSymbolToken(new FakeSymbolToken(null, 99));
+
+        in = reread();
         in.next();
         IonAssert.checkSymbol(in, null, 99);
     }
@@ -864,12 +892,41 @@ public abstract class IonWriterTestCase
         throws Exception
     {
         iw = makeWriter();
-        iw.writeSymbol(SystemSymbols.NAME_SID);
+        iw.writeSymbol(NAME_SID);
 
         IonDatagram dg = reload();
         IonSymbol s = (IonSymbol) dg.get(0);
-        checkSymbol(SystemSymbols.NAME, SystemSymbols.NAME_SID, s);
+        checkSymbol(SystemSymbols.NAME, NAME_SID, s);
     }
+
+    @Test
+    public void testWriteSymbolWokenWithInt()
+        throws Exception
+    {
+        iw = makeWriter();
+        iw.writeSymbolToken(new FakeSymbolToken(null, NAME_SID));
+
+        IonDatagram dg = reload();
+        IonSymbol s = (IonSymbol) dg.get(0);
+        checkSymbol(SystemSymbols.NAME, NAME_SID, s);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testWriteSymbolWithBadInt()
+        throws Exception
+    {
+        iw = makeWriter();
+        iw.writeSymbol(-12);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testWriteSymbolTokenWithBadSid()
+        throws Exception
+    {
+        iw = makeWriter();
+        iw.writeSymbolToken(new FakeSymbolToken(null, -12));
+    }
+
 
     @Test
     public void testWriteValuesWithSymtab()

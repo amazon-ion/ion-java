@@ -3,8 +3,8 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static com.amazon.ion.impl.IonImplUtils.newSymbolTokens;
 import static com.amazon.ion.impl.IonImplUtils.newSymbolToken;
+import static com.amazon.ion.impl.IonImplUtils.newSymbolTokens;
 import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
@@ -245,8 +245,37 @@ abstract class IonWriterSystem
         }
         _field_name_type = IonType.STRING;
         _field_name = name;
+        _field_name_sid = UNKNOWN_SYMBOL_ID;
     }
 
+    public final void setFieldNameSymbol(SymbolToken name)
+    {
+        if (!this.isInStruct()) {
+            throw new IllegalStateException();
+        }
+
+        String text = name.getText();
+        if (text != null)
+        {
+            if (text.length() == 0) {
+                throw new EmptySymbolException();
+            }
+            _field_name_type = IonType.STRING;
+            _field_name = text;
+            _field_name_sid = UNKNOWN_SYMBOL_ID;
+        }
+        else
+        {
+            int sid = name.getSid();
+            if (sid <= 0) {
+                throw new IllegalArgumentException();
+            }
+
+            _field_name_type = IonType.INT;
+            _field_name_sid = sid;
+            _field_name = null;
+        }
+    }
 
     /**
      * Returns the symbol id of the current field name, if the field name
@@ -282,6 +311,7 @@ abstract class IonWriterSystem
         return id;
     }
 
+    @Deprecated
     public final void setFieldId(int id)
     {
         if (!this.isInStruct()) {

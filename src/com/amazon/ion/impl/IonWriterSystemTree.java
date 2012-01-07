@@ -317,6 +317,7 @@ final class IonWriterSystemTree
     }
 
 
+    @Deprecated
     public void writeSymbol(int symbolId)
     {
         // TODO ION-165 this should handle IVMs

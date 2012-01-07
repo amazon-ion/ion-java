@@ -5,13 +5,13 @@ package com.amazon.ion;
 /**
  * NOT SUITABLE FOR PUBLIC USE since it doesn't enforce correctness.
  */
-class FakeSymbolToken
+public class FakeSymbolToken
     implements SymbolToken
 {
     private final String myText;
     private final int mySid;
 
-    FakeSymbolToken(String text, int sid)
+    public FakeSymbolToken(String text, int sid)
     {
         myText = text;
         mySid = sid;

@@ -797,8 +797,13 @@ public final class IonWriterSystemBinary  // TODO protect, must fix IonStreamUti
         patch(patch_len);
     }
 
+    @Deprecated
     public void writeSymbol(int symbolId) throws IOException
     {
+        if (symbolId < 1) {
+            throw new IllegalArgumentException("symbol IDs are greater than 0");
+        }
+
         if (symbolId == ION_1_0_SID && atDatagramLevel()) {
             // the $ion_1_0 symbol at the datagram level is ALWAYS
             // an ion version marker

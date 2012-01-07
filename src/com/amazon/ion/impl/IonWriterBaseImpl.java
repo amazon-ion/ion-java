@@ -191,6 +191,28 @@ public abstract class IonWriterBaseImpl
         writeNull(IonType.NULL);
     }
 
+
+    public final void writeSymbolToken(SymbolToken tok)
+        throws IOException
+    {
+        if (tok == null) {
+            writeNull(IonType.SYMBOL);
+            return;
+        }
+
+        String text = tok.getText();
+        if (text != null)
+        {
+            writeSymbol(text);
+        }
+        else
+        {
+            int sid = tok.getSid();
+            writeSymbol(sid);
+        }
+    }
+
+
     public void writeTimestamp(Date value, Integer localOffset)
         throws IOException
     {
@@ -351,18 +373,7 @@ public abstract class IonWriterBaseImpl
                 throw new IllegalStateException("Field name not set");
             }
 
-            String name = tok.getText();
-            if (name != null)
-            {
-                setFieldName(name);
-            }
-            else
-            {
-                int sid = tok.getSid();
-                assert sid != SymbolTable.UNKNOWN_SYMBOL_ID;
-                setFieldId(sid);
-            }
-
+            setFieldNameSymbol(tok);
             if (_debug_on) System.out.print(":");
         }
     }
@@ -430,24 +441,9 @@ public abstract class IonWriterBaseImpl
                 if (_debug_on) System.out.print("$");
                 break;
             case SYMBOL:
-            {
-                SymbolToken is = reader.symbolValue();
-                // TODO this should pass the IS over directly so the writer
-                // can remap unknown symbols when possible.
-                String text = is.getText();
-                if (text != null)
-                {
-                    writeSymbol(text);
-                }
-                else
-                {
-                    int sid = is.getSid();
-                    assert sid != SymbolTable.UNKNOWN_SYMBOL_ID;
-                    writeSymbol(sid);
-                }
+                writeSymbolToken(reader.symbolValue());
                 if (_debug_on) System.out.print("y");
                 break;
-            }
             case BLOB:
                 writeBlob(reader.newBytes());
                 if (_debug_on) System.out.print("B");

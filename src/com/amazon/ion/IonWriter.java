@@ -165,7 +165,11 @@ public interface IonWriter
      *
      * @throws IllegalStateException if the current container isn't a struct,
      * that is, if {@link #isInStruct()} is false.
+     *
+     * @deprecated Since R15.
+     * Use {@link #setFieldNameSymbol(SymbolToken)} instead.
      */
+    @Deprecated
     public void setFieldId(int id);
 
     /**
@@ -185,6 +189,8 @@ public interface IonWriter
      * @throws EmptySymbolException if {@code name} is empty.
      */
     public void setFieldName(String name);
+
+    public void setFieldNameSymbol(SymbolToken name);
 
 
     /**
@@ -461,19 +467,34 @@ public interface IonWriter
      * of the Ion binary format. You almost certainly don't want to use it.</b>
      *
      * @param symbolId symbol table id to write
+     *
+     * @deprecated Since IonJava R15.
+     * Use {@link #writeSymbol(SymbolToken)} instead.
      */
+    @Deprecated
     public void writeSymbol(int symbolId) throws IOException;
 
     /**
-     * write value out as an IonSymbol value.  If the value is not
-     * present in the symbol table it will be added to the symbol table.
+     * Writes the text of an Ion symbol value.
      *
-     * @param value may be null to represent {@code null.symbol}.
+     * @param content may be null to represent {@code null.symbol}.
      *
      * @throws IllegalArgumentException if the value contains an invalid UTF-16
      * surrogate pair.
      */
-    public void writeSymbol(String value) throws IOException;
+    public void writeSymbol(String content) throws IOException;
+
+    /**
+     * Writes the content of an Ion symbol value.
+     * If the token has text, it is considered canonical and any SID in the
+     * token may be ignored or reassigned.
+     *
+     * @param content may be null to represent {@code null.symbol}.
+     *
+     * @throws IllegalArgumentException if the value contains an invalid UTF-16
+     * surrogate pair.
+     */
+    public void writeSymbolToken(SymbolToken content) throws IOException;
 
     /**
      * Write an Ion version marker symbol to the output.  This
