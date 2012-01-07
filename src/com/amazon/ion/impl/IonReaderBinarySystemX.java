@@ -364,6 +364,7 @@ class IonReaderBinarySystemX
         return new SymbolTokenImpl(text, sid);
     }
 
+    @Deprecated
     public int getSymbolId()
     {
         if (_value_type != SYMBOL) throw new IllegalStateException();

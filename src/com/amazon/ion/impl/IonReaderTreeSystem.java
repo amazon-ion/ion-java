@@ -416,6 +416,7 @@ class IonReaderTreeSystem
         return ((IonSymbol)_curr).symbolValue();
     }
 
+    @Deprecated
     public int getSymbolId()
     {
         if (_curr == null) return -1;

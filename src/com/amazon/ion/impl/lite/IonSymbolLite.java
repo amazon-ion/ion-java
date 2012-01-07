@@ -109,6 +109,7 @@ public class IonSymbolLite
         return getSymbolId();
     }
 
+    @Deprecated
     public int getSymbolId()
         throws NullValueException
     {

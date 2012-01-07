@@ -212,6 +212,9 @@ public interface IonWriter
      * The list of pending annotations is cleared when the current value is
      * written via {@link #stepIn(IonType) stepIn()} or one of the
      * {@code write*()} methods.
+     * <p>
+     * <b>This is an "expert method": correct use requires deep understanding
+     * of the Ion binary format. You almost certainly don't want to use it.</b>
      *
      * @param annotations
      * If null or empty, any pending annotations are cleared.
@@ -234,7 +237,11 @@ public interface IonWriter
      *
      * @param annotationIds array with the annotation symbol ids.
      * If null or empty, any pending annotations are cleared.
+     *
+     * @deprecated Since R15.
+     * Use {@link #setTypeAnnotationSymbols(SymbolToken...)} instead.
      */
+    @Deprecated
     public void setTypeAnnotationIds(int... annotationIds);
 
     /**
@@ -259,7 +266,11 @@ public interface IonWriter
      * of the Ion binary format. You almost certainly don't want to use it.</b>
      *
      * @param annotationId symbol id to append to the annotation list
+     *
+     * @deprecated Since R15.
+     * Use {@link #setTypeAnnotationSymbols(SymbolToken...)} instead.
      */
+    @Deprecated
     public void addTypeAnnotationId(int annotationId);
 
 

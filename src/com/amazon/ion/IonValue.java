@@ -163,7 +163,7 @@ public interface IonValue
      * Gets the field name attached to this value,
      * or <code>null</code> if this is not part of an {@link IonStruct}.
      *
-     * @deprecated Renamed to {@link #getFieldId()}.
+     * @deprecated Since 2008. Use {@link #getFieldNameSymbol()} instead.
      */
     @Deprecated
     public int getFieldNameId();
@@ -175,9 +175,11 @@ public interface IonValue
      * @return the symbol ID of the field name, if this is part of an
      * {@link IonStruct}. If this is not a field, or if the symbol ID cannot be
      * determined, this method returns a value <em>less than one</em>.
+     *
+     * @deprecated Since R15. Use {@link #getFieldNameSymbol()} instead.
      */
+    @Deprecated
     public int getFieldId();
-    // TODO deprecate
 
 
     /**
@@ -212,7 +214,8 @@ public interface IonValue
     /**
      * Gets the user type annotations attached to this value
      * as strings.  This will return an empty array if there are no annotations.
-     * @deprecated Use {@link #getTypeAnnotations()} instead.
+     *
+     * @deprecated Since 2008. Use {@link #getTypeAnnotations()} instead.
      */
     @Deprecated
     public String[] getTypeAnnotationStrings();

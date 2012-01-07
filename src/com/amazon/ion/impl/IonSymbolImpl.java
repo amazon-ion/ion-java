@@ -161,6 +161,7 @@ public final class IonSymbolImpl
         return getSymbolId();
     }
 
+    @Deprecated
     public int getSymbolId()
         throws NullValueException
     {

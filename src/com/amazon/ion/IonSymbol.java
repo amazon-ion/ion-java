@@ -25,7 +25,8 @@ public interface IonSymbol
      * symbol table.  Otherwise, return {@link SymbolTable#UNKNOWN_SYMBOL_ID}.
      *
      * @throws NullValueException if this is <code>null.symbol</code>.
-     * @deprecated Use {@link #getSymbolId()} instead.
+     * @deprecated Since 2008.
+     * Use {@link #symbolValue()} instead.
      */
     @Deprecated
     public int intValue()
@@ -38,7 +39,11 @@ public interface IonSymbol
      * symbol table.  Otherwise, return {@link SymbolTable#UNKNOWN_SYMBOL_ID}.
      *
      * @throws NullValueException if this is <code>null.symbol</code>.
+     *
+     * @deprecated Since IonJava R15.
+     * Use {@link #symbolValue()} instead.
      */
+    @Deprecated
     public int getSymbolId()
         throws NullValueException;
 

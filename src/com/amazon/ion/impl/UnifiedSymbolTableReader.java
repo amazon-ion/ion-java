@@ -1379,6 +1379,7 @@ public class UnifiedSymbolTableReader
         throw new UnsupportedOperationException();
     }
 
+    @Deprecated
     public int getSymbolId()
     {
         throw new IllegalStateException("only valid if the value is a symbol");

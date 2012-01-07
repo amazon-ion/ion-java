@@ -537,6 +537,7 @@ public class IonReaderTextSystemX
         return sym;
     }
 
+    @Deprecated
     public final int getSymbolId()
     {
         if (_value_type != IonType.SYMBOL) throw new IllegalStateException();

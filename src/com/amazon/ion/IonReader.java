@@ -189,7 +189,7 @@ public interface IonReader
      * @return the (ordered) annotations on the current value, or an empty
      * array (not {@code null}) if there are none.
      *
-     * @deprecated Use {@link #getTypeAnnotationSymbols()} instead.
+     * @deprecated Since R15. Use {@link #getTypeAnnotationSymbols()} instead.
      */
     @Deprecated
     public int[] getTypeAnnotationIds();
@@ -215,7 +215,7 @@ public interface IonReader
      *
      * @return not null.
      *
-     * @deprecated Use {@link #getTypeAnnotationSymbols()} instead.
+     * @deprecated Since R15. Use {@link #getTypeAnnotationSymbols()} instead.
      */
     @Deprecated
     public Iterator<Integer> iterateTypeAnnotationIds();
@@ -231,7 +231,7 @@ public interface IonReader
      * If the current value is not a field, or if the symbol ID cannot be
      * determined, this method returns a value <em>less than one</em>.
      *
-     * @deprecated Use {@link #getFieldNameSymbol()} instead.
+     * @deprecated Since R15. Use {@link #getFieldNameSymbol()} instead.
      */
     @Deprecated
     public int getFieldId();
@@ -381,7 +381,11 @@ public interface IonReader
      * of the Ion binary format. You almost certainly don't want to use it.</b>
      *
      * @see #stringValue()
+     *
+     * @deprecated Since IonJava R15.
+     * Use {@link #symbolValue()} instead.
      */
+    @Deprecated
     public int getSymbolId();
 
 
