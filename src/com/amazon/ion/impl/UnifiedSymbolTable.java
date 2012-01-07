@@ -31,6 +31,7 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.SystemSymbols;
@@ -615,7 +616,7 @@ public final class UnifiedSymbolTable
      */
     private void verify_not_read_only() {
         if (_is_read_only) {
-            throw new IonException("modifications to read only symbol table not allowed");
+            throw new ReadOnlyValueException(SymbolTable.class);
         }
     }
 
@@ -624,11 +625,10 @@ public final class UnifiedSymbolTable
     }
 
     public synchronized void makeReadOnly() {
-        if (isReadOnly()) {
-            return;
+        if (! _is_read_only) {
+            _import_list.makeReadOnly(); // TODO should always be read-only
+            _is_read_only = true;
         }
-        _import_list.makeReadOnly();
-        _is_read_only = true;
     }
 
     /**
@@ -884,9 +884,6 @@ public final class UnifiedSymbolTable
     {
         int sid = this.findSymbol(name);
         if (sid == UNKNOWN_SYMBOL_ID) {
-            if (_name != null) {
-                throw new UnsupportedOperationException("can't change shared symbol table");
-            }
             validateSymbol(name);
             sid = getMaxId() + 1;
             putSymbol(name, sid);

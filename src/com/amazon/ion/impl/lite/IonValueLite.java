@@ -721,13 +721,8 @@ public abstract class IonValueLite
         throws ReadOnlyValueException
     {
         if (_isLocked()) {
-            throwReadOnlyException();
+            throw new ReadOnlyValueException();
         }
-    }
-    private final void throwReadOnlyException()
-        throws ReadOnlyValueException
-    {
-        throw new ReadOnlyValueException();
     }
 
 

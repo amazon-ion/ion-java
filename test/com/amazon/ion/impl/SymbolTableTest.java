@@ -26,6 +26,7 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
 import com.amazon.ion.SystemSymbols;
@@ -155,7 +156,7 @@ public class SymbolTableTest
         checkSymbol(NAME, NAME_SID, st);
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test(expected = ReadOnlyValueException.class)
     public void testSystemSymtabAddSymbol()
     {
         SymbolTable st = system().getSystemSymbolTable();
@@ -213,7 +214,7 @@ public class SymbolTableTest
             symbolTable.addSymbol("boo");
             fail("expected exception");
         }
-        catch (IonException e) { }  // TODO should be ReadOnlyValueException
+        catch (ReadOnlyValueException e) { }
     }
 
 

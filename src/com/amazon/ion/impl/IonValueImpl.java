@@ -697,14 +697,10 @@ public abstract class IonValueImpl
         throws ReadOnlyValueException
     {
         if (_isLocked()) {
-            throwReadOnlyException();
+            throw new ReadOnlyValueException();
         }
     }
-    private final void throwReadOnlyException()
-        throws ReadOnlyValueException
-    {
-        throw new ReadOnlyValueException();
-    }
+
 
     /**
      * Marks this element, and it's container, dirty.  This forces the binary

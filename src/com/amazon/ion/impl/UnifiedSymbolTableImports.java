@@ -4,7 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 
-import com.amazon.ion.IonException;
+import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import java.util.Arrays;
@@ -48,28 +48,12 @@ class UnifiedSymbolTableImports
      */
     private void verify_not_read_only() {
         if (_is_read_only) {
-            throw new IonException("modifications to read only symbol table not allowed");
+            throw new ReadOnlyValueException(SymbolTable.class);
         }
     }
 
-    /**
-     * checks the _is_read_only flag and if the flag is set
-     * this throws an error.  This is used by the various
-     * methods that may modify a value.
-     */
     synchronized void makeReadOnly() {
-        if (_is_read_only) {
-            return;
-        }
-        for (int ii=0; ii<_import_count; ii++) {
-            SymbolTable table = _imports[ii];
-            if (table.isReadOnly() == false) {
-                throw new IonException("imported symbol tables must be immutable to mark the importer as immutable");
-            }
-        }
-
         _is_read_only = true;
-        return;
     }
 
 

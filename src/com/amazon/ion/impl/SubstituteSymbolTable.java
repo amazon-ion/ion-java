@@ -2,9 +2,9 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
@@ -130,7 +130,7 @@ class SubstituteSymbolTable
         SymbolToken tok = find(text);
         if (tok == null)
         {
-            throw new IonException("Cannot add new entries to shared symtab");
+            throw new ReadOnlyValueException(SymbolTable.class);
         }
         return tok;
     }
@@ -193,9 +193,10 @@ class SubstituteSymbolTable
                 return sid;
             }
         }
-        throw new UnsupportedOperationException("Cannot add new entries to shared symtab");
+        throw new ReadOnlyValueException(SymbolTable.class);
     }
 
+    @SuppressWarnings("unchecked")
     public Iterator<String> iterateDeclaredSymbolNames()
     {
         Iterator<String> delegateIter;

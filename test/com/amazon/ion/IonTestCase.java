@@ -810,13 +810,13 @@ public abstract class IonTestCase
                 symtab.intern(text);
                 fail("Expected exception");
             }
-            catch (IonException e) { }
+            catch (ReadOnlyValueException e) { }
 
             try {
                 symtab.addSymbol(text);
                 fail("Expected exception");
             }
-            catch (UnsupportedOperationException e) { }
+            catch (ReadOnlyValueException e) { }
         }
     }
 
