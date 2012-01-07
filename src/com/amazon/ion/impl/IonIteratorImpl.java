@@ -1,8 +1,7 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonLob;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSequence;
@@ -10,6 +9,7 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.ValueFactory;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -76,7 +76,7 @@ public class IonIteratorImpl
     {
         IonType type = _reader.getType();
 
-        InternedSymbol[] annotations = _reader.getTypeAnnotationSymbols();
+        SymbolToken[] annotations = _reader.getTypeAnnotationSymbols();
 
         IonValue v;
 
@@ -132,7 +132,7 @@ public class IonIteratorImpl
                     _reader.stepIn();
                     while (_reader.next() != null)
                     {
-                        InternedSymbol name = _reader.getFieldNameSymbol();
+                        SymbolToken name = _reader.getFieldNameSymbol();
                         IonValue child = readValue();
                         struct.add(name, child);
                     }

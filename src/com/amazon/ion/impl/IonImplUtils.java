@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -6,11 +6,11 @@ import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
 
 import com.amazon.ion.EmptySymbolException;
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.Reader;
@@ -171,9 +171,9 @@ public final class IonImplUtils // TODO this class shouldn't be public
      *
      * @param symbols must not be null array.
      */
-    public static void ensureNonEmptySymbols(InternedSymbol[] symbols)
+    public static void ensureNonEmptySymbols(SymbolToken[] symbols)
     {
-        for (InternedSymbol s : symbols)
+        for (SymbolToken s : symbols)
         {
             if (s == null || s.getText() != null && s.getText().length() == 0)
             {
@@ -185,50 +185,50 @@ public final class IonImplUtils // TODO this class shouldn't be public
     /**
      * @return not null
      */
-    public static InternedSymbolImpl newInternedSymbol(String text, int sid)
+    public static SymbolTokenImpl newSymbolToken(String text, int sid)
     {
-        return new InternedSymbolImpl(text, sid);
+        return new SymbolTokenImpl(text, sid);
     }
 
     /**
      * @return not null
      */
-    public static InternedSymbolImpl newInternedSymbol(int sid)
+    public static SymbolTokenImpl newSymbolToken(int sid)
     {
-        return new InternedSymbolImpl(sid);
+        return new SymbolTokenImpl(sid);
     }
 
     /**
      * Checks symbol content.
      * @return not null
      */
-    public static InternedSymbol newInternedSymbol(SymbolTable symtab,
-                                                   String text)
+    public static SymbolToken newSymbolToken(SymbolTable symtab,
+                                             String text)
     {
         // TODO ION-267 symtab should not be null
         if (text == null || text.length() == 0)
         {
             throw new EmptySymbolException();
         }
-        InternedSymbol is = (symtab == null ? null : symtab.find(text));
-        if (is == null)
+        SymbolToken tok = (symtab == null ? null : symtab.find(text));
+        if (tok == null)
         {
-            is = new InternedSymbolImpl(text, UNKNOWN_SYMBOL_ID);
+            tok = new SymbolTokenImpl(text, UNKNOWN_SYMBOL_ID);
         }
-        return is;
+        return tok;
     }
 
     /**
      * @return not null
      */
-    public static InternedSymbol newInternedSymbol(SymbolTable symtab,
-                                                   int sid)
+    public static SymbolToken newSymbolToken(SymbolTable symtab,
+                                             int sid)
     {
         if (sid < 1) throw new IllegalArgumentException();
 
         // TODO ION-267 symtab should not be null
         String text = (symtab == null ? null : symtab.findKnownSymbol(sid));
-        return new InternedSymbolImpl(text, sid);
+        return new SymbolTokenImpl(text, sid);
     }
 
     /**
@@ -236,56 +236,56 @@ public final class IonImplUtils // TODO this class shouldn't be public
      * @param text may be null or empty.
      * @return not null.
      */
-    public static InternedSymbol[] newInternedSymbols(SymbolTable symtab,
-                                                      String... text)
+    public static SymbolToken[] newSymbolTokens(SymbolTable symtab,
+                                                String... text)
     {
         if (text != null)
         {
             int count = text.length;
             if (count != 0)
             {
-                InternedSymbol[] result = new InternedSymbol[count];
+                SymbolToken[] result = new SymbolToken[count];
                 for (int i = 0; i < count; i++)
                 {
                     String s = text[i];
-                    result[i] = newInternedSymbol(symtab, s);
+                    result[i] = newSymbolToken(symtab, s);
                 }
                 return result;
             }
         }
-        return InternedSymbol.EMPTY_ARRAY;
+        return SymbolToken.EMPTY_ARRAY;
     }
 
     /**
      * @param syms may be null or empty.
      * @return not null.
      */
-    public static InternedSymbol[] newInternedSymbols(SymbolTable symtab,
-                                                      int... syms)
+    public static SymbolToken[] newSymbolTokens(SymbolTable symtab,
+                                                int... syms)
     {
         if (syms != null)
         {
             int count = syms.length;
             if (syms.length != 0)
             {
-                InternedSymbol[] result = new InternedSymbol[count];
+                SymbolToken[] result = new SymbolToken[count];
                 for (int i = 0; i < count; i++)
                 {
                     int s = syms[i];
-                    result[i] = newInternedSymbol(symtab, s);
+                    result[i] = newSymbolToken(symtab, s);
                 }
                 return result;
             }
         }
-        return InternedSymbol.EMPTY_ARRAY;
+        return SymbolToken.EMPTY_ARRAY;
     }
 
 
-    public static InternedSymbol localize(SymbolTable symtab,
-                                          InternedSymbol sym)
+    public static SymbolToken localize(SymbolTable symtab,
+                                       SymbolToken sym)
     {
         String text = sym.getText();
-        int sid = sym.getId();
+        int sid = sym.getSid();
 
         if (symtab != null)  // TODO ION-267 require symtab
         {
@@ -294,12 +294,12 @@ public final class IonImplUtils // TODO this class shouldn't be public
                 text = symtab.findKnownSymbol(sid);
                 if (text != null)
                 {
-                    sym = new InternedSymbolImpl(text, sid);
+                    sym = new SymbolTokenImpl(text, sid);
                 }
             }
             else
             {
-                InternedSymbol newSym = symtab.find(text);
+                SymbolToken newSym = symtab.find(text);
                 if (newSym != null)
                 {
                     sym = newSym;
@@ -307,14 +307,14 @@ public final class IonImplUtils // TODO this class shouldn't be public
                 else if (sid >= 0)
                 {
                     // We can't trust the sid, discard it.
-                    sym = new InternedSymbolImpl(text, UNKNOWN_SYMBOL_ID);
+                    sym = new SymbolTokenImpl(text, UNKNOWN_SYMBOL_ID);
                 }
             }
         }
         else if (text != null && sid >= 0)
         {
             // We can't trust the sid, discard it.
-            sym = new InternedSymbolImpl(text, UNKNOWN_SYMBOL_ID);
+            sym = new SymbolTokenImpl(text, UNKNOWN_SYMBOL_ID);
         }
         return sym;
     }
@@ -325,13 +325,13 @@ public final class IonImplUtils // TODO this class shouldn't be public
     * @param syms may be mutated, replacing entries with localized updates!
     */
     public static void localize(SymbolTable symtab,
-                                InternedSymbol[] syms,
+                                SymbolToken[] syms,
                                 int count)
     {
         for (int i = 0; i < count; i++)
         {
-            InternedSymbol sym = syms[i];
-            InternedSymbol updated = localize(symtab, sym);
+            SymbolToken sym = syms[i];
+            SymbolToken updated = localize(symtab, sym);
             if (updated != sym) syms[i] = updated;
         }
     }
@@ -341,39 +341,38 @@ public final class IonImplUtils // TODO this class shouldn't be public
      * @param syms may be mutated, replacing entries with localized updates!
      */
     public static void localize(SymbolTable symtab,
-                                InternedSymbol[] syms)
+                                SymbolToken[] syms)
     {
         localize(symtab, syms, syms.length);
     }
 
 
-    public static String[] toStrings(InternedSymbol[] symbols, int count)
+    public static String[] toStrings(SymbolToken[] symbols, int count)
     {
         if (count == 0) return IonImplUtils.EMPTY_STRING_ARRAY;
 
         String[] annotations = new String[count];
         for (int i = 0; i < count; i++)
         {
-            InternedSymbol sym = symbols[i];
-            String text = sym.getText();
+            SymbolToken tok = symbols[i];
+            String text = tok.getText();
             if (text == null)
             {
-                throw new UnknownSymbolException(sym.getId());
+                throw new UnknownSymbolException(tok.getSid());
             }
             annotations[i] = text;
         }
         return annotations;
     }
 
-    public static int[] toSids(InternedSymbol[] symbols, int count)
+    public static int[] toSids(SymbolToken[] symbols, int count)
     {
         if (count == 0) return IonImplUtils.EMPTY_INT_ARRAY;
 
         int[] sids = new int[count];
         for (int i = 0; i < count; i++)
         {
-            InternedSymbol sym = symbols[i];
-            sids[i] = sym.getId();
+            sids[i] = symbols[i].getSid();
         }
         return sids;
     }

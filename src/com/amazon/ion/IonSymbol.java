@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -44,11 +44,11 @@ public interface IonSymbol
 
 
     /**
-     * Returns this value as an interned symbol (text + ID).
+     * Returns this value as a symbol token (text + ID).
      *
      * @return null if {@link #isNullValue()}
      */
-    public InternedSymbol symbolValue();
+    public SymbolToken symbolValue();
 
 
     /**

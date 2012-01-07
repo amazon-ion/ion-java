@@ -592,42 +592,42 @@ public class StructTest
 
 
     @Test
-    public void testAddInternedSymbolWithBadSid()
+    public void testAddSymbolTokenWithBadSid()
     {
         IonStruct struct = system().newNullStruct();
         IonBool nullBool = system().newNullBool();
 
-        InternedSymbol is = IonImplUtils.newInternedSymbol("f", 1);
+        SymbolToken is = IonImplUtils.newSymbolToken("f", 1);
         struct.add(is, nullBool);
         is = nullBool.getFieldNameSymbol();
         checkSymbol("f", UNKNOWN_SYMBOL_ID, is);
 
         nullBool = system().newNullBool();
-        is = new FakeInternedSymbol("g", 99);
+        is = new FakeSymbolToken("g", 99);
         struct.add(is, nullBool);
         is = nullBool.getFieldNameSymbol();
         checkSymbol("g", UNKNOWN_SYMBOL_ID, is);
 
         IonBool nullBool2 = system().newNullBool();
-        is = new FakeInternedSymbol("h", -2);
+        is = new FakeSymbolToken("h", -2);
         struct.add(is, nullBool2);
         is = nullBool2.getFieldNameSymbol();
         checkSymbol("h", UNKNOWN_SYMBOL_ID, is);
     }
 
     @Test
-    public void testBadAddInternedSymbol()
+    public void testBadAddSymbolToken()
     {
         IonStruct value = system().newNullStruct();
         IonBool nullBool = system().newNullBool();
 
         try {
-            value.add((InternedSymbol) null, nullBool);
+            value.add((SymbolToken) null, nullBool);
             fail("Expected NullPointerException");
         }
         catch (NullPointerException e) { }
 
-        InternedSymbol is = IonImplUtils.newInternedSymbol("f", 1);
+        SymbolToken is = IonImplUtils.newSymbolToken("f", 1);
         try {
             value.add(is, null);
             fail("Expected NullPointerException");
@@ -648,14 +648,14 @@ public class StructTest
         }
         catch (IllegalArgumentException e) { }
 
-        is = new FakeInternedSymbol(null, UNKNOWN_SYMBOL_ID);
+        is = new FakeSymbolToken(null, UNKNOWN_SYMBOL_ID);
         try {
             value.add(is, nullBool);
             fail("Expected IllegalArgumentException");
         }
         catch (IllegalArgumentException e) { }
 
-        is = new FakeInternedSymbol(null, -2);
+        is = new FakeSymbolToken(null, -2);
         try {
             value.add(is, nullBool);
             fail("Expected IllegalArgumentException");

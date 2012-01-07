@@ -1,4 +1,4 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.junit;
 
@@ -11,7 +11,6 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonLob;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSequence;
@@ -21,6 +20,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReaderChecker;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.util.Equivalence;
 import java.util.ArrayList;
@@ -182,7 +182,7 @@ public class IonAssert
 
         assertEquals(expectedSid, in.getSymbolId());
 
-        InternedSymbol sym = in.symbolValue();
+        SymbolToken sym = in.symbolValue();
         IonTestCase.checkSymbol(expectedText, expectedSid, sym);
     }
 
@@ -196,7 +196,7 @@ public class IonAssert
         assertEquals("isNullValue", expectedText == null, in.isNullValue());
         assertEquals("stringValue", expectedText, in.stringValue());
 
-        InternedSymbol is = in.symbolValue();
+        SymbolToken is = in.symbolValue();
         if (expectedText == null)
         {
             assertEquals("symbolValue", null, is);
@@ -220,8 +220,8 @@ public class IonAssert
 
 
     public static void assertSymbolEquals(String path,
-                                          InternedSymbol expected,
-                                          InternedSymbol actual)
+                                          SymbolToken expected,
+                                          SymbolToken actual)
     {
         String expectedText = expected.getText();
         String actualText   = actual.getText();
@@ -229,13 +229,13 @@ public class IonAssert
 
         if (expectedText == null)
         {
-            assertEquals(path + " sid", expected.getId(), actual.getId());
+            assertEquals(path + " sid", expected.getSid(), actual.getSid());
         }
     }
 
     public static void assertSymbolEquals(String path,
-                                          InternedSymbol[] expecteds,
-                                          InternedSymbol[] actuals)
+                                          SymbolToken[] expecteds,
+                                          SymbolToken[] actuals)
     {
         assertEquals(path + " count", expecteds.length, actuals.length);
 
@@ -277,8 +277,8 @@ public class IonAssert
     {
         if (expected == actual) return;
 
-        InternedSymbol[] expecteds = expected.getTypeAnnotationSymbols();
-        InternedSymbol[] actuals   = actual.getTypeAnnotationSymbols();
+        SymbolToken[] expecteds = expected.getTypeAnnotationSymbols();
+        SymbolToken[] actuals   = actual.getTypeAnnotationSymbols();
 
         assertSymbolEquals(path + " annotation", expecteds, actuals);
     }
@@ -475,10 +475,10 @@ public class IonAssert
             new HashMap<String,List<IonValue>>();
         for (IonValue v : s)
         {
-            InternedSymbol is = v.getFieldNameSymbol();
-            String text = is.getText();
+            SymbolToken tok = v.getFieldNameSymbol();
+            String text = tok.getText();
             if (text == null) {
-                text = " --UNKNOWN SYMBOL-- $" + is.getId(); // TODO ION-58
+                text = " --UNKNOWN SYMBOL-- $" + tok.getSid(); // TODO ION-58
             }
             List<IonValue> fields = sorted.get(text);
             if (fields == null)

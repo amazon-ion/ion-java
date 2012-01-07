@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -8,11 +8,11 @@ import static com.amazon.ion.impl.IonImplUtils.EMPTY_INT_ARRAY;
 import static com.amazon.ion.impl.IonImplUtils.intIterator;
 
 import com.amazon.ion.Decimal;
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
 import com.amazon.ion.impl.IonScalarConversionsX.ValueVariant;
@@ -59,21 +59,21 @@ class IonReaderBinarySystemX
         return _value_field_id;
     }
 
-    public InternedSymbol[] getTypeAnnotationSymbols()
+    public SymbolToken[] getTypeAnnotationSymbols()
     {
         load_annotations();
 
         int count = _annotation_count;
-        if (count == 0) return InternedSymbol.EMPTY_ARRAY;
+        if (count == 0) return SymbolToken.EMPTY_ARRAY;
 
         SymbolTable symtab = getSymbolTable();
 
-        InternedSymbol[] result = new InternedSymbol[count];
+        SymbolToken[] result = new SymbolToken[count];
         for (int i = 0; i < count; i++)
         {
             int sid = _annotation_ids[i];
             String text = symtab.findKnownSymbol(sid);
-            result[i] = new InternedSymbolImpl(text, sid);
+            result[i] = new SymbolTokenImpl(text, sid);
         }
 
         return result;
@@ -352,7 +352,7 @@ class IonReaderBinarySystemX
         return _v.getString();
     }
 
-    public InternedSymbol symbolValue()
+    public SymbolToken symbolValue()
     {
         if (_value_type != SYMBOL) throw new IllegalStateException();
         if (_value_is_null) return null;
@@ -361,7 +361,7 @@ class IonReaderBinarySystemX
         assert sid != UNKNOWN_SYMBOL_ID;
         // TODO not the right symtab
         String text = _system.getSystemSymbolTable().findKnownSymbol(sid);
-        return new InternedSymbolImpl(text, sid);
+        return new SymbolTokenImpl(text, sid);
     }
 
     public int getSymbolId()
@@ -384,7 +384,7 @@ class IonReaderBinarySystemX
 //        throw new UnsupportedOperationException("not supported - use UserReader");
     }
 
-    public InternedSymbol getFieldNameSymbol()
+    public SymbolToken getFieldNameSymbol()
     {
         // TODO ION-233 implement symbol text for system readers
         return null;

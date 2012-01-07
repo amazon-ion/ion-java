@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -172,12 +172,12 @@ public interface IonReader
     public String[] getTypeAnnotations();
 
     /**
-     * Gets the current value's annotations as interned symbols (text + ID).
+     * Gets the current value's annotations as symbol tokens (text + ID).
      *
      * @return the (ordered) annotations on the current value, or an empty
      * array (not {@code null}) if there are none.
      */
-    public InternedSymbol[] getTypeAnnotationSymbols();
+    public SymbolToken[] getTypeAnnotationSymbols();
 
     /**
      * Return the symbol IDs of the annotations on the current value as an
@@ -245,12 +245,12 @@ public interface IonReader
     public String getFieldName();
 
     /**
-     * Gets the current value's field name as an interned symbol (text + ID).
+     * Gets the current value's field name as a symbol token (text + ID).
      *
      * @return null if there is no current value or if the current value is
      *  not a field of a struct.
      */
-    public InternedSymbol getFieldNameSymbol();
+    public SymbolToken getFieldNameSymbol();
 
 
     /**
@@ -360,13 +360,13 @@ public interface IonReader
 
 
     /**
-     * Returns the current value as an interned symbol (text + ID).
+     * Returns the current value as a symbol token (text + ID).
      * This is only valid when {@link #getType()} returns
      * {@link IonType#SYMBOL}.
      *
      * @return null if {@link #isNullValue()}
      */
-    public InternedSymbol symbolValue();
+    public SymbolToken symbolValue();
 
 
     /**

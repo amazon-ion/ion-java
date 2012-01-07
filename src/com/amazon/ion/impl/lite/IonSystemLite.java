@@ -14,7 +14,6 @@ import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewSharedSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.newSystemSymbolTable;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonContainer;
@@ -29,6 +28,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.UnsupportedIonVersionException;
 import com.amazon.ion.impl.IonReaderFactoryX;
@@ -399,11 +399,11 @@ public final class IonSystemLite
             }
         }
         if (reader.isInStruct()) {
-            InternedSymbol sym = reader.getFieldNameSymbol();
+            SymbolToken sym = reader.getFieldNameSymbol();
             v.setFieldNameSymbol(sym);
             symbol_is_present = true;
         }
-        InternedSymbol[] uta = reader.getTypeAnnotationSymbols();
+        SymbolToken[] uta = reader.getTypeAnnotationSymbols();
         if (uta.length > 0) {
             v.setTypeAnnotationSymbols(uta);
             symbol_is_present = true;

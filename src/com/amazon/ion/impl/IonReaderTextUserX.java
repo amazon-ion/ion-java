@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -6,7 +6,6 @@ import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
@@ -15,6 +14,7 @@ import com.amazon.ion.SeekableReader;
 import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.TextSpan;
 
 /**
@@ -135,7 +135,7 @@ public class IonReaderTextUserX
                 case STRUCT:
                     if (_annotation_count > 0) {
                         for (int ii=0; ii<_annotation_count; ii++) {
-                            InternedSymbol a = _annotations[ii];
+                            SymbolToken a = _annotations[ii];
                             // TODO SID only?
                             if (ION_SYMBOL_TABLE.equals(a.getText())) {
                                 _symbols = makeNewLocalSymbolTable(_system,
@@ -151,7 +151,7 @@ public class IonReaderTextUserX
                     }
                     break;
                 case SYMBOL:
-                    InternedSymbol is = symbolValue();
+                    SymbolToken is = symbolValue();
                     String sym = is.getText();
                     if (ION_1_0.equals(sym)) {
                         symbol_table_reset();

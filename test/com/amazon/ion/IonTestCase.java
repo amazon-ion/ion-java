@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -658,14 +658,14 @@ public abstract class IonTestCase
     /**
      * @param text null means text is unknown
      */
-    public static void checkSymbol(String text, int sid, InternedSymbol sym)
+    public static void checkSymbol(String text, int sid, SymbolToken sym)
     {
-        assertEquals("InternedSymbol.text", text, sym.getText());
-        assertEquals("InternedSymbol.id",   sid,  sym.getId());
+        assertEquals("SymbolToken.text", text, sym.getText());
+        assertEquals("SymbolToken.id",   sid,  sym.getSid());
 
         if (text != null)
         {
-            assertEquals("InternedSymbol.assumeText", text, sym.assumeText());
+            assertEquals("SymbolToken.assumeText", text, sym.assumeText());
         }
         else
         {
@@ -690,7 +690,7 @@ public abstract class IonTestCase
         assertEquals("symbol name", name, sym.stringValue());
         assertEquals("isNullValue", name == null, sym.isNullValue());
 
-        InternedSymbol is = sym.symbolValue();
+        SymbolToken is = sym.symbolValue();
         if (name == null)
         {
             assertEquals("IonSymbol.symbolValue()", null, is);
@@ -763,11 +763,11 @@ public abstract class IonTestCase
                 assertEquals(msg, sid, symtab.findSymbol(text));
                 assertEquals(msg, sid, symtab.addSymbol(text));
 
-                InternedSymbol sym = symtab.intern(text);
-                assertEquals(msg, sid, sym.getId());
+                SymbolToken sym = symtab.intern(text);
+                assertEquals(msg, sid, sym.getSid());
 
                 sym = symtab.find(text);
-                assertEquals(msg, sid, sym.getId());
+                assertEquals(msg, sid, sym.getSid());
             }
         }
         else // No text expected, must have sid

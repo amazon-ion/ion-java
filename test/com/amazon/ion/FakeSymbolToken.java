@@ -1,17 +1,17 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 /**
  * NOT SUITABLE FOR PUBLIC USE since it doesn't enforce correctness.
  */
-class FakeInternedSymbol
-    implements InternedSymbol
+class FakeSymbolToken
+    implements SymbolToken
 {
     private final String myText;
     private final int mySid;
 
-    FakeInternedSymbol(String text, int sid)
+    FakeSymbolToken(String text, int sid)
     {
         myText = text;
         mySid = sid;
@@ -28,7 +28,7 @@ class FakeInternedSymbol
         return myText;
     }
 
-    public int getId()
+    public int getSid()
     {
         return mySid;
     }

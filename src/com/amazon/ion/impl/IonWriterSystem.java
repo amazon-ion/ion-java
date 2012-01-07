@@ -3,16 +3,16 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static com.amazon.ion.impl.IonImplUtils.newInternedSymbol;
-import static com.amazon.ion.impl.IonImplUtils.newInternedSymbols;
+import static com.amazon.ion.impl.IonImplUtils.newSymbolTokens;
+import static com.amazon.ion.impl.IonImplUtils.newSymbolToken;
 import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.EmptySymbolException;
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import java.io.IOException;
 
@@ -43,8 +43,8 @@ abstract class IonWriterSystem
     private static final int DEFAULT_ANNOTATION_COUNT = 4;
 
     private int         _annotation_count;
-    private InternedSymbol[] _annotations =
-        new InternedSymbol[DEFAULT_ANNOTATION_COUNT];
+    private SymbolToken[] _annotations =
+        new SymbolToken[DEFAULT_ANNOTATION_COUNT];
 
 
     //========================================================================
@@ -292,14 +292,14 @@ abstract class IonWriterSystem
         _field_name = null;
     }
 
-    final InternedSymbol assumeFieldNameSymbol()
+    final SymbolToken assumeFieldNameSymbol()
     {
         if (_field_name_type == null)  {
             throw new IllegalStateException(ERROR_MISSING_FIELD_NAME);
         }
         // Exactly one of our fields is set.
         assert _field_name != null ^ _field_name_sid >= 0;
-        return new InternedSymbolImpl(_field_name, _field_name_sid);
+        return new SymbolTokenImpl(_field_name, _field_name_sid);
     }
 
     //========================================================================
@@ -319,7 +319,7 @@ abstract class IonWriterSystem
             newlen = length;
         }
 
-        InternedSymbol[] temp1 = new InternedSymbol[newlen];
+        SymbolToken[] temp1 = new SymbolToken[newlen];
 
         if (oldlen > 0) {
             System.arraycopy(_annotations, 0, temp1, 0, oldlen);
@@ -336,13 +336,13 @@ abstract class IonWriterSystem
         int[] sids = new int[count];
         for (int i = 0; i < count; i++)
         {
-            InternedSymbol sym = _annotations[i];
-            int sid = sym.getId();
+            SymbolToken sym = _annotations[i];
+            int sid = sym.getSid();
             if (sid == UNKNOWN_SYMBOL_ID)
             {
                 String text = sym.getText();
                 sid = add_symbol(text);
-                _annotations[i] = new InternedSymbolImpl(text, sid);
+                _annotations[i] = new SymbolTokenImpl(text, sid);
             }
             sids[i] = sid;
         }
@@ -382,17 +382,17 @@ abstract class IonWriterSystem
         return false;
     }
 
-    final InternedSymbol[] getTypeAnnotationSymbols()
+    final SymbolToken[] getTypeAnnotationSymbols()
     {
         int count = _annotation_count;
-        if (count == 0) return InternedSymbol.EMPTY_ARRAY;
+        if (count == 0) return SymbolToken.EMPTY_ARRAY;
 
-        InternedSymbol[] syms = new InternedSymbol[count];
+        SymbolToken[] syms = new SymbolToken[count];
         System.arraycopy(_annotations, 0, syms, 0, count);
         return syms;
     }
 
-    public final void setTypeAnnotationSymbols(InternedSymbol... annotations)
+    public final void setTypeAnnotationSymbols(SymbolToken... annotations)
     {
         if (annotations == null || annotations.length == 0)
         {
@@ -408,7 +408,7 @@ abstract class IonWriterSystem
             SymbolTable symtab = getSymbolTable();
             for (int i = 0; i < count; i++)
             {
-                InternedSymbol sym = annotations[i];
+                SymbolToken sym = annotations[i];
                 sym = IonImplUtils.localize(symtab, sym);
                 _annotations[i] = sym;
             }
@@ -430,8 +430,8 @@ abstract class IonWriterSystem
         }
         else
         {
-            InternedSymbol[] syms =
-                newInternedSymbols(getSymbolTable(), annotations);
+            SymbolToken[] syms =
+                newSymbolTokens(getSymbolTable(), annotations);
             int count = syms.length;
             // TODO the following makes two copy passes
             ensureAnnotationCapacity(count);
@@ -442,7 +442,7 @@ abstract class IonWriterSystem
 
     public final void addTypeAnnotation(String annotation)
     {
-        InternedSymbol is = newInternedSymbol(getSymbolTable(), annotation);
+        SymbolToken is = newSymbolToken(getSymbolTable(), annotation);
         ensureAnnotationCapacity(_annotation_count + 1);
         _annotations[_annotation_count++] = is;
     }
@@ -456,13 +456,13 @@ abstract class IonWriterSystem
 
     public final void setTypeAnnotationIds(int... annotationIds)
     {
-        _annotations = newInternedSymbols(getSymbolTable(), annotationIds);
+        _annotations = newSymbolTokens(getSymbolTable(), annotationIds);
         _annotation_count = _annotations.length;
     }
 
     public final void addTypeAnnotationId(int annotationId)
     {
-        InternedSymbol is = newInternedSymbol(getSymbolTable(), annotationId);
+        SymbolToken is = newSymbolToken(getSymbolTable(), annotationId);
         ensureAnnotationCapacity(_annotation_count + 1);
         _annotations[_annotation_count++] = is;
     }

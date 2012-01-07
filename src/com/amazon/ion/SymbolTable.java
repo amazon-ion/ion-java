@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -171,7 +171,7 @@ public interface SymbolTable
     /**
      * Adds a new symbol to this table, or finds an existing definition of it.
      * <p>
-     * The resulting {@link InternedSymbol} has the same String instance that
+     * The resulting {@link SymbolToken} has the same String instance that
      * was first interned. In order to reduce memory
      * footprint, callers should generally replace their copy of the text with
      * the string in the result.
@@ -188,7 +188,7 @@ public interface SymbolTable
      *
      * @see #find(String)
      */
-    public InternedSymbol intern(String text);
+    public SymbolToken intern(String text);
 
     /**
      * Finds a symbol already interned by this table.
@@ -203,7 +203,7 @@ public interface SymbolTable
      *
      * @see #intern(String)
      */
-    public InternedSymbol find(String text);
+    public SymbolToken find(String text);
 
 
     /**
@@ -259,7 +259,7 @@ public interface SymbolTable
      *
      * @deprecated Use {@link #intern(String)} instead, replacing the caller's
      * parameter string with the interned instance in
-     * {@link InternedSymbol#getText()}.
+     * {@link SymbolToken#getText()}.
      */
     @Deprecated
     public int addSymbol(String name);

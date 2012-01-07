@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -10,12 +10,12 @@ import static com.amazon.ion.impl.UnifiedSymbolTable.initialSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.ValueFactory;
 import java.io.IOException;
@@ -243,7 +243,7 @@ abstract class IonWriterUser
 
         _symbol_table_value = _symtab_value_factory.newEmptyStruct();
 
-        InternedSymbol[] anns = _system_writer.getTypeAnnotationSymbols();
+        SymbolToken[] anns = _system_writer.getTypeAnnotationSymbols();
         _system_writer.clearAnnotations();
 
         _symbol_table_value.setTypeAnnotationSymbols(anns);
@@ -357,7 +357,7 @@ abstract class IonWriterUser
         _current_writer.setTypeAnnotations(annotations);
     }
 
-    public void setTypeAnnotationSymbols(InternedSymbol... annotations)
+    public void setTypeAnnotationSymbols(SymbolToken... annotations)
     {
         _current_writer.setTypeAnnotationSymbols(annotations);
     }
@@ -374,7 +374,7 @@ abstract class IonWriterUser
         return _current_writer.getTypeAnnotationIds();
     }
 
-    final InternedSymbol[] getTypeAnnotationSymbols()
+    final SymbolToken[] getTypeAnnotationSymbols()
     {
         return _current_writer.getTypeAnnotationSymbols();
     }

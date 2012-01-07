@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -7,11 +7,11 @@ import static com.amazon.ion.impl.IonTokenConstsX.TOKEN_CLOSE_BRACE;
 import static com.amazon.ion.impl.IonTokenConstsX.TOKEN_CLOSE_PAREN;
 import static com.amazon.ion.impl.IonTokenConstsX.TOKEN_CLOSE_SQUARE;
 
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
 import com.amazon.ion.impl.IonScalarConversionsX.ValueVariant;
@@ -262,7 +262,7 @@ public abstract class IonReaderTextRawX
     String              _field_name;
     int                 _field_name_sid = UNKNOWN_SYMBOL_ID;
     int                 _annotation_count;
-    InternedSymbol[]    _annotations;
+    SymbolToken[]    _annotations;
 
     boolean             _current_value_save_point_loaded;
     SavePoint           _current_value_save_point;
@@ -303,7 +303,7 @@ public abstract class IonReaderTextRawX
 
     protected final void init_once() {
         _current_value_buffer = new StringBuilder();
-        _annotations = new InternedSymbol[DEFAULT_ANNOTATION_COUNT];
+        _annotations = new SymbolToken[DEFAULT_ANNOTATION_COUNT];
     }
 
     protected final void init(UnifiedInputStreamX iis, IonType parent)
@@ -406,9 +406,9 @@ public abstract class IonReaderTextRawX
         _v.setAuthoritativeType(IonScalarConversionsX.AS_TYPE.boolean_value);
     }
 
-    private final void set_fieldname(InternedSymbol sym) {
+    private final void set_fieldname(SymbolToken sym) {
         String text = sym.getText();
-        int sid = sym.getId();
+        int sid = sym.getSid();
         if (text != null && text.length() < 1) {
             parse_error("empty strings are not valid field names");
         }
@@ -421,12 +421,12 @@ public abstract class IonReaderTextRawX
         _field_name_sid = UNKNOWN_SYMBOL_ID;
     }
 
-    private final void append_annotation(InternedSymbol sym) {
+    private final void append_annotation(SymbolToken sym) {
         // empty text is checked by caller
         int oldlen = _annotations.length;
         if (_annotation_count >= oldlen) {
             int newlen = oldlen * 2;
-            InternedSymbol[] temp = new InternedSymbol[newlen];
+            SymbolToken[] temp = new SymbolToken[newlen];
             System.arraycopy(_annotations, 0, temp, 0, oldlen);
             _annotations = temp;
         }
@@ -751,7 +751,7 @@ public abstract class IonReaderTextRawX
     }
 
 
-    private final InternedSymbol parseSymbolToken(String context,
+    private final SymbolToken parseSymbolToken(String context,
                                                   StringBuilder sb,
                                                   int t)
         throws IOException
@@ -786,7 +786,7 @@ public abstract class IonReaderTextRawX
             sid = UNKNOWN_SYMBOL_ID;
         }
 
-        return new InternedSymbolImpl(text, sid);
+        return new SymbolTokenImpl(text, sid);
     }
 
 
@@ -873,7 +873,7 @@ public abstract class IonReaderTextRawX
 
                 sb = token_contents_load(t);
 
-                InternedSymbol sym = parseSymbolToken("a field name", sb, t);
+                SymbolToken sym = parseSymbolToken("a field name", sb, t);
                 set_fieldname(sym);
                 clear_current_value_buffer();
 
@@ -907,7 +907,7 @@ public abstract class IonReaderTextRawX
                 }
 
                 // We have an annotation!
-                InternedSymbol sym = parseSymbolToken("an annotation", sb, t);
+                SymbolToken sym = parseSymbolToken("an annotation", sb, t);
                 append_annotation(sym);
                 clear_current_value_buffer();
 
@@ -1325,7 +1325,7 @@ if (depth == debugging_depth) {
         return _field_name_sid;
     }
 
-    public InternedSymbol getFieldNameSymbol()
+    public SymbolToken getFieldNameSymbol()
     {
         // For hoisting
         if (getDepth() == 0 && is_in_struct_internal()) return null;
@@ -1333,7 +1333,7 @@ if (depth == debugging_depth) {
         String name = _field_name;
         int sid = getFieldId();
         if (name == null && sid == UNKNOWN_SYMBOL_ID) return null;
-        return new InternedSymbolImpl(name, sid);
+        return new SymbolTokenImpl(name, sid);
     }
 
     public Iterator<String> iterateTypeAnnotations()

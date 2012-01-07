@@ -1,12 +1,12 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import java.util.Arrays;
 import java.util.Iterator;
 
@@ -155,8 +155,8 @@ class UnifiedSymbolTableImports
 
     int findSymbol(String name)
     {
-        InternedSymbol sym = find(name);
-        return (sym == null ? UNKNOWN_SYMBOL_ID : sym.getId());
+        SymbolToken tok = find(name);
+        return (tok == null ? UNKNOWN_SYMBOL_ID : tok.getSid());
     }
 
     /**
@@ -171,20 +171,20 @@ class UnifiedSymbolTableImports
      * @return the interned symbol (with both text and SID),
      * or {@code null} if it's not defined by an imported table.
      */
-    InternedSymbol find(String text)
+    SymbolToken find(String text)
     {
         for (int ii=0; ii<_import_count; ii++) {
-            InternedSymbol is = _imports[ii].find(text);
-            if (is != null)
+            SymbolToken tok = _imports[ii].find(text);
+            if (tok != null)
             {
-                int local_sid = is.getId();
+                int local_sid = tok.getSid();
                 int local_max = getMaxIdForExport(ii);
                 if (local_sid <= local_max) {
                     int this_base = _import_base_sid[ii];
                     int sid = local_sid + this_base;
-                    text = is.getText(); // Use interned instance
+                    text = tok.getText(); // Use interned instance
                     assert text != null;
-                    return new InternedSymbolImpl(text, sid);
+                    return new SymbolTokenImpl(text, sid);
                 }
             }
         }

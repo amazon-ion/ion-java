@@ -1,13 +1,13 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnknownSymbolException;
 import java.io.IOException;
@@ -345,20 +345,20 @@ public abstract class IonWriterBaseImpl
     {
         if (this.isInStruct() && !isFieldNameSet())
         {
-            InternedSymbol is = reader.getFieldNameSymbol();
-            if (is == null)
+            SymbolToken tok = reader.getFieldNameSymbol();
+            if (tok == null)
             {
                 throw new IllegalStateException("Field name not set");
             }
 
-            String name = is.getText();
+            String name = tok.getText();
             if (name != null)
             {
                 setFieldName(name);
             }
             else
             {
-                int sid = is.getId();
+                int sid = tok.getSid();
                 assert sid != SymbolTable.UNKNOWN_SYMBOL_ID;
                 setFieldId(sid);
             }
@@ -369,7 +369,7 @@ public abstract class IonWriterBaseImpl
 
     private final void write_value_annotations_helper(IonReader reader)
     {
-        InternedSymbol[] a = reader.getTypeAnnotationSymbols();
+        SymbolToken[] a = reader.getTypeAnnotationSymbols();
         // At present, we must always call this, even when the list is empty,
         // because local symtab diversion leaves the $ion_symbol_table
         // dangling on the system writer!  TODO fix that, it's broken.
@@ -431,7 +431,7 @@ public abstract class IonWriterBaseImpl
                 break;
             case SYMBOL:
             {
-                InternedSymbol is = reader.symbolValue();
+                SymbolToken is = reader.symbolValue();
                 // TODO this should pass the IS over directly so the writer
                 // can remap unknown symbols when possible.
                 String text = is.getText();
@@ -441,7 +441,7 @@ public abstract class IonWriterBaseImpl
                 }
                 else
                 {
-                    int sid = is.getId();
+                    int sid = is.getSid();
                     assert sid != SymbolTable.UNKNOWN_SYMBOL_ID;
                     writeSymbol(sid);
                 }

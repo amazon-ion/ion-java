@@ -1,13 +1,13 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonBinary.Reader;
@@ -189,7 +189,7 @@ public final class IonStructImpl
                 new HashSet<String>(Arrays.asList(fieldNames));
             for (IonValue value : this)
             {
-                InternedSymbol fieldNameSymbol = value.getFieldNameSymbol();
+                SymbolToken fieldNameSymbol = value.getFieldNameSymbol();
                 String fieldName = fieldNameSymbol.getText();
                 if (fields.contains(fieldName) == keep)
                 {
@@ -346,16 +346,16 @@ public final class IonStructImpl
         }
     }
 
-    public void add(InternedSymbol fieldName, IonValue child)
+    public void add(SymbolToken fieldName, IonValue child)
     {
         String text = fieldName.getText();
         if (text != null)
         {
-            // TODO should we always ignore the sid?
+            // Ignoring the sid is safe, but perhaps not the most efficient.
             add(text, child);
             return;
         }
-        else if (fieldName.getId() < 0)
+        else if (fieldName.getSid() < 0)
         {
             throw new IllegalArgumentException("fieldName has no text or ID");
         }

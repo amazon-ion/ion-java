@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -10,12 +10,12 @@ import static com.amazon.ion.impl.IonWriterUserText.builderFor;
 import static com.amazon.ion.system.IonTextWriterBuilder.ASCII;
 
 import com.amazon.ion.Decimal;
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.Base64Encoder.TextStream;
@@ -369,7 +369,7 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
 
         // write field name
         if (_in_struct) {
-            InternedSymbol sym = assumeFieldNameSymbol();
+            SymbolToken sym = assumeFieldNameSymbol();
             String name = sym.getText();
             if (name == null) {
                 int sid = getFieldId();
@@ -386,12 +386,12 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
         // write annotations
         if (hasAnnotations()) {
             if (! _options._skip_annotations) {
-                InternedSymbol[] annotations = getTypeAnnotationSymbols();
-                for (InternedSymbol ann : annotations) {
+                SymbolToken[] annotations = getTypeAnnotationSymbols();
+                for (SymbolToken ann : annotations) {
                     String name = ann.getText();
                     if (name == null) {
                         _output.append('$');
-                        _output.append(Integer.toString(ann.getId()));
+                        _output.append(Integer.toString(ann.getSid()));
                     }
                     else {
                         IonTextUtils.printSymbol(_output, name);
@@ -432,7 +432,7 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
             // move onto and write the struct header
             IonType t = reader.next();
             assert(IonType.STRUCT.equals(t));
-            InternedSymbol[] a = reader.getTypeAnnotationSymbols();
+            SymbolToken[] a = reader.getTypeAnnotationSymbols();
             // you (should) always have the $ion_symbol_table annotation
             assert(a != null && a.length >= 1);
 

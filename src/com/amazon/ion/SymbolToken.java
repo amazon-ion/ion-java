@@ -1,20 +1,21 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 
 /**
- * Represents a symbol that's been interned into a {@link SymbolTable},
+ * Represents an Ion symbol token (field name, annotation, and symbol values)
  * providing both the symbol text and the assigned symbol ID.
+ * Symbol tokens may be interned into a {@link SymbolTable},
  * <p>
  * Any instance will have at least one of the two properties defined.
  */
-public interface InternedSymbol
+public interface SymbolToken
 {
     /**
      * A zero-length array.
      */
-    public static final InternedSymbol[] EMPTY_ARRAY = new InternedSymbol[0];
+    public static final SymbolToken[] EMPTY_ARRAY = new SymbolToken[0];
 
 
     /**
@@ -22,7 +23,7 @@ public interface InternedSymbol
      * <p>
      * If the text is not known (usually due to a shared symbol table being
      * unavailable) then this method returns null.
-     *  In such cases {@link #getId()} will be non-negative.
+     * In such cases {@link #getSid()} will be non-negative.
      *
      * @return the text of this symbol, or null if the text is unknown.
      */
@@ -40,7 +41,7 @@ public interface InternedSymbol
 
 
     /**
-     * Gets the ID of this symbol.
+     * Gets the ID of this symbol token.
      * <p>
      * If no ID has yet been assigned (as may be the case when processing Ion
      * text-formatted data), this method returns
@@ -50,5 +51,5 @@ public interface InternedSymbol
      * @return the symbol ID (sid) of this symbol, or
      * {@link SymbolTable#UNKNOWN_SYMBOL_ID} if the sid unknown.
      */
-    public int getId();
+    public int getSid();
 }

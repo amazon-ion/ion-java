@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -77,13 +77,13 @@ public class SymbolTest
     public void testFactorySymbolWithSid(ValueFactory vf)
     {
         final int sid = 99;
-        InternedSymbol is = IonImplUtils.newInternedSymbol((String)null, sid);
+        SymbolToken tok = IonImplUtils.newSymbolToken((String)null, sid);
 
-        IonSymbol value = vf.newSymbol(is);
+        IonSymbol value = vf.newSymbol(tok);
         checkUnknownSymbol(99, value);
 
-        is = IonImplUtils.newInternedSymbol("text", sid);
-        value = vf.newSymbol(is);
+        tok = IonImplUtils.newSymbolToken("text", sid);
+        value = vf.newSymbol(tok);
         checkSymbol("text", value);
         assertFalse(value.isNullValue());
 

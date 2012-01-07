@@ -3,11 +3,11 @@
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.ContainedValueException;
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
@@ -96,7 +96,7 @@ public class IonStructLite
         int count = get_child_count();
         for (int ii=0; ii<count; ii++) {
             IonValueLite v = get_child_lite(ii);
-            InternedSymbol fieldNameSymbol = v.getFieldNameSymbol();
+            SymbolToken fieldNameSymbol = v.getFieldNameSymbol();
             String name = fieldNameSymbol.getText();
             if (_field_map.get(name) != null) {
                 _field_map_duplicate_count++;
@@ -321,7 +321,7 @@ public class IonStructLite
                 new HashSet<String>(Arrays.asList(fieldNames));
             for (IonValue value : this)
             {
-                InternedSymbol fieldNameSymbol = value.getFieldNameSymbol();
+                SymbolToken fieldNameSymbol = value.getFieldNameSymbol();
                 String fieldName = fieldNameSymbol.getText();
                 if (fields.contains(fieldName) == keep)
                 {
@@ -478,10 +478,10 @@ public class IonStructLite
 //        }
     }
 
-    public void add(InternedSymbol fieldName, IonValue child)
+    public void add(SymbolToken fieldName, IonValue child)
     {
         String text = fieldName.getText();
-        int id = fieldName.getId();
+        int sid = fieldName.getSid();
 
         if (text != null)
         {
@@ -490,7 +490,7 @@ public class IonStructLite
             return;
         }
 
-        if (id < 1)
+        if (sid < 1)
         {
             throw new IllegalArgumentException("fieldName has no text or ID");
         }

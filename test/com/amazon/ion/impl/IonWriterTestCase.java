@@ -1,16 +1,15 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.TestUtils.FERMATA;
-import static com.amazon.ion.impl.IonImplUtils.newInternedSymbol;
+import static com.amazon.ion.impl.IonImplUtils.newSymbolToken;
 import static com.amazon.ion.impl.IonWriterBaseImpl.ERROR_MISSING_FIELD_NAME;
 import static com.amazon.ion.junit.IonAssert.expectNextField;
 
 import com.amazon.ion.EmptySymbolException;
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonDatagram;
@@ -27,6 +26,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Symtabs;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.TestUtils;
@@ -608,13 +608,13 @@ public abstract class IonWriterTestCase
         v.clearTypeAnnotations();
 
         iw.addTypeAnnotation("b");
-        iw.setTypeAnnotationSymbols(new InternedSymbol[0]);
+        iw.setTypeAnnotationSymbols(new SymbolToken[0]);
         iw.writeNull();
         v = expected.add().newNull();
         v.clearTypeAnnotations();
 
         iw.addTypeAnnotation("b");
-        iw.setTypeAnnotationSymbols((InternedSymbol[])null);
+        iw.setTypeAnnotationSymbols((SymbolToken[])null);
         iw.writeNull();
         v = expected.add().newNull();
         v.clearTypeAnnotations();
@@ -660,7 +660,7 @@ public abstract class IonWriterTestCase
         iw.addTypeAnnotationId(99);
         iw.writeNull();
         IonValue v = expected.add().newNull();
-        v.setTypeAnnotationSymbols(newInternedSymbol(99));
+        v.setTypeAnnotationSymbols(newSymbolToken(99));
 
         assertEquals(expected, reload());
     }
@@ -672,7 +672,7 @@ public abstract class IonWriterTestCase
         iw = makeWriter();
         IonDatagram expected = system().newDatagram();
 
-        iw.setTypeAnnotationSymbols(newInternedSymbol("a", 99));
+        iw.setTypeAnnotationSymbols(newSymbolToken("a", 99));
         iw.writeNull();
         IonValue v = expected.add().newNull();
         v.setTypeAnnotations("a");

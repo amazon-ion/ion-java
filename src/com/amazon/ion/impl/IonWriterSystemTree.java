@@ -1,10 +1,9 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonClob;
@@ -20,6 +19,7 @@ import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.ValueFactory;
@@ -172,14 +172,14 @@ final class IonWriterSystemTree
         }
 
         if (hasAnnotations()) {
-            InternedSymbol[] annotations = getTypeAnnotationSymbols();
+            SymbolToken[] annotations = getTypeAnnotationSymbols();
             // TODO this makes an extra copy of the array
             ((IonValuePrivate)value).setTypeAnnotationSymbols(annotations);
             this.clearAnnotations();
         }
 
         if (_in_struct) {
-            InternedSymbol sym = assumeFieldNameSymbol();
+            SymbolToken sym = assumeFieldNameSymbol();
             IonStruct struct = (IonStruct) _current_parent;
             struct.add(sym, value);
             this.clearFieldName();
@@ -321,7 +321,7 @@ final class IonWriterSystemTree
     {
         // TODO ION-165 this should handle IVMs
         String name = getSymbolTable().findKnownSymbol(symbolId);
-        InternedSymbolImpl is = new InternedSymbolImpl(name, symbolId);
+        SymbolTokenImpl is = new SymbolTokenImpl(name, symbolId);
         IonSymbol v = _factory.newSymbol(is);
         append(v);
     }

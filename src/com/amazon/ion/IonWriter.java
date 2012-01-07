@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -216,7 +216,7 @@ public interface IonWriter
      * @param annotations
      * If null or empty, any pending annotations are cleared.
      */
-    public void setTypeAnnotationSymbols(InternedSymbol... annotations);
+    public void setTypeAnnotationSymbols(SymbolToken... annotations);
 
 
     /**

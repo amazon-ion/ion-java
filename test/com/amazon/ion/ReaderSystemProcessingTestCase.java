@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -143,7 +143,7 @@ public abstract class ReaderSystemProcessingTestCase
 
         assertEquals(expected, myReader.stringValue());
 
-        InternedSymbol sym = myReader.symbolValue();
+        SymbolToken sym = myReader.symbolValue();
         assertEquals(expected, sym.getText());
     }
 

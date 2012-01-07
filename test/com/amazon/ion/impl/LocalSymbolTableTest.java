@@ -1,11 +1,11 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Symtabs;
 import org.junit.Test;
 
@@ -42,20 +42,20 @@ public class LocalSymbolTableTest
     {
         // Existing symbol from imports
         String fredSym = ST_FRED_V2.findKnownSymbol(3);
-        InternedSymbol is = st.intern(new String(fredSym));
-        assertSame(fredSym, is.getText());
-        assertSame(st.getSystemSymbolTable().getMaxId() + 3, is.getId());
+        SymbolToken tok = st.intern(new String(fredSym));
+        assertSame(fredSym, tok.getText());
+        assertSame(st.getSystemSymbolTable().getMaxId() + 3, tok.getSid());
 
         String gingerSym = ST_GINGER_V1.findKnownSymbol(1);
-        is = st.intern(new String(gingerSym));
-        assertSame(gingerSym, is.getText());
+        tok = st.intern(new String(gingerSym));
+        assertSame(gingerSym, tok.getText());
         assertSame(st.getSystemSymbolTable().getMaxId() + ST_FRED_V2.getMaxId() + 1,
-                   is.getId());
+                   tok.getSid());
 
         // Existing local symbol
-        is = st.intern(OTHER_A);
-        assertSame(A, is.getText());
-        assertEquals(st.getImportedMaxId() + 1, is.getId());
+        tok = st.intern(OTHER_A);
+        assertSame(A, tok.getText());
+        assertEquals(st.getImportedMaxId() + 1, tok.getSid());
     }
 
     @Test
@@ -72,13 +72,13 @@ public class LocalSymbolTableTest
 
         String D = "d";
         checkUnknownSymbol(D, st);
-        InternedSymbol is = st.intern(D);
-        assertSame(D, is.getText());
-        assertEquals(st.getImportedMaxId() + 4, is.getId());
+        SymbolToken tok = st.intern(D);
+        assertSame(D, tok.getText());
+        assertEquals(st.getImportedMaxId() + 4, tok.getSid());
 
-        is = st.intern(new String(D)); // Force a new instance
-        assertSame(D, is.getText());
-        assertEquals(st.getImportedMaxId() + 4, is.getId());
+        tok = st.intern(new String(D)); // Force a new instance
+        assertSame(D, tok.getText());
+        assertEquals(st.getImportedMaxId() + 4, tok.getSid());
     }
 
     @Test
@@ -107,50 +107,50 @@ public class LocalSymbolTableTest
 
 
     //-------------------------------------------------------------------------
-    // findInternedSymbol()
+    // find()
 
 
-    public void testFindInternedSymbol(SymbolTable st)
+    public void testFindSymbolToken(SymbolTable st)
     {
         // Existing symbol from imports
         String fredSym = ST_FRED_V2.findKnownSymbol(3);
-        InternedSymbol is = st.find(new String(fredSym));
-        assertSame(fredSym, is.getText());
-        assertSame(st.getSystemSymbolTable().getMaxId() + 3, is.getId());
+        SymbolToken tok = st.find(new String(fredSym));
+        assertSame(fredSym, tok.getText());
+        assertSame(st.getSystemSymbolTable().getMaxId() + 3, tok.getSid());
 
         String gingerSym = ST_GINGER_V1.findKnownSymbol(1);
-        is = st.find(new String(gingerSym));
-        assertSame(gingerSym, is.getText());
+        tok = st.find(new String(gingerSym));
+        assertSame(gingerSym, tok.getText());
         assertSame(st.getSystemSymbolTable().getMaxId() + ST_FRED_V2.getMaxId() + 1,
-                   is.getId());
+                   tok.getSid());
 
         // Existing local symbol
-        is = st.find(OTHER_A);
-        assertSame(A, is.getText());
-        assertEquals(st.getImportedMaxId() + 1, is.getId());
+        tok = st.find(OTHER_A);
+        assertSame(A, tok.getText());
+        assertEquals(st.getImportedMaxId() + 1, tok.getSid());
 
         // Non-existing symbol
         assertEquals(null, st.find("not there"));
     }
 
     @Test
-    public void testFindInternedSymbol()
+    public void testFindSymbolToken()
     {
         SymbolTable st = makeAbcTable(ST_FRED_V2, ST_GINGER_V1);
-        testFindInternedSymbol(st);
+        testFindSymbolToken(st);
     }
 
     @Test
-    public void testFindInternedSymbolWhenReadOnly()
+    public void testFindSymbolTokenWhenReadOnly()
     {
         SymbolTable st = makeAbcTable(ST_FRED_V2, ST_GINGER_V1);
         st.makeReadOnly();
-        testFindInternedSymbol(st);
+        testFindSymbolToken(st);
     }
 
 
     @Test(expected = NullPointerException.class)
-    public void testFindInternSymbolNull()
+    public void testFindSymbolTokenNull()
     {
         SymbolTable st = makeAbcTable();
         st.find(null);

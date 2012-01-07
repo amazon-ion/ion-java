@@ -1,12 +1,12 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import java.io.IOException;
 import java.util.Collections;
@@ -125,28 +125,28 @@ class SubstituteSymbolTable
         return myMaxId;
     }
 
-    public InternedSymbol intern(String text)
+    public SymbolToken intern(String text)
     {
-        InternedSymbol is = find(text);
-        if (is == null)
+        SymbolToken tok = find(text);
+        if (tok == null)
         {
             throw new IonException("Cannot add new entries to shared symtab");
         }
-        return is;
+        return tok;
     }
 
-    public InternedSymbol find(String text)
+    public SymbolToken find(String text)
     {
-        InternedSymbol is = null;
+        SymbolToken tok = null;
         if (myDelegate != null)
         {
-            is = myDelegate.find(text);
-            if (is != null && is.getId() > myMaxId)
+            tok = myDelegate.find(text);
+            if (tok != null && tok.getSid() > myMaxId)
             {
-                is = null;
+                tok = null;
             }
         }
-        return is;
+        return tok;
     }
 
     public int findSymbol(String text)

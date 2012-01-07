@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -290,7 +290,7 @@ public class TestUtils
                 String s = reader.stringValue();
                 break;
             case SYMBOL:
-                InternedSymbol is = reader.symbolValue();
+                SymbolToken tok = reader.symbolValue();
                 break;
             case BLOB:
             case CLOB:

@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -7,7 +7,6 @@ import static com.amazon.ion.impl.IonReaderFactoryX.makeSystemReader;
 import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 
 import com.amazon.ion.ContainedValueException;
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
@@ -18,6 +17,7 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.UnifiedSymbolTable;
@@ -1159,8 +1159,8 @@ public class IonDatagramLite
         {
             if (value instanceof IonSymbol) {
                 IonSymbol sym = (IonSymbol)value;
-                InternedSymbol is = sym.symbolValue();
-                if (is != null && ION_1_0.equals(is.getText()))
+                SymbolToken tok = sym.symbolValue();
+                if (tok != null && ION_1_0.equals(tok.getText()))
                 {
                     return true;
                 }

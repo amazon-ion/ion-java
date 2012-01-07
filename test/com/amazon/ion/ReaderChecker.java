@@ -1,4 +1,4 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -73,7 +73,7 @@ public class ReaderChecker
         assertEquals("IonReader.getFieldId()",
                      expectedSid, myReader.getFieldId());
 
-        InternedSymbol sym = myReader.getFieldNameSymbol();
+        SymbolToken sym = myReader.getFieldNameSymbol();
         checkSymbol(expectedText, expectedSid, sym);
 
         return this;
@@ -84,18 +84,18 @@ public class ReaderChecker
      */
     public ReaderChecker fieldName(String name)
     {
-        InternedSymbol is = myReader.getFieldNameSymbol();
+        SymbolToken tok = myReader.getFieldNameSymbol();
 
         assertEquals("field name", name, myReader.getFieldName());
 
         if (name == null)
         {
-            assertEquals("Unexpected InternedSymbol", null, is);
+            assertEquals("Unexpected SymbolToken", null, tok);
         }
         else
         {
-            assertEquals("field name InternedSymbol text",
-                         name, is.getText());
+            assertEquals("field name SymbolToken text",
+                         name, tok.getText());
         }
         // TODO check sid
 
@@ -105,7 +105,7 @@ public class ReaderChecker
     /**
      * @param name null means no field name expected.
      */
-    public ReaderChecker fieldName(InternedSymbol name)
+    public ReaderChecker fieldName(SymbolToken name)
     {
         if (name == null)
         {
@@ -116,7 +116,7 @@ public class ReaderChecker
         }
         else
         {
-            fieldName(name.getText(), name.getId());
+            fieldName(name.getText(), name.getSid());
         }
 
         return this;
@@ -158,7 +158,7 @@ public class ReaderChecker
         int[] sids = myReader.getTypeAnnotationIds();
         assertEquals("sid", expectedSid, sids[0]);
 
-        InternedSymbol[] annSyms = myReader.getTypeAnnotationSymbols();
+        SymbolToken[] annSyms = myReader.getTypeAnnotationSymbols();
         IonTestCase.checkSymbol(expectedText, expectedSid, annSyms[0]);
 
         return this;
@@ -178,9 +178,9 @@ public class ReaderChecker
         return this;
     }
 
-    public ReaderChecker annotations(InternedSymbol[] expecteds)
+    public ReaderChecker annotations(SymbolToken[] expecteds)
     {
-        InternedSymbol[] actuals = myReader.getTypeAnnotationSymbols();
+        SymbolToken[] actuals = myReader.getTypeAnnotationSymbols();
 
         assertSymbolEquals("annotation", expecteds, actuals);
 

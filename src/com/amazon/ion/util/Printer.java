@@ -8,7 +8,6 @@ import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.SYMBOLS;
 
 import com.amazon.ion.Decimal;
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonClob;
@@ -29,6 +28,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.impl._Private_IonTextWriterBuilder;
@@ -569,14 +569,14 @@ public class Printer
         {
             if (! myOptions.skipAnnotations)
             {
-                InternedSymbol[] anns = value.getTypeAnnotationSymbols();
+                SymbolToken[] anns = value.getTypeAnnotationSymbols();
                 if (anns != null)
                 {
-                    for (InternedSymbol ann : anns) {
+                    for (SymbolToken ann : anns) {
                         String text = ann.getText();
                         if (text == null) {
                             myOut.append('$');
-                            myOut.append(Integer.toString(ann.getId()));
+                            myOut.append(Integer.toString(ann.getSid()));
                         }
                         else {
                             IonTextUtils.printSymbol(myOut, text);
@@ -625,7 +625,7 @@ public class Printer
             myOut.append(close);
         }
 
-        public void writeSymbolToken(InternedSymbol sym) throws IOException
+        public void writeSymbolToken(SymbolToken sym) throws IOException
         {
             String text = sym.getText();
             if (text != null)
@@ -634,13 +634,13 @@ public class Printer
             }
             else
             {
-                int sid = sym.getId();
+                int sid = sym.getSid();
                 if (sid < 1)
                 {
                     throw new IllegalArgumentException("Bad SID " + sid);
                 }
 
-                text = "$" + sym.getId();
+                text = "$" + sym.getSid();
                 if (myOptions.symbolAsString)
                 {
                     writeString(text);
@@ -1114,7 +1114,7 @@ public class Printer
                     }
                     hitOne = true;
 
-                    InternedSymbol sym = child.getFieldNameSymbol();
+                    SymbolToken sym = child.getFieldNameSymbol();
                     writeSymbolToken(sym);
                     myOut.append(':');
                     writeChild(child, true);
@@ -1129,7 +1129,7 @@ public class Printer
         {
             writeAnnotations(value);
 
-            InternedSymbol is = value.symbolValue();
+            SymbolToken is = value.symbolValue();
             if (is == null)
             {
                 writeNull("symbol");

@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -22,7 +22,6 @@ import static com.amazon.ion.impl.SymbolTableType.SHARED;
 import static com.amazon.ion.util.IonTextUtils.printQuotedSymbol;
 
 import com.amazon.ion.EmptySymbolException;
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonList;
@@ -33,6 +32,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueFactory;
@@ -834,21 +834,21 @@ public final class UnifiedSymbolTable
     }
 
 
-    public InternedSymbol intern(String text)
+    public SymbolToken intern(String text)
     {
-        InternedSymbol is = find(text);
+        SymbolToken is = find(text);
         if (is == null)
         {
             validateSymbol(text);
             int sid = getMaxId() + 1;
             putSymbol(text, sid);
-            is = new InternedSymbolImpl(text, sid);
+            is = new SymbolTokenImpl(text, sid);
         }
         return is;
     }
 
 
-    public InternedSymbol find(String text)
+    public SymbolToken find(String text)
     {
         if (text.length() < 1) {
             throw new EmptySymbolException();
@@ -860,7 +860,7 @@ public final class UnifiedSymbolTable
             int offset = convertSidToLocalOffset(sid);
             String internedText = _symbols[offset];
             assert internedText != null;
-            return new InternedSymbolImpl(internedText, sid);
+            return new SymbolTokenImpl(internedText, sid);
         }
 
         // Don't search imports on shared symtabs, they are "open content"

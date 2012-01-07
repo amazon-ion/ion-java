@@ -1,4 +1,4 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -45,7 +45,7 @@ public class IonValueChecker
         assertEquals("IonValue.getFieldId",
                      expectedSid, myCurrentValue.getFieldId());
 
-        InternedSymbol sym = myCurrentValue.getFieldNameSymbol();
+        SymbolToken sym = myCurrentValue.getFieldNameSymbol();
         checkSymbol(expectedText, expectedSid, sym);
 
         return this;
@@ -72,7 +72,7 @@ public class IonValueChecker
             assertEquals(expectedText, typeAnnotations[0]);
         }
 
-        InternedSymbol[] annSyms = myCurrentValue.getTypeAnnotationSymbols();
+        SymbolToken[] annSyms = myCurrentValue.getTypeAnnotationSymbols();
         checkSymbol(expectedText, expectedSid, annSyms[0]);
 
         myCurrentValue.hasTypeAnnotation("just make sure it doesn't blow up");

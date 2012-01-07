@@ -1,9 +1,8 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import com.amazon.ion.ContainedValueException;
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonClob;
@@ -20,6 +19,7 @@ import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.ValueFactory;
 import java.math.BigDecimal;
@@ -384,7 +384,7 @@ abstract class CurriedValueFactory
         return v;
     }
 
-    public IonSymbol newSymbol(InternedSymbol value)
+    public IonSymbol newSymbol(SymbolToken value)
     {
         IonSymbol v = myFactory.newSymbol(value);
         handle(v);

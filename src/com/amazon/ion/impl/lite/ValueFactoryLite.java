@@ -1,14 +1,14 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.Decimal;
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.ValueFactory;
 import java.math.BigDecimal;
@@ -376,7 +376,7 @@ public class ValueFactoryLite
         return ionValue;
     }
 
-    public IonSymbolLite newSymbol(InternedSymbol value)
+    public IonSymbolLite newSymbol(SymbolToken value)
     {
         return new IonSymbolLite(_system, value);
     }

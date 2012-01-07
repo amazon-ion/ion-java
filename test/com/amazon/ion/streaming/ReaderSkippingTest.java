@@ -1,15 +1,15 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.streaming;
 
 import static com.amazon.ion.TestUtils.consumeCurrentValue;
 import static com.amazon.ion.TestUtils.testdataFiles;
 
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.TestUtils;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
@@ -145,7 +145,7 @@ extends IonTestCase
         myFullReader.getTypeAnnotationSymbols();
         if (!skip())
         {
-            InternedSymbol[] expecteds = myFullReader.getTypeAnnotationSymbols();
+            SymbolToken[] expecteds = myFullReader.getTypeAnnotationSymbols();
             check(mySkipReader).annotations(expecteds);
         }
 

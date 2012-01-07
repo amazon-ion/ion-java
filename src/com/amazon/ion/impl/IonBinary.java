@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -9,9 +9,9 @@ import static com.amazon.ion.impl.IonTimestampImpl.precisionIncludes;
 import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
 
 import com.amazon.ion.Decimal;
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.Timestamp.Precision;
 import com.amazon.ion.UnexpectedEofException;
@@ -2640,16 +2640,16 @@ done:       for (;;) {
             return 1;
         }
 
-        public int writeAnnotations(InternedSymbol[] annotations,
+        public int writeAnnotations(SymbolToken[] annotations,
                                     SymbolTable symbolTable) throws IOException
         {
             int startPosition = this.position();
 
             int annotationLen = 0;
             for (int ii=0; ii<annotations.length; ii++) {
-                int sym = annotations[ii].getId();
-                assert sym != SymbolTable.UNKNOWN_SYMBOL_ID;
-                annotationLen += IonBinary.lenVarUInt(sym);
+                int sid = annotations[ii].getSid();
+                assert sid != SymbolTable.UNKNOWN_SYMBOL_ID;
+                annotationLen += IonBinary.lenVarUInt(sid);
             }
 
             // write the len of the list
@@ -2657,8 +2657,8 @@ done:       for (;;) {
 
             // write the symbol id's
             for (int ii=0; ii<annotations.length; ii++) {
-                int sym = annotations[ii].getId();
-                this.writeVarUIntValue(sym, true);
+                int sid = annotations[ii].getSid();
+                this.writeVarUIntValue(sid, true);
             }
 
             return this.position() - startPosition;

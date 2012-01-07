@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -7,7 +7,6 @@ import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
@@ -16,6 +15,7 @@ import com.amazon.ion.SeekableReader;
 import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
 import com.amazon.ion.impl.UnifiedInputStreamX.FromByteArray;
 import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
@@ -271,12 +271,12 @@ class IonReaderBinaryUserX
     }
 
     @Override
-    public final InternedSymbol getFieldNameSymbol()
+    public final SymbolToken getFieldNameSymbol()
     {
         if (_value_field_id == SymbolTable.UNKNOWN_SYMBOL_ID) return null;
         int sid = _value_field_id;
         String text = _symbols.findKnownSymbol(sid);
-        return new InternedSymbolImpl(text, sid);
+        return new SymbolTokenImpl(text, sid);
     }
 
     @Override
@@ -323,7 +323,7 @@ class IonReaderBinaryUserX
     }
 
     @Override
-    public InternedSymbol symbolValue()
+    public SymbolToken symbolValue()
     {
         if (_value_type != IonType.SYMBOL) throw new IllegalStateException();
         if (_value_is_null) return null;
@@ -332,7 +332,7 @@ class IonReaderBinaryUserX
         assert sid != UNKNOWN_SYMBOL_ID;
         String text = _symbols.findKnownSymbol(sid);
 
-        return new InternedSymbolImpl(text, sid);
+        return new SymbolTokenImpl(text, sid);
     }
 
     @Override

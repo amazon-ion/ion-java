@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -8,12 +8,12 @@ import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.impl.IonConstants.BB_TOKEN_LEN;
 
 import com.amazon.ion.EmptySymbolException;
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
@@ -54,7 +54,7 @@ public final class IonSymbolImpl
         setValue(name);
     }
 
-    public IonSymbolImpl(IonSystemImpl system, InternedSymbol sym)
+    public IonSymbolImpl(IonSystemImpl system, SymbolToken sym)
     {
         this(system);
 
@@ -70,7 +70,7 @@ public final class IonSymbolImpl
             }
             else
             {
-                mySid = sym.getId();
+                mySid = sym.getSid();
             }
 
             _isNullValue(false);
@@ -211,13 +211,13 @@ public final class IonSymbolImpl
     }
 
 
-    public InternedSymbol symbolValue()
+    public SymbolToken symbolValue()
     {
         if (isNullValue()) return null;
 
         int sid = getSymbolId();
         String text = _stringValue();
-        return IonImplUtils.newInternedSymbol(text, sid);
+        return IonImplUtils.newSymbolToken(text, sid);
     }
 
 

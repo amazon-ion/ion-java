@@ -20,7 +20,6 @@ import static com.amazon.ion.util.IonTextUtils.printString;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.Decimal;
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonCatalog;
@@ -46,6 +45,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.SystemSymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnexpectedEofException;
@@ -659,7 +659,7 @@ public final class IonSystemImpl
                 return true;
             }
             else if (sid < 1 || sid > SystemSymbolTable.ION_1_0_MAX_ID) {
-                InternedSymbol is = symbol.symbolValue();
+                SymbolToken is = symbol.symbolValue();
                 String image = is.getText();
                 return image != null && textIsSystemId(image);
             }
@@ -1088,7 +1088,7 @@ public final class IonSystemImpl
         return new IonSymbolImpl(this, name);
     }
 
-    public IonSymbol newSymbol(InternedSymbol value)
+    public IonSymbol newSymbol(SymbolToken value)
     {
         return new IonSymbolImpl(this, value);
     }

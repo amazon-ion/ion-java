@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -7,11 +7,11 @@ import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 
 import com.amazon.ion.EmptySymbolException;
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonImplUtils;
@@ -36,13 +36,13 @@ public class IonSymbolLite
         super(system, isNull);
     }
 
-    IonSymbolLite(IonSystemLite system, InternedSymbol sym)
+    IonSymbolLite(IonSystemLite system, SymbolToken sym)
     {
         super(system, sym == null);
         if (sym != null)
         {
             String text = sym.getText();
-            int sid = sym.getId();
+            int sid = sym.getSid();
             assert text != null || sid > 0;
 
             if (text != null)
@@ -132,11 +132,11 @@ public class IonSymbolLite
                 return _sid;
             }
         }
-        InternedSymbol is = symtab.find(name);
-        if (is != null)
+        SymbolToken tok = symtab.find(name);
+        if (tok != null)
         {
-            _sid = is.getId();
-            _set_value(is.getText()); // Use the interned instance of the text
+            _sid = tok.getSid();
+            _set_value(tok.getText()); // Use the interned instance of the text
         }
         return _sid;
     }
@@ -173,13 +173,13 @@ public class IonSymbolLite
         return name;
     }
 
-    public InternedSymbol symbolValue()
+    public SymbolToken symbolValue()
     {
         if (isNullValue()) return null;
 
         int sid = getSymbolId();
         String text = _stringValue();
-        return IonImplUtils.newInternedSymbol(text, sid);
+        return IonImplUtils.newSymbolToken(text, sid);
     }
 
 

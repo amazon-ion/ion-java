@@ -1,11 +1,10 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonImplUtils.readFully;
 
 import com.amazon.ion.Decimal;
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
@@ -24,6 +23,7 @@ import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import java.io.IOException;
 import java.io.InputStream;
@@ -243,7 +243,7 @@ class IonReaderTreeSystem
     }
 
 
-    public final InternedSymbol[] getTypeAnnotationSymbols()
+    public final SymbolToken[] getTypeAnnotationSymbols()
     {
         if (_curr == null) {
             throw new IllegalStateException();
@@ -254,7 +254,7 @@ class IonReaderTreeSystem
 
     public final int[] getTypeAnnotationIds()
     {
-        InternedSymbol[] syms = getTypeAnnotationSymbols(); // Checks nullValue
+        SymbolToken[] syms = getTypeAnnotationSymbols(); // Checks nullValue
         return IonImplUtils.toSids(syms, syms.length);
     }
 
@@ -297,7 +297,7 @@ class IonReaderTreeSystem
         return (_curr == null || (_hoisted && _top == 0)) ? null : _curr.getFieldName();
     }
 
-    public final InternedSymbol getFieldNameSymbol()
+    public final SymbolToken getFieldNameSymbol()
     {
         if (_curr == null || (_hoisted && _top == 0)) return null;
         return _curr.getFieldNameSymbol();
@@ -406,7 +406,7 @@ class IonReaderTreeSystem
         throw new IllegalStateException("current value is not a symbol or string");
     }
 
-    public InternedSymbol symbolValue()
+    public SymbolToken symbolValue()
     {
         if (! (_curr instanceof IonSymbol))
         {

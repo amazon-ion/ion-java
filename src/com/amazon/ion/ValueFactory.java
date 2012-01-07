@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -521,7 +521,7 @@ public interface ValueFactory
 
 
     /**
-     * Constructs a new Ion symbol with the given symbol fields.
+     * Constructs a new Ion symbol with the given symbol token.
      * <p>
      * <b>This is an "expert method": correct use requires deep understanding
      * of the Ion binary format. You almost certainly don't want to use it.</b>
@@ -529,7 +529,7 @@ public interface ValueFactory
      * @param value the text and/or SID of the symbol;
      * may be <code>null</code> to make <code>null.symbol</code>.
      */
-    public IonSymbol newSymbol(InternedSymbol value);
+    public IonSymbol newSymbol(SymbolToken value);
 
 
     //-------------------------------------------------------------------------

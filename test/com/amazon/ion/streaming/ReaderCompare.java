@@ -1,16 +1,14 @@
-/*
- * Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.streaming;
 
 import static com.amazon.ion.impl.IonImplUtils.READER_HASNEXT_REMOVED;
 
 import com.amazon.ion.Decimal;
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.junit.IonAssert;
 import org.junit.Assert;
@@ -108,23 +106,23 @@ public class ReaderCompare
         assertEquals(what, s1, s2);
     }
 
-    public static void compareFieldNames(IonReader it1, IonReader it2) {
-        InternedSymbol is1 = it1.getFieldNameSymbol();
-        InternedSymbol is2 = it1.getFieldNameSymbol();
-        String fn = is1.getText();
-        assertEquals(fn, is2.getText());
+    public static void compareFieldNames(IonReader r1, IonReader r2) {
+        SymbolToken tok1 = r1.getFieldNameSymbol();
+        SymbolToken tok2 = r1.getFieldNameSymbol();
+        String fn = tok1.getText();
+        assertEquals(fn, tok2.getText());
 
         if (fn != null) {
-            String f1 = it1.getFieldName();
-            String f2 = it2.getFieldName();
+            String f1 = r1.getFieldName();
+            String f2 = r2.getFieldName();
             compareNonNullStrings("field name", fn, f1);
             compareNonNullStrings("field name", fn, f2);
         }
     }
 
     public static void compareAnnotations(IonReader it1, IonReader it2) {
-        InternedSymbol[] syms1 = it1.getTypeAnnotationSymbols();
-        InternedSymbol[] syms2 = it2.getTypeAnnotationSymbols();
+        SymbolToken[] syms1 = it1.getTypeAnnotationSymbols();
+        SymbolToken[] syms2 = it2.getTypeAnnotationSymbols();
 
         IonAssert.assertSymbolEquals("annotation", syms1, syms2);
     }
@@ -164,16 +162,16 @@ public class ReaderCompare
             }
             case SYMBOL:
             {
-                InternedSymbol is1 = it1.symbolValue();
-                InternedSymbol is2 = it2.symbolValue();
-                if (is1.getText() == null || is2.getText() == null)
+                SymbolToken tok1 = it1.symbolValue();
+                SymbolToken tok2 = it2.symbolValue();
+                if (tok1.getText() == null || tok2.getText() == null)
                 {
-                    assertEquals("sids", is1.getId(), is2.getId());
+                    assertEquals("sids", tok1.getSid(), tok2.getSid());
                 }
                 else
                 {
-                    String s1 = is1.getText();
-                    String s2 = is2.getText();
+                    String s1 = tok1.getText();
+                    String s2 = tok2.getText();
                     assertEquals(s1, s2);
                 }
                 break;

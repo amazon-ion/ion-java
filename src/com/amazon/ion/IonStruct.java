@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -161,7 +161,7 @@ public interface IonStruct
      *   if {@code fieldName} is empty or
      *   if {@code element} is an {@link IonDatagram}.
      */
-    public void add(InternedSymbol fieldName, IonValue child)
+    public void add(SymbolToken fieldName, IonValue child)
         throws ContainedValueException;
     // TODO if name has text, it is authoritative
     // TODO   if sid doesn't match context symtab assignment, it is replaced

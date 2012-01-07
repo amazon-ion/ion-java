@@ -1,7 +1,8 @@
+// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
+
 package com.amazon.ion.util;
 
 import com.amazon.ion.Decimal;
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDecimal;
@@ -15,6 +16,7 @@ import com.amazon.ion.IonText;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import java.io.IOException;
 import java.io.InputStream;
@@ -110,16 +112,16 @@ public final class Equivalence {
     }
 
 
-    private static int compare(InternedSymbol is1, InternedSymbol is2)
+    private static int compare(SymbolToken tok1, SymbolToken tok2)
     {
-        String text1 = is1.getText();
-        String text2 = is2.getText();
+        String text1 = tok1.getText();
+        String text2 = tok2.getText();
         if (text1 == null || text2 == null) {
             if (text1 != null) return  1;
             if (text2 != null) return -1;
 
             // otherwise v1 == v2 == null
-            return compare(is1.getId(), is2.getId());
+            return compare(tok1.getSid(), tok2.getSid());
         }
 
         return text1.compareTo(text2);
@@ -199,10 +201,10 @@ public final class Equivalence {
          */
         public StructItem(final IonValue myValue, final boolean myStrict)
         {
-            InternedSymbol is = myValue.getFieldNameSymbol();
-            String k = is.getText();
+            SymbolToken tok = myValue.getFieldNameSymbol();
+            String k = tok.getText();
             if (k == null) {
-                k = " -- UNKNOWN SYMBOL -- $" + is.getId(); // TODO ION-58
+                k = " -- UNKNOWN SYMBOL -- $" + tok.getSid(); // TODO ION-58
             }
             key = k;
             value = myValue;
@@ -292,8 +294,8 @@ public final class Equivalence {
         return values;
     }
 
-    private static int ionCompareAnnotations(InternedSymbol[] an1,
-                                             InternedSymbol[] an2)
+    private static int ionCompareAnnotations(SymbolToken[] an1,
+                                             SymbolToken[] an2)
     {
         int result = 0;
 
@@ -490,8 +492,8 @@ public final class Equivalence {
         if (strict && (result == 0)) {
             // check tuple equality over the annotations
             // (which are strings)
-            InternedSymbol[] an1 = v1.getTypeAnnotationSymbols();
-            InternedSymbol[] an2 = v2.getTypeAnnotationSymbols();
+            SymbolToken[] an1 = v1.getTypeAnnotationSymbols();
+            SymbolToken[] an2 = v2.getTypeAnnotationSymbols();
             result = ionCompareAnnotations(an1, an2);
         }
 

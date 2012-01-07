@@ -1,4 +1,4 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -46,8 +46,8 @@ public class IonValueTest
     public void testGetTypeAnnotationSymbols()
     {
         IonValue v = system().newNull();
-        InternedSymbol[] anns = v.getTypeAnnotationSymbols();
-        assertArrayEquals(InternedSymbol.EMPTY_ARRAY, anns);
+        SymbolToken[] anns = v.getTypeAnnotationSymbols();
+        assertArrayEquals(SymbolToken.EMPTY_ARRAY, anns);
 
         v.setTypeAnnotations(ann, ben);
         anns = v.getTypeAnnotationSymbols();
@@ -61,11 +61,11 @@ public class IonValueTest
         IonValue v = system().newNull();
         v.setTypeAnnotations(ann);
 
-        InternedSymbol[] anns = v.getTypeAnnotationSymbols();
+        SymbolToken[] anns = v.getTypeAnnotationSymbols();
         assertEquals(ann, anns[0].getText());
-        anns[0] = new FakeInternedSymbol("ben", SymbolTable.UNKNOWN_SYMBOL_ID);
+        anns[0] = new FakeSymbolToken("ben", SymbolTable.UNKNOWN_SYMBOL_ID);
 
-        InternedSymbol[] anns2 = v.getTypeAnnotationSymbols();
+        SymbolToken[] anns2 = v.getTypeAnnotationSymbols();
         assertEquals(ann, anns2[0].getText());
     }
 
@@ -121,7 +121,7 @@ public class IonValueTest
     public void testSetTypeAnnotationInterning()
     {
         SymbolTable systemSymtab = system().getSystemSymbolTable();
-        InternedSymbol nameSym = systemSymtab.find(SystemSymbols.NAME);
+        SymbolToken nameSym = systemSymtab.find(SystemSymbols.NAME);
 
         String nameOrig = nameSym.getText();
         String nameCopy = new String(nameOrig);

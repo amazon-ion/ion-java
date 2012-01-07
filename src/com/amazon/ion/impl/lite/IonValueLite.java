@@ -4,11 +4,10 @@ package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
-import static com.amazon.ion.impl.IonImplUtils.newInternedSymbol;
+import static com.amazon.ion.impl.IonImplUtils.newSymbolToken;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.util.Equivalence.ionEquals;
 
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
@@ -20,6 +19,7 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonImplUtils;
@@ -182,7 +182,7 @@ public abstract class IonValueLite
      * The annotation sequence. This array is overallocated and may have
      * nulls at the end denoting unused slots.
      */
-    private   InternedSymbol[] _annotations;
+    private   SymbolToken[] _annotations;
 
     // current size 32 bit: 3*4 + 4 +  8 = 24 (32 bytes allocated)
     //              64 bit: 3*8 + 4 + 16 = 52 (56 bytes allocated)
@@ -214,7 +214,7 @@ public abstract class IonValueLite
         // we don't add duplicate annotations
         if (hasTypeAnnotation(annotation)) return;
 
-        InternedSymbol sym = newInternedSymbol(annotation, UNKNOWN_SYMBOL_ID);
+        SymbolToken sym = newSymbolToken(annotation, UNKNOWN_SYMBOL_ID);
 
         int old_len = (_annotations == null) ? 0 : _annotations.length;
         if (old_len > 0) {
@@ -227,7 +227,7 @@ public abstract class IonValueLite
         }
 
         int new_len = (old_len == 0) ? 1 : old_len * 2;
-        InternedSymbol temp[] = new InternedSymbol[new_len];
+        SymbolToken temp[] = new SymbolToken[new_len];
         if (old_len > 0) {
             System.arraycopy(_annotations, 0, temp, 0, old_len);
         }
@@ -345,8 +345,8 @@ public abstract class IonValueLite
         SymbolTable symbolTable = getSymbolTable();
         if (symbolTable != null)
         {
-            InternedSymbol is = symbolTable.find(_fieldName);
-            if (is != null) return is.getId();
+            SymbolToken tok = symbolTable.find(_fieldName);
+            if (tok != null) return tok.getSid();
         }
         return UNKNOWN_SYMBOL_ID;
     }
@@ -363,7 +363,7 @@ public abstract class IonValueLite
     }
 
 
-    public final InternedSymbol getFieldNameSymbol()
+    public final SymbolToken getFieldNameSymbol()
     {
         int sid = _fieldId;
         String text;
@@ -382,7 +382,7 @@ public abstract class IonValueLite
             return null;
         }
 
-        return IonImplUtils.newInternedSymbol(text, sid);
+        return IonImplUtils.newSymbolToken(text, sid);
     }
 
 
@@ -405,7 +405,7 @@ public abstract class IonValueLite
 
             if (_annotations != null) {
                 for (int ii=0; ii<_annotations.length; ii++) {
-                    InternedSymbol sym = _annotations[ii];
+                    SymbolToken sym = _annotations[ii];
                     if (sym == null) {
                         break;
                     }
@@ -454,12 +454,12 @@ public abstract class IonValueLite
     }
 
     /** Both parts of the symbol are trusted! */
-    final void setFieldNameSymbol(InternedSymbol name)
+    final void setFieldNameSymbol(SymbolToken name)
     {
         assert(this.getContainer() == null);
         assert _fieldId == UNKNOWN_SYMBOL_ID && _fieldName == null;
         _fieldName = name.getText();
-        _fieldId   = name.getId();
+        _fieldId   = name.getSid();
     }
 
     public final String getFieldName()
@@ -585,7 +585,7 @@ public abstract class IonValueLite
         return IonImplUtils.toStrings(_annotations, count);
     }
 
-    public final /* synchronized ?? */ InternedSymbol[] getTypeAnnotationSymbols()
+    public final /* synchronized ?? */ SymbolToken[] getTypeAnnotationSymbols()
     {
         // first we have to count the number of non-null
         // elements there are in the annotations array
@@ -601,26 +601,26 @@ public abstract class IonValueLite
         }
         // if there aren't any, we're done
         if (count == 0) {
-            return InternedSymbol.EMPTY_ARRAY;
+            return SymbolToken.EMPTY_ARRAY;
         }
 
         // it there are we allocate a user array and
         // copy the references into it. Note that our
         // count above lets us use arraycopy
-        InternedSymbol[] users_copy = new InternedSymbol[count];
+        SymbolToken[] users_copy = new SymbolToken[count];
         // TODO should try to fill in sids
         System.arraycopy(_annotations, 0, users_copy, 0, count);
         return users_copy;
     }
 
-    public void setTypeAnnotationSymbols(InternedSymbol... annotations)
+    public void setTypeAnnotationSymbols(SymbolToken... annotations)
     {
         checkForLock();
 
         if (annotations == null || annotations.length == 0)
         {
             // Normalize all empty lists to the same instance.
-            _annotations = InternedSymbol.EMPTY_ARRAY;
+            _annotations = SymbolToken.EMPTY_ARRAY;
         }
         else
         {
@@ -638,7 +638,7 @@ public abstract class IonValueLite
     {
         checkForLock();
 
-        _annotations = IonImplUtils.newInternedSymbols(getSymbolTable(),
+        _annotations = IonImplUtils.newSymbolTokens(getSymbolTable(),
                                                        annotations);
     }
 
@@ -658,7 +658,7 @@ public abstract class IonValueLite
 
         if (_annotations != null) {
             for (int ii=0; ii<_annotations.length; ii++) {
-                InternedSymbol a = _annotations[ii];
+                SymbolToken a = _annotations[ii];
                 if (a == null) {
                     break;
                 }
@@ -754,7 +754,7 @@ public abstract class IonValueLite
             }
             int ii;
             for (ii=pos; ii<_annotations.length - 1; ii++) {
-                InternedSymbol a = _annotations[ii+1];
+                SymbolToken a = _annotations[ii+1];
                 if (a == null) {
                     break;
                 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -17,14 +17,14 @@ import static com.amazon.ion.SystemSymbols.SYMBOLS;
 import static com.amazon.ion.SystemSymbols.SYMBOLS_SID;
 import static com.amazon.ion.SystemSymbols.VERSION;
 import static com.amazon.ion.SystemSymbols.VERSION_SID;
-import static com.amazon.ion.impl.IonImplUtils.newInternedSymbol;
+import static com.amazon.ion.impl.IonImplUtils.newSymbolToken;
 
 import com.amazon.ion.Decimal;
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -1058,16 +1058,16 @@ public class UnifiedSymbolTableReader
         return IonImplUtils.EMPTY_STRING_ARRAY;
     }
 
-    private static final InternedSymbol ION_SYMBOL_TABLE_SYM =
-        newInternedSymbol(ION_SYMBOL_TABLE, ION_SYMBOL_TABLE_SID);
+    private static final SymbolToken ION_SYMBOL_TABLE_SYM =
+        newSymbolToken(ION_SYMBOL_TABLE, ION_SYMBOL_TABLE_SID);
 
-    private static final InternedSymbol ION_SHARED_SYMBOL_TABLE_SYM =
-        newInternedSymbol(ION_SHARED_SYMBOL_TABLE, ION_SHARED_SYMBOL_TABLE_SID);
+    private static final SymbolToken ION_SHARED_SYMBOL_TABLE_SYM =
+        newSymbolToken(ION_SHARED_SYMBOL_TABLE, ION_SHARED_SYMBOL_TABLE_SID);
 
-    public InternedSymbol[] getTypeAnnotationSymbols()
+    public SymbolToken[] getTypeAnnotationSymbols()
     {
         if (_current_state == S_STRUCT) {
-            InternedSymbol sym;
+            SymbolToken sym;
             if (_symbol_table.isLocalTable() || _symbol_table.isSystemTable())
             {
                 sym = ION_SYMBOL_TABLE_SYM;
@@ -1078,9 +1078,9 @@ public class UnifiedSymbolTableReader
             }
 
             // Must return a new array each time to prevent user from changing it
-            return new InternedSymbol[] { sym };
+            return new SymbolToken[] { sym };
         }
-        return InternedSymbol.EMPTY_ARRAY;
+        return SymbolToken.EMPTY_ARRAY;
     }
 
 
@@ -1193,7 +1193,7 @@ public class UnifiedSymbolTableReader
         }
     }
 
-    public InternedSymbol getFieldNameSymbol()
+    public SymbolToken getFieldNameSymbol()
     {
         switch (_current_state)
         {
@@ -1214,21 +1214,21 @@ public class UnifiedSymbolTableReader
 
         case S_NAME:
         case S_IMPORT_NAME:
-            return new InternedSymbolImpl(NAME, NAME_SID);
+            return new SymbolTokenImpl(NAME, NAME_SID);
 
         case S_VERSION:
         case S_IMPORT_VERSION:
-            return new InternedSymbolImpl(VERSION, VERSION_SID);
+            return new SymbolTokenImpl(VERSION, VERSION_SID);
 
         case S_MAX_ID:
         case S_IMPORT_MAX_ID:
-            return new InternedSymbolImpl(MAX_ID, MAX_ID_SID);
+            return new SymbolTokenImpl(MAX_ID, MAX_ID_SID);
 
         case S_IMPORT_LIST:
-            return new InternedSymbolImpl(IMPORTS, IMPORTS_SID);
+            return new SymbolTokenImpl(IMPORTS, IMPORTS_SID);
 
         case S_SYMBOL_LIST:
-            return new InternedSymbolImpl(SYMBOLS, SYMBOLS_SID);
+            return new SymbolTokenImpl(SYMBOLS, SYMBOLS_SID);
 
         default:
             throw new IonException("Internal error: UnifiedSymbolTableReader is in an unrecognized state: "+_current_state);
@@ -1373,7 +1373,7 @@ public class UnifiedSymbolTableReader
         return _string_value;
     }
 
-    public InternedSymbol symbolValue()
+    public SymbolToken symbolValue()
     {
         // TODO handle null
         throw new UnsupportedOperationException();

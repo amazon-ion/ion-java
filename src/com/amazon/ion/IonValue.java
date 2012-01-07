@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -156,7 +156,7 @@ public interface IonValue
      *
      * @return null if this value isn't a struct field.
      */
-    public InternedSymbol getFieldNameSymbol();
+    public SymbolToken getFieldNameSymbol();
 
 
     /**
@@ -231,7 +231,7 @@ public interface IonValue
      * @return the (ordered) annotations on the current value, or an empty
      * array (not {@code null}) if there are none.
      */
-    public InternedSymbol[] getTypeAnnotationSymbols();
+    public SymbolToken[] getTypeAnnotationSymbols();
 
 
     /**
@@ -256,7 +256,7 @@ public interface IonValue
      */
     public void setTypeAnnotations(String... annotations);
 
-    public void setTypeAnnotationSymbols(InternedSymbol... annotations);
+    public void setTypeAnnotationSymbols(SymbolToken... annotations);
 
     /**
      * Removes all the user type annotations attached to this value.

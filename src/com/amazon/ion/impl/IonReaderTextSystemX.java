@@ -1,11 +1,10 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonScalarConversionsX.getValueTypeName;
 
 import com.amazon.ion.Decimal;
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonException;
@@ -19,6 +18,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.IonReaderTextRawTokensX.IonReaderTextTokenException;
@@ -359,18 +359,18 @@ public class IonReaderTextSystemX
     // public value routines
     //
 
-    public InternedSymbol[] getTypeAnnotationSymbols()
+    public SymbolToken[] getTypeAnnotationSymbols()
     {
         final int count = _annotation_count;
-        if (count == 0) return InternedSymbol.EMPTY_ARRAY;
+        if (count == 0) return SymbolToken.EMPTY_ARRAY;
 
         SymbolTable symbols = getSymbolTable();
 
-        InternedSymbol[] result = new InternedSymbol[count];
+        SymbolToken[] result = new SymbolToken[count];
         for (int i = 0; i < count; i++)
         {
-            InternedSymbol sym = _annotations[i];
-            InternedSymbol updated = IonImplUtils.localize(symbols, sym);
+            SymbolToken sym = _annotations[i];
+            SymbolToken updated = IonImplUtils.localize(symbols, sym);
             if (updated != sym) _annotations[i] = updated;
             result[i] = updated;
         }
@@ -380,7 +380,7 @@ public class IonReaderTextSystemX
 
     public int[] getTypeAnnotationIds()
     {
-        InternedSymbol[] syms = getTypeAnnotationSymbols();
+        SymbolToken[] syms = getTypeAnnotationSymbols();
         return IonImplUtils.toSids(syms, syms.length);
     }
 
@@ -527,9 +527,9 @@ public class IonReaderTextSystemX
     }
 
     @Override
-    public final InternedSymbol getFieldNameSymbol()
+    public final SymbolToken getFieldNameSymbol()
     {
-        InternedSymbol sym = super.getFieldNameSymbol();
+        SymbolToken sym = super.getFieldNameSymbol();
         if (sym != null)
         {
             sym = IonImplUtils.localize(getSymbolTable(), sym);
@@ -546,7 +546,7 @@ public class IonReaderTextSystemX
         return _v.getInt();
     }
 
-    public InternedSymbol symbolValue()
+    public SymbolToken symbolValue()
     {
         if (_value_type != IonType.SYMBOL) throw new IllegalStateException();
         if (_v.isNull()) return null;
@@ -559,7 +559,7 @@ public class IonReaderTextSystemX
 
         String text = _v.getString();
         int    sid  = _v.getInt();
-        return new InternedSymbolImpl(text, sid);
+        return new SymbolTokenImpl(text, sid);
     }
 
     //

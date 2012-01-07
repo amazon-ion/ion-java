@@ -1,4 +1,4 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -7,7 +7,6 @@ import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.impl.IonImplUtils.stringIterator;
 import static com.amazon.ion.impl.SymbolTableTest.checkSharedTable;
 
-import com.amazon.ion.InternedSymbol;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
@@ -16,6 +15,7 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SharedSymtabMaker;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Symtabs;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.junit.Injected.Inject;
@@ -281,9 +281,9 @@ public class SharedSymbolTableTest
 
         SymbolTable st = makeAbcTable();
 
-        InternedSymbol is = st.intern(OTHER_A);
-        assertSame(A, is.getText());
-        assertEquals(st.getImportedMaxId() + 1, is.getId());
+        SymbolToken tok = st.intern(OTHER_A);
+        assertSame(A, tok.getText());
+        assertEquals(st.getImportedMaxId() + 1, tok.getSid());
     }
 
     @Test(expected = NullPointerException.class)
@@ -303,23 +303,23 @@ public class SharedSymbolTableTest
 
 
     //-------------------------------------------------------------------------
-    // findInternedSymbol()
+    // find()
 
     @Test
-    public void testFindInternedSymbol()
+    public void testFindSymbolToken()
     {
         SymbolTable st = makeAbcTable();
 
-        InternedSymbol is = st.find(OTHER_A);
-        assertSame(A, is.getText());
-        assertEquals(st.getImportedMaxId() + 1, is.getId());
+        SymbolToken tok = st.find(OTHER_A);
+        assertSame(A, tok.getText());
+        assertEquals(st.getImportedMaxId() + 1, tok.getSid());
 
-        is = st.find("not there");
-        assertNull(is);
+        tok = st.find("not there");
+        assertNull(tok);
     }
 
     @Test(expected = NullPointerException.class)
-    public void testFindInternSymbolNull()
+    public void testFindSymbolTokenNull()
     {
         SymbolTable st = makeAbcTable();
         st.find(null);

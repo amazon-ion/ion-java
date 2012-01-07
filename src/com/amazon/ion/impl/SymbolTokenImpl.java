@@ -1,20 +1,20 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.util.IonTextUtils.printString;
 
-import com.amazon.ion.InternedSymbol;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 
 
-final class InternedSymbolImpl
-    implements InternedSymbol
+final class SymbolTokenImpl
+    implements SymbolToken
 {
     private final String myText;
     private final int mySid;
 
-    InternedSymbolImpl(String text, int sid)
+    SymbolTokenImpl(String text, int sid)
     {
         assert text != null || sid > 0 : "Neither text nor sid is defined";
 
@@ -22,7 +22,7 @@ final class InternedSymbolImpl
         mySid = sid;
     }
 
-    InternedSymbolImpl(int sid)
+    SymbolTokenImpl(int sid)
     {
         assert sid > 0 : "sid is undefined";
 
@@ -42,7 +42,7 @@ final class InternedSymbolImpl
         return myText;
     }
 
-    public int getId()
+    public int getSid()
     {
         return mySid;
     }
@@ -51,6 +51,6 @@ final class InternedSymbolImpl
     public String toString()
     {
         String text = (myText == null ? null : printString(myText));
-        return "InternedSymbol::{text:" + text + ",id:" + mySid + "}";
+        return "SymbolToken::{text:" + text + ",id:" + mySid + "}";
     }
 }
