@@ -176,6 +176,8 @@ public interface IonReader
      *
      * @return the (ordered) annotations on the current value, or an empty
      * array (not {@code null}) if there are none.
+     *
+     * @since IonJava R15
      */
     public SymbolToken[] getTypeAnnotationSymbols();
 
@@ -189,7 +191,8 @@ public interface IonReader
      * @return the (ordered) annotations on the current value, or an empty
      * array (not {@code null}) if there are none.
      *
-     * @deprecated Since R15. Use {@link #getTypeAnnotationSymbols()} instead.
+     * @deprecated Since IonJava R15.
+     * Use {@link #getTypeAnnotationSymbols()} instead.
      */
     @Deprecated
     public int[] getTypeAnnotationIds();
@@ -215,7 +218,8 @@ public interface IonReader
      *
      * @return not null.
      *
-     * @deprecated Since R15. Use {@link #getTypeAnnotationSymbols()} instead.
+     * @deprecated Since IonJava R15.
+     * Use {@link #getTypeAnnotationSymbols()} instead.
      */
     @Deprecated
     public Iterator<Integer> iterateTypeAnnotationIds();
@@ -231,7 +235,8 @@ public interface IonReader
      * If the current value is not a field, or if the symbol ID cannot be
      * determined, this method returns a value <em>less than one</em>.
      *
-     * @deprecated Since R15. Use {@link #getFieldNameSymbol()} instead.
+     * @deprecated Since IonJava R15.
+     * Use {@link #getFieldNameSymbol()} instead.
      */
     @Deprecated
     public int getFieldId();
@@ -249,6 +254,8 @@ public interface IonReader
      *
      * @return null if there is no current value or if the current value is
      *  not a field of a struct.
+     *
+     * @since IonJava R15
      */
     public SymbolToken getFieldNameSymbol();
 
@@ -365,6 +372,8 @@ public interface IonReader
      * {@link IonType#SYMBOL}.
      *
      * @return null if {@link #isNullValue()}
+     *
+     * @since IonJava R15
      */
     public SymbolToken symbolValue();
 

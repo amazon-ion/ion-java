@@ -155,6 +155,8 @@ public interface IonValue
      * (text + ID).
      *
      * @return null if this value isn't a struct field.
+     *
+     * @since IonJava R15
      */
     public SymbolToken getFieldNameSymbol();
 
@@ -233,6 +235,8 @@ public interface IonValue
      *
      * @return the (ordered) annotations on the current value, or an empty
      * array (not {@code null}) if there are none.
+     *
+     * @since IonJava R15
      */
     public SymbolToken[] getTypeAnnotationSymbols();
 
@@ -247,7 +251,7 @@ public interface IonValue
 
 
     /**
-     * Replaces all type annotations with the given ones.
+     * Replaces all type annotations with the given text.
      *
      * @param annotations the new annotations.  If null or empty array, then
      *  all annotations are removed.  Any duplicates are preserved.
@@ -259,6 +263,20 @@ public interface IonValue
      */
     public void setTypeAnnotations(String... annotations);
 
+    /**
+     * Replaces all type annotations with the given symbol tokens.
+     * The contents of the {@code annotations} array are copied into this
+     * writer, so the caller does not need to preserve the array.
+     * <p>
+     * <b>This is an "expert method": correct use requires deep understanding
+     * of the Ion binary format. You almost certainly don't want to use it.</b>
+     *
+     * @param annotations the new annotations.
+     * If null or empty array, then all annotations are removed.
+     * Any duplicates are preserved.
+     *
+     * @since IonJava R15
+     */
     public void setTypeAnnotationSymbols(SymbolToken... annotations);
 
     /**

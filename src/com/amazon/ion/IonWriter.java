@@ -166,7 +166,7 @@ public interface IonWriter
      * @throws IllegalStateException if the current container isn't a struct,
      * that is, if {@link #isInStruct()} is false.
      *
-     * @deprecated Since R15.
+     * @deprecated Since IonJava R15.
      * Use {@link #setFieldNameSymbol(SymbolToken)} instead.
      */
     @Deprecated
@@ -174,8 +174,6 @@ public interface IonWriter
 
     /**
      * Sets the pending field name to the given text.
-     * If the string is not present in the current symbol table,
-     * it will be added.
      * <p>
      * The pending field name is cleared when the current value is
      * written via {@link #stepIn(IonType) stepIn()} or one of the
@@ -190,6 +188,19 @@ public interface IonWriter
      */
     public void setFieldName(String name);
 
+    /**
+     * Sets the pending field name to the given token.
+     * <p>
+     * The pending field name is cleared when the current value is
+     * written via {@link #stepIn(IonType) stepIn()} or one of the
+     * {@code write*()} methods.
+     *
+     * @param name text of the field name
+     *
+     * @throws IllegalStateException if the current container isn't a struct,
+     * that is, if {@link #isInStruct()} is false.
+     * @throws NullPointerException if {@code name} is null.
+     */
     public void setFieldNameSymbol(SymbolToken name);
 
 
@@ -224,6 +235,8 @@ public interface IonWriter
      *
      * @param annotations
      * If null or empty, any pending annotations are cleared.
+     *
+     * @since IonJava R15
      */
     public void setTypeAnnotationSymbols(SymbolToken... annotations);
 
@@ -244,7 +257,7 @@ public interface IonWriter
      * @param annotationIds array with the annotation symbol ids.
      * If null or empty, any pending annotations are cleared.
      *
-     * @deprecated Since R15.
+     * @deprecated Since IonJava R15.
      * Use {@link #setTypeAnnotationSymbols(SymbolToken...)} instead.
      */
     @Deprecated
@@ -273,7 +286,7 @@ public interface IonWriter
      *
      * @param annotationId symbol id to append to the annotation list
      *
-     * @deprecated Since R15.
+     * @deprecated Since IonJava R15.
      * Use {@link #setTypeAnnotationSymbols(SymbolToken...)} instead.
      */
     @Deprecated
@@ -469,7 +482,7 @@ public interface IonWriter
      * @param symbolId symbol table id to write
      *
      * @deprecated Since IonJava R15.
-     * Use {@link #writeSymbol(SymbolToken)} instead.
+     * Use {@link #writeSymbolToken(SymbolToken)} instead.
      */
     @Deprecated
     public void writeSymbol(int symbolId) throws IOException;
@@ -493,6 +506,8 @@ public interface IonWriter
      *
      * @throws IllegalArgumentException if the value contains an invalid UTF-16
      * surrogate pair.
+     *
+     * @since IonJava R15
      */
     public void writeSymbolToken(SymbolToken content) throws IOException;
 

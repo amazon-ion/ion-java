@@ -52,6 +52,8 @@ public interface IonSymbol
      * Returns this value as a symbol token (text + ID).
      *
      * @return null if {@link #isNullValue()}
+     *
+     * @since IonJava R15
      */
     public SymbolToken symbolValue();
 

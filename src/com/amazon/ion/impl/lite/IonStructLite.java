@@ -481,16 +481,14 @@ public class IonStructLite
     public void add(SymbolToken fieldName, IonValue child)
     {
         String text = fieldName.getText();
-        int sid = fieldName.getSid();
-
         if (text != null)
         {
-            // TODO should we always ignore the sid?
+            // Ignoring the sid is safe, but perhaps not the most efficient.
             add(text, child);
             return;
         }
 
-        if (sid < 1)
+        if (fieldName.getSid() < 1)
         {
             throw new IllegalArgumentException("fieldName has no text or ID");
         }

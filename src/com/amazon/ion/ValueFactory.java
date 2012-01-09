@@ -528,6 +528,8 @@ public interface ValueFactory
      *
      * @param value the text and/or SID of the symbol;
      * may be <code>null</code> to make <code>null.symbol</code>.
+     *
+     * @since IonJava R15
      */
     public IonSymbol newSymbol(SymbolToken value);
 

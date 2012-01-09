@@ -9,6 +9,8 @@ package com.amazon.ion;
  * Symbol tokens may be interned into a {@link SymbolTable},
  * <p>
  * Any instance will have at least one of the two properties defined.
+ *
+ * @since IonJava R15
  */
 public interface SymbolToken
 {

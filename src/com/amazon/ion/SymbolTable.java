@@ -228,7 +228,8 @@ public interface SymbolTable
      * @throws IllegalArgumentException if {@code id < 1}.
      * @throws UnknownSymbolException if the symbol text isn't known.
      *
-     * @deprecated This method cannot distinguish between generic identifiers
+     * @deprecated Since IonJava R15.
+     * This method cannot distinguish between generic identifiers
      * (like {@code $123}) and known symbols that happen the same text
      * (like {@code '$123'}).  Use {@link #findKnownSymbol(int)} instead.
      */
@@ -257,7 +258,8 @@ public interface SymbolTable
      * @throws IonException if {@link #isReadOnly()}
      * and the requested symbol is not already defined.
      *
-     * @deprecated Use {@link #intern(String)} instead, replacing the caller's
+     * @deprecated Since IonJava R15.
+     * Use {@link #intern(String)} instead, replacing the caller's
      * parameter string with the interned instance in
      * {@link SymbolToken#getText()}.
      */

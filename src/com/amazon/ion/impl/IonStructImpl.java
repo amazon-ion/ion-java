@@ -355,7 +355,8 @@ public final class IonStructImpl
             add(text, child);
             return;
         }
-        else if (fieldName.getSid() < 0)
+
+        if (fieldName.getSid() < 0)
         {
             throw new IllegalArgumentException("fieldName has no text or ID");
         }

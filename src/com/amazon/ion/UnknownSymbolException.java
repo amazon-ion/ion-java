@@ -1,9 +1,11 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 /**
  * Indicates that a symbol ID could not be translated into text.
+ *
+ * @since IonJava R15
  */
 public class UnknownSymbolException
     extends IonException

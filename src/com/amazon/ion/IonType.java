@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -51,6 +51,8 @@ public enum IonType
      * @param t may be null.
      *
      * @return true when {@code t} is {@link #STRING} or {@link #SYMBOL}.
+     *
+     * @since IonJava R15
      */
     public static boolean isText(IonType t)
     {
@@ -64,6 +66,8 @@ public enum IonType
      * @param t may be null.
      *
      * @return true when {@code t} is {@link #BLOB} or {@link #CLOB}.
+     *
+     * @since IonJava R15
      */
     public static boolean isLob(IonType t)
     {
