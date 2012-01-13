@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -249,7 +249,7 @@ public class IonTokenConstsX
     }
 */
     public final static boolean isDigit(int c) {
-    	return (c >= '0' && c <= '9');
+        return (c >= '0' && c <= '9');
     }
     public final static int decimalDigitValue(int c) {
         if (!isDigit(c)) {

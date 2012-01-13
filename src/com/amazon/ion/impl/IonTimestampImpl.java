@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -7,8 +7,8 @@ import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.Timestamp.Precision;
+import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;

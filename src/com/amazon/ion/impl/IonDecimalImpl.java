@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -32,18 +32,18 @@ public final class IonDecimalImpl
 
     public static boolean isNegativeZero(float value)
     {
-    	if (value != 0) return false;
+        if (value != 0) return false;
         // TODO perhaps use Float.compare() instead?
-    	if ((Float.floatToRawIntBits(value) & 0x80000000) == 0) return false; // test the sign bit
-    	return true;
+        if ((Float.floatToRawIntBits(value) & 0x80000000) == 0) return false; // test the sign bit
+        return true;
     }
 
     public static boolean isNegativeZero(double value)
     {
-    	if (value != 0) return false;
-    	// TODO perhaps use Double.compare() instead?
-    	if ((Double.doubleToLongBits(value) & 0x8000000000000000L) == 0) return false;
-    	return true;
+        if (value != 0) return false;
+        // TODO perhaps use Double.compare() instead?
+        if ((Double.doubleToLongBits(value) & 0x8000000000000000L) == 0) return false;
+        return true;
     }
 
     private BigDecimal _decimal_value;
@@ -213,8 +213,8 @@ public final class IonDecimalImpl
             ln = getNativeValueLength();
             if (ln > IonConstants.lnIsVarLen) {
                 // we get ln==VarLen for free, that is when len is 14 then
-            	// it will fill in the VarLen anyway, but for a length that
-            	// is greater ... we have to be explicit about VarLen
+                // it will fill in the VarLen anyway, but for a length that
+                // is greater ... we have to be explicit about VarLen
                 ln = IonConstants.lnIsVarLen;
             }
         }

@@ -1,14 +1,14 @@
-// Copyright (c) 2009-2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
+
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
-
-import com.amazon.ion.SymbolTable;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.Timestamp.Precision;
 import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;

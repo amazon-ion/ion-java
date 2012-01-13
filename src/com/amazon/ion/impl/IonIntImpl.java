@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -79,13 +77,13 @@ public final class IonIntImpl
     @Override
     public IonIntImpl clone()
     {
-    	IonIntImpl clone = new IonIntImpl(_system);
+        IonIntImpl clone = new IonIntImpl(_system);
 
-    	makeReady();
-    	clone.copyAnnotationsFrom(this);
+        makeReady();
+        clone.copyAnnotationsFrom(this);
         clone.doSetValue(this._long_value, this._isNullValue());
 
-    	return clone;
+        return clone;
     }
 
     /**
@@ -176,12 +174,12 @@ public final class IonIntImpl
     public void setValue(long value)
     {
         checkForLock();
-    	doSetValue(Long.valueOf(value), false);
+        doSetValue(Long.valueOf(value), false);
     }
 
     public void setValue(Number value)
     {
-    	checkForLock();
+        checkForLock();
         if (value == null)
         {
             doSetValue(0, true);

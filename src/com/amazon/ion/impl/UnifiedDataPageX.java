@@ -1,3 +1,5 @@
+// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
+
 package com.amazon.ion.impl;
 
 import java.io.IOException;
@@ -23,18 +25,18 @@ public abstract class UnifiedDataPageX
 
 
     public static final UnifiedDataPageX makePage(byte[] bytes, int offset, int length) {
-    	return new Bytes(bytes, offset, length);
+        return new Bytes(bytes, offset, length);
     }
     public static final UnifiedDataPageX makePage(char[] chars, int offset, int length) {
-    	return new Chars(chars, offset, length);
+        return new Chars(chars, offset, length);
     }
     public static final UnifiedDataPageX makePage(PageType pageType, int size) {
-    	if (size < 1) throw new IllegalArgumentException("invalid page size must be > 0");
-    	switch (pageType) {
-    	case CHARS: return new Chars(size);
-    	case BYTES: return new Bytes(size);
-    	default: throw new IllegalArgumentException("invalid page type, s/b 1 or 2");
-    	}
+        if (size < 1) throw new IllegalArgumentException("invalid page size must be > 0");
+        switch (pageType) {
+        case CHARS: return new Chars(size);
+        case BYTES: return new Bytes(size);
+        default: throw new IllegalArgumentException("invalid page type, s/b 1 or 2");
+        }
     }
 
     // this class should only be constructed through the factory
