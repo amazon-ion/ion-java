@@ -91,7 +91,8 @@ public class TestUtils
 
     private static void testdataFiles(FilenameFilter filter,
                                       File dir,
-                                      List<File> results)
+                                      List<File> results,
+                                      boolean recurse)
     {
         String[] fileNames = dir.list();
         if (fileNames == null)
@@ -110,8 +111,10 @@ public class TestUtils
             File testFile = new File(dir, fileName);
             if (testFile.isDirectory())
             {
-                // Recurse down the directory hierarchy
-                testdataFiles(filter, testFile, results);
+                if (recurse)
+                {
+                    testdataFiles(filter, testFile, results, recurse);
+                }
             }
             else if (filter == null || filter.accept(dir, fileName))
             {
@@ -121,6 +124,7 @@ public class TestUtils
     }
 
     public static File[] testdataFiles(FilenameFilter filter,
+                                       boolean recurse,
                                        String... testdataDirs)
     {
         ArrayList<File> files = new ArrayList<File>();
@@ -136,10 +140,17 @@ public class TestUtils
                 throw new IllegalArgumentException(message);
             }
 
-            testdataFiles(filter, dir, files);
+            testdataFiles(filter, dir, files, recurse);
         }
 
         return files.toArray(new File[files.size()]);
+    }
+
+
+    public static File[] testdataFiles(FilenameFilter filter,
+                                       String... testdataDirs)
+    {
+        return testdataFiles(filter, /* recurse */ true, testdataDirs);
     }
 
 
