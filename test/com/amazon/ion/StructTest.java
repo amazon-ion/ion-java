@@ -1,11 +1,12 @@
 // Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+
 package com.amazon.ion;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 
 import com.amazon.ion.impl.IonImplUtils;
-import com.amazon.ion.impl.lite.IonStructLite;
-import com.amazon.ion.impl.lite.IonValueLite;
+import com.amazon.ion.impl.IonValuePrivate;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -1342,10 +1343,8 @@ public class StructTest
         }
     }
     void dump(IonStruct s1_temp, ArrayList<TestField> s2) {
-        IonStructLite s1 = ((IonStructLite)s1_temp);
-        System.out.println("struct: "+s1.toString());
-        s1.debug_print_map();
-        System.out.println("dups: "+s1._field_map_duplicate_count);
+        IonValuePrivate s1 = ((IonValuePrivate)s1_temp);
+        s1.dump(new PrintWriter(System.out));
         System.out.println("array: "+s2.toString());
     }
     int pick_command(Random r, int size)
@@ -1573,8 +1572,8 @@ public class StructTest
                 errors += "extra field in struct "+v;
                 errors += "\n";
             }
-            if (v instanceof IonValueLite) {
-                int eid = ((IonValueLite)v).getElementId();
+            if (v instanceof IonValuePrivate) {
+                int eid = ((IonValuePrivate)v).getElementId();
                 if (eid != struct_idx) {
                     difference = true;
                     errors += "index of struct field "+struct_idx+" doesn't match array index "+eid+": "+v;
@@ -1597,8 +1596,8 @@ public class StructTest
 
         if (_debug_print_flag) {
             // now check the map, if there is one
-            IonStructLite l = (IonStructLite)s1;
-            String map_error = l.debug_check_map();
+            IonValuePrivate l = (IonValuePrivate)s1;
+            String map_error = l.validate();
             if (map_error != null) {
                 errors += map_error;
                 difference = true;

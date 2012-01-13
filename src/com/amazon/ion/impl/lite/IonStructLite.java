@@ -11,6 +11,7 @@ import com.amazon.ion.SymbolToken;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -23,7 +24,7 @@ import java.util.Set;
 /**
  *
  */
-public class IonStructLite
+final class IonStructLite
     extends IonContainerLite
     implements IonStruct
 {
@@ -189,26 +190,32 @@ public class IonStructLite
         }
     }
 
-    public void debug_print_map()
+    @Override
+    public void dump(PrintWriter out)
     {
+        super.dump(out);
+
         if (_field_map == null) {
             return;
         }
+
+        out.println("   dups: "+_field_map_duplicate_count);
         Iterator<Entry<String, Integer>> it = _field_map.entrySet().iterator();
-        System.out.print("   map: [");
+        out.print("   map: [");
         boolean first = true;
         while (it.hasNext()) {
             Entry<String, Integer> e = it.next();
             if (!first) {
-                System.out.print(",");
+                out.print(",");
             }
-            System.out.print(""+e.getKey()+":"+e.getValue());
+            out.print(e.getKey()+":"+e.getValue());
             first = false;
         }
-        System.out.println("]");
+        out.println("]");
     }
 
-    public String debug_check_map()
+    @Override
+    public String validate()
     {
         if (_field_map == null) {
             return null;

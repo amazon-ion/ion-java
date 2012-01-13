@@ -27,6 +27,7 @@ import com.amazon.ion.impl.IonValuePrivate;
 import com.amazon.ion.impl.UnifiedSymbolTable;
 import com.amazon.ion.util.Printer;
 import java.io.IOException;
+import java.io.PrintWriter;
 
 /**
  *  Base class of the light weight implementation of
@@ -38,7 +39,7 @@ import java.io.IOException;
  *  implementation may be more expensive than the
  *  original implementation.
  */
-public abstract class IonValueLite
+abstract class IonValueLite
     implements IonValuePrivate
 {
     /**
@@ -854,6 +855,17 @@ public abstract class IonValueLite
         {
             throw new IonException(e);
         }
+    }
+
+
+    public void dump(PrintWriter out)
+    {
+        out.println(this);
+    }
+
+    public String validate()
+    {
+        return null;
     }
 }
 

@@ -1,10 +1,11 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
+import java.io.PrintWriter;
 
 /**
  *
@@ -104,4 +105,7 @@ public interface IonValuePrivate
      */
     public SymbolTable populateSymbolValues(SymbolTable symbols);
 
+    public void dump(PrintWriter out);
+
+    public String validate();
 }

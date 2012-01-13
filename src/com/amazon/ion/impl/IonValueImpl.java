@@ -30,6 +30,7 @@ import com.amazon.ion.impl.IonBinary.Reader;
 import com.amazon.ion.impl.IonBinary.Writer;
 import com.amazon.ion.util.Printer;
 import java.io.IOException;
+import java.io.PrintWriter;
 
 /**
  *
@@ -2131,5 +2132,16 @@ public abstract class IonValueImpl
             same = ionEquals(this, (IonValue) other);
         }
         return same;
+    }
+
+
+    public void dump(PrintWriter out)
+    {
+        out.println(this);
+    }
+
+    public String validate()
+    {
+        return null;
     }
 }
