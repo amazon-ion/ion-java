@@ -9,7 +9,10 @@ import java.util.Collection;
 /**
  * The factory for all {@link IonValue}s.
  * <p>
- * This interface is not intended to be used as an application extension point.
+ * <b>
+ * This interface changes frequently and is not intended to be used as an
+ * application extension point; do not extend or implement it.
+ * </b>
  */
 public interface ValueFactory
 {
