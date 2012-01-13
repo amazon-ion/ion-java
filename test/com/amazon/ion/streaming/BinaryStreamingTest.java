@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion.streaming;
 
 import static com.amazon.ion.junit.IonAssert.expectField;
@@ -16,7 +16,6 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.IonImplUtils;
-import com.amazon.ion.impl.IonTokenReader;
 import com.amazon.ion.junit.IonAssert;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -143,8 +142,7 @@ public class BinaryStreamingTest
                         wr.writeTimestampUTC((Date)value);
                     }
                     else if (value instanceof String) {
-                        Timestamp ti =
-                            IonTokenReader.Type.timeinfo.parse((String)value);
+                        Timestamp ti = Timestamp.valueOf((String)value);
                         wr.writeTimestamp(ti);
                     }
                     else if (value instanceof Timestamp) {
@@ -274,8 +272,7 @@ public class BinaryStreamingTest
                         assertEquals(Timestamp.UTC_OFFSET, actual.getLocalOffset());
                     }
                     else if (value instanceof String) {
-                        Timestamp ti2 =
-                            IonTokenReader.Type.timeinfo.parse((String)value);
+                        Timestamp ti2 = Timestamp.valueOf((String)value);
                         assertEquals(ti2, actual);
                     }
                     else if (value instanceof Timestamp) {
@@ -465,13 +462,13 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
 //                   new TestValue("date_d3",       IonType.TIMESTAMP, new Date("1-23-2008T12:53:24") ),
 
 //                   new TestValue("date_t1",       IonType.TIMESTAMP, IonTokenReader.Type.timeinfo.parse("2008-02Z") ),
-               new TestValue("date_t2",       IonType.TIMESTAMP, IonTokenReader.Type.timeinfo.parse("2008-02-15") ),
-               new TestValue("date_t3",       IonType.TIMESTAMP, IonTokenReader.Type.timeinfo.parse("0001-01-01") ),
-               new TestValue("date_t4",       IonType.TIMESTAMP, IonTokenReader.Type.timeinfo.parse("9999-12-31") ),
+               new TestValue("date_t2",       IonType.TIMESTAMP, Timestamp.valueOf("2008-02-15") ),
+               new TestValue("date_t3",       IonType.TIMESTAMP, Timestamp.valueOf("0001-01-01") ),
+               new TestValue("date_t4",       IonType.TIMESTAMP, Timestamp.valueOf("9999-12-31") ),
 
-               new TestValue("date_t5",       IonType.TIMESTAMP, IonTokenReader.Type.timeinfo.parse("2008-02-15T12:59:59.100000-03:45") ),
-               new TestValue("date_t6",       IonType.TIMESTAMP, IonTokenReader.Type.timeinfo.parse("0001-01-01T00:00:00.000000-00:00") ),
-               new TestValue("date_t7",       IonType.TIMESTAMP, IonTokenReader.Type.timeinfo.parse("9999-12-31T23:59:59.999999+01:00") ),
+               new TestValue("date_t5",       IonType.TIMESTAMP, Timestamp.valueOf("2008-02-15T12:59:59.100000-03:45") ),
+               new TestValue("date_t6",       IonType.TIMESTAMP, Timestamp.valueOf("0001-01-01T00:00:00.000000-00:00") ),
+               new TestValue("date_t7",       IonType.TIMESTAMP, Timestamp.valueOf("9999-12-31T23:59:59.999999+01:00") ),
 
                new TestValue("string_1",       IonType.STRING, ""),
                new TestValue("string_2",       IonType.STRING, " "),
