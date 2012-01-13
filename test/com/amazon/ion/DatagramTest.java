@@ -9,7 +9,6 @@ import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.SYMBOLS;
 
 import com.amazon.ion.impl.IonSystemPrivate;
-import com.amazon.ion.impl.IonValueImpl;
 import com.amazon.ion.impl.IonValuePrivate;
 import java.io.ByteArrayOutputStream;
 import java.util.Collection;
@@ -227,39 +226,6 @@ public class DatagramTest
         bytes = datagram1.getBytes();
         String s = datagram1.toString();
         s = ""+s;
-    }
-
-    @Test
-    public void testSystemDatagram()
-        throws Exception
-    {
-        IonSystem system = system();
-
-        IonInt i = system.newNullInt();
-        i.setValue(65);
-
-        IonStruct struct = system.newNullStruct();
-        SymbolTable sym = struct.getSymbolTable();
-        if (sym == null) {
-            sym = system.newLocalSymbolTable();
-            ((IonValueImpl)struct).setSymbolTable(sym);
-        }
-        struct.put("ii", i);
-
-        IonDatagram dg = system.newDatagram(struct);
-
-        assertSame(struct, dg.get(0));
-        IonStruct reloadedStruct = (IonStruct) dg.get(0);  // XXX
-        assertEquals(struct, reloadedStruct);  // XXX
-        assertSame(dg, reloadedStruct.getContainer());
-
-        i = (IonInt) reloadedStruct.get("ii");
-
-        for (int ival = -1000; ival <= 1000; ival++) {
-            i.setValue(ival);
-            byte[] bytes = dg.getBytes();
-            checkBinaryHeader(bytes);
-        }
     }
 
 
