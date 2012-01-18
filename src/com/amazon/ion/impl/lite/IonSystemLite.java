@@ -4,13 +4,13 @@ package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
-import static com.amazon.ion.impl.IonReaderFactoryX.makeReader;
-import static com.amazon.ion.impl.IonReaderFactoryX.makeSystemReader;
 import static com.amazon.ion.impl.UnifiedSymbolTable.initialSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewSharedSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.newSystemSymbolTable;
+import static com.amazon.ion.impl._Private_IonReaderFactory.makeReader;
+import static com.amazon.ion.impl._Private_IonReaderFactory.makeSystemReader;
 import static com.amazon.ion.impl._Private_Utils.addAllNonNull;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
@@ -31,7 +31,6 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.UnsupportedIonVersionException;
-import com.amazon.ion.impl.IonReaderFactoryX;
 import com.amazon.ion.impl.IonReaderWriterPrivate;
 import com.amazon.ion.impl.IonScalarConversionsX.CantConvertException;
 import com.amazon.ion.impl.IonSystemPrivate;
@@ -39,6 +38,7 @@ import com.amazon.ion.impl.IonWriterFactory;
 import com.amazon.ion.impl.IonWriterUserBinary;
 import com.amazon.ion.impl.UnifiedSymbolTable;
 import com.amazon.ion.impl._Private_IonBinaryWriterImpl;
+import com.amazon.ion.impl._Private_IonReaderFactory;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import java.io.Closeable;
 import java.io.IOException;
@@ -176,28 +176,28 @@ public final class IonSystemLite
 
     public Iterator<IonValue> iterate(Reader ionText)
     {
-        IonReader reader = IonReaderFactoryX.makeReader(this, ionText);
+        IonReader reader = _Private_IonReaderFactory.makeReader(this, ionText);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
 
     public Iterator<IonValue> iterate(InputStream ionData)
     {
-        IonReader reader = IonReaderFactoryX.makeReader(this, ionData);
+        IonReader reader = _Private_IonReaderFactory.makeReader(this, ionData);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
 
     public Iterator<IonValue> iterate(String ionText)
     {
-        IonReader reader = IonReaderFactoryX.makeReader(this, ionText);
+        IonReader reader = _Private_IonReaderFactory.makeReader(this, ionText);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
 
     public Iterator<IonValue> iterate(byte[] ionData)
     {
-        IonReader reader = IonReaderFactoryX.makeReader(this, ionData);
+        IonReader reader = _Private_IonReaderFactory.makeReader(this, ionData);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
@@ -831,13 +831,13 @@ public final class IonSystemLite
 
     public IonTextReader newReader(String ionText)
     {
-        IonTextReader reader = IonReaderFactoryX.makeReader(this, ionText);
+        IonTextReader reader = _Private_IonReaderFactory.makeReader(this, ionText);
         return reader;
     }
 
     public IonReader newReader(byte[] ionData)
     {
-        IonReader reader = IonReaderFactoryX.makeReader(this, getCatalog(), ionData, 0, ionData.length);
+        IonReader reader = _Private_IonReaderFactory.makeReader(this, getCatalog(), ionData, 0, ionData.length);
         return reader;
     }
 
@@ -856,7 +856,7 @@ public final class IonSystemLite
     public IonReader newReader(IonCatalog catalog, byte[] ionData, int offset, int len)
     {
         if (catalog == null) catalog = getCatalog();
-        IonReader reader = IonReaderFactoryX.makeReader(this, catalog, ionData, offset, len);
+        IonReader reader = _Private_IonReaderFactory.makeReader(this, catalog, ionData, offset, len);
         return reader;
     }
 
@@ -881,7 +881,7 @@ public final class IonSystemLite
     public IonReader newReader(IonCatalog catalog, IonValue value)
     {
         if (catalog == null) catalog = getCatalog();
-        IonReader reader = IonReaderFactoryX.makeReader(this, catalog, value);
+        IonReader reader = _Private_IonReaderFactory.makeReader(this, catalog, value);
         return reader;
     }
 
@@ -965,14 +965,14 @@ public final class IonSystemLite
      */
     public Iterator<IonValue> systemIterate(Reader ionText)
     {
-        IonReader reader = IonReaderFactoryX.makeReader(this, ionText);
+        IonReader reader = _Private_IonReaderFactory.makeReader(this, ionText);
         Iterator<IonValue> iterator = make_system_iterator(reader);
         return iterator;
     }
 
     public Iterator<IonValue> systemIterate(String ionText)
     {
-        IonReader reader = IonReaderFactoryX.makeSystemReader(this, ionText);
+        IonReader reader = _Private_IonReaderFactory.makeSystemReader(this, ionText);
         Iterator<IonValue> iterator = make_system_iterator(reader);
         return iterator;
     }
@@ -982,7 +982,7 @@ public final class IonSystemLite
      */
     public Iterator<IonValue> systemIterate(InputStream ionData)
     {
-        IonReader reader = IonReaderFactoryX.makeReader(this, ionData);
+        IonReader reader = _Private_IonReaderFactory.makeReader(this, ionData);
         Iterator<IonValue> iterator = make_system_iterator(reader);
         return iterator;
     }
@@ -992,7 +992,7 @@ public final class IonSystemLite
      */
     public Iterator<IonValue> systemIterate(byte[] ionData)
     {
-        IonReader reader = IonReaderFactoryX.makeSystemReader(this, ionData);
+        IonReader reader = _Private_IonReaderFactory.makeSystemReader(this, ionData);
         Iterator<IonValue> iterator = make_system_iterator(reader);
         return iterator;
     }

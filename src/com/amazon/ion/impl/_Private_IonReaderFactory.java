@@ -17,14 +17,10 @@ import java.io.InputStream;
 import java.io.Reader;
 
 /**
- *     temporary factory to create the July 2009
- *     version of the readers (both text and binary)
- *     these should be moved into system or some
- *     other class for public consumption and this
- *     class should be deprecated
+ * NOT FOR APPLICATION USE!
  */
 @SuppressWarnings("deprecation")
-public class IonReaderFactoryX
+public final class _Private_IonReaderFactory
 {
     public static final IonTextReader makeReader(IonSystem system, char[] chars) {
         IonTextReader r = makeReader(system, system.getCatalog(), chars, 0, chars.length);

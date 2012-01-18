@@ -1,8 +1,8 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
-import static com.amazon.ion.impl.IonReaderFactoryX.makeReader;
+import static com.amazon.ion.impl._Private_IonReaderFactory.makeReader;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
