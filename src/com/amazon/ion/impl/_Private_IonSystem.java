@@ -17,7 +17,7 @@ import java.util.Iterator;
 /**
  *
  */
-public interface IonSystemPrivate
+public interface _Private_IonSystem
     extends IonSystem
 {
     /* constructor */

@@ -75,7 +75,7 @@ import java.util.List;
  */
 @SuppressWarnings("deprecation")
 public final class IonSystemImpl
-    implements IonSystemPrivate
+    implements _Private_IonSystem
 {
     public static final int SYSTEM_VERSION = 1;
 

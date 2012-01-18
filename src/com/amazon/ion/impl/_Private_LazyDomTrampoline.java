@@ -13,8 +13,8 @@ import java.io.InputStream;
  */
 public final class _Private_LazyDomTrampoline
 {
-    public static IonSystem newLazySystem(IonCatalog catalog,
-                                          boolean streamCopyOptimized)
+    public static _Private_IonSystem newLazySystem(IonCatalog catalog,
+                                                   boolean streamCopyOptimized)
     {
         return new IonSystemImpl(catalog, streamCopyOptimized);
     }

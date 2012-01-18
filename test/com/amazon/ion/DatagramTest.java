@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -8,8 +8,8 @@ import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.SYMBOLS;
 
-import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.impl.IonValuePrivate;
+import com.amazon.ion.impl._Private_IonSystem;
 import java.io.ByteArrayOutputStream;
 import java.util.Collection;
 import java.util.Iterator;
@@ -113,7 +113,7 @@ public class DatagramTest
     public void testAutomaticIVM()
         throws Exception
     {
-        IonSystemPrivate system = system();
+        _Private_IonSystem system = system();
         SymbolTable      systemSymtab_1_0 = system.getSystemSymbolTable(ION_1_0);
 
         IonDatagram dg = system.newDatagram();
@@ -134,7 +134,7 @@ public class DatagramTest
     public void testManualIVM()
         throws Exception
     {
-        IonSystemPrivate system = system();
+        _Private_IonSystem system = system();
         SymbolTable      systemSymtab_1_0 = system.getSystemSymbolTable(ION_1_0);
 
         IonDatagram dg = system.newDatagram();

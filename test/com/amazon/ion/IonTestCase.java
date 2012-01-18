@@ -5,7 +5,7 @@ package com.amazon.ion;
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 
-import com.amazon.ion.impl.IonSystemPrivate;
+import com.amazon.ion.impl._Private_IonSystem;
 import com.amazon.ion.junit.Injected;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
@@ -50,7 +50,7 @@ public abstract class IonTestCase
 
     private static boolean ourSystemPropertiesLoaded = false;
     protected SimpleCatalog    myCatalog;
-    protected IonSystemPrivate mySystem;
+    protected _Private_IonSystem mySystem;
     protected IonLoader        myLoader;
 
     //  FIXME: needs java docs
@@ -203,7 +203,7 @@ public abstract class IonTestCase
     // ========================================================================
     // Fixture Helpers
 
-    protected IonSystemPrivate system()
+    protected _Private_IonSystem system()
     {
         if (mySystem == null)
         {
@@ -215,12 +215,12 @@ public abstract class IonTestCase
     // added helper, this returns a separate system
     // every time since the user is passing in a catalog
     // which changes the state of the system object
-    protected IonSystemPrivate system(IonCatalog catalog)
+    protected _Private_IonSystem system(IonCatalog catalog)
     {
         IonSystemBuilder b = IonSystemBuilder.standard().withCatalog(catalog);
         BuilderHack.setBinaryBacked(b, getDomType() == DomType.BACKED);
         IonSystem system = b.build();
-        return (IonSystemPrivate) system;
+        return (_Private_IonSystem) system;
     }
 
     protected SimpleCatalog catalog()

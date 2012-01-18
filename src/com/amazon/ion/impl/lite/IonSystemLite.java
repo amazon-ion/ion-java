@@ -31,12 +31,12 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.UnsupportedIonVersionException;
-import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.impl.IonWriterFactory;
 import com.amazon.ion.impl.IonWriterUserBinary;
 import com.amazon.ion.impl.UnifiedSymbolTable;
 import com.amazon.ion.impl._Private_IonBinaryWriterImpl;
 import com.amazon.ion.impl._Private_IonReaderFactory;
+import com.amazon.ion.impl._Private_IonSystem;
 import com.amazon.ion.impl._Private_ReaderWriter;
 import com.amazon.ion.impl._Private_ScalarConversions.CantConvertException;
 import com.amazon.ion.system.IonTextWriterBuilder;
@@ -56,7 +56,7 @@ import java.util.NoSuchElementException;
 @SuppressWarnings("deprecation")
 public final class IonSystemLite
     extends ValueFactoryLite
-    implements IonSystemPrivate, IonContext
+    implements _Private_IonSystem, IonContext
 {
     private static int DEFAULT_CONTEXT_FREE_LIST_SIZE = 120;
 

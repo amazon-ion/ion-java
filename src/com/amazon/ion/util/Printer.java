@@ -30,7 +30,7 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.impl.IonSystemPrivate;
+import com.amazon.ion.impl._Private_IonSystem;
 import com.amazon.ion.impl._Private_IonTextWriterBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
@@ -450,7 +450,7 @@ public class Printer
             IonWriter writer = o.build(out);
             // TODO doesn't work for datagram since it skips system values
             // value.writeTo(writer);
-            IonSystemPrivate system = (IonSystemPrivate) value.getSystem();
+            _Private_IonSystem system = (_Private_IonSystem) value.getSystem();
             IonReader reader = system.newSystemReader(value);
             writer.writeValues(reader);
             writer.finish();
