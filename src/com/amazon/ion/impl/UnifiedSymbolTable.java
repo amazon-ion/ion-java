@@ -17,8 +17,6 @@ import static com.amazon.ion.SystemSymbols.SYMBOLS;
 import static com.amazon.ion.SystemSymbols.SYMBOLS_SID;
 import static com.amazon.ion.SystemSymbols.VERSION;
 import static com.amazon.ion.SystemSymbols.VERSION_SID;
-import static com.amazon.ion.impl.SymbolTableType.LOCAL;
-import static com.amazon.ion.impl.SymbolTableType.SHARED;
 import static com.amazon.ion.util.IonTextUtils.printQuotedSymbol;
 
 import com.amazon.ion.EmptySymbolException;
@@ -65,6 +63,14 @@ import java.util.Map;
 public final class UnifiedSymbolTable
     implements SymbolTable
 {
+    private enum SymbolTableType {
+        SYSTEM,
+        LOCAL,
+        SHARED,
+        INVALID
+    }
+
+
     /**
      * The set of system symbols as defined by Ion 1.0.
      * We keep this private to (help) prevent it from being modified.
@@ -1224,12 +1230,12 @@ public final class UnifiedSymbolTable
 
             switch (fieldId) {
             case VERSION_SID:
-                if (symtabType == SHARED && fieldType == IonType.INT) {
+                if (symtabType == SymbolTableType.SHARED && fieldType == IonType.INT) {
                     version = reader.intValue();
                 }
                 break;
             case NAME_SID:
-                if (symtabType == SHARED && fieldType == IonType.STRING) {
+                if (symtabType == SymbolTableType.SHARED && fieldType == IonType.STRING) {
                     name = reader.stringValue();
                 }
                 break;
@@ -1253,7 +1259,7 @@ public final class UnifiedSymbolTable
                 }
                 break;
             case IMPORTS_SID:
-                if (symtabType == LOCAL && fieldType == IonType.LIST) {
+                if (symtabType == SymbolTableType.LOCAL && fieldType == IonType.LIST) {
                     readImportList(reader, catalog);
                 }
                 break;
@@ -1262,7 +1268,7 @@ public final class UnifiedSymbolTable
             }
         }
 
-        if (symtabType == SHARED) {
+        if (symtabType == SymbolTableType.SHARED) {
             if (name == null || name.length() == 0) {
                 String message =
                     "Shared symbol table is malformed: field 'name' " +
