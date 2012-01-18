@@ -27,7 +27,7 @@ import java.util.Iterator;
  */
 class IonReaderBinarySystemX
     extends IonReaderBinaryRawX
-    implements IonReaderWriterPrivate
+    implements _Private_ReaderWriter
 {
     IonSystem _system;
     // ValueVariant _v; actually owned by the raw reader so it can be cleared at appropriate times

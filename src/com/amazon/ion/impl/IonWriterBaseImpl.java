@@ -21,7 +21,7 @@ import java.util.Date;
  *  writer).
  */
 public abstract class IonWriterBaseImpl
-    implements IonWriter, IonReaderWriterPrivate
+    implements IonWriter, _Private_ReaderWriter
 {
     protected static final String ERROR_MISSING_FIELD_NAME =
         "IonWriter.setFieldName() must be called before writing a value into a struct.";
@@ -325,10 +325,10 @@ public abstract class IonWriterBaseImpl
 
         if (reader.getType() == null) reader.next();
 
-        if (getDepth() == 0 && reader instanceof IonReaderWriterPrivate) {
+        if (getDepth() == 0 && reader instanceof _Private_ReaderWriter) {
             // Optimize symbol table copying
-            IonReaderWriterPrivate private_reader =
-                (IonReaderWriterPrivate)reader;
+            _Private_ReaderWriter private_reader =
+                (_Private_ReaderWriter)reader;
             while (reader.getType() != null) {
                 transfer_symbol_tables(private_reader);
                 writeValue(reader);
@@ -343,7 +343,7 @@ public abstract class IonWriterBaseImpl
         }
     }
 
-    private final void transfer_symbol_tables(IonReaderWriterPrivate reader)
+    private final void transfer_symbol_tables(_Private_ReaderWriter reader)
         throws IOException
     {
         SymbolTable reader_symbols = reader.pop_passed_symbol_table();

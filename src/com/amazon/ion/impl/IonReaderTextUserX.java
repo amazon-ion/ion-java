@@ -40,7 +40,7 @@ import com.amazon.ion.TextSpan;
  */
 public class IonReaderTextUserX
     extends IonReaderTextSystemX
-    implements IonReaderWriterPrivate
+    implements _Private_ReaderWriter
 {
     /**
      * This is the physical start-of-stream offset when this reader was created.

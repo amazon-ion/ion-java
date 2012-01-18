@@ -43,7 +43,7 @@ import java.util.Iterator;
  */
 public class IonReaderTextSystemX
     extends IonReaderTextRawX
-    implements IonReaderWriterPrivate
+    implements _Private_ReaderWriter
 {
     private static int UNSIGNED_BYTE_MAX_VALUE = 255;
 

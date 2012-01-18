@@ -36,7 +36,7 @@ import java.util.Iterator;
  *
  */
 class IonReaderTreeSystem
-    implements IonReader, IonReaderWriterPrivate
+    implements IonReader, _Private_ReaderWriter
 {
     protected IonSystem           _system;
     protected SymbolTable         _symbols;

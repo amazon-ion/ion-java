@@ -31,7 +31,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.UnsupportedIonVersionException;
-import com.amazon.ion.impl.IonReaderWriterPrivate;
+import com.amazon.ion.impl._Private_ReaderWriter;
 import com.amazon.ion.impl.IonScalarConversionsX.CantConvertException;
 import com.amazon.ion.impl.IonSystemPrivate;
 import com.amazon.ion.impl.IonWriterFactory;
@@ -743,8 +743,8 @@ public final class IonSystemLite
         {
             SymbolTable symbols;
 
-            if (_reader instanceof IonReaderWriterPrivate) {
-                symbols = ((IonReaderWriterPrivate)_reader).pop_passed_symbol_table();
+            if (_reader instanceof _Private_ReaderWriter) {
+                symbols = ((_Private_ReaderWriter)_reader).pop_passed_symbol_table();
                 if (symbols != null) {
                     _previous_symbols = symbols;
                 }

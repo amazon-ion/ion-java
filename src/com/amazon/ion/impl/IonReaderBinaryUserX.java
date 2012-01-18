@@ -24,7 +24,7 @@ import java.util.Iterator;
 
 class IonReaderBinaryUserX
     extends IonReaderBinarySystemX
-    implements IonReaderWriterPrivate
+    implements _Private_ReaderWriter
 {
     /**
      * This is the physical start-of-stream offset when this reader was created.

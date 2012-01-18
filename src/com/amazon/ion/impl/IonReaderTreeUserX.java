@@ -24,7 +24,7 @@ import com.amazon.ion.SymbolTable;
  */
 class IonReaderTreeUserX
     extends IonReaderTreeSystem
-    implements IonReaderWriterPrivate
+    implements _Private_ReaderWriter
 {
     IonCatalog _catalog;
 
