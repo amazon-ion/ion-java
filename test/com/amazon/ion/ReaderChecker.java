@@ -186,4 +186,19 @@ public class ReaderChecker
 
         return this;
     }
+
+    public ReaderChecker type(IonType expected)
+    {
+        IonType actual = myReader.getType();
+        assertEquals("IonReader.getType()", expected, actual);
+        return this;
+    }
+
+    public ReaderChecker isInt(long expected)
+    {
+        type(IonType.INT);
+        long actual = myReader.longValue();
+        assertEquals("IonReader.longValue()", expected, actual);
+        return this;
+    }
 }

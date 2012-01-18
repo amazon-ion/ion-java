@@ -1,56 +1,50 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.junit.IonAssert.assertEof;
-import static com.amazon.ion.junit.IonAssert.assertNoCurrentValue;
 import static com.amazon.ion.junit.IonAssert.assertTopLevel;
-import static com.amazon.ion.junit.IonAssert.expectField;
 
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.TestUtils;
+import com.amazon.ion.streaming.ReaderTestCase;
 import org.junit.Test;
 
 /**
  *
  */
 public class TreeReaderTest
-    extends IonTestCase
+    extends ReaderTestCase
 {
     @Test
     public void testInitialStateForScalar()
     {
         IonInt value = system().newInt(23);
-        IonReader r = system().newReader(value);
+        in = system().newReader(value);
 
-        assertTrue(r.hasNext());
-        assertEquals(IonType.INT, r.next());
+        check().next().isInt(23);
     }
 
     @Test
     public void testInitialStateForList()
     {
         IonList list = system().newEmptyList();
-        IonReader r = system().newReader(list);
+        in = system().newReader(list);
 
-        assertTrue(r.hasNext());
-        assertEquals(IonType.LIST, r.next());
-        assertEquals(0, r.getDepth());
+        check().next().type(IonType.LIST);
+        assertEquals(0, in.getDepth());
 
-        r.stepIn();
-
-        assertEquals(1, r.getDepth());
-        assertEof(r);
-
-        r.stepOut();
-
-        assertEof(r);
+        in.stepIn();
+        {
+            assertEquals(1, in.getDepth());
+            expectEof();
+        }
+        in.stepOut();
+        expectTopEof();
     }
 
     @Test
@@ -79,13 +73,12 @@ public class TreeReaderTest
     public void testReadingStructFields()
     {
         IonStruct s = struct("{f:null}");
-        IonReader r = system().newReader(s.get("f"));
+        in = system().newReader(s.get("f"));
 
-        assertTopLevel(r, /* inStruct */ true);
-        assertNoCurrentValue(r);
+        assertTopLevel(in, /* inStruct */ true);
+        expectNoCurrentValue();
 
-        assertSame(IonType.NULL, r.next());
-        assertTopLevel(r, /* inStruct */ true);
-        expectField(r, "f");
+        check().next().fieldName("f").type(IonType.NULL);
+        assertTopLevel(in, /* inStruct */ true);
     }
 }
