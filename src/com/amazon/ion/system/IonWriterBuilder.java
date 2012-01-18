@@ -5,6 +5,11 @@ package com.amazon.ion.system;
 
 /**
  * Common options for writing Ion data streams of any form.
+ * <p>
+ * <b>
+ * This class is not intended to be used as an application extension point;
+ * do not extend or implement it.
+ * </b>
  */
 public abstract class IonWriterBuilder
 {

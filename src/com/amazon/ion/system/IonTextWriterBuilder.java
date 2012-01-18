@@ -25,6 +25,11 @@ import java.nio.charset.Charset;
  * Configuration properties follow the standard JavaBeans idiom in order to be
  * friendly to dependency injection systems.  They also provide alternative
  * {@code with...()} mutation methods that enable a more fluid style.
+ * <p>
+ * <b>
+ * This class is not intended to be used as an application extension point;
+ * do not extend or implement it.
+ * </b>
  */
 public abstract class IonTextWriterBuilder
     extends IonWriterBuilder
@@ -67,6 +72,13 @@ public abstract class IonTextWriterBuilder
         return standard().withPrettyPrinting();
     }
 
+    /**
+     * Creates a builder preconfigured for JSON compatibility.
+     *
+     * @return a new, mutable builder instance.
+     *
+     * @see #withJsonDowngrade()
+     */
     public static IonTextWriterBuilder json()
     {
         return standard().withJsonDowngrade();
@@ -246,6 +258,26 @@ public abstract class IonTextWriterBuilder
     public abstract IonTextWriterBuilder withPrettyPrinting();
 
 
+    /**
+     * Declares that this builder should downgrade the writers' output to
+     * JSON compatibility. This format cannot round-trip back to Ion with full
+     * fidelity.
+     * <p>
+     * The specific conversions are as follows:
+     * <ul>
+     *   <li>All annotations are suppressed.
+     *   <li>Nulls of any type are printed as JSON {@code null}.
+     *   <li>Blobs are printed as strings, containing Base64.
+     *   <li>Clobs are printed as strings, containing only Unicode code points
+     *       U+00 through U+FF.
+     *   <li>Sexps are printed as lists.
+     *   <li>Symbols are printed as strings.
+     *   <li>Timestamps are printed as strings, using Ion timestamp format.
+     * </ul>
+     *
+     * @return this instance, if mutable;
+     * otherwise a mutable copy of this instance.
+     */
     public abstract IonTextWriterBuilder withJsonDowngrade();
 
 
