@@ -611,10 +611,10 @@ public final class IonImplUtils // TODO this class shouldn't be public
         throws IonException, IOException
     {
         boolean isBinary = false;
-        byte[] cookie = new byte[IonConstants.BINARY_VERSION_MARKER_SIZE];
+        byte[] cookie = new byte[_Private_IonConstants.BINARY_VERSION_MARKER_SIZE];
 
         int len = readFully(pushback, cookie);
-        if (len == IonConstants.BINARY_VERSION_MARKER_SIZE) {
+        if (len == _Private_IonConstants.BINARY_VERSION_MARKER_SIZE) {
             isBinary = isIonBinary(cookie);
         }
         if (len > 0) {

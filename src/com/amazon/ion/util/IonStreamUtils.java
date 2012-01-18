@@ -2,8 +2,8 @@
 
 package com.amazon.ion.util;
 
-import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_1_0;
-import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
+import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_1_0;
+import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_SIZE;
 
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;

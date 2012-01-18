@@ -2,7 +2,7 @@
 
 package com.amazon.ion.util;
 
-import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_1_0;
+import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_1_0;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_BYTE_ARRAY;
 import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
 import static org.junit.Assert.assertEquals;

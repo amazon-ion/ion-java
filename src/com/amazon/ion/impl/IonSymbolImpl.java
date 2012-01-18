@@ -5,7 +5,10 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
-import static com.amazon.ion.impl.IonConstants.BB_TOKEN_LEN;
+import static com.amazon.ion.impl._Private_IonConstants.BB_TOKEN_LEN;
+import static com.amazon.ion.impl._Private_IonConstants.lnIsNullAtom;
+import static com.amazon.ion.impl._Private_IonConstants.makeTypeDescriptor;
+import static com.amazon.ion.impl._Private_IonConstants.tidSymbol;
 
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonException;
@@ -27,8 +30,7 @@ public final class IonSymbolImpl
     implements IonSymbol
 {
     static final int NULL_SYMBOL_TYPEDESC =
-        IonConstants.makeTypeDescriptor(IonConstants.tidSymbol,
-                                        IonConstants.lnIsNullAtom);
+        makeTypeDescriptor(tidSymbol, lnIsNullAtom);
 
     private static final int HASH_SIGNATURE =
         IonType.SYMBOL.toString().hashCode();
@@ -83,7 +85,7 @@ public final class IonSymbolImpl
     public IonSymbolImpl(IonSystemImpl system, int typeDesc)
     {
         super(system, typeDesc);
-        assert pos_getType() == IonConstants.tidSymbol;
+        assert pos_getType() == _Private_IonConstants.tidSymbol;
     }
 
     /**
@@ -239,7 +241,7 @@ public final class IonSymbolImpl
         assert _hasNativeValue() == true;
 
         if (this.isIonVersionMarker()) {
-            return IonConstants.BINARY_VERSION_MARKER_SIZE;
+            return _Private_IonConstants.BINARY_VERSION_MARKER_SIZE;
         }
 
         if (_isNullValue()) return 0;
@@ -282,12 +284,12 @@ public final class IonSymbolImpl
             ln = 0;
         }
         else if (isNull) {
-            ln = IonConstants.lnIsNullAtom;
+            ln = _Private_IonConstants.lnIsNullAtom;
         }
         else {
             ln = getNativeValueLength();
-            if (ln > IonConstants.lnIsVarLen) {
-                ln = IonConstants.lnIsVarLen;
+            if (ln > _Private_IonConstants.lnIsVarLen) {
+                ln = _Private_IonConstants.lnIsVarLen;
             }
         }
         return ln;
@@ -322,7 +324,7 @@ public final class IonSymbolImpl
         int len;
 
         if (this._is_IonVersionMarker) {  // FIXME: WHAT IF THE ivm HAS ANNOTATIONS ??
-            len = IonConstants.BINARY_VERSION_MARKER_SIZE - IonConstants.BB_TOKEN_LEN;
+            len = _Private_IonConstants.BINARY_VERSION_MARKER_SIZE - _Private_IonConstants.BB_TOKEN_LEN;
         }
         else {
             len = super.getNakedValueLength();
@@ -381,28 +383,28 @@ public final class IonSymbolImpl
         assert (byte)(0xff & td) == this.pos_getTypeDescriptorByte();
 
         int tdb = this.pos_getTypeDescriptorByte();
-        if ((tdb & 0xff) == (IonConstants.BINARY_VERSION_MARKER_1_0[0] & 0xff)) {
+        if ((tdb & 0xff) == (_Private_IonConstants.BINARY_VERSION_MARKER_1_0[0] & 0xff)) {
             mySid = ION_1_0_SID;
             _set_value(ION_1_0);
             // we need to skip over the binary marker, we've read the first
             // byte and we checked the contents long before we got here so ...
-            reader.skip(IonConstants.BINARY_VERSION_MARKER_SIZE - 1);
+            reader.skip(_Private_IonConstants.BINARY_VERSION_MARKER_SIZE - 1);
         }
         else {
             int type = this.pos_getType();
-            if (type != IonConstants.tidSymbol) {
+            if (type != _Private_IonConstants.tidSymbol) {
                 throw new IonException("invalid type desc encountered for value");
             }
 
             int ln = this.pos_getLowNibble();
             switch ((0xf & ln)) {
-            case IonConstants.lnIsNullAtom:
+            case _Private_IonConstants.lnIsNullAtom:
                 mySid = UNKNOWN_SYMBOL_ID;
                 _set_value(null);
                 break;
             case 0:
                 throw new IonException("invalid symbol id for value, must be > 0");
-            case IonConstants.lnIsVarLen:
+            case _Private_IonConstants.lnIsVarLen:
                 ln = reader.readVarUIntAsInt();
                 // fall through to default:
             default:
@@ -427,8 +429,8 @@ public final class IonSymbolImpl
         assert valueLen > 0;
 
         if (this.isIonVersionMarker()) {
-            writer.write(IonConstants.BINARY_VERSION_MARKER_1_0);
-            assert valueLen == IonConstants.BINARY_VERSION_MARKER_SIZE;
+            writer.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
+            assert valueLen == _Private_IonConstants.BINARY_VERSION_MARKER_SIZE;
         }
         else {
             // We've already been through updateSymbolTable().
@@ -454,7 +456,7 @@ public final class IonSymbolImpl
         // we look for the IonVersionMarker stamp for special
         // treatment (the 4 byte value) otherwise we delegate
         if (this._is_IonVersionMarker) {
-            writer.write(IonConstants.BINARY_VERSION_MARKER_1_0);
+            writer.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
         }
         else {
             cumulativePositionDelta =

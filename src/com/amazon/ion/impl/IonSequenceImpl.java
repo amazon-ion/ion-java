@@ -1,6 +1,10 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc. All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc. All rights reserved.
 
 package com.amazon.ion.impl;
+
+import static com.amazon.ion.impl._Private_IonConstants.lnIsEmptyContainer;
+import static com.amazon.ion.impl._Private_IonConstants.lnIsNullSequence;
+import static com.amazon.ion.impl._Private_IonConstants.lnIsVarLen;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonDatagram;
@@ -383,13 +387,13 @@ public abstract class IonSequenceImpl
     {
         assert _hasNativeValue();
 
-        if (_isNullValue())    { return IonConstants.lnIsNullSequence; }
-        if (_children == null || _child_count == 0) { return IonConstants.lnIsEmptyContainer; }
+        if (_isNullValue())    { return lnIsNullSequence; }
+        if (_children == null || _child_count == 0) { return lnIsEmptyContainer; }
 
         int contentLength = getNakedValueLength();
-        if (contentLength > IonConstants.lnIsVarLen)
+        if (contentLength > _Private_IonConstants.lnIsVarLen)
         {
-            return IonConstants.lnIsVarLen;
+            return _Private_IonConstants.lnIsVarLen;
         }
 
         return contentLength;
@@ -409,7 +413,7 @@ public abstract class IonSequenceImpl
         int vlen = this.getNativeValueLength();
         if (vlen > 0)
         {
-            if (vlen >= IonConstants.lnIsVarLen)
+            if (vlen >= lnIsVarLen)
             {
                 writer.writeVarUIntValue(vlen, true);
                 // Fall through...

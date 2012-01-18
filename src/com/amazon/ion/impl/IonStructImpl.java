@@ -2,6 +2,11 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl._Private_IonConstants.lnIsNullStruct;
+import static com.amazon.ion.impl._Private_IonConstants.lnIsOrderedStruct;
+import static com.amazon.ion.impl._Private_IonConstants.makeTypeDescriptor;
+import static com.amazon.ion.impl._Private_IonConstants.tidStruct;
+
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
@@ -28,12 +33,10 @@ public final class IonStructImpl
 {
 
     private static final int NULL_STRUCT_TYPEDESC =
-        IonConstants.makeTypeDescriptor(IonConstants.tidStruct,
-                                        IonConstants.lnIsNullStruct);
+        makeTypeDescriptor(tidStruct, lnIsNullStruct);
 
     static final int ORDERED_STRUCT_TYPEDESC =
-        IonConstants.makeTypeDescriptor(IonConstants.tidStruct,
-                                        IonConstants.lnIsOrderedStruct);
+        makeTypeDescriptor(tidStruct, lnIsOrderedStruct);
 
     private static final int HASH_SIGNATURE =
         IonType.STRUCT.toString().hashCode();
@@ -57,7 +60,7 @@ public final class IonStructImpl
     public IonStructImpl(IonSystemImpl system, int typeDesc)
     {
         super(system, typeDesc);
-        assert pos_getType() == IonConstants.tidStruct;
+        assert pos_getType() == _Private_IonConstants.tidStruct;
     }
 
     /**
@@ -484,7 +487,7 @@ public final class IonStructImpl
     @Override
     public int getTypeDescriptorAndLengthOverhead(int contentLength)
     {
-        int len = IonConstants.BB_TOKEN_LEN;
+        int len = _Private_IonConstants.BB_TOKEN_LEN;
 
         if (isNullValue() || isEmpty())
         {
@@ -492,7 +495,7 @@ public final class IonStructImpl
             return len;
         }
 
-        if (_isOrdered || contentLength >= IonConstants.lnIsVarLen)
+        if (_isOrdered || contentLength >= _Private_IonConstants.lnIsVarLen)
         {
             len += IonBinary.lenVarUInt(contentLength);
         }
@@ -505,16 +508,16 @@ public final class IonStructImpl
     {
         assert _hasNativeValue();
 
-        if (_isNullValue())    { return IonConstants.lnIsNullSequence; }
+        if (_isNullValue())    { return _Private_IonConstants.lnIsNullSequence; }
 
-        if (get_child_count() == 0) return IonConstants.lnIsEmptyContainer;
+        if (get_child_count() == 0) return _Private_IonConstants.lnIsEmptyContainer;
 
-        if (_isOrdered) return IonConstants.lnIsOrderedStruct;
+        if (_isOrdered) return _Private_IonConstants.lnIsOrderedStruct;
 
         int contentLength = this.getNativeValueLength();  // FIXME check nakedLength?
-        if (contentLength > IonConstants.lnIsVarLen)
+        if (contentLength > _Private_IonConstants.lnIsVarLen)
         {
-            return IonConstants.lnIsVarLen;
+            return _Private_IonConstants.lnIsVarLen;
         }
 
         return contentLength;
@@ -534,7 +537,7 @@ public final class IonStructImpl
             // TODO Rewrite this to avoid computing length again
             int vlen = this.getNativeValueLength();
 
-            if (_isOrdered || vlen >= IonConstants.lnIsVarLen)
+            if (_isOrdered || vlen >= _Private_IonConstants.lnIsVarLen)
             {
                 writer.writeVarUIntValue(vlen, true);
             }

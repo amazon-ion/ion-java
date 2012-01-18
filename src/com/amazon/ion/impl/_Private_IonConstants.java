@@ -1,15 +1,13 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
 
 /**
- *
+ * NOT FOR APPLICATION USE!
  */
-public class IonConstants
+public class _Private_IonConstants
 {
 
     public final static int BB_TOKEN_LEN           =    1;
@@ -35,48 +33,48 @@ public class IonConstants
     public static final int surrogate_value_mask = ~0xFFFFFC00; // 0x3f << 10; or the top 6 bits is the marker the low 10 is the 1/2 character
     public static final int surrogate_utf32_offset = 0x10000;
     public static final int surrogate_utf32_shift = 10;
-    
-    // these help convert from Java UTF-16 to Unicode Scalars (aka unicode code 
+
+    // these help convert from Java UTF-16 to Unicode Scalars (aka unicode code
     // points (aka characters)) which are "32" bit values (really just 21 bits)
     // the DON'T check validity of their input, they expect that to have happened
     // already.  This is a perf issue since normally this check has been done
     // to detect that these routines should be called at all - no need to do it
-    // twice.  
+    // twice.
     public static final int makeUnicodeScalar(int high_surrogate, int low_surrogate) {
-    	int c;
-    	c = (high_surrogate & surrogate_value_mask) << surrogate_utf32_shift;
-    	c |= (low_surrogate & surrogate_value_mask);
-    	c += surrogate_utf32_offset;
-    	return c;
+        int c;
+        c = (high_surrogate & surrogate_value_mask) << surrogate_utf32_shift;
+        c |= (low_surrogate & surrogate_value_mask);
+        c += surrogate_utf32_offset;
+        return c;
     }
     public static final int makeHighSurrogate(int unicodeScalar) {
-    	int c;
-    	c = unicodeScalar - surrogate_utf32_offset;
-    	c >>>= surrogate_utf32_shift;
-    	c |= high_surrogate_value;
-    	return c;
+        int c;
+        c = unicodeScalar - surrogate_utf32_offset;
+        c >>>= surrogate_utf32_shift;
+        c |= high_surrogate_value;
+        return c;
     }
     public static final int makeLowSurrogate(int unicodeScalar) {
-    	int c;
-    	c = unicodeScalar - surrogate_utf32_offset;
-    	c &= surrogate_value_mask;
-    	c |= low_surrogate_value;
-    	return c;
+        int c;
+        c = unicodeScalar - surrogate_utf32_offset;
+        c &= surrogate_value_mask;
+        c |= low_surrogate_value;
+        return c;
     }
     public static final boolean isHighSurrogate(int c) {
-    	boolean is;
-    	is = (c & surrogate_mask) == high_surrogate_value;
-    	return is;
+        boolean is;
+        is = (c & surrogate_mask) == high_surrogate_value;
+        return is;
     }
     public static final boolean isLowSurrogate(int c) {
-    	boolean is;
-    	is = (c & surrogate_mask) == low_surrogate_value;
-    	return is;
+        boolean is;
+        is = (c & surrogate_mask) == low_surrogate_value;
+        return is;
     }
     public static final boolean isSurrogate(int c) {
-    	boolean is;
-    	is = (c & (surrogate_mask | (low_surrogate_value - high_surrogate_value))) == high_surrogate_value;
-    	return is;
+        boolean is;
+        is = (c & (surrogate_mask | (low_surrogate_value - high_surrogate_value))) == high_surrogate_value;
+        return is;
     }
 
     /**
@@ -111,7 +109,7 @@ public class IonConstants
     public static final int tidStruct       = 13; // d
     public static final int tidTypedecl     = 14; // e
     public static final int tidUnused       = 15; // f
-    
+
     public static final int tidDATAGRAM     = 16; // not a real type id
 
 /* this is just here to help programmer productivity ...
@@ -249,10 +247,10 @@ public class IonConstants
     }
 
     public static final int True =
-        makeTypeDescriptor(IonConstants.tidBoolean,
-                           IonConstants.lnBooleanTrue);
+        makeTypeDescriptor(_Private_IonConstants.tidBoolean,
+                           _Private_IonConstants.lnBooleanTrue);
 
     public static final int False =
-        makeTypeDescriptor(IonConstants.tidBoolean,
-                           IonConstants.lnBooleanFalse);
+        makeTypeDescriptor(_Private_IonConstants.tidBoolean,
+                           _Private_IonConstants.lnBooleanFalse);
 }

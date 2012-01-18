@@ -901,13 +901,13 @@ public final class UnifiedSymbolTable
         int ii=0;
         for (; ii<name.length(); ii++) {
             char c = name.charAt(ii);
-            if (IonConstants.isHighSurrogate(c)) {
+            if (_Private_IonConstants.isHighSurrogate(c)) {
                 if (pending_high_surrogate) {
                     break; // our check at the end will throw for us
                 }
                 pending_high_surrogate = true;
             }
-            else if (IonConstants.isLowSurrogate(c)) {
+            else if (_Private_IonConstants.isLowSurrogate(c)) {
                 if (!pending_high_surrogate) {
                     throw new IllegalArgumentException("unparied low surrogate in symbol name at position "+ii);
                 }

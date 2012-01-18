@@ -1,8 +1,9 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.UnifiedInputStreamX.makeStream;
+import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_SIZE;
 import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
 
 import com.amazon.ion.IonCatalog;
@@ -278,12 +279,12 @@ public class IonReaderFactoryX
     //
     private static final boolean has_binary_cookie(UnifiedInputStreamX uis) throws IOException
     {
-        byte[] bytes = new byte[IonConstants.BINARY_VERSION_MARKER_SIZE];
+        byte[] bytes = new byte[BINARY_VERSION_MARKER_SIZE];
 
         // try to read the first 4 bytes and unread them (we want
         // the data stream undisturbed by our peeking ahead)
         int len;
-        for (len = 0; len < IonConstants.BINARY_VERSION_MARKER_SIZE; len++) {
+        for (len = 0; len < BINARY_VERSION_MARKER_SIZE; len++) {
             int c = uis.read();
             if (c == UnifiedInputStreamX.EOF) {
                 break;

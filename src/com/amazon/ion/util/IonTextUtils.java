@@ -3,7 +3,7 @@
 package com.amazon.ion.util;
 
 import com.amazon.ion.EmptySymbolException;
-import com.amazon.ion.impl.IonConstants;
+import com.amazon.ion.impl._Private_IonConstants;
 import java.io.IOException;
 
 
@@ -869,13 +869,13 @@ public class IonTextUtils
         {
             int c = text.charAt(i);
 
-            if (IonConstants.isHighSurrogate(c))
+            if (_Private_IonConstants.isHighSurrogate(c))
             {
                 i++;
                 char c2;
                 // I apologize for the embedded assignment, but the alternative
                 // was worse.
-                if (i >= len || !IonConstants.isLowSurrogate(c2 = text.charAt(i)))
+                if (i >= len || !_Private_IonConstants.isLowSurrogate(c2 = text.charAt(i)))
                 {
                     String message =
                         "text is invalid UTF-16. It contains an unmatched " +
@@ -883,9 +883,9 @@ public class IonTextUtils
                         " at index " + i;
                     throw new IllegalArgumentException(message);
                 }
-                c = IonConstants.makeUnicodeScalar(c, c2);
+                c = _Private_IonConstants.makeUnicodeScalar(c, c2);
             }
-            else if (IonConstants.isLowSurrogate(c))
+            else if (_Private_IonConstants.isLowSurrogate(c))
             {
                 String message =
                     "text is invalid UTF-16. It contains an unmatched " +

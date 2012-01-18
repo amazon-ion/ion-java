@@ -13,7 +13,7 @@ import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl.IonConstants;
+import com.amazon.ion.impl._Private_IonConstants;
 import com.amazon.ion.impl.IonContainerPrivate;
 import com.amazon.ion.impl.IonImplUtils;
 import java.io.IOException;
@@ -647,20 +647,20 @@ public abstract class IonContainerLite
      */
     static final int[] INITIAL_SIZE = make_initial_size_array();
     static int[] make_initial_size_array() {
-        int[] sizes = new int[IonConstants.tidDATAGRAM + 1];
-        sizes[IonConstants.tidList]     = 1;
-        sizes[IonConstants.tidSexp]     = 4;
-        sizes[IonConstants.tidStruct]   = 5;
-        sizes[IonConstants.tidDATAGRAM] = 3;
+        int[] sizes = new int[_Private_IonConstants.tidDATAGRAM + 1];
+        sizes[_Private_IonConstants.tidList]     = 1;
+        sizes[_Private_IonConstants.tidSexp]     = 4;
+        sizes[_Private_IonConstants.tidStruct]   = 5;
+        sizes[_Private_IonConstants.tidDATAGRAM] = 3;
         return sizes;
     }
     static final int[] NEXT_SIZE = make_next_size_array();
     static int[] make_next_size_array() {
-        int[] sizes = new int[IonConstants.tidDATAGRAM + 1];
-        sizes[IonConstants.tidList]     = 4;
-        sizes[IonConstants.tidSexp]     = 8;
-        sizes[IonConstants.tidStruct]   = 8;
-        sizes[IonConstants.tidDATAGRAM] = 10;
+        int[] sizes = new int[_Private_IonConstants.tidDATAGRAM + 1];
+        sizes[_Private_IonConstants.tidList]     = 4;
+        sizes[_Private_IonConstants.tidSexp]     = 8;
+        sizes[_Private_IonConstants.tidStruct]   = 8;
+        sizes[_Private_IonConstants.tidDATAGRAM] = 10;
         return sizes;
     }
     final protected int initialSize()

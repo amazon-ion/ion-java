@@ -1,12 +1,12 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_1_0;
-import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
 import static com.amazon.ion.impl.IonValueImpl.makeValueFromReader;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
+import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_1_0;
+import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_SIZE;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
@@ -332,10 +332,10 @@ class SystemValueIteratorImpl
             len = BINARY_VERSION_MARKER_SIZE;
         }
         else {
-            int ln = IonConstants.getLowNibble(b);
-            int hn = IonConstants.getTypeCode(b);
+            int ln = _Private_IonConstants.getLowNibble(b);
+            int hn = _Private_IonConstants.getTypeCode(b);
             len = _buffer._reader.readLength(hn, ln);
-            if (ln == IonConstants.lnIsVarLen) {
+            if (ln == _Private_IonConstants.lnIsVarLen) {
                 // we need to count the length of the variable int len field too
                 // fixed ion binary reader bug manifesting in good/submission.10n
                 len += IonBinary.lenVarUInt(len);
@@ -451,7 +451,7 @@ class SystemValueIteratorImpl
                         // Start the buffer with the BVM.
                         IonBinary.Writer writer = buffer.openWriter();
                          writer.setPosition(_buffer_offset);
-                        writer.write(IonConstants.BINARY_VERSION_MARKER_1_0);
+                        writer.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
                         _just_wrote_ivm = true;
                     }
                     else {

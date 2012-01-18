@@ -225,7 +225,7 @@ class IonReaderBinaryUserX
     {
         super.hasNext();
         if (getDepth() == 0 && !_value_is_null) {
-            if (_value_tid == IonConstants.tidSymbol) {
+            if (_value_tid == _Private_IonConstants.tidSymbol) {
                 load_cached_value(AS_TYPE.int_value);
                 int sid = _v.getInt();
                 if (sid == ION_1_0_SID) {
@@ -234,7 +234,7 @@ class IonReaderBinaryUserX
                     _has_next_needed = true;
                 }
             }
-            else if (_value_tid == IonConstants.tidStruct) {
+            else if (_value_tid == _Private_IonConstants.tidStruct) {
                 int count = load_annotations();
                 for(int ii=0; ii<count; ii++) {
                     if (_annotation_ids[ii] == ION_SYMBOL_TABLE_SID) {
@@ -252,7 +252,7 @@ class IonReaderBinaryUserX
                 }
             }
             else {
-                assert (_value_tid != IonConstants.tidTypedecl);
+                assert (_value_tid != _Private_IonConstants.tidTypedecl);
             }
         }
     }

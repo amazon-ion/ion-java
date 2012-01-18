@@ -338,7 +338,7 @@ public abstract class IonValueImpl
         _hasNativeValue(false);
         _isDirty(true);
         pos_setTypeDescriptorByte(typedesc);
-        boolean isnull = (IonConstants.getLowNibble(typedesc) == IonConstants.lnIsNull);
+        boolean isnull = (_Private_IonConstants.getLowNibble(typedesc) == _Private_IonConstants.lnIsNull);
         _isNullValue(isnull);
     }
 
@@ -458,54 +458,54 @@ public abstract class IonValueImpl
         assert system != null;
 
         IonValueImpl value = null;
-        int typeId = IonConstants.getTypeCode(typedesc);
+        int typeId = _Private_IonConstants.getTypeCode(typedesc);
 
         switch (typeId) {
-        case IonConstants.tidNull: // null(0)
+        case _Private_IonConstants.tidNull: // null(0)
             value = new IonNullImpl(system, typedesc);
             break;
-        case IonConstants.tidBoolean: // boolean(1)
+        case _Private_IonConstants.tidBoolean: // boolean(1)
             value = new IonBoolImpl(system, typedesc);
             break;
-        case IonConstants.tidPosInt: // 2
-        case IonConstants.tidNegInt: // 3
+        case _Private_IonConstants.tidPosInt: // 2
+        case _Private_IonConstants.tidNegInt: // 3
             value = new IonIntImpl(system, typedesc);
             break;
-        case IonConstants.tidFloat: // float(4)
+        case _Private_IonConstants.tidFloat: // float(4)
             value = new IonFloatImpl(system, typedesc);
             break;
-        case IonConstants.tidDecimal: // decimal(5)
+        case _Private_IonConstants.tidDecimal: // decimal(5)
             value = new IonDecimalImpl(system, typedesc);
             break;
-        case IonConstants.tidTimestamp: // timestamp(6)
+        case _Private_IonConstants.tidTimestamp: // timestamp(6)
             value = new IonTimestampImpl(system, typedesc);
             break;
-        case IonConstants.tidSymbol: // symbol(7)
+        case _Private_IonConstants.tidSymbol: // symbol(7)
             value = new IonSymbolImpl(system, typedesc);
             break;
-        case IonConstants.tidString: // string (8)
+        case _Private_IonConstants.tidString: // string (8)
             value = new IonStringImpl(system, typedesc);
             break;
-        case IonConstants.tidClob: // clob(9)
+        case _Private_IonConstants.tidClob: // clob(9)
             value = new IonClobImpl(system, typedesc);
             break;
-        case IonConstants.tidBlob: // blob(10)
+        case _Private_IonConstants.tidBlob: // blob(10)
             value = new IonBlobImpl(system, typedesc);
             break;
-        case IonConstants.tidList: // list(11)
+        case _Private_IonConstants.tidList: // list(11)
             value = new IonListImpl(system, typedesc);
             break;
-        case IonConstants.tidSexp: // 12
+        case _Private_IonConstants.tidSexp: // 12
             value = new IonSexpImpl(system, typedesc);
             break;
-        case IonConstants.tidStruct: // 13
+        case _Private_IonConstants.tidStruct: // 13
             value = new IonStructImpl(system, typedesc);
             break;
 
-        case IonConstants.tidTypedecl: // 14
+        case _Private_IonConstants.tidTypedecl: // 14
             // the only case where this is valid is if this is
             // really an IonVersionMaker
-            assert IonConstants.getLowNibble(typedesc) == 0;
+            assert _Private_IonConstants.getLowNibble(typedesc) == 0;
             value = system.newSystemIdSymbol(ION_1_0);
             break;
 
@@ -1169,19 +1169,19 @@ public abstract class IonValueImpl
         this._value_content_start = valueReader.position();
         this._next_start = this._value_content_start + vlen;
 
-        if (type == IonConstants.tidTypedecl) {
+        if (type == _Private_IonConstants.tidTypedecl) {
             // check for the special case of the typedecl that is a binary version marker
-            if (this._type_desc == (IonConstants.BINARY_VERSION_MARKER_1_0[0] & 0xff)) {
+            if (this._type_desc == (_Private_IonConstants.BINARY_VERSION_MARKER_1_0[0] & 0xff)) {
                 // read the remaining (3) bytes of the IonVersionMarker
-                for (int ii=1; ii<IonConstants.BINARY_VERSION_MARKER_SIZE; ii++) {
+                for (int ii=1; ii<_Private_IonConstants.BINARY_VERSION_MARKER_SIZE; ii++) {
                     int b = valueReader.read();
-                    if ((b & 0xff) != (IonConstants.BINARY_VERSION_MARKER_1_0[ii] & 0xff)) {
+                    if ((b & 0xff) != (_Private_IonConstants.BINARY_VERSION_MARKER_1_0[ii] & 0xff)) {
                         throw new IonException("illegal value encoded at "+this._value_content_start);
                     }
                 }
                 // fixup the "next start" position, since when we set this
                 // the value length was "wrong"
-                vlen = IonConstants.BINARY_VERSION_MARKER_SIZE - 1;
+                vlen = _Private_IonConstants.BINARY_VERSION_MARKER_SIZE - 1;
                 this._next_start = this._value_content_start + vlen;
                 this._isSystemValue(true);
             }
@@ -1196,7 +1196,7 @@ public abstract class IonValueImpl
                 // TODO check that td != annotation (illegal nested annotation)
 
                 int ln = pos_getLowNibble();
-                if ((ln == IonConstants.lnIsVarLen)
+                if ((ln == _Private_IonConstants.lnIsVarLen)
                     || (this._type_desc == IonStructImpl.ORDERED_STRUCT_TYPEDESC))
                 {
                     // Skip over the extended length to find the content start.
@@ -1218,12 +1218,12 @@ public abstract class IonValueImpl
     }
     public final int pos_getType()
     {
-        return IonConstants.getTypeCode(this._type_desc);
+        return _Private_IonConstants.getTypeCode(this._type_desc);
     }
 
     public final int pos_getLowNibble()
     {
-        return IonConstants.getLowNibble(this._type_desc);
+        return _Private_IonConstants.getLowNibble(this._type_desc);
     }
 
     public final int pos_getFieldIdLen()
@@ -1296,8 +1296,8 @@ public abstract class IonValueImpl
 
     static int getFieldLength(int td, IonBinary.Reader reader) throws IOException
     {
-        int ln = IonConstants.getLowNibble(td);
-        int hn = IonConstants.getTypeCode(td);
+        int ln = _Private_IonConstants.getLowNibble(td);
+        int hn = _Private_IonConstants.getTypeCode(td);
         int len = reader.readLength(hn, ln);
         return len;
     }
@@ -1402,10 +1402,10 @@ public abstract class IonValueImpl
 
         // skip over the annoation td and total length
         int td = reader.read();
-        if (IonConstants.getTypeCode(td) != IonConstants.tidTypedecl) {
+        if (_Private_IonConstants.getTypeCode(td) != _Private_IonConstants.tidTypedecl) {
             throw new IonException("invalid user type annotation");
         }
-        if (IonConstants.getLowNibble(td) == IonConstants.lnIsVarLen) {
+        if (_Private_IonConstants.getLowNibble(td) == _Private_IonConstants.lnIsVarLen) {
             // skip past the overall length, which we don't care about here
             reader.readVarIntAsInt();
         }
@@ -1661,28 +1661,28 @@ public abstract class IonValueImpl
      */
     public int getTypeDescriptorAndLengthOverhead(int contentLength)
     {
-        int len = IonConstants.BB_TOKEN_LEN;
+        int len = _Private_IonConstants.BB_TOKEN_LEN;
 
         if (isNullValue()) return len;
 
         switch (this.pos_getType()) {
-        case IonConstants.tidNull: // null(0)
-        case IonConstants.tidBoolean: // boolean(1)
+        case _Private_IonConstants.tidNull: // null(0)
+        case _Private_IonConstants.tidBoolean: // boolean(1)
             break;
-        case IonConstants.tidPosInt: // 2
-        case IonConstants.tidNegInt: // 3
-        case IonConstants.tidFloat: // float(4)
-        case IonConstants.tidDecimal: // decimal(5)
-        case IonConstants.tidTimestamp: // timestamp(6)
-        case IonConstants.tidSymbol: // symbol(7)
-        case IonConstants.tidString: // string (8)
-        case IonConstants.tidClob:   // 9
-        case IonConstants.tidBlob:   // 10
-        case IonConstants.tidList:   // 11
-        case IonConstants.tidSexp:   // 12
+        case _Private_IonConstants.tidPosInt: // 2
+        case _Private_IonConstants.tidNegInt: // 3
+        case _Private_IonConstants.tidFloat: // float(4)
+        case _Private_IonConstants.tidDecimal: // decimal(5)
+        case _Private_IonConstants.tidTimestamp: // timestamp(6)
+        case _Private_IonConstants.tidSymbol: // symbol(7)
+        case _Private_IonConstants.tidString: // string (8)
+        case _Private_IonConstants.tidClob:   // 9
+        case _Private_IonConstants.tidBlob:   // 10
+        case _Private_IonConstants.tidList:   // 11
+        case _Private_IonConstants.tidSexp:   // 12
             len += IonBinary.lenLenFieldWithOptionalNibble(contentLength);
             break;
-        case IonConstants.tidStruct: // Overridden
+        case _Private_IonConstants.tidStruct: // Overridden
         default:
             throw new IonException("this value has an illegal type descriptor id "+this.pos_getTypeDescriptorByte());
         }
@@ -1702,7 +1702,7 @@ public abstract class IonValueImpl
         if (this.isNullValue()) {
             // the raw non-annotated, non-fieldnamed, length
             // is 1 for a null container
-            len = IonConstants.BB_TOKEN_LEN;
+            len = _Private_IonConstants.BB_TOKEN_LEN;
         }
         else {
             // for non-null we start with the length of the
@@ -1750,7 +1750,7 @@ public abstract class IonValueImpl
         int fieldSidLen = 0;
         if (_fieldName != null || _fieldSid != UNKNOWN_SYMBOL_ID) {
             assert this._container != null;
-            assert this._container.pos_getType() == IonConstants.tidStruct;
+            assert this._container.pos_getType() == _Private_IonConstants.tidStruct;
 
             if (_fieldSid == UNKNOWN_SYMBOL_ID) {
                 int newFieldSid  = addSymbol(_fieldName);
@@ -1797,7 +1797,7 @@ public abstract class IonValueImpl
     {
         int hn = this.pos_getType();
         int ln = this.computeLowNibble(valuelen);
-        return IonConstants.makeTypeDescriptor(hn, ln);
+        return _Private_IonConstants.makeTypeDescriptor(hn, ln);
     }
 
 
@@ -2057,7 +2057,7 @@ public abstract class IonValueImpl
             int annotationlen = getAnnotationLength();
             int wrappedLength = valuelen + tdwithvlenlen + annotationlen;
 
-            writer.writeCommonHeader(IonConstants.tidTypedecl,
+            writer.writeCommonHeader(_Private_IonConstants.tidTypedecl,
                                                 wrappedLength);
             // this is depending on getAnnotationLength() to have
             // added all the symbols as necessary so that writeAnnotations
@@ -2094,11 +2094,11 @@ public abstract class IonValueImpl
         int vlen = this.getNativeValueLength();
         if (vlen > 0) {
             switch (this.pos_getLowNibble()) {
-            case IonConstants.lnIsNullAtom:
-            case IonConstants.lnNumericZero:
+            case _Private_IonConstants.lnIsNullAtom:
+            case _Private_IonConstants.lnNumericZero:
                 // we don't need to do anything here
                 break;
-            case IonConstants.lnIsVarLen:
+            case _Private_IonConstants.lnIsVarLen:
                 writer.writeVarUIntValue(vlen, true);
             default:
                 this.doWriteNakedValue(writer, vlen);

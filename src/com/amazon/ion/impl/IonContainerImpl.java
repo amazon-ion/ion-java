@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc. All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc. All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -34,25 +34,25 @@ abstract public class IonContainerImpl
      */
     static final int[] INITIAL_SIZE = make_initial_size_array();
     static int[] make_initial_size_array() {
-        int[] sizes = new int[IonConstants.tidDATAGRAM + 1];
-        sizes[IonConstants.tidList]     = 1;
-        sizes[IonConstants.tidSexp]     = 4;
-        sizes[IonConstants.tidStruct]   = 5;
-        sizes[IonConstants.tidDATAGRAM] = 3;
+        int[] sizes = new int[_Private_IonConstants.tidDATAGRAM + 1];
+        sizes[_Private_IonConstants.tidList]     = 1;
+        sizes[_Private_IonConstants.tidSexp]     = 4;
+        sizes[_Private_IonConstants.tidStruct]   = 5;
+        sizes[_Private_IonConstants.tidDATAGRAM] = 3;
         return sizes;
     }
     static final int[] NEXT_SIZE = make_next_size_array();
     static int[] make_next_size_array() {
-        int[] sizes = new int[IonConstants.tidDATAGRAM + 1];
-        sizes[IonConstants.tidList]     = 4;
-        sizes[IonConstants.tidSexp]     = 8;
-        sizes[IonConstants.tidStruct]   = 8;
-        sizes[IonConstants.tidDATAGRAM] = 10;
+        int[] sizes = new int[_Private_IonConstants.tidDATAGRAM + 1];
+        sizes[_Private_IonConstants.tidList]     = 4;
+        sizes[_Private_IonConstants.tidSexp]     = 8;
+        sizes[_Private_IonConstants.tidStruct]   = 8;
+        sizes[_Private_IonConstants.tidDATAGRAM] = 10;
         return sizes;
     }
     static final protected int initialSize(int typeDesc)
     {
-        int tid = IonConstants.getTypeCode(typeDesc & 0xff);
+        int tid = _Private_IonConstants.getTypeCode(typeDesc & 0xff);
         if (tid < 0 || tid >= INITIAL_SIZE.length) {
             assert("this should never happen: type id's should be in range".length() < 0);
             return 4;
@@ -63,7 +63,7 @@ abstract public class IonContainerImpl
     final protected int nextSize(int current_size)
     {
         int typeDesc = pos_getTypeDescriptorByte();
-        int tid = IonConstants.getTypeCode(typeDesc & 0xff);
+        int tid = _Private_IonConstants.getTypeCode(typeDesc & 0xff);
 
         if (current_size == 0) {
             int new_size = initialSize(typeDesc);
@@ -449,7 +449,7 @@ abstract public class IonContainerImpl
         throws IOException
     {
         assert reader.position() == this.pos_getOffsetAtActualValue();
-        assert this.pos_getType() != IonConstants.tidStruct;
+        assert this.pos_getType() != _Private_IonConstants.tidStruct;
 
         IonBinary.BufferManager buffer = this._buffer;
         SymbolTable symtab = this.getSymbolTable();

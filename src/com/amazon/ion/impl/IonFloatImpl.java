@@ -1,8 +1,10 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
+
+import static com.amazon.ion.impl._Private_IonConstants.lnIsNullAtom;
+import static com.amazon.ion.impl._Private_IonConstants.makeTypeDescriptor;
+import static com.amazon.ion.impl._Private_IonConstants.tidFloat;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonFloat;
@@ -21,8 +23,7 @@ public final class IonFloatImpl
     implements IonFloat
 {
     static final int NULL_FLOAT_TYPEDESC =
-        IonConstants.makeTypeDescriptor(IonConstants.tidFloat,
-                                        IonConstants.lnIsNullAtom);
+        makeTypeDescriptor(tidFloat, lnIsNullAtom);
 
     static private final Double ZERO_DOUBLE = new Double(0);
 
@@ -57,7 +58,7 @@ public final class IonFloatImpl
     public IonFloatImpl(IonSystemImpl system, int typeDesc)
     {
         super(system, typeDesc);
-        assert pos_getType() == IonConstants.tidFloat;
+        assert pos_getType() == _Private_IonConstants.tidFloat;
 //        assert pos_getLowNibble() == IonConstants.lnIsNullAtom
 //            || pos_getLowNibble() == SIZE_OF_IEEE_754_64_BITS;
     }
@@ -193,15 +194,15 @@ public final class IonFloatImpl
 
         int ln = 0;
         if (_float_value == null) {
-            ln = IonConstants.lnIsNullAtom;
+            ln = _Private_IonConstants.lnIsNullAtom;
         }
         else if (_float_value.equals(0)) {
-            ln = IonConstants.lnNumericZero;
+            ln = _Private_IonConstants.lnNumericZero;
         }
         else {
             ln = getNativeValueLength();
-            if (ln > IonConstants.lnIsVarLen) {
-                ln = IonConstants.lnIsVarLen;
+            if (ln > _Private_IonConstants.lnIsVarLen) {
+                ln = _Private_IonConstants.lnIsVarLen;
             }
         }
         return ln;
@@ -224,18 +225,18 @@ public final class IonFloatImpl
         assert (byte)(0xff & td) == this.pos_getTypeDescriptorByte();
 
         int type = this.pos_getType();
-        if (type != IonConstants.tidFloat) {
+        if (type != _Private_IonConstants.tidFloat) {
             throw new IonException("invalid type desc encountered for float");
         }
         int ln = this.pos_getLowNibble();
         switch ((0xf & ln)) {
-        case IonConstants.lnIsNullAtom:
+        case _Private_IonConstants.lnIsNullAtom:
             _float_value = null;
             break;
         case 0:
             _float_value = ZERO_DOUBLE;
             break;
-        case IonConstants.lnIsVarLen:
+        case _Private_IonConstants.lnIsVarLen:
             ln = reader.readVarUIntAsInt();
             // fall through to default:
         default:

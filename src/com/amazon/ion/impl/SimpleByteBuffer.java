@@ -568,8 +568,8 @@ done:       for (;;) {
                     chars[ii++] = (char)c;
                 }
                 else { // when c is >= 0x10000 we need surrogate encoding
-                    chars[ii++] = (char)IonConstants.makeHighSurrogate(c);
-                    chars[ii++] = (char)IonConstants.makeLowSurrogate(c);
+                    chars[ii++] = (char)_Private_IonConstants.makeHighSurrogate(c);
+                    chars[ii++] = (char)_Private_IonConstants.makeLowSurrogate(c);
                 }
             }
             if (this.position() < endPosition) throwUnexpectedEOFException();
@@ -921,8 +921,8 @@ done:       for (;;) {
             int written_len = 1;
 
             int td = ((typeid & 0xf) << 4);
-            if (valueLength >= IonConstants.lnIsVarLen) {
-                td |= IonConstants.lnIsVarLen;
+            if (valueLength >= _Private_IonConstants.lnIsVarLen) {
+                td |= _Private_IonConstants.lnIsVarLen;
                 writeTypeDesc(td);
                 written_len += writeVarUInt(valueLength, lenOfLength, true);
             }
@@ -938,8 +938,8 @@ done:       for (;;) {
             int written_len = 1;
 
             int td = ((typeid & 0xf) << 4);
-            if (valueLength >= IonConstants.lnIsVarLen) {
-                td |= IonConstants.lnIsVarLen;
+            if (valueLength >= _Private_IonConstants.lnIsVarLen) {
+                td |= _Private_IonConstants.lnIsVarLen;
                 writeTypeDesc(td);
                 int lenOfLength = IonBinary.lenVarUInt(valueLength);
                 written_len += writeVarUInt(valueLength, lenOfLength, true);
@@ -1321,19 +1321,19 @@ done:       for (;;) {
                 int c = value.charAt(ii);
                 if (c > 127) {
                     if (c >= 0xD800) {
-                        if (IonConstants.isHighSurrogate(c)) {
+                        if (_Private_IonConstants.isHighSurrogate(c)) {
                             ii++;
                             // houston we have a high surrogate (let's hope it has a partner
                             if (ii >= value.length()) {
                                 throw new IonException("invalid string, unpaired high surrogate character");
                             }
                             int c2 = value.charAt(ii);
-                            if (!IonConstants.isLowSurrogate(c2)) {
+                            if (!_Private_IonConstants.isLowSurrogate(c2)) {
                                 throw new IonException("invalid string, unpaired high surrogate character");
                             }
-                            c = IonConstants.makeUnicodeScalar(c, c2);
+                            c = _Private_IonConstants.makeUnicodeScalar(c, c2);
                         }
-                        else if (IonConstants.isLowSurrogate(c)) {
+                        else if (_Private_IonConstants.isLowSurrogate(c)) {
                             // it's a loner low surrogate - that's an error
                             throw new IonException("invalid string, unpaired low surrogate character");
                         }

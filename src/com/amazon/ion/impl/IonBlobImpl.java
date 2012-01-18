@@ -1,7 +1,11 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
+
+import static com.amazon.ion.impl._Private_IonConstants.lnIsNullAtom;
+import static com.amazon.ion.impl._Private_IonConstants.makeTypeDescriptor;
+import static com.amazon.ion.impl._Private_IonConstants.tidBlob;
 
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonType;
@@ -18,8 +22,7 @@ public final class IonBlobImpl
 {
 
     static final int NULL_BLOB_TYPEDESC =
-         IonConstants.makeTypeDescriptor(IonConstants.tidBlob,
-                                         IonConstants.lnIsNullAtom);
+         makeTypeDescriptor(tidBlob, lnIsNullAtom);
 
     private static final int HASH_SIGNATURE =
         IonType.BLOB.toString().hashCode();
@@ -39,7 +42,7 @@ public final class IonBlobImpl
     public IonBlobImpl(IonSystemImpl system, int typeDesc)
     {
         super(system, typeDesc);
-        assert pos_getType() == IonConstants.tidBlob;
+        assert pos_getType() == _Private_IonConstants.tidBlob;
     }
 
     /**

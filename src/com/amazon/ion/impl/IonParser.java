@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved. */
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -172,7 +172,7 @@ public class IonParser
     {
         _annotationList = new ArrayList<Integer>();
         this._out.writer().pushPosition(_annotationList);
-        this._out.writer().write(IonConstants.makeTypeDescriptor(IonConstants.tidTypedecl, 0));
+        this._out.writer().write(_Private_IonConstants.makeTypeDescriptor(_Private_IonConstants.tidTypedecl, 0));
         this._out.writer().writeVarIntValue(1, true); // we'll have at least 1 byte of annotations
         this._out.writer().write((byte)0);       // and here's at least 1 annotation
     }
@@ -209,7 +209,7 @@ public class IonParser
         int totalAnnotationAndValueLen = annotationLen + (writtenDataLen - 3);
 
         int tdLen = IonBinary.lenLenFieldWithOptionalNibble(totalAnnotationAndValueLen);
-        tdLen += IonConstants.BB_TOKEN_LEN; // and we have the typedesc byte too
+        tdLen += _Private_IonConstants.BB_TOKEN_LEN; // and we have the typedesc byte too
 
         // so we know the annotation td and len is tdLen, the annotation
         // list itself is annotationLen and we already wrote 3 bytes in
@@ -225,7 +225,7 @@ public class IonParser
         // the length here is the bytes of annotations + the value we
         // wrote as we parsed it
         this._out.writer().writeCommonHeader(
-                                IonConstants.tidTypedecl
+                                _Private_IonConstants.tidTypedecl
                                ,totalAnnotationAndValueLen
                            );
         this._out.writer().writeAnnotations(_annotationList);
@@ -306,7 +306,7 @@ public class IonParser
         this._out.writer().startLongWrite(hn);
 
         boolean onlyByteSizedCharacters
-           = (hn == IonConstants.tidClob);
+           = (hn == _Private_IonConstants.tidClob);
 
         // First copy the characters we've already accummulated.
         this._out.writer().appendToLongValue(_in.value, onlyByteSizedCharacters);
@@ -328,7 +328,7 @@ public class IonParser
         boolean currentInQuotedContentState = this._in.inQuotedContent;
 
         boolean onlyByteSizedCharacters
-           = (hn == IonConstants.tidClob);
+           = (hn == _Private_IonConstants.tidClob);
 
         // here we'll "let" the BufferBytes class handle the heavy lifting
         PushbackReader r = this._in.getPushbackReader();
@@ -367,7 +367,7 @@ public class IonParser
 
         assert _t == IonTokenReader.Type.tOpenParen;
 
-        _out.writer().startLongWrite(IonConstants.tidSexp);
+        _out.writer().startLongWrite(_Private_IonConstants.tidSexp);
         this._depth++;
 
 loop:   for (;;) {
@@ -393,7 +393,7 @@ loop:   for (;;) {
         // here we backpatch the head of this list
         // TODO shouldn't need to pass high-nibble again.
         // lownibble is ignored and computed from amount written.
-        this._out.writer().patchLongHeader(IonConstants.tidSexp, 0);
+        this._out.writer().patchLongHeader(_Private_IonConstants.tidSexp, 0);
         this._depth--;
     }
 
@@ -401,7 +401,7 @@ loop:   for (;;) {
 
         assert _t == IonTokenReader.Type.tOpenSquare;
 
-        _out.writer().startLongWrite(IonConstants.tidList);
+        _out.writer().startLongWrite(_Private_IonConstants.tidList);
         this._depth++;
 
 loop:   for (;;) {
@@ -429,7 +429,7 @@ loop:   for (;;) {
 
         // here we backpatch the head of this list
         // lownibble is ignored and computed from amount written.
-        this._out.writer().patchLongHeader(IonConstants.tidList, 0);
+        this._out.writer().patchLongHeader(_Private_IonConstants.tidList, 0);
         this._depth--;
     }
 
@@ -438,8 +438,8 @@ loop:   for (;;) {
 
         assert _t == IonTokenReader.Type.tOpenCurly;
 
-        int hn = IonConstants.tidStruct;
-        int ln = IonConstants.lnNumericZero;  // TODO justify
+        int hn = _Private_IonConstants.tidStruct;
+        int ln = _Private_IonConstants.lnNumericZero;  // TODO justify
         _out.writer().pushLongHeader(hn, ln, true);
         this._out.writer().writeStubStructHeader(hn, ln);
         this._depth++;
@@ -523,8 +523,8 @@ loop:   for (;;) {
         boolean fieldsAreOrdered = false;
 
         // TODO This code path is WAY ugly and needs cleanup.
-        int lowNibble = (fieldsAreOrdered ? IonConstants.lnIsOrderedStruct : 0);
-        this._out.writer().patchLongHeader(IonConstants.tidStruct,
+        int lowNibble = (fieldsAreOrdered ? _Private_IonConstants.lnIsOrderedStruct : 0);
+        this._out.writer().patchLongHeader(_Private_IonConstants.tidStruct,
                                   lowNibble);
         this._depth--;
         this._in.popContext();
@@ -571,7 +571,7 @@ loop:   for (;;) {
                 this._skipped_ivm = true;
             }
             else {
-                this._out.writer().write(IonConstants.BINARY_VERSION_MARKER_1_0);
+                this._out.writer().write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
             }
         }
         else {
@@ -589,10 +589,10 @@ loop:   for (;;) {
         int token;
         switch (this._in.keyword) {
             case kwTrue:
-                token = IonConstants.True;
+                token = _Private_IonConstants.True;
                 break;
             case kwFalse:
-                token = IonConstants.False;
+                token = _Private_IonConstants.False;
                 break;
             case kwNull:
             case kwNullNull:
@@ -607,13 +607,13 @@ loop:   for (;;) {
             case kwNullClob:
             case kwNullList:
             case kwNullSexp:
-                token = IonConstants.makeTypeDescriptor(hn,
-                                         IonConstants.lnIsNullAtom);
+                token = _Private_IonConstants.makeTypeDescriptor(hn,
+                                         _Private_IonConstants.lnIsNullAtom);
                 break;
             case kwNullStruct:
-                token = IonConstants.makeTypeDescriptor(
+                token = _Private_IonConstants.makeTypeDescriptor(
                                          hn,
-                                         IonConstants.lnIsNullStruct);
+                                         _Private_IonConstants.lnIsNullStruct);
                 break;
             default:
                 throw new IllegalStateException("bad keyword token");
@@ -632,7 +632,7 @@ loop:   for (;;) {
                 this._out.writer().writeByte(
                         castto.getHighNibble(),
                         size);
-                if (size >= IonConstants.lnIsVarLen) {
+                if (size >= _Private_IonConstants.lnIsVarLen) {
                     this._out.writer().writeVarUIntValue(size, false);
                 }
                 int wroteLen = this._out.writer().writeUIntValue(val, size);
@@ -646,7 +646,7 @@ loop:   for (;;) {
                 this._out.writer().writeByte(
                         castto.getHighNibble(),
                         size);
-                if (size >= IonConstants.lnIsVarLen) {
+                if (size >= _Private_IonConstants.lnIsVarLen) {
                     this._out.writer().writeVarUIntValue(size, false);
                 }
                 int wroteLen = this._out.writer().writeUIntValue(val, size);
@@ -706,12 +706,12 @@ loop:   for (;;) {
                 }
                 // that's 3 - it's a long string
                 this._in.isLongString = true;
-                transferLongString(IonConstants.tidClob);
+                transferLongString(_Private_IonConstants.tidClob);
                 this._in.isLongString = false;
             }
             else {
                 // somebody else gets to do most of our work here
-                transferString(IonConstants.tidClob);
+                transferString(_Private_IonConstants.tidClob);
             }
 
             // we haven't seen the close curly first one yet
@@ -743,7 +743,7 @@ loop:   for (;;) {
 
             int start = this._out.writer().position();
 
-            _out.writer().startLongWrite(IonConstants.tidBlob);
+            _out.writer().startLongWrite(_Private_IonConstants.tidBlob);
             _out.writer().appendToLongValue(-1, false, true, false, pbr);
 
             // we'll have exited from the reader either on trailing whitespace or
@@ -774,10 +774,10 @@ loop:   for (;;) {
             }
 
             int len = this._out.writer().position() - start;
-            if (len > IonConstants.lnIsVarLen) {
-                len = IonConstants.lnIsVarLen;
+            if (len > _Private_IonConstants.lnIsVarLen) {
+                len = _Private_IonConstants.lnIsVarLen;
             }
-            this._out.writer().patchLongHeader(IonConstants.tidBlob, len);
+            this._out.writer().patchLongHeader(_Private_IonConstants.tidBlob, len);
         }
     }
 

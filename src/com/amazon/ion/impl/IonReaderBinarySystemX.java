@@ -195,12 +195,12 @@ class IonReaderBinarySystemX
 
                 if (v < 0) {
                     // we really can't fit this magnitude properly into a Java long
-                    int signum = _value_tid == IonConstants.tidPosInt ? 1 : -1;
+                    int signum = _value_tid == _Private_IonConstants.tidPosInt ? 1 : -1;
                     BigInteger big = IonBinary.unsignedLongToBigInteger(signum, v);
                     _v.setValue(big);
                     _v.setAuthoritativeType(AS_TYPE.bigInteger_value);
                 } else {
-                    if (_value_tid == IonConstants.tidNegInt) {
+                    if (_value_tid == _Private_IonConstants.tidNegInt) {
                         v = -v;
                     }
                     _v.setValue(v);
@@ -208,7 +208,7 @@ class IonReaderBinarySystemX
                 }
             }
             else {
-                boolean is_negative = (_value_tid == IonConstants.tidNegInt);
+                boolean is_negative = (_value_tid == _Private_IonConstants.tidNegInt);
                 BigInteger v = readBigInteger(_value_len, is_negative);
                 _v.setValue(v);
                 _v.setAuthoritativeType(AS_TYPE.bigInteger_value);

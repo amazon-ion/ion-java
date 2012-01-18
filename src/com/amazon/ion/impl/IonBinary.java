@@ -2,10 +2,10 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_BYTE_ARRAY;
 import static com.amazon.ion.impl.IonImplUtils.readFully;
 import static com.amazon.ion.impl.IonTimestampImpl.precisionIncludes;
+import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_SIZE;
 import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
 
 import com.amazon.ion.Decimal;
@@ -15,7 +15,7 @@ import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.Timestamp.Precision;
 import com.amazon.ion.UnexpectedEofException;
-import com.amazon.ion.impl.IonConstants.HighNibble;
+import com.amazon.ion.impl._Private_IonConstants.HighNibble;
 import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
 import java.io.InputStream;
@@ -51,7 +51,7 @@ public class IonBinary
      *
      * @param reader must not be null.
      * @throws IonException if there's a problem reading the cookie, or if the
-     * data does not start with {@link IonConstants#BINARY_VERSION_MARKER_1_0}.
+     * data does not start with {@link _Private_IonConstants#BINARY_VERSION_MARKER_1_0}.
      */
     public static void verifyBinaryVersionMarker(Reader reader)
         throws IonException
@@ -102,8 +102,8 @@ public class IonBinary
         int written_len = 1;
 
         int td = ((typeid & 0xf) << 4);
-        if (valueLength >= IonConstants.lnIsVarLen) {
-            td |= IonConstants.lnIsVarLen;
+        if (valueLength >= _Private_IonConstants.lnIsVarLen) {
+            td |= _Private_IonConstants.lnIsVarLen;
             userstream.write((byte)(td & 0xff));
             written_len += writeVarUInt(userstream, (long)valueLength, lenOfLength, true);
         }
@@ -119,8 +119,8 @@ public class IonBinary
         int written_len = 1;
         int td = ((typeid & 0xf) << 4);
 
-        if (valueLength >= IonConstants.lnIsVarLen) {
-            td |= IonConstants.lnIsVarLen;
+        if (valueLength >= _Private_IonConstants.lnIsVarLen) {
+            td |= _Private_IonConstants.lnIsVarLen;
             userstream.write((byte)(td & 0xff));
             int lenOfLength = IonBinary.lenVarUInt(valueLength);
             written_len += writeVarUInt(userstream, (long)valueLength, lenOfLength, true);
@@ -213,19 +213,19 @@ public class IonBinary
             int c = value.charAt(ii);
             if (c > 127) {
                 if (c >= 0xD800) {
-                    if (IonConstants.isHighSurrogate(c)) {
+                    if (_Private_IonConstants.isHighSurrogate(c)) {
                         ii++;
                         // houston we have a high surrogate (let's hope it has a partner
                         if (ii >= value.length()) {
                             throw new IonException("invalid string, unpaired high surrogate character");
                         }
                         int c2 = value.charAt(ii);
-                        if (!IonConstants.isLowSurrogate(c2)) {
+                        if (!_Private_IonConstants.isLowSurrogate(c2)) {
                             throw new IonException("invalid string, unpaired high surrogate character");
                         }
-                        c = IonConstants.makeUnicodeScalar(c, c2);
+                        c = _Private_IonConstants.makeUnicodeScalar(c, c2);
                     }
-                    else if (IonConstants.isLowSurrogate(c)) {
+                    else if (_Private_IonConstants.isLowSurrogate(c)) {
                         // it's a loner low surrogate - that's an error
                         throw new IonException("invalid string, unpaired low surrogate character");
                     }
@@ -613,7 +613,7 @@ public class IonBinary
      * @return zero if valuelen < 14
      */
     public static int lenLenFieldWithOptionalNibble(int valuelen) {
-        if (valuelen < IonConstants.lnIsVarLen) {
+        if (valuelen < _Private_IonConstants.lnIsVarLen) {
             return 0;
         }
         return lenVarUInt(valuelen);
@@ -622,29 +622,29 @@ public class IonBinary
     public static int lenTypeDescWithAppropriateLenField(int type, int valuelen)
     {
         switch (type) {
-        case IonConstants.tidNull: // null(0)
-        case IonConstants.tidBoolean: // boolean(1)
-            return IonConstants.BB_TOKEN_LEN;
+        case _Private_IonConstants.tidNull: // null(0)
+        case _Private_IonConstants.tidBoolean: // boolean(1)
+            return _Private_IonConstants.BB_TOKEN_LEN;
 
-        case IonConstants.tidPosInt: // 2
-        case IonConstants.tidNegInt: // 3
-        case IonConstants.tidFloat: // float(4)
-        case IonConstants.tidDecimal: // decimal(5)
-        case IonConstants.tidTimestamp: // timestamp(6)
-        case IonConstants.tidSymbol: // symbol(7)
-        case IonConstants.tidString: // string (8)
-        case IonConstants.tidClob: // clob(9)
-        case IonConstants.tidBlob: // blob(10)
-        case IonConstants.tidList:   // 11        -- cas mar 6 2008, moved containers
-        case IonConstants.tidSexp:   // 12        -- up heresince they now use the same
-        case IonConstants.tidStruct: // 13        -- length encodings as scalars
-        case IonConstants.tidTypedecl: // 14
-            if (valuelen < IonConstants.lnIsVarLen) {
-                return IonConstants.BB_TOKEN_LEN;
+        case _Private_IonConstants.tidPosInt: // 2
+        case _Private_IonConstants.tidNegInt: // 3
+        case _Private_IonConstants.tidFloat: // float(4)
+        case _Private_IonConstants.tidDecimal: // decimal(5)
+        case _Private_IonConstants.tidTimestamp: // timestamp(6)
+        case _Private_IonConstants.tidSymbol: // symbol(7)
+        case _Private_IonConstants.tidString: // string (8)
+        case _Private_IonConstants.tidClob: // clob(9)
+        case _Private_IonConstants.tidBlob: // blob(10)
+        case _Private_IonConstants.tidList:   // 11        -- cas mar 6 2008, moved containers
+        case _Private_IonConstants.tidSexp:   // 12        -- up heresince they now use the same
+        case _Private_IonConstants.tidStruct: // 13        -- length encodings as scalars
+        case _Private_IonConstants.tidTypedecl: // 14
+            if (valuelen < _Private_IonConstants.lnIsVarLen) {
+                return _Private_IonConstants.BB_TOKEN_LEN;
             }
-            return IonConstants.BB_TOKEN_LEN + lenVarUInt(valuelen);
+            return _Private_IonConstants.BB_TOKEN_LEN + lenVarUInt(valuelen);
 
-        case IonConstants.tidUnused: // unused(15)
+        case _Private_IonConstants.tidUnused: // unused(15)
         default:
             throw new IonException("invalid type");
         }
@@ -761,7 +761,7 @@ public class IonBinary
             }
 
             // look for surrogate pairs and merge them (and throw on bad data)
-            if (IonConstants.isHighSurrogate(c)) {
+            if (_Private_IonConstants.isHighSurrogate(c)) {
                 ii++;
                 if (ii >= v.length()) {
                     String message =
@@ -770,16 +770,16 @@ public class IonBinary
                     throw new IllegalArgumentException(message);
                 }
                 int c2 = v.charAt(ii);
-                if (!IonConstants.isLowSurrogate(c2)) {
+                if (!_Private_IonConstants.isLowSurrogate(c2)) {
                     String message =
                         "Text contains unmatched UTF-16 high surrogate " +
                         IonTextUtils.printCodePointAsString(c) +
                         " at index " + (ii-1);
                     throw new IllegalArgumentException(message);
                 }
-                c = IonConstants.makeUnicodeScalar(c, c2);
+                c = _Private_IonConstants.makeUnicodeScalar(c, c2);
             }
-            else if (IonConstants.isLowSurrogate(c)) {
+            else if (_Private_IonConstants.isLowSurrogate(c)) {
                 String message =
                     "Text contains unmatched UTF-16 low surrogate " +
                     IonTextUtils.printCodePointAsString(c) +
@@ -1038,9 +1038,9 @@ public class IonBinary
         {
             int c = read();
             if (c < 0) throwUnexpectedEOFException();
-            int typeid = IonConstants.getTypeCode(c);
-            if (typeid == IonConstants.tidTypedecl) {
-                int lownibble = IonConstants.getLowNibble(c);
+            int typeid = _Private_IonConstants.getTypeCode(c);
+            if (typeid == _Private_IonConstants.tidTypedecl) {
+                int lownibble = _Private_IonConstants.getLowNibble(c);
                 if (lownibble == 0) {
                     // 0xE0 is the first byte of the IonVersionMarker
                     // so we'll return it as is, the caller has to
@@ -1101,42 +1101,42 @@ public class IonBinary
         {
             // TODO check for invalid lownibbles
             switch (td) {
-            case IonConstants.tidNull: // null(0)
-            case IonConstants.tidBoolean: // boolean(1)
+            case _Private_IonConstants.tidNull: // null(0)
+            case _Private_IonConstants.tidBoolean: // boolean(1)
                 return 0;
-            case IonConstants.tidPosInt: // 2
-            case IonConstants.tidNegInt: // 3
-            case IonConstants.tidFloat: // float(4)
-            case IonConstants.tidDecimal: // decimal(5)
-            case IonConstants.tidTimestamp: // timestamp(6)
-            case IonConstants.tidSymbol: // symbol(7)
-            case IonConstants.tidString: // string (8)
-            case IonConstants.tidClob: // clob(9)
-            case IonConstants.tidBlob: // blob(10)
-            case IonConstants.tidList:     // 11
-            case IonConstants.tidSexp:     // 12
-            case IonConstants.tidTypedecl: // 14
+            case _Private_IonConstants.tidPosInt: // 2
+            case _Private_IonConstants.tidNegInt: // 3
+            case _Private_IonConstants.tidFloat: // float(4)
+            case _Private_IonConstants.tidDecimal: // decimal(5)
+            case _Private_IonConstants.tidTimestamp: // timestamp(6)
+            case _Private_IonConstants.tidSymbol: // symbol(7)
+            case _Private_IonConstants.tidString: // string (8)
+            case _Private_IonConstants.tidClob: // clob(9)
+            case _Private_IonConstants.tidBlob: // blob(10)
+            case _Private_IonConstants.tidList:     // 11
+            case _Private_IonConstants.tidSexp:     // 12
+            case _Private_IonConstants.tidTypedecl: // 14
                 switch (ln) {
                 case 0:
-                case IonConstants.lnIsNullAtom:
+                case _Private_IonConstants.lnIsNullAtom:
                     return 0;
-                case IonConstants.lnIsVarLen:
+                case _Private_IonConstants.lnIsVarLen:
                     return readVarUIntAsInt();
                 default:
                     return ln;
                 }
-            case IonConstants.tidStruct: // 13
+            case _Private_IonConstants.tidStruct: // 13
                 switch (ln) {
-                case IonConstants.lnIsEmptyContainer:
-                case IonConstants.lnIsNullStruct:
+                case _Private_IonConstants.lnIsEmptyContainer:
+                case _Private_IonConstants.lnIsNullStruct:
                     return 0;
-                case IonConstants.lnIsOrderedStruct:
-                case IonConstants.lnIsVarLen:
+                case _Private_IonConstants.lnIsOrderedStruct:
+                case _Private_IonConstants.lnIsVarLen:
                     return readVarUIntAsInt();
                 default:
                     return ln;
                 }
-            case IonConstants.tidUnused: // unused(15)
+            case _Private_IonConstants.tidUnused: // unused(15)
             default:
                 // TODO use InvalidBinaryDataException
                 throw new BlockedBuffer.BlockedBufferException("invalid type id encountered: " + td);
@@ -1722,8 +1722,8 @@ done:       for (;;) {
                     cb[ii++] = (char)c;
                 }
                 else {
-                    cb[ii++] = (char)IonConstants.makeHighSurrogate(c);
-                    cb[ii++] = (char)IonConstants.makeLowSurrogate(c);
+                    cb[ii++] = (char)_Private_IonConstants.makeHighSurrogate(c);
+                    cb[ii++] = (char)_Private_IonConstants.makeLowSurrogate(c);
                 }
             }
 
@@ -1800,14 +1800,14 @@ done:       for (;;) {
 
         public String readString() throws IOException {
             int td = read();
-            if (IonConstants.getTypeCode(td) != IonConstants.tidString) {
+            if (_Private_IonConstants.getTypeCode(td) != _Private_IonConstants.tidString) {
                 throw new IonException("readString helper only works for string(7) not "+((td >> 4 & 0xf)));
             }
             int len = (td & 0xf);
-            if (len == IonConstants.lnIsNullAtom) {
+            if (len == _Private_IonConstants.lnIsNullAtom) {
                 return null;
             }
-            else if (len == IonConstants.lnIsVarLen) {
+            else if (len == _Private_IonConstants.lnIsVarLen) {
                 len = this.readVarUIntAsInt();
             }
             return readString(len);
@@ -1938,7 +1938,7 @@ done:       for (;;) {
 
            // calculate the length just the value itself
            // we don't count the type descriptor in the value len
-           int writtenValueLen = totallen - IonConstants.BB_TOKEN_LEN;
+           int writtenValueLen = totallen - _Private_IonConstants.BB_TOKEN_LEN;
 
            // now we can figure out how long the value is going to be
 
@@ -1948,31 +1948,31 @@ done:       for (;;) {
 
            // TODO cleanup this logic.  lengthFollows == is struct
            if (n._length_follows) {
-               assert hn == IonConstants.tidStruct;
+               assert hn == _Private_IonConstants.tidStruct;
 
-               if (lownibble == IonConstants.lnIsOrderedStruct)
+               if (lownibble == _Private_IonConstants.lnIsOrderedStruct)
                {
                    // leave len_o_len alone
                }
                else
                {
-                   if (writtenValueLen < IonConstants.lnIsVarLen) {
+                   if (writtenValueLen < _Private_IonConstants.lnIsVarLen) {
                        lownibble = writtenValueLen;
                        len_o_len = 0;
                    }
                    else {
-                       lownibble = IonConstants.lnIsVarLen;
+                       lownibble = _Private_IonConstants.lnIsVarLen;
                    }
-                   assert lownibble != IonConstants.lnIsOrderedStruct;
+                   assert lownibble != _Private_IonConstants.lnIsOrderedStruct;
                }
            }
            else {
-               if (writtenValueLen < IonConstants.lnIsVarLen) {
+               if (writtenValueLen < _Private_IonConstants.lnIsVarLen) {
                    lownibble = writtenValueLen;
                    len_o_len = 0;
                }
                else {
-                   lownibble = IonConstants.lnIsVarLen;
+                   lownibble = _Private_IonConstants.lnIsVarLen;
                }
            }
 
@@ -1990,7 +1990,7 @@ done:       for (;;) {
 
            // so, we have room (or already had enough) now we can write
            // replacement type descriptor and the length and the reset the pos
-           this.writeByte(IonConstants.makeTypeDescriptor(hn, lownibble));
+           this.writeByte(_Private_IonConstants.makeTypeDescriptor(hn, lownibble));
            if (len_o_len > 0) {
                this.writeVarUIntValue(writtenValueLen, true);
            }
@@ -2031,13 +2031,13 @@ done:       for (;;) {
                 }
                 else {
                     if (_pending_high_surrogate != 0) {
-                        if ((c & IonConstants.surrogate_mask) != IonConstants.low_surrogate_value) {
+                        if ((c & _Private_IonConstants.surrogate_mask) != _Private_IonConstants.low_surrogate_value) {
                             throw new IonException("unmatched high surrogate character encountered, invalid utf-16");
                         }
-                        c = IonConstants.makeUnicodeScalar(_pending_high_surrogate, c);
+                        c = _Private_IonConstants.makeUnicodeScalar(_pending_high_surrogate, c);
                         _pending_high_surrogate = 0;
                     }
-                    else if ((c & IonConstants.surrogate_mask) == IonConstants.high_surrogate_value) {
+                    else if ((c & _Private_IonConstants.surrogate_mask) == _Private_IonConstants.high_surrogate_value) {
                         ii++;
                         if (ii >= len) {
                             // a trailing high surrogate, we just remember it for later
@@ -2047,12 +2047,12 @@ done:       for (;;) {
                             break;
                         }
                         int c2 = chars.charAt(ii);
-                        if ((c2 & IonConstants.surrogate_mask) != IonConstants.low_surrogate_value) {
+                        if ((c2 & _Private_IonConstants.surrogate_mask) != _Private_IonConstants.low_surrogate_value) {
                             throw new IonException("unmatched high surrogate character encountered, invalid utf-16");
                     }
-                        c = IonConstants.makeUnicodeScalar(c, c2);
+                        c = _Private_IonConstants.makeUnicodeScalar(c, c2);
                     }
-                    else if ((c & IonConstants.surrogate_mask) == IonConstants.low_surrogate_value) {
+                    else if ((c & _Private_IonConstants.surrogate_mask) == _Private_IonConstants.low_surrogate_value) {
                         throw new IonException("unmatched low surrogate character encountered, invalid utf-16");
                     }
                     writeUnicodeScalarAsUTF8(c);
@@ -2160,16 +2160,16 @@ done:       for (;;) {
                     // that will get picked up on the next call into this routine when the
                     // next segment of the long string is processed
                     if (_pending_high_surrogate != 0) {
-                        if ((c & IonConstants.surrogate_mask) != IonConstants.low_surrogate_value) {
+                        if ((c & _Private_IonConstants.surrogate_mask) != _Private_IonConstants.low_surrogate_value) {
                             String message =
                                 "Text contains unmatched UTF-16 high surrogate " +
                                 IonTextUtils.printCodePointAsString(_pending_high_surrogate);
                             throw new IonException(message);
                         }
-                        c = IonConstants.makeUnicodeScalar(_pending_high_surrogate, c);
+                        c = _Private_IonConstants.makeUnicodeScalar(_pending_high_surrogate, c);
                         _pending_high_surrogate = 0;
                     }
-                    else if ((c & IonConstants.surrogate_mask) == IonConstants.high_surrogate_value) {
+                    else if ((c & _Private_IonConstants.surrogate_mask) == _Private_IonConstants.high_surrogate_value) {
                         int c2 = r.read();
                         if (c2 == terminator) {
                             if (longstring && isLongTerminator(terminator, r)) {
@@ -2217,15 +2217,15 @@ done:       for (;;) {
                             break;
                         }
 
-                        if ((c2 & IonConstants.surrogate_mask) != IonConstants.low_surrogate_value) {
+                        if ((c2 & _Private_IonConstants.surrogate_mask) != _Private_IonConstants.low_surrogate_value) {
                             String message =
                                 "Text contains unmatched UTF-16 high surrogate " +
                                 IonTextUtils.printCodePointAsString(c);
                             throw new IonException(message);
                         }
-                        c = IonConstants.makeUnicodeScalar(c, c2);
+                        c = _Private_IonConstants.makeUnicodeScalar(c, c2);
                     }
-                    else if ((c & IonConstants.surrogate_mask) == IonConstants.low_surrogate_value) {
+                    else if ((c & _Private_IonConstants.surrogate_mask) == _Private_IonConstants.low_surrogate_value) {
                         String message =
                             "Text contains unmatched UTF-16 low surrogate " +
                             IonTextUtils.printCodePointAsString(c);
@@ -2607,7 +2607,7 @@ done:       for (;;) {
                 throw new IonException("negative token length encountered");
             }
             if (len > 13) len = 14; // TODO remove magic numbers
-            int t = IonConstants.makeTypeDescriptor( hn.value(), len );
+            int t = _Private_IonConstants.makeTypeDescriptor( hn.value(), len );
             write(t);
             return 1;
         }
@@ -2690,7 +2690,7 @@ done:       for (;;) {
             throws IOException
         {
             // write the hn and ln as the typedesc, we'll patch it later.
-            writeByte(IonConstants.makeTypeDescriptor(hn, ln));
+            writeByte(_Private_IonConstants.makeTypeDescriptor(hn, ln));
         }
 
         /**
@@ -2702,11 +2702,11 @@ done:       for (;;) {
             int returnlen = 0;
 
             // write then len in low nibble
-            if (len < IonConstants.lnIsVarLen) {
-                returnlen += writeByte(IonConstants.makeTypeDescriptor(hn, len));
+            if (len < _Private_IonConstants.lnIsVarLen) {
+                returnlen += writeByte(_Private_IonConstants.makeTypeDescriptor(hn, len));
             }
             else {
-                returnlen += writeByte(IonConstants.makeTypeDescriptor(hn, IonConstants.lnIsVarLen));
+                returnlen += writeByte(_Private_IonConstants.makeTypeDescriptor(hn, _Private_IonConstants.lnIsVarLen));
                 returnlen += writeVarUIntValue(len, false);
             }
             return returnlen;
@@ -2731,7 +2731,7 @@ done:       for (;;) {
 
             int vlen = lenUInt(sid);
             int len = this.writeCommonHeader(
-                                 IonConstants.tidSymbol
+                                 _Private_IonConstants.tidSymbol
                                 ,vlen
                            );
             len += this.writeUIntValue(sid, vlen);
@@ -2751,7 +2751,7 @@ done:       for (;;) {
             if (len < 0) this.throwUTF8Exception();
 
             // first we write the type desc and length
-            len += this.writeCommonHeader(IonConstants.tidString, len);
+            len += this.writeCommonHeader(_Private_IonConstants.tidString, len);
 
             // now we write just the value out
             writeStringData(s);
@@ -2778,18 +2778,18 @@ done:       for (;;) {
                 }
                 else {
                     if (c >= 0xD800) {
-                        if (IonConstants.isHighSurrogate(c)) {
+                        if (_Private_IonConstants.isHighSurrogate(c)) {
                             // houston we have a high surrogate (let's hope it has a partner
                             if (ii >= s.length()) {
                                 throw new IonException("invalid string, unpaired high surrogate character");
                             }
                             int c2 = s.charAt(++ii);
-                            if (!IonConstants.isLowSurrogate(c2)) {
+                            if (!_Private_IonConstants.isLowSurrogate(c2)) {
                                 throw new IonException("invalid string, unpaired high surrogate character");
                             }
-                            c = IonConstants.makeUnicodeScalar(c, c2);
+                            c = _Private_IonConstants.makeUnicodeScalar(c, c2);
                         }
-                        else if (IonConstants.isLowSurrogate(c)) {
+                        else if (_Private_IonConstants.isLowSurrogate(c)) {
                             // it's a loner low surrogate - that's an error
                             throw new IonException("invalid string, unpaired low surrogate character");
                         }
@@ -2806,7 +2806,7 @@ done:       for (;;) {
 
         public int writeNullWithTD(HighNibble hn) throws IOException
         {
-            writeByte(hn, IonConstants.lnIsNullAtom);
+            writeByte(hn, _Private_IonConstants.lnIsNullAtom);
             return 1;
         }
 
@@ -2817,14 +2817,14 @@ done:       for (;;) {
 
             if (di == null) {
                 returnlen = this.writeCommonHeader(
-                                                   IonConstants.tidTimestamp
-                                                   ,IonConstants.lnIsNullAtom);
+                                                   _Private_IonConstants.tidTimestamp
+                                                   ,_Private_IonConstants.lnIsNullAtom);
             }
             else {
                 int vlen = IonBinary.lenIonTimestamp(di);
 
                 returnlen = this.writeCommonHeader(
-                                                   IonConstants.tidTimestamp
+                                                   _Private_IonConstants.tidTimestamp
                                                    ,vlen);
 
                 int wroteLen = writeTimestamp(di);
@@ -2897,19 +2897,19 @@ done:       for (;;) {
                 // otherwise we to it the hard way ....
                 int len = IonBinary.lenIonDecimal(bd, false);
 
-                if (len < IonConstants.lnIsVarLen) {
+                if (len < _Private_IonConstants.lnIsVarLen) {
                     returnlen = this.writeByte(
-                            IonConstants.makeTypeDescriptor(
-                                    IonConstants.tidDecimal
+                            _Private_IonConstants.makeTypeDescriptor(
+                                    _Private_IonConstants.tidDecimal
                                     , len
                             )
                         );
                 }
                 else {
                     returnlen = this.writeByte(
-                            IonConstants.makeTypeDescriptor(
-                                    IonConstants.tidDecimal
-                                    , IonConstants.lnIsVarLen
+                            _Private_IonConstants.makeTypeDescriptor(
+                                    _Private_IonConstants.tidDecimal
+                                    , _Private_IonConstants.lnIsVarLen
                             )
                         );
                     this.writeVarIntValue(len, false);

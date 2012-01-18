@@ -3,9 +3,9 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.SYMBOLS;
-import static com.amazon.ion.impl.IonConstants.tidList;
-import static com.amazon.ion.impl.IonConstants.tidSexp;
-import static com.amazon.ion.impl.IonConstants.tidStruct;
+import static com.amazon.ion.impl._Private_IonConstants.tidList;
+import static com.amazon.ion.impl._Private_IonConstants.tidSexp;
+import static com.amazon.ion.impl._Private_IonConstants.tidStruct;
 import static com.amazon.ion.impl.IonWriterUserText.builderFor;
 import static com.amazon.ion.system.IonTextWriterBuilder.ASCII;
 
@@ -155,16 +155,16 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
         }
         else {
             switch(_stack_parent_type[_top-1]) {
-            case IonConstants.tidDATAGRAM:
+            case _Private_IonConstants.tidDATAGRAM:
                 container = IonType.DATAGRAM;
                 break;
-            case IonConstants.tidSexp:
+            case _Private_IonConstants.tidSexp:
                 container = IonType.SEXP;
                 break;
-            case IonConstants.tidList:
+            case _Private_IonConstants.tidList:
                 container = IonType.LIST;
                 break;
-            case IonConstants.tidStruct:
+            case _Private_IonConstants.tidStruct:
                 container = IonType.STRUCT;
                 break;
             default:
@@ -182,11 +182,11 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
         _stack_in_struct[_top] = _in_struct;
         _stack_pending_comma[_top] = _pending_separator;
         switch (typeid) {
-        case IonConstants.tidSexp:
+        case _Private_IonConstants.tidSexp:
             _separator_character = ' ';
             break;
-        case IonConstants.tidList:
-        case IonConstants.tidStruct:
+        case _Private_IonConstants.tidList:
+        case _Private_IonConstants.tidStruct:
             _separator_character = ',';
             break;
         default:
@@ -217,11 +217,11 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
         int parentid = (_top > 0) ? _stack_parent_type[_top - 1] : -1;
         switch (parentid) {
         case -1:
-        case IonConstants.tidSexp:
+        case _Private_IonConstants.tidSexp:
             _separator_character = ' ';
             break;
-        case IonConstants.tidList:
-        case IonConstants.tidStruct:
+        case _Private_IonConstants.tidList:
+        case _Private_IonConstants.tidStruct:
             _separator_character = ',';
             break;
         default:

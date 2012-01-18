@@ -1,9 +1,10 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl._Private_IonConstants.lnIsNullSequence;
+import static com.amazon.ion.impl._Private_IonConstants.makeTypeDescriptor;
+import static com.amazon.ion.impl._Private_IonConstants.tidList;
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonList;
@@ -21,8 +22,7 @@ public final class IonListImpl
     implements IonList
 {
     private static final int NULL_LIST_TYPEDESC =
-        IonConstants.makeTypeDescriptor(IonConstants.tidList,
-                                        IonConstants.lnIsNullSequence);
+        makeTypeDescriptor(tidList, lnIsNullSequence);
 
     private static final int HASH_SIGNATURE =
         IonType.LIST.toString().hashCode();
@@ -44,7 +44,7 @@ public final class IonListImpl
     public IonListImpl(IonSystemImpl system, boolean makeNull)
     {
         super(system, NULL_LIST_TYPEDESC, makeNull);
-        assert pos_getType() == IonConstants.tidList;
+        assert pos_getType() == _Private_IonConstants.tidList;
     }
 
     /**
@@ -73,7 +73,7 @@ public final class IonListImpl
     public IonListImpl(IonSystemImpl system, int typeDesc)
     {
         super(system, typeDesc);
-        assert pos_getType() == IonConstants.tidList;
+        assert pos_getType() == _Private_IonConstants.tidList;
     }
 
     /**

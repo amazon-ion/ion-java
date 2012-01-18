@@ -1,9 +1,12 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.impl._Private_IonConstants.lnIsEmptyContainer;
+import static com.amazon.ion.impl._Private_IonConstants.makeTypeDescriptor;
+import static com.amazon.ion.impl._Private_IonConstants.tidSexp;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonCatalog;
@@ -35,8 +38,7 @@ public final class IonDatagramImpl
     implements IonDatagram, _Private_IonDatagram
 {
     static private final int DATAGRAM_TYPEDESC  =
-        IonConstants.makeTypeDescriptor(IonConstants.tidSexp,
-                                        IonConstants.lnIsEmptyContainer);
+        makeTypeDescriptor(tidSexp, lnIsEmptyContainer);
 
     private static final int HASH_SIGNATURE =
         IonType.DATAGRAM.toString().hashCode();

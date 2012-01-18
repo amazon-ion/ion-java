@@ -2,6 +2,10 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl._Private_IonConstants.lnNumericZero;
+import static com.amazon.ion.impl._Private_IonConstants.makeTypeDescriptor;
+import static com.amazon.ion.impl._Private_IonConstants.tidList;
+
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonType;
@@ -24,8 +28,7 @@ public class TemporaryList
      */
     public TemporaryList(IonSystemImpl system) {
         super(system,
-              IonConstants.makeTypeDescriptor(IonConstants.tidList,
-                                              IonConstants.lnNumericZero));
+              makeTypeDescriptor(tidList, lnNumericZero));
        _tmpelements = new ArrayList<IonValueImpl>();
        setClean();
     }

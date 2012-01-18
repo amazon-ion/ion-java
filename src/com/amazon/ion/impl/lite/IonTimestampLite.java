@@ -8,7 +8,7 @@ import com.amazon.ion.NullValueException;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.Timestamp.Precision;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl.IonConstants;
+import com.amazon.ion.impl._Private_IonConstants;
 import java.math.BigDecimal;
 import java.util.Date;
 
@@ -64,8 +64,8 @@ implements IonTimestamp
 
 
     static final int NULL_TIMESTAMP_TYPEDESC =
-        IonConstants.makeTypeDescriptor(IonConstants.tidTimestamp,
-                                        IonConstants.lnIsNullAtom);
+        _Private_IonConstants.makeTypeDescriptor(_Private_IonConstants.tidTimestamp,
+                                        _Private_IonConstants.lnIsNullAtom);
 
     private Timestamp _timestamp_value;
 
