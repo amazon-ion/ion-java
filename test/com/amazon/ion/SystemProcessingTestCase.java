@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -10,8 +10,6 @@ import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE_SID;
 import static com.amazon.ion.TestUtils.FERMATA;
 
-import com.amazon.ion.impl.IonImplUtils;
-import com.amazon.ion.impl.IonUTF8;
 import com.amazon.ion.impl.SymbolTableTest;
 import com.amazon.ion.system.SimpleCatalog;
 import org.junit.Ignore;
@@ -209,27 +207,6 @@ public abstract class SystemProcessingTestCase
 
     protected abstract void checkEof()
         throws Exception;
-
-
-    //=========================================================================
-
-    /**
-     * TODO how is this different from {@link IonImplUtils#utf8(String)}?
-     */
-    public static byte[] convertUtf16UnitsToUtf8(String text)
-    {
-        byte[] data = new byte[4*text.length()];
-        int limit = 0;
-        for (int i = 0; i < text.length(); i++)
-        {
-            char c = text.charAt(i);
-            limit += IonUTF8.convertToUTF8Bytes(c, data, limit, data.length - limit);
-        }
-
-        byte[] result = new byte[limit];
-        System.arraycopy(data, 0, result, 0, limit);
-        return result;
-    }
 
 
     //=========================================================================

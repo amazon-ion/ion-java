@@ -2,7 +2,7 @@
 
 package com.amazon.ion;
 
-import static com.amazon.ion.impl.IonImplUtils.EMPTY_BYTE_ARRAY;
+import static com.amazon.ion.impl._Private_Utils.EMPTY_BYTE_ARRAY;
 
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.ByteArrayInputStream;

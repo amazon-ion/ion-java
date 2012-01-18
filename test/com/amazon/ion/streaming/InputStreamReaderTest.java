@@ -1,8 +1,9 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+
 package com.amazon.ion.streaming;
 
-import static com.amazon.ion.impl.IonImplUtils.EMPTY_BYTE_ARRAY;
-import static com.amazon.ion.impl.IonImplUtils.utf8;
+import static com.amazon.ion.impl._Private_Utils.EMPTY_BYTE_ARRAY;
+import static com.amazon.ion.impl._Private_Utils.utf8;
 
 import com.amazon.ion.InputStreamWrapper;
 import com.amazon.ion.IonType;

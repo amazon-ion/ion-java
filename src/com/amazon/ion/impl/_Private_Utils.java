@@ -35,9 +35,9 @@ import java.util.NoSuchElementException;
 import java.util.TimeZone;
 
 /**
- * For internal use only!
+ * NOT FOR APPLICATION USE!
  */
-public final class IonImplUtils // TODO this class shouldn't be public
+public final class _Private_Utils
 {
     /**
      * Marker for code points relevant to removal of IonReader.hasNext().
@@ -349,7 +349,7 @@ public final class IonImplUtils // TODO this class shouldn't be public
 
     public static String[] toStrings(SymbolToken[] symbols, int count)
     {
-        if (count == 0) return IonImplUtils.EMPTY_STRING_ARRAY;
+        if (count == 0) return _Private_Utils.EMPTY_STRING_ARRAY;
 
         String[] annotations = new String[count];
         for (int i = 0; i < count; i++)
@@ -367,7 +367,7 @@ public final class IonImplUtils // TODO this class shouldn't be public
 
     public static int[] toSids(SymbolToken[] symbols, int count)
     {
-        if (count == 0) return IonImplUtils.EMPTY_INT_ARRAY;
+        if (count == 0) return _Private_Utils.EMPTY_INT_ARRAY;
 
         int[] sids = new int[count];
         for (int i = 0; i < count; i++)
@@ -487,6 +487,28 @@ public final class IonImplUtils // TODO this class shouldn't be public
     }
 
 
+    /**
+     * This differs from {@link #utf8(String)} by using our custem encoder.
+     * Not sure which is better.
+     * TODO benchmark the two approaches
+     */
+    public static byte[] convertUtf16UnitsToUtf8(String text)
+    {
+        byte[] data = new byte[4*text.length()];
+        int limit = 0;
+        for (int i = 0; i < text.length(); i++)
+        {
+            char c = text.charAt(i);
+            limit += IonUTF8.convertToUTF8Bytes(c, data, limit,
+                                                data.length - limit);
+        }
+
+        byte[] result = new byte[limit];
+        System.arraycopy(data, 0, result, 0, limit);
+        return result;
+    }
+
+
     //========================================================================
 
     /**
@@ -573,7 +595,7 @@ public final class IonImplUtils // TODO this class shouldn't be public
     public static String utf8FileToString(File file)
         throws IonException, IOException
     {
-        byte[] utf8Bytes = IonImplUtils.loadFileBytes(file);
+        byte[] utf8Bytes = _Private_Utils.loadFileBytes(file);
         String s = utf8(utf8Bytes);
         return s;
     }
@@ -721,7 +743,7 @@ public final class IonImplUtils // TODO this class shouldn't be public
     {
         if (values == null || values.length == 0)
         {
-            return IonImplUtils.<String>emptyIterator();
+            return _Private_Utils.<String>emptyIterator();
         }
         return new StringIterator(values, values.length);
     }
@@ -730,7 +752,7 @@ public final class IonImplUtils // TODO this class shouldn't be public
     {
         if (values == null || values.length == 0 || len == 0)
         {
-            return IonImplUtils.<String>emptyIterator();
+            return _Private_Utils.<String>emptyIterator();
         }
         return new StringIterator(values, len);
     }
@@ -770,7 +792,7 @@ public final class IonImplUtils // TODO this class shouldn't be public
     {
         if (values == null || values.length == 0)
         {
-            return IonImplUtils.<Integer>emptyIterator();
+            return _Private_Utils.<Integer>emptyIterator();
         }
         return new IntIterator(values);
     }
@@ -779,7 +801,7 @@ public final class IonImplUtils // TODO this class shouldn't be public
     {
         if (values == null || values.length == 0 || len == 0)
         {
-            return IonImplUtils.<Integer>emptyIterator();
+            return _Private_Utils.<Integer>emptyIterator();
         }
         return new IntIterator(values, 0, len);
     }

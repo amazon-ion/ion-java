@@ -3,8 +3,8 @@
 package com.amazon.ion;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
-import static com.amazon.ion.impl.IonImplUtils.UTF8_CHARSET;
-import static com.amazon.ion.impl.IonImplUtils.utf8;
+import static com.amazon.ion.impl._Private_Utils.UTF8_CHARSET;
+import static com.amazon.ion.impl._Private_Utils.utf8;
 
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.ByteArrayInputStream;

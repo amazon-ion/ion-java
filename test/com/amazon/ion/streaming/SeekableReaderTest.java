@@ -7,7 +7,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.Span;
 import com.amazon.ion.TestUtils;
-import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
 import java.io.File;
@@ -193,7 +193,7 @@ public class SeekableReaderTest
     throws IOException
     {
         File file = getTestdataFile("good/structOrdered.10n");
-        byte[] binary = IonImplUtils.loadFileBytes(file);
+        byte[] binary = _Private_Utils.loadFileBytes(file);
 
         read(binary);
 

@@ -13,9 +13,9 @@ import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl._Private_IonConstants;
 import com.amazon.ion.impl._Private_IonContainer;
+import com.amazon.ion.impl._Private_Utils;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.ListIterator;
@@ -108,7 +108,7 @@ public abstract class IonContainerLite
         if (isNullValue())
         {
             if (index != 0) throw new IndexOutOfBoundsException();
-            return IonImplUtils.<IonValue>emptyIterator();
+            return _Private_Utils.<IonValue>emptyIterator();
         }
 
         return new SequenceContentIterator(index, isReadOnly());

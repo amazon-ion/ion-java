@@ -14,7 +14,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.impl._Private_Utils;
 
 /**
  *
@@ -180,7 +180,7 @@ public class IonSymbolLite
 
         int sid = getSymbolId();
         String text = _stringValue();
-        return IonImplUtils.newSymbolToken(text, sid);
+        return _Private_Utils.newSymbolToken(text, sid);
     }
 
 

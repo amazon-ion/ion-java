@@ -2,7 +2,7 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.impl._Private_Utils;
 import org.junit.Test;
 
 
@@ -77,12 +77,12 @@ public class SymbolTest
     public void testFactorySymbolWithSid(ValueFactory vf)
     {
         final int sid = 99;
-        SymbolToken tok = IonImplUtils.newSymbolToken((String)null, sid);
+        SymbolToken tok = _Private_Utils.newSymbolToken((String)null, sid);
 
         IonSymbol value = vf.newSymbol(tok);
         checkUnknownSymbol(99, value);
 
-        tok = IonImplUtils.newSymbolToken("text", sid);
+        tok = _Private_Utils.newSymbolToken("text", sid);
         value = vf.newSymbol(tok);
         checkSymbol("text", value);
         assertFalse(value.isNullValue());

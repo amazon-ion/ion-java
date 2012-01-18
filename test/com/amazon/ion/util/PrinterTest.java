@@ -25,7 +25,7 @@ import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.impl._Private_Utils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -664,7 +664,7 @@ public class PrinterTest
             .append("'''")
             .toString();
 
-        final byte[] utf8Bytes = IonImplUtils.utf8(literal);
+        final byte[] utf8Bytes = _Private_Utils.utf8(literal);
 
         final IonDatagram dg = loader().load(utf8Bytes);
         final StringBuilder out = new StringBuilder();

@@ -5,7 +5,7 @@ package com.amazon.ion;
 import static com.amazon.ion.TestUtils.testdataFiles;
 import static com.amazon.ion.junit.IonAssert.assertIonIteratorEquals;
 
-import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.streaming.ReaderCompare;
 import java.io.File;
@@ -92,7 +92,7 @@ public class GoodIonTest
     {
         if (! myFileIsBinary)
         {
-            String ionText = IonImplUtils.utf8FileToString(myTestFile);
+            String ionText = _Private_Utils.utf8FileToString(myTestFile);
             IonDatagram dg = loader().load(ionText);
 
             // Flush out any encoding problems in the data.
@@ -104,7 +104,7 @@ public class GoodIonTest
     public void testIterateByteArray()
     throws Exception
     {
-        byte[] bytes = IonImplUtils.loadFileBytes(myTestFile);
+        byte[] bytes = _Private_Utils.loadFileBytes(myTestFile);
 
         Iterator<IonValue> i = system().iterate(bytes);
         while (i.hasNext())

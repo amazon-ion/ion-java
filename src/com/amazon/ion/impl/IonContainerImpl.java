@@ -877,7 +877,7 @@ abstract public class IonContainerImpl
         if (isNullValue())
         {
             if (index != 0) throw new IndexOutOfBoundsException();
-            return IonImplUtils.<IonValue>emptyIterator();
+            return _Private_Utils.<IonValue>emptyIterator();
         }
 
         makeReady();

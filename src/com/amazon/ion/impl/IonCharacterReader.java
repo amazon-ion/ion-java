@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -22,7 +20,7 @@ public class IonCharacterReader extends PushbackReader {
     /**
      * The default buffer size
      *
-     * @see IonImplUtils#MAX_LOOKAHEAD_UTF16
+     * @see _Private_Utils#MAX_LOOKAHEAD_UTF16
      */
     public static final int DEFAULT_BUFFER_SIZE = 12;
 
@@ -33,7 +31,7 @@ public class IonCharacterReader extends PushbackReader {
      *
      * FIXME does this properly account for surrogates?
      *
-     * @see IonImplUtils#MAX_LOOKAHEAD_UTF16
+     * @see _Private_Utils#MAX_LOOKAHEAD_UTF16
      */
     public static final int BUFFER_PADDING = 1;
 

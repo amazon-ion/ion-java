@@ -2,7 +2,7 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl.IonImplUtils.readFully;
+import static com.amazon.ion.impl._Private_Utils.readFully;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBool;
@@ -255,19 +255,19 @@ class IonReaderTreeSystem
     public final int[] getTypeAnnotationIds()
     {
         SymbolToken[] syms = getTypeAnnotationSymbols(); // Checks nullValue
-        return IonImplUtils.toSids(syms, syms.length);
+        return _Private_Utils.toSids(syms, syms.length);
     }
 
     public final Iterator<Integer> iterateTypeAnnotationIds()
     {
         int [] ids = getTypeAnnotationIds();
-        return IonImplUtils.intIterator(ids);
+        return _Private_Utils.intIterator(ids);
     }
 
     public final Iterator<String> iterateTypeAnnotations()
     {
         String [] annotations = getTypeAnnotations();
-        return IonImplUtils.stringIterator(annotations);
+        return _Private_Utils.stringIterator(annotations);
     }
 
 

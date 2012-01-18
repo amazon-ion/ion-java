@@ -7,14 +7,14 @@ import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
-import static com.amazon.ion.impl.IonImplUtils.UTF8_CHARSET;
-import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
 import static com.amazon.ion.impl.IonReaderFactoryX.makeReader;
 import static com.amazon.ion.impl.IonReaderFactoryX.makeSystemReader;
 import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemIterator;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewSharedSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.newSystemSymbolTable;
+import static com.amazon.ion.impl._Private_Utils.UTF8_CHARSET;
+import static com.amazon.ion.impl._Private_Utils.addAllNonNull;
 import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
@@ -329,7 +329,7 @@ public final class IonSystemImpl
         try
         {
             PushbackInputStream pushback = new PushbackInputStream(ionData, 8);
-            binaryData = IonImplUtils.streamIsIonBinary(pushback);
+            binaryData = _Private_Utils.streamIsIonBinary(pushback);
             if (binaryData)
             {
                 systemReader = newPagedBinarySystemIterator(getCatalog(), pushback);

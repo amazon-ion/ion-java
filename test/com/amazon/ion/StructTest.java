@@ -4,7 +4,7 @@ package com.amazon.ion;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 
-import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.impl.IonValuePrivate;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -598,7 +598,7 @@ public class StructTest
         IonStruct struct = system().newNullStruct();
         IonBool nullBool = system().newNullBool();
 
-        SymbolToken is = IonImplUtils.newSymbolToken("f", 1);
+        SymbolToken is = _Private_Utils.newSymbolToken("f", 1);
         struct.add(is, nullBool);
         is = nullBool.getFieldNameSymbol();
         checkSymbol("f", UNKNOWN_SYMBOL_ID, is);
@@ -628,7 +628,7 @@ public class StructTest
         }
         catch (NullPointerException e) { }
 
-        SymbolToken is = IonImplUtils.newSymbolToken("f", 1);
+        SymbolToken is = _Private_Utils.newSymbolToken("f", 1);
         try {
             value.add(is, null);
             fail("Expected NullPointerException");

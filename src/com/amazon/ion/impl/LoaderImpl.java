@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved. */
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -158,7 +158,7 @@ public class LoaderImpl
         try
         {
             PushbackInputStream pushback = new PushbackInputStream(ionData, 8);
-            if (IonImplUtils.streamIsIonBinary(pushback)) {
+            if (_Private_Utils.streamIsIonBinary(pushback)) {
                 if (USE_NEW_READERS)
                 {
                     // Nothing special to do. SystemReader works fine to

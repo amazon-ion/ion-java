@@ -3,9 +3,9 @@
 package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
-import static com.amazon.ion.impl.IonImplUtils.newSymbolToken;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
+import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
 import static com.amazon.ion.util.Equivalence.ionEquals;
 
 import com.amazon.ion.IonContainer;
@@ -22,9 +22,9 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl.IonValuePrivate;
 import com.amazon.ion.impl.UnifiedSymbolTable;
+import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.util.Printer;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -383,7 +383,7 @@ abstract class IonValueLite
             return null;
         }
 
-        return IonImplUtils.newSymbolToken(text, sid);
+        return _Private_Utils.newSymbolToken(text, sid);
     }
 
 
@@ -583,7 +583,7 @@ abstract class IonValueLite
             return EMPTY_STRING_ARRAY;
         }
 
-        return IonImplUtils.toStrings(_annotations, count);
+        return _Private_Utils.toStrings(_annotations, count);
     }
 
     public final /* synchronized ?? */ SymbolToken[] getTypeAnnotationSymbols()
@@ -625,7 +625,7 @@ abstract class IonValueLite
         }
         else
         {
-            IonImplUtils.ensureNonEmptySymbols(annotations);
+            _Private_Utils.ensureNonEmptySymbols(annotations);
             _annotations = annotations.clone();
         }
     }
@@ -639,7 +639,7 @@ abstract class IonValueLite
     {
         checkForLock();
 
-        _annotations = IonImplUtils.newSymbolTokens(getSymbolTable(),
+        _annotations = _Private_Utils.newSymbolTokens(getSymbolTable(),
                                                        annotations);
     }
 

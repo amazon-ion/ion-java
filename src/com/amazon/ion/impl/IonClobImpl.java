@@ -98,7 +98,7 @@ public final class IonClobImpl
         byte[] bytes = getBytes();
         if (bytes == null) return null;
 
-        return IonImplUtils.decode(bytes, cs);
+        return _Private_Utils.decode(bytes, cs);
     }
 
 

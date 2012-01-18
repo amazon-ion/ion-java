@@ -2,7 +2,7 @@
 
 package com.amazon.ion.streaming;
 
-import static com.amazon.ion.impl.IonImplUtils.READER_HASNEXT_REMOVED;
+import static com.amazon.ion.impl._Private_Utils.READER_HASNEXT_REMOVED;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonReader;

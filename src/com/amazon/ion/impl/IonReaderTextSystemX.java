@@ -370,7 +370,7 @@ public class IonReaderTextSystemX
         for (int i = 0; i < count; i++)
         {
             SymbolToken sym = _annotations[i];
-            SymbolToken updated = IonImplUtils.localize(symbols, sym);
+            SymbolToken updated = _Private_Utils.localize(symbols, sym);
             if (updated != sym) _annotations[i] = updated;
             result[i] = updated;
         }
@@ -381,13 +381,13 @@ public class IonReaderTextSystemX
     public int[] getTypeAnnotationIds()
     {
         SymbolToken[] syms = getTypeAnnotationSymbols();
-        return IonImplUtils.toSids(syms, syms.length);
+        return _Private_Utils.toSids(syms, syms.length);
     }
 
     public Iterator<Integer> iterateTypeAnnotationIds()
     {
         int[] ids = getTypeAnnotationIds();
-        return IonImplUtils.intIterator(ids);
+        return _Private_Utils.intIterator(ids);
     }
 
 
@@ -553,7 +553,7 @@ public class IonReaderTextSystemX
         SymbolToken sym = super.getFieldNameSymbol();
         if (sym != null)
         {
-            sym = IonImplUtils.localize(getSymbolTable(), sym);
+            sym = _Private_Utils.localize(getSymbolTable(), sym);
         }
         return sym;
     }

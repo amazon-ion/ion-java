@@ -150,7 +150,7 @@ public final class UnifiedSymbolTable
         _image_factory = imageFactory;
         _import_list = imports;
         _id_map = idMap;
-        _symbols = IonImplUtils.EMPTY_STRING_ARRAY;
+        _symbols = _Private_Utils.EMPTY_STRING_ARRAY;
     }
 
     /**
@@ -1274,7 +1274,7 @@ public final class UnifiedSymbolTable
                 version = 1;
             }
 
-            assert _symbols == IonImplUtils.EMPTY_STRING_ARRAY;
+            assert _symbols == _Private_Utils.EMPTY_STRING_ARRAY;
             assert _id_map.isEmpty();
 
             if (symbols != null && symbols.size() != 0)

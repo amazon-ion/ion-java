@@ -6,7 +6,7 @@ import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.NAME_SID;
 import static com.amazon.ion.TestUtils.FERMATA;
-import static com.amazon.ion.impl.IonImplUtils.newSymbolToken;
+import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
 import static com.amazon.ion.impl.IonWriterBaseImpl.ERROR_MISSING_FIELD_NAME;
 import static com.amazon.ion.junit.IonAssert.expectNextField;
 

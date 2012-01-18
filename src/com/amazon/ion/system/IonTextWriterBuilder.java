@@ -5,8 +5,8 @@ package com.amazon.ion.system;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.impl.IonImplUtils;
 import com.amazon.ion.impl._Private_IonTextWriterBuilder;
+import com.amazon.ion.impl._Private_Utils;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 
@@ -32,12 +32,12 @@ public abstract class IonTextWriterBuilder
     /**
      * The {@code "US-ASCII"} charset.
      */
-    public static final Charset ASCII = IonImplUtils.ASCII_CHARSET;
+    public static final Charset ASCII = _Private_Utils.ASCII_CHARSET;
 
     /**
      * The {@code "UTF-8"} charset.
      */
-    public static final Charset UTF8 = IonImplUtils.UTF8_CHARSET;
+    public static final Charset UTF8 = _Private_Utils.UTF8_CHARSET;
 
 
     /**

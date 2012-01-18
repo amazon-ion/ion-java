@@ -4,7 +4,7 @@ package com.amazon.ion;
 
 import static com.amazon.ion.IonTestCase.checkSymbol;
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static com.amazon.ion.impl.IonImplUtils.stringIterator;
+import static com.amazon.ion.impl._Private_Utils.stringIterator;
 import static com.amazon.ion.junit.IonAssert.assertIteratorEquals;
 import static com.amazon.ion.junit.IonAssert.assertSymbolEquals;
 import static org.junit.Assert.assertArrayEquals;

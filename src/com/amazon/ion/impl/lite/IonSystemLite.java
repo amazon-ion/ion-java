@@ -4,7 +4,6 @@ package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
-import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
 import static com.amazon.ion.impl.IonReaderFactoryX.makeReader;
 import static com.amazon.ion.impl.IonReaderFactoryX.makeSystemReader;
 import static com.amazon.ion.impl.UnifiedSymbolTable.initialSymbolTable;
@@ -12,6 +11,7 @@ import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewSharedSymbolTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.newSystemSymbolTable;
+import static com.amazon.ion.impl._Private_Utils.addAllNonNull;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
 import com.amazon.ion.IonBinaryWriter;

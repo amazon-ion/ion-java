@@ -11,8 +11,8 @@ import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.NAME;
 import static com.amazon.ion.SystemSymbols.NAME_SID;
 import static com.amazon.ion.SystemSymbols.SYMBOLS;
-import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
-import static com.amazon.ion.impl.IonImplUtils.stringIterator;
+import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.impl._Private_Utils.stringIterator;
 
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;

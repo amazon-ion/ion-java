@@ -5,7 +5,7 @@ package com.amazon.ion;
 import static com.amazon.ion.TestUtils.ensureBinary;
 import static com.amazon.ion.TestUtils.ensureText;
 
-import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.impl._Private_Utils;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -82,7 +82,7 @@ public enum DatagramMaker
 
     public IonDatagram newDatagram(IonSystem system, String ionText)
     {
-        byte[] utf8 = IonImplUtils.utf8(ionText);
+        byte[] utf8 = _Private_Utils.utf8(ionText);
         return newDatagram(system, utf8);
     }
 

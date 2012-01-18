@@ -220,7 +220,7 @@ public final class IonSymbolImpl
 
         int sid = getSymbolId();
         String text = _stringValue();
-        return IonImplUtils.newSymbolToken(text, sid);
+        return _Private_Utils.newSymbolToken(text, sid);
     }
 
 

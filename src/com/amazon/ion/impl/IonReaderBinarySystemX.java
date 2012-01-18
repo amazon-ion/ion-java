@@ -4,8 +4,8 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.IonType.SYMBOL;
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static com.amazon.ion.impl.IonImplUtils.EMPTY_INT_ARRAY;
-import static com.amazon.ion.impl.IonImplUtils.intIterator;
+import static com.amazon.ion.impl._Private_Utils.EMPTY_INT_ARRAY;
+import static com.amazon.ion.impl._Private_Utils.intIterator;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonSystem;
@@ -415,14 +415,14 @@ class IonReaderBinarySystemX
     public Iterator<String> iterateTypeAnnotations()
     {
         // TODO ION-233 implement symbol text for system readers
-        return IonImplUtils.<String>emptyIterator();
+        return _Private_Utils.<String>emptyIterator();
 //        throw new UnsupportedOperationException("not supported - use UserReader");
     }
 
     public String[] getTypeAnnotations()
     {
         // TODO ION-233 implement symbol text for system readers
-        return IonImplUtils.EMPTY_STRING_ARRAY;
+        return _Private_Utils.EMPTY_STRING_ARRAY;
 //        throw new UnsupportedOperationException("not supported - use UserReader");
     }
 

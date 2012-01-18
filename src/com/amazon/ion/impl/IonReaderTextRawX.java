@@ -1338,12 +1338,12 @@ if (depth == debugging_depth) {
 
     public Iterator<String> iterateTypeAnnotations()
     {
-        return IonImplUtils.stringIterator(getTypeAnnotations());
+        return _Private_Utils.stringIterator(getTypeAnnotations());
     }
 
     public String[] getTypeAnnotations()
     {
-        return IonImplUtils.toStrings(_annotations, _annotation_count);
+        return _Private_Utils.toStrings(_annotations, _annotation_count);
     }
 
 

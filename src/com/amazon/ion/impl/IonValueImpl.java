@@ -4,11 +4,11 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
-import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
-import static com.amazon.ion.impl.IonImplUtils.newSymbolToken;
-import static com.amazon.ion.impl.IonImplUtils.newSymbolTokens;
 import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
+import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
+import static com.amazon.ion.impl._Private_Utils.newSymbolTokens;
 import static com.amazon.ion.util.Equivalence.ionEquals;
 
 import com.amazon.ion.IonContainer;
@@ -952,7 +952,7 @@ public abstract class IonValueImpl
 
         if (_annotations == null) return EMPTY_STRING_ARRAY;
 
-        return IonImplUtils.toStrings(_annotations, _annotations.length);
+        return _Private_Utils.toStrings(_annotations, _annotations.length);
     }
 
     public SymbolToken[] getTypeAnnotationSymbols()
@@ -968,7 +968,7 @@ public abstract class IonValueImpl
         if (_annotations == null) return SymbolToken.EMPTY_ARRAY;
 
         SymbolTable symtab = getSymbolTable();
-        IonImplUtils.localize(symtab, _annotations);
+        _Private_Utils.localize(symtab, _annotations);
         return _annotations.clone();
     }
 
@@ -991,11 +991,11 @@ public abstract class IonValueImpl
         }
         else
         {
-            IonImplUtils.ensureNonEmptySymbols(annotations);
+            _Private_Utils.ensureNonEmptySymbols(annotations);
             _annotations = annotations.clone();
 
             SymbolTable symtab = getSymbolTable();
-            IonImplUtils.localize(symtab, _annotations);
+            _Private_Utils.localize(symtab, _annotations);
         }
         setDirty();
     }

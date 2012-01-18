@@ -3,7 +3,7 @@
 package com.amazon.ion.streaming;
 
 import static com.amazon.ion.TestUtils.testdataFiles;
-import static com.amazon.ion.impl.IonImplUtils.utf8;
+import static com.amazon.ion.impl._Private_Utils.utf8;
 import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS;
 
 import com.amazon.ion.IonBinaryWriter;
@@ -14,7 +14,7 @@ import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.TestUtils;
-import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.impl.IonWriterUserBinary;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
@@ -83,7 +83,7 @@ extends IonTestCase
         super.setUp();
         myPrinter = new Printer();
         myBuilder = new StringBuilder();
-        myBuffer = IonImplUtils.loadFileBytes(myTestFile);
+        myBuffer = _Private_Utils.loadFileBytes(myTestFile);
     }
 
     @Override

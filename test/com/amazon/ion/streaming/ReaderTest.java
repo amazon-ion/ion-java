@@ -3,7 +3,7 @@
 package com.amazon.ion.streaming;
 
 import static com.amazon.ion.Symtabs.printLocalSymtab;
-import static com.amazon.ion.impl.IonImplUtils.intIterator;
+import static com.amazon.ion.impl._Private_Utils.intIterator;
 import static com.amazon.ion.junit.IonAssert.checkNullSymbol;
 
 import com.amazon.ion.BinaryTest;

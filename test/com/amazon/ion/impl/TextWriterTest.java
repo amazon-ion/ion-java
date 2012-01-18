@@ -37,7 +37,7 @@ public class TextWriterTest
         throws Exception
     {
         byte[] utf8Bytes = outputByteArray();
-        return IonImplUtils.utf8(utf8Bytes);
+        return _Private_Utils.utf8(utf8Bytes);
     }
 
     @Test

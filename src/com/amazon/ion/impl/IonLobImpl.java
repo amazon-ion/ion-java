@@ -2,7 +2,7 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl.IonImplUtils.EMPTY_BYTE_ARRAY;
+import static com.amazon.ion.impl._Private_Utils.EMPTY_BYTE_ARRAY;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonLob;

@@ -3,10 +3,10 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
-import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.impl._Private_IonConstants.lnIsEmptyContainer;
 import static com.amazon.ion.impl._Private_IonConstants.makeTypeDescriptor;
 import static com.amazon.ion.impl._Private_IonConstants.tidSexp;
+import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonCatalog;

@@ -2,10 +2,10 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl.IonImplUtils.EMPTY_BYTE_ARRAY;
-import static com.amazon.ion.impl.IonImplUtils.readFully;
 import static com.amazon.ion.impl.IonTimestampImpl.precisionIncludes;
 import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_SIZE;
+import static com.amazon.ion.impl._Private_Utils.EMPTY_BYTE_ARRAY;
+import static com.amazon.ion.impl._Private_Utils.readFully;
 import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
 
 import com.amazon.ion.Decimal;

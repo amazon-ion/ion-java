@@ -15,7 +15,7 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.junit.IonAssert;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -860,45 +860,45 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         assertEquals(IonType.STRUCT, ir.next());
         ir.stepIn();
 
-        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
+        if (! _Private_Utils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.INT);
         expectField(ir, "12");
         assertEquals(ir.intValue(), -12);
 
-        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
+        if (! _Private_Utils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.FLOAT);
         expectField(ir, "12242.124598129");
         assertEquals(ir.doubleValue(), 12242.124598129);
 
-        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
+        if (! _Private_Utils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.BOOL);
         expectField(ir, "Almost Done.");
         assertEquals(ir.booleanValue(), true);
 
-        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
+        if (! _Private_Utils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.BOOL);
         expectField(ir, "This is a test String.");
         assertEquals(ir.booleanValue(), true);
 
-        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
+        if (! _Private_Utils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.BOOL);
         expectField(ir, "false");
         assertEquals(ir.booleanValue(), false);
 
-        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
+        if (! _Private_Utils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.INT);
         expectField(ir, "long");
         assertEquals(ir.longValue(), 9326L);
 
-        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
+        if (! _Private_Utils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.BOOL);
         expectField(ir, "true");
         assertEquals(ir.booleanValue(), true);
 
-        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertFalse(ir.hasNext());
+        if (! _Private_Utils.READER_HASNEXT_REMOVED) assertFalse(ir.hasNext());
         assertEquals(null, ir.next());
         ir.stepOut();
-        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertFalse(ir.hasNext());
+        if (! _Private_Utils.READER_HASNEXT_REMOVED) assertFalse(ir.hasNext());
         assertEquals(null, ir.next());
     }
 }

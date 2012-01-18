@@ -283,7 +283,7 @@ class IonReaderBinaryUserX
     public Iterator<String> iterateTypeAnnotations()
     {
         String[] annotations = getTypeAnnotations();
-        return IonImplUtils.stringIterator(annotations);
+        return _Private_Utils.stringIterator(annotations);
     }
 
     @Override
@@ -292,7 +292,7 @@ class IonReaderBinaryUserX
         load_annotations();
         String[] anns;
         if (_annotation_count < 1) {
-            anns = IonImplUtils.EMPTY_STRING_ARRAY;
+            anns = _Private_Utils.EMPTY_STRING_ARRAY;
         }
         else {
             anns = new String[_annotation_count];

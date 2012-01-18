@@ -432,7 +432,7 @@ public class IonTokenReader
             localReader = new LocalReader(this);
             pushbackReader =
                 new PushbackReader(localReader,
-                                   IonImplUtils.MAX_LOOKAHEAD_UTF16);
+                                   _Private_Utils.MAX_LOOKAHEAD_UTF16);
         }
         localReader.reset();
         return pushbackReader ;

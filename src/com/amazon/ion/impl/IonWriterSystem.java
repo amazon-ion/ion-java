@@ -3,10 +3,10 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static com.amazon.ion.impl.IonImplUtils.newSymbolToken;
-import static com.amazon.ion.impl.IonImplUtils.newSymbolTokens;
 import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
+import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
+import static com.amazon.ion.impl._Private_Utils.newSymbolTokens;
 
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonException;
@@ -361,7 +361,7 @@ abstract class IonWriterSystem
     final int[] internAnnotationsAndGetSids() throws IOException
     {
         int count = _annotation_count;
-        if (count == 0) return IonImplUtils.EMPTY_INT_ARRAY;
+        if (count == 0) return _Private_Utils.EMPTY_INT_ARRAY;
 
         int[] sids = new int[count];
         for (int i = 0; i < count; i++)
@@ -439,7 +439,7 @@ abstract class IonWriterSystem
             for (int i = 0; i < count; i++)
             {
                 SymbolToken sym = annotations[i];
-                sym = IonImplUtils.localize(symtab, sym);
+                sym = _Private_Utils.localize(symtab, sym);
                 _annotations[i] = sym;
             }
             _annotation_count = count;
@@ -449,7 +449,7 @@ abstract class IonWriterSystem
     @Override
     final String[] getTypeAnnotations()
     {
-        return IonImplUtils.toStrings(_annotations, _annotation_count);
+        return _Private_Utils.toStrings(_annotations, _annotation_count);
     }
 
     public final void setTypeAnnotations(String... annotations)
@@ -481,7 +481,7 @@ abstract class IonWriterSystem
     @Override
     final int[] getTypeAnnotationIds()
     {
-        return IonImplUtils.toSids(_annotations, _annotation_count);
+        return _Private_Utils.toSids(_annotations, _annotation_count);
     }
 
     public final void setTypeAnnotationIds(int... annotationIds)

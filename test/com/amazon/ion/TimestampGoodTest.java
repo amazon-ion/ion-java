@@ -5,7 +5,7 @@ package com.amazon.ion;
 import static com.amazon.ion.TestUtils.GLOBAL_SKIP_LIST;
 import static com.amazon.ion.TestUtils.testdataFiles;
 
-import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.junit.Injected.Inject;
 import java.io.BufferedReader;
 import java.io.File;
@@ -55,7 +55,7 @@ public class TimestampGoodTest
     {
         if (! myTestFile.getName().endsWith(".ion")) return;
 
-        String fileText = IonImplUtils.utf8FileToString(myTestFile);
+        String fileText = _Private_Utils.utf8FileToString(myTestFile);
         BufferedReader reader = new BufferedReader(new StringReader(fileText));
 
         String line = reader.readLine();

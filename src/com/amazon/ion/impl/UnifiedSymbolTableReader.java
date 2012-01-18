@@ -17,7 +17,7 @@ import static com.amazon.ion.SystemSymbols.SYMBOLS;
 import static com.amazon.ion.SystemSymbols.SYMBOLS_SID;
 import static com.amazon.ion.SystemSymbols.VERSION;
 import static com.amazon.ion.SystemSymbols.VERSION_SID;
-import static com.amazon.ion.impl.IonImplUtils.newSymbolToken;
+import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
@@ -1055,7 +1055,7 @@ public class UnifiedSymbolTableReader
             }
             return new String[] { ION_SHARED_SYMBOL_TABLE };
         }
-        return IonImplUtils.EMPTY_STRING_ARRAY;
+        return _Private_Utils.EMPTY_STRING_ARRAY;
     }
 
     private static final SymbolToken ION_SYMBOL_TABLE_SYM =
@@ -1093,19 +1093,19 @@ public class UnifiedSymbolTableReader
             }
             return new int[] { ION_SHARED_SYMBOL_TABLE_SID };
         }
-        return IonImplUtils.EMPTY_INT_ARRAY;
+        return _Private_Utils.EMPTY_INT_ARRAY;
     }
 
     public Iterator<String> iterateTypeAnnotations()
     {
         String[] annotations = getTypeAnnotations();
-        return IonImplUtils.stringIterator(annotations);
+        return _Private_Utils.stringIterator(annotations);
     }
 
     public Iterator<Integer> iterateTypeAnnotationIds()
     {
         int[] ids = getTypeAnnotationIds();
-        return IonImplUtils.intIterator(ids);
+        return _Private_Utils.intIterator(ids);
     }
 
     public int getFieldId()

@@ -3,8 +3,8 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.Symtabs.sharedSymtabStruct;
-import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
-import static com.amazon.ion.impl.IonImplUtils.stringIterator;
+import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.impl._Private_Utils.stringIterator;
 import static com.amazon.ion.impl.SymbolTableTest.checkSharedTable;
 
 import com.amazon.ion.IonException;
