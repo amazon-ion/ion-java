@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
@@ -8,8 +8,7 @@ import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_SI
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.impl.IonWriterSystemBinary;
-import com.amazon.ion.impl.IonWriterUserBinary;
+import com.amazon.ion.impl._Private_ListWriter;
 import java.io.IOException;
 
 /**
@@ -80,15 +79,11 @@ public class IonStreamUtils
      * optimized internally.
      * @param values boolean values to populate the list with
      */
-    public void writeBoolList(IonWriter writer, boolean[] values)
+    public static void writeBoolList(IonWriter writer, boolean[] values)
         throws IOException
     {
-        if (writer instanceof IonWriterUserBinary) {
-            ((IonWriterUserBinary)writer).writeBoolList(values);
-            return;
-        }
-        if (writer instanceof IonWriterSystemBinary) {
-            ((IonWriterSystemBinary)writer).writeBoolList(values);
+        if (writer instanceof _Private_ListWriter) {
+            ((_Private_ListWriter)writer).writeBoolList(values);
             return;
         }
 
@@ -109,15 +104,11 @@ public class IonStreamUtils
      * the passed in floats to double before writing them.
      * @param values 32 bit float values to populate the lists IonFloat's with
      */
-    public void writeFloatList(IonWriter writer, float[] values)
+    public static void writeFloatList(IonWriter writer, float[] values)
         throws IOException
     {
-        if (writer instanceof IonWriterUserBinary) {
-            ((IonWriterUserBinary)writer).writeFloatList(values);
-            return;
-        }
-        if (writer instanceof IonWriterSystemBinary) {
-            ((IonWriterSystemBinary)writer).writeFloatList(values);
+        if (writer instanceof _Private_ListWriter) {
+            ((_Private_ListWriter)writer).writeFloatList(values);
             return;
         }
 
@@ -136,15 +127,11 @@ public class IonStreamUtils
      * optimized internally.
      * @param values 64 bit float values to populate the lists IonFloat's with
      */
-    public void writeFloatList(IonWriter writer, double[] values)
+    public static void writeFloatList(IonWriter writer, double[] values)
         throws IOException
     {
-        if (writer instanceof IonWriterUserBinary) {
-            ((IonWriterUserBinary)writer).writeFloatList(values);
-            return;
-        }
-        if (writer instanceof IonWriterSystemBinary) {
-            ((IonWriterSystemBinary)writer).writeFloatList(values);
+        if (writer instanceof _Private_ListWriter) {
+            ((_Private_ListWriter)writer).writeFloatList(values);
             return;
         }
 
@@ -164,15 +151,11 @@ public class IonStreamUtils
      * optimized internally.
      * @param values signed byte values to populate the lists int's with
      */
-    public void writeIntList(IonWriter writer, byte[] values)
+    public static void writeIntList(IonWriter writer, byte[] values)
         throws IOException
     {
-        if (writer instanceof IonWriterUserBinary) {
-            ((IonWriterUserBinary)writer).writeIntList(values);
-            return;
-        }
-        if (writer instanceof IonWriterSystemBinary) {
-            ((IonWriterSystemBinary)writer).writeIntList(values);
+        if (writer instanceof _Private_ListWriter) {
+            ((_Private_ListWriter)writer).writeIntList(values);
             return;
         }
 
@@ -191,15 +174,11 @@ public class IonStreamUtils
      * optimized internally.
      * @param values signed short values to populate the lists int's with
      */
-    public void writeIntList(IonWriter writer, short[] values)
+    public static void writeIntList(IonWriter writer, short[] values)
         throws IOException
     {
-        if (writer instanceof IonWriterUserBinary) {
-            ((IonWriterUserBinary)writer).writeIntList(values);
-            return;
-        }
-        if (writer instanceof IonWriterSystemBinary) {
-            ((IonWriterSystemBinary)writer).writeIntList(values);
+        if (writer instanceof _Private_ListWriter) {
+            ((_Private_ListWriter)writer).writeIntList(values);
             return;
         }
 
@@ -218,15 +197,11 @@ public class IonStreamUtils
      * optimized internally.
      * @param values signed int values to populate the lists int's with
      */
-    public void writeIntList(IonWriter writer, int[] values)
+    public static void writeIntList(IonWriter writer, int[] values)
         throws IOException
     {
-        if (writer instanceof IonWriterUserBinary) {
-            ((IonWriterUserBinary)writer).writeIntList(values);
-            return;
-        }
-        if (writer instanceof IonWriterSystemBinary) {
-            ((IonWriterSystemBinary)writer).writeIntList(values);
+        if (writer instanceof _Private_ListWriter) {
+            ((_Private_ListWriter)writer).writeIntList(values);
             return;
         }
 
@@ -245,15 +220,11 @@ public class IonStreamUtils
      * optimized internally.
      * @param values signed long values to populate the lists int's with
      */
-    public void writeIntList(IonWriter writer, long[] values)
+    public static void writeIntList(IonWriter writer, long[] values)
         throws IOException
     {
-        if (writer instanceof IonWriterUserBinary) {
-            ((IonWriterUserBinary)writer).writeIntList(values);
-            return;
-        }
-        if (writer instanceof IonWriterSystemBinary) {
-            ((IonWriterSystemBinary)writer).writeIntList(values);
+        if (writer instanceof _Private_ListWriter) {
+            ((_Private_ListWriter)writer).writeIntList(values);
             return;
         }
 
@@ -273,15 +244,11 @@ public class IonStreamUtils
      * optimized internally.
      * @param values Java String to populate the lists IonString's from
      */
-    public void writeStringList(IonWriter writer, String[] values)
+    public static void writeStringList(IonWriter writer, String[] values)
         throws IOException
     {
-        if (writer instanceof IonWriterUserBinary) {
-            ((IonWriterUserBinary)writer).writeStringList(values);
-            return;
-        }
-        if (writer instanceof IonWriterSystemBinary) {
-            ((IonWriterSystemBinary)writer).writeStringList(values);
+        if (writer instanceof _Private_ListWriter) {
+            ((_Private_ListWriter)writer).writeStringList(values);
             return;
         }
 

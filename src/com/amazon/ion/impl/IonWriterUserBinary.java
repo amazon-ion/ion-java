@@ -9,6 +9,7 @@ import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueFactory;
+import com.amazon.ion.util.IonStreamUtils;
 import java.io.IOException;
 
 /**
@@ -16,6 +17,7 @@ import java.io.IOException;
  */
 public class IonWriterUserBinary
     extends IonWriterUser
+    implements _Private_ListWriter
 {
     @Deprecated // TODO ION-252 Remove this
     public static final boolean OUR_FAST_COPY_DEFAULT = false;
@@ -74,5 +76,53 @@ public class IonWriterUserBinary
         // From here on, we won't call back into this method, so we won't
         // bother doing all those checks again.
         writeValueRecursively(type, reader);
+    }
+
+
+    public void writeBoolList(boolean[] values) throws IOException
+    {
+        IonStreamUtils.writeBoolList(_current_writer, values);
+    }
+
+
+    public void writeFloatList(float[] values) throws IOException
+    {
+        IonStreamUtils.writeFloatList(_current_writer, values);
+    }
+
+
+    public void writeFloatList(double[] values) throws IOException
+    {
+        IonStreamUtils.writeFloatList(_current_writer, values);
+    }
+
+
+    public void writeIntList(byte[] values) throws IOException
+    {
+        IonStreamUtils.writeIntList(_current_writer, values);
+    }
+
+
+    public void writeIntList(short[] values) throws IOException
+    {
+        IonStreamUtils.writeIntList(_current_writer, values);
+    }
+
+
+    public void writeIntList(int[] values) throws IOException
+    {
+        IonStreamUtils.writeIntList(_current_writer, values);
+    }
+
+
+    public void writeIntList(long[] values) throws IOException
+    {
+        IonStreamUtils.writeIntList(_current_writer, values);
+    }
+
+
+    public void writeStringList(String[] values) throws IOException
+    {
+        IonStreamUtils.writeStringList(_current_writer, values);
     }
 }

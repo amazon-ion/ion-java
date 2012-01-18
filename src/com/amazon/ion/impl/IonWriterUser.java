@@ -40,7 +40,7 @@ import java.math.BigInteger;
  * {@link SymbolTable} is installed.
  */
 abstract class IonWriterUser
-    extends IonWriterBaseImpl  // should be IonWriterSystem ?
+    extends IonWriterBaseImpl
     implements _Private_IonWriter
 {
     /** Factory for constructing the DOM of local symtabs. Not null. */
@@ -581,73 +581,6 @@ abstract class IonWriterUser
     public void writeTimestamp(Timestamp value) throws IOException
     {
         _current_writer.writeTimestamp(value);
-        finish_value();
-    }
-
-    //
-    // list version of the write methods these have to be intercepted
-    // since someone might write a list of strings into a local symbol
-    // table and we need to divert the values.
-    //
-    // and the underlying system writer might be a binary writer
-    // in which case we want to invoke the optimized versions of these
-    // methods.
-    //
-    // in all likelihood this is not a worthwhile optimization <sigh>
-    //
-    @Override
-    public void writeBoolList(boolean[] values) throws IOException
-    {
-        _current_writer.writeBoolList(values);
-        finish_value();
-    }
-
-    @Override
-    public void writeIntList(byte[] values) throws IOException
-    {
-        _current_writer.writeIntList(values);
-        finish_value();
-    }
-
-    @Override
-    public void writeIntList(short[] values) throws IOException
-    {
-        _current_writer.writeIntList(values);
-        finish_value();
-    }
-
-    @Override
-    public void writeIntList(int[] values) throws IOException
-    {
-        _current_writer.writeIntList(values);
-        finish_value();
-    }
-
-    @Override
-    public void writeIntList(long[] values) throws IOException
-    {
-        _current_writer.writeIntList(values);
-        finish_value();
-    }
-
-    @Override
-    public void writeFloatList(float[] values) throws IOException
-    {
-        _current_writer.writeFloatList(values);
-        finish_value();
-    }
-
-    @Override
-    public void writeFloatList(double[] values) throws IOException
-    {
-        _current_writer.writeFloatList(values);
-        finish_value();
-    }
-
-    @Override
-    public void writeStringList(String[] values) throws IOException
-    {
-        _current_writer.writeStringList(values);
         finish_value();
     }
 }

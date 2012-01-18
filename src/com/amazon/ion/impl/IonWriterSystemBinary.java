@@ -25,6 +25,7 @@ import java.math.BigInteger;
  */
 public final class IonWriterSystemBinary  // TODO protect, must fix IonStreamUtils
     extends IonWriterSystem
+    implements _Private_ListWriter
 {
     // private static final boolean _verbose_debug = false;
 
@@ -890,7 +891,7 @@ public final class IonWriterSystemBinary  // TODO protect, must fix IonStreamUti
 
     static final int bool_true = (_Private_IonConstants.tidBoolean << 4) | _Private_IonConstants.lnBooleanTrue;
     static final int bool_false = (_Private_IonConstants.tidBoolean << 4) | _Private_IonConstants.lnBooleanFalse;
-    @Override
+
     public void writeBoolList(boolean[] values) throws IOException
     {
         int len = values.length; // 1 byte per boolean
@@ -914,10 +915,11 @@ public final class IonWriterSystemBinary  // TODO protect, must fix IonStreamUti
         patch_len += len;
         patch(patch_len);
     }
+
     static final int int_tid_0   = (_Private_IonConstants.tidPosInt << 4);
     static final int int_tid_pos = (_Private_IonConstants.tidPosInt << 4) | 1;
     static final int int_tid_neg = (_Private_IonConstants.tidNegInt << 4) | 1;
-    @Override
+
     public void writeIntList(byte[] values) throws IOException
     {
         int patch_len = 1;
@@ -956,7 +958,7 @@ public final class IonWriterSystemBinary  // TODO protect, must fix IonStreamUti
         patch_len += len;
         patch(patch_len);
     }
-    @Override
+
     public void writeIntList(short[] values) throws IOException
     {
         int patch_len = 1;
@@ -995,7 +997,7 @@ public final class IonWriterSystemBinary  // TODO protect, must fix IonStreamUti
         patch_len += len;
         patch(patch_len);
     }
-    @Override
+
     public void writeIntList(int[] values) throws IOException
     {
         int tmp;
@@ -1044,7 +1046,7 @@ public final class IonWriterSystemBinary  // TODO protect, must fix IonStreamUti
         patch_len += len;
         patch(patch_len);
     }
-    @Override
+
     public void writeIntList(long[] values) throws IOException
     {
         int patch_len = 1;
@@ -1085,7 +1087,7 @@ public final class IonWriterSystemBinary  // TODO protect, must fix IonStreamUti
         patch_len += len;
         patch(patch_len);
     }
-    @Override
+
     public void writeFloatList(float[] values) throws IOException
     {
         int patch_len = 1;
@@ -1118,7 +1120,7 @@ public final class IonWriterSystemBinary  // TODO protect, must fix IonStreamUti
 
         patch(patch_len);
     }
-    @Override
+
     public void writeFloatList(double[] values) throws IOException
     {
         int patch_len = 1;
@@ -1151,7 +1153,7 @@ public final class IonWriterSystemBinary  // TODO protect, must fix IonStreamUti
 
         patch(patch_len);
     }
-    @Override
+
     public void writeStringList(String[] values) throws IOException
     {
         String s;
