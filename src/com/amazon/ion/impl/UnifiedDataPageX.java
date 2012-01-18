@@ -10,7 +10,7 @@ import java.io.Reader;
  * this base class and it's two children (below) manage
  *
  */
-public abstract class UnifiedDataPageX
+abstract class UnifiedDataPageX
 {
     public enum PageType { BYTES, CHARS }
 

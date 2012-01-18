@@ -15,7 +15,7 @@ import java.util.LinkedList;
  * need to un-roll the line number on push back and we need to have the logic to
  * deal with newline combinations anyhow.
  */
-public class IonCharacterReader extends PushbackReader {
+final class IonCharacterReader extends PushbackReader {
 
     /**
      * The default buffer size

@@ -24,7 +24,7 @@ import java.util.NoSuchElementException;
  * WARNING: Unless {@link #resetBuffer()} is called, this class will
  * incrementally accumulate data in its internal buffer!
  */
-class SystemValueIteratorImpl
+final class SystemValueIteratorImpl
     implements SystemValueIterator
 {
     private final IonSystemImpl _system;

@@ -16,7 +16,7 @@ import java.util.Iterator;
  * UnifiedSymbolTable.  It includes find methods to find either
  * sids or names in the imported tables it manages.
  */
-class UnifiedSymbolTableImports
+final class UnifiedSymbolTableImports
 {
     static final int DEFAULT_IMPORT_LENGTH = 4;
 

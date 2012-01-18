@@ -19,7 +19,7 @@ import com.amazon.ion.impl._Private_Utils;
 /**
  *
  */
-public class IonSymbolLite
+final class IonSymbolLite
     extends IonTextLite
     implements IonSymbol
 {

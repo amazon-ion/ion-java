@@ -18,7 +18,7 @@ import java.util.Collection;
 /**
  * Implements the Ion <code>sexp</code> (S-expression) type.
  */
-public class IonSexpImpl
+final class IonSexpImpl
     extends IonSequenceImpl
     implements IonSexp
 {

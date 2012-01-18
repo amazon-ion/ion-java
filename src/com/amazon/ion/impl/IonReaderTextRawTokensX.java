@@ -41,7 +41,7 @@ import java.io.IOException;
  *  calling reader.
  *
  */
-public class IonReaderTextRawTokensX
+final class IonReaderTextRawTokensX
 {
 //////////////////////////////////////////////////////////////////////////debug
     static final boolean _debug = false;

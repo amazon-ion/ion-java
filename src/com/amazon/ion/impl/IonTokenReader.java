@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved. */
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -25,7 +25,7 @@ import java.util.Stack;
  *  It does both the token recognition (aka the scanner) and the state
  *  management needed to use the value underlying some of these tokens.
  */
-public class IonTokenReader
+final class IonTokenReader
 {
     // TODO clean up, many of these are unused.
     public static int isPunctuation = 0x0001;

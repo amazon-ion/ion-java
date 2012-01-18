@@ -1,8 +1,7 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
+
 /*
  * This is a class that supports encoding and decoding binary
  * data in base 64 encodings.
@@ -48,7 +47,7 @@ import java.io.InputStream;
 import java.io.Reader;
 
 
-public class Base64Encoder
+final class Base64Encoder
 {
     static class EL {  // EncoderLetter
         public int  value;
@@ -79,13 +78,13 @@ public class Base64Encoder
         ,new EL(16, 'Q') ,new EL(33, 'h') ,new EL(50, 'y'),
     };
 
-    final public static char  URLSafe64IntToCharTerminator = init64IntToCharTerminator(Base64Alphabet);
+    final static char  URLSafe64IntToCharTerminator = init64IntToCharTerminator(Base64Alphabet);
     final static int[] URLSafe64IntToChar = init64IntToChar(Base64Alphabet);
     final static int[] URLSafe64CharToInt = init64CharToInt(Base64Alphabet);
 
-    public final static int[] Base64EncodingIntToChar = init64IntToChar(Base64Alphabet);
-    public final static int[] Base64EncodingCharToInt = init64CharToInt(Base64Alphabet);
-    public final static char  Base64EncodingTerminator = init64IntToCharTerminator(Base64Alphabet);
+    final static int[] Base64EncodingIntToChar = init64IntToChar(Base64Alphabet);
+    final static int[] Base64EncodingCharToInt = init64CharToInt(Base64Alphabet);
+    final static char  Base64EncodingTerminator = init64IntToCharTerminator(Base64Alphabet);
 
     static private char init64IntToCharTerminator(EL[] els)
     {
@@ -123,11 +122,13 @@ public class Base64Encoder
         }
         return output;
     }
-    public final static boolean isBase64Character(int c) {
+
+    final static boolean isBase64Character(int c) {
         if (c < 32 || c > 255) return false;
         return (URLSafe64CharToInt[c] >= 0);
     }
-    public Base64Encoder() {}
+
+    private Base64Encoder() {}
 
     /*********************************************************************
      *
@@ -138,7 +139,9 @@ public class Base64Encoder
      *               as there is a 3:4 output to input character ratio
      */
     final static int BUFSIZE = 1024;
-    public static class BinaryStream extends Reader
+
+    static final class BinaryStream
+        extends Reader
     {
         boolean  _ready;
         Reader   _source;
@@ -162,12 +165,12 @@ public class Base64Encoder
             _ready = true;
         }
 
-        public BinaryStream(Reader input, char altterminator)
+        BinaryStream(Reader input, char altterminator)
         {
             this(input, URLSafe64CharToInt, URLSafe64IntToCharTerminator, altterminator);
         }
 
-        public int terminatingChar()
+        int terminatingChar()
         {
             return this._terminatingChar;
         }
@@ -333,15 +336,16 @@ public class Base64Encoder
     final static int BUFSIZE_BIN = 3*BUFSIZE/8; // 1024 -> 384
     final static int BUFSIZE_TEXT = (BUFSIZE/2);  // 1024/2 -> 512 .. (384/3)*4 = 512
 
-    /*******************************************************************'
-     *
+    /**
      * The TextStream takes a reader over binary data and returns
      * a text reader.  This reads binary bytes and produces base64
      * encoded printable characters
      *
      * @author csuver
      */
-    public static class TextStream extends Reader {
+    static final class TextStream
+        extends Reader
+    {
         final InputStream _source;
         final int[]    _bintochar;
         final char     _padding;

@@ -50,7 +50,7 @@ import java.util.NoSuchElementException;
  *
  */
 @SuppressWarnings("deprecation")
-public final class IonSystemLite
+final class IonSystemLite
     extends ValueFactoryLite
     implements _Private_IonSystem, IonContext
 {

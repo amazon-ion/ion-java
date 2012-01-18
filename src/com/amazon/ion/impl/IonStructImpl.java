@@ -27,7 +27,7 @@ import java.util.Set;
 /**
  * Implements the Ion <code>struct</code> type.
  */
-public final class IonStructImpl
+final class IonStructImpl
     extends IonContainerImpl
     implements IonStruct
 {

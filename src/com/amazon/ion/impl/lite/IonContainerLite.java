@@ -20,8 +20,7 @@ import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
 
-
-public abstract class IonContainerLite
+abstract class IonContainerLite
     extends IonValueLite
     implements _Private_IonContainer, IonContext
 {

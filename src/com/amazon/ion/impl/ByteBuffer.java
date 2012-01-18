@@ -11,7 +11,7 @@ import java.io.OutputStream;
  * are resposible for managing container state during operations
  * as well as the underlying data in the buffer itself.
  */
-public interface ByteBuffer
+interface ByteBuffer
 {
     /**
      * creates a reader and sets it to the beginning of the buffer

@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -14,7 +14,7 @@ import java.util.Collection;
 /**
  *
  */
-class IonSexpLite
+final class IonSexpLite
     extends IonSequenceLite
     implements IonSexp
 {

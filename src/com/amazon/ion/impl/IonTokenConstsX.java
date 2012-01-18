@@ -11,7 +11,7 @@ import com.amazon.ion.impl._Private_ScalarConversions.CantConvertException;
  * this is a collection of constants and some static helper functions
  * to support tokenizing Ion text
  */
-public class IonTokenConstsX
+final class IonTokenConstsX
 {
     public static class CharacterSequence {
         public static final int CHAR_SEQ_EOF                         = -1; // matches -1 (stream eof)

@@ -22,7 +22,7 @@ import com.amazon.ion.SymbolTable;
 /**
  *
  */
-class IonReaderTreeUserX
+final class IonReaderTreeUserX
     extends IonReaderTreeSystem
     implements _Private_ReaderWriter
 {

@@ -25,7 +25,7 @@ import java.io.IOException;
 /**
  * Implements the Ion <code>symbol</code> type.
  */
-public final class IonSymbolImpl
+final class IonSymbolImpl
     extends IonTextImpl
     implements IonSymbol
 {

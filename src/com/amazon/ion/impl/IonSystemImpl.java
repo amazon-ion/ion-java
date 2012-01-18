@@ -72,7 +72,7 @@ import java.util.List;
  * The standard implementation of Ion.
  */
 @SuppressWarnings("deprecation")
-public final class IonSystemImpl
+final class IonSystemImpl
     implements _Private_IonSystem
 {
     public static final int SYSTEM_VERSION = 1;

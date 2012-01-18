@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion.impl;
 import com.amazon.ion.IonException;
 import java.io.ByteArrayOutputStream;
@@ -22,7 +22,7 @@ import java.util.TreeSet;
  *
  * @author Chris Suver, 3 Feb 2007
  */
-final public class BlockedBuffer
+final class BlockedBuffer
 {
     ///////////////////////////////////////////////////////////////////////////////
     //

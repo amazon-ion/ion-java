@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -33,7 +33,7 @@ import com.amazon.ion.SymbolTable;
  *  a local symbol table and attaches it to the calling
  *  child object ... how?
  */
-public interface IonContext
+interface IonContext
 {
     /**
      * Return the container of values associated with this context.

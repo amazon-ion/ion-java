@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -14,7 +12,7 @@ import java.math.BigDecimal;
  * data source randomly and insert space at any position.  However forward
  * access is expected to be the standard direction.
  */
-public interface ByteWriter
+interface ByteWriter
 {
         public void write(byte b) throws IOException;
         public void write(byte[] dst, int start, int len) throws IOException;

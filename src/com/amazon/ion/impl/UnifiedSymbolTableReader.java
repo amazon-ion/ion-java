@@ -279,7 +279,7 @@ S_SYMBOL_LIST_CLOSE(2)     system
 */
 
 
-public class UnifiedSymbolTableReader
+final class UnifiedSymbolTableReader
     implements IonReader
 {
 

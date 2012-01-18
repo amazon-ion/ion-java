@@ -13,7 +13,7 @@ import java.io.OutputStream;
  *  This is the factory class for constructing writers
  *  with various capabilities.
  */
-public class _Private_IonWriterFactory
+public final class _Private_IonWriterFactory
 {
     /**
      * static short cut methods to construct IonWriters

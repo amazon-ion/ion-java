@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -10,7 +10,7 @@ import com.amazon.ion.ValueVisitor;
 /**
  *
  */
-public class IonBoolLite
+final class IonBoolLite
     extends IonValueLite
     implements IonBool
 {

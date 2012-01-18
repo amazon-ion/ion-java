@@ -16,7 +16,7 @@ import com.amazon.ion.impl.IonBinary.Writer;
 import java.io.IOException;
 import java.util.ArrayList;
 
-public class TemporaryList
+final class TemporaryList
     extends IonSequenceImpl
     implements IonList
 {

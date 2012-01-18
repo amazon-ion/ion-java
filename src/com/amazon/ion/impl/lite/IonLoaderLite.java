@@ -21,7 +21,7 @@ import java.io.Reader;
 /**
  *
  */
-public class IonLoaderLite
+final class IonLoaderLite
     implements IonLoader
 {
     private final IonSystemLite _system;

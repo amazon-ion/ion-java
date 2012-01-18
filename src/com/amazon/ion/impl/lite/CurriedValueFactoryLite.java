@@ -29,7 +29,7 @@ import java.util.Collection;
 /**
  *
  */
-public abstract class CurriedValueFactoryLite
+abstract class CurriedValueFactoryLite
     implements ValueFactory
 {
     private final ValueFactory myFactory;

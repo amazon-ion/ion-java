@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -13,7 +13,7 @@ import java.math.BigInteger;
 /**
  *
  */
-public class IonIntLite
+final class IonIntLite
     extends IonValueLite
     implements IonInt
 {

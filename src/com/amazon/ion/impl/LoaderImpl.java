@@ -21,7 +21,7 @@ import java.io.Reader;
  * <p>
  * This is an internal implementation class that should not be used directly.
  */
-public class LoaderImpl
+final class LoaderImpl
     implements IonLoader
 {
     static final boolean USE_NEW_READERS = true;

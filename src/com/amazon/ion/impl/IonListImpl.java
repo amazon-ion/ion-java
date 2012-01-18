@@ -17,7 +17,7 @@ import java.util.Collection;
 /**
  * Implements the Ion <code>list</code> type.
  */
-public final class IonListImpl
+final class IonListImpl
     extends IonSequenceImpl
     implements IonList
 {

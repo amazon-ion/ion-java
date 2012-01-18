@@ -14,9 +14,9 @@ import java.util.Date;
 /**
  *
  */
-public class IonTimestampLite
-extends IonValueLite
-implements IonTimestamp
+final class IonTimestampLite
+    extends IonValueLite
+    implements IonTimestamp
 {
     public final static Integer UTC_OFFSET = Timestamp.UTC_OFFSET;
 

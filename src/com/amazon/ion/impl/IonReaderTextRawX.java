@@ -57,7 +57,7 @@ import java.util.Iterator;
  * performance gain (<sigh>).  Logically these are the same.
  *
  */
-public abstract class IonReaderTextRawX
+abstract class IonReaderTextRawX
     implements IonTextReader
 {
     public abstract BigInteger bigIntegerValue();

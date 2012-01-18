@@ -37,7 +37,7 @@ import java.util.ListIterator;
 /**
  *
  */
-public final class IonDatagramImpl
+final class IonDatagramImpl
     extends IonSequenceImpl
     implements IonDatagram, _Private_IonDatagram
 {

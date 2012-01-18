@@ -23,7 +23,7 @@ import java.math.BigInteger;
 /**
  *
  */
-public final class IonWriterSystemBinary  // TODO protect, must fix IonStreamUtils
+final class IonWriterSystemBinary
     extends IonWriterSystem
     implements _Private_ListWriter
 {

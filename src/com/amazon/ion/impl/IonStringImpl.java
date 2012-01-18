@@ -16,7 +16,7 @@ import java.io.IOException;
 /**
  * Implements the Ion <code>string</code> type.
  */
-public final class IonStringImpl
+final class IonStringImpl
     extends IonTextImpl
     implements IonString
 {

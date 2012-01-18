@@ -15,7 +15,7 @@ import java.math.BigDecimal;
 /**
  * Implements the Ion <code>decimal</code> type.
  */
-public final class IonDecimalImpl
+final class IonDecimalImpl
     extends IonValueImpl
     implements IonDecimal
 {

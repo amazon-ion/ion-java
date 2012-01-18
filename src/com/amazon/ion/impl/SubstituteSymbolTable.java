@@ -20,7 +20,7 @@ import java.util.Iterator;
  * Note that {@link #isSubstitute()} is always true for instances of this
  * class.
  */
-class SubstituteSymbolTable
+final class SubstituteSymbolTable
     implements SymbolTable
 {
     /** Either null or a non-system shared table. */

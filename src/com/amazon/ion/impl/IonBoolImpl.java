@@ -17,7 +17,7 @@ import java.io.IOException;
 /**
  * Implements the Ion <code>bool</code> type.
  */
-public final class IonBoolImpl
+final class IonBoolImpl
     extends IonValueImpl
     implements IonBool
 {

@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -10,7 +10,7 @@ import java.util.zip.CRC32;
 /**
  *
  */
-public abstract class IonLobLite
+abstract class IonLobLite
     extends IonValueLite
     implements IonLob
 {

@@ -18,7 +18,7 @@ import java.nio.charset.Charset;
 /**
  * Implements the Ion <code>clob</code> type.
  */
-public final class IonClobImpl
+final class IonClobImpl
     extends IonLobImpl
     implements IonClob
 {

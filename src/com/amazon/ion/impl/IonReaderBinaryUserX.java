@@ -22,7 +22,7 @@ import com.amazon.ion.impl._Private_ScalarConversions.AS_TYPE;
 import java.io.IOException;
 import java.util.Iterator;
 
-class IonReaderBinaryUserX
+final class IonReaderBinaryUserX
     extends IonReaderBinarySystemX
     implements _Private_ReaderWriter
 {

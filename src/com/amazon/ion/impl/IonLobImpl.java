@@ -15,7 +15,7 @@ import java.util.zip.CRC32;
 /**
  * The abstract parent of all Ion lob types.
  */
-public abstract class IonLobImpl
+abstract class IonLobImpl
     extends IonValueImpl
     implements IonLob
 {

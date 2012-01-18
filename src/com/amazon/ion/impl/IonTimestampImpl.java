@@ -16,7 +16,7 @@ import java.util.Date;
 /**
  * Implements the Ion <code>timestamp</code> type.
  */
-public final class IonTimestampImpl
+final class IonTimestampImpl
     extends IonValueImpl
     implements IonTimestamp
 {

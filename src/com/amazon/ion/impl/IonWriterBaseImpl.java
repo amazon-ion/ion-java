@@ -20,7 +20,7 @@ import java.util.Date;
  *  table is available (which it will not be if the underlying writer is a system
  *  writer).
  */
-public abstract class IonWriterBaseImpl
+abstract class IonWriterBaseImpl
     implements IonWriter, _Private_ReaderWriter
 {
     protected static final String ERROR_MISSING_FIELD_NAME =

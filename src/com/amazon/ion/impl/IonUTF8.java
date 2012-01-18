@@ -1,6 +1,5 @@
-/*
- * Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
+
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
@@ -25,7 +24,7 @@ import java.io.OutputStream;
  * 21 April 2009
  *
  */
-public class IonUTF8 {
+final class IonUTF8 {
     private final static int UNICODE_MAX_ONE_BYTE_SCALAR       = 0x0000007F; // 7 bits     =  7 / 1 = 7    bits per byte
     private final static int UNICODE_MAX_TWO_BYTE_SCALAR       = 0x000007FF; // 5 + 6 bits = 11 / 2 = 5.50 bits per byte
     private final static int UNICODE_MAX_THREE_BYTE_SCALAR     = 0x0000FFFF; // 4 + 6+6    = 16 / 3 = 5.33 bits per byte

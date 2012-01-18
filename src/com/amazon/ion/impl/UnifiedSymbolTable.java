@@ -55,7 +55,7 @@ import java.util.Map;
  *
  */
 
-public final class UnifiedSymbolTable
+final class UnifiedSymbolTable
     implements SymbolTable
 {
     private enum SymbolTableType {

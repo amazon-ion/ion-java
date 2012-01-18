@@ -14,7 +14,7 @@ import java.nio.charset.Charset;
 /**
  *
  */
-public class IonClobLite
+final class IonClobLite
     extends IonLobLite
     implements IonClob
 {

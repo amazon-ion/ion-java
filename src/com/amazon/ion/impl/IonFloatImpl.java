@@ -18,7 +18,7 @@ import java.math.BigDecimal;
 /**
  * Implements the Ion <code>float</code> type.
  */
-public final class IonFloatImpl
+final class IonFloatImpl
     extends IonValueImpl
     implements IonFloat
 {

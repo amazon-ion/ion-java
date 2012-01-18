@@ -22,7 +22,7 @@ import java.util.ArrayList;
 /**
  * The Ion text to binary transcoder.
  */
-public class IonParser
+final class IonParser
 {
 
     private IonTokenReader      _in;

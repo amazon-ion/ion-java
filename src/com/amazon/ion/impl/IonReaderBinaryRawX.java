@@ -36,7 +36,7 @@ import java.math.MathContext;
  *  csuver
  *  16 July 2009
  */
-abstract public class IonReaderBinaryRawX
+abstract class IonReaderBinaryRawX
     implements IonReader
 {
     static final int DEFAULT_CONTAINER_STACK_SIZE = 12; // a multiple of 3

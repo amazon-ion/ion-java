@@ -38,7 +38,7 @@ import com.amazon.ion.TextSpan;
  *    undefined symbol value.
  *
  */
-public class IonReaderTextUserX
+class IonReaderTextUserX
     extends IonReaderTextSystemX
     implements _Private_ReaderWriter
 {

@@ -15,7 +15,7 @@ import java.io.IOException;
 /**
  * Implements the Ion <code>null</code> type.
  */
-public final class IonNullImpl
+final class IonNullImpl
     extends IonValueImpl
     implements IonNull
 {

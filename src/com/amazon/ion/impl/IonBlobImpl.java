@@ -2,7 +2,6 @@
 
 package com.amazon.ion.impl;
 
-
 import static com.amazon.ion.impl._Private_IonConstants.lnIsNullAtom;
 import static com.amazon.ion.impl._Private_IonConstants.makeTypeDescriptor;
 import static com.amazon.ion.impl._Private_IonConstants.tidBlob;
@@ -16,7 +15,7 @@ import java.io.InputStream;
 /**
  * Implements the Ion <code>blob</code> type.
  */
-public final class IonBlobImpl
+final class IonBlobImpl
     extends IonLobImpl
     implements IonBlob
 {

@@ -35,7 +35,7 @@ import java.io.PrintWriter;
 /**
  *
  */
-public abstract class IonValueImpl
+abstract class IonValueImpl
     implements _Private_IonValue
 {
     /**

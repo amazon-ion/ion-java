@@ -18,7 +18,7 @@ import java.math.MathContext;
  * Manages a very simple byte buffer that is a single contiguous
  * byte array, without resize ability.
  */
-public final class SimpleByteBuffer
+final class SimpleByteBuffer
     implements ByteBuffer
 {
     byte[]  _bytes;

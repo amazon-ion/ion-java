@@ -41,7 +41,7 @@ import java.util.Iterator;
  *  the IonTextUserReader is responsible for that.
  *
  */
-public class IonReaderTextSystemX
+class IonReaderTextSystemX
     extends IonReaderTextRawX
     implements _Private_ReaderWriter
 {

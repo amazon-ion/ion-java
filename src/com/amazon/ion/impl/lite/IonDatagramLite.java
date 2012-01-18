@@ -64,7 +64,7 @@ import java.util.NoSuchElementException;
  *
  */
 
-public class IonDatagramLite
+final class IonDatagramLite
     extends IonSequenceLite
     implements IonDatagram, IonContext, _Private_IonDatagram
 {

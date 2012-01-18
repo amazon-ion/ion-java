@@ -23,7 +23,7 @@ import java.util.List;
  *  instance construction.
  *
  */
-public class ValueFactoryLite
+abstract class ValueFactoryLite
     implements ValueFactory
 {
     private IonSystemLite _system;

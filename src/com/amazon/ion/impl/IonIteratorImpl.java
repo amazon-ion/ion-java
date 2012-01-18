@@ -15,7 +15,7 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 
-public class IonIteratorImpl
+final class IonIteratorImpl
     implements Iterator<IonValue>
 {
     private final ValueFactory _valueFactory;

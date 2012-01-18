@@ -19,7 +19,7 @@ import java.io.OutputStream;
  */
 @SuppressWarnings("deprecation")
 @Deprecated
-public class _Private_IonBinaryWriterImpl
+public final class _Private_IonBinaryWriterImpl
     extends IonWriterUserBinary
     implements IonBinaryWriter
 {

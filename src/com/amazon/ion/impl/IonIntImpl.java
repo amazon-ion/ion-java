@@ -22,7 +22,7 @@ import java.math.BigInteger;
  *
  * TODO: we don't properly handle values larger than Java long.
  */
-public final class IonIntImpl
+final class IonIntImpl
     extends IonValueImpl
     implements IonInt
 {

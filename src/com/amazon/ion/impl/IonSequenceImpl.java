@@ -23,7 +23,7 @@ import java.util.List;
 /**
  * Base class for list and sexp implementations.
  */
-public abstract class IonSequenceImpl
+abstract class IonSequenceImpl
     extends IonContainerImpl
     implements IonSequence
 {
