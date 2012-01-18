@@ -90,14 +90,7 @@ public final class IonBlobImpl
         InputStream byteStream = newInputStream();
         try
         {
-            Base64Encoder.TextStream ts =
-                new Base64Encoder.TextStream(byteStream);
-
-            for (;;) {
-                int c = ts.read();
-                if (c == -1) break;
-                out.append((char) c);
-            }
+            _Private_LazyDomTrampoline.writeAsBase64(byteStream, out);
         }
         finally
         {

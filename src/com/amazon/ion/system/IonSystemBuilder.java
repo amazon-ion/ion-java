@@ -2,13 +2,14 @@
 
 package com.amazon.ion.system;
 
+import static com.amazon.ion.impl._Private_LazyDomTrampoline.newLazySystem;
+import static com.amazon.ion.impl.lite._Private_LiteDomTrampoline.newLiteSystem;
+
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.impl.IonSystemImpl;
-import com.amazon.ion.impl.lite.IonSystemLite;
 
 /**
  * The bootstrap builder for creating an {@link IonSystem}.
@@ -331,11 +332,11 @@ public class IonSystemBuilder
         IonSystem sys;
         if (isBinaryBacked())
         {
-            sys = new IonSystemImpl(catalog, myStreamCopyOptimized);
+            sys = newLazySystem(catalog, myStreamCopyOptimized);
         }
         else
         {
-            sys = new IonSystemLite(catalog, myStreamCopyOptimized);
+            sys = newLiteSystem(catalog, myStreamCopyOptimized);
         }
         return sys;
     }

@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 /**
+ * NOT FOR APPLICATION USE!
  * Adapts the binary {@link IonWriter} implementation to the deprecated
  * {@link IonBinaryWriter} interface.
  */
