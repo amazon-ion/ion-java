@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -13,7 +13,7 @@ import java.io.OutputStream;
  *  This is the factory class for constructing writers
  *  with various capabilities.
  */
-public class IonWriterFactory
+public class _Private_IonWriterFactory
 {
     /**
      * static short cut methods to construct IonWriters

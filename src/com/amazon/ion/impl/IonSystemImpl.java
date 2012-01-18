@@ -429,7 +429,7 @@ public final class IonSystemImpl
 
     public IonWriter newWriter(IonContainer container)
     {
-        IonWriter userWriter = IonWriterFactory.makeWriter(container);
+        IonWriter userWriter = _Private_IonWriterFactory.makeWriter(container);
         return userWriter;
     }
 
@@ -488,10 +488,10 @@ public final class IonSystemImpl
 
     public IonWriter newBinaryWriter(OutputStream out, SymbolTable... imports)
     {
-        IonWriterUserBinary writer =
-            IonWriterFactory.newBinaryWriter(this, getCatalog(),
-                                             myStreamCopyOptimized,
-                                             out, imports);
+        IonWriter writer =
+            _Private_IonWriterFactory.newBinaryWriter(this, getCatalog(),
+                                                      myStreamCopyOptimized,
+                                                      out, imports);
         return writer;
     }
 
@@ -501,7 +501,7 @@ public final class IonSystemImpl
      */
     public IonWriter newTreeWriter(IonContainer container)
     {
-        IonWriter writer = IonWriterFactory.makeWriter(container);
+        IonWriter writer = _Private_IonWriterFactory.makeWriter(container);
         return writer;
     }
 
@@ -510,8 +510,9 @@ public final class IonSystemImpl
      */
     public IonWriter newTreeSystemWriter(IonContainer container)
     {
-        IonWriter system_writer = IonWriterFactory.makeSystemWriter(container);
-        return system_writer;
+        IonWriter writer =
+            _Private_IonWriterFactory.makeSystemWriter(container);
+        return writer;
     }
 
 
