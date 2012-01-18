@@ -101,7 +101,7 @@ public class IonDatagramLite
 
 
     @Override
-    public final SymbolTable getLocalSymbolTable(IonValueLite child)
+    public final SymbolTable ensureLocalSymbolTable(IonValueLite child)
     {
         // otherwise the concrete context would have returned
         // it's already present local symbol table, there's

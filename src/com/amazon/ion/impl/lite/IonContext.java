@@ -78,23 +78,20 @@ public interface IonContext
     abstract SymbolTable getContextSymbolTable();
 
     /**
-     * Get a SymbolTable associated with this
-     * attached IonValue the can be used to
-     * define symbols.  A local symbol table
-     * as distinct from a read only symbol table,
-     * such as a system symbol table.
+     * Ensure that a local symtab (not a system symtab) is associated with
+     * this context.
+     * <p>
+     * Generally this delegates to the parent who may need to create a new
+     * symtab.
      *
-     * Generally this delegates to the parent
-     * who may need to create a new symbol
-     * table.
-     *
-     * @param child the IonValue of the child requesting the local symbol table, used to back patch
+     * @param child the IonValue of the child requesting the local symtab,
+     * used to back patch.
      *
      * @return SymbolTable updatable symbol table
      *
      * @throws ReadOnlyValueException if the IonValue is read only
      */
-    abstract SymbolTable getLocalSymbolTable(IonValueLite child);
+    abstract SymbolTable ensureLocalSymbolTable(IonValueLite child);
 
     /**
      *  Set the SymbolTable of the associated IonValue.

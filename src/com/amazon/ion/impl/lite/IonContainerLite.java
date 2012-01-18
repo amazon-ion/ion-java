@@ -420,9 +420,9 @@ public abstract class IonContainerLite
     }
 
 
-    public SymbolTable getLocalSymbolTable(IonValueLite child)
+    public SymbolTable ensureLocalSymbolTable(IonValueLite child)
     {
-        return _context.getLocalSymbolTable(this);
+        return _context.ensureLocalSymbolTable(this);
     }
 
     public final SymbolTable getContextSymbolTable()

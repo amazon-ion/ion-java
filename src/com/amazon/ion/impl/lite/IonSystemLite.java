@@ -524,7 +524,7 @@ public final class IonSystemLite
      * IonContext methods
      */
 
-    public SymbolTable getLocalSymbolTable(IonValueLite child)
+    public SymbolTable ensureLocalSymbolTable(IonValueLite child)
     {
         // if this request makes it up to the system
         // it means there was no local symbol table
@@ -719,7 +719,7 @@ public final class IonSystemLite
             // symbol table is the system symbol table
             if (value._isSymbolPresent()) {
                 if (symbols == null || !symbols.isLocalTable()) {
-                    symbols = value.getContext().getLocalSymbolTable(value);
+                    symbols = value.getContext().ensureLocalSymbolTable(value);
                 }
             }
 

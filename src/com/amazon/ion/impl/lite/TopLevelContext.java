@@ -107,7 +107,7 @@ final class TopLevelContext
         _symbols = null;
     }
 
-    public SymbolTable getLocalSymbolTable(IonValueLite child)
+    public SymbolTable ensureLocalSymbolTable(IonValueLite child)
     {
         SymbolTable local;
 

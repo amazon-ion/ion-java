@@ -438,7 +438,7 @@ abstract class IonValueLite
 
         if (sid == UNKNOWN_SYMBOL_ID) {
             if (!symbols.isLocalTable()) {
-                symbols = this._context.getLocalSymbolTable(this);
+                symbols = this._context.ensureLocalSymbolTable(this);
             }
             sid = symbols.addSymbol(name);
         }
