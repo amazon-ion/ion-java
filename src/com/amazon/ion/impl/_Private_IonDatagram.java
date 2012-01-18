@@ -9,7 +9,7 @@ import com.amazon.ion.SymbolTable;
  * NOT FOR APPLICATION USE!
  */
 public interface _Private_IonDatagram
-    extends IonValuePrivate, IonDatagram
+    extends _Private_IonValue, IonDatagram
 {
     void appendTrailingSymbolTable(SymbolTable symtab);
 }

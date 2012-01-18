@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -6,7 +6,7 @@ import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.ValueFactory;
-import com.amazon.ion.impl.IonValuePrivate;
+import com.amazon.ion.impl._Private_IonValue;
 import java.lang.reflect.Array;
 import java.util.Collection;
 import java.util.IdentityHashMap;
@@ -310,10 +310,7 @@ abstract class IonSequenceLite
         if (o == null) {
             throw new NullPointerException();
         }
-        if (!(o instanceof IonValuePrivate)) {
-            throw new ClassCastException();
-        }
-        IonValuePrivate v = (IonValuePrivate) o;
+        _Private_IonValue v = (_Private_IonValue) o;
         if (this != v.getContainer()) return -1;
         return v.getElementId();
     }

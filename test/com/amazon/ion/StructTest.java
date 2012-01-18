@@ -4,8 +4,8 @@ package com.amazon.ion;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 
+import com.amazon.ion.impl._Private_IonValue;
 import com.amazon.ion.impl._Private_Utils;
-import com.amazon.ion.impl.IonValuePrivate;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -1343,7 +1343,7 @@ public class StructTest
         }
     }
     void dump(IonStruct s1_temp, ArrayList<TestField> s2) {
-        IonValuePrivate s1 = ((IonValuePrivate)s1_temp);
+        _Private_IonValue s1 = ((_Private_IonValue)s1_temp);
         s1.dump(new PrintWriter(System.out));
         System.out.println("array: "+s2.toString());
     }
@@ -1572,8 +1572,8 @@ public class StructTest
                 errors += "extra field in struct "+v;
                 errors += "\n";
             }
-            if (v instanceof IonValuePrivate) {
-                int eid = ((IonValuePrivate)v).getElementId();
+            if (v instanceof _Private_IonValue) {
+                int eid = ((_Private_IonValue)v).getElementId();
                 if (eid != struct_idx) {
                     difference = true;
                     errors += "index of struct field "+struct_idx+" doesn't match array index "+eid+": "+v;
@@ -1596,7 +1596,7 @@ public class StructTest
 
         if (_debug_print_flag) {
             // now check the map, if there is one
-            IonValuePrivate l = (IonValuePrivate)s1;
+            _Private_IonValue l = (_Private_IonValue)s1;
             String map_error = l.validate();
             if (map_error != null) {
                 errors += map_error;

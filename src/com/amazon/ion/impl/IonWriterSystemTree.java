@@ -174,7 +174,7 @@ final class IonWriterSystemTree
         if (hasAnnotations()) {
             SymbolToken[] annotations = getTypeAnnotationSymbols();
             // TODO this makes an extra copy of the array
-            ((IonValuePrivate)value).setTypeAnnotationSymbols(annotations);
+            ((_Private_IonValue)value).setTypeAnnotationSymbols(annotations);
             this.clearAnnotations();
         }
 

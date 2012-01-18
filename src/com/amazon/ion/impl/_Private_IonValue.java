@@ -10,7 +10,7 @@ import java.io.PrintWriter;
 /**
  *
  */
-public interface IonValuePrivate
+public interface _Private_IonValue
     extends IonValue
 {
     /**

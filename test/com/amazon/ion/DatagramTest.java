@@ -8,8 +8,8 @@ import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.SYMBOLS;
 
-import com.amazon.ion.impl.IonValuePrivate;
 import com.amazon.ion.impl._Private_IonSystem;
+import com.amazon.ion.impl._Private_IonValue;
 import java.io.ByteArrayOutputStream;
 import java.util.Collection;
 import java.util.Iterator;
@@ -621,7 +621,7 @@ public class DatagramTest
     public void testGetAssignedSymbolTable()
     {
         IonDatagram dg = system().newDatagram();
-        ((IonValuePrivate)dg).getAssignedSymbolTable();
+        ((_Private_IonValue)dg).getAssignedSymbolTable();
     }
 
     /**

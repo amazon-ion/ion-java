@@ -174,10 +174,10 @@ public class IonIteratorImpl
         // TODO this is too late in the case of system reading
         // when v is a local symtab (it will get itself, not the prior symtab)
         SymbolTable symtab = _reader.getSymbolTable();
-        ((IonValuePrivate)v).setSymbolTable(symtab);
+        ((_Private_IonValue)v).setSymbolTable(symtab);
 
         if (annotations.length != 0) {
-            ((IonValuePrivate)v).setTypeAnnotationSymbols(annotations);
+            ((_Private_IonValue)v).setTypeAnnotationSymbols(annotations);
         }
 
         return v;

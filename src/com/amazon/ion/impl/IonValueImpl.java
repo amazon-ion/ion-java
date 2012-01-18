@@ -36,7 +36,7 @@ import java.io.PrintWriter;
  *
  */
 public abstract class IonValueImpl
-    implements IonValuePrivate
+    implements _Private_IonValue
 {
     /**
      * We could multiplex this with member id, but it adds way more complexity

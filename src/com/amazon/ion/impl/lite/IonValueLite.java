@@ -22,8 +22,8 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl.IonValuePrivate;
 import com.amazon.ion.impl.UnifiedSymbolTable;
+import com.amazon.ion.impl._Private_IonValue;
 import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.util.Printer;
 import java.io.IOException;
@@ -40,7 +40,7 @@ import java.io.PrintWriter;
  *  original implementation.
  */
 abstract class IonValueLite
-    implements IonValuePrivate
+    implements _Private_IonValue
 {
     /**
      * this hold all the various boolean flags we have

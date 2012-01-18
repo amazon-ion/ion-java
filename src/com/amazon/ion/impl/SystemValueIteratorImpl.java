@@ -521,7 +521,8 @@ class SystemValueIteratorImpl
         {
             IonStruct struct = (IonStruct)curr;
             SymbolTable sys = _system.getSystemSymbolTable();
-            _currentSymbolTable = UnifiedSymbolTable.makeNewLocalSymbolTable(sys, _catalog, struct);
+            _currentSymbolTable =
+                makeNewLocalSymbolTable(sys, _catalog, struct);
             _currentIsHidden = true;
             _just_wrote_ivm = false;
         }
@@ -536,7 +537,8 @@ class SystemValueIteratorImpl
 
             // we're leaving this for the next value since the
             // parser put the local symbol table on the $ion_1_0 (in error)
-            _currentSymbolTable = ((IonValuePrivate)curr).getAssignedSymbolTable();
+            _currentSymbolTable =
+                ((_Private_IonValue)curr).getAssignedSymbolTable();
             _currentIsHidden = true;
             _just_wrote_ivm = true;
         }
