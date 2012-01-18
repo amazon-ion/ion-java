@@ -96,7 +96,7 @@ final class IonStructLite
 
         int count = get_child_count();
         for (int ii=0; ii<count; ii++) {
-            IonValueLite v = get_child_lite(ii);
+            IonValueLite v = get_child(ii);
             SymbolToken fieldNameSymbol = v.getFieldNameSymbol();
             String name = fieldNameSymbol.getText();
             if (_field_map.get(name) != null) {
@@ -178,7 +178,7 @@ final class IonStructLite
         }
 
         for (int ii=removed_idx; ii<get_child_count(); ii++) {
-            IonValueLite value = get_child_lite(ii);
+            IonValueLite value = get_child(ii);
             String  field_name = value.getFieldName();
             Integer map_idx = _field_map.get(field_name);
             if (map_idx.intValue() != ii) {
@@ -225,7 +225,7 @@ final class IonStructLite
         while (it.hasNext()) {
             Entry<String, Integer> e = it.next();
             int idx = e.getValue().intValue();
-            IonValueLite v = (idx >= 0 && idx < get_child_count()) ? get_child_lite(idx) : null;
+            IonValueLite v = (idx >= 0 && idx < get_child_count()) ? get_child(idx) : null;
             if (v == null || idx != v._elementid() || (e.getKey().equals(v.getFieldName()) == false)) {
                 error += "map entry ["+e+"] doesn't match list value ["+v+"]\n";
             }
@@ -238,7 +238,7 @@ final class IonStructLite
     {
         for (int ii=existing_idx; ii>0; ) {
             ii--;
-            IonValueLite field = get_child_lite(ii);
+            IonValueLite field = get_child(ii);
             if (fieldName.equals(field.getFieldName())) {
                 return ii;
             }
@@ -250,7 +250,7 @@ final class IonStructLite
     {
         int count = 0;
         for (int ii=0; ii<get_child_count(); ii++) {
-            IonValueLite v = get_child_lite(ii);
+            IonValueLite v = get_child(ii);
             if (v.getFieldName().equals(fieldName)) {
                 count++;
             }
@@ -421,8 +421,6 @@ final class IonStructLite
             validateFieldName(text);
         }
 
-        validateNewChild(child);
-
         IonValueLite concrete = (IonValueLite) child;
         _add(text, concrete);
 
@@ -444,6 +442,8 @@ final class IonStructLite
 
 
     /**
+     * Validates the child and checks locks.
+     *
      * @param fieldName may be null
      * @param child must be validated and have field name or id set
      */
@@ -462,12 +462,12 @@ final class IonStructLite
 
     public void add(String fieldName, IonValue value)
     {
+        // Validate everything before altering the child
+        checkForLock();
         validateNewChild(value);
         validateFieldName(fieldName);
 
-        // TODO USE _add
         IonValueLite concrete = (IonValueLite) value;
-//        int size = get_child_count();
 
         // set the fieldname first so that setFieldName
         // doesn't complain that we're changing the name
@@ -475,14 +475,6 @@ final class IonStructLite
         concrete.setFieldName(fieldName);
 
         _add(fieldName, concrete);
-
-//        // add this to the Container child collection
-//        add(size, concrete);
-//
-//        // if we have a hash map we need to update it now
-//        if (_field_map != null) {
-//            add_field(fieldName, concrete._elementid());
-//        }
     }
 
     public void add(SymbolToken fieldName, IonValue child)
@@ -500,6 +492,8 @@ final class IonStructLite
             throw new IllegalArgumentException("fieldName has no text or ID");
         }
 
+        // Validate everything before altering the child
+        checkForLock();
         validateNewChild(child);
 
         IonValueLite concrete = (IonValueLite) child;
@@ -571,7 +565,7 @@ final class IonStructLite
             for (int ii = get_child_count(); ii > 0; )
             {
                 ii--;
-                IonValueLite child = get_child_lite(ii);
+                IonValueLite child = get_child(ii);
                 if (fieldName.equals(child.getFieldNameSymbol().getText()))
                 {
                     // done by remove_child: child.detachFromContainer();

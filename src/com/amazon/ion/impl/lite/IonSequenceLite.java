@@ -154,13 +154,11 @@ abstract class IonSequenceLite
         };
     }
 
-    @Override
-    // Increasing visibility to satisfy IonSequence
+
     public void add(int index, IonValue element)
         throws ContainedValueException, NullPointerException
     {
-        // super.add will check for the lock
-        super.add(index, element);
+        add(index, (IonValueLite) element);
     }
 
     public ValueFactory add(final int index)
@@ -191,7 +189,7 @@ abstract class IonSequenceLite
 
         assert _children != null; // else index would be out of bounds above.
 
-        IonValueLite removed = set_child_lite(index, concrete);
+        IonValueLite removed = set_child(index, concrete);
         concrete._elementid(index);
         concrete._context = this;
 
@@ -209,7 +207,7 @@ abstract class IonSequenceLite
             throw new IndexOutOfBoundsException("" + index);
         }
 
-        IonValueLite v = get_child_lite(index);
+        IonValueLite v = get_child(index);
         assert(v._elementid() == index);
         remove_child(index);
         patch_elements_helper(index);

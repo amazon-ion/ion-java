@@ -63,7 +63,7 @@ public abstract class IonSequenceImpl
         else
         {
             _isNullValue(false);
-            _children = new IonValue[initialSize(typeDesc)];
+            _children = new IonValueImpl[initialSize(typeDesc)];
             _child_count = 0;
         }
         _hasNativeValue(true);
@@ -100,7 +100,7 @@ public abstract class IonSequenceImpl
 
         if (elements != null)
         {
-            _children = new IonValue[elements.size()];
+            _children = new IonValueImpl[elements.size()];
             for (Iterator i = elements.iterator(); i.hasNext();)
             {
                 IonValue element = (IonValue) i.next();
@@ -232,7 +232,7 @@ public abstract class IonSequenceImpl
 
         assert _children != null; // else index would be out of bounds above.
 
-        IonValueImpl removed = (IonValueImpl)set_child(index, concrete);
+        IonValueImpl removed = set_child(index, concrete);
         concrete._elementid = index;
         concrete._container = this;
 

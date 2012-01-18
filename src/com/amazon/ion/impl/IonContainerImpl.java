@@ -96,39 +96,43 @@ abstract public class IonContainerImpl
     {
         return;
     }
+
     /**
      * Only meaningful if {@link #_hasNativeValue}.
      */
-    //protected ArrayList<IonValue> _contents;
     protected int        _child_count;
-    protected IonValue[] _children;
+    protected IonValueImpl[] _children;
+
     public int get_child_count() {
         return _child_count;
     }
-    public IonValue get_child(int idx)
+
+    public IonValueImpl get_child(int idx)
     {
         if (idx < 0 || idx >= _child_count) {
             throw new IndexOutOfBoundsException(""+idx);
         }
         return _children[idx];
     }
-    public IonValue set_child(int idx, IonValue child)
+
+    final IonValueImpl set_child(int idx, IonValueImpl child)
     {
         if (idx < 0 || idx >= _child_count) {
             throw new IndexOutOfBoundsException(""+idx);
         }
-        IonValue prev = _children[idx];
+        IonValueImpl prev = _children[idx];
         _children[idx] = child;
         return prev;
     }
-    public int add_child(int idx, IonValue child)
+
+    public int add_child(int idx, IonValueImpl child)
     {
         _isNullValue(false); // if we add children we're not null anymore
         if (_children == null || _child_count >= _children.length) {
             int old_len = (_children == null) ? 0 : _children.length;
             int new_len = this.nextSize(old_len);
             assert(new_len > idx);
-            IonValue[] temp = new IonValue[new_len];
+            IonValueImpl[] temp = new IonValueImpl[new_len];
             if (old_len > 0) {
                 System.arraycopy(_children, 0, temp, 0, old_len);
             }
@@ -142,6 +146,7 @@ abstract public class IonContainerImpl
         _children[idx] = child;
         return idx;
     }
+
     public void remove_child(int idx) {
         assert(idx >=0 && idx < _child_count); // this also asserts child count > 0
         if (idx + 1 <= _child_count) {
@@ -149,14 +154,6 @@ abstract public class IonContainerImpl
         }
         _child_count--;
         _children[_child_count] = null;
-    }
-    public int find_Child(IonValue child) {
-        for (int ii=0; ii<_child_count; ii++) {
-            if (_children[ii] == child) {
-                return ii;
-            }
-        }
-        return -1;
     }
 
     protected IonContainerImpl(IonSystemImpl system, int typeDesc)
@@ -219,7 +216,7 @@ abstract public class IonContainerImpl
                 if (next_size < 1) {
                     next_size = initialSize(pos_getTypeDescriptorByte());
                 }
-                this._children = new IonValue[next_size];
+                this._children = new IonValueImpl[next_size];
                 if (next_size >= this.nextSize(next_size)) {
                     this.transitionToLargeSize(next_size);
                 }
@@ -277,7 +274,7 @@ abstract public class IonContainerImpl
         {
             assert _hasNativeValue() == true || _isPositionLoaded() == false;
             for (int ii=0; ii<get_child_count(); ii++) {
-                IonValueImpl aChild = (IonValueImpl) get_child(ii);
+                IonValueImpl aChild = get_child(ii);
                 length += aChild.getFullEncodedSize();
             }
         }
@@ -508,7 +505,7 @@ abstract public class IonContainerImpl
 
         for (int ii=0; ii<_child_count; ii++) {
             // Move our children's tokens.
-            IonValueImpl aChild = (IonValueImpl)get_child(ii);
+            IonValueImpl aChild = get_child(ii);
             aChild.shiftTokenAndChildren(delta);
         }
     }
@@ -605,7 +602,7 @@ abstract public class IonContainerImpl
     {
         // overriden in sexp and datagram to handle Ion Version Marker (magic cookie)
         for (int ii=0; ii<_child_count; ii++) {
-            IonValueImpl child = (IonValueImpl)get_child(ii);
+            IonValueImpl child = get_child(ii);
 
             cumulativePositionDelta =
                 child.updateBuffer2(writer, writer.position(),
@@ -776,7 +773,7 @@ abstract public class IonContainerImpl
 
         if (_children == null || _child_count == 0)
         {
-            _children = new IonValue[initialSize(pos_getTypeDescriptorByte())];
+            _children = new IonValueImpl[initialSize(pos_getTypeDescriptorByte())];
             _hasNativeValue(true);
         }
 
@@ -798,7 +795,7 @@ abstract public class IonContainerImpl
     void updateElementIds(int startingIndex)
     {
         while (startingIndex<this.get_child_count()) {
-            IonValueImpl v = (IonValueImpl)this.get_child(startingIndex);
+            IonValueImpl v = get_child(startingIndex);
             v._elementid = startingIndex;
             startingIndex++;
         }
@@ -810,7 +807,7 @@ abstract public class IonContainerImpl
         makeReady();
 
         for (int ii=0; ii<get_child_count(); ii++) {
-            IonValueImpl v = (IonValueImpl)get_child(ii);
+            IonValueImpl v = get_child(ii);
             v.clear_position_and_buffer();
         }
         super.clear_position_and_buffer();
@@ -821,7 +818,7 @@ abstract public class IonContainerImpl
     {
         assert _hasNativeValue(); // else we don't know if _contents is valid
         for (int ii=0; ii<get_child_count(); ii++) {
-            IonValueImpl v = (IonValueImpl)get_child(ii);
+            IonValueImpl v = get_child(ii);
             v.detachFromSymbolTable();
         }
         super.detachFromSymbolTable();

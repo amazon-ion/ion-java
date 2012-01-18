@@ -335,7 +335,7 @@ public class IonDatagramLite
         // thereafter each child may have it's own symbol table
         for (int ii=0; ii<get_child_count(); ii++)
         {
-            IonValueLite child = get_child_lite(ii);
+            IonValueLite child = get_child(ii);
             SymbolTable child_symbols = child.getAssignedSymbolTable();
             if (child_symbols != null) {
                 symbols = child_symbols;
@@ -370,7 +370,7 @@ public class IonDatagramLite
 
         while (idx > 0 && symbols == null) {
             idx--;
-            IonValueLite prev_child = get_child_lite(idx);
+            IonValueLite prev_child = get_child(idx);
             symbols = prev_child.getAssignedSymbolTable();
         }
 
@@ -404,7 +404,7 @@ public class IonDatagramLite
             }
             else {
                 // the preceding elements symbol table is our next
-                IonValueLite preceding = (index > 0) ? get_child_lite(index - 1) : null;
+                IonValueLite preceding = (index > 0) ? get_child(index - 1) : null;
                 if (preceding != null && preceding._context != this) {
                     concrete.setContext(preceding._context);
                 }
@@ -919,7 +919,7 @@ public class IonDatagramLite
         }
         protected IonValueLite get_datagram_child(int idx)
         {
-            return get_child_lite(idx);
+            return get_child(idx);
         }
         protected IonSystem get_datagram_system()
         {

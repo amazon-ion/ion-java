@@ -296,7 +296,7 @@ public final class IonDatagramImpl
         // for a local symbol table, so there's no need to look
         if (systemPos > 0)
         {
-            IonValueImpl v = (IonValueImpl)get_child(systemPos - 1);
+            IonValueImpl v = get_child(systemPos - 1);
             if (valueIsLocalSymbolTable(v))
             {
                 IonStruct symtabStruct = (IonStruct) v;
@@ -864,7 +864,7 @@ public final class IonDatagramImpl
     {
         for (int ii = 0; ii<get_child_count(); ii++) {
             IonValueImpl child;
-            child = (IonValueImpl) get_child(ii);
+            child = get_child(ii);
 
             cumulativePositionDelta =
             child.updateBuffer2(writer, writer.position(),
@@ -1084,7 +1084,7 @@ public final class IonDatagramImpl
         // filled with all the necessary local symbols.
         SymbolTable currentSymtab = null;
         if (get_child_count() > 0) {
-            IonValueImpl first = (IonValueImpl)get_child(0);
+            IonValueImpl first = get_child(0);
             currentSymtab = first.getSymbolTable();
             if (!_system.valueIsSystemId(first)) {
                 IonValue ivm = injectInitialIVM();
@@ -1097,7 +1097,7 @@ public final class IonDatagramImpl
         // this starts at 1 since we forced the 0th entry to be an IVM
         for (int ii = 1; ii < this.get_child_count(); ii++)
         {
-            IonValueImpl ichild = (IonValueImpl)get_child(ii);
+            IonValueImpl ichild = get_child(ii);
             if (_system.valueIsSystemId(ichild))
             {
                 currentSymtab = ichild.getSymbolTable();

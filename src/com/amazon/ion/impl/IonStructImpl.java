@@ -91,7 +91,7 @@ public final class IonStructImpl
         _field_map = new HashMap<String, Integer>(size);
         int count = get_child_count();
         for (int ii=0; ii<count; ii++) {
-            IonValueImpl v = (IonValueImpl)get_child(ii);
+            IonValueImpl v = get_child(ii);
             String name = v.getFieldName();
             _field_map.put(name, ii);
         }
@@ -101,7 +101,7 @@ public final class IonStructImpl
     {
         int size = get_child_count();
         for (int ii=0; ii<size; ii++) {
-            IonValueImpl field = (IonValueImpl)get_child(ii);
+            IonValueImpl field = get_child(ii);
             if (fieldName.equals(field.getFieldName())) {
                 return ii;
             }
