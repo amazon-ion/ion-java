@@ -3,7 +3,6 @@
 package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
-import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeSystemReader;
 
 import com.amazon.ion.ContainedValueException;
@@ -20,9 +19,9 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl.UnifiedSymbolTable;
 import com.amazon.ion.impl._Private_IonBinaryWriterImpl;
 import com.amazon.ion.impl._Private_IonDatagram;
+import com.amazon.ion.impl._Private_Utils;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Array;
@@ -143,7 +142,7 @@ public class IonDatagramLite
     {
         assert child._context == this;
 
-        if (isNonSystemSharedTable(symbols)) {
+        if (_Private_Utils.symtabIsSharedNotSystem(symbols)) {
             throw new IllegalArgumentException("you can only set a symbol table to a system or local table");
         }
 
@@ -1115,17 +1114,14 @@ public class IonDatagramLite
                 SymbolTable new_symbol_table = curr_symtab;
                 while (new_symbol_table != null)
                 {
-                    if ((new_symbol_table instanceof UnifiedSymbolTable) == false) {
-                        throw new IonException("only UnifiedSymbolTable instances are currently supported by IonDatagramLite");
-                    }
-
                     final boolean new_symbol_table_is_system = new_symbol_table.isSystemTable();
                     IonValue rep;
                     if (new_symbol_table_is_system) {
                         rep = __iterator.get_datagram_ivm();
                     }
                     else {
-                        rep = ((UnifiedSymbolTable)new_symbol_table).getIonRepresentation(this.__iterator.get_datagram_system());
+                        IonSystem sys = __iterator.get_datagram_system();
+                        rep = _Private_Utils.symtabTree(sys, new_symbol_table);
                     }
                     assert(rep != null && __iterator.get_datagram_system() == rep.getSystem());
 
@@ -1227,7 +1223,7 @@ public class IonDatagramLite
             int count = 0;
             while (curr.isLocalTable()) {
                 count++;
-                curr = ((UnifiedSymbolTable)curr).getIonRepresentation(sys).getSymbolTable();
+                curr = _Private_Utils.symtabTree(sys, curr).getSymbolTable();
             }
             // we should terminate when the symbol tables symbol table is the system symbol table
             assert(curr != null);

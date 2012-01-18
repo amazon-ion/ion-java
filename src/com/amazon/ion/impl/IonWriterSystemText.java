@@ -3,10 +3,10 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.SYMBOLS;
+import static com.amazon.ion.impl.IonWriterUserText.builderFor;
 import static com.amazon.ion.impl._Private_IonConstants.tidList;
 import static com.amazon.ion.impl._Private_IonConstants.tidSexp;
 import static com.amazon.ion.impl._Private_IonConstants.tidStruct;
-import static com.amazon.ion.impl.IonWriterUserText.builderFor;
 import static com.amazon.ion.system.IonTextWriterBuilder.ASCII;
 
 import com.amazon.ion.Decimal;
@@ -425,9 +425,8 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
         // TODO ION-274 this always suppresses local symtabs w/o imports
         SymbolTable[] imports = symtab.getImportedTables();
         if (imports.length > 0) {
-            // TODO: remove cast below with update IonReader over symbol table
-            IonReader reader =
-                ((UnifiedSymbolTable)symtab).getReader();
+            IonReader reader = new UnifiedSymbolTableReader(symtab);
+
             // move onto and write the struct header
             IonType t = reader.next();
             assert(IonType.STRUCT.equals(t));

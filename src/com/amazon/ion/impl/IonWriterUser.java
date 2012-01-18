@@ -6,9 +6,7 @@ import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
-import static com.amazon.ion.impl.UnifiedSymbolTable.initialSymbolTable;
-import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
-import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
+import static com.amazon.ion.impl._Private_Utils.initialSymtab;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
@@ -132,8 +130,7 @@ abstract class IonWriterUser
             systemWriter.getDefaultSystemSymtab();
 
         SymbolTable initialSymtab =
-            initialSymbolTable(symtabValueFactory, defaultSystemSymtab,
-                               imports);
+            initialSymtab(symtabValueFactory, defaultSystemSymtab, imports);
         if (initialSymtab.isLocalTable() || initialSymtab != defaultSystemSymtab)
         {
             try {
@@ -263,9 +260,10 @@ abstract class IonWriterUser
 
         // convert the struct we just wrote with the TreeWriter to a
         // local symbol table
-        UnifiedSymbolTable symtab =
-            makeNewLocalSymbolTable(activeSystemSymbolTable(),
-                                    _catalog, _symbol_table_value);
+        SymbolTable symtab =
+            _Private_Utils.newLocalSymtab(activeSystemSymbolTable(),
+                                          _catalog,
+                                          _symbol_table_value);
 
         _symbol_table_value = null;
         _current_writer     = _system_writer;
@@ -279,7 +277,7 @@ abstract class IonWriterUser
     public final void setSymbolTable(SymbolTable symbols)
         throws IOException
     {
-        if (symbols == null || isNonSystemSharedTable(symbols)) {
+        if (symbols == null || _Private_Utils.symtabIsSharedNotSystem(symbols)) {
             throw new IllegalArgumentException("symbol table must be local or system to be set, or reset");
         }
 

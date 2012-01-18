@@ -4,9 +4,9 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.impl.IonValueImpl.makeValueFromReader;
-import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_1_0;
 import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_SIZE;
+import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
@@ -392,7 +392,7 @@ class SystemValueIteratorImpl
     {
         SymbolTable symbols = this.getSymbolTable();
         if (! symbols.isLocalTable()) {
-            symbols = makeNewLocalSymbolTable(_system, symbols);
+            symbols = newLocalSymtab(_system, symbols);
             _currentSymbolTable = symbols;
         }
         return symbols;
@@ -521,8 +521,7 @@ class SystemValueIteratorImpl
         {
             IonStruct struct = (IonStruct)curr;
             SymbolTable sys = _system.getSystemSymbolTable();
-            _currentSymbolTable =
-                makeNewLocalSymbolTable(sys, _catalog, struct);
+            _currentSymbolTable = newLocalSymtab(sys, _catalog, struct);
             _currentIsHidden = true;
             _just_wrote_ivm = false;
         }

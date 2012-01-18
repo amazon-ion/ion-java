@@ -327,9 +327,9 @@ public final class IonWriterSystemBinary  // TODO protect, must fix IonStreamUti
     }
 
     @Override
-    final UnifiedSymbolTable inject_local_symbol_table() throws IOException
+    final SymbolTable inject_local_symbol_table() throws IOException
     {
-        UnifiedSymbolTable symbols = super.inject_local_symbol_table();
+        SymbolTable symbols = super.inject_local_symbol_table();
         set_symbol_table_prepend_new_local_table(symbols);
         return symbols;
     }

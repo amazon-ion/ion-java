@@ -8,13 +8,11 @@ import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemIterator;
-import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
-import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewSharedSymbolTable;
-import static com.amazon.ion.impl.UnifiedSymbolTable.newSystemSymbolTable;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeReader;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeSystemReader;
 import static com.amazon.ion.impl._Private_Utils.UTF8_CHARSET;
 import static com.amazon.ion.impl._Private_Utils.addAllNonNull;
+import static com.amazon.ion.impl._Private_Utils.systemSymtab;
 import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
@@ -79,7 +77,7 @@ public final class IonSystemImpl
 {
     public static final int SYSTEM_VERSION = 1;
 
-    private final UnifiedSymbolTable mySystemSymbols;
+    private final SymbolTable mySystemSymbols;
 
     /** Not null. */
     private final IonCatalog myCatalog;
@@ -97,7 +95,7 @@ public final class IonSystemImpl
         assert catalog != null;
         myCatalog = catalog;
         myLoader = new LoaderImpl(this, myCatalog);
-        mySystemSymbols = newSystemSymbolTable(SYSTEM_VERSION);
+        mySystemSymbols = systemSymtab(SYSTEM_VERSION);
         myStreamCopyOptimized = streamCopyOptimized;
 
         IonTextWriterBuilder twb =
@@ -107,13 +105,13 @@ public final class IonSystemImpl
     }
 
 
-    public final UnifiedSymbolTable getSystemSymbolTable()
+    public final SymbolTable getSystemSymbolTable()
     {
         return mySystemSymbols;
     }
 
 
-    public UnifiedSymbolTable getSystemSymbolTable(String ionVersionId)
+    public SymbolTable getSystemSymbolTable(String ionVersionId)
         throws UnsupportedIonVersionException
     {
         if (!ION_1_0.equals(ionVersionId)) {
@@ -129,37 +127,32 @@ public final class IonSystemImpl
     }
 
 
-    public UnifiedSymbolTable newLocalSymbolTable(SymbolTable... imports)
+    public SymbolTable newLocalSymbolTable(SymbolTable... imports)
     {
-        UnifiedSymbolTable st =
-            makeNewLocalSymbolTable(this, mySystemSymbols, imports);
-        return st;
+        return _Private_Utils.newLocalSymtab(this, mySystemSymbols, imports);
     }
 
 
-    public UnifiedSymbolTable newSharedSymbolTable(IonStruct ionRep)
+    public SymbolTable newSharedSymbolTable(IonStruct ionRep)
     {
-        UnifiedSymbolTable st = makeNewSharedSymbolTable(ionRep);
-        return st;
+        return _Private_Utils.newSharedSymtab(ionRep);
     }
 
-    public UnifiedSymbolTable newSharedSymbolTable(IonReader reader)
+    public SymbolTable newSharedSymbolTable(IonReader reader)
     {
-        UnifiedSymbolTable st = makeNewSharedSymbolTable(reader, false);
-        return st;
+        return _Private_Utils.newSharedSymtab(reader, false);
     }
 
-    public UnifiedSymbolTable newSharedSymbolTable(IonReader reader,
-                                                   boolean isOnStruct)
+    public SymbolTable newSharedSymbolTable(IonReader reader,
+                                            boolean isOnStruct)
     {
-        UnifiedSymbolTable st = makeNewSharedSymbolTable(reader, isOnStruct);
-        return st;
+        return _Private_Utils.newSharedSymtab(reader, isOnStruct);
     }
 
-    public UnifiedSymbolTable newSharedSymbolTable(String name,
-                                                   int version,
-                                                   Iterator<String> newSymbols,
-                                                   SymbolTable... imports)
+    public SymbolTable newSharedSymbolTable(String name,
+                                            int version,
+                                            Iterator<String> newSymbols,
+                                            SymbolTable... imports)
     {
         // TODO streamline to avoid making this collection
         ArrayList<String> syms = new ArrayList<String>();
@@ -186,9 +179,9 @@ public final class IonSystemImpl
 
         addAllNonNull(syms, newSymbols);
 
-        UnifiedSymbolTable st =
-            makeNewSharedSymbolTable(name, version, prior, syms.iterator());
-
+        SymbolTable st =
+            _Private_Utils.newSharedSymtab(name, version, prior,
+                                           syms.iterator());
         return st;
     }
 
@@ -233,7 +226,7 @@ public final class IonSystemImpl
     public IonDatagram newDatagram(SymbolTable... imports)
     {
         // TODO this implementation is awkward.
-        UnifiedSymbolTable lst = newLocalSymbolTable(imports);
+        SymbolTable lst = newLocalSymbolTable(imports);
 
         IonDatagramImpl datagram = newDatagram();
         datagram.appendTrailingSymbolTable(lst);

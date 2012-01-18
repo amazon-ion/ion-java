@@ -9,6 +9,7 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.SymbolTable;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
@@ -23,7 +24,7 @@ public interface _Private_IonSystem
     /* constructor */
     // public IonSystemImpl(IonCatalog catalog);
 
-    public UnifiedSymbolTable newSharedSymbolTable(IonStruct ionRep);
+    public SymbolTable newSharedSymbolTable(IonStruct ionRep);
 
     /**
      * TODO Must correct ION-160 before exposing this or using from public API.

@@ -61,7 +61,7 @@ abstract public class IonReaderBinaryRawX
     boolean             _value_is_true;   // cached boolean value (since we step on the length)
 
     /**
-     * {@link UnifiedSymbolTable#UNKNOWN_SID} means "not on a struct field"
+     * {@link SymbolTable#UNKNOWN_SYMBOL_ID} means "not on a struct field"
      * since otherwise we always know the SID.
      */
     int                 _value_field_id;

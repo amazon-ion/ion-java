@@ -246,7 +246,7 @@ class UnifiedSymbolTableImports
             _idx = 0;
             if (hasSystemSymbolsImported()) {
                 _idx++;
-                assert(UnifiedSymbolTable.isSharedTable(_imports[0]));
+                assert _imports[0].isSharedTable();
             }
         }
 
@@ -263,7 +263,7 @@ class UnifiedSymbolTableImports
             while (_idx < _import_count) {
                 SymbolTable obj = _imports[_idx];
                 _idx++;
-                assert(UnifiedSymbolTable.isSystemTable(obj) == false);
+                assert ! obj.isSystemTable();
                 return obj;
             }
             return null;

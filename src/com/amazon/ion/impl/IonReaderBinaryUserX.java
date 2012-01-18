@@ -5,7 +5,7 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
-import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
+import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
@@ -239,12 +239,12 @@ class IonReaderBinaryUserX
                 for(int ii=0; ii<count; ii++) {
                     if (_annotation_ids[ii] == ION_SYMBOL_TABLE_SID) {
                         _symbols =
-                            makeNewLocalSymbolTable(_system,
-                                                    // TODO should be current symtab:
-                                                    _system.getSystemSymbolTable(),
-                                                    _catalog,
-                                                    this,
-                                                    false);
+                            newLocalSymtab(_system,
+                                           // TODO should be current symtab:
+                                           _system.getSystemSymbolTable(),
+                                           _catalog,
+                                           this,
+                                           false);
                         push_symbol_table(_symbols);
                         _has_next_needed = true;
                         break;

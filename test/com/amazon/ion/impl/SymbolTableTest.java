@@ -13,6 +13,7 @@ import static com.amazon.ion.SystemSymbols.NAME_SID;
 import static com.amazon.ion.SystemSymbols.SYMBOLS;
 import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.impl._Private_Utils.stringIterator;
+import static com.amazon.ion.impl._Private_Utils.symtabTree;
 
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
@@ -755,9 +756,9 @@ public class SymbolTableTest
     {
         SymbolTable st = system().newLocalSymbolTable();
         st.addSymbol("foo");
-        IonStruct image = ((UnifiedSymbolTable)st).getIonRepresentation(system());
+        IonStruct image = symtabTree(system(), st);
         st.addSymbol("bar");
-        image = ((UnifiedSymbolTable)st).getIonRepresentation(system());
+        image = symtabTree(system(), st);
         IonList symbols = (IonList) image.get(SYMBOLS);
         assertEquals("[\"foo\",\"bar\"]", symbols.toString());
     }
@@ -1028,7 +1029,7 @@ public class SymbolTableTest
         IonStruct stStruct = writeIonRep(st);
         checkFirstImport(name, version, expectedSymbols, stStruct);
 
-        stStruct = ((UnifiedSymbolTable) st).getIonRepresentation(system());
+        stStruct = _Private_Utils.symtabTree(system(), st);
         checkFirstImport(name, version, expectedSymbols, stStruct);
 
         SymbolTable importedTable = st.getImportedTables()[0];

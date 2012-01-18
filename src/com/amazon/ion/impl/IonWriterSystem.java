@@ -3,8 +3,7 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
-import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
+import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
 import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
 import static com.amazon.ion.impl._Private_Utils.newSymbolTokens;
 
@@ -83,7 +82,7 @@ abstract class IonWriterSystem
     public final void setSymbolTable(SymbolTable symbols)
         throws IOException
     {
-        if (symbols == null || isNonSystemSharedTable(symbols)) {
+        if (symbols == null || _Private_Utils.symtabIsSharedNotSystem(symbols)) {
             throw new IllegalArgumentException("symbol table must be local or system to be set, or reset");
         }
         if (getDepth() > 0) {
@@ -125,12 +124,12 @@ abstract class IonWriterSystem
      * (a system symtab).
      * @return not null.
      */
-    UnifiedSymbolTable inject_local_symbol_table() throws IOException
+    SymbolTable inject_local_symbol_table() throws IOException
     {
         assert _symbol_table.isSystemTable();
         // no catalog since it doesn't matter as this is a
         // pure local table, with no imports
-        return makeNewLocalSymbolTable(null /*system*/, _symbol_table);
+        return newLocalSymtab(null /*system*/, _symbol_table);
     }
 
     @Override
@@ -231,7 +230,7 @@ abstract class IonWriterSystem
     {
         _field_name_type = null;
         _field_name = null;
-        _field_name_sid = UnifiedSymbolTable.UNKNOWN_SYMBOL_ID;
+        _field_name_sid = UNKNOWN_SYMBOL_ID;
     }
 
 

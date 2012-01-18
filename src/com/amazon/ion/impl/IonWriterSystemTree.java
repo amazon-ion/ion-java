@@ -2,7 +2,8 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
+import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
+import static com.amazon.ion.impl._Private_Utils.valueIsLocalSymbolTable;
 
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonCatalog;
@@ -211,12 +212,12 @@ final class IonWriterSystemTree
         popParent();
 
         if (_current_parent instanceof IonDatagram
-            && UnifiedSymbolTable.valueIsLocalSymbolTable(prior))
+            && valueIsLocalSymbolTable(prior))
         {
             // We just finish writing a symbol table!
             SymbolTable symbol_table =
-                makeNewLocalSymbolTable(_default_system_symbol_table,
-                                        _catalog, (IonStruct) prior);
+                newLocalSymtab(_default_system_symbol_table,
+                               _catalog, (IonStruct) prior);
             setSymbolTable(symbol_table);
         }
     }
@@ -244,9 +245,9 @@ final class IonWriterSystemTree
     }
 
     @Override
-    final UnifiedSymbolTable inject_local_symbol_table() throws IOException
+    final SymbolTable inject_local_symbol_table() throws IOException
     {
-        return makeNewLocalSymbolTable(_factory, getSymbolTable());
+        return newLocalSymtab(_factory, getSymbolTable());
     }
 
     //========================================================================

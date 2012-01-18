@@ -4,9 +4,9 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
-import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
-import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.impl._Private_Utils.isTrivialTable;
+import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
 import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
 import static com.amazon.ion.impl._Private_Utils.newSymbolTokens;
 import static com.amazon.ion.util.Equivalence.ionEquals;
@@ -757,16 +757,14 @@ public abstract class IonValueImpl
         IonValueImpl topLevel = topLevelValue();
         SymbolTable symbols = topLevel.getSymbolTable();
 
-        if (UnifiedSymbolTable.isLocalTable(symbols)) {
-            return symbols;
-        }
-
         if (symbols == null) {
             symbols = _system.getSystemSymbolTable();
         }
 
-        symbols = makeNewLocalSymbolTable(_system, symbols);
-        topLevel.setSymbolTable(symbols);
+        if (! symbols.isLocalTable()) {
+            symbols = newLocalSymtab(_system, symbols);
+            topLevel.setSymbolTable(symbols);
+        }
 
         return symbols;
     }
@@ -862,7 +860,7 @@ public abstract class IonValueImpl
         assert resolveSymbol(name) == UNKNOWN_SYMBOL_ID;
         assert symbols == this.getSymbolTable();
 
-        if (UnifiedSymbolTable.isLocalTable(symbols) == false) {
+        if (symbols == null || ! symbols.isLocalTable()) {
             symbols = getUpdatableSymbolTable();
         }
         checkForLock();
@@ -873,7 +871,7 @@ public abstract class IonValueImpl
 
 
     public void setSymbolTable(SymbolTable symtab) {
-        if (isNonSystemSharedTable(symtab)) {
+        if (_Private_Utils.symtabIsSharedNotSystem(symtab)) {
             throw new IllegalArgumentException("symbol table must be local or system");
         }
 
@@ -881,7 +879,7 @@ public abstract class IonValueImpl
         SymbolTable  currentSymtab = top.getSymbolTable();
         if (currentSymtab != symtab) {
             checkForLock();
-            if (UnifiedSymbolTable.isTrivialTable(currentSymtab) == false) {
+            if (isTrivialTable(currentSymtab) == false) {
                 top.detachFromSymbolTable(); // Calls setDirty
             }
             else {
@@ -1382,7 +1380,7 @@ public abstract class IonValueImpl
             }
             assert symtab.isSystemTable();
             synchronized (this) {
-                symtab = makeNewLocalSymbolTable(_system, symtab);
+                symtab = newLocalSymtab(_system, symtab);
                 this.setSymbolTable(symtab);
             }
         }

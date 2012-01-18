@@ -4,7 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
-import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
+import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
@@ -138,11 +138,11 @@ public class IonReaderTextUserX
                             SymbolToken a = _annotations[ii];
                             // TODO SID only?
                             if (ION_SYMBOL_TABLE.equals(a.getText())) {
-                                _symbols = makeNewLocalSymbolTable(_system,
-                                                                   _system.getSystemSymbolTable(),
-                                                                   _catalog,
-                                                                   this,
-                                                                   true);
+                                _symbols = newLocalSymtab(_system,
+                                                          _system.getSystemSymbolTable(),
+                                                          _catalog,
+                                                          this,
+                                                          true);
                                 push_symbol_table(_symbols);
                                 _has_next_called = false;
                                 break;
@@ -180,7 +180,7 @@ public class IonReaderTextUserX
     {
         if (_symbols == null) {
             SymbolTable system_symbols = _system.getSystemSymbolTable();
-            _symbols = makeNewLocalSymbolTable(_system, system_symbols);
+            _symbols = newLocalSymtab(_system, system_symbols);
         }
         return _symbols;
     }

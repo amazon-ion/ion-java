@@ -3,15 +3,21 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
 
 import com.amazon.ion.EmptySymbolException;
+import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
+import com.amazon.ion.IonStruct;
+import com.amazon.ion.IonSystem;
+import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
+import com.amazon.ion.ValueFactory;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.Reader;
 import com.amazon.ion.system.IonTextWriterBuilder;
@@ -672,6 +678,166 @@ public final class _Private_Utils
         return s;
     }
 
+
+    //========================================================================
+    // Symbol Table helpers
+
+    /**
+     * Checks the passed in value and returns whether or not
+     * the value could be a local symbol table.  It does this
+     * by checking the type and annotations.
+     *
+     * @return boolean true if v can be a local symbol table otherwise false
+     */
+    public static boolean valueIsLocalSymbolTable(IonValue v)
+    {
+        return (v instanceof IonStruct
+                && v.hasTypeAnnotation(ION_SYMBOL_TABLE));
+    }
+
+
+    /** Indicates whether a table is shared but not a system table. */
+    public static final boolean symtabIsSharedNotSystem(SymbolTable symtab)
+    {
+        return (symtab != null
+                && symtab.isSharedTable()
+                && ! symtab.isSystemTable());
+    }
+
+
+    public static boolean symtabIsLocalAndNonTrivial(SymbolTable symtab)
+    {
+        if (symtab == null) return false;
+        if (!symtab.isLocalTable()) return false;
+
+        // If symtab has imports we must retain it.
+        // Note that I chose to retain imports even in the degenerate case
+        // where the imports have no symbols.
+        if (symtab.getImportedTables().length > 0) {
+            return true;
+        }
+
+        if (symtab.getImportedMaxId() < symtab.getMaxId()) {
+            return true;
+        }
+
+        return false;
+    }
+
+
+    /**
+     * Is the table null, system, or local without imported symbols?
+     */
+    public static boolean isTrivialTable(SymbolTable table)
+    {
+        if (table == null)         return true;
+        if (table.isSystemTable()) return true;
+        if (table.isLocalTable()) {
+            // this is only true when there are no local
+            // symbols defined
+            // and there are no imports with any symbols
+            if (table.getMaxId() == table.getSystemSymbolTable().getMaxId()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+    public static SymbolTable systemSymtab(int version)
+    {
+        return UnifiedSymbolTable.systemSymbolTable(version);
+    }
+
+
+    public static SymbolTable newSharedSymtab(IonStruct ionRep)
+    {
+        return UnifiedSymbolTable.makeNewSharedSymbolTable(ionRep);
+    }
+
+
+    public static SymbolTable newSharedSymtab(IonReader reader,
+                                              boolean alreadyInStruct)
+    {
+        return UnifiedSymbolTable.makeNewSharedSymbolTable(reader,
+                                                           alreadyInStruct);
+    }
+
+
+    /**
+     * As per {@link IonSystem#newSharedSymbolTable(String, int, Iterator, SymbolTable...)},
+     * any duplicate or null symbol texts are skipped.
+     * Therefore, <b>THIS METHOD IS NOT SUITABLE WHEN READING SERIALIZED
+     * SHARED SYMBOL TABLES</b> since that scenario must preserve all sids.
+     *
+     * @param priorSymtab may be null.
+     */
+    public static SymbolTable newSharedSymtab(String name,
+                                              int version,
+                                              SymbolTable priorSymtab,
+                                              Iterator<String> symbols)
+    {
+        return UnifiedSymbolTable.makeNewSharedSymbolTable(name,
+                                                           version,
+                                                           priorSymtab,
+                                                           symbols);
+    }
+
+
+    public static SymbolTable newLocalSymtab(ValueFactory imageFactory,
+                                             SymbolTable systemSymtab,
+                                             SymbolTable... imports)
+    {
+        return UnifiedSymbolTable.makeNewLocalSymbolTable(imageFactory,
+                                                          systemSymtab,
+                                                          imports);
+    }
+
+
+    public static SymbolTable newLocalSymtab(SymbolTable systemSymbtab,
+                                             IonCatalog catalog,
+                                             IonStruct ionRep)
+    {
+        return UnifiedSymbolTable.makeNewLocalSymbolTable(systemSymbtab,
+                                                          catalog,
+                                                          ionRep);
+    }
+
+
+    public static SymbolTable newLocalSymtab(ValueFactory imageFactory,
+                                             SymbolTable systemSymbolTable,
+                                             IonCatalog catalog,
+                                             IonReader reader,
+                                             boolean alreadyInStruct)
+    {
+        return UnifiedSymbolTable.makeNewLocalSymbolTable(imageFactory,
+                                                          systemSymbolTable,
+                                                          catalog,
+                                                          reader,
+                                                          alreadyInStruct);
+    }
+
+
+    public static SymbolTable initialSymtab(ValueFactory imageFactory,
+                                            SymbolTable defaultSystemSymtab,
+                                            SymbolTable... imports)
+    {
+        return UnifiedSymbolTable.initialSymbolTable(imageFactory,
+                                                     defaultSystemSymtab,
+                                                     imports);
+    }
+
+
+    /**
+     * Trampoline to
+     * {@link UnifiedSymbolTable#getIonRepresentation(ValueFactory)};
+     */
+    public static IonStruct symtabTree(ValueFactory vf, SymbolTable symtab)
+    {
+        return ((UnifiedSymbolTable)symtab).getIonRepresentation(vf);
+    }
+
+
     public static boolean symtabExtends(SymbolTable superset, SymbolTable subset)
     {
         if (superset == subset) return true;
@@ -711,6 +877,9 @@ public final class _Private_Utils
 
         return false;
     }
+
+
+    //========================================================================
 
 
     /**

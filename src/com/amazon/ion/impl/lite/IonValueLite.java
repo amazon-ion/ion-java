@@ -3,7 +3,6 @@
 package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
 import static com.amazon.ion.util.Equivalence.ionEquals;
@@ -22,7 +21,6 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl.UnifiedSymbolTable;
 import com.amazon.ion.impl._Private_IonValue;
 import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.util.Printer;
@@ -510,13 +508,10 @@ abstract class IonValueLite
     public SymbolTable getUpdatableSymbolTable()
     {
         SymbolTable symbols = getSymbolTable();
-        if (UnifiedSymbolTable.isLocalTable(symbols)) {
-            return symbols;
-        }
-        if (symbols == null) {
+        if (symbols == null || ! symbols.isLocalTable()) {
             IonSystem system = getSystem();
             symbols = system.getSystemSymbolTable();
-            symbols = makeNewLocalSymbolTable(system, symbols);
+            symbols = _Private_Utils.newLocalSymtab(system, symbols);
         }
         return symbols;
     }

@@ -1,12 +1,10 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
-import static com.amazon.ion.impl.UnifiedSymbolTable.isNonSystemSharedTable;
-
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.impl.UnifiedSymbolTable;
+import com.amazon.ion.impl._Private_Utils;
 
 
 /**
@@ -60,7 +58,7 @@ final class TopLevelContext
                                 SymbolTable symbols,
                                 IonValueLite child)
     {
-        if (isNonSystemSharedTable(symbols)) {
+        if (_Private_Utils.symtabIsSharedNotSystem(symbols)) {
             throw new IllegalArgumentException("you can only set a symbol table to a system or local table");
         }
 
@@ -86,7 +84,7 @@ final class TopLevelContext
         SymbolTable parent_symbols = parent.getSymbolTable();
         SymbolTable child_symbols = child.getAssignedSymbolTable();
 
-        if (UnifiedSymbolTable.isLocalAndNonTrivial(child_symbols)) {
+        if (_Private_Utils.symtabIsLocalAndNonTrivial(child_symbols)) {
             // we may have a problem here ...
             if (child_symbols != parent_symbols) {
                 // perhaps we should throw
@@ -184,7 +182,7 @@ final class TopLevelContext
         // value.  That is the owning context is null, a datagram
         // of a system intance.
 
-        if (isNonSystemSharedTable(symbols)) {
+        if (_Private_Utils.symtabIsSharedNotSystem(symbols)) {
             throw new IllegalArgumentException("you can only set a symbol table to a system or local table");
         }
         _symbols = symbols;
