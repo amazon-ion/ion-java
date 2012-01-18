@@ -14,8 +14,8 @@ import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
-import com.amazon.ion.impl.IonScalarConversionsX.ValueVariant;
+import com.amazon.ion.impl._Private_ScalarConversions.AS_TYPE;
+import com.amazon.ion.impl._Private_ScalarConversions.ValueVariant;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -121,9 +121,9 @@ class IonReaderBinarySystemX
 
             if (!_v.can_convert(as_type)) {
                 String message = "can't cast from "
-                    +IonScalarConversionsX.getValueTypeName(_v.getAuthoritativeType())
+                    +_Private_ScalarConversions.getValueTypeName(_v.getAuthoritativeType())
                     +" to "
-                    +IonScalarConversionsX.getValueTypeName(as_type);
+                    +_Private_ScalarConversions.getValueTypeName(as_type);
                 throw new IllegalStateException(message);
             }
             int fnid = _v.get_conversion_fnid(as_type);

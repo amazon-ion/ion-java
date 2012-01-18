@@ -13,9 +13,9 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
-import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
-import com.amazon.ion.impl.IonScalarConversionsX.ValueVariant;
 import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
+import com.amazon.ion.impl._Private_ScalarConversions.AS_TYPE;
+import com.amazon.ion.impl._Private_ScalarConversions.ValueVariant;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Iterator;
@@ -395,7 +395,7 @@ public abstract class IonReaderTextRawX
         clear_current_value_buffer();
         _value_type = _null_type;
         _v.setValueToNull(null_type);
-        _v.setAuthoritativeType(IonScalarConversionsX.AS_TYPE.null_value);
+        _v.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.null_value);
     }
 
     private final void current_value_is_bool(boolean value)
@@ -403,7 +403,7 @@ public abstract class IonReaderTextRawX
         clear_current_value_buffer();
         _value_type = IonType.BOOL;
         _v.setValue(value);
-        _v.setAuthoritativeType(IonScalarConversionsX.AS_TYPE.boolean_value);
+        _v.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.boolean_value);
     }
 
     private final void set_fieldname(SymbolToken sym) {

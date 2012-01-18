@@ -2,7 +2,7 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl.IonScalarConversionsX.getValueTypeName;
+import static com.amazon.ion.impl._Private_ScalarConversions.getValueTypeName;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBlob;
@@ -22,8 +22,8 @@ import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.IonReaderTextRawTokensX.IonReaderTextTokenException;
-import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
-import com.amazon.ion.impl.IonScalarConversionsX.CantConvertException;
+import com.amazon.ion.impl._Private_ScalarConversions.AS_TYPE;
+import com.amazon.ion.impl._Private_ScalarConversions.CantConvertException;
 import com.amazon.ion.impl.IonTokenConstsX.CharacterSequence;
 import java.io.IOException;
 import java.math.BigDecimal;
