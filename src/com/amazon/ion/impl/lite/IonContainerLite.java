@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -13,20 +13,18 @@ import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl._Private_IonConstants;
-import com.amazon.ion.impl.IonContainerPrivate;
 import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.impl._Private_IonConstants;
+import com.amazon.ion.impl._Private_IonContainer;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
 
-/**listIterator
- *
- */
+
 public abstract class IonContainerLite
     extends IonValueLite
-    implements IonContainerPrivate, IonContext
+    implements _Private_IonContainer, IonContext
 {
 
     protected int            _child_count;

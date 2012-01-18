@@ -83,7 +83,7 @@ class IonReaderTreeSystem
         if (value instanceof IonDatagram) {
             // datagrams interacting with these readers must be
             // IonContainerPrivate containers
-            assert(value instanceof IonContainerPrivate);
+            assert(value instanceof _Private_IonContainer);
             IonDatagram dg = (IonDatagram) value;
             _parent = dg;
             _next = null;
@@ -494,13 +494,13 @@ class IonReaderTreeSystem
     {
         boolean             _eof;
         int                 _next_idx;
-        IonContainerPrivate _parent;
+        _Private_IonContainer _parent;
         IonValue            _curr;
 
         Children(IonContainer parent)
         {
-            if (parent instanceof IonContainerPrivate) {
-                _parent = (IonContainerPrivate)parent;
+            if (parent instanceof _Private_IonContainer) {
+                _parent = (_Private_IonContainer)parent;
 
 if (_parent instanceof IonValueImpl) {
 ((IonValueImpl)_parent).makeReady();

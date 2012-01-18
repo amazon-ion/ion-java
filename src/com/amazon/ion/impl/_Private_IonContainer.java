@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -9,7 +9,7 @@ import com.amazon.ion.SymbolTable;
 /**
  *
  */
-public interface IonContainerPrivate
+public interface _Private_IonContainer
     extends IonContainer
 {
     /**

@@ -26,7 +26,7 @@ import java.util.NoSuchElementException;
  */
 abstract public class IonContainerImpl
     extends IonValueImpl
-    implements IonContainerPrivate
+    implements _Private_IonContainer
 {
     /**
      * sizes for the various types of containers
