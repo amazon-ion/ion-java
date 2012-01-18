@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -8,7 +8,6 @@ import com.amazon.ion.NullValueException;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.Timestamp.Precision;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl._Private_IonConstants;
 import java.math.BigDecimal;
 import java.util.Date;
 
@@ -62,10 +61,6 @@ implements IonTimestamp
         throw new IllegalStateException("unrecognized precision"+isIncluded);
     }
 
-
-    static final int NULL_TIMESTAMP_TYPEDESC =
-        _Private_IonConstants.makeTypeDescriptor(_Private_IonConstants.tidTimestamp,
-                                        _Private_IonConstants.lnIsNullAtom);
 
     private Timestamp _timestamp_value;
 
