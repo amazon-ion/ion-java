@@ -89,9 +89,19 @@ public class IonSymbolLite
     @Override
     public int hashCode() {
         int hash = HASH_SIGNATURE;
-        if (!isNullValue())  {
-            // TODO ION-266 broken when symbol text in unknown
-            hash ^= stringValue().hashCode();
+        if (!isNullValue())
+        {
+            SymbolToken token = symbolValue();
+            String text = token.getText();
+            if (text != null)
+            {
+                hash ^= text.hashCode();
+            }
+            else
+            {
+                int sid = token.getSid();
+                hash ^= Integer.valueOf(sid).hashCode();
+            }
         }
         return hash;
     }
