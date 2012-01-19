@@ -37,7 +37,7 @@ import java.io.Reader;
  * single buffer.
  *
  */
-abstract class UnifiedInputStreamX
+public abstract class UnifiedInputStreamX
     implements Closeable
 {
     public static final int      EOF = -1;
