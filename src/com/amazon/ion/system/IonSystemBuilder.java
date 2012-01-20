@@ -153,6 +153,8 @@ public class IonSystemBuilder
      *
      * @return this instance, if immutable;
      * otherwise an immutable copy of this instance.
+     *
+     * @since IonJava R15
      */
     public IonSystemBuilder immutable()
     {
@@ -164,6 +166,8 @@ public class IonSystemBuilder
      *
      * @return this instance, if mutable;
      * otherwise a mutable copy of this instance.
+     *
+     * @since IonJava R15
      */
     public IonSystemBuilder mutable()
     {

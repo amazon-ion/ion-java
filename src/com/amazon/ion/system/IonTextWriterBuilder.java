@@ -30,6 +30,8 @@ import java.nio.charset.Charset;
  * This class is not intended to be used as an application extension point;
  * do not extend or implement it.
  * </b>
+ *
+ * @since IonJava R15
  */
 public abstract class IonTextWriterBuilder
     extends IonWriterBuilder

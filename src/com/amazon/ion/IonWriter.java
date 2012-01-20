@@ -200,6 +200,8 @@ public interface IonWriter
      * @throws IllegalStateException if the current container isn't a struct,
      * that is, if {@link #isInStruct()} is false.
      * @throws NullPointerException if {@code name} is null.
+     *
+     * @since IonJava R15
      */
     public void setFieldNameSymbol(SymbolToken name);
 

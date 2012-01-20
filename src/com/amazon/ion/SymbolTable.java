@@ -65,6 +65,8 @@ public interface SymbolTable
      * at all (as is the case when no version of an imported table is found).
      * <p>
      * Substitute tables are always shared, non-system tables.
+     *
+     * @since IonJava R15
      */
     public boolean isSubstitute();
 
@@ -187,8 +189,11 @@ public interface SymbolTable
      * the text isn't already interned.
      *
      * @see #find(String)
+     *
+     * @since IonJava R15
      */
     public SymbolToken intern(String text);
+
 
     /**
      * Finds a symbol already interned by this table.
@@ -202,6 +207,8 @@ public interface SymbolTable
      *  or {@code null} if it's not already interned.
      *
      * @see #intern(String)
+     *
+     * @since IonJava R15
      */
     public SymbolToken find(String text);
 

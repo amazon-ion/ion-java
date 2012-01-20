@@ -209,6 +209,8 @@ public interface IonValue
      * {@link IonDatagram}.
      *
      * @throws UnsupportedOperationException if this is an {@link IonDatagram}.
+     *
+     * @since IonJava R15
      */
     public IonValue topLevelValue();
 

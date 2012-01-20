@@ -10,6 +10,8 @@ package com.amazon.ion.system;
  * This class is not intended to be used as an application extension point;
  * do not extend or implement it.
  * </b>
+ *
+ * @since IonJava R15
  */
 public abstract class IonWriterBuilder
 {
