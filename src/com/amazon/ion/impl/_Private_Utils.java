@@ -353,6 +353,13 @@ public final class _Private_Utils
     }
 
 
+    /**
+     * Extracts the non-null text from a list of symbol tokens.
+     *
+     * @return not null.
+     *
+     * @throws UnknownSymbolException if any token is missing text.
+     */
     public static String[] toStrings(SymbolToken[] symbols, int count)
     {
         if (count == 0) return _Private_Utils.EMPTY_STRING_ARRAY;
