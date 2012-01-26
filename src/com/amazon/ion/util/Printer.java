@@ -411,7 +411,6 @@ public class Printer
         }
         else
         {
-            // TODO ION-10
             // Bridge to the configurable test writer. This is here for
             // testing purposes. It *almost* works except for some wonkyness
             // at the IVM/symtab level where the two paths behave differently.

@@ -219,6 +219,8 @@ public interface IonValue
      * Gets the user type annotations attached to this value
      * as strings.  This will return an empty array if there are no annotations.
      *
+     * @throws UnknownSymbolException if any annotation has unknown text.
+     *
      * @deprecated Since 2008. Use {@link #getTypeAnnotations()} instead.
      */
     @Deprecated
@@ -226,8 +228,12 @@ public interface IonValue
 
 
     /**
-     * Gets the user type annotations attached to this value
-     * as strings.  This will return an empty array if there are no annotations.
+     * Gets this value's user type annotations as text.
+     *
+     * @return the (ordered) annotations on the current value, or an empty
+     * array (not {@code null}) if there are none.
+     *
+     * @throws UnknownSymbolException if any annotation has unknown text.
      */
     public String[] getTypeAnnotations();
 
