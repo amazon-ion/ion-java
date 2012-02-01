@@ -2,6 +2,7 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util.IonStreamUtils;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
@@ -58,6 +59,7 @@ import java.util.Date;
  * explains how to do that.
  *
  * @see IonStreamUtils
+ * @see IonTextWriterBuilder
  */
 public interface IonWriter
     extends Closeable, Flushable

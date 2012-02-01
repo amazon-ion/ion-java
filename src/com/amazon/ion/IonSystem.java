@@ -1,7 +1,8 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
+import com.amazon.ion.system.IonTextWriterBuilder;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -24,6 +25,8 @@ import java.util.Iterator;
  * see {@link com.amazon.ion.system.IonSystemBuilder}.
  * <p>
  * Implementations of this interface must be safe for use by multiple threads.
+ *
+ * @see IonTextWriterBuilder
  */
 public interface IonSystem
     extends ValueFactory
@@ -413,6 +416,8 @@ public interface IonSystem
      * Must not be null.
      *
      * @return a new {@link IonWriter} instance; not {@code null}.
+     *
+     * @see IonTextWriterBuilder
      */
     public IonWriter newTextWriter(OutputStream out);
 
@@ -424,6 +429,8 @@ public interface IonSystem
      * Must not be null.
      *
      * @return a new {@link IonWriter} instance; not {@code null}.
+     *
+     * @see IonTextWriterBuilder
      */
     public IonWriter newTextWriter(Appendable out);
 
@@ -441,6 +448,8 @@ public interface IonSystem
      * @return a new {@link IonWriter} instance; not {@code null}.
      *
      * @throws IOException if its thrown by the output stream.
+     *
+     * @see IonTextWriterBuilder
      */
     public IonWriter newTextWriter(OutputStream out, SymbolTable... imports)
         throws IOException;
@@ -460,6 +469,8 @@ public interface IonSystem
      * @return a new {@link IonWriter} instance; not {@code null}.
      *
      * @throws IOException if its thrown by the output stream.
+     *
+     * @see IonTextWriterBuilder
      */
     public IonWriter newTextWriter(Appendable out, SymbolTable... imports)
         throws IOException;
