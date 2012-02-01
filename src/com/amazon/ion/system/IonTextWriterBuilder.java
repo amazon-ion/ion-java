@@ -52,6 +52,9 @@ public abstract class IonTextWriterBuilder
      * properties having their default values.
      *
      * @return a new, mutable builder instance.
+     *
+     * @see #pretty()
+     * @see #json()
      */
     public static IonTextWriterBuilder standard()
     {
@@ -189,7 +192,7 @@ public abstract class IonTextWriterBuilder
      * Only ASCII and UTF-8 are supported; applications can use the helper
      * constants {@link #ASCII} and {@link #UTF8}.
      *
-     * @para charset may be null, denoting the default of UTF-8.
+     * @param charset may be null, denoting the default of UTF-8.
      *
      * @see #getCharset()
      * @see #withCharset(Charset)
@@ -217,7 +220,7 @@ public abstract class IonTextWriterBuilder
      * Only ASCII and UTF-8 are supported; applications can use the helper
      * constants {@link #ASCII} and {@link #UTF8}.
      *
-     * @para charset may be null, denoting the default of UTF-8.
+     * @param charset may be null, denoting the default of UTF-8.
      *
      * @return this instance, if mutable;
      * otherwise a mutable copy of this instance.
@@ -288,8 +291,8 @@ public abstract class IonTextWriterBuilder
     /**
      * {@inheritDoc}
      *
-     * @see #setInitialIvmHandling(InitialIvmHandling)
-     * @see #withInitialIvmHandling(InitialIvmHandling)
+     * @see #setInitialIvmHandling(IonWriterBuilder.InitialIvmHandling)
+     * @see #withInitialIvmHandling(IonWriterBuilder.InitialIvmHandling)
      */
     @Override
     public final InitialIvmHandling getInitialIvmHandling()
@@ -306,7 +309,7 @@ public abstract class IonTextWriterBuilder
      * Null indicates that explicitly-written IVMs will be emitted.
      *
      * @see #getInitialIvmHandling()
-     * @see #withInitialIvmHandling(InitialIvmHandling)
+     * @see #withInitialIvmHandling(IonWriterBuilder.InitialIvmHandling)
      *
      * @throws UnsupportedOperationException if this is immutable.
      */
@@ -327,8 +330,8 @@ public abstract class IonTextWriterBuilder
      * @return this instance, if mutable;
      * otherwise a mutable copy of this instance.
      *
-     * @see #setInitialIvmHandling(InitialIvmHandling)
-     * @see #withInitialIvmHandling(InitialIvmHandling)
+     * @see #setInitialIvmHandling(IonWriterBuilder.InitialIvmHandling)
+     * @see #withInitialIvmHandling(IonWriterBuilder.InitialIvmHandling)
      */
     public final IonTextWriterBuilder
     withInitialIvmHandling(InitialIvmHandling handling)

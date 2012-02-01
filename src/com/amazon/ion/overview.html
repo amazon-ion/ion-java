@@ -127,12 +127,15 @@ There's also several mechanisms for generating Ion data:
     generate Ion text, but it's primarily intended for debugging purposes and
     cannot be customized.  It's format is not guaranteed so don't assume that
     it will always output the same thing!
+  <li>{@link com.amazon.ion.IonValue#writeTo(IonWriter)} outputs Ion data in
+    the writer's format. This is the best way to output the data model.
   <li>From an {@link com.amazon.ion.IonDatagram IonDatagram} you can call
     {@link com.amazon.ion.IonDatagram#getBytes() getBytes()} to get Ion
     binary data.
 </ul>
 
-You can create {@code IonWriter}s using methods on {@code IonSystem}.
+You can create {@code IonWriter}s using methods on {@code IonSystem}, but the
+{@link com.amazon.ion.system.IonTextWriterBuilder} provides more flexibility.
 
 </body>
 </html>
