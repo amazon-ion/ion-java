@@ -251,6 +251,12 @@ public interface IonReader
 
     /**
      * Gets the current value's field name as a symbol token (text + ID).
+     * If the text of the token isn't known, the result's
+     * {@link SymbolToken#getText()} will be null.
+     * If the symbol ID of the token isn't known, the result's
+     * {@link SymbolToken#getSid()} will be
+     * {@link SymbolTable#UNKNOWN_SYMBOL_ID}.
+     * At least one of the two fields will be defined.
      *
      * @return null if there is no current value or if the current value is
      *  not a field of a struct.
