@@ -290,12 +290,32 @@ final class IonSystemImpl
 
     public Iterator<IonValue> iterate(byte[] ionData)
     {
+        boolean isBinary = isIonBinary(ionData);
+        if (isBinary)
+        {
+            // Don't go through a normal reader since that won't be lazy.
+            SystemValueIterator systemReader =
+                newBinarySystemIterator(null, ionData);
+            UserValueIterator userReader = new UserValueIterator(systemReader);
+            // Don't use buffer-clearing!
+            return userReader;
+        }
+
         IonReader reader = newReader(ionData);
         return new IonIteratorImpl(this, reader);
     }
 
     public Iterator<IonValue> systemIterate(byte[] ionData)
     {
+        boolean isBinary = isIonBinary(ionData);
+        if (isBinary)
+        {
+            // Don't go through a normal reader since that won't be lazy.
+            SystemValueIterator systemReader =
+                newBinarySystemIterator(null, ionData);
+            return systemReader;
+        }
+
         IonReader reader = newSystemReader(ionData);
         return new IonIteratorImpl(this, reader);
     }

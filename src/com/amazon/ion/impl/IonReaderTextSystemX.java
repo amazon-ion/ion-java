@@ -22,9 +22,9 @@ import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.IonReaderTextRawTokensX.IonReaderTextTokenException;
+import com.amazon.ion.impl.IonTokenConstsX.CharacterSequence;
 import com.amazon.ion.impl._Private_ScalarConversions.AS_TYPE;
 import com.amazon.ion.impl._Private_ScalarConversions.CantConvertException;
-import com.amazon.ion.impl.IonTokenConstsX.CharacterSequence;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -617,7 +617,6 @@ class IonReaderTextSystemX
             assert(!_current_value_save_point_loaded && _current_value_save_point.isClear());
             _scanner.save_point_start(_current_value_save_point);
             _scanner.skip_over_lob(_lob_token, _current_value_save_point);
-            _scanner.skip_lob_close_punctuation(_lob_token);
             _current_value_save_point_loaded = true;
             tokenValueIsFinished();
             _lob_loaded = LOB_STATE.READ;
