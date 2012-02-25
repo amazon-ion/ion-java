@@ -406,15 +406,8 @@ final class IonReaderTextRawTokensX
         return IonTokenConstsX.TOKEN_STRING_TRIPLE_QUOTE;
     }
 
-    protected final void skip_lob_close_punctuation(int lobToken) throws IOException {
-        switch (lobToken) {
-        case IonTokenConstsX.TOKEN_STRING_DOUBLE_QUOTE:
-        case IonTokenConstsX.TOKEN_STRING_TRIPLE_QUOTE:
-            break;
-        default:
-            return;
-        }
-
+    /** Expects optional whitespace then }} */
+    protected final void skip_lob_close_punctuation() throws IOException {
         int c = skip_over_whitespace();
         if (c == '}') {
             c = read_char();
@@ -1114,24 +1107,26 @@ final class IonReaderTextRawTokensX
                 if (c == '{') {
                     // 2nd '{' - it's a lob of some sort - let's find out what sort
                     c = skip_over_lob_whitespace();
+
+                    int lobType;
                     if (c == '"') {
                         // clob, double quoted
-                        skip_double_quoted_string(null);
+                        lobType = IonTokenConstsX.TOKEN_STRING_DOUBLE_QUOTE;
                     }
                     else if (c == '\'') {
-                     // clob, triple quoted - or error
+                        // clob, triple quoted - or error
                         if (!is_2_single_quotes_helper()) {
                             error("invalid single quote in lob content");
                         }
-                        skip_triple_quoted_string(null);
+                        lobType = IonTokenConstsX.TOKEN_STRING_TRIPLE_QUOTE;
                     }
-                    else if (c == '}') {
-                        // blob, empty (closed immediately) - or error
-                        c = read_char();
-                        if (c != '}') {
-                            error("missing blob close");
-                        }
+                    else {
+                        // blob
+                        unread_char(c);
+                        lobType = IonTokenConstsX.TOKEN_OPEN_DOUBLE_BRACE;
                     }
+
+                    skip_over_lob(lobType, null);
                 }
                 else if (c == '}') {
                     // do nothing, we just opened and closed an empty struct
@@ -2038,13 +2033,16 @@ final class IonReaderTextRawTokensX
         return c;
     }
 
+    /** Skips over the closing }} too. */
     protected void skip_over_lob(int lobToken, SavePoint sp) throws IOException {
         switch(lobToken) {
         case IonTokenConstsX.TOKEN_STRING_DOUBLE_QUOTE:
             skip_double_quoted_string(sp);
+            skip_lob_close_punctuation();
             break;
         case IonTokenConstsX.TOKEN_STRING_TRIPLE_QUOTE:
             skip_triple_quoted_string(sp);
+            skip_lob_close_punctuation();
             break;
         case IonTokenConstsX.TOKEN_OPEN_DOUBLE_BRACE:
             skip_over_blob(sp);

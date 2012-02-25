@@ -206,4 +206,74 @@ public class ReaderTest
             catch (IllegalStateException e) { }
         }
     }
+
+
+    private void skipThroughTopLevelContainer(String data)
+    {
+        read(data);
+
+        in.next();
+        in.stepIn();
+        {
+            while (in.next() != null)
+            {
+                // Just skip the children
+            }
+            expectEof();
+        }
+        in.stepOut();
+        expectTopEof();
+    }
+
+
+    private String[] LOB_DATA = {
+          "\"\"",
+          "\"clob\"",
+
+          "''''''",
+          "''' '''",
+          "'''clob'''",
+          "'''c}ob'''",
+          "'''c}}b'''",
+          "'''c\\'''ob'''",
+
+          "",
+          "Zm9v",
+    };
+
+    private void testSkippingLob(String containerPrefix,
+                                 String containerSuffix)
+    {
+        for (String lob : LOB_DATA)
+        {
+            String data = containerPrefix + lob + containerSuffix;
+            skipThroughTopLevelContainer(data);
+
+            data = containerPrefix + " " + lob + containerSuffix;
+            skipThroughTopLevelContainer(data);
+
+            data = containerPrefix + " " + lob + " " + containerSuffix;
+            skipThroughTopLevelContainer(data);
+
+            data = containerPrefix + lob + " " + containerSuffix;
+            skipThroughTopLevelContainer(data);
+        }
+    }
+
+
+    @Test
+    public void testSkippingLobInList()
+    {
+        testSkippingLob("[1, { c:", " } ]");
+        testSkippingLob("[1, { c:", "}]");
+    }
+
+
+    @Test
+    public void testSkippingLobInStruct()
+    {
+        testSkippingLob("{a:1, b:{ c:", " } }");
+        testSkippingLob("{a:1, b:{ c:", " }}");
+        testSkippingLob("{a:1, b:{ c:", "}}");
+    }
 }
